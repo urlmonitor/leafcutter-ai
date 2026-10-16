@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the mutation proof has broken the implementation of UXP-510 in the run's
@@ -39,25 +39,102 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Where the as-written copies live (the worktree's git dir), the durable journal written before any alteration, the byte-compare put-back, and the no-shared-stash rule. All of these are reused here."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   config_schema_fragment:
     fast_lane_mutation_restore:
       type: object
-      description: "Pre-proof content snapshot (content hash per touched file) taken before any mutation, restored in a finally path, then verified by hash; any mismatch yields halt reason mutation_restore_unconfirmed with the differing paths."
-  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+      description: "Before the first mutant, mutation_proof records (a) the as-written bytes and sha256 of every target file, through the shared wrong-version runner's copies and journal under <git-dir>/leafcutter/wrong-version-runs/<run-id>/, and (b) the output of git status --porcelain=v1 --untracked-files=all. It restores in a finally path after every mutant and at exit. It then verifies that each touched file is byte-equal to its copy and that the status output matches. Any mismatch gives {status: 'halted', reason: 'mutation_restore_unconfirmed', files: [str repo-relative path]}."
+  reference_file_path: "scripts/build_orchestration/_fl_cli.py"
   n_location_rule: "1"
   required_skills:
     - python-coder
-  post_write_commands: []
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
   constraints:
     - "Restoration must not rely on git checkout of the file. The workspace may hold uncommitted coder or test-writer changes, which a checkout would destroy. Restore from the pre-proof snapshot."
+    - "Never use the repository's shared git stash at any step. It is shared with the main checkout and every worktree (TQ-500g-1-iii)."
+    - "Reuse _wvr_gate.restore_entries and recover_all from scripts/build_orchestration/_wvr_gate.py rather than writing a second put-back. Write the journal entry durably before the working file is altered."
+    - "Restore must hold on every exit path: a pass, a named halt, an exception raised inside a test run, a pytest timeout, and an interrupt (KeyboardInterrupt or SIGTERM, handled the way wrong_version_runner.py handles it). When a drive is cut short and later resumed, the workflow runs the runner's recover step (wrong_version_runner.py recover) before mutation_proof or any later step."
+    - "No bytecode compiled from a mutant may survive in the workspace. Mutated runs do not write .pyc files (PYTHONDONTWRITEBYTECODE=1 or -B). A stale __pycache__ entry with a matching size and mtime would otherwise let a mutant outlive its restore."
+    - "Containment: every write goes to the run's own worktree, and to its git dir for copies and the journal. The main checkout, other worktrees and the live repository outside the run's worktree are never written."
+    - "When the verdict is mutation_restore_unconfirmed, nothing is staged, committed or pushed. The workflow halts before the review and commit phases (BO-2400a-3-xiv)."
     - "The covering test must interrupt the proof partway, for example by having a test run raise, and assert the tree is restored. A test that only covers the happy path does not prove this record."
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-3-x
-  contract: "The set of files the mutation proof changed."
+  contract: "The set of files the mutation proof changed: per_ac[].mutations[].file, which are paths relative to --test-root."
+test_spec:
+  - name: test_restore_after_passing_proof_is_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "After a passing proof, every mutated file's bytes and sha256 equal the pre-proof copy."
+  - name: test_restore_after_named_halt_is_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "After a tests_survive_mutation halt, every mutated file equals its pre-proof copy."
+  - name: test_restore_after_exception_mid_test_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the test run patched to raise while a mutant is applied, the file is still restored and the error is reported."
+    must_catch:
+      - "restore only on the happy path"
+  - name: test_git_status_identical_before_and_after_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "On a temp worktree, git status --porcelain=v1 --untracked-files=all is identical before and after the proof, including uncommitted tracked edits and untracked files that the proof never touched."
+  - name: test_uncommitted_edits_preserved_not_checked_out
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "A target file that holds uncommitted in-run edits outside the mutated function still holds those edits after restore."
+    must_catch:
+      - "restore via git checkout of the file"
+  - name: test_restore_mismatch_halts_restore_unconfirmed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "When the put-back is forced to leave a byte difference, the verdict is mutation_restore_unconfirmed and names each differing file."
+  - name: test_restore_unconfirmed_stops_before_review_and_commit
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "In fast-lane-ship.js, a halted mutation_proof verdict returns before the pr-reviewer, commit and PR call sites, and no staging command follows it."
+  - name: test_no_mutant_bytecode_or_bytes_left_in_tree
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "After a full proof, git diff and git diff --cached are unchanged, and no .pyc compiled from a mutant exists in the worktree."
+  - name: test_no_file_outside_worktree_changed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A sibling checkout and the parent directory of the run's worktree have identical file hashes before and after the proof."
+  - name: test_resume_recovers_leftover_mutant_first
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Given a journal left by a run killed mid-mutant, the recover step restores the file byte-for-byte before mutation_proof runs again."
 origin_agent: business-analyst
 created: 2026-10-15
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a batch containing BO-2600b-4, whose work_status is todo for the whole run,
@@ -49,27 +49,82 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 it_requirements:
   config_schema_fragment:
     fast_lane_green_gate_strict_run:
       type: object
-      description: "The green gate's scoped pytest run is executed with the AC test-enforcement plugin in strict mode (AC_ENFORCE_STRICT=1 set in the child process environment), so no failure of a scoped test is downgraded to xfail."
-  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+      description: "The green gate's scoped pytest run is executed with the AC test-enforcement plugin in strict mode (AC_ENFORCE_STRICT=1 set in the child process environment), so no failure of a scoped test is downgraded to xfail. The fast-lane-ship workflow runs verify_green_and_coverage itself, as a command step after the coder reports ok, and decides from that step's JSON {green, coverage_ok, uncovered_ac_ids, failing_tests}."
+  reference_file_path: "scripts/build_orchestration/_fl_coverage.py"
   n_location_rule: "1"
   required_skills:
     - python-coder
-  post_write_commands: []
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
   constraints:
     - "Strict mode is set on the environment of the gate's own test subprocess, not inherited from the caller's shell, so the gate's verdict does not depend on how the lane was launched."
     - "The covering test must reproduce the BO-2600b-4 shape: a not-yet-done AC whose covering test fails on an assertion, run through the real enforcement plugin, and assert the gate reports it failing. A fixture that emits FAILED directly cannot detect the defect."
-    - "it-po to confirm whether verify_red_baseline should also run strict. It need not for correctness, since BO-2400a-3-vi already counts xfailed as red, so this record does not require it."
+    - "The plugin is scripts/ac_store/pytest_ac_enforcement.py. pytest.ini loads it into every pytest process (addopts -p scripts.ac_store.pytest_ac_enforcement). It reads the opt-out AC_ENFORCE_STRICT (truthy tokens, around line 64-79) and rewrites a call-phase assertion failure to xfailed when the covered AC is not done."
+    - "Finding to resolve first. verify_green_and_coverage (_fl_coverage.py) decides through done_proof.verify_done_eligible, and that function's _run_pytest_and_parse already sets AC_ENFORCE_STRICT=1 in its child environment (scripts/ac_store/done_proof.py around line 1346, ACS-200f). The workflow, however, does not run the gate itself. The coder dispatch prompt runs greenCoverageInvocation and returns green and coverage_ok in its own reply (templates/workflows-js/fast-lane-ship.js around lines 1597-1618), and the workflow branches on coderResult.green (around line 1660). Before changing code, reproduce the BO-2600b-4 run through the real lane and record which process reported the masked outcome. The fix must close that point."
+    - "Whatever the root cause, the workflow must run verify_green_and_coverage as its own command step, through the existing command-step runner, after the coder reports ok, and decide from that step's JSON. The coder's green and coverage_ok are advisory and used only for BO-2400a-4-iv's contradiction record. Every pytest subprocess whose outcome feeds the green verdict, including the done_proof_kind_support path, runs strict."
+    - "verify_red_baseline is not switched to strict by this record. BO-2400a-3-vi already counts xfailed as red. The mutation proof runs strict through _wvr_pytest (BO-2400a-3-x)."
+    - "When the gate is not green, the workflow takes the existing coverage-fail branch: claims are released, and it returns before pr-reviewer, commit and mark_done. fast-lane-ship.js measures 1819 lines against the 1000-line .js cap, so the 2-for-1 file-size ratchet applies to every added line. Keep exactly one coder-connected call site."
+    - "The verdict is idempotent: re-running the gate on the same tree gives the same verdict and failing_tests."
 delivers_to:
-  agent: llm-expert
-  contract: "A green verdict whose failing_tests list includes every scoped test whose failure the enforcement plugin would otherwise have downgraded."
+  agent: python-coder
+  contract: "verify_green_and_coverage JSON on the command step's stdout: {green: bool, coverage_ok: bool, uncovered_ac_ids: [str], failing_tests: [{nodeid: str, ac_id: str, outcome: str raw pytest outcome}]}. failing_tests lists every scoped test the enforcement plugin would otherwise have downgraded. The fast-lane-ship workflow consumes it to decide staging and to build BO-2400a-4-iv's contradiction record."
 expects_from:
   ac_id: BO-2400a-4
   contract: "The green+coverage gate and its verdict object."
+test_spec:
+  - name: test_green_gate_reports_masked_failures_as_failed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "On a temp store where BO-2600b-4 is todo, with 3 assertion-failing and 10 passing covering tests run through the real enforcement plugin, the gate's outcomes for the 3 are FAILED, not XFAIL."
+  - name: test_green_verdict_not_green_lists_failures_with_ac
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The verdict is green false, and failing_tests names exactly those 3 node ids, each with ac_id BO-2600b-4."
+  - name: test_workflow_stops_at_green_gate_before_review_commit_markdone
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "In fast-lane-ship.js a non-green gate step returns before the pr-reviewer, commit and mark_done call sites, and no staging command runs."
+  - name: test_corrected_fixtures_all_pass_green
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With the 3 fixtures corrected, all 13 tests report PASSED and green is true."
+  - name: test_verdict_independent_of_work_status
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "The same tree, gated once with BO-2600b-4 todo and once with it done, gives identical green and failing_tests, with AC_ENFORCE_STRICT unset or 0 in the parent environment."
+    must_catch:
+      - "strict mode inherited from the caller's shell"
+      - "plugin downgrade honoured because the AC is todo"
+  - name: test_workflow_runs_green_gate_as_command_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "fast-lane-ship.js invokes verify_green_and_coverage through the command-step runner after the coder-connected call, and the staging decision reads that step's green and coverage_ok, not the coder reply's."
+    must_catch:
+      - "green verdict taken from the coder's reply"
+  - name: test_green_gate_cli_runs_strict_child
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Running fast_lane.py verify_green_and_coverage as a subprocess, with AC_ENFORCE_STRICT absent from the parent environment, reports the masked failures as failing."
 origin_agent: business-analyst
 created: 2026-10-15
 amended_by: []

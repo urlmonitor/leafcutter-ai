@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the fast lane dispatches its coder for a batch whose criteria are not yet done,
@@ -35,15 +35,64 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
-assigned_agent: llm-expert
+assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "The strict-run instruction is part of the coder dispatch prompt the fast-lane workflow assembles, so it is checkable by reading the assembled prompt and does not depend on the coder's own discretion."
-  - "The green gate (BO-2400a-4-ii, -iii) stays the authority. This record shortens the loop and does not replace the gate."
+  config_schema_fragment:
+    fast_lane_coder_strict_self_check:
+      type: object
+      description: "The coder-connected dispatch prompt assembled in fast-lane-ship.js tells the coder to run the scoped tests with AC_ENFORCE_STRICT=1, the same way the green gate does, and states that an xfailed scoped test is a failure to fix before reporting ok. When the coder reports green true and the workflow's own green-gate step reports green false, the run result carries gate_contradicted_coder: true, coder_reported: {green, coverage_ok}, and the gate's failing_tests."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The strict-run instruction is part of the coder dispatch prompt the fast-lane workflow assembles, so it is checkable by reading the assembled prompt and does not depend on the coder's own discretion."
+    - "The green gate (BO-2400a-4-ii, -iii) stays the authority. This record shortens the loop and does not replace the gate."
+    - "Assigned to python-coder rather than llm-expert. Both halves of this record live in templates/workflows-js/fast-lane-ship.js: the prompt string and the contradiction branch. agent_registry.json gives .js to python-coder, and the second scenario is control flow."
+    - "The instructed command must run in the coder's shell on both Windows (Git Bash) and POSIX. Take it from the same invocation string the gate uses (greenCoverageInvocation or the scoped pytest command), with the strict setting added, and do not restate it by hand."
+    - "The file-size ratchet applies to fast-lane-ship.js (1819 measured against the 1000 .js cap; every added line costs two removed). Keep exactly one coder-connected call site."
+    - "This record depends on BO-2400a-4-ii's independent green-gate command step. The contradiction is detected by comparing that step's verdict with the coder's reply, never by asking an agent."
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-4-ii
-  contract: "The strict-mode way of running the scoped tests that the coder is told to reproduce."
+  contract: "The strict-mode way of running the scoped tests that the coder is told to reproduce, and the workflow's own green-gate step verdict {green, coverage_ok, failing_tests}."
+test_spec:
+  - name: test_coder_prompt_instructs_strict_scoped_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The assembled coder-connected prompt contains the scoped test command with AC_ENFORCE_STRICT=1, taken from the same invocation the gate uses."
+  - name: test_coder_prompt_says_xfail_is_a_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The assembled prompt states that an xfailed scoped test is a failure the coder must fix before reporting ok."
+  - name: test_gate_stops_run_when_coder_reports_ok_with_failures
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Given a coder reply with green true and a gate step verdict naming 3 failing tests, the workflow returns blocked at the green gate, naming the 3 tests and their AC ids."
+    must_catch:
+      - "the coder's green report trusted as the outcome"
+  - name: test_result_records_gate_contradicted_coder
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "That blocked result carries gate_contradicted_coder true and coder_reported {green: true, ...}, and its outcome is the gate's verdict."
+  - name: test_deployed_workflow_carries_strict_instruction
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After build.py into a temp target, the deployed .claude/workflows/fast-lane-ship.js coder prompt carries the strict instruction."
 origin_agent: business-analyst
 created: 2026-10-15
 amended_by: []

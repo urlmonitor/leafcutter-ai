@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the fast-lane sequence diagram after BO-2400a-3-ix to BO-2400a-3-xiv and
@@ -27,6 +27,9 @@ doc_links:
   - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
     relationship: modifies
     status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 it_requirements:
@@ -37,6 +40,20 @@ it_requirements:
     Author through the write-c4-diagram skill, keeping the diagram's existing type,
     level and file. Refresh last_updated, and stay within the doc-length and
     doc-compliance hooks.
+  - >-
+    The target is docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    (diagram_type: sequence, flight_level: L3-Component, last_updated 2026-09-01).
+    Update its "Gate Summary" and "Actors" sections along with the diagram body, so the
+    prose and the drawing agree.
+  - >-
+    The mutation proof is drawn as a step of the fast_lane.py gate script, run by the
+    workflow as a command step, not as an agent. No agent decides whether a test is
+    proven. Show the recover step before it, and the break, re-run, restore and verify
+    loop inside it.
+  - >-
+    The green gate is drawn as run by the workflow itself as a command step after the
+    coder replies (BO-2400a-4-ii), labelled as a strict run with failure-masking
+    switched off, and not as part of the coder's turn.
 test_required: false
 test_rationale: |
   Architecture diagram. The store's convention for this tree is test_required: false, as

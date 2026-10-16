@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given every criterion in the batch, UXP-510 and UXP-511, is classified as a test
@@ -34,16 +34,84 @@ doc_links:
   - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
     relationship: describes
     status: exists
-assigned_agent: llm-expert
-estimated_complexity: S
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
 it_requirements:
-  - "The routing lives in the fast-lane-ship workflow and reads the gate verdict's per-AC proof routes. The workflow never re-derives them."
-  - "Skipping the coder must not skip any later gate. The green gate (strict, BO-2400a-4-ii), the coverage check and the BO-2400g review still run unchanged."
-  - "The per-AC proof route, and for mutation-route ACs the per-test mutation record from BO-2400a-3-x, is carried into the run result and the pull request description."
+  config_schema_fragment:
+    fast_lane_ship_proof_route_branch:
+      type: object
+      description: "fast-lane-ship.js reads the verify_red_baseline verdict's next_step and mutation_required. When mutation_required is non-empty it runs 'python <gateScript> mutation_proof ...' as a command step through the existing command-step runner (isCommandStep: true, BO-2400a-1-i). It enters the single coder call site only when next_step is 'coder'. The run result and the PR body carry proof_routes and, for each mutation-route AC, its per-test proven_by record together with the matching mutation."
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The routing lives in the fast-lane-ship workflow and reads the gate verdict's per-AC proof routes. The workflow never re-derives them."
+    - "Skipping the coder must not skip any later gate. The green gate (strict, BO-2400a-4-ii), the coverage check and the BO-2400g review still run unchanged."
+    - "The per-AC proof route, and for mutation-route ACs the per-test mutation record from BO-2400a-3-x, is carried into the run result and the pull request description."
+    - "Assigned to python-coder rather than llm-expert because agent_registry.json gives python-coder ownership of .js (owns_file_extensions ['.py', '.js']), and this change is control flow, not prompt text."
+    - "The file-size ratchet applies. fast-lane-ship.js measures 1819 lines against the 1000-line cap for .js. For a file over the cap, check-file-size allows a new length of at most max(1000, previous - added), so every added line costs two removed. Keep the workflow change to one branch and one command step, and keep decisions in the Python verdict fields. Condense in the same change if needed, and run the check-file-size hook before committing."
+    - "Keep the BO-2400a-1 invariant: exactly one coder call site (label coder-connected) and one test-writer call site. Skipping the coder is a guard around the existing call, not a second call. unit_tests/workflows/test_bo2400a_runner_structure.py checks the labels."
+    - "The workflow reads the gate's own JSON from the command step. It never trusts an agent's summary of the red-baseline or mutation verdict."
+    - "Before mutation_proof, the workflow runs the shared runner's recover step (BO-2400a-3-xii). A halted mutation_proof verdict goes through the same release-claims path as the other gate halts and returns before review, commit and PR."
+    - "Template and deployed copy stay in parity: templates/workflows-js/fast-lane-ship.js builds to .claude/workflows/fast-lane-ship.js through build.py, and unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py stays green."
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-3-x
-  contract: "Mutation-proof verdict per backfill AC, including the per-test mutation record."
+  contract: "mutation_proof JSON verdict {status, reason, per_ac: [{ac_id, passed, mutations, tests: [{nodeid, proven_by, outcomes}]}], post_restore}. The verify_red_baseline fields next_step, proof_routes and mutation_required come from BO-2400a-3-ix."
+test_spec:
+  - name: test_all_backfill_batch_skips_coder_dispatch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The coder-connected call site is entered only when the verdict's next_step is 'coder'. With every AC proven by mutation, the coder is not dispatched."
+  - name: test_all_backfill_batch_still_runs_green_review_commit
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "On the coder-skipped path, the green and coverage gate, the pr-reviewer review, the changelog step and the commit still run in order."
+    must_catch:
+      - "skipping the coder also skips the green gate"
+  - name: test_run_result_and_pr_body_carry_proof_route_per_ac
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The returned result and the PR body template both include each AC's proof route, and for mutation ACs the per-test mutation record."
+  - name: test_mixed_batch_dispatches_coder_exactly_once
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "There is exactly one coder-connected call site. A batch with at least one red_first AC and proven backfills reaches it once."
+  - name: test_workflow_does_not_rederive_proof_routes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "The workflow source reads proof_routes, next_step and mutation_required from the gate verdict and contains no outcome-class logic (no PASSED, FAILED or XFAIL comparisons) for routing."
+    must_catch:
+      - "workflow re-derives routes from raw outcomes"
+  - name: test_mutation_proof_runs_as_command_step_before_coder
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: reachability
+    description: "mutation_proof is invoked through the command-step runner, after the red-baseline step and before the coder-connected call site, and recover runs before it."
+  - name: test_deployed_workflow_carries_proof_route_branch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After build.py into a temp target, the deployed .claude/workflows/fast-lane-ship.js contains the mutation_proof command step and the next_step guard."
 origin_agent: business-analyst
 created: 2026-10-15
 amended_by: []
