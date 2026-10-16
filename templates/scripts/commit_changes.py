@@ -34,11 +34,13 @@ DECISION HISTORY:
     commit.md's stage-by-name (the hardened copy), not the fast lane's add -A or
     precommit-autofix's add -u. Private-index mechanism chosen so the property
     "commit = HEAD + named paths" holds whatever the shared index contains.
+  - 2026-10-16 [BO-4500]: Split, behaviour unchanged. Answer/git/config primitives
+    moved to commit_step_base.py and AC-parent resolution to commit_step_parents.py,
+    both deployed beside this script, to make room for BO-4500a-4.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import re
@@ -46,14 +48,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
 from pathlib import Path
 
-_CONFIG_ENV = "LEAFCUTTER_COMMIT_STEP_CONFIG"
-_CEILING_KEY = "max_automated_fix_retries"
-_DEFAULT_CEILING = 3
-_AC_STORE_DEFAULT = "docs/acceptance-criteria"
-_AC_STORE_ENV = "LEAFCUTTER_AC_STORE_ROOT"
+from commit_step_base import StepRefusal
+from commit_step_base import answer as _answer
+from commit_step_base import ceiling as _ceiling
+from commit_step_base import git as _git
+from commit_step_base import git_out as _git_out
+from commit_step_parents import parent_candidates
+
 _USAGE = (
     "usage: commit_changes.py --message-file FILE PATH [PATH ...]\n"
     "  --message-file FILE   file holding the commit message (required)\n"
@@ -61,40 +64,6 @@ _USAGE = (
     "                        Directories, globs and 'all' requests are refused.\n"
     "  --help                show this text\n"
 )
-
-
-class StepRefusal(Exception):
-    """A request the step declines; carries the answer's reason_code and reason."""
-
-    def __init__(self, code: str, reason: str) -> None:
-        super().__init__(reason)
-        self.code = code
-        self.reason = reason
-
-
-def _answer(status: str, **fields: object) -> dict:
-    """Build the one answer object with every contract key present."""
-    answer: dict = {"status": status, "sha": None, "paths": [], "added_parents": [], "unlisted_changes": []}
-    answer.update(hook_name=None, failing_files=[], reason_code=None, reason=None, hook_output=None)
-    answer.update(autofixed=[], skip_request_ignored=[], remedy=None, handoff=None)
-    answer.update(fields)
-    return answer
-
-
-def _git(args: list[str], cwd: Path, env: dict | None = None, stdin: str | None = None):
-    """Run git; an unrunnable git is a refusal, a non-zero exit is the caller's to read."""
-    try:
-        return subprocess.run(["git", *args], cwd=cwd, env=env, input=stdin, capture_output=True, text=True, check=False)
-    except OSError as exc:
-        raise StepRefusal("git_unavailable", f"cannot run git: {exc}") from exc
-
-
-def _git_out(args: list[str], cwd: Path, env: dict | None = None) -> str:
-    """Run git and return stdout, refusing on a non-zero exit."""
-    proc = _git(args, cwd, env)
-    if proc.returncode != 0:
-        raise StepRefusal("git_error", f"git {' '.join(args[:2])} failed: {proc.stderr.strip()}")
-    return proc.stdout
 
 
 def parse_args(argv: list[str]) -> tuple[str, list[str]]:
@@ -150,73 +119,6 @@ def validate_paths(entries: list[str], cwd: Path, root: Path, tracked: set[str])
         detail = "; ".join(f"{entry} ({code})" for code, entry in bad)
         raise StepRefusal(bad[0][0], f"cannot commit these entries: {detail}")
     return good
-
-
-def _load_derive_parent_id() -> Callable[[str], str | None] | None:
-    """Load the canonical derive_parent_id; None when the module is not deployed."""
-    here = Path(__file__).resolve().parent
-    # Deployed: scripts/ac_store beside this file. Source tree: <repo>/scripts/ac_store.
-    for candidate in (
-        here / "ac_store" / "ac_parent_id.py",
-        here.parent.parent / "scripts" / "ac_store" / "ac_parent_id.py",
-    ):
-        if not candidate.is_file():
-            continue
-        spec = importlib.util.spec_from_file_location("ac_parent_id", str(candidate))
-        if spec is None or spec.loader is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module.derive_parent_id
-    return None
-
-
-def _record_id(path: Path) -> str:
-    """Read an AC record's id (first top-level id: line); fall back to the file stem."""
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return path.stem
-    match = re.search(r"^id:\s*['\"]?([^\s'\"#]+)", text, re.MULTILINE)
-    return match.group(1) if match else path.stem
-
-
-def _find_parent_file(child: Path, parent_id: str, store: Path) -> Path | None:
-    """Locate the parent record: same folder first, then anywhere in the AC store."""
-    sibling = child.parent / f"{parent_id}.yaml"
-    if sibling.is_file():
-        return sibling
-    return next(iter(sorted(store.rglob(f"{parent_id}.yaml"))), None) if store.is_dir() else None
-
-
-def parent_candidates(named: list[str], root: Path) -> list[str]:
-    """Return repo-relative structural parents (one hop) of the named AC records."""
-    store_rel = os.environ.get(_AC_STORE_ENV, _AC_STORE_DEFAULT).strip("/")
-    records = [rel for rel in named if rel.endswith(".yaml") and rel.startswith(store_rel + "/")]
-    if not records:
-        return []
-    derive = _load_derive_parent_id()
-    if derive is None:
-        # Fail closed: AC records are being committed but their parents cannot be
-        # worked out, so silently committing without them would recreate
-        # KI-BO-20260928 (the edited parent left unstaged) as an apparent success.
-        msg = (
-            "AC records were named but the parent resolver (ac_store/ac_parent_id.py) "
-            "is not deployed beside this script, so their edited parents cannot be "
-            f"included: {', '.join(records)}"
-        )
-        raise StepRefusal("step_parent_resolver_unavailable", msg)
-    found: list[str] = []
-    for rel in named:
-        if not rel.endswith(".yaml") or not rel.startswith(store_rel + "/"):
-            continue
-        parent_id = derive(_record_id(root / rel))
-        parent = _find_parent_file(root / rel, parent_id, root / store_rel) if parent_id else None
-        if parent is not None:
-            parent_rel = parent.relative_to(root).as_posix()
-            if parent_rel not in named and parent_rel not in found:
-                found.append(parent_rel)
-    return found
 
 
 def _changed_vs_base(root: Path, env: dict, base: str | None) -> set[str]:
@@ -325,27 +227,6 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
     if failure is not None:
         return {**failure, **extra}
     return {**_finish(root, env, base, paths, added, msg_file), **extra}
-
-
-def _ceiling() -> int:
-    """Read max_automated_fix_retries once, before any check runs (BO-4500a-3-ii).
-
-    Source: the file named by LEAFCUTTER_COMMIT_STEP_CONFIG, else config/commit_step.json
-    beside the source tree or the deployed install; default 3 when no file exists.
-    """
-    here = Path(__file__).resolve().parent
-    override = os.environ.get(_CONFIG_ENV)
-    for path in [Path(override)] if override else [here.parent.parent / "config" / "commit_step.json", here.parent / "config" / "commit_step.json"]:
-        if not path.is_file():
-            continue
-        try:
-            value = json.loads(path.read_text(encoding="utf-8")).get(_CEILING_KEY, _DEFAULT_CEILING)
-        except (OSError, ValueError, AttributeError) as exc:
-            raise StepRefusal("step_config_unreadable", f"cannot read {path}: {exc}") from exc
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-            raise StepRefusal("step_config_unreadable", f"{path}: {_CEILING_KEY} must be a non-negative integer")
-        return value
-    return _DEFAULT_CEILING
 
 
 def _scrub_environment(env: dict) -> tuple[dict, list[str]]:
