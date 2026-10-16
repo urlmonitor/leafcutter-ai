@@ -36,6 +36,9 @@ ARCHITECTURE: A pure planner (``plan_writes``: verdict, open notices, commit
     red-then-green-at-the-same-commit run's failures (``--previous-verdict-file``, which
     the correctness notice job now also passes) on the flaky notice. Lane entrants stay
     a timing-lane section. The verdict file is only read, never written.
+    TQ-600a-13-xv: ``--unrerunnable JSON`` (the ``reevaluate`` job's output, via env) adds one
+    line per pull request whose hold could not be re-run to a red or did-not-complete
+    description (``_notice_unrerunnable``); bad input names nothing and never blocks the notice.
 """
 
 from __future__ import annotations
@@ -56,9 +59,10 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_notice.py`
 from scripts.ci import _notice_render as render  # noqa: E402
 from scripts.ci._flaky_notice import FLAKY, FLAKY_LABEL, may_close, not_reproduced, plan_flaky_writes, repeated_lines, wants_write  # noqa: E402
 from scripts.ci._flaky_window import load_tunables  # noqa: E402
-from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy  # noqa: E402
 from scripts.ci._notice_entrants import find_entrants, render_entrant_lines  # noqa: E402
 from scripts.ci._notice_render import CORRECTNESS, LANES, LaneSpec  # noqa: E402
+from scripts.ci._notice_unrerunnable import unrerunnable_lines  # noqa: E402
 from scripts.ci._post_merge_stages import stage_from_conclusion  # noqa: E402
 from scripts.ci._run_history import select_verdict_run, tested_main  # noqa: E402
 from scripts.ci.post_merge_suite import build_verdict_file  # noqa: E402
@@ -330,12 +334,14 @@ def read_previous_verdict(path: str | None) -> dict | None:
 
 
 def _red_extra_lines(opts: argparse.Namespace, verdict: dict, lane: LaneSpec) -> list[str]:
-    """The extra sections of a RED run's notice: the repeated pass-on-retry ids (correctness), the lane entrants (timing)."""
+    """The extra sections of a notice: the repeated pass-on-retry ids (correctness), the lane entrants (timing), then the
+    pull requests whose hold could not be re-run (TQ-600a-13-xv; red and did-not-complete runs only: green writes no notice)."""
+    unrerunnable = unrerunnable_lines(getattr(opts, "unrerunnable", None))
     if verdict["verdict"] != "red":
-        return []
+        return unrerunnable
     if lane.name == CORRECTNESS.name:  # entrants are a timing-lane notion: the correctness lane's collected ids are not a lane membership
-        return repeated_lines(verdict, load_tunables())
-    return render_entrant_lines(find_entrants(verdict, read_previous_verdict(opts.previous_verdict_file), opts.repo_dir))
+        return [*repeated_lines(verdict, load_tunables()), *unrerunnable]
+    return [*render_entrant_lines(find_entrants(verdict, read_previous_verdict(opts.previous_verdict_file), opts.repo_dir)), *unrerunnable]
 
 
 def _decide(opts: argparse.Namespace, client: GitHubClient) -> tuple[list[Write], str | None, dict | None]:
@@ -405,7 +411,7 @@ def run_apply(opts: argparse.Namespace, token: str) -> int:
         logger.warning("%s notice: refusing repository name %r", label, opts.repo)
         return EXIT_BAD_INPUT
     try:
-        client = GitHubClient(opts.api_url, token)
+        client = GitHubClient(opts.api_url, token, policy=WritePolicy(repo=opts.repo, notices=True))
         writes, reason, verdict = _decide(opts, client)
     except (GitHubError, ValueError, OSError, TypeError, KeyError) as exc:  # the last three: an unreadable or malformed tunables file
         logger.warning("%s notice: cannot decide what to write: %s", label, exc)
@@ -431,6 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply.add_argument("--download-outcome", default="", help="outcome of the artifact download step (success | failure)")
     apply.add_argument("--lane", choices=sorted(LANES), default=CORRECTNESS.name, help="which lane's run history, label and wording to use")
     apply.add_argument("--previous-verdict-file", default=None, help="verdict file of the previous settled run of this lane, to name lane entrants")
+    apply.add_argument("--unrerunnable", default=None, help="JSON text of the reevaluate job's unrerunnable output (TQ-600a-13-xv); unusable text names nothing")
     return parser
 
 

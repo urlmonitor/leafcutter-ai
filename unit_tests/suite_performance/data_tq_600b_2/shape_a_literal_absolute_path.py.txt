@@ -1,0 +1,6 @@
+"""Offender shape 1: a hardcoded absolute temp path in a string literal."""
+
+
+def test_writes_to_a_literal_path():
+    with open("/tmp/leaf_fixed_shape_a.txt", "w") as handle:
+        handle.write("scratch")

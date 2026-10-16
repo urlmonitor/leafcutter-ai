@@ -28,10 +28,6 @@ proposed_frontmatter:
     trigger: task requiring adr-author capabilities
     behavior: Delegates to adr-author via Agent tool
     related_agent: adr-author
-  - name: Delegation to architect-review-deep
-    trigger: task requiring architect-review-deep capabilities
-    behavior: Delegates to architect-review-deep via Agent tool
-    related_agent: architect-review-deep
   - name: Conditional Behavior
     trigger: the change introduces a new cross-cutting policy decision (new abstraction
     behavior: new constraint, new cross-component contract) that is not already covered

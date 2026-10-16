@@ -21,13 +21,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Path constants
-# ---------------------------------------------------------------------------
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_SUBMIT_SCRIPT = _REPO_ROOT / "scripts" / "feedback" / "submit_feedback.py"
-_REAL_CATEGORIES = _REPO_ROOT / "config" / "feedback_categories.yaml"
+from unit_tests.feedback import _inf_500d_4_helpers as h
 
 
 def _load_module_from_path(script_path: Path, module_name: str = "submit_feedback"):
@@ -48,20 +42,21 @@ class TestWorktreeConfigResolution(unittest.TestCase):
         self.worktree = Path(self.tmpdir) / "my-project-worktree"
         self.worktree.mkdir()
 
-        # Simulate .leafcutter/ deployment layout inside the worktree
-        leafcutter_dir = self.worktree / ".leafcutter"
+        # Simulate .leafcutter/ deployment layout inside the worktree.
+        # INF-500d-4-i: submit_feedback.py now imports sibling modules
+        # (feedback_sink.py, feedback_validation.py) and reads the build-time
+        # declaration config/knowledge_sink.json, so the layout is the whole
+        # scripts/feedback directory (as the build deploys it) plus a
+        # declaration written by the real build helper -- not the lone script.
+        leafcutter_dir = h.deploy_install(self.worktree, git=False)
         scripts_dir = leafcutter_dir / "scripts" / "feedback"
         config_dir = leafcutter_dir / "config"
-        scripts_dir.mkdir(parents=True)
-        config_dir.mkdir(parents=True)
+        h.declare(leafcutter_dir)
 
-        # Deploy submit_feedback.py into the worktree's .leafcutter/scripts/feedback/
-        self.deployed_script = scripts_dir / "submit_feedback.py"
-        shutil.copy2(str(_SUBMIT_SCRIPT), str(self.deployed_script))
-
-        # Deploy a minimal (but valid) feedback_categories.yaml into the
-        # worktree's .leafcutter/config/ so end-to-end submission works.
-        shutil.copy2(str(_REAL_CATEGORIES), str(config_dir / "feedback_categories.yaml"))
+        # The deployed script (with its siblings) and a valid
+        # feedback_categories.yaml are in place so end-to-end submission works.
+        self.deployed_script = h.submit_script(leafcutter_dir)
+        self.assertTrue((config_dir / "feedback_categories.yaml").is_file())
 
         # Also create a parent config dir to verify the script does NOT use it
         parent_config_dir = self.worktree / "config"

@@ -12,7 +12,6 @@ related_docs:
 - tickets/09_done/EPIC-CodingAgents/11_conflict_resolver_agent.md
 related_code:
 - .claude/agents/conflict-resolver.md
-- .claude/agents/conflict-resolver-deep.md
 description: 'Overview of Agent Reference: conflict-resolver.'
 ---
 # Agent Reference: `conflict-resolver`
@@ -23,7 +22,7 @@ Family: `coding/`.
 
 This document explains **when `pull-request` routes here**, **what inputs the
 agent expects**, **what it produces**, the **line-by-line vs structural rubric**
-with three examples each, and the **Opus-escalation prompt template**.
+with three examples each, and how a **structural** file is resolved in place.
 
 ---
 
@@ -57,26 +56,26 @@ The agent accepts a missing or partial input and falls back to running
 ## 3. What the Agent Produces
 
 A structured **Conflict Resolution Report** followed by an `## Escalation`
-section (required on every run, even when no Opus escalation occurred):
+section (required on every run):
 
 ```
 ## Conflict Resolution Report
 
 ### resolved_files
 - <path>: line-by-line — <one-line description of resolution applied>
-- <path>: structural (opus) — <one-line description of escalation trigger>
+- <path>: structural — <one-line description of the rubric trigger and the resolution>
 
 ### escalation
-none | opus
+none (the field is kept so the report shape is unchanged; no escalation tier exists)
 
 ### escalation_reason
-none | <one sentence naming the rubric trigger(s)>
+none | <one sentence naming the rubric trigger(s) that made file(s) structural>
 
 ### unresolved_files
 none | <list>
 
 ## Escalation
-not escalated: all conflicts matched line-by-line triggers
+line-by-line: all conflicts matched line-by-line triggers
 ```
 
 ---
@@ -88,8 +87,8 @@ conflict hunk (`git diff --diff-filter=U -- <file>`) and checks it against
 this table before routing.
 
 **Conservative default: classify as structural if in doubt.** A false-positive
-escalation costs one Opus call. A false-negative silent wrong resolution can
-corrupt source files or data.
+costs a slower, more careful resolution. A false-negative silent wrong resolution
+can corrupt source files or data.
 
 ### 4.1 Line-by-line triggers (Sonnet resolves inline)
 
@@ -106,9 +105,9 @@ one line-by-line trigger.
 | L6 | **Ticket frontmatter field addition** | `main` added `priority: high`; the feature branch added `components: [infrastructure]`. Both fields belong in the merged result. |
 | L7 | **Dependency list divergence** | `main` added `requests>=2.31` to `pyproject.toml`; the feature branch added `httpx>=0.27`. Resolution: include both. |
 
-### 4.2 Structural triggers (Opus escalation via `conflict-resolver-deep`)
+### 4.2 Structural triggers (resolved in place, with fuller context)
 
-ANY single hunk matching a structural trigger sends the entire file to Opus.
+ANY single hunk matching a structural trigger makes the entire file structural.
 
 | # | Trigger | Concrete example |
 |---|---|---|
@@ -132,42 +131,22 @@ search tools):
 | Read raw conflict hunks | `git diff --diff-filter=U -- <file>` |
 | Stage resolved file | `git add <file>` |
 | Verify no markers remain | `grep -c "<<<<<<" <file>` — must return 0 |
+| Read both sides and the ancestor | `git show :1:<file>`, `git show :2:<file>`, `git show :3:<file>` |
 
-All cross-cutting codebase research (blast radius, dependency graph, related
-docs) is delegated to `research-agent`. The conflict-resolver itself carries
-no `Grep`, `Glob`, or `jcodemunch` tools — strict-research-delegation
-([ADR-006 §2.6](../../architecture/adrs/ADR-033-agent-model-tiers.md#26-tool-allowlist--strict-research-delegation)).
+The conflict-resolver carries no `Grep`, `Glob`, or `jcodemunch` tools and is
+permitted no sub-agents: it gathers context with `Read` and read-only git
+commands only.
 
 ---
 
-## 6. Opus-Escalation Prompt Template
+## 6. Resolving a Structural File
 
-When the agent escalates a structural file, it spawns `conflict-resolver-deep`
-via the `Agent` tool with the following prompt shape (fill in the bracketed
-fields at runtime):
-
-```
-You are conflict-resolver-deep. Resolve the structural merge conflict in
-[FILE_PATH].
-
-Escalation trigger: [TRIGGER_NAME_FROM_RUBRIC]
-
-Base branch: [BASE_BRANCH]
-Head branch: [HEAD_BRANCH]
-
-## Research findings (from research-agent)
-[BLAST_RADIUS_TEXT]
-
-## Related docs
-[LIST_OF_RELATED_DOC_PATHS]
-
-## Raw conflict hunks
-[OUTPUT_OF: git diff --diff-filter=U -- FILE_PATH]
-
-Determine the semantically correct merged content. Write the resolution,
-stage the file, and return the structured Structural Resolution block
-defined in your system prompt.
-```
+There is no deeper resolver to hand a structural file to. The agent gathers
+both sides and the common ancestor, reads the history of the conflicting lines
+on each branch, decides what each side was trying to do, and writes a merged
+result that preserves both intents. When the two intents cannot both be kept it
+does not guess: the file goes to `unresolved_files` with a one-line reason. A
+real Opus escalation tier is tracked as the follow-up in KI-AR-004.
 
 ---
 
@@ -188,10 +167,9 @@ Before declaring a file resolved, the agent enforces:
 
 - Does not commit or push — resolution stops at `git add`. The calling
   `pull-request` agent controls commit and push.
-- Does not perform codebase search directly — all research is delegated to
-  `research-agent`.
-- Does not spawn sub-agents other than `research-agent` and
-  `conflict-resolver-deep`.
+- Does not perform codebase search with search tools — it reads files and
+  read-only git output only.
+- Does not spawn sub-agents: it is permitted none.
 - Does not modify files outside the conflicted working tree (no ticket moves,
   no README updates, no doc writes during a conflict resolution run).
 
@@ -201,8 +179,6 @@ Before declaring a file resolved, the agent enforces:
 
 - [`.claude/agents/conflict-resolver.md`](../../../.claude/agents/conflict-resolver.md) —
   the Sonnet gatekeeper agent file.
-- [`.claude/agents/conflict-resolver-deep.md`](../../../.claude/agents/conflict-resolver-deep.md) —
-  the Opus sub-agent file.
 - [`docs/agents/conventions.md`](../conventions.md) — Gatekeeper Escalation
   pattern (§5.3); tool allowlists (§4).
 - [`docs/architecture/adrs/ADR-033-agent-model-tiers.md`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
@@ -211,7 +187,5 @@ Before declaring a file resolved, the agent enforces:
   the ticket that shipped this agent.
 - [Ticket 12](../../../tickets/09_done/EPIC-CodingAgents/12_pull_request_agent.md) —
   `pull-request` agent, the only legitimate caller.
-- [Ticket 00](../../../tickets/09_done/EPIC-CodingAgents/00_research_agent.md) —
-  `research-agent`, delegated to for blast-radius context on escalations.
 
 [EPIC-CodingAgents]: ../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md

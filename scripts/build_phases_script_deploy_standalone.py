@@ -170,8 +170,11 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     output_dir = target_root / "scripts"
     written = 0
 
-    # Shallow scan — only top-level .py files; subdirectories have their own phases
-    for src_file in sorted(templates_scripts_src.glob("*.py")):
+    # Shallow scan — only top-level .py files; subdirectories have their own phases.
+    # GE-132a-1: the remedy-declaration seed rides along, because the deployed
+    # shared loader (_remedy_declarations.py) falls back to scripts/precommit-autofix.json.
+    seed = templates_scripts_src / "precommit-autofix.json"
+    for src_file in sorted([*templates_scripts_src.glob("*.py"), seed]):
         if not src_file.is_file():
             continue
 

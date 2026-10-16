@@ -60,36 +60,79 @@ def _event_field(keys, ctx):
     return "" if node is None else node
 
 
+_MISS = object()  # a context reader's "this path is not one I can evaluate"
+
+
+def _steps_value(parts, ctx):
+    if len(parts) not in (3, 4):
+        return _MISS
+    step = ctx.steps.get(parts[1])
+    if step is None:
+        return ""
+    if parts[2] == "outputs" and len(parts) == 4:
+        return step["outputs"].get(parts[3], "")
+    if parts[2] in ("outcome", "conclusion") and len(parts) == 3:
+        return step[parts[2]]
+    return _MISS
+
+
+def _needs_value(parts, ctx):
+    if len(parts) not in (3, 4):
+        return _MISS
+    need = ctx.needs.get(parts[1])
+    if need is None:
+        _fail(f"expression reads needs.{parts[1]} but that job is not a declared dependency")
+    if parts[2] == "result" and len(parts) == 3:
+        return need.conclusion
+    if parts[2] == "outputs" and len(parts) == 4:
+        return need.outputs.get(parts[3], "")
+    return _MISS
+
+
+def _github_value(parts, ctx):
+    if len(parts) > 2 and parts[1] == "event":
+        return _event_field(parts[2:], ctx)
+    if len(parts) == 2 and parts[1] in _GITHUB_KEYS:
+        return ctx.env.get(_GITHUB_KEYS[parts[1]], "")
+    return _MISS
+
+
+def _runner_value(parts, ctx):
+    return ctx.env.get("RUNNER_NAME", "") if parts[1:] == ["name"] else _MISS
+
+
+def _job_value(parts, ctx):
+    return ctx.status if parts[1:] == ["status"] else _MISS
+
+
+def _env_reader(prefix):
+    """A reader of ``<head>.<name>`` from the executor's env under ``prefix`` (unset = "", as on the platform)."""
+
+    def read(parts, ctx):
+        return ctx.env.get(f"{prefix}{parts[1]}", "") if len(parts) == 2 else _MISS
+
+    return read
+
+
+_LOOKUPS = {
+    "steps": _steps_value,
+    "needs": _needs_value,
+    "github": _github_value,
+    "runner": _runner_value,
+    "vars": _env_reader("VARS_"),  # repository variables arrive as VARS_<name>
+    "secrets": _env_reader("SECRETS_"),  # an environment's secrets arrive as SECRETS_<name>
+    "env": _env_reader(""),
+    "job": _job_value,
+}
+
+
 def _lookup(path, ctx):
     parts = path.split(".")
-    head = parts[0]
-    if head == "github" and len(parts) > 2 and parts[1] == "event":
-        return _event_field(parts[2:], ctx)
-    if head == "steps" and len(parts) in (3, 4):
-        step = ctx.steps.get(parts[1])
-        if step is None:
-            return ""
-        if parts[2] == "outputs" and len(parts) == 4:
-            return step["outputs"].get(parts[3], "")
-        if parts[2] in ("outcome", "conclusion") and len(parts) == 3:
-            return step[parts[2]]
-    elif head == "needs" and len(parts) in (3, 4):
-        need = ctx.needs.get(parts[1])
-        if need is None:
-            _fail(f"expression reads needs.{parts[1]} but that job is not a declared dependency")
-        if parts[2] == "result" and len(parts) == 3:
-            return need.conclusion
-        if parts[2] == "outputs" and len(parts) == 4:
-            return need.outputs.get(parts[3], "")
-    elif head == "github" and len(parts) == 2 and parts[1] in _GITHUB_KEYS:
-        return ctx.env.get(_GITHUB_KEYS[parts[1]], "")
-    elif head == "runner" and parts[1:] == ["name"]:
-        return ctx.env.get("RUNNER_NAME", "")
-    elif head == "env" and len(parts) == 2:
-        return ctx.env.get(parts[1], "")
-    elif head == "job" and parts[1:] == ["status"]:
-        return ctx.status
-    return _fail(f"the executor cannot evaluate the context expression {path!r}")
+    reader = _LOOKUPS.get(parts[0])
+    value = reader(parts, ctx) if reader else _MISS
+    if value is _MISS:
+        return _fail(f"the executor cannot evaluate the context expression {path!r}")
+    return value
 
 
 def _expand(text, ctx):

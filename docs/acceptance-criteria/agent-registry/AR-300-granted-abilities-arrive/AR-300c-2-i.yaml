@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -91,9 +91,16 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: contradicted-by-later-decision
+  agent: it-po
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, test contract, status and readiness unchanged. implemented_by names scripts/migrate_agent_abilities.py, which user decision 7 (BrainCandy, 2026-10-12) retires (AR-400e-1-iv deletes it). When that lands, this record's covering test (test_ar_300c_2_i_single_field_agents.py) is retargeted at the transform-agent-registry hook / _agent_ability_sync.regenerate_record -- not deleted or xfailed -- and implemented_by is re-pointed at the code that then fulfils it. The criteria do not name the helper."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_2_i_single_field_agents.py
+implemented_by:
+  - scripts/migrate_agent_abilities.py
+  - scripts/agent_ability_verdict.py
 notes: |
   WHY THIS IS AT THE COMPILED PROMPT AND NOT AT THE DECLARATION. AR-300c-2
   constrains the consolidation; this constrains the outcome an agent actually

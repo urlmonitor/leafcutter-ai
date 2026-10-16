@@ -499,3 +499,11 @@ knowledge_routing_wiring:
         Produces a ticket specification rather than completing built work,
         for the same reason as plan-feature.js above.
       covered_by: "whichever completion path later builds the created ticket"
+    - path: commit.js
+      reason: >
+        Depth-0 dispatcher for the /commit surface (BO-3800a-2). It only
+        dispatches the commit agent and, on a handoff, the declared
+        restructuring specialist; the commit agent itself runs its own
+        knowledge routing around the commit it makes, so the script adds no
+        publishing step of its own.
+      covered_by: "templates/agents/commit.md (the commit agent it dispatches)"

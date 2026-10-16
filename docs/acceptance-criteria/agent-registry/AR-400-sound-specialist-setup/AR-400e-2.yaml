@@ -1,0 +1,112 @@
+id: AR-400e-2
+title: "The central registry carries one derived list of a specialist's abilities, regenerated from its declaration"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree, in which the central registry carries
+    `skills_used` on 31 specialists and `skills_invoked` on 39 (2026-10-12),
+  When an agent definition is staged and the commit-time step that regenerates
+    the derived registry fields runs,
+  Then the regenerated registry carries `skills_invoked` for every specialist
+    with a `skills:` declaration, equal to that declaration (ids, modes,
+    conditions and any `provided_by` marking),
+    And no specialist entry carries `skills_used`,
+    And every other byte of the registry is unchanged, except for derived fields
+      the same step already owns,
+    And running the step a second time leaves the registry byte-identical,
+    And the committed real registry is the output of that step.
+depends_on:
+  - AR-400e
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "The derived copy."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTED, NOT REWRITTEN: its transform-scope constraint names BOTH skills_used and skills_invoked as the regenerated fields. Amendment noted on that record pointing here."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Already superseded (2026-09-30) by AR-300c-1/AR-300c-3; its 'skills_used retained as an alias' clause is the arrangement this record ends. Note added on that record."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The transform-agent-registry pre-commit hook that regenerates the derived fields."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "HISTORY-INDEPENDENT REGENERATION: templates/scripts/commit_guardian/_agent_ability_sync.regenerate_record (~187-204) today keeps each field's population ('a field that was empty stays empty'), which is why 4/12/27 agents differ. It becomes: write skills_invoked = declared entries (with condition and provided_by) + preserved descriptive_only entries, for every agent with a declaration; DELETE the skills_used key. _ABILITY_FIELDS, descriptive_entries and the module docstring follow."
+  - "transform_agent_registry.py docstring and its commit_guardian.json registration name/_comment (which say 'regenerate skills_used/skills_invoked/spawn_allowlist') are updated; the hook's file pattern and stages are unchanged."
+  - "SCHEMA: config/agent_registry.schema.json -- remove 'skills_used' from the agent item's `required` list (~31) and its property (~114-121); skills_invoked items gain `condition` and `provided_by`; the skills_invoked description drops the check_skills_invoked_xref sentence. NOTE: the JSON schema is NOT what the registry validator enforces (check_agent_registry calls validate_agent_registry); the refusal of skills_used is AR-400e-2-i's code, the schema edit keeps documentation and step_kinds_validator's schema read honest."
+  - "BYTE DISCIPLINE: dump_registry's format (4-space indent, ensure_ascii False, final newline); every other byte unchanged except fields the hook already owns (skills_invoked, spawn_allowlist); second run byte-identical; the committed config/agent_registry.json is the hook's output, not a hand edit."
+  - "ORDER: lands with or after AR-400e-1's reader moves (and AR-400e-1-iv's test retargeting), never before."
+  - "AR-300c-3's TRANSFORM SCOPE constraint and its pinning test test_ar_300c_3_ii_registry_transform.py name skills_used; update the test in the same change (AR-300c-3's amended_by note already points here)."
+test_spec:
+  - name: test_regeneration_writes_skills_invoked_for_every_declared_agent_and_no_skills_used
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the transform-agent-registry hook over a copy of the real package (templates + registry): every agent with a `skills:` declaration has skills_invoked equal to its declaration (ids, modes, conditions, provided_by) plus its descriptive_only entries, and no agent entry has skills_used."
+    must_catch:
+      - "an agent that held only skills_used keeps that population"
+      - "descriptive_only entries are dropped"
+  - name: test_regeneration_changes_no_other_byte_and_is_idempotent
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Diff the regenerated registry against the input: only skills_invoked / skills_used / spawn_allowlist keys differ; a second run is byte-identical to the first."
+  - name: test_committed_registry_equals_hook_output
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Running the hook over the checked-out package leaves config/agent_registry.json byte-identical (the committed file is the hook's output)."
+test_rationale: >-
+  The defect is history-dependence, so the criterion descriptor starts from
+  the real registry with its 4/12/27 split; byte discipline and idempotency
+  are the hook's contract and get their own descriptor.
+delivers_to:
+  agent: python-coder
+  contract: "A registry in which skills_invoked is the only derived abilities field, consumed by every reader in AR-400e-1. Item shape: {'skill_id': str, 'mode': 'always' | 'conditional', 'condition'?: str, 'provided_by'?: 'project'} or a preserved {'skill_id', 'descriptive_only': true, ...} entry, grants first."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400e-2-i
+implemented_by: []
+notes: |
+  USER DECISION 3 (BrainCandy, 2026-10-12), BINDING: retire skills_used in this
+  round; one derived field (skills_invoked) remains.
+
+  THE COUNTS. 4 only-older + 27 both = 31 with skills_used; 12 only-newer + 27
+  both = 39 with skills_invoked (AR-400e's doc_link figures). Measurements, not
+  constants.
+
+  HISTORY-INDEPENDENCE. The design found the regeneration step keeps whichever
+  field already existed on an entry -- the reason the populations differ. The
+  first two clauses together are what make the result independent of an entry's
+  history.
+
+  ORDERING WITH AR-400e-1. Readers must move before or with this; the L3s of
+  AR-400e-1 are the guard.

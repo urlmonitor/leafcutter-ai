@@ -368,6 +368,12 @@ if (acBlock) return acBlock
 const { ac_id, ac_path, parent_ac_path, component_id, ac_title } = acResult
 log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`)
 
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote and the mutation-proof/PR-body files live in scratchDir. Fail-open: /tmp, no note.
+const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
+const scratchDir = typeof scratchItem === 'string' && scratchItem ? scratchItem : '/tmp'
+const scratchEnvNote = scratchDir === '/tmp' ? '' : `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchDir}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.`
+
 // Phase 2 — Red phase (test-writer, then strict verification)
 
 phase('Red Phase')
@@ -386,7 +392,7 @@ The test must FAIL (red phase) against the current unmodified code. It should ex
 
 Assert on OBSERVABLE BEHAVIOUR — the value returned, the state changed, the exit code. Do not write a test that greps the source for a string: such a test passes against dead code and cannot tell a wired fix from an inert one. Where the behaviour has a natural inverse, add a negative control so the assertion is tied to the fix rather than to an empty fixture or a load failure.
 
-Return the absolute path to the test file you created as test_file.`,
+Return the absolute path to the test file you created as test_file.` + scratchEnvNote,
   { label: 'test-writer', phase: 'Red Phase', schema: TEST_WRITER_SCHEMA, agentType: 'test-writer' }
 )
 
@@ -439,7 +445,7 @@ Test file:     ${testFile}
 ${STRICT_NOTE}
 
 EXPECTED: the test FAILS (the bug is not fixed yet).
-Return passed=true if it passes, passed=false if it fails, plus the failure message or output summary.`,
+Return passed=true if it passes, passed=false if it fails, plus the failure message or output summary.` + scratchEnvNote,
   { label: 'red-verify/strict', phase: 'Red Phase', schema: TEST_RUNNER_SCHEMA, agentType: 'test-runner' }
 )
 
@@ -580,7 +586,7 @@ earlier phases, so they always show up dirty in git status by the time you run i
   - ${parent_ac_path}  (parent AC, back-linked to the one above)
   - ${testFile}         (test written by test-writer in the Red Phase)
 extra_files[] is for genuinely unexpected files beyond ${target_file} and the three
-paths above — name only those.`,
+paths above — name only those.` + scratchEnvNote,
   { label: 'python-coder/fix', phase: 'Fix', schema: FIX_SCHEMA, agentType: 'python-coder' }
 )
 
@@ -651,7 +657,7 @@ Test file:     ${testFile}
 ${STRICT_NOTE}
 
 EXPECTED: the test PASSES (the bug has been fixed).
-Return passed=true if it passes, passed=false if it fails, plus the failure message or output summary.`,
+Return passed=true if it passes, passed=false if it fails, plus the failure message or output summary.` + scratchEnvNote,
   { label: 'green-verify/strict', phase: 'Green Phase', schema: TEST_RUNNER_SCHEMA, agentType: 'test-runner' }
 )
 
@@ -705,7 +711,7 @@ New test:      ${testFile}
 
 Judge only against what these tests did BEFORE the fix. A test already broken on this branch
 for unrelated reasons is not collateral damage — if you cannot tell, say which ones you were
-unsure about rather than guessing.`,
+unsure about rather than guessing.` + scratchEnvNote,
   { label: 'related-tests/strict', phase: 'Green Phase', schema: TEST_RUNNER_SCHEMA, agentType: 'test-runner' }
 )
 
@@ -733,24 +739,24 @@ Test file:     ${testFile}
 DO NOT USE git stash. The stash stack is shared with every other session in this
 repository and an unqualified pop takes the top entry, which may not be yours — that
 recipe has already destroyed a concurrent session's uncommitted work. Revert through two
-files in /tmp instead.
+files in ${scratchDir} instead.
 
 Run these as single, simple commands, in order:
 
-1. cp "${worktreeRoot}/${target_file}" "/tmp/quickfix-${ac_id}-fixed.bak"
-2. git -C "${worktreeRoot}" show "HEAD:${target_file}" > "/tmp/quickfix-${ac_id}-head.orig"
+1. cp "${worktreeRoot}/${target_file}" "${scratchDir}/quickfix-${ac_id}-fixed.bak"
+2. git -C "${worktreeRoot}" show "HEAD:${target_file}" > "${scratchDir}/quickfix-${ac_id}-head.orig"
    This must exit 0 and leave a non-empty file. If it does not, STOP here and report
    red_without_fix=false with the reason — nothing has been overwritten yet, and the fix is
    still in place. Never redirect git show straight over "${target_file}": the shell
    truncates the target before git runs, so a failed lookup would destroy the fix.
-3. cp "/tmp/quickfix-${ac_id}-head.orig" "${worktreeRoot}/${target_file}"
+3. cp "${scratchDir}/quickfix-${ac_id}-head.orig" "${worktreeRoot}/${target_file}"
 4. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
    EXPECTED: FAIL. Record the result as red_without_fix (true when it fails).
-5. cp "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+5. cp "${scratchDir}/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
 6. AC_ENFORCE_STRICT=1 python -m pytest "${testFile}" -v
    EXPECTED: PASS. Record the result as green_with_fix_restored.
 
-Then run: diff -q "/tmp/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
+Then run: diff -q "${scratchDir}/quickfix-${ac_id}-fixed.bak" "${worktreeRoot}/${target_file}"
 and set fix_restored=true only when it exits 0 with no output. Do not infer the restore
 from git status — a path showing as modified only proves it differs from HEAD, which a
 partial or corrupted restore does too.
@@ -758,10 +764,10 @@ partial or corrupted restore does too.
 RESTORING THE FIX IS MANDATORY, on the failing path as much as the passing one: run step 5
 even when step 4 came out green. If the restore fails for any reason, say so explicitly and
 set fix_restored=false rather than continuing — the run must not proceed to commit with the
-fix reverted. Name /tmp/quickfix-${ac_id}-fixed.bak as the file that holds it.
+fix reverted. Name ${scratchDir}/quickfix-${ac_id}-fixed.bak as the file that holds it.
 
 Set status="ok" only when red_without_fix=true AND green_with_fix_restored=true AND
-fix_restored=true.`,
+fix_restored=true.` + scratchEnvNote,
   { label: 'mutation-proof', phase: 'Green Phase', schema: MUTATION_SCHEMA }
 )
 
@@ -773,8 +779,8 @@ function mutationProofBlock(haltReason, message) {
 if (!mutationResult || mutationResult.status === 'blocked' ||
     mutationResult.fix_restored !== true) {
   return mutationProofBlock('mutation_proof_incomplete', mutationResult
-    ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp /tmp/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
-    : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "/tmp/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`)
+    ? `Mutation proof did not complete cleanly.\n\n  red without fix:      ${mutationResult.red_without_fix}\n  green with fix back:  ${mutationResult.green_with_fix_restored}\n  fix restored:         ${mutationResult.fix_restored}\n\n${mutationResult.message || ''}\n\nIf fix_restored is false the fix is NOT in the working tree — recover it with "cp ${scratchDir}/quickfix-${ac_id}-fixed.bak ${worktreeRoot}/${target_file}" before doing anything else.`
+    : `Mutation-proof agent returned null — the fix may have been left reverted. Compare "${worktreeRoot}/${target_file}" against "${scratchDir}/quickfix-${ac_id}-fixed.bak" and copy it back if they differ, before continuing.`)
 }
 
 if (mutationResult.red_without_fix !== true || mutationResult.green_with_fix_restored !== true) {
@@ -926,7 +932,7 @@ Run single, simple commands only.
    anything — do not omit them just because the message text also mentions the compare URL.
 
 5. On confirmation, write the PR body to a FILE with the Write tool (for example
-   /tmp/quick-fix-pr-body-${ac_id}.md) and pass it with --body-file:
+   ${scratchDir}/quick-fix-pr-body-${ac_id}.md) and pass it with --body-file:
      gh pr create --base main --head "${activeBranch}" --title "<title>" --body-file "<path>"
    NEVER pass the body inline with --body. The shell interpolates backticks inside it: a body
    containing a backticked identifier has been published as "<identifier>: command not found".

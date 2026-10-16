@@ -183,8 +183,10 @@ producing low-quality output.
 /feedback-report --since 2026-06-01
 ```
 
-The `feedback-analyst` agent reads `debugging/logs/agent_telemetry.jsonl` and
-returns a prioritized summary grouped by category (e.g. tooling-issue,
+The `feedback-analyst` agent runs `trend_report.py`, which reads the install's
+declared `feedback_sink` (`<operational_log_root>/feedback.jsonl`, recorded at build
+time in `.leafcutter/config/knowledge_sink.json`) and states on stderr which file it
+read and how many records it found. It returns a prioritized summary grouped by category (e.g. tooling-issue,
 slow-agent, wrong-output). Use the output to decide which agents or workflows
 to improve next.
 

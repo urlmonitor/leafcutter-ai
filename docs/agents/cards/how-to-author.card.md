@@ -98,13 +98,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | conditional | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration
@@ -121,13 +122,3 @@ flowchart TD
 | Stop-and-Ask | condition requiring user decision or out-of-scope action | Do not proceed without doing this. | `None` |
 | Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
 | Conditional Behavior | writing the guide: add required sections | ensure required steps are covered, | `None` |
----
-
-## AC Assignments
-
-### how-to-author
-
-- BO-3200c-4: A how-to shows a person how to answer a paused run and how to resume it
-- BP-1500g-4: An adopter can find out where their own work can live, and what a build will do to it, before they lose any of it
-- TKT-500b-5: How-to: configuring and overriding TDD sequencing
-- TKT-500c-5: How-to: reading and interpreting AC delivery state

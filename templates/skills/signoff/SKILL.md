@@ -1020,10 +1020,9 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    build-time declaration at `config/knowledge_sink.json`, obtained via
    `harvest_learnings.py --print-sink` (see step 2 above), is now the single
    knowledge-emission sink every producer resolves against — the earlier
-   mismatch, where producers appended to
-   `debugging/logs/agent_telemetry.jsonl` while `harvest_learnings.py` read
-   `debugging/logs/knowledge_emissions.jsonl` (a file that never existed),
-   no longer applies. This step still defines only what a record looks
+   mismatch, where producers appended to the telemetry stream while
+   `harvest_learnings.py` read a separate emissions file in the install's
+   declared log root (a file that never existed), no longer applies. This step still defines only what a record looks
    like; the destination is now defined by that declaration, not by this
    step.
 

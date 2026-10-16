@@ -12,8 +12,9 @@ ARCHITECTURE: ``GitHubClient(api_url, token)`` offers ``get`` / ``post`` /
     ``Link``); ``same_origin_path`` turns a ``Link`` target into a request only when
     it stays on the API's origin, so the token never leaves it. Every failure that
     crosses the process boundary (HTTP status, connection, undecodable body) is raised as
-    ``GitHubError`` with the HTTP status (0 when none) so callers decide what a
-    failed call means; this module never swallows one. The token is never
+    ``GitHubError`` with the HTTP status (0 when none), a ``kind`` (``KINDS``: http,
+    timeout, connection, tls, not_json, shape, other, refused) and the ``Retry-After`` text (TQ-600a-13-ix) so callers
+    decide what a failed call means; this module never swallows one. The token is never
     logged or put in an exception message. ``get_bytes`` (TQ-600a-13-xiii) is the
     one method that follows a redirect, exactly once and without the token.
 """
@@ -23,9 +24,14 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from scripts.ci._write_policy import WriteGuard, WritePolicy, path_refusal
+
+__all__ = ["GitHubClient", "GitHubError", "KINDS", "WritePolicy"]
 
 logger = logging.getLogger("github_rest")
 
@@ -47,17 +53,46 @@ _NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 class GitHubError(RuntimeError):
-    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received."""
+    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received.
 
-    def __init__(self, message: str, status: int = 0) -> None:
+    ``kind`` says what failed, one of ``KINDS``: ``http`` (a status came back), ``timeout``, ``connection`` (refused, reset,
+    protocol error), ``tls`` (certificate not verified; never worth a retry), ``not_json``, ``shape`` (parsed, but not the
+    shape the caller needs; raised by callers, not by this client) or ``other``. ``retry_after`` is the response's
+    ``Retry-After`` header text (None when absent), so a caller can classify the failure without parsing the message.
+    """
+
+    def __init__(self, message: str, status: int = 0, *, kind: str = "other", retry_after: str | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.kind = kind
+        self.retry_after = retry_after
+
+
+KINDS = frozenset({"http", "timeout", "connection", "tls", "not_json", "shape", "other", "refused"})
+
+
+def _transport_kind(exc: BaseException) -> str:
+    """``timeout``, ``tls`` (a certificate that did not verify) or ``connection`` for a failure below HTTP."""
+    reason = getattr(exc, "reason", None)
+    if isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError):
+        return "timeout"
+    if isinstance(exc, ssl.SSLCertVerificationError) or isinstance(reason, ssl.SSLCertVerificationError):
+        return "tls"
+    return "connection"
 
 
 class GitHubClient:
     """Authenticated JSON client for one GitHub API root."""
 
-    def __init__(self, api_url: str, token: str, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        token: str,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        policy: WritePolicy | None = None,
+        *,
+        read_with: GitHubClient | None = None,
+    ) -> None:
         scheme = urllib.parse.urlparse(api_url).scheme
         if scheme not in ALLOWED_SCHEMES:
             message = f"refusing API URL with scheme {scheme!r}"
@@ -65,6 +100,24 @@ class GitHubClient:
         self._root = api_url.rstrip("/")
         self._token = token
         self._timeout = timeout
+        # ``read_with``: the client that makes the pre-checks of a write (a run's workflow, an issue's labels), so a write-only
+        # credential (the App's installation token) is never used to read.
+        self._guard = WriteGuard(policy or WritePolicy(), (read_with or self)._read_or_none)  # noqa: SLF001 -- the same class
+
+    def _read_or_none(self, path: str):
+        """GET ``path`` for a write's pre-check; None when it cannot be read (the failure is logged by ``request``)."""
+        try:
+            return self.get(path)
+        except GitHubError:
+            return None
+
+    def _enforce(self, method: str, path: str, body: dict | None) -> None:
+        """Raise ``GitHubError(kind="refused")``, before anything is sent, for a write the policy does not grant."""
+        reason = path_refusal(path) or self._guard.refusal(method, path, body)
+        if reason is not None:
+            logger.warning("refused %s", reason)
+            message = f"refused {reason}"
+            raise GitHubError(message, kind="refused")
 
     def request(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return the decoded JSON body (None for an empty body)."""
@@ -86,6 +139,7 @@ class GitHubClient:
 
     def request_with_headers(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return ``(decoded JSON body, response headers)``; header names are lower-cased."""
+        self._enforce(method, path, body)
         url = f"{self._root}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -111,12 +165,14 @@ class GitHubClient:
         except urllib.error.HTTPError as exc:
             logger.warning("%s %s -> HTTP %s", method, path, exc.code)
             message = f"{method} {path} failed with HTTP {exc.code}"
-            raise GitHubError(message, exc.code) from exc
+            raise GitHubError(message, exc.code, kind="http", retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
         except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
             logger.warning("%s %s -> %s", method, path, exc)
             message = f"{method} {path} failed: {exc}"
-            raise GitHubError(message) from exc
-        return self._decode(method, path, raw), headers
+            raise GitHubError(message, kind=_transport_kind(exc)) from exc
+        decoded = self._decode(method, path, raw)
+        self._guard.record(method, path, decoded)
+        return decoded, headers
 
     @staticmethod
     def _decode(method: str, path: str, raw: bytes):
@@ -127,7 +183,7 @@ class GitHubClient:
             return json.loads(raw)
         except (ValueError, RecursionError) as exc:  # a hostile body nested past the interpreter's limit is not JSON we can read
             message = f"{method} {path} returned a body that is not JSON"
-            raise GitHubError(message) from exc
+            raise GitHubError(message, kind="not_json") from exc
 
     def get(self, path: str, query: dict | None = None):
         """GET ``path`` with an optional query mapping."""

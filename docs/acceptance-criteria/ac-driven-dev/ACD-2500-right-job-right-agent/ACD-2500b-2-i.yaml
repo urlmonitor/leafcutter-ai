@@ -93,7 +93,8 @@ amended_by:
   directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/24_TICKET-20261012-ACD-2500b-2-i.md
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

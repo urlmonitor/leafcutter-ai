@@ -1,0 +1,12 @@
+[
+  {"label": "exact pin", "requirements": "ruff==0.15.15\n", "extra_files": {}, "outcome": "ok", "version_check": "matched"},
+  {"label": "exact pin, spaced, case-insensitive name, trailing comment", "requirements": "Ruff == 0.15.15  # c\n", "extra_files": {}, "outcome": "ok", "version_check": "matched"},
+  {"label": "wildcard is not exact", "requirements": "ruff==0.15.*\n", "extra_files": {}, "outcome": "ok", "version_check": "not_declared"},
+  {"label": "lower bound is not exact", "requirements": "ruff>=0.15\n", "extra_files": {}, "outcome": "ok", "version_check": "not_declared"},
+  {"label": "compatible release is not exact", "requirements": "ruff~=0.15.0\n", "extra_files": {}, "outcome": "ok", "version_check": "not_declared"},
+  {"label": "bare name is not exact", "requirements": "ruff\n", "extra_files": {}, "outcome": "ok", "version_check": "not_declared"},
+  {"label": "no ruff line at all", "requirements": "pytest>=8\n", "extra_files": {}, "outcome": "ok", "version_check": "not_declared"},
+  {"label": "pin reached through -r include", "requirements": "-r other.txt\n", "extra_files": {"other.txt": "ruff==0.15.15\n"}, "outcome": "ok", "version_check": "matched"},
+  {"label": "two different exact pins are unreadable", "requirements": "ruff==0.15.15\nruff==0.15.14\n", "extra_files": {}, "outcome": "could_not_check", "reason": "linter_version_source_unreadable"},
+  {"label": "environment marker is unreadable", "requirements": "ruff==0.15.15; python_version<'3.12'\n", "extra_files": {}, "outcome": "could_not_check", "reason": "linter_version_source_unreadable"}
+]

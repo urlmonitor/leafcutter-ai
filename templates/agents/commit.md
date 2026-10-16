@@ -18,7 +18,13 @@ description: 'Confirmation-gated commit agent. Shows the planned commit message 
 memory: true
 model: sonnet
 name: commit
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
+- skill_id: precommit-autofix
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -331,6 +337,23 @@ Protocol from the base instructions applies.
 ## Step 5 — Pre-commit hook failure → precommit-autofix
 
 If the commit fails because of pre-commit hooks:
+
+0. **Remedy check first.** If the refusing hook's remedy declaration has
+   disposition `engage-specialist` (today: `check-complexity` →
+   `restructuring-specialist` with `complexity-reduction`), take this branch
+   and skip steps 1-6:
+   - Dispatch NO agent (you run at depth 1; ADR-019 says such calls are
+     silently dropped) and edit NO files to fix the refusal.
+   - Run `python3 scripts/commit_guardian/remedy_handoff.py --hook-id <hook_id>`
+     with the hook's refusal output on stdin, and return its JSON unchanged as
+     your result (`status: handoff`). The depth-0 dispatcher engages the
+     specialist and re-offers the commit.
+   - If `remedy_handoff.py` exits 1, report the refusal as `status: blocker`
+     with its stderr reason.
+   - Never reset, stash, checkout or restore, and never pass `--no-verify` or
+     `SKIP=`: the change must stay exactly as left.
+
+   Other dispositions (`author-clears`, `mechanical-autofix`) follow steps 1-6.
 
 1. Capture the hook's stderr output verbatim.
 2. Invoke the `precommit-autofix` skill, passing:

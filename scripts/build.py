@@ -65,13 +65,13 @@ from build_phases import (
     AGENT_SUPPORT_SCRIPT_FILES,
     build_template_standalone_scripts,
     build_product_truth,
-    detect_deploy_collisions,
-    _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
     set_local_change_baseline,
     announce_if_local_change_replaced,
 )
+from agent_preparation_delivery import refuse_if_agents_compiled
+from build_phases_collisions import _check_deploy_collision_guard
 from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
 from build_deploy_manifest_helpers import (
     _manifest_ac_store_scripts,
@@ -80,6 +80,7 @@ from build_deploy_manifest_helpers import (
     _manifest_build_orchestration_scripts,
     _manifest_agent_support_scripts,
     _manifest_template_standalone_scripts,
+    _guard_source_paths_template_standalone,
     _manifest_doc_compliance_scripts,
     _manifest_sync_platforms_scripts,
 )
@@ -780,18 +781,7 @@ def _guard_source_paths_ac_mode_detection(package_root: Path) -> set[str]:
     return source_paths
 
 
-def _guard_source_paths_template_standalone(package_root: Path) -> set[str]:
-    """Return SOURCE paths for template-standalone scripts (BP-100n-4 split).
-
-    Source is under templates/scripts/ (top-level .py).
-    """
-    source_paths: set[str] = set()
-    templates_scripts = package_root / "templates" / "scripts"
-    if templates_scripts.is_dir():
-        for f in templates_scripts.glob("*.py"):
-            if f.is_file():
-                source_paths.add(f"templates/scripts/{f.name}")
-    return source_paths
+# _guard_source_paths_template_standalone moved to build_deploy_manifest_helpers.py.
 
 
 def _guard_source_paths_release(package_root: Path) -> set[str]:
@@ -1318,48 +1308,6 @@ def _compute_version_str(package_root: Path) -> str:
         return baseline
     bump = _compute_bump(entries)
     return _bump_version(baseline, bump)
-
-
-def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
-    """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
-
-    Enumerates (source_template, resolved_target) pairs for all file-based
-    artifact phases via ``_compute_phase_mappings``, then calls
-    ``detect_deploy_collisions`` to find any target path claimed by two or
-    more distinct source templates.  Runs in both real and dry-run modes
-    because the collision is a build-graph error, not a write-time concern.
-
-    Detection is path-keyed and content-agnostic (BP-100m-1-i): byte-identical
-    source templates still collide.  Cross-platform fan-out (same source →
-    different target paths) is never flagged (BP-100m-2-i).  All colliding
-    sources and the shared target are named in the error output (BP-100m-2).
-
-    Args:
-        output_root: Absolute path to the consolidated output directory
-            (e.g. ``<target>/.leafcutter``).
-        config: Build configuration dict used to resolve active platforms.
-
-    Returns:
-        0 if no collisions detected (build may proceed).
-        1 if one or more collisions found (build must abort).
-    """
-    phase_mappings = _compute_phase_mappings(output_root, config)
-    collisions = detect_deploy_collisions(phase_mappings)
-    if not collisions:
-        return 0
-
-    print(
-        "[COLLISION GUARD] Build aborted: deploy-path collision(s) detected.",
-        file=sys.stderr,
-    )
-    for c in collisions:
-        sources_str = "\n  ".join(str(s) for s in c["sources"])
-        print(
-            f"[COLLISION GUARD]  target:  {c['target']}\n"
-            f"[COLLISION GUARD]  sources:\n  {sources_str}",
-            file=sys.stderr,
-        )
-    return 1
 
 
 def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
@@ -1927,6 +1875,9 @@ def main(argv: list[str] | None = None) -> int:
     deploy_failure_exit = _raise_deploy_failures_if_any()
     if deploy_failure_exit is not None:
         return deploy_failure_exit
+
+    if refuse_if_agents_compiled(target_root, config, args.dry_run):
+        return 1
 
     reachability_exit = _check_command_reachability_if_live(
         output_root, config, args.dry_run, _check_command_reachability_guard

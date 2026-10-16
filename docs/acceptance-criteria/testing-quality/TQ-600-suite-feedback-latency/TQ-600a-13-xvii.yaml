@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -126,7 +126,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- docs/testing/README.md
 change_target:
   - docs
   - infrastructure
@@ -136,3 +137,10 @@ notes: |
   broken). RESOLVED 2026-10-08 by the owner: the mechanism is removal of the one context,
   never a bypass actor. REHEARSAL TO RECORD HERE: date, what was removed and restored,
   and the PR used.
+
+  DOCUMENTED 2026-10-12: the procedure and its log table are in docs/testing/README.md,
+  section "Break-glass: merging a repair when the hold itself is broken (owner only)".
+  work_status stays in_progress, not done: the AC's done-proof also needs the live
+  rehearsal, which can only happen once TQ-600a-13-x makes the check required. The PUT
+  body in step 3 names "read-only fields dropped" without listing them; confirm the exact
+  field list during the rehearsal and amend the step.

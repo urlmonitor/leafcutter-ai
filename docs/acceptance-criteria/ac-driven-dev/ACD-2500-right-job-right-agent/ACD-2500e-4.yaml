@@ -46,7 +46,8 @@ amended_by:
   by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/45_TICKET-20261012-ACD-2500e-4.md
 change_target: docs
 risk_surface: internal
 notes: |

@@ -3,7 +3,11 @@ description: 'Workspace lifecycle agent. Asks the workspace maker (scripts/workt
 memory: true
 model: haiku
 name: worktree-agent
-tools: Bash, Read
+tools: Bash, Read, Skill
+skills:
+- skill_id: feature
+  mode: conditional
+  condition: When a create request names an epic ticket path (an EPIC-*/ path segment), load feature and run its Epic Workflow with the ticket path as $ARGUMENTS.
 portable: true
 signoff: false
 domain: null

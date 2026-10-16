@@ -52,6 +52,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import agent_grant_delivery_gate as _grants
+import agent_preparation_delivery as _prep
 from build_capability_merge import (
     detect_skill_local_changes,
     propagate_capability_winner,
@@ -142,7 +144,7 @@ def _build_components_table(components_json_path: Path) -> str:
     return "\n".join([header_row, sep_row] + rows)
 
 
-def _inject_components_table(text: str, package_root: Path) -> str:
+def _inject_components_table(text: str, package_root: Path, agent: str | None = None) -> str:
     """Replace the ``{{components_table}}`` placeholder with a Markdown table.
 
     Reads ``docs/components.json`` from *package_root* and generates a table
@@ -154,16 +156,15 @@ def _inject_components_table(text: str, package_root: Path) -> str:
         text: Template text that may contain ``{{components_table}}``.
         package_root: Absolute path to the package root; ``docs/components.json``
             is resolved relative to it.
+        agent: Compiled-prompt file stem. When given, the table is registered
+            as a preparation for that agent (AR-300b-2); None renders only.
 
     Returns:
         Text with ``{{components_table}}`` replaced by the Markdown table.
     """
-    placeholder = "{{components_table}}"
-    if placeholder not in text:
-        return text
-    components_json_path = package_root / "docs" / "components.json"
-    table = _build_components_table(components_json_path)
-    return text.replace(placeholder, table)
+    path = package_root / "docs" / "components.json"
+    return _prep.inject_prepared_placeholder(
+        text, "components_table", agent, lambda: _build_components_table(path))
 
 
 def build_agents(target_root: Path, config: dict[str, Any],
@@ -172,10 +173,12 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
     Skips helper files whose names start with ``_`` (e.g. ``_signoff_block.md``).
 
-    Registry injection (ticket 29): loads ``agent_registry.json`` once and passes
-    the agents list, registry path, and skills root to ``compile_agent_template``
-    so that ``{{my_spawn_allowlist}}``, ``{{my_skills_used}}``, and
-    ``{{registry_phase_agents_table}}`` placeholders are resolved at compile time.
+    Registry injection: loads ``agent_registry.json`` once and passes the agents
+    list, registry path, and skills root to ``compile_agent_template`` so that
+    ``{{registry_phase_agents_table}}`` and the other table placeholders are
+    resolved at compile time, and each agent's skills table and sub-agent
+    section are appended from its own frontmatter declaration (the
+    ``{{my_skills_used}}`` / ``{{my_spawn_allowlist}}`` placeholders are retired).
     When the registry is absent, compilation proceeds without injection (graceful
     degradation — unresolved placeholders remain as-is in the compiled output).
 
@@ -190,9 +193,11 @@ def build_agents(target_root: Path, config: dict[str, Any],
     """
     import build_phases as _bp
 
+    _prep.reset_preparations()  # AR-300b: a fresh registry per agents phase
     agents_template_dir = _bp.TEMPLATES_DIR / "agents"
     if not agents_template_dir.exists():
         return 0
+    _grants.note_agents_source(agents_template_dir)  # AR-300a: the grant-delivery gate reads declarations from here
 
     # Load registry once for the whole phase (ticket 29)
     agents_list = _load_registry(_bp.REGISTRY_PATH)
@@ -229,7 +234,8 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
         # Inject {{components_table}} placeholder after all other compilation
         # steps so the generated table is always fresh (ACS-300k-1).
-        compiled = _inject_components_table(compiled, _bp.PACKAGE_ROOT)
+        compiled = _inject_components_table(compiled, _bp.PACKAGE_ROOT, template_file.stem)
+        _prep.note_compiled_agent(target_root, compiled)
 
         for platform, is_active in platforms.items():
             if not is_active:

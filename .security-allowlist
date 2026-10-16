@@ -8,14 +8,15 @@ ENTROPY_HIGH:docs/agents/README.md:429
 ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
+ENTROPY_HIGH:docs/agents/README.md:*
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
 # False positive: shell example in a how-to doc setting a long SCREAMING_SNAKE env-var
 # name (LEAFCUTTER_SHARED_LAYOUT_INTEGRITY_REPORT) to a file path -- not a secret.
 # Glob, not per-line, per CLAUDE.md: line numbers in how-to prose shift.
 ENTROPY_HIGH:docs/how-to/verify-shared-layout-stays-read-only.md:*
 ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
-ENTROPY_HIGH:templates/agents/llm-expert.md:39
-ENTROPY_HIGH:templates/agents/llm-expert.md:104
+# Glob, not per-line: the skills: frontmatter block (AR-300c) shifts these PROJECT_CONTEXT.md path strings.
+ENTROPY_HIGH:templates/agents/llm-expert.md:*
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:*
 # False positive: file path string in module docstring of test_llm_expert_artifacts.py (PROJECT_CONTEXT.md path, not a secret)
@@ -394,6 +395,11 @@ GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
 
+# BO-2400f-5-iii (2026-09-30): ENTROPY_HIGH on a long CamelCase TestCase name that
+# spells out the behaviour under test (the 2026-09-25 refusal replay). Same shape as
+# the test-class-name entries above; not reproduced here because quoting it trips
+# the scanner this entry suppresses.
+ENTROPY_HIGH:unit_tests/workflows/test_bo2400f5iii_declined_step_replay_and_boundary.py:*
 # KM-400 safe example contains placeholders only; actual credentials remain outside Git.
 ENV_FILE:knowledge/.env.example:0
 
@@ -700,6 +706,12 @@ GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
 # Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
 # so a pinned line number would silently stop matching.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# AR-300 slice 2 test support: RETIRED_SKILLS_TOKEN / RETIRED_SPAWN_TOKEN hold the retired
+# {{my_skills_used}} / {{my_spawn_allowlist}} placeholder strings the tests assert are gone;
+# "TOKEN" in the name trips GENERIC_SECRET. Not credentials. Glob per CLAUDE.md test-file rule.
+GENERIC_SECRET:unit_tests/prompt_assembly/_ar_300ad_support.py:*
+# AR-300 slice 2: the test's docstring names the in-run mutation environment variable and its value.
+ENTROPY_HIGH:unit_tests/prompt_assembly/test_ar_300d_3_i_last_ability.py:*
 # TQ-600a-13-vi App fake: a fixed placeholder token string that a local test server
 # hands its jobs. Not a credential. Duplicated to the workspace-root copy.
 GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*
@@ -715,6 +727,14 @@ GENERIC_SECRET:unit_tests/suite_performance/_flaky_harness.py:*
 # AIza*, JWTs and user:pass@host URIs (0 hits). Glob, not per-line.
 # Duplicated to the workspace-root copy per the dual-update rule.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-10-09.jsonl:*
+
+# Knowledge-emission snapshot, 2026-10-12 (47 records, INF-400c-4 reopened in #1114).
+# Same false positive as the feedback snapshots: long one-line JSON records of dense
+# prose read as high entropy (11 lines flagged). Swept before this entry was added for
+# sk-*, ghp_/github_pat_, AKIA*, PEM headers, password=, secret_key, api_key, bearer,
+# authorization, xox[baprs]-, AIza*, JWTs and user:pass@host URIs (0 hits). Glob, not
+# per-line. Duplicated to the workspace-root copy per the dual-update rule.
+ENTROPY_HIGH:reports/knowledge-snapshots/knowledge-emissions-2026-10-12.jsonl:*
 
 # Closed Aura evaluation: exact immutable lines, reviewed 2026-10-09.
 # 58 existing artifact-path/SHA256 keys and 22 optional_unresolved related-doc paths.
@@ -1015,3 +1035,4 @@ GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300e_2_ii.py:*
 # holds a marker the test feeds in as a hostile script_path reply and expects quoted back in the
 # halt message. Not a credential; the scanner fires on the name.
 GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300c_3_i.py:*
+ENTROPY_HIGH:templates/scripts/commit_guardian/_lint_scope.py:*

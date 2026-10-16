@@ -32,6 +32,7 @@ def _run_hook(
     payload: dict,
     env_overrides: dict | None = None,
     cwd: str | None = None,
+    hook: str = HOOK_SCRIPT,
 ) -> subprocess.CompletedProcess:
     """Run the inline_work_guard.py hook with the given stdin payload.
 
@@ -39,6 +40,8 @@ def _run_hook(
         payload: JSON-serialisable dict sent as stdin to the hook.
         env_overrides: Optional dict of env var overrides for the subprocess.
         cwd: Working directory for the subprocess. Defaults to the temp dir.
+        hook: Hook script to run. Defaults to the template source; audit tests
+            pass a copy deployed into a declared install (INF-500d-4-iv).
 
     Returns:
         CompletedProcess with returncode, stdout, and stderr.
@@ -47,7 +50,7 @@ def _run_hook(
     if env_overrides:
         env.update(env_overrides)
     return subprocess.run(
-        [sys.executable, HOOK_SCRIPT],
+        [sys.executable, hook],
         input=json.dumps(payload),
         capture_output=True,
         text=True,
@@ -126,17 +129,44 @@ class TestInlineWorkGuardWithLock(unittest.TestCase):
         self.assertIn(".build-feature.lock", result.stderr)
         self.assertIn("supervisor", result.stderr)
 
+    def _declared_install(self) -> tuple[str, Path]:
+        """Deploy the hook into a declared install; return (hook path, audit log path).
+
+        INF-500d-4-iv: the audit record is appended to
+        <operational_log_root>/inline_work_guard.jsonl, read from the build-time
+        declaration (config/knowledge_sink.json) of the hook's OWN deployed
+        workspace -- no longer <repo_root>/debugging/logs, which is deleted with
+        the per-drive worktree. So the hook runs from a deployed layout
+        (<install>/hooks/) whose declaration is written by the real build helper
+        and names a root OUTSIDE the repo the guard is judging.
+        """
+        import shutil
+
+        from unit_tests.feedback import _inf_500d_4_helpers as h
+
+        install = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, install, ignore_errors=True)
+        out_root = install / ".leafcutter"
+        shutil.copytree(
+            Path(HOOK_SCRIPT).parent, out_root / "hooks",
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+        enduring = install / "enduring"
+        enduring.mkdir()
+        h.declare(out_root, enduring / "logs")
+        log_root = Path(h.read_declaration(out_root)["operational_log_root"])
+        return str(out_root / "hooks" / "inline_work_guard.py"), log_root / "inline_work_guard.jsonl"
+
     def test_jsonl_audit_log_written(self) -> None:
         """Block must append a JSONL record with required fields."""
-        audit_dir = Path(self.tmpdir) / "debugging" / "logs"
-        # Remove any pre-existing audit log
-        audit_log = audit_dir / "inline_work_guard.jsonl"
-        if audit_log.exists():
-            audit_log.unlink()
+        hook, audit_log = self._declared_install()
 
-        _run_hook(self.payload, cwd=self.tmpdir)
+        result = _run_hook(self.payload, cwd=self.tmpdir, hook=hook)
 
-        self.assertTrue(audit_log.exists(), "Audit log file was not created")
+        self.assertEqual(result.returncode, 2)
+        self.assertTrue(audit_log.exists(), "Audit log file was not created under the declared root")
+        # The retracted location (inside the per-drive repo root) is not written.
+        self.assertFalse((Path(self.tmpdir) / "debugging").exists())
         with open(audit_log, "r", encoding="utf-8") as fh:
             lines = fh.read().strip().splitlines()
         self.assertGreater(len(lines), 0, "Audit log is empty")
@@ -159,17 +189,17 @@ class TestInlineWorkGuardWithLock(unittest.TestCase):
 
     def test_warn_mode_writes_audit_log(self) -> None:
         """Warn mode must still append a JSONL record."""
-        audit_log = Path(self.tmpdir) / "debugging" / "logs" / "inline_work_guard.jsonl"
-        if audit_log.exists():
-            audit_log.unlink()
+        hook, audit_log = self._declared_install()  # INF-500d-4-iv: declared root, not the repo
 
         _run_hook(
             self.payload,
             env_overrides={"INLINE_WORK_GUARD_MODE": "warn"},
             cwd=self.tmpdir,
+            hook=hook,
         )
 
-        self.assertTrue(audit_log.exists(), "Audit log not created in warn mode")
+        self.assertTrue(audit_log.exists(), "Audit log not created in warn mode under the declared root")
+        self.assertFalse((Path(self.tmpdir) / "debugging").exists())
         with open(audit_log, "r", encoding="utf-8") as fh:
             lines = fh.read().strip().splitlines()
         self.assertGreater(len(lines), 0, "Audit log is empty in warn mode")

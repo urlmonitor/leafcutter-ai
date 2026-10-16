@@ -208,26 +208,18 @@ deploy-manifest entry:
 - How the maker replaced the seven former recipes: [delivered-maker analysis §9](../../analysis/2026-09-25-worktree-delivered-maker.md#9-delivered--the-one-maker-2026-09-28)
   and [the consolidation inventory](../../analysis/2026-09-25-worktree-creation-consolidation.md)
 
+## Log root inherited from the main install (ADR-069) -- not yet in the maker
+
+A workspace is deleted when its drive ends, so its logs must not live in it. The former
+bootstrap in `setup_ticket_worktree.py` (deleted by BO-4300) handed the workspace's own
+`build.py` the log root the main install had already recorded in
+`<main>/.leafcutter/config/knowledge_sink.json`: `--log-root <root>`, or `--no-log-root`
+with a WARNING when the file was unreadable (AC
+[INF-500d-4-iii](../../acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-iii.yaml);
+decision: [ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md)). The maker's build
+call (`run_install_build` in `scripts/worktree_readiness.py`) does not pass either flag yet,
+so a maker-made workspace declares its own `debugging/logs`. Porting the behaviour is
+tracked as separate work.
+
 <!--
-====================================================================
-DECISION HISTORY
-====================================================================
-- 2026-10-13 [architecture-diagram-author, EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13]:
-  Rewritten for per-feature clones (BO-4300a-4). The flowchart component map
-  became a C4Component diagram: the maker as one standalone component (with
-  its resolver and modules inside), every caller route, the main copy, the
-  hub, the decided landing place (Q5) and each workspace with its own
-  install. Overview, responsibilities and entry points now describe the
-  shipped maker. The setup-script provisioning notes and the ACD-2100a-2
-  resolution contract were removed: the maker replaces them, and their
-  history is in git and in KI-ACD-004. The remove constraint now describes
-  the two-step discard (Q8) instead of --force. Linked the c3-030 sequence
-  and c3-031 state diagrams. root: true, as on c3-008 and c3-009: no L2 doc
-  exists above the worktree manager, and the page already carried a mermaid
-  block with no parent (ARCH-PARENT-MISSING). This is an update of an existing
-  page, so the scaffold rule does not apply (write-c4-diagram section 4,
-  Exception). The new frontmatter keys and the Legend follow the user's
-  scaffold-free pass, dec-b10271ebb40b9eaa (approved 2026-10-10). No skill
-  text was edited.
-====================================================================
--->
+=============================================================

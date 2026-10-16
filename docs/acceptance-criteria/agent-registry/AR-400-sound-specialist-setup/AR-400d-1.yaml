@@ -1,0 +1,121 @@
+id: AR-400d-1
+title: "A grant marked as supplied by the project reaches the specialist when the project has that ability"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a consumer project whose own abilities area under `.leafcutter/skills`
+    holds an ability "postgres" with a readable definition,
+    And the package ships no ability named "postgres",
+    And a package specialist "probe-coder" grants "postgres" with the grant
+      marked `provided_by: project`, and its instructions say "Apply the
+      `postgres` skill before writing SQL",
+  When the build installs the package into that project,
+  Then the build passes with no finding about "postgres",
+    And probe-coder's compiled prompt lists "postgres" in its abilities section,
+      marked as supplied by the project,
+    And the derived central registry entry for probe-coder carries the grant
+      with its `provided_by: project` marking,
+    And the same grant written without the marking stops the build with
+      "ability does not exist" for "postgres", because the package does not
+      ship it.
+depends_on:
+  - AR-400d
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The `skills:` entry shape gains a per-grant `provided_by` marking (user decision 1)."
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-009.md
+    relationship: related
+    status: exists
+    relevance: "ADJACENT, NOT MERGED: where an adopter's own abilities can live safely is open; this record only states where a project-supplied ability is looked for."
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where packaged abilities live (templates/skills/) -- the set a project-supplied grant is NOT resolved against."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "ONE PARSED GRANT: agent_ability_verdict.normalize_entries (scripts/) gains `provided_by` and carries it through unchanged when its value is 'project'; it is the parser every scripts/ surface uses (gate, verdict, delivery table, reference check, render_effective_prompt via the registry copy)."
+  - "THE HOOK CARRIES ITS OWN COPY: templates/scripts/commit_guardian/_agent_ability_sync.normalize_declared (and its _skill_problem shape check) is deployed on its own and cannot import scripts/; it must produce byte-identical normalised entries, held in step by a parity test over the same inputs. regenerate_record writes provided_by onto the skills_invoked entry."
+  - "LOOKUP LOCATION: a marked grant resolves ONLY in <project_root>/<output_root>/skills/<id>/SKILL.md (output_root from skills_config, default .leafcutter -- the same root agent_ability_gate._output_root_name already resolves). An UNMARKED grant resolves ONLY in the packaged templates/skills/. agent_ability_verdict._resolve today accepts EITHER location for ANY grant (the INF-600g-3-i fallback); that fallback is removed."
+  - "The delivered abilities table (agent_skills_declaration.build_declared_skills_table) marks a project-supplied row as supplied by the project; the function must receive the project skills root to do so, and its description lookup reads the project copy for a marked grant."
+  - "SCHEMA: config/agent_registry.schema.json skills_invoked item objects are additionalProperties:false and today list only skill_id, mode, descriptive_only -- add `condition` (already written by the hook) and `provided_by` (enum ['project'])."
+  - "PROTECTED IDS (user decision 10): <project>/<output_root>/skills is also where build_skills deploys PACKAGED abilities ('.claude/skills' is a symlink to it in the self-host workspace), and --clean / _cleanup_stale_paths / the .claude/skills shim remove entries there (KI-BP-009). The build computes the set of ids any specialist marks provided_by: project and never deploys over, nor deletes, <project>/<output_root>/skills/<id> for those ids. IT PO reading, flagged: the decision names 'a packaged id', but an UNSHIPPED marked id (this record's postgres) must get the same no-delete protection, or --clean reaps it as a stale artifact; the protected set is therefore every marked id, packaged or not."
+  - "The project's copy applies project-wide: every specialist granting the id reads the same <project>/<output_root>/skills/<id>/SKILL.md (user decision 10)."
+test_spec:
+  - name: test_marked_grant_present_in_project_area_is_delivered_and_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "Scratch consumer project with .leafcutter/skills/postgres/SKILL.md; package copy where probe-coder grants postgres with provided_by: project and says 'Apply the `postgres` skill before writing SQL'; build.py passes with no postgres finding and probe-coder's compiled abilities section lists postgres marked as project-supplied."
+  - name: test_unmarked_grant_to_unshipped_ability_fails_as_nonexistent
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Same project, marking removed: the build fails with 'ability does not exist' for postgres even though .leafcutter/skills/postgres exists."
+    must_catch:
+      - "unmarked grants still resolve in the project-local area (today's _resolve fallback)"
+  - name: test_transform_hook_keeps_provided_by_on_skills_invoked
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run the transform-agent-registry hook over the package copy; probe-coder's regenerated skills_invoked entry carries provided_by: project, and the hook's normalised entries equal agent_ability_verdict.normalize_entries' for the same frontmatter."
+    must_catch:
+      - "the hook's copy of normalize_declared drops provided_by"
+  - name: test_project_ability_survives_an_ordinary_rebuild
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "Build the scratch project a second time without --clean, then a third time WITH --clean; after each, .leafcutter/skills/postgres/SKILL.md is still present and byte-identical."
+    must_catch:
+      - "--clean removes the marked project ability as a stale artifact (KI-BP-009)"
+test_rationale: >-
+  Delivery is asserted on the compiled prompt in a real consumer layout
+  because the placement is exactly where KI-BP-009 says the build deletes
+  things; the hook-parity descriptor exists because the hook is the one
+  surface that cannot share the parser.
+delivers_to:
+  agent: python-coder
+  contract: "A grant shape {skill_id, mode, condition?, provided_by?: 'project'} parsed once from the frontmatter and consumed unchanged by every surface listed in AR-400d-3. Python: list[{'skill_id': str, 'mode': 'always' | 'conditional', 'condition'?: str, 'provided_by'?: 'project'}] -- key absent (never None) when unmarked."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria unchanged. it_requirements: the KI-BP-009 'known hazard, not solved here' item replaced by the protected-id rule (marked ids are never deployed over or deleted) and the project-wide scope rule; the rebuild-survival test now also runs a --clean build. WHY: user decision 10 (BrainCandy, 2026-10-12). The extension of no-delete protection to unshipped marked ids is an IT PO reading, flagged in it_requirements."
+superseded_by: null
+covered_by:
+  - AR-400d-1-i
+  - AR-400d-1-ii
+implemented_by: []
+notes: |
+  USER DECISION 1 (BrainCandy, 2026-10-12), BINDING: per-grant marking
+  `provided_by: project`; looked up ONLY in <project>/.leafcutter/skills; absent
+  -> report, not refuse (AR-400d-2).
+
+  The last clause pins that the marking is the ONLY thing that turns a missing
+  package ability into an acceptable one -- the "typo must not be rescued" rule
+  from AR-400d's notes, whose L3 form is AR-400d-2-ii.

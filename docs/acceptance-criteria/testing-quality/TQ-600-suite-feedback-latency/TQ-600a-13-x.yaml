@@ -345,6 +345,57 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: >-
+    ADDITIVE ONLY -- A RECORDED DECISION NOT TO CHANGE ANYTHING. criteria, declared_files (all
+    three entries left at `to_be_created`), it_requirements, test_spec, depends_on,
+    work_status (todo), readiness (approved) and every other field are UNTOUCHED. One notes
+    block is added and this entry. NO RE-APPROVAL IS OWED: nothing this record requires has
+    changed, and the entry exists so three standing advisory reports are not read as neglect.
+
+
+    THE QUESTION. This record declares scripts/ci/post_merge_hold.py,
+    scripts/ci/post_merge_notice.py and scripts/ci/post_merge_tunables.json as
+    `to_be_created`. All three now exist, none was created by this record's own work (hold.py
+    by -vi, notice.py by -iii, tunables.json by -ii), and this record's own it_requirements
+    describe it as EXTENDING the tunables file rather than creating it. So each of the three
+    produces a standing "marked to be created but already exists" advisory report. Whether to
+    flip them to `existing` was escalated to the owner on 2026-10-12 and delegated back to
+    the BA to decide.
+
+
+    DECIDED: LEAVE ALL THREE AS `to_be_created`. Four reasons, in descending weight; the full
+    argument is in the notes block added by this entry.
+
+    (1) THE MARKER IS A BUILD PRECONDITION -- "the work must not assume this path is present"
+    -- not a claim that this record's own work creates the path, and not a historical note
+    (settled in ACD-1600c-4-v). `to_be_created` is therefore the CORRECT AND SAFE declaration
+    here: this record's build order relative to -vi, -iii and -ii is not guaranteed (it
+    depends_on -vi only, and not on -iii or -ii at all), so it must not assume any of the three
+    files is present. Flipping to `existing` would assert a precondition this record cannot
+    guarantee. THIS REASON SURVIVES ALL THREE CANDIDATE READINGS OF THE FIELD, which is why the
+    decision did not have to wait on the semantics: under the historical reading the
+    declarations were true when made, under the precondition reading they are still true, and
+    only under the ownership reading would they be wrong -- and that reading is dead (the
+    two-value enum leaves nine such records unencodable, and a false ownership claim would have
+    to refuse rather than report).
+
+    (2) `existing` + absent + not-done is a BLOCKING REFUSAL in the declared-files check,
+    where `to_be_created` + present + not-done is only advisory. Flipping arms a merge blocker
+    on three files whose lifecycle this record does not control: if any is renamed or removed
+    by revision of -vi, -iii or -ii before this record is built, every commit staging this
+    record is refused. This record is `work_status: todo` against a hard 2026-11-02 deadline,
+    which is the worst available moment to arm that.
+
+    (3) These three are the ONLY VISIBLE INSTANCES of a condition measured at 15 declarations
+    across the same three paths, 12 of which sit on `done` records and are silently exempted.
+    Flipping them takes the count visible to a reader from 3 to 0 while the specification
+    defect behind the exemption is still open in draft.
+
+    (4) The advisory report is ACCURATE AND BENIGN here. ACD-1600c-4-i's own notes say the
+    report covers both a stale marker AND the legitimate mid-build case where "the file was
+    created by the work in progress". This is that legitimate case, one family member over.
+  by: business-analyst
+  at: '2026-10-12'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -370,3 +421,81 @@ notes: |
   record now owns which identity may satisfy a merge gate.
 
   DEADLINE: 2026-11-02, when the default `pull_request_target` block is enforced.
+
+  ==========================================================================
+  THE THREE DECLARED FILES ARE DELIBERATELY LEFT AT `to_be_created` (2026-10-12).
+  READ THIS BEFORE "CORRECTING" THEM.
+  ==========================================================================
+  THREE STANDING ADVISORY REPORTS ON THIS RECORD ARE A DECISION, NOT NEGLECT. All three
+  declared paths -- scripts/ci/post_merge_hold.py, scripts/ci/post_merge_notice.py,
+  scripts/ci/post_merge_tunables.json -- now exist, and none was created by this record's own
+  work: hold.py by TQ-600a-13-vi, notice.py by -iii, tunables.json by -ii (whose
+  it_requirement already says the tunables file is "created by whichever family record lands
+  first that reads a tunable (normally -ii, for the window), EXTENDED BY THE REST" -- this
+  record is one of the extenders). So each path yields a "marked to be created but already
+  exists" report for as long as this record is unfinished. That is expected and correct.
+
+  WHAT THE MARKER MEANS, WHICH IS THE WHOLE BASIS OF THE DECISION. `to_be_created` states a
+  BUILD PRECONDITION -- "the work must not assume this path is present at the moment it is
+  built" -- and is neither a claim of ownership nor a dated historical note. Settled in
+  ACD-1600c-4-v: ownership dies on the two-value enum (a record whose work EDITS a file a
+  sibling CREATES has no honest value available) and on severity (a false ownership claim would
+  have to refuse, and this condition is advisory by design); the historical reading dies on the
+  refusal branch (nothing blocks a merge over a stale dated note, so `existing` + absent
+  refusing proves the field is live).
+
+  SO THIS RECORD'S THREE DECLARATIONS ARE NOT STALE -- THEY ARE CORRECT AND DELIBERATELY SAFE.
+  This record depends_on TQ-600a-13-vi only; it does NOT depend on -iii or -ii, which are the
+  records that create notice.py and tunables.json. Its build order relative to those two is
+  therefore not guaranteed by anything in the store, and `to_be_created` is exactly the
+  declaration that says so. The asymmetry below exists so that this safe choice is never
+  punished: a precondition that turns out to be already satisfied is only reported, while an
+  unsatisfiable one refuses. WHAT THE REPORT CANNOT CURRENTLY SAY is that these three were
+  satisfied EARLY BY SIBLING WORK rather than declared wrongly -- that relabelling is
+  ACD-1600c-4-v's clause (b), and it is the actual fix for the noise, not a re-marking here.
+
+  THE ASYMMETRY THAT MAKES THE FLIP ACTIVELY UNSAFE, AND IT IS THE REASON A READER SHOULD NOT
+  TIDY THIS. The declared-files check treats the two markers very differently for an
+  unfinished record:
+
+      `to_be_created` + path present  ->  ADVISORY REPORT (non-blocking, ACD-1600c-4-i)
+      `existing`      + path absent   ->  BLOCKING REFUSAL (ACD-1600c-4-i)
+
+  This record does not own the lifecycle of any of the three files. Marking them `existing`
+  arms a merge blocker that fires if -vi's, -iii's or -ii's work is revised and any path is
+  renamed or removed before this record is built -- and it fires on every commit that stages
+  this record, for a fact this record's author cannot fix. This record is still
+  `work_status: todo` with a hard 2026-11-02 deadline above, so it would be arming that
+  blocker at precisely the wrong moment. Three non-blocking lines are the cheap side of that
+  trade by a wide margin.
+
+  AND THE FLIP WOULD DELETE THE ONLY EVIDENCE OF A LARGER, OPEN CONDITION. Measured 2026-10-12
+  across these same three paths: 15 `to_be_created` declarations in total (hold.py 7, notice.py
+  6, tunables.json 2); 3 on the creating record; 12 on `done` records, which
+  ACD-1600c-4-i exempts from the report entirely; and 3 on this record -- THE ONLY THREE
+  ANYTHING REPORTS FOR THESE THREE PATHS, because this is the only one of the twelve declaring
+  records still unfinished. Of the 12 exempted, the exemption's stated reason ("the finished
+  work is what created it") is true of 3 and false of 9. Quieting this record's three takes the
+  visible count for these paths to zero while that specification defect is still open in draft
+  (ACD-1600c-4-v), so the only smoke detector for a 15-instance condition would be switched off
+  to stop it beeping.
+
+  STORE-WIDE, FOR SCOPE: `validate_ac_schema.py` over all 5,036 records on 2026-10-12 emits six
+  such report lines across four records -- this record's three, plus one each on TQ-600a-11,
+  -11-ii and -11-iii. Those three are a DIFFERENT case and are not evidence that this one is
+  routine: that family is `status: deprecated`, and the retirement convention's
+  `work_status: done -> todo` demotion un-exempted its declared files, so those reports are
+  permanent and unclearable (the only work that would clear them is work deliberately
+  retired). Written up in ACD-1600c-4-v, which proposes a separate report section for them.
+  This record's three are the ordinary mid-build case and WILL clear themselves the moment
+  this record is built.
+
+  THE GENERAL SHAPE, for a reader who arrives here from somewhere else:
+  `declared_files[].state` states a condition on THIS record's build, but it is evaluated
+  against the tree as it now stands, and the tree is moved by OTHER RECORDS' WORK. So declared
+  and observed diverge WITHOUT ANYONE MAKING A MISTAKE; the check cannot name which of the two
+  causes it is looking at, and its wording picks the wrong one; and once `work_status: done`
+  the condition is EXEMPTED rather than flagged, so no gate ever surfaces it. It is the fourth
+  entry on INF-600b-2's canonical list of true-looking-and-wrong shapes and the most common
+  member precisely because it needs no error to occur. Go there for the family;
+  ACD-1600c-4-v is the record that fixes both the relabelling and the countability.

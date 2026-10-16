@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -117,9 +117,18 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: contradicted-by-later-decision
+  agent: it-po
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, test contract, status and readiness unchanged. implemented_by names scripts/migrate_agent_abilities.py, which user decision 7 (BrainCandy, 2026-10-12) retires (AR-400e-1-iv deletes it). When that lands, test_ar_300c_1_frontmatter_declaration.py's use of the migration (via _ar_300c_support.run_migration) is retargeted at the transform-agent-registry hook -- not deleted or xfailed -- and the helper is dropped from implemented_by. The criteria do not name the helper."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_1_frontmatter_declaration.py
+  - unit_tests/prompt_assembly/test_ar_300_review_malformed_declarations.py
+implemented_by:
+  - scripts/agent_skills_declaration.py
+  - scripts/agent_declaration_shape.py
+  - scripts/migrate_agent_abilities.py
 notes: |
   THIS CARRIES A DECISION THE USER HAS ALREADY TAKEN. The abilities move into the
   agent's own definition, beside the declaration of what it is permitted to use.

@@ -38,7 +38,6 @@
  *     "resolve": {...} | null,           // resolve-target stub reply
  *     "workspace_ensure": {...} | null,  // workspace-ensure stub reply (BO-4300c-3), served verbatim;
  *                                        // absent = ready at record_dir
- *     "worktree_agent": {...} | null,    // (retired step) worktree-setup stub reply
  *     "worktree_check": {...} | null,    // build-ticket.js ambient git check reply
  *     "epic": {
  *        "path": "<abs epic folder>",
@@ -782,31 +781,6 @@ async function agent(prompt, opts = {}) {
     };
   }
 
-  // BO-4000: build-feature.js checks resolve-target's own worktree_path via a
-  // repo-facts call before reusing it, rather than trusting it unconditionally.
-  // Default: reusable ONLY when the queried path (read out of the prompt,
-  // which names it verbatim) equals scenario.record_dir — the harness's own
-  // notion of "the established working copy". This reproduces every
-  // pre-BO-4000 scenario whose "resolve" reports record_dir (the dominant
-  // shape) unchanged, with no worktree-setup dispatch, while still letting a
-  // scenario that deliberately reports something ELSE (e.g. the work-store
-  // epic folder, BO-1900a-4's own observed defect shape) fall through to the
-  // "name a new location" path exactly as BO-4000's second scenario requires.
-  if (label === "worktree-facts-resolved") {
-    if (scenario.worktree_facts_resolved !== undefined) {
-      return { output: JSON.stringify(scenario.worktree_facts_resolved), exit_code: 0 };
-    }
-    const queried = (/facts "([^"]*)"/.exec(String(prompt)) || [])[1] || null;
-    const reusable = queried !== null && queried === scenario.record_dir;
-    return {
-      output: JSON.stringify({
-        exists: reusable, is_git_toplevel: reusable, is_linked_worktree: reusable,
-        is_main_checkout: false, same_repository: reusable, branch: reusable ? "harness-default" : null,
-      }),
-      exit_code: 0,
-    };
-  }
-
   // BO-100e-4: the dirty-state read; absent scenario.dirty = clean, null = unreadable.
   if (label === "worktree-dirty") {
     const spec = scenario.dirty;
@@ -816,26 +790,6 @@ async function agent(prompt, opts = {}) {
     if (typeof one === "string") return { output: one, exit_code: 0 };
     const clean = { readable: true, staged: [], unstaged: [], untracked: [] };
     return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
-  }
-
-  // BO-4000: the "name a new location" branch's own repo-facts checks. Every
-  // pre-existing scenario is indifferent to these (none asserts on them), so
-  // generic, always-succeeding defaults let the run proceed to the SAME
-  // "worktree-setup" dispatch it always reached — the one label every
-  // existing scenario already controls via scenario.worktree_agent.
-  if (label === "worktree-base") {
-    return { output: JSON.stringify({ main_checkout: "/fake/repo", worktree_base: "/fake/worktrees", layout: "dev" }), exit_code: 0 };
-  }
-  if (label === "worktree-facts-location") {
-    return { output: JSON.stringify({ exists: false }), exit_code: 0 };
-  }
-  if (label === "branch-standing") {
-    return { output: JSON.stringify({ exists: false, fetch_ok: true, behind: null, ahead: null }), exit_code: 0 };
-  }
-
-  if (label === "worktree-setup") {
-    if (scenario.worktree_agent !== undefined) return scenario.worktree_agent;
-    return { worktree_path: scenario.record_dir || "/fake/worktree", status: "reused" };
   }
 
   // BO-4300c-3: the ONE workspace step. A scenario scripts it with `workspace_ensure` (the reply served
@@ -1086,6 +1040,29 @@ async function agent(prompt, opts = {}) {
     return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
   }
 
+  // --- scratch item (BO-4400f-1) --------------------------------------------
+  // Label "scratch-item": the shell step that creates the run's labelled
+  // scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+  // ABSENT entry answers {item: null} (the workflow's fail-open path: no
+  // scratch note), so every pre-existing scenario is unchanged.
+  if (label === "scratch-item") {
+    return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
+  }
+
+  // --- remedy-declaration read (BO-3800b) -------------------------------------
+  // A label matching /remedy|declaration/ is the driver reading a check's
+  // remedy declaration (the shared GE-132a-1 loader) -- not a phase agent. It is
+  // answered from scenario.remedy_declarations[hook_id] (hook_id found in the
+  // prompt) and is NOT recorded as an engaged party. An ABSENT entry answers
+  // {status: "error"} so an unreadable declaration is a visible stop.
+  if (/remedy|declaration/i.test(label)) {
+    const table = scenario.remedy_declarations || {};
+    const hookId = Object.keys(table).find((h) => String(prompt).includes(h));
+    return hookId
+      ? Object.assign({ status: "ok" }, table[hookId])
+      : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
@@ -1105,6 +1082,9 @@ async function agent(prompt, opts = {}) {
     // whatever the agent template can key on has to be in here.
     prompt: typeof prompt === "string" ? prompt : String(prompt),
     opts_keys: Object.keys(opts || {}),
+    // BO-3800b/c: the machine-readable brief a refusal-originated engagement
+    // carries as an `opts.brief` field (null when the dispatch sent none).
+    opts_brief: opts && opts.brief !== undefined ? opts.brief : null,
     opts_ticket_path:
       opts && typeof opts.ticket_path === "string" ? opts.ticket_path : null,
   });
@@ -1170,6 +1150,9 @@ async function agent(prompt, opts = {}) {
   // Passed through only when the scenario sets it, so a handoff spec that omits
   // it reproduces the real defect shape: `status: handoff` with no target field.
   if (spec.handoff_target !== undefined) reply.handoff_target = spec.handoff_target;
+  // BO-3800a-2: the refusal's machine-readable remedy record, passed through
+  // verbatim only when the scenario sets it.
+  if (spec.remedy !== undefined) reply.remedy = spec.remedy;
   return reply;
 }
 

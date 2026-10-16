@@ -11,6 +11,15 @@ description: |
 model: opus
 name: product-owner
 tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/, docs/vision.md, docs/roadmap.json. Edit is required by S6b.
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: knowledge-query
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
+- skill_id: ac-tree-split
+  mode: conditional
+  condition: When an L0 or L1 exceeds its child limit, load ac-tree-split for split patterns A and C.
 portable: true
 requires_verification: true
 signoff: false
@@ -18,9 +27,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used:
-  - ac-tree-split  # Loaded when an L0 or L1 exceeds child limits; provides split patterns A and C.
-  - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
   needs strategic framing before BA decomposition. Never invoke directly

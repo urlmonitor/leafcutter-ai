@@ -110,9 +110,7 @@ function resolvePathOntoRoot(root, input) {
 }
 // BO-3900-PATH-HELPERS-END
 
-// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
-// ---------------------------------------------------------------------------
 
 function parseAgentJson(raw, ctx) {
   const stage = ctx.stage;
@@ -1149,24 +1147,37 @@ async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath)
  *
  * The workflow cannot append to a log file directly (everything is an agent
  * dispatch), so store-absent / skip events are recorded by dispatching a
- * status-checker to append one JSON line to debugging/logs/agent_telemetry.jsonl.
+ * status-checker to append one JSON line to the DECLARED operational telemetry
+ * stream. The stream is never composed here (AC INF-500d-4-iv): the dispatched
+ * command asks the deployed `sink_resolution.py --print-location telemetry`
+ * (INF-500d-4-iii) for it, repository-anchored through
+ * _buildRepoRootResolutionSnippet(), so the line lands in the enduring log
+ * root and not in the authoring worktree that is deleted afterwards. On a
+ * fresh install the log directory does not exist yet, so the command creates
+ * it (mkdir -p) -- but only when the enduring root holding it is live (the
+ * directory above the log root, or the project above `debugging`; the same
+ * rule as sink_resolution.enduring_root_exists), so a vanished project is
+ * never conjured back and the first event is not lost.
  * Best-effort: never throws, never blocks the pipeline. This is the "never
  * silent" guarantee for the store-absent self-skip.
  *
  * @param {string}      event                 - Short event key (e.g. "pt_phase_skipped_store_absent").
  * @param {object}      detail                - JSON-serialisable detail payload.
- * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @param {string|null} authoringWorktreePath - Unused: the stream is declared, never derived from the worktree.
  * @returns {Promise<void>}
  */
 async function emitPtTelemetry(event, detail, authoringWorktreePath) {
   log(`[plan-feature][PT] ${event}: ${JSON.stringify(detail)}`);
-  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
-  const logPath = root + "debugging/logs/agent_telemetry.jsonl";
   const line = JSON.stringify({ source: "plan-feature", phase: "product-truth", event, detail });
+  const target = ".leafcutter/scripts/knowledge/sink_resolution.py";
+  const cmd = _buildRepoRootResolutionSnippet(target) + "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "STREAM=$(python \"$SCRIPT\" --print-location telemetry) || exit 1; LOG_DIR=$(dirname \"$STREAM\"); HOLDER=$(dirname \"$LOG_DIR\"); " +
+    "[ \"$(basename \"$HOLDER\")\" != debugging ] || HOLDER=$(dirname \"$HOLDER\"); [ -d \"$HOLDER\" ] && mkdir -p \"$LOG_DIR\" || exit 1; " +
+    "printf '%s\\n' " + JSON.stringify(line) + " >> \"$STREAM\"";
   try {
     await agent(
-      `Append exactly one line to a telemetry log (create the directory if needed).\n` +
-      `Run: mkdir -p "${root}debugging/logs" && printf '%s\\n' ${JSON.stringify(line)} >> "${logPath}"\n` +
+      `Append exactly one line to the declared operational telemetry stream. Its path comes from the ` +
+      `location query sink_resolution.py --print-location telemetry; never compose a path yourself.\nRun: ${cmd}\n` +
       `This is an observability signal for the /plan-feature product-truth phase — event: ${event}.\n` +
       `Return JSON: { "exit_code": <number> }`,
       { agentType: "status-checker", label: "pt-telemetry" }
@@ -1504,13 +1515,11 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   }
 }
 
-// ---------------------------------------------------------------------------
 // §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
 // E2 workflow bodies are self-contained and cannot import local modules
 // (ES-module import is a SyntaxError inside the test-harness IIFE, and the
 // runtime has no module access), so the pause-resume helper is defined inline
 // here. The same helper is inlined in finalize-feature.js — keep them in sync.
-// ---------------------------------------------------------------------------
 
 /**
  * Validate a resume_answer's shape against its declared question type.
@@ -1947,10 +1956,8 @@ function isAgentRefusal(answer) {
   return false;
 }
 
-// ---------------------------------------------------------------------------
 // Repository-anchored support-script resolution
 // (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
-// ---------------------------------------------------------------------------
 // `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
 // relative name (".leafcutter") baked into the compiled template. A shell
 // command built with that placeholder is resolved by the DISPATCHING AGENT'S
@@ -2099,16 +2106,6 @@ function buildRepoAnchoredResolutionCommand(relPath) {
   );
 }
 
-// buildRepoAnchoredReadCommand(), _parseRegistryUnreadableDiagnostic(),
-// _describeRegistryInterpretationFailure(), and
-// _resolveWorkspaceSetupAgentEntryState() used to live here, supporting the
-// Pre-Stage-0 workspace-setup permission dispatch above. ACD-2100b-5 removed
-// that dispatch (the registry read now happens locally, in
-// scripts/worktree/check_workspace_setup_permission.py, invoked by the
-// plan-feature skill before this workflow runs — see that section's own
-// comment) and these four helpers had no other caller, so they were removed
-// with it rather than left as dead code.
-
 /**
  * Build the single-line POSIX-sh command that resolves BOTH the
  * `pause_store.py` script's repository-anchored location AND the
@@ -2218,9 +2215,7 @@ async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
   return { ok: true, path: absPath };
 }
 
-// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
-// ---------------------------------------------------------------------------
 
 phase('Stage 0')
 
@@ -2240,9 +2235,7 @@ if (!request) {
   };
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1, BO-1500e-1).
-// -------------------------------------------------------------------------
 
 // BO-4300c-3 / BO-4300a-1-ia: this workflow works in ONE authoring workspace -- the workspace maker's answer,
 // handed in as args.workspace or obtained by exactly ONE verbatim dispatch of the maker command (further down).
@@ -2401,10 +2394,18 @@ const workingLocationNote = `Working location (the maker's workspace): ${authori
   "Do all work and write every file inside that folder only.\n";
 const acStoreDir = (typeof authoringWorkspace.answer.ac_store_path === "string" && authoringWorkspace.answer.ac_store_path) || "docs/acceptance-criteria";
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
-// -------------------------------------------------------------------------
-const orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+// ACD-2100c-3-iii: on resume with candidates, the run's own drafts (pause record context.acs) are not orphans.
+let orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+if (orphans.length > 0 && args.resume_answer && args.resume_answer.gate_id !== "resolve-orphans-choice") {
+  const _ownRec = await readPauseRecordWithRetry(args.run_id || "default-run", "orphan-scan-pause-record", "Read the durable pause record for this run (READ-ONLY — do not act on it or clear it).");
+  if (_ownRec === null) {
+    return { status: "pause_record_unreadable", run_id: args.run_id || "default-run", message: "The saved pause record could not be read, so your answer was not applied. Re-send the same answer to retry." };
+  }
+  const _ownAcs = (_ownRec.exists === true && _ownRec.stale !== true && _ownRec.record && _ownRec.record.context && _ownRec.record.context.acs) || [];
+  const _ownAcIds = (Array.isArray(_ownAcs) ? _ownAcs : []).map((a) => (a && typeof a === "object") ? (a.id || a.ac_id) : a);
+  orphans = orphans.filter((o) => !_ownAcIds.includes(o.acId));
+}
 if (orphans.length > 0) {
   const orphanAcIds = orphans.map((o) => o.acId).sort();
   const orphanN = orphans.length;
@@ -2464,14 +2465,10 @@ if (orphans.length > 0) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Committed-Stage Detection
-// -------------------------------------------------------------------------
 const committedStageKeys = await scanCommittedStages(authoringWorktreePath);
 
-// -------------------------------------------------------------------------
 // Stage 0 — ac-triage: duplicate check + route classification
-// -------------------------------------------------------------------------
 const triageResult = await agent(
   workingLocationNote +
   "Triage the user's request against the AC store. " +
@@ -2497,9 +2494,7 @@ try {
 
 const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage;
 
-// -------------------------------------------------------------------------
 // Handle "covered" route: show existing ACs + prompt user
-// -------------------------------------------------------------------------
 if (route === "covered" && !force) {
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
   const _covGateResult = await resolveGate(
@@ -2566,15 +2561,12 @@ if (route === "covered" && !force) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Product-Truth (PT) Phase — ALWAYS-ON; runs between triage and the AC pipeline.
-//
 // Dispatches pt-classifier, derives the run-set from the OUTCOME (never the
 // `dispatch` array), self-skips (non-silent) when the store is absent, then
 // drafts mock-data → mockup → flow (filtered) each behind a user gate, committing
 // each approved stage surgically. `outcome:"none"` and unparseable classifier
 // output fall straight through to the AC pipeline.
-// -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
 // KI-ACD-007 / BO-1500a-5-i: authoringWorktreePath is guaranteed non-null past the worktree-setup gate above (ACD-2400.yaml amended_by); always anchor via resolvePathOntoRoot(), mirroring acStoreDir's own unconditional treatment above.
@@ -2775,9 +2767,7 @@ if (ptRunSet.skip) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Build the agent dispatch sequence based on effective route
-// -------------------------------------------------------------------------
 const effectiveRoute = triage.route;
 
 // flow_backlinks reported by the business-analyst (for the reconciliation step).
@@ -2812,9 +2802,7 @@ if (effectiveRoute === "strategic") {
   ];
 }
 
-// -------------------------------------------------------------------------
 // Stage 1–N — sequential authoring pipeline with gates
-// -------------------------------------------------------------------------
 
 phase('Authoring Pipeline')
 

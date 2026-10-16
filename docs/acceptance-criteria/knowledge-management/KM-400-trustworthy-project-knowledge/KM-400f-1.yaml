@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: in_progress
 parent: KM-400f
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
@@ -81,9 +81,47 @@ amended_by:
     parent, depends_on, the delivers_to contract's references, the covers tags and the
     approval fields were touched. readiness moved to approved and priority to high at
     the user's approval gate."
+  - "2026-10-12: business-analyst added six L3 children — KM-400f-1-i through
+    KM-400f-1-vi — recorded in covered_by. This AC's criteria, test_spec,
+    test_rationale, must_catch, readiness, priority and work_status are UNCHANGED; only
+    covered_by and this note were touched. The children exist because this AC's declared
+    bound and evaluator are correct and aimed at the wrong population: the read behind
+    the evaluation admits only generations whose publication reached the completed state,
+    and measured on the live hosted store on 2026-10-12 all 12 generation records recorded
+    a FAILED publication and none a completed one, so the evaluation correctly reported
+    zero generations and zero reclaimable while 123,810 reclaimable nodes sat in the
+    store. The children fix the population (i), state the age basis for a generation that
+    was never retired and so carries no retirement time (ii), make the active-generation
+    protection independent of publication outcome because the live store's active pointer
+    references an incompletely published generation (iii), separate
+    reclaimable-because-failed from reclaimable-because-outside-the-bound (iv), reconcile
+    entity nodes against generation records and report the unaccounted count — zero and
+    hypothetical today (v), and require an unassessable store to be reported as such
+    rather than as nothing to reclaim (vi). They were authored as L3 children rather than
+    as new L2 siblings because KM-400f held 4 of 5 L2 slots and because each refines this
+    AC's evaluator rather than standing alone; the L2 level carries no child cap, so the
+    L1's last free slot is preserved. Every child's test_rationale records that this AC's
+    own 32-generation fixture of completed and retired generations is the fixture bias
+    that hid the defect, and requires fixtures reproducing the real observed shape."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- KM-400f-1-i
+- KM-400f-1-ii
+- KM-400f-1-iii
+- KM-400f-1-iv
+- KM-400f-1-v
+- KM-400f-1-vi
+- tests/knowledge/test_km_400f_1.py::test_retention_policy_reports_declared_bound_and_exact_reclaimable_set
+- tests/knowledge/test_km_400f_1.py::test_undeclared_retention_bound_refuses_instead_of_defaulting
+- tests/knowledge/test_km_400f_1.py::test_count_without_minimum_age_refuses_naming_the_missing_age
+- tests/knowledge/test_km_400f_1.py::test_zero_minimum_age_is_a_declared_value_not_unset
+- tests/knowledge/test_km_400f_1.py::test_km_400f_1_reachable_from_entry_point
+- tests/knowledge_live/test_km_400f_1.py::test_policy_evaluation_changes_no_generation
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-KM-400f-1.md
+- knowledge/config.py
+- knowledge/adapters/neo4j_projection.py
+- knowledge/cli_retention.py
 change_target: [code, config]
 risk_surface: contract_boundary
 notes: |

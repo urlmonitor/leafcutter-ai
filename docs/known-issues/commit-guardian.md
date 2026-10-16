@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 77** (2 blocker, 35 high, 40 low) · **Resolved: 17**
+**Open: 79** (2 blocker, 35 high, 42 low) · **Resolved: 18**
 
 ## Open
 
@@ -157,6 +157,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260925-frontmatter-guard-truncates-at-in-value-dashes — ticket_frontmatter_guard (and check-doc-frontmatter) end the frontmatter at the first triple dash anywhere, including inside a value | [open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md](commit-guardian/open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md) |
 | `low` | KI-CG-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts — `check-output-drift` now lets a registry entry excuse content drift on a RECORDED output, contradicting the registry's own charter, and counts that output in both `verified` and `uncomparable`; the counting fix needs an ADR | [open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md](commit-guardian/open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md) |
 | `low` | KI-CG-20261008-build-drift-doc-claims-staged-file-trigger — `docs/build-drift-hook.md` says both drift gates fire on a staged file, but both are `always_run` and never read the staged list | [open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md](commit-guardian/open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md) |
+| `low` | KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — `check-folder-density` (GE-120h-3) caps every folder at 15 files with no exemption for `docs/acceptance-criteria/`, while the AC store keeps each L0 tree flat in one folder (BO-4300 holds 68, BO-4400 49), so every BA-stage commit of a normal-sized tree is refused; graded medium | [open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md](commit-guardian/open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md) |
+| `low` | KI-CG-20261012-file-size-repayment-counts-modified-lines-as-added — `check-file-size`'s GE-127f repayment counts every rewritten line as added, so a one-line edit to an oversized file forces a far larger restructure and merging two lines into one never pays for itself; graded medium | [open-low-ki-cg-20261012-file-size-repayment-counts-modified-lines-as-added.md](commit-guardian/open-low-ki-cg-20261012-file-size-repayment-counts-modified-lines-as-added.md) |
 
 ## Resolved
 
@@ -178,6 +180,6 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260908-file-size-refusal-advises-a-dead-command — the only remediation the live file-size gate offers points at a slash command whose own first step runs a script that does not exist | [resolved-low-ki-cg-20260908-file-size-refusal-advises-a-dead-command.md](commit-guardian/resolved/resolved-low-ki-cg-20260908-file-size-refusal-advises-a-dead-command.md) |
 | `low` | KI-CG-20260914-doc-length-blocks-registers — RETRACTED: "check-doc-length tests absolute size and refuses any register edit" — tested and disproved; it ratchets on growth | [resolved-low-ki-cg-20260914-doc-length-blocks-registers.md](commit-guardian/resolved/resolved-low-ki-cg-20260914-doc-length-blocks-registers.md) |
 | `low` | KI-CG-20261007-file-size-refusal-understates-the-shrink-obligation — the grown-file refusal tells the author that removing as many lines as they add is enough, while the gate enforces twice that; the correct `Required length:` figure sits two lines above the advice that contradicts it | [resolved-low-ki-cg-20261007-file-size-refusal-understates-the-shrink-obligation.md](commit-guardian/resolved/resolved-low-ki-cg-20261007-file-size-refusal-understates-the-shrink-obligation.md) |
-| `high` | KI-CG-20260908-ratchet-reads-pre-merge-head — `check-file-size`'s ratchet resolves a file's previous length from `HEAD`, which during a merge is the branch's pre-merge tip, so a file long-standing on `origin/main` but absent from the branch is judged against the absolute limit and can refuse a merge for content the merge did not author | [resolved-high-ki-cg-20260908-ratchet-reads-pre-merge-head.md](commit-guardian/resolved/resolved-high-ki-cg-20260908-ratchet-reads-pre-merge-head.md) |
 | `blocker` | KI-CG-021 — The whole-collection uniqueness pass is registered in no hook config and no CI workflow, and has never run — RESOLVED: PR #495 merged and `check_identifier_uniqueness.py` was registered in both `commit_guardian.json` and `.pre-commit-config.yaml` by GE-122d-6 | [resolved-blocker-ki-cg-021.md](commit-guardian/resolved/resolved-blocker-ki-cg-021.md) |
 | `high` | KI-CG-20260928-check-agent-registry-never-runs-in-this-repo — the commit-time agent-registry check looks for a `leafcutter/` folder this repository does not have and passes having checked nothing; fixed by GE-113c-1-vi | [resolved-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md](commit-guardian/resolved/resolved-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md) |
+| `high` | KI-CG-20261010-folder-density-refuses-merges-of-main — `check-folder-density` took its before-count from HEAD alone, so a merge of `origin/main` was refused for every folder main itself took over the limit — RESOLVED 2026-10-12 (`a104d934c`, PR #1143): BEFORE is now the per-folder maximum over HEAD and every MERGE_HEAD parent, via `_density_parents.py` | [resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md](commit-guardian/resolved/resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md) |

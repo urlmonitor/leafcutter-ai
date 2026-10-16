@@ -1,0 +1,129 @@
+id: BP-1500h-1
+title: "A file-location setting left empty is treated as 'not configured' by every part of the build, and said once"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch consumer project whose settings file sets a file-location
+    setting to the empty string -- for example `changelog_categories_path: ""`
+    -- and every other setting to a working value,
+  When the build installs the package into that project,
+  Then the build passes,
+    And no line of its output reports an attempt to open the project folder as a
+      file (no "Is a directory", no "could not read <project folder>"),
+    And the output says, exactly once for that setting, that it is not
+      configured, naming the setting,
+    And every step of the build that reads that setting -- the step that checks
+      configuration scaffolds for staleness, the step that installs
+      configuration scaffolds, and the referential-integrity check -- treats the
+      feature as off: none of them reads, writes or checks a file for that
+      setting, and no scaffold for it is installed, not even at the shipped
+      default location,
+    And, by contrast, when the setting is absent altogether those same steps
+      use the shipped default location for it -- the scaffold is installed
+      there and the steps that read it read it -- and no "not configured" line
+      is printed for it,
+    And the same holds for every file-location setting the build reads, not only
+      the example.
+depends_on:
+  - BP-1500h
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml
+    relationship: related
+    status: exists
+    relevance: "Parent promise: the build's account of its work is complete and true."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build whose config readers this record unifies."
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: "The settings reference that names the file-location keys."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "ONE HELPER, NEW MODULE scripts/config_paths.py (user decisions 2 and 11): resolves a file-location setting to one of off (value present and empty/whitespace-only -- the feature is not configured) | default (key ABSENT from the project's settings -> the shipped default path from config/skills_config.default.json, then judged like a configured path) | usable (target_root/value is_file()) | broken (missing, or a directory -- BP-1500h-1-i). Every reader calls it; no reader tests the raw value, calls config.get(key, '<literal default>') or uses .exists()."
+  - "ABSENT vs EMPTY MUST SURVIVE CONFIG MERGING: if the build merges config/skills_config.default.json into the project config before readers see it, an absent key arrives already holding the default and an empty key arrives as ''. The helper must distinguish the two from the merged view (empty string = off; key holding the default = default). Verify where the merge happens (config loader) and that it never replaces an explicit '' with the default."
+  - "THE READERS, VERIFIED 2026-10-12: scripts/build_helpers.py ~751-806 (_register_scaffold_if_unmodified: tests output_path.exists() -> '' joins to target_root, exists, read_text raises IsADirectoryError -> the 'could not read <project> ... Is a directory' line); scripts/build_config_scaffolds.py ~142-185 (target_root/'' exists -> silently skipped); scripts/build_referential_integrity.py ~406-409 (already treats falsy as unset -- the precedent; keep its result, route it through the helper). build_helpers.py (1310 content lines) and build_referential_integrity.py (408) may not grow: their edits must be net-neutral or shorter, with logic in config_paths.py."
+  - "RESOLVED (user decision 11): \"\" = feature OFF / not configured (no read, no scaffold); ABSENT key = the shipped default path (config/skills_config.default.json:43 '.claude/changelog_categories.md' for the example). The self-host workspace's own .claude/skills_config.json:29 sets the key to \"\" and therefore turns the feature off there -- confirm that is intended when this ships."
+  - "THE KEY SET IS DATA, NOT A LIST PER READER: the set of file-location keys (file, not folder: changelog_categories_path, precommit_autofix_config_path, reachability_exemptions_path, testing_context.readme_path, ... ) is declared once (config_paths.py or derived from config/skills_config.schema.json if it can distinguish file from folder). build_referential_integrity._PATH_KEYS mixes folders (docs_root, changelog_folder, ticket dirs) with files; folder keys must not be judged by is_file()."
+  - "SAID ONCE: the 'not configured' line is emitted by the helper's single reporting point, de-duplicated per key per build (BP-1500h-1-ii), at informational severity."
+test_spec:
+  - name: test_empty_setting_turns_the_feature_off
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Scratch consumer with changelog_categories_path: \"\": build.py passes, no changelog_categories scaffold is written anywhere (in particular not at .claude/changelog_categories.md), and no step reads or checks a file for that setting."
+    must_catch:
+      - "the empty value is joined to the project root and read as a file"
+      - "the empty value is replaced by the shipped default during config merging"
+  - name: test_absent_setting_uses_the_shipped_default_path
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Same project with the key absent: the scaffold is installed at the default path from config/skills_config.default.json, the staleness step reads it, and no 'not configured' line is printed for the key."
+    must_catch:
+      - "absent is treated as off too"
+  - name: test_empty_setting_output_has_no_directory_read_and_one_not_configured_line
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "The empty-value build's output contains no 'Is a directory' and no 'could not read <project folder>', and exactly one 'not configured' line naming changelog_categories_path."
+  - name: test_every_file_location_setting_behaves_the_same_when_empty
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: "Parametrised over the declared file-location key set: each key set to \"\" writes and reads nothing for that key and prints one 'not configured' line; the same key absent uses its shipped default."
+test_rationale: >-
+  Empty and absent now mean different things, so the empty-is-off and
+  absent-is-default descriptors are a pair of real builds that differ in one
+  setting; the parametrised descriptor stops a fix scoped to the one key in
+  the 2026-10-12 log.
+delivers_to:
+  agent: python-coder
+  contract: "One shared interpretation of a file-location setting value: off (empty) | default (absent -> shipped default path) | usable | broken; every reader asks it rather than testing the raw value. Python: scripts/config_paths.resolve_file_setting(config: dict, key: str, target_root: Path) -> {'state': 'off' | 'usable' | 'broken', 'source': 'configured' | 'default' | None, 'path': Path | None, 'reason': None | 'missing' | 'is_directory'} -- the shipped default is read from config/skills_config.default.json, never passed as a literal by the caller."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: the clause 'every step that reads that setting ... behaves as it does when the setting is absent altogether: the same steps run, the same steps are skipped, and the same files are written' REPLACED by two clauses -- with the setting empty those steps treat the feature as off (no read, write or check of a file for it; no scaffold installed, not even at the shipped default location); with the setting absent they use the shipped default location (scaffold installed there and read) and print no 'not configured' line. Other clauses unchanged; title unchanged. WHY: user decision 11 (BrainCandy, 2026-10-12): \"\" = feature off / not configured; an ABSENT key = the shipped default path (config/skills_config.default.json). The old 'empty behaves exactly as absent' clause contradicted that."
+superseded_by: null
+covered_by:
+  - BP-1500h-1-i
+  - BP-1500h-1-ii
+implemented_by: []
+notes: |
+  USER DECISION 2 (BrainCandy, 2026-10-12), BINDING: empty = not configured,
+  decided in ONE place every reader uses. The design names the readers: the
+  config loader joins "" to the project root and tests existence rather than
+  file-ness (rebuild log line 669: "could not read /home/henzeh/projects/
+  leafcutter to check scaffold staleness: [Errno 21] Is a directory"); the
+  scaffold installer skips silently; the referential-integrity check already
+  treats "" as unset (the precedent).
+
+  "EQUAL TO ABSENT" IS THE TEST. Comparing the empty-value run against the
+  absent-key run step by step catches a reader that still special-cases "".
+  The last clause stops a fix scoped to the one setting in the log.
+
+  SUPERSEDED BY USER DECISION 11 (2026-10-12): empty and absent are no longer
+  equal -- empty is off, absent is the shipped default. The paired runs remain
+  the test, now asserting the two different outcomes (see amended_by).

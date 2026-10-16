@@ -235,6 +235,52 @@ amended_by:
     report means (this addition leaves that deliverable incomplete), and the three
     declared entries pinned in this record''s it_requirements will each need a numeric
     ceiling pinned at enrichment.'
+- reason: cards-entry-reaffirmed-after-its-strongest-evidence-disappeared
+  by: business-analyst
+  at: '2026-10-09'
+  note: 'ADDITIVE ONLY. criteria, readiness (approved), req_status, work_status,
+    priority, it_requirements, test_spec, test_rationale, declares_side_effect,
+    documentation_triggers and covered_by are ALL UNTOUCHED. This amendment adds one
+    notes block and this entry. The three declared entries pinned in it_requirements
+    are unchanged — including (a) docs/agents/cards/, which STAYS.
+
+
+    WHAT HAPPENED AND WHY IT TOUCHES THIS RECORD. On the same day this L1 was approved,
+    a separate change made agent cards STATIC: the trailing per-agent AC-assignment
+    section is removed from every card. Measured with that change: the section is 3,787
+    of 11,526 total card lines (33%), present in 17 of 64 cards; python-coder.card.md
+    goes from 2,809 lines to 162; the number of cards above the 300-line document limit
+    goes from 3 to ZERO. This record''s strongest piece of evidence — "3 stand above the
+    300-line limit, the longest at 2,809" — ceases to describe the tree, and the live
+    ratchet refusals this L1 was written to remove cease to exist for the cards.
+
+
+    THE DECISION, AND IT WAS A REAL CHOICE. The cards entry STAYS in the declared
+    set-aside list. The full argument is in the new notes block headed "DOES THE CARDS
+    ENTRY COME OUT?"; the short form is that this L1''s own criteria make membership a
+    property of THE KIND OF DOCUMENT, not of its current size, so removing the entry
+    because the cards now fit would make size the membership test and contradict the
+    record removing it. The second reason is structural: it is the only
+    DIRECTORY-shaped entry of the three, so it is the only one under which GE-127g-1''s
+    second arm — a newly generated document joining the set without anyone editing a
+    list — has any population at all.
+
+
+    GE-127g-5''s CEILING RATIONALE IS NOT LEFT DANGLING. Its 10,000-line figure for the
+    cards was derived from a +284-lines-per-regeneration growth rate that this change
+    eliminates. That derivation is recorded as SUPERSEDED on GE-127g-5 itself, with the
+    new measured basis and an explicit hand-back to the IT PO for re-derivation, per
+    that record''s own instruction that "the reasoning above is the deliverable; the
+    numbers are its output". The numeric value is not changed here — it_requirements is
+    the IT PO''s field and this author does not write it.
+
+
+    GE-127g-1 IS NOTED, NOT AMENDED IN SUBSTANCE. Its criteria state the cards
+    population''s measured figures; its own notes already label them "ILLUSTRATIVE OF A
+    SHAPE RATHER THAN FIXED FACTS" and its test_spec builds the over-limit document in a
+    throwaway fixture rather than taking one from the real directory, so it stays
+    buildable with no criteria change. A note was added there recording that its third
+    arm can no longer be exercised against the REAL cards directory.'
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
@@ -379,6 +425,89 @@ notes: |
   below fix what must be true of any such set: it is declared rather than built in, each
   entry carries a reason, a new document of an already-declared generated kind joins
   without an edit, the set is reported, and a hand-authored document is still judged.
+
+  ==========================================================================
+  DOES THE CARDS ENTRY COME OUT? DECIDED 2026-10-09: NO, IT STAYS. HERE IS WHY.
+  ==========================================================================
+  AGENT CARDS BECAME STATIC the same day this L1 was approved. The trailing per-agent
+  AC-assignment section — 3,787 of 11,526 total card lines, 33%, present in 17 of the
+  64 cards — is removed, taking python-coder.card.md from 2,809 lines to 162 and the
+  count of cards above the 300-line limit from 3 to ZERO. Every measurement in this
+  record that made the cards "the strongest example" is now a statement about the past.
+  The honest question is therefore whether the cards entry belongs in a list of
+  locations set aside from a standard they no longer breach, and the two answers are
+  both reasonable. This block is the decision and the reasoning, recorded here rather
+  than left to be rediscovered.
+
+  THE CASE FOR REMOVING IT, STATED AT ITS STRONGEST SO IT IS NOT STRAW. A declaration
+  is a claim about what needs an exemption. Three cards above the limit is why anyone
+  wrote one; zero cards above the limit means the exemption now protects nothing, and
+  an entry that protects nothing is an entry nobody re-examines. This L1's own second
+  design question answers "silent or reported?" with "reported", on the specific ground
+  that "a silent exclusion makes an over-broad exclusion unfindable" — and an exclusion
+  that is not needed at all is the limiting case of over-broad. Keeping it also costs
+  something real: the set-aside count GE-127g-2 requires will include 64 documents that
+  would pass the standard unaided, so the reported figure overstates how much of the
+  project is unjudged.
+
+  THE DECISION: IT STAYS. Three grounds, in order of weight.
+
+    (1) MEMBERSHIP IS BY KIND, AND REMOVING IT WOULD MAKE MEMBERSHIP BY SIZE. This
+        L1's criteria say that whether a document is held to the standard "is a stated,
+        reviewable property of THE KIND OF DOCUMENT IT IS", and GE-127g-4's second
+        clause requires each ground to be the earning PROPERTY and not the name of the
+        generator. The ground pinned for the cards in this record's it_requirements is
+        "Regenerated whole from templates/agents/ by the build's agent-card phase. No
+        human author decides the length of any document here and no hand edit survives
+        the next regeneration, so a length refusal names work nobody wrote and
+        prescribes a remedy nobody can apply." EVERY WORD OF THAT IS STILL TRUE. Not
+        one clause of it mentions size. Dropping the entry because the documents got
+        shorter would silently install a second, unstated membership test — current
+        length — alongside the stated one, which is precisely the drift this L1 exists
+        to end. The exemption is a statement about who can act on a refusal, and nobody
+        became able to act on one.
+
+    (2) IT IS THE ONLY DIRECTORY-SHAPED ENTRY, SO REMOVING IT EMPTIES GE-127g-1. The
+        other two declared entries, docs/roadmap.md and docs/INDEX.md, are single
+        FILES. GE-127g-1's own notes say "THE SECOND ARM IS THE WHOLE RECORD" — the arm
+        where a newly generated document joins the set with no edit to the declaration
+        — and this record's own design question one names the deciding property as
+        "whether adding an agent requires an edit". With the cards gone the declared
+        set is two filenames, which is the basename-list mechanism this L1 was written
+        to replace, wearing a path. The no-edit property would have no population, the
+        general mechanism would be a one-off for two files, and the next generated
+        directory to appear would start the discussion over — which is the "third
+        discussion" ground this record already rejected once.
+
+    (3) THE REGRESSION IT COVERS IS CHEAP AND THE REGRESSION IT WOULD INVITE IS NOT.
+        Keeping the entry costs a line of configuration and an inflated set-aside count.
+        Removing it means that the first future card to cross 300 lines — a long agent
+        template, a new generated section, a verbose contract table — reinstates the
+        unactionable refusal on whoever happens to stage the regeneration, and the fix
+        is a fresh round of this same argument. The asymmetry is not close.
+
+  WHAT THE DECISION COSTS, RECORDED SO IT IS NOT DISCOVERED AS A SURPRISE. The cards
+  are now a declared set-aside location sitting FAR below its ceiling — 162 lines
+  against a bound sized for a different growth story. Two consequences follow and
+  neither is fatal. First, GE-127g-2's set-aside count will be dominated by 64
+  documents that need no exemption, so a reader using that count as a measure of how
+  much of the project is unjudged will overstate it; that is a reporting nuance for
+  GE-127g-4's published text to handle, not a reason to shrink the declaration.
+  Second, and this is the one to watch, the cards stop being the location that
+  EXERCISES the mechanism. Every arm of GE-127g-1 and GE-127g-5 that was going to be
+  demonstrated against the real cards directory must now be demonstrated against a
+  constructed fixture. Both records already specify fixtures rather than the real tree,
+  so nothing breaks — but the mechanism loses its live worked example, and a mechanism
+  with no live instance is one nobody notices decaying.
+
+  AND THE PART THAT MUST NOT BE LEFT DANGLING: GE-127g-5's ceiling for the cards —
+  report_above_lines: 10000 — was derived from a measured +284-lines-per-regeneration
+  growth rate that this change removes entirely. Carrying the number forward with a
+  void derivation is exactly the "figure that looks measured, cites a tool, carries a
+  date, and is none of those things" failure BP-1500a records against itself. The
+  derivation is marked SUPERSEDED on GE-127g-5, with the new measured basis stated and
+  the numeric re-derivation handed to the IT PO under that record's own rule that the
+  reasoning is the deliverable and the numbers are its output.
 
   NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
   test_rationale and declares_side_effect. Those are the IT PO's.

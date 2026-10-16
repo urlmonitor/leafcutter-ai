@@ -1,0 +1,79 @@
+id: AR-400b-2-iv
+title: "An installer step that copies an ability into place is not an instruction to use it"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-installer" that grants nothing, whose
+    instructions offer the user an optional ability and, on acceptance, run:
+      "mkdir -p .claude/skills/webapp-testing"
+      "cp leafcutter/templates/skills/webapp-testing/SKILL.md
+          .claude/skills/webapp-testing/SKILL.md"
+      "Print: webapp-testing installed at .claude/skills/webapp-testing/SKILL.md"
+    And "If `.claude/skills/webapp-testing/SKILL.md` already exists, skip the
+      webapp-testing prompt."
+  When the build runs,
+  Then the build reports no finding for "probe-installer" about
+    "webapp-testing",
+    And adding the line "After installing, load the `webapp-testing` skill and
+      take a screenshot." produces an "ability exists but is not granted"
+      finding for that line only.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/onboard.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance: the onboard wizard's optional webapp-testing install step -- warned about on 2026-10-12 as if onboard were told to use the ability."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "File operations on an ability's location -- mkdir, cp/copy, a test of whether it exists, printing where it was installed -- are not instructions to use it. The verb set is a generalised rule over shell/file verbs, not an exemption keyed on onboard or webapp-testing."
+  - "The exemption is per line: an instruction line in the same specialist ('After installing, load the `webapp-testing` skill ...') still produces exactly one finding, for that line only."
+  - "check_skill_refs.py's current imperative markers include 'bash' and 'run'; an installer line naming .claude/skills/<id>/ in a shell command must not be classed imperative merely because it is a shell command."
+test_spec:
+  - name: test_installer_steps_produce_no_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-installer (grants nothing) carries the mkdir / cp / Print / 'If ... already exists, skip' lines for webapp-testing; the validator CLI passes."
+    must_catch:
+      - "a shell command line naming a skill path is treated as an instruction"
+  - name: test_added_load_line_yields_exactly_one_finding_on_that_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Adding 'After installing, load the `webapp-testing` skill and take a screenshot.' produces one 'not granted' finding, on that line only."
+test_rationale: >-
+  The real onboard instance is a shell sequence; the added load line proves the
+  exemption is per line rather than per specialist.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule, which classifies file-operation lines as non-instructions."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR ("an installer step"). File
+  operations on an ability's file (create its folder, copy it, test whether it
+  exists, print where it landed) move or inspect the ability; they do not
+  invoke it.

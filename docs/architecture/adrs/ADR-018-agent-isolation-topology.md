@@ -23,7 +23,7 @@ related_docs:
 related_code:
   - templates/skills/feature/SKILL.md
   - templates/agents/worktree-agent.md
-  - templates/scripts/setup_ticket_worktree.py
+  - templates/scripts/worktree.py
   - templates/scripts/commit_guardian/_resolve_root.py
   - scripts/build_phases_script_deploy.py
   - scripts/build_deploy_manifest_helpers.py

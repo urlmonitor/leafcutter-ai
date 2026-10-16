@@ -29,6 +29,8 @@ _DESCRIPTIONS = {
     "embedding_model": "Embedding model to ask; required once embeddings are enabled.",
     "embedding_dimensions": "Vector size the embedding model returns, to match the stored index.",
     "query_timeout": "Seconds a graph query may run before it is cut off.",
+    "retention_max_generations": "Most generations to retain; null means undeclared, and reclaiming is refused until both retention settings are declared.",
+    "retention_min_age_seconds": "Seconds a generation must have been retired before it may be reclaimed; null means undeclared, and 0 is a declared value.",
 }
 
 

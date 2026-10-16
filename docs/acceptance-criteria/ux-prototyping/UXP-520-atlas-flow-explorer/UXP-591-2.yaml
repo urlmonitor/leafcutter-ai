@@ -117,7 +117,8 @@ covered_by:
   - UXP-591-2-iii
   - UXP-591-2-iv
   - UXP-591-2-v
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-2.md
 notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v5, step 'openStepLink' (records
   FlowRoute route-ac-drawer-link and route-ac-drawer-branch-link). Branches 'stepNotFound',
