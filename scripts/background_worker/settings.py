@@ -4,6 +4,7 @@ from __future__ import annotations
 from urllib.parse import urlparse
 import re
 import math
+from pathlib import PurePosixPath
 
 
 def validate(settings: dict, *, executable: bool = False) -> None:
@@ -28,6 +29,16 @@ def validate(settings: dict, *, executable: bool = False) -> None:
         fields = {"executor", "provider", "model", "credential_ref"}
         if role == "implementation":
             fields.add("endpoint")
+            fields.update({"context_window", "reasoning_effort"})
+            window = value.get("context_window", 65536)
+            if type(window) is not int or window <= 0:
+                raise ValueError("Implementation context_window must be a positive integer")
+            effort = value.get("reasoning_effort")
+            if effort is not None and (
+                not isinstance(effort, str)
+                or effort not in {"none", "minimal", "low", "medium", "high", "xhigh"}
+            ):
+                raise ValueError("Implementation reasoning_effort is unsupported")
         if set(value) - fields:
             raise ValueError(
                 role + " contains unsupported fields; use credential_ref for authentication"
@@ -71,3 +82,21 @@ def validate(settings: dict, *, executable: bool = False) -> None:
     target = settings.get("target_ref", "origin/main")
     if not isinstance(target, str) or not target or target.startswith("-"):
         raise ValueError("target_ref must be a Git reference")
+    hooks = settings.get("hook_runtime", {})
+    if not isinstance(hooks, dict) or set(hooks) - {"read_paths", "pre_commit_cache"}:
+        raise ValueError("hook_runtime supports only read_paths and pre_commit_cache")
+    paths = hooks.get("read_paths", [])
+    if not isinstance(paths, list):
+        raise ValueError("hook_runtime.read_paths must be a list of absolute Linux directories")
+    if "pre_commit_cache" in hooks:
+        paths = [*paths, hooks["pre_commit_cache"]]
+    for path in paths:
+        if (
+            not isinstance(path, str)
+            or not PurePosixPath(path).is_absolute()
+            or str(PurePosixPath(path)) == "/"
+            or ".." in PurePosixPath(path).parts
+        ):
+            raise ValueError(
+                "Hook runtime dependencies must name specific absolute Linux directories"
+            )

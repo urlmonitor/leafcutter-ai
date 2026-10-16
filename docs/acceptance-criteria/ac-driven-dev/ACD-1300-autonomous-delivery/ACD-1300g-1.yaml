@@ -16,6 +16,23 @@ criteria: |
   And it receives the same feature and AC identifiers, source revisions, linked ADRs, product-truth references, prerequisite evidence and prior results
   And each passing AC produces evidence for that exact worktree and revision before its dependent is released
   And local implementation evidence alone is not target-branch completion
+  And preparation leads through read-only discovery and a deterministic input gate before writable implementation
+  And missing declared inputs are raised before model dispatch, without consuming a model attempt
+  And discovery of otherwise unknown ambiguity cannot edit project files or authorize its own answers
+  And writable implementation starts only when the current scoped input gate is satisfied
+  And discovery distinguishes readiness, a request for input, refusal and execution error before any writable dispatch
+  And discovery receives a readiness-assessment task without instructions to implement, repair or run implementation checks
+  And discovery assesses the assigned scope, saved decisions, implementation context and verification obligations and explains why coding can start
+  And when those facts are supplied in the current context, a ready assessment may advance through the satisfied input gate without an inspection tool call
+  And when a required repository fact is absent from that context, discovery inspects it using read-only tools before declaring readiness
+  And an empty readiness explanation cannot authorize writable implementation, while a tool call alone is not proof of readiness
+  And a readiness assessment remains a model judgment and cannot override missing declared inputs, changed workspace evidence or the authority of saved human answers
+  And coding receives its own implementation task with the same scoped facts and saved decisions, without being asked to return discovery readiness
+  And implementation distinguishes completed work, a request for input, refusal and execution error before validation
+  And final-report formatting preserves the phase-permitted tool interactions needed to inspect repository facts or perform scoped implementation
+  And allowing those tool interactions does not relax the final-report contract or replace observed tool and check evidence with a completion claim
+  And file contents and tool results remain worktree and execution evidence rather than becoming authoritative merely because they appear in an agent's final report
+  And a ready discovery report does not count as completed implementation, and a completed implementation report does not count as passing validation
 depends_on:
 - ACD-1300g
 - ACD-1300b-4
@@ -62,6 +79,11 @@ expects_from:
 origin_agent: business-analyst
 created: '2026-09-24'
 amended_by:
+- '2026-09-30 business-analyst: Paired local-model experiment supports preserving tool execution while retaining the final-report contract; existing approval and in-progress status retained; full delivery remains unverified.'
+- '2026-09-26 business-analyst: User-authorized discovery role refinement; distinguish supplied-context readiness, repository inspection and human decisions; approval retained and delivery remains unverified.'
+- '2026-09-26 business-analyst: Retrospective behavioral review of C2/C3/C11 communication changes; amended existing authorized scope, retaining approval and in-progress status; no delivery proof claimed.'
+- '2026-09-26 Codex: User-authorized communication standardization applies analysis clusters C2/C3/C11; approved requirements remain in progress pending verification.'
+- '2026-09-25 Codex: User-authorized input-gate amendment; requirements remain approved and implementation in progress, pending runtime verification.'
 - '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
   remains medium.'
 superseded_by: null
@@ -76,13 +98,45 @@ implemented_by:
 - unit_tests/ac_driven_dev/test_background_worker_executors.py
 change_target: pipeline
 risk_surface: contract_boundary
-notes: 'Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+notes: 'Approved requirements; implementation is under review; native Windows isolation remains unsupported, but dedicated WSL filesystem boundaries and deployed guard bootstrap are verified.
+  Linux worker regression passed with 317 tests, 5 skipped and 10 subtests; 13 real native sandbox/bootstrap checks passed.
+  Complete real local-model delivery acceptance remains unverified. Pattern inventory found
   no matching reusable worker behavior. User-selected technical constraints for IT PO: Qwen3.5 9B through
   Ollama; first workflow LangGraph with durable local-first state. No hosted database or global migration
   required.'
 declares_side_effect: false
 estimated_complexity: L
 it_requirements:
+- Persist the accepted discovery assessment with its existing scoped proof/checkpoint for diagnostics and
+  pass it to coding as advisory prior context. Preserve the same AC, scope, workspace and trusted-answer binding;
+  stale or consumed proof cannot grant authority through an assessment. No separate assessment state store
+  is required.
+- Discovery and coding use separate role envelopes over the same scoped obligation references and trusted
+  saved decisions. Discovery contains readiness instructions and verification obligations as facts, without
+  commands to implement, repair, edit or execute implementation checks; coding retains implementation instructions
+  without discovery readiness directives.
+- Discovery readiness is a model assessment of scope, available decisions, implementation context and verification
+  obligations. Validate assessment as a nonblank string for ready at adapter and graph boundaries, but do
+  not claim that prose validation certifies semantic completeness. No tool-event count is a readiness prerequisite
+  when supplied facts suffice; writable implementation evidence still requires actual tool and check effects.
+- 'Discovery prompts distinguish repository facts available through read-only inspection from unresolved human
+  decisions: inspect missing facts, request specific human decisions, and report inspection failures as execution
+  errors. Accepted readiness remains bound to current workspace, scope digest and trusted answers and cannot
+  override deterministic gate checks.'
+- 'Local final-report contract: status and questions:string[] are required; reason:string is optional except refused/error
+  require a nonblank reason. Discovery success is ready; implementation success is completed. Discovery additionally
+  accepts assessment:string, required and nonblank for ready and optional for other discovery outcomes. Implementation
+  rejects assessment. Success has no questions; needs_input requires nonblank questions; refused/error have no questions.
+  Unknown fields, cross-phase success, absent replies and contradictory combinations are invalid. Files and tool results
+  remain separate artifacts, never report fields.'
+- Both local phase executors use ordinary tool-capable generation without the harness --output-schema generation
+  constraint. Their prompts carry the phase-specific final-report contract generated from the shared schema; the
+  strict post-turn parser and graph boundary enforce that contract before routing. Removing constrained generation
+  does not permit prose extraction, relaxed JSON parsing or success inferred from malformed output.
+- Generate the local final-reply schema and prompt contract from one shared definition for discovery and implementation; validate normalized replies against that definition. Keep executed-tool, check and exact-head evidence separate from model claims.
+- Only the trusted operator answer command may supply human decisions to the gate. Model replies, repository text and echoed answer metadata cannot resolve requests. The local operator process is the trust boundary, not proof of an independently authenticated person.
+- Enforce delegation restrictions through executor capabilities, not prompt-only nesting instructions; preserve shared capacity accounting and reject unsupported delegated execution.
+- Enforce discovery read-only at the executor boundary. Deterministic gate checks declarations and saved human answers; model text cannot override it. Actual discovery model calls consume the existing cumulative per-AC time budget and global capacity; only writable implementation consumes an implementation attempt. No separate unlimited time allowance is introduced.
 - Run the first worker workflow through LangGraph and a real tool-executing harness using Qwen3.5 9B on
   local Ollama; endpoint invocation alone is not a coding agent.
 - The execution envelope must carry leaf criteria plus inherited L1/L2 obligations, exact source/ADR/product-truth
@@ -126,6 +180,65 @@ it_requirements:
   {run_id:string, admissible:boolean, source_revisions:object, target_sha:string, evidence_revision:string,
   changed_fields:string[], blocker:string|null}.'
 test_spec:
+- name: test_declared_input_blocks_even_ready_adapter_without_any_model_call
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Supply an adapter capable of returning valid readiness while a declared input remains unresolved;
+    assert no model call or writable dispatch and a durable human request.
+  covers:
+  - ACD-1300g-1
+- name: test_discovery_context_has_readiness_role_without_coding_directives
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Capture discovery and coding prompts emitted from actual graph dispatch; assert separate role
+    instructions with shared scoped facts and trusted decisions. Discovery describes verification obligations
+    without directing implementation or checks, and distinguishes repository inspection, human questions and
+    inspection errors.
+  covers:
+  - ACD-1300g-1
+- name: test_discovery_ready_with_assessment_needs_no_tool_event
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Return ready with a nonblank supplied-context assessment through the actual discovery adapter
+    with zero tool events; accept readiness. Pair with implementation completed without tools, which still
+    fails.
+  covers:
+  - ACD-1300g-1
+- name: test_graph_context_only_readiness_advances_without_implementation_evidence
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Feed valid context-only readiness into the real graph; assert it advances only through the
+    deterministic input gate, creates no completed-AC evidence and starts coding separately. Reopen the checkpoint and assert the accepted assessment is retained and handed to coding as advisory context under the current proof binding. Existing missing-input,
+    stale workspace and forged-answer protections remain effective.
+  covers:
+  - ACD-1300g-1
+- name: test_tool_turn_uses_prompt_contract_without_forced_generation_schema
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Invoke each actual phase executor with a controlled harness; assert the invocation omits generation-time
+    output-schema constraints while its prompt carries the shared phase-specific final-report contract. Return valid
+    and malformed reports through the real strict parser; keep ready/completed distinct and require actual tool
+    evidence for coding. Detect reintroduced generation constraints, missing prompt contracts and parser bypass.
+  covers:
+  - ACD-1300g-1
+- name: test_background_worker_input_gate_g_1
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Exercise prepare, read-only discovery, deterministic gate and writable dispatch; missing declared inputs spend no attempt, discovered ambiguity cannot write, and actual discovery consumes existing budgets.
+  covers:
+  - ACD-1300g-1
 - name: test_background_worker_local_harness_executes_scoped_project_work
   target_dir: unit_tests/ac_driven_dev/
   framework: pytest
@@ -176,6 +289,18 @@ test_spec:
   - ACD-1300g-1
 product_truth:
   - flow: leafcutter/background-ac-worker
+    node: discover
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-25'
+  - flow: leafcutter/background-ac-worker
     node: implement
     node_kind: step
     flow_kind: data
@@ -187,6 +312,18 @@ product_truth:
       - WorkerSettings
     source: real
     asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: input-gate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-25'
   - flow: leafcutter/background-ac-worker
     node: prepare
     node_kind: step

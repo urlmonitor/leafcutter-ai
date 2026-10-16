@@ -15,6 +15,7 @@ DEFAULT_SETTINGS = {
     },
     "reviewer": None,
     "checks": [],
+    "hook_runtime": {},
     "settings_revision": "initial",
 }
 SCHEMA = """

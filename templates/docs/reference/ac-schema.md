@@ -33,6 +33,7 @@ Each AC file is a single YAML document with the following fields.
 | `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, or `superseded_by`. |
 | `created_by` | string | **yes** | Path to the ticket (relative to repo root) that first introduced this criterion. |
 | `criteria` | string | **yes** | Multi-line Gherkin scenario body (`Given`/`When`/`Then`/`And`). |
+| `required_inputs` | list of objects | no | Human runtime decisions; see [declaration and answer contract](ac-required-inputs.md#required-runtime-inputs). |
 | `superseded_by` | string or null | no | AC ID of the replacement criterion. Must be set when `status` is `superseded_by`; null otherwise. |
 | `amended_by` | list of strings | no | Ticket paths that subsequently amended this criterion. Default: `[]`. |
 | `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) that verify this criterion. Default: `[]`. |
@@ -41,28 +42,10 @@ Each AC file is a single YAML document with the following fields.
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline to select mandatory guardrail agents. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs predating the computed-gates pipeline. |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure (ADR-017). Combined with `change_target` to select guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
 
-### Full example
+### AC record and runtime-input examples
 
-```yaml
-id: FIN-001
-title: "Merge main before running tests"
-component: finalize
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-FinalizeFeatureHardening/01_merge_main.md"
-criteria: |
-  Given a worktree branched from an older commit of main
-  When the finalize-feature workflow begins
-  Then it merges origin/main into the current branch before running any tests
-  And it aborts with a clear error message if the merge produces a conflict
-covered_by:
-  - "unit_tests/test_finalize.py::test_merge_main_before_tests"
-implemented_by:
-  - "scripts/finalize.py#merge_main"
-amended_by: []
-origin_agent: business-analyst
-```
-
----
+See [AC examples and required runtime inputs](ac-required-inputs.md) for the full
+record example and the optional declaration/answer contract.
 
 ## ID Format and Assignment
 

@@ -689,7 +689,7 @@
       "component": "ac-driven-dev",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Ac",
         "WorkerSettings",
@@ -707,10 +707,10 @@
       "path": "flows/leafcutter/background-ac-worker.flow.json",
       "impl_summary": {
         "done": 0,
-        "in_progress": 19,
+        "in_progress": 21,
         "not_started": 0,
-        "total": 19,
-        "asof": "2026-09-24"
+        "total": 21,
+        "asof": "2026-09-25"
       },
       "summary": "A local worker builds approved features, carries evidence into review, and hands draft PRs or blockers to the user."
     }
@@ -1082,10 +1082,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 19,
+        "in_progress": 21,
         "not_started": 0,
-        "total": 19,
-        "asof": "2026-09-24"
+        "total": 21,
+        "asof": "2026-09-25"
       },
       "expands": [],
       "parents": []
@@ -1582,6 +1582,21 @@
       },
       {
         "flow": "leafcutter/background-ac-worker",
+        "node": "input-gate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/background-ac-worker-data",
+        "entities": [
+          "Ac",
+          "BuildRun",
+          "WorkerSettings"
+        ],
+        "source": "real",
+        "asof": "2026-09-25"
+      },
+      {
+        "flow": "leafcutter/background-ac-worker",
         "node": "validation-blocked",
         "node_kind": "branch",
         "flow_kind": "data",
@@ -1775,6 +1790,21 @@
     "ACD-1300e-1": [
       {
         "flow": "leafcutter/background-ac-worker",
+        "node": "input-gate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/background-ac-worker-data",
+        "entities": [
+          "Ac",
+          "BuildRun",
+          "WorkerSettings"
+        ],
+        "source": "real",
+        "asof": "2026-09-25"
+      },
+      {
+        "flow": "leafcutter/background-ac-worker",
         "node": "resume",
         "node_kind": "branch",
         "flow_kind": "data",
@@ -1790,6 +1820,21 @@
       }
     ],
     "ACD-1300e-2": [
+      {
+        "flow": "leafcutter/background-ac-worker",
+        "node": "input-gate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/background-ac-worker-data",
+        "entities": [
+          "Ac",
+          "BuildRun",
+          "WorkerSettings"
+        ],
+        "source": "real",
+        "asof": "2026-09-25"
+      },
       {
         "flow": "leafcutter/background-ac-worker",
         "node": "publication-blocked",
@@ -1953,6 +1998,21 @@
     "ACD-1300g-1": [
       {
         "flow": "leafcutter/background-ac-worker",
+        "node": "discover",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/background-ac-worker-data",
+        "entities": [
+          "Ac",
+          "BuildRun",
+          "WorkerSettings"
+        ],
+        "source": "real",
+        "asof": "2026-09-25"
+      },
+      {
+        "flow": "leafcutter/background-ac-worker",
         "node": "implement",
         "node_kind": "step",
         "flow_kind": "data",
@@ -1965,6 +2025,21 @@
         ],
         "source": "real",
         "asof": "2026-09-24"
+      },
+      {
+        "flow": "leafcutter/background-ac-worker",
+        "node": "input-gate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": "leafcutter/background-ac-worker-data",
+        "entities": [
+          "Ac",
+          "BuildRun",
+          "WorkerSettings"
+        ],
+        "source": "real",
+        "asof": "2026-09-25"
       },
       {
         "flow": "leafcutter/background-ac-worker",

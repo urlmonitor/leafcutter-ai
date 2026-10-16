@@ -220,7 +220,7 @@ class Store:
         result["remaining_seconds"] = max(0, 3600 - result["elapsed_seconds"])
         return result
 
-    def begin_attempt(self, run_id: str, ac_id: str) -> dict | None:
+    def begin_attempt(self, run_id: str, ac_id: str, *, implementation: bool = True) -> dict | None:
         with self._transaction():
             run = self.get_run(run_id)
             if not self.get_settings()["enabled"] or run["state"] in {
@@ -239,8 +239,8 @@ class Store:
             ):
                 return None
             self.connection.execute(
-                "UPDATE budgets SET attempts=attempts+1,in_progress=1 WHERE run_id=? AND ac_id=?",
-                (run_id, ac_id),
+                "UPDATE budgets SET attempts=attempts+?,in_progress=1 WHERE run_id=? AND ac_id=?",
+                (int(implementation), run_id, ac_id),
             )
         return self.get_run(run_id)["budgets"][ac_id]
 
@@ -328,6 +328,10 @@ class Store:
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError("An explicit non-empty answer is required")
         with self._transaction():
+            from .input_gate import validate_answer
+
+            item = self.get_inbox(item_id)
+            validate_answer(self.get_run(item["run_id"]), item["details"], answer)
             cursor = self.connection.execute(
                 "UPDATE inbox SET status='resolved',answer=?,resolved_at=? WHERE id=? AND status='pending'",
                 (answer, time.time(), item_id),
@@ -335,58 +339,9 @@ class Store:
         return cursor.rowcount == 1
 
     def answer_request(self, run_id: str, item_id: str, answer: str) -> dict | None:
-        """Atomically bind an answer and the resumable checkpoint to its own run.
+        from .operator_answers import answer_request
 
-        A crash cannot leave an answered request blocking a run forever, and
-        simultaneous answers cannot overwrite another request's saved context.
-        """
-        if not isinstance(answer, str) or not answer.strip():
-            raise ValueError("An explicit non-empty answer is required")
-        with self._transaction():
-            row = self.connection.execute(
-                "SELECT * FROM inbox WHERE id=? AND run_id=? AND status='pending'",
-                (item_id, run_id),
-            ).fetchone()
-            if not row:
-                return None
-            run = self.get_run(run_id)
-            if run["state"] in {"delivered", "completed"}:
-                return None
-            self.connection.execute(
-                "UPDATE inbox SET status='resolved',answer=?,resolved_at=? WHERE id=?",
-                (answer, time.time(), item_id),
-            )
-            answers = {
-                item["id"]: item["answer"]
-                for item in self.connection.execute(
-                    "SELECT id,answer FROM inbox WHERE run_id=? AND status='resolved'", (run_id,)
-                )
-            }
-            pending = self.connection.execute(
-                "SELECT COUNT(*) FROM inbox WHERE run_id=? AND status='pending'", (run_id,)
-            ).fetchone()[0]
-            state = "blocked" if pending else "paused"
-            answered_requests = {
-                item["id"]: {
-                    "question": item["reason"],
-                    "details": self._json(item["details"]),
-                    "answer": item["answer"],
-                }
-                for item in self.connection.execute(
-                    "SELECT id,reason,details,answer FROM inbox WHERE run_id=? AND status='resolved'",
-                    (run_id,),
-                )
-            }
-            payload = {
-                **run["payload"],
-                "request_answers": answers,
-                "answered_requests": answered_requests,
-            }
-            self.connection.execute(
-                "UPDATE runs SET state=?,payload=?,updated_at=? WHERE id=?",
-                (state, json.dumps(payload), time.time(), run_id),
-            )
-        return {"run_id": run_id, "request_id": item_id, "state": state}
+        return answer_request(self, run_id, item_id, answer)
 
     def get_queue_status(self) -> dict:
         rows = self._read("SELECT value FROM metadata WHERE key='queue_status'")

@@ -5,7 +5,6 @@ Checkpoints record control flow; they never claim to roll back processes or Git.
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 import sqlite3
@@ -15,12 +14,13 @@ import uuid
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-from .executors import ExecutorError, LocalCodexExecutor, SDKReviewer, check_evidence
+from .executors import ExecutorError, LocalCodexExecutor, SDKReviewer
 from .git_ops import GitOps
 from .locks import exclusive
+from .recovery import linux_runtime_id
 
 LOGGER = logging.getLogger(__name__)
-PHASES = ("prepare", "implement", "validate", "review", "publish")
+PHASES = ("prepare", "discover", "input_gate", "implement", "validate", "review", "publish")
 
 
 class DrainRequested(RuntimeError):
@@ -64,36 +64,15 @@ class WorkerEngine:
         return graph
 
     @staticmethod
-    def implementation_context(plan, ac_id, payload):
-        return json.dumps(
-            {
-                "assigned_ac": ac_id,
-                "feature_plan": plan,
-                "review_findings": payload.get("findings", []),
-                "request_answers": payload.get("request_answers", {}),
-                "answered_requests": payload.get("answered_requests", {}),
-                "questions": payload.get("questions", []),
-                "previous_evidence": payload.get("evidence", {}),
-            },
-            ensure_ascii=False,
-        )
+    def implementation_context(plan, ac_id, payload, checks=None):
+        from .implementation_context import build_context
+
+        return build_context(plan, ac_id, payload, checks)
 
     def _scope_valid(self, run):
-        from .sources import load_records, load_reference_contents, target_completed
-        from .planning import plan_features
+        from .scope_validation import scope_valid
 
-        records = load_records(self.repo)
-        plans = plan_features(
-            records,
-            target_completed=target_completed(
-                self.repo, self.settings.get("target_ref", "origin/main")
-            ),
-            adr_contents=load_reference_contents(self.repo, records),
-        )
-        return any(
-            plan.feature_id == run["feature_id"] and plan.scope_digest == run["scope_digest"]
-            for plan in plans.ready
-        )
+        return scope_valid(self, run)
 
     def _save(self, run, phase, **payload):
         self.store.checkpoint(run["id"], "running", {"next": phase, **payload})
@@ -112,7 +91,7 @@ class WorkerEngine:
             return self._block(run, "Approved feature scope or target dependency proof changed")
         execution_settings = {
             key: self.store.get_settings().get(key)
-            for key in ("implementation", "reviewer", "checks", "target_ref")
+            for key in ("implementation", "reviewer", "checks", "target_ref", "hook_runtime")
         }
         saved_settings = run["payload"].get("execution_settings")
         if saved_settings is not None and saved_settings != execution_settings:
@@ -128,11 +107,15 @@ class WorkerEngine:
                 raise ExecutorError(
                     "Target advanced since worktree creation; validation and review require reconciliation"
                 )
-            return getattr(self, "_" + phase)(run)
+            from .workspace_checkpoint import execute_phase
+
+            return execute_phase(self, phase, run)
         except DrainRequested:
             return self._pause_capacity(run, phase)
         except (ExecutorError, OSError, ValueError) as exc:
-            LOGGER.warning("Worker phase %s blocked: %s", phase, type(exc).__name__)
+            from .status_views import record_phase_failure
+
+            record_phase_failure(self.store, run, phase, exc)
             return self._block(run, str(exc))
 
     def run(self, run_id):
@@ -155,6 +138,7 @@ class WorkerEngine:
                 try:
                     if self.production_git:
                         self.git._assert_hooks_safe(self.repo)
+                        self.git.publication_destination(self.repo)
                     if self.production_local:
                         self.local.preflight()
                     if self.production_reviewer:
@@ -176,15 +160,18 @@ class WorkerEngine:
             return self.store.get_run(run_id)
 
     def _prepare(self, run):
-        self.store.checkpoint(run["id"], "running", {"in_flight": "prepare", "next": "prepare"})
+        self.store.checkpoint(
+            run["id"], "running",
+            {"in_flight": "prepare", "next": "prepare", "process_runtime_id": linux_runtime_id()},
+        )
         workspace = self.git.prepare(run)
         execution_settings = {
             key: self.settings.get(key)
-            for key in ("implementation", "reviewer", "checks", "target_ref")
+            for key in ("implementation", "reviewer", "checks", "target_ref", "hook_runtime")
         }
         return self._save(
             run,
-            "implement",
+            "discover",
             **workspace,
             in_flight=None,
             evidence={},
@@ -200,23 +187,28 @@ class WorkerEngine:
         return {"run_id": run["id"], "next": "stop"}
 
     def _checks(self, workspace, *, timeout, heartbeat=None):
-        if not self.settings.get("checks"):
-            raise ExecutorError("Required project checks are not configured")
-        started = time.monotonic()
-        results = []
-        for argv in self.settings["checks"]:
-            if not self.store.get_settings().get("enabled"):
-                raise DrainRequested()
-            result = self.local.check(
-                workspace, argv, timeout=timeout - (time.monotonic() - started), heartbeat=heartbeat
-            )
-            results.append(check_evidence(argv, result))
-        return results
+        from .project_checks import run_checks
+
+        return run_checks(self, workspace, timeout=timeout, heartbeat=heartbeat)
+
+    def _discover(self, run):
+        from .discovery import discover
+
+        return discover(self, run)
+
+    def _input_gate(self, run):
+        from .input_gate import input_gate
+
+        return input_gate(self, run)
 
     def _implement(self, run):
         pending = run["payload"].get("pending", [])
         if not pending:
             return self._save(run, "validate")
+        from .input_gate import execution_context_payload, valid_gate
+
+        if not valid_gate(self, run):
+            return self._save(run, "discover", input_gate=None, discovery_proof=None)
         lease = self._lease(run, "implementation")
         if not lease:
             return self._pause_capacity(run, "implement")
@@ -227,7 +219,10 @@ class WorkerEngine:
             return self._block(
                 run, f"AC {ac_id} exhausted its attempt/time budget or has an uncertain attempt"
             )
-        self.store.checkpoint(run["id"], "running", {"in_flight": "implement", "next": "implement"})
+        self.store.checkpoint(
+            run["id"], "running",
+            {"in_flight": "implement", "next": "discover", "input_gate": None, "discovery_proof": None, "process_runtime_id": linux_runtime_id()},
+        )
         started = time.monotonic()
 
         def heartbeat():
@@ -237,32 +232,34 @@ class WorkerEngine:
             workspace = self.git.assert_workspace(run)
             outcome = self.local.implement(
                 workspace,
-                self.implementation_context(run["plan"], ac_id, run["payload"]),
+                self.implementation_context(run["plan"], ac_id, execution_context_payload(self, run, ac_id), self.settings["checks"]),
                 timeout=budget["remaining_seconds"],
                 heartbeat=heartbeat,
             )
-            if outcome and outcome.get("status") == "needs_input":
-                self.store.finish_attempt(
-                    run["id"], ac_id, time.monotonic() - started, success=False
-                )
-                self.store.release_lease(lease["lease_id"], self.owner)
-                self.store.checkpoint(
-                    run["id"], "running", {"in_flight": None, "questions": outcome["questions"]}
-                )
-                self.store.block_run(
-                    run["id"],
-                    "Implementation needs user input",
-                    {"ac_id": ac_id, "questions": outcome["questions"]},
-                )
-                return {"run_id": run["id"], "next": "stop"}
+            from .reply_contract import validate_reply
+
+            outcome = validate_reply(outcome, adapter=True)
+            if outcome["status"] == "needs_input":
+                from .input_gate import request_implementation_input
+
+                return request_implementation_input(self, run, ac_id, outcome["questions"], time.monotonic() - started, lease)
             checks = self._checks(
                 workspace,
                 timeout=budget["remaining_seconds"] - (time.monotonic() - started),
                 heartbeat=heartbeat,
             )
+            if isinstance(self.git, GitOps):
+                from .completion import complete_ac
+
+                changed = self.git.git(workspace, "diff", "--name-only", "-z", "HEAD", "--", ".").split("\0")
+                changed += self.git.git(workspace, "ls-files", "-z", "--others", "--exclude-standard").split("\0")
+                changed = [name for name in changed if name]
+                if complete_ac(workspace, run["plan"], ac_id, changed, completed_ac_ids=run["payload"].get("evidence", {})):
+                    checks = self._checks(workspace, timeout=budget["remaining_seconds"] - (time.monotonic() - started), heartbeat=heartbeat)
             if not self.store.get_settings().get("enabled"):
                 raise DrainRequested()
-            sha = self.git.commit(run, ac_id)
+            commit_options = {"timeout": budget["remaining_seconds"] - (time.monotonic() - started)} if isinstance(self.git, GitOps) else {}
+            sha = self.git.commit(run, ac_id, **commit_options)
             if time.monotonic() - started >= budget["remaining_seconds"]:
                 raise ExecutorError(
                     "AC cumulative execution budget expired before evidence could be accepted"
@@ -272,9 +269,15 @@ class WorkerEngine:
                 raise
             self.store.finish_attempt(run["id"], ac_id, time.monotonic() - started, success=False)
             self.store.release_lease(lease["lease_id"], self.owner)
+            if getattr(exc, "stop_run", False):
+                from .reply_failure import stop_reply
+
+                return stop_reply(self, run, exc, "implement")
+            if getattr(exc, "requires_reconciliation", False):
+                return self._block(run, str(exc))
             return self._save(
                 run,
-                "implement",
+                "discover",
                 in_flight=None,
                 last_failure=str(exc),
                 failed_check=getattr(exc, "evidence", None),
@@ -288,12 +291,15 @@ class WorkerEngine:
         self.store.release_lease(lease["lease_id"], self.owner)
         evidence = dict(run["payload"].get("evidence", {}))
         evidence[ac_id] = {"head_sha": sha, "checks": checks, "attempt": budget["attempts"]}
-        return self._save(run, "implement", in_flight=None, pending=pending[1:], evidence=evidence)
+        return self._save(run, "discover", in_flight=None, pending=pending[1:], evidence=evidence, questions=[], last_failure=None, failed_check=None, failed_reply=None)
 
     def _validate(self, run):
         workspace = self.git.assert_workspace(run)
         sha = self.git.head(workspace)
-        self.store.checkpoint(run["id"], "running", {"in_flight": "validate", "next": "validate"})
+        self.store.checkpoint(
+            run["id"], "running",
+            {"in_flight": "validate", "next": "validate", "process_runtime_id": linux_runtime_id()},
+        )
         try:
             checks = self._checks(workspace, timeout=1800)
         except (ExecutorError, DrainRequested) as exc:
@@ -322,7 +328,10 @@ class WorkerEngine:
         if not count:
             self.store.release_lease(lease["lease_id"], self.owner)
             return self._block(run, "Feature review budget exhausted")
-        self.store.checkpoint(run["id"], "running", {"in_flight": "review", "next": "review"})
+        self.store.checkpoint(
+            run["id"], "running",
+            {"in_flight": "review", "next": "review", "process_runtime_id": linux_runtime_id()},
+        )
         try:
             result = self.reviewer.review(
                 run["workspace"],
@@ -330,6 +339,9 @@ class WorkerEngine:
                 heartbeat=lambda: self.store.renew_lease(lease["lease_id"], self.owner),
             )
         except ExecutorError as exc:
+            from .status_views import _redact
+
+            self.store.checkpoint(run["id"], "running", {"failed_review": _redact(getattr(exc, "evidence", None))})
             if "Uncertain process termination" not in str(exc):
                 self.store.release_lease(lease["lease_id"], self.owner)
                 self.store.checkpoint(run["id"], "running", {"in_flight": None})
@@ -362,13 +374,25 @@ class WorkerEngine:
             raise ExecutorError("Review findings cannot be mapped to executable AC obligations")
         pending = [ac for ac in run["plan"]["execution_order"] if ac in affected]
         return self._save(
-            run, "implement", in_flight=None, pending=pending, findings=result["findings"]
+            run, "discover", in_flight=None, input_gate=None, discovery_proof=None, pending=pending, findings=result["findings"]
         )
 
     def _publish(self, run):
         if run["payload"].get("validated_sha") != run["payload"].get("reviewed_sha"):
             raise ExecutorError("Publication does not have matching validation and review evidence")
-        self.store.checkpoint(run["id"], "running", {"in_flight": "publish", "next": "publish"})
+        binding = {}
+        resolver = getattr(self.git, "publication_destination", None)
+        if resolver is not None:
+            destination = resolver(run["workspace"])
+            previous = run["payload"].get("publication_destination")
+            if previous is not None and previous != destination:
+                raise ExecutorError("Publication destination changed; explicit reconciliation required")
+            binding["publication_destination"] = destination
+        self.store.checkpoint(
+            run["id"], "running",
+            {"in_flight": "publish", "next": "publish", "process_runtime_id": linux_runtime_id(), **binding},
+        )
+        run = self.store.get_run(run["id"])
         url = self.git.publish(run, run["payload"]["reviewed_sha"])
         self.store.checkpoint(
             run["id"], "delivered", {"in_flight": None, "pr_url": url, "next": "stop"}

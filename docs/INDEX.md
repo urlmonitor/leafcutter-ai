@@ -121,6 +121,7 @@ task, then pull only those files.
 | ac traceability store | [docs\how-to\ac-traceability-store.md](docs\how-to\ac-traceability-store.md) | How-to guide for delivering approved ACs via the reviewed-PR path, and for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map. |
 | approval gate | [docs\how-to\approval-gate.md](docs\how-to\approval-gate.md) | Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO review-all path. |
 | authoring product truth artifacts | [docs\how-to\authoring-product-truth-artifacts.md](docs\how-to\authoring-product-truth-artifacts.md) | Step-by-step guide for authoring product-truth artifacts by hand, including the mandatory search-index.json then add-vs-create protocol that keeps exactly one canonical dataset per entity per component. |
+| background ac worker wsl | [docs\how-to\background-ac-worker-wsl.md](docs\how-to\background-ac-worker-wsl.md) | Install a dedicated Linux runtime and register the Windows worker launcher. |
 | background ac worker | [docs\how-to\background-ac-worker.md](docs\how-to\background-ac-worker.md) | Configure, supervise and recover the opt-in local background AC worker. |
 | build ac unified | [docs\how-to\build-ac-unified.md](docs\how-to\build-ac-unified.md) | Task-oriented guide: /build-ac auto-detects leaf vs goal mode — leaf ACs generate a single ticket, goal ACs generate a full EPIC folder. |
 | choose build path | [docs\how-to\choose-build-path.md](docs\how-to\choose-build-path.md) | Decide whether to invoke the fast-lane or heavy-pipeline build path for a ticket based on scope, attended mode, and defect cost. |
@@ -161,6 +162,7 @@ task, then pull only those files.
 | Name | Path | Description |
 |------|------|-------------|
 | ac id hierarchy | [docs\reference\ac-id-hierarchy.md](docs\reference\ac-id-hierarchy.md) | Lookup reference for the AC identifier format and full regex, the id-derived parent algorithm, and the direct-children scope rule that governs every covered_by list in the AC store. |
+| ac required inputs | [docs\reference\ac-required-inputs.md](docs\reference\ac-required-inputs.md) | An AC record example and the declared runtime-input schema, answer scope, and budget semantics. |
 | ac schema | [docs\reference\ac-schema.md](docs\reference\ac-schema.md) | Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time. |
 | agent teams constraints | [docs\reference\agent-teams-constraints.md](docs\reference\agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs\reference\agent-template-frontmatter.md](docs\reference\agent-template-frontmatter.md) | Overview of Reference: Agent Template Frontmatter Fields. |

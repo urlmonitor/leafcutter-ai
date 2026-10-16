@@ -18,6 +18,11 @@ from urllib.parse import urlparse
 
 
 
+from .local_model import write_catalog
+from .reply_contract import reply_instructions
+from .local_outcome import parse_outcome
+from .codex_home import isolated_codex_home
+
 from .execution_boundary import (
     ExecutorError, permission_overrides, local_environment, safe_output, check_evidence, run_process,
 )
@@ -61,8 +66,9 @@ class LocalCodexExecutor:
         self.endpoint = _local_endpoint(settings.get("endpoint", "http://127.0.0.1:11434"))
         self.executable = settings.get("executable", "codex")
         self.invoke = invoke
+        self.metadata = {}
 
-    def command(self, workspace, outcome_schema=None):
+    def command(self, workspace, model_options=(), *, readonly=False):
         return [
             self.executable,
             "exec",
@@ -78,8 +84,7 @@ class LocalCodexExecutor:
             str(Path(workspace).resolve()),
             "--json",
             "--ephemeral",
-            *[item for value in permission_overrides() for item in ("-c", value)],
-            *(["--output-schema", str(outcome_schema)] if outcome_schema else []),
+            *[item for value in (*permission_overrides(workspace=workspace, readonly=readonly), *model_options) for item in ("-c", value)],
             "-",
         ]
 
@@ -87,7 +92,7 @@ class LocalCodexExecutor:
         if not shutil.which(self.executable):
             raise ExecutorError("Codex CLI is not installed; local tool harness unavailable")
         result = self.invoke([self.executable, "exec", "--help"], cwd=Path.cwd(), timeout=20)
-        if "--oss" not in result.stdout or "--strict-config" not in result.stdout:
+        if any(flag not in result.stdout for flag in ("--oss", "--strict-config")):
             raise ExecutorError(
                 "Installed Codex CLI does not provide the required OSS sandbox interface"
             )
@@ -100,14 +105,22 @@ class LocalCodexExecutor:
 p=Path.cwd()
 (p/'inside').write_text('allowed')
 assert (p/'inside').read_text()=='allowed'
-for op in (lambda: (p.parent/'outside').read_text(), lambda: (p.parent/'escaped').write_text('forbidden')):
-    try: op()
-    except PermissionError: pass
-    else: raise RuntimeError('Native sandbox permitted outside access')
+try: (p.parent/'outside').read_text()
+except (PermissionError, FileNotFoundError): pass
+else: raise RuntimeError('Native sandbox permitted outside read')
+for name in ('outside', 'escaped'):
+    try: (p.parent/name).write_text('forbidden')
+    except (PermissionError, FileNotFoundError, OSError): pass
 """
             try:
                 self.check(workspace, [sys.executable, "-c", probe], timeout=30)
-            except ExecutorError as exc:
+                # Linux may allow writes to private namespace temp paths; verify
+                # from the coordinator that no real outside write escaped.
+                if (outer / "outside").read_text(encoding="utf-8") != "boundary-sentinel" or (outer / "escaped").exists():
+                    raise ExecutorError("Native sandbox allowed a write outside the owned worktree")
+                if (workspace / "inside").read_text(encoding="utf-8") != "allowed":
+                    raise ExecutorError("Native sandbox did not persist the owned worktree write")
+            except (ExecutorError, OSError) as exc:
                 raise ExecutorError(
                     "Native Codex sandbox cannot prove scoped read/write isolation on this host. "
                     "Run the worker in an isolated Linux/WSL environment with supported filesystem policies "
@@ -135,8 +148,18 @@ for op in (lambda: (p.parent/'outside').read_text(), lambda: (p.parent/'escaped'
             raise ExecutorError(
                 "Cannot verify installed local Ollama model and tool capability"
             ) from exc
+        try:
+            with tempfile.TemporaryDirectory(prefix="leafcutter-model-preflight-") as home:
+                write_catalog(
+                    home, self.model, metadata,
+                    context_window=self.settings.get("context_window", 65536),
+                    reasoning_effort=self.settings.get("reasoning_effort"),
+                )
+        except (OSError, ValueError) as exc:
+            raise ExecutorError("Invalid local model runtime configuration: " + str(exc)) from exc
+        self.metadata = metadata
 
-    def check(self, workspace, argv, *, timeout, heartbeat=None):
+    def check(self, workspace, argv, *, timeout, heartbeat=None, readonly=False):
         command = [
             self.executable,
             "sandbox",
@@ -144,11 +167,11 @@ for op in (lambda: (p.parent/'outside').read_text(), lambda: (p.parent/'escaped'
             "leafcutter-worker",
             "-C",
             str(workspace),
-            *[item for value in permission_overrides() for item in ("-c", value)],
+            *[item for value in permission_overrides(workspace=workspace, readonly=readonly) for item in ("-c", value)],
             "--",
             *argv,
         ]
-        with tempfile.TemporaryDirectory(prefix="leafcutter-check-") as home:
+        with isolated_codex_home(prefix="check-") as home:
             env = local_environment()
             env["CODEX_HOME"] = home
             return self.invoke(
@@ -156,8 +179,14 @@ for op in (lambda: (p.parent/'outside').read_text(), lambda: (p.parent/'escaped'
             )
 
     def implement(self, workspace, context, *, timeout, heartbeat=None):
+        return self._execute(workspace, context, timeout=timeout, heartbeat=heartbeat)
+
+    def discover(self, workspace, context, *, timeout, heartbeat=None):
+        return self._execute(workspace, context, timeout=timeout, heartbeat=heartbeat, discovery=True)
+
+    def _execute(self, workspace, context, *, timeout, heartbeat=None, discovery=False):
         workspace = Path(workspace).resolve(strict=True)
-        with tempfile.TemporaryDirectory(prefix="leafcutter-codex-") as home:
+        with isolated_codex_home(prefix="implementation-") as home:
             # A clean home prevents plugins, MCP servers, unsafe profiles and cloud auth leaking into local calls.
             env = local_environment()
             env.update(
@@ -173,80 +202,57 @@ for op in (lambda: (p.parent/'outside').read_text(), lambda: (p.parent/'escaped'
                     "Cannot establish isolated local harness configuration"
                 ) from exc
             prompt = (
-                "Implement the assigned AC and inherited obligations in this worktree. "
+                "Follow this work sequence:\n"
+                "1. Read assigned_ac and saved resolved_user_decisions. Honor genuinely unresolved explicit confirmation gates.\n"
+                "2. Use available file or shell tools to locate and read relevant code, tests and documentation in this worktree. "
+                "Do not ask the user to paste contents of files you can read locally; inspect those files with tools.\n"
+                "3. Implement the approved assigned behavior, preserve prior work, and run required_checks. "
+                "Investigate tool/check failures using available tools.\n"
+                "The coordinator also rejects unintended trailing whitespace in changed lines. "
+                "Inspect submitted edits for that quality gate without running Git; remove accidental trailing whitespace "
+                "while preserving meaningful whitespace in code, strings and fixtures.\n"
+                "4. Finish with exactly one valid JSON outcome object, without Markdown fences, explanation or trailing characters.\n\n"
+                "Implement ONLY assigned_ac and its inherited obligations in this worktree. "
+                "Other leaf ACs in the full feature plan are context, not authorization to implement them now. "
+                "Preserve work and passing tests from previously completed ACs; do not implement future leaf behavior early. "
+                "Do not run Git commands; the coordinator handles worktree metadata, diff, commits and publication. "
+                "Inspect and edit files directly. "
+                "Execute clear approved AC and reviewer requests without asking permission; "
+                "use judgment for routine code and test choices. Ask needs_input only for a genuinely missing "
+                "or contradictory requirement, or an explicit requirement to obtain user confirmation. "
+                "Read resolved_user_decisions first on resume: these human answers have already been provided. "
+                "Fulfill those confirmed choices instead of asking the same confirmation again. Apply each saved human answer only to its "
+                "recorded question and scope; do not repeat an already answered confirmation unless a new conflict remains. "
                 "Run required checks and maintain documentation. Do not delegate, commit, push, merge, "
                 "modify .git or access files outside the worktree. Dependency operations must remain project-local. "
-                "Return the structured outcome. If an answer is necessary, use needs_input with exact questions; do not guess.\n"
+                "Use the available tools to read and modify the actual files; a completion claim alone is not work. "
+                + reply_instructions()
                 + context
             )
-            schema = Path(home) / "outcome.schema.json"
-            schema.write_text(
-                json.dumps(
-                    {
-                        "type": "object",
-                        "additionalProperties": False,
-                        "required": ["status", "questions"],
-                        "properties": {
-                            "status": {"type": "string", "enum": ["completed", "needs_input"]},
-                            "questions": {"type": "array", "items": {"type": "string"}},
-                        },
-                    }
-                ),
-                encoding="utf-8",
+            if discovery:
+                from .discovery_executor import discovery_prompt
+                prompt = discovery_prompt(context)
+            catalog, effort, window = write_catalog(
+                home, self.model, self.metadata,
+                context_window=self.settings.get("context_window", 65536),
+                reasoning_effort=self.settings.get("reasoning_effort"),
             )
+            options = [
+                "model_catalog_json=" + json.dumps(str(catalog)),
+                "model_reasoning_effort=" + json.dumps(effort),
+                f"model_context_window={window}",
+                f"model_auto_compact_token_limit={window * 3 // 4}",
+                'web_search="disabled"',
+            ]
             result = self.invoke(
-                self.command(workspace, schema),
+                self.command(workspace, options, readonly=discovery),
                 cwd=workspace,
                 input_text=prompt,
                 timeout=timeout,
                 env=env,
                 heartbeat=heartbeat,
             )
-        events = []
-        for line in result.stdout.splitlines():
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-        if not any(event.get("type") == "turn.completed" for event in events):
-            raise ExecutorError("Local harness returned no completed turn; cannot infer success")
-        if any(event.get("type") in {"turn.failed", "error"} for event in events):
-            raise ExecutorError("Local harness reported an execution failure")
-        messages = [
-            event["item"].get("text", "")
-            for event in events
-            if event.get("type") == "item.completed"
-            and event.get("item", {}).get("type") == "agent_message"
-        ]
-        try:
-            outcome = json.loads(messages[-1])
-        except (IndexError, ValueError) as exc:
-            raise ExecutorError(
-                "Local harness did not provide a structured completion/needs_input outcome"
-            ) from exc
-        if (
-            not isinstance(outcome, dict)
-            or set(outcome) != {"status", "questions"}
-            or not isinstance(outcome["questions"], list)
-            or any(not isinstance(q, str) or not q.strip() for q in outcome["questions"])
-        ):
-            raise ExecutorError("Invalid structured local outcome")
-        if outcome["status"] == "needs_input" and outcome["questions"]:
-            return outcome
-        if outcome["status"] != "completed" or outcome["questions"]:
-            raise ExecutorError("Local completion contradicts outstanding questions")
-        if not any(
-            event.get("type") == "item.completed"
-            and (
-                event.get("item", {}).get("type") == "command_execution"
-                and event["item"].get("exit_code") == 0
-                or event.get("item", {}).get("type") == "file_change"
-                and event["item"].get("status") == "completed"
-            )
-            for event in events
-        ):
-            raise ExecutorError("Local harness produced no actual tool execution evidence")
-        return {"status": "completed", "questions": [], "event_count": len(events)}
+        return parse_outcome(result.stdout, discovery=discovery)
 
 
 def validate_review(result, expected_sha, ac_ids):
@@ -350,7 +356,7 @@ class SDKReviewer:
             env[
                 "CODEX_API_KEY" if self.settings["executor"] == "codex-sdk" else "ANTHROPIC_API_KEY"
             ] = value
-        with tempfile.TemporaryDirectory(prefix="leafcutter-review-") as home:
+        with isolated_codex_home(prefix="review-") as home:
             original = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "auth.json"
             if self.settings["executor"] == "codex-sdk":
                 if original.is_file():
@@ -388,3 +394,7 @@ class SDKReviewer:
 def preflight(settings):
     LocalCodexExecutor(settings["implementation"]).preflight()
     SDKReviewer(settings["reviewer"]).preflight()
+
+# DECISION HISTORY
+# ========================================
+# - 2026-09-30 00:00 [python-coder]: Keep tool turns unconstrained after paired local inference evidence; validate final reports separately. (#TICKETLESS reason=approved-ac-local-schema-transport)

@@ -37,6 +37,7 @@ _SCOPE_FIELDS = (
     "assigned_agent",
     "doc_links",
     "unanswered_questions",
+    "required_inputs",
     "required",
     "example_product",
     "covered_by",
@@ -252,9 +253,13 @@ def _candidate(
                         )
                     edges[leaf].update(prerequisites)
     execution_order = _topological(edges)
-    scoped = {i: {key: records[i].get(key) for key in _SCOPE_FIELDS} for i in sorted(obligations)}
+    from .input_gate import declarations
+
+    for leaf in remaining:
+        declarations({"plan": {"source_context": {"obligations": records}}}, leaf)
+    scoped = {i: {key: records[i].get(key) for key in _SCOPE_FIELDS if key != "required_inputs" or key in records[i]} for i in sorted(obligations)}
     dependency_context = {
-        i: {key: records[i].get(key) for key in _SCOPE_FIELDS} for i in sorted(external_ids)
+        i: {key: records[i].get(key) for key in _SCOPE_FIELDS if key != "required_inputs" or key in records[i]} for i in sorted(external_ids)
     }
     # Revisions are content based and deliberately exclude priority-only edits.
     revisions = {i: _digest(value) for i, value in scoped.items()}
@@ -274,6 +279,7 @@ def _candidate(
         "feature_id": feature,
         "ancestor_ids": lineages[feature][1:],
         "obligations": scoped,
+        "completion_baseline": {i: {key: records[i].get(key) for key in ("work_status", "implemented_by")} for i in sorted(obligations)},
         "ac_revisions": revisions,
         "adr_revisions": adr_revisions,
         "doc_refs": sorted(refs),

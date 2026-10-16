@@ -18,7 +18,7 @@ def exclusive(path):
     acquired = False
     try:
         handle.seek(0)
-        if not handle.read(1):
+        if os.fstat(handle.fileno()).st_size == 0:
             handle.write(b"0")
             handle.flush()
         handle.seek(0)

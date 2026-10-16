@@ -4,7 +4,7 @@ description: "Configure, supervise and recover the opt-in local background AC wo
 type: how-to
 status: active
 created: 2026-09-24
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 components:
   - ac_driven_dev
 related_code:
@@ -14,6 +14,7 @@ related_code:
 related_docs:
   - docs/architecture/components/ac-driven-dev.md
   - docs/reference/background-ac-worker.md
+  - docs/how-to/background-ac-worker-wsl.md
 ---
 
 # Run the local background AC worker
@@ -22,23 +23,34 @@ The background lane turns approved, dependency-ready feature groups into reviewe
 draft pull requests. It is disabled after installation. Enabling this lane does
 not change the ordinary build queue.
 
-The installed native Windows Codex runtime currently rejects the worker's
-filesystem profile that denies host-root access. Startup therefore fails closed
-on this environment; live local implementation has not been demonstrated here.
-Execution requires an isolated environment that supports the required profile.
-A smoke test in the existing Docker Desktop Linux runtime also failed because
-Bubblewrap could not create an unprivileged user namespace. A standalone Linux
-or WSL environment with those namespaces enabled remains unverified. Do not remove the
-profile or use `--no-start` as a way to bypass this execution requirement.
+A candidate is a whole canonical feature: all remaining executable leaves must
+be approved, have no unanswered questions, and be estimated S or M; inherited
+obligations must also be approved and question-free. Real prerequisites must be
+satisfied, with external prerequisites proven complete on the target branch.
+The worker selects the least urgent dependency-ready feature first, using the
+strongest urgency of its remaining work and ancestors, then canonical feature
+ID for ties. Each AC shares at most three attempts and sixty implementation
+minutes across initial work and repairs. Each feature gets at most two automatic
+reviews; exhaustion requires human attention, and restarting does not reset
+these limits.
 
-Repositories with active Git hooks also require manual delivery in this pilot.
-The worker refuses to run those hooks outside its execution boundary and does
-not skip them to force a commit through.
+The native Windows Codex runtime used during validation rejects the required
+filesystem policy. A dedicated WSL2 runtime now passes the real sandbox probe:
+writing inside the owned workspace succeeds, while host files outside the owned
+worktree remain inaccessible and unchanged. Linux Git-hook integration tests also pass, including attempts to write
+outside the worktree or change protected Git metadata. These checks establish
+the execution boundary; full live local-model delivery acceptance is still in
+progress. `on --no-start` does not bypass that boundary during execution.
 
 Install Leafcutter into your consumer repository with the usual build command.
 The installed entry point is `.leafcutter/scripts/background_worker_cli.py`.
 Use absolute paths for that script, the repository and configuration file; you
 can then invoke it from another working directory.
+
+## Windows runtime setup
+
+Use the [dedicated WSL runtime setup guide](background-ac-worker-wsl.md) to install
+Linux dependencies and register the Windows launcher before continuing below.
 
 ## Prepare execution
 
@@ -56,6 +68,31 @@ npm ci --prefix /absolute/project/.leafcutter/scripts/background_worker/reviewer
 
 The reviewer bridge requires Node.js 20 or later. Run the Python installation
 with the same interpreter that will start the worker.
+Run `npm ci` in the execution runtime after deployment, and again when an upgrade
+changes the deployed reviewer lockfile. Deployment copies the bridge manifest
+and lockfile; it does not install npm dependencies. Neither a model nor the
+background scheduler installs missing reviewer packages. A missing SDK is a
+prerequisite error to resolve before enabling work.
+The coordinator's virtual environment is granted read access inside the model
+and check sandbox, so install check tools in that environment. This grant covers
+runtime dependencies, not arbitrary home directories. Install repository hook
+dependencies before enabling work; hooks cannot download packages inside their
+network-disabled sandbox. For pre-commit hooks, prepare a dedicated cache in
+advance and configure `hook_runtime.read_paths` and `hook_runtime.pre_commit_cache`
+as shown in the [reference](../reference/background-ac-worker.md). For a project
+using pre-commit, install its hook environments before sandboxed execution:
+
+```bash
+/opt/leafcutter-worker/venv/bin/python -m pip install pre-commit
+worker_runtime=/opt/leafcutter-worker
+export PRE_COMMIT_HOME="$worker_runtime/pre-commit-cache"
+worker_python="$worker_runtime/venv/bin/python"
+"$worker_python" -m pre_commit install-hooks --config /absolute/project/.pre-commit-config.yaml
+```
+
+Grant only the dedicated virtualenv/cache and any additional runtime directories
+the hooks actually require. Hooks that reformat tracked files stop the run so
+required checks can be repeated.
 
 Create a JSON file with your chosen reviewer model and real project checks:
 
@@ -66,20 +103,37 @@ Create a JSON file with your chosen reviewer model and real project checks:
     "executor": "codex-cli",
     "provider": "ollama",
     "model": "qwen3.5:9b-q4_K_M",
-    "endpoint": "http://localhost:11434"
+    "endpoint": "http://localhost:11434",
+    "context_window": 65536
   },
   "reviewer": {
     "executor": "codex-sdk",
-    "model": "REPLACE_WITH_YOUR_REVIEWER_MODEL"
+    "provider": "openai",
+    "model": "gpt-6-sol"
   },
-  "checks": [["python", "-m", "pytest"]],
+  "checks": [["/opt/leafcutter-worker/venv/bin/python", "-m", "pytest"]],
   "target_ref": "origin/main",
   "poll_seconds": 5
 }
 ```
 
-The reviewer model placeholder is not a working model identifier. Select a model
-available to your authenticated reviewer. Checks are argument arrays, not shell
+The last two implementation fields are optional. The requested context defaults
+to 65,536 tokens and is capped by the model's advertised native context capacity.
+Configure the Ollama server with at least that resulting context; this setting
+does not resize the server. Reasoning follows the validated provider default
+unless explicitly overridden. Without an advertised default it uses `none`
+when supported. Preflight rejects unsupported advertised or explicit efforts. Omit `reasoning_effort` when switching models
+unless you have selected a supported value.
+
+Each implementation call receives a temporary model catalog built from the
+verified local model metadata, plus explicit context and reasoning settings.
+The worker removes it after the call. No manual shared `~/.codex/model.json`
+or shared Codex profile changes are needed; user profiles are not imported into
+the isolated implementation runtime. Local completion still requires actual
+tool evidence and a strictly parsed final outcome.
+
+The reviewer model is configurable per role; select one available to your
+authenticated reviewer. Checks are argument arrays, not shell
 command strings. Replace the example with the checks your project actually uses.
 Each check must exit successfully and report a positive inspected count. The
 worker recognizes a pytest passing summary. For other tools, use a project-owned
@@ -147,3 +201,37 @@ decision. Closing a proposal unmerged does not authorize an automatic new build.
 
 See [configuration and recovery](../reference/background-ac-worker.md) and the
 [state diagram](../architecture/diagrams/background-ac-worker-state.md).
+
+
+## Reconcile an interrupted process
+
+An ordinary `off` drains the current action and needs no reconciliation. If the
+worker crashes with an uncertain action, `answer` alone cannot establish that
+an orphan process has stopped. Preserve its database and worktree, disable the
+worker, and inspect the interruption before proceeding.
+
+Reconciliation requires proof that the Linux runtime which started the action
+has ended. It records the kernel boot identity, PID namespace and PID 1 start
+time before execution. Stop other work in the dedicated worker distribution,
+then use `wsl --terminate leafcutter-worker` and start it again. A new namespace
+and init start time prove the prior processes ended even when Docker keeps the
+shared WSL kernel running. This command never restarts the runtime for you.
+
+After restarting, inspect the preserved worktree and run:
+
+```text
+python /absolute/project/.leafcutter/scripts/background_worker_cli.py --repo /absolute/project reconcile RUN_ID --confirm-processes-stopped --note "Restarted worker VM and inspected the preserved worktree"
+```
+
+The command requires the worker to remain disabled and rejects active service
+or run locks. It records the operator note, runtime identities, current Git head,
+worktree status and released capacity. Same-runtime interruptions and legacy runs
+without a recorded runtime identity remain blocked; expiry alone is never proof
+that a process stopped.
+
+An uncertain implementation consumes its remaining AC time allowance and stays
+in the human inbox. No attempts or review calls are refunded. An interrupted
+validation or first review can resume through fresh validation after explicit
+`on`, provided no other inbox questions remain. Two consumed reviews require
+human handling. Reconciliation does not accept unknown changes as completed work,
+modify the worktree, or publish a proposal.

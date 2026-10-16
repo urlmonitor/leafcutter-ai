@@ -1,7 +1,9 @@
 """Durable, deduplicated native notification attempts independent of run outcomes."""
 
 from contextlib import contextmanager
+import base64
 import os
+import platform
 import sqlite3
 import subprocess
 import sys
@@ -34,18 +36,29 @@ def notification_status(db):
 
 
 def _send(message):
-    env = os.environ.copy()
-    env["LEAFCUTTER_NOTICE"] = message
-    if os.name == "nt":
+    allowed = {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "HOME", "USERPROFILE",
+               "DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR"}
+    env = {key: value for key, value in os.environ.items() if key.upper() in allowed}
+    wsl = sys.platform.startswith("linux") and "microsoft" in platform.release().lower()
+    if os.name == "nt" or wsl:
+        # The only variable script content is base64 data, never executable text.
+        payload = base64.b64encode(message.encode("utf-8")).decode("ascii")
         script = (
+            "$message=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('"
+            + payload + "')); "
             "Add-Type -AssemblyName System.Windows.Forms; "
             "$n=New-Object System.Windows.Forms.NotifyIcon; "
             "$n.Icon=[System.Drawing.SystemIcons]::Information; $n.Visible=$true; "
-            "$n.ShowBalloonTip(5000,'Leafcutter',$env:LEAFCUTTER_NOTICE,"
+            "$n.ShowBalloonTip(5000,'Leafcutter',$message,"
             "[System.Windows.Forms.ToolTipIcon]::Info); Start-Sleep -Seconds 6; $n.Dispose()"
         )
-        argv = ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script]
+        executable = ("/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" if wsl
+                      else r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
+        encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+        argv = [executable, "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+                "-EncodedCommand", encoded]
     elif sys.platform == "darwin":
+        env["LEAFCUTTER_NOTICE"] = message
         argv = [
             "osascript",
             "-e",

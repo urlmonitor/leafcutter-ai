@@ -3,7 +3,6 @@
 from __future__ import annotations
 import argparse
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -37,20 +36,9 @@ def repo_path(value):
 
 
 def start_background(repo, state_dir):
-    entry = Path(__file__).resolve().parents[1] / "background_worker_cli.py"
-    argv = [sys.executable, str(entry), "--repo", str(repo), "run"]
-    kwargs = {"cwd": str(repo), "stdin": subprocess.DEVNULL}
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
-    else:
-        kwargs["start_new_session"] = True
-    try:
-        with open(state_dir / "worker.log", "ab") as output:
-            child = subprocess.Popen(argv, stdout=output, stderr=output, **kwargs)
-    except OSError as exc:
-        LOGGER.warning("Cannot start background worker: %s", type(exc).__name__)
-        raise
-    return {"pid": child.pid, "log": str(state_dir / "worker.log")}
+    from .startup import start_background as launch
+
+    return launch(repo, state_dir)
 
 
 def parser():
@@ -75,6 +63,10 @@ def parser():
     c.add_argument("run_id")
     c.add_argument("--request-id", required=True)
     c.add_argument("--answer", required=True)
+    c = sub.add_parser("reconcile")
+    c.add_argument("run_id")
+    c.add_argument("--confirm-processes-stopped", action="store_true", required=True)
+    c.add_argument("--note", required=True)
     return p
 
 
@@ -100,6 +92,7 @@ def main(argv=None):
                 "checks",
                 "target_ref",
                 "poll_seconds",
+                "hook_runtime",
             }
             if set(requested) - allowed:
                 raise ValueError("Unknown configuration fields")
@@ -109,6 +102,8 @@ def main(argv=None):
             emit({"settings": store.get_settings()})
         elif args.command == "status":
             from .notifications import notification_status
+            from .startup import startup_status
+            from .status_views import capacity_status, attention_items
 
             emit(
                 {
@@ -116,10 +111,15 @@ def main(argv=None):
                     "runs": store.list_runs(),
                     "notifications": notification_status(db),
                     "queue": store.get_queue_status(),
+                    "startup": startup_status(state_dir),
+                    "capacity": capacity_status(store),
+                    "attention_items": attention_items(store),
                 }
             )
         elif args.command == "inbox":
-            emit({"items": store.list_inbox()})
+            from .status_views import attention_items
+
+            emit({"items": attention_items(store)})
         elif args.command == "off":
             store.update_settings(enabled=False)
             emit({"settings": store.get_settings(), "state": "draining"})
@@ -130,12 +130,16 @@ def main(argv=None):
                 from .executors import preflight
 
                 preflight(settings)
-            store.update_settings(enabled=True)
-            try:
-                process = {} if args.no_start else start_background(repo, state_dir)
-            except OSError:
-                store.update_settings(enabled=False)
-                raise
+            if args.no_start:
+                from .locks import exclusive
+
+                with exclusive(state_dir / "startup.lock") as admitted:
+                    if not admitted:
+                        raise OSError("Worker startup or recovery is in progress")
+                    store.update_settings(enabled=True)
+                process = {}
+            else:
+                process = start_background(repo, state_dir)
             emit({"settings": store.get_settings(), "worker": process})
         elif args.command == "answer":
             items = store.list_inbox()
@@ -150,6 +154,18 @@ def main(argv=None):
             if result is None:
                 raise ValueError("Request already resolved or unknown for this run")
             emit(result)
+        elif args.command == "reconcile":
+            from .recovery import reconcile
+
+            emit(
+                reconcile(
+                    repo,
+                    store,
+                    args.run_id,
+                    confirm_processes_stopped=args.confirm_processes_stopped,
+                    note=args.note,
+                )
+            )
         elif args.command == "run":
             from .service import run_service
 

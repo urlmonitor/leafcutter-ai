@@ -106,7 +106,27 @@ def test_local_harness_requires_and_parses_structured_outcome(tmp_path, outcome)
     ]
 
     def invoke(argv, **kwargs):
-        assert "--output-schema" in argv
+        assert "--output-schema" not in argv
+        prompt = kwargs["input_text"]
+        assert prompt.startswith("Follow this work sequence:\n1.")
+        assert "Do not ask the user to paste contents of files you can read locally" in prompt
+        assert "Honor genuinely unresolved explicit confirmation gates" in prompt
+        assert "without Markdown fences, explanation or trailing characters" in prompt
+        assert "coordinator also rejects unintended trailing whitespace" in prompt
+        assert "preserving meaningful whitespace in code, strings and fixtures" in prompt
+        assert prompt.index("2. Use available file or shell tools") < prompt.index("3. Implement")
+        assert "Implement ONLY assigned_ac and its inherited obligations" in prompt
+        assert "Other leaf ACs in the full feature plan are context, not authorization" in prompt
+        assert "Preserve work and passing tests from previously completed ACs" in prompt
+        assert "do not implement future leaf behavior early" in prompt
+        assert "Do not run Git commands; the coordinator handles worktree metadata" in prompt
+        assert "Execute clear approved AC and reviewer requests without asking permission" in prompt
+        assert "explicit requirement to obtain user confirmation" in prompt
+        assert "Read resolved_user_decisions first on resume" in prompt
+        assert "Use the available tools to read and modify the actual files" in prompt
+        assert '{"status":"completed","questions":[]}' in prompt
+        assert '{"status":"needs_input","questions":["the exact question"]}' in prompt
+        assert "Fill status and questions; use reason only for refused or error" in prompt
         return subprocess.CompletedProcess(
             argv, 0, "\n".join(json.dumps(event) for event in events), ""
         )
@@ -115,6 +135,44 @@ def test_local_harness_requires_and_parses_structured_outcome(tmp_path, outcome)
         tmp_path, "context", timeout=10
     )
     assert result["status"] == outcome["status"] and result["questions"] == outcome["questions"]
+
+
+@pytest.mark.parametrize("tool", [None, {"type": "command_execution", "exit_code": 1},
+                                  {"type": "file_change", "status": "failed"}])
+def test_json_completion_alone_or_failed_tools_never_prove_implementation(tmp_path, tool):
+    # covers: ACD-1300g-1-i
+    events = ([{"type": "item.completed", "item": tool}] if tool else []) + [
+        {"type": "item.completed", "item": {"type": "agent_message", "text":
+            '{"status":"completed","questions":[]}'}},
+        {"type": "turn.completed"},
+    ]
+    executor = LocalCodexExecutor({"model": "fixture"}, invoke=lambda argv, **kwargs:
+        subprocess.CompletedProcess(argv, 0, "\n".join(map(json.dumps, events)), ""))
+    with pytest.raises(ExecutorError, match="no actual tool execution"):
+        executor.implement(tmp_path, "context", timeout=10)
+
+
+@pytest.mark.parametrize("outcome", [
+    {"status": "completed"},
+    {"questions": []},
+    {"status": "complete", "questions": []},
+    {"status": "completed", "questions": ""},
+    {"status": "needs_input", "questions": [False]},
+    {"status": "completed", "questions": ["Unanswered"]},
+    {"status": "needs_input", "questions": []},
+    {"status": "needs_input", "questions": [" "]},
+])
+def test_unconstrained_decoding_still_requires_strict_final_outcome(tmp_path, outcome):
+    # covers: ACD-1300g-1-i, ACD-1300c-1
+    events = [
+        {"type": "item.completed", "item": {"type": "command_execution", "exit_code": 0}},
+        {"type": "item.completed", "item": {"type": "agent_message", "text": json.dumps(outcome)}},
+        {"type": "turn.completed"},
+    ]
+    executor = LocalCodexExecutor({"model": "fixture"}, invoke=lambda argv, **kwargs:
+        subprocess.CompletedProcess(argv, 0, "\n".join(map(json.dumps, events)), ""))
+    with pytest.raises(ExecutorError):
+        executor.implement(tmp_path, "context", timeout=10)
 
 
 def test_plain_question_text_is_not_a_completed_implementation(tmp_path):

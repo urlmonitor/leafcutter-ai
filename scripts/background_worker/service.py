@@ -25,9 +25,18 @@ def _advance(repo, db, run_id):
 
 
 def run_service(repo, db, *, once=False):
+    from .startup import service_lifecycle
+
+    with service_lifecycle(db.parent) as ready:
+        return _run_service(repo, db, once=once, ready=ready)
+
+
+def _run_service(repo, db, *, once, ready):
     with Store(db) as store, exclusive(db.parent / "service.lock") as owned:
         if not owned:
+            ready("already_running")
             return {"state": "already_running"}
+        ready("running")
         with ThreadPoolExecutor(max_workers=64) as pool:
             active = {}
             while True:
@@ -57,7 +66,11 @@ def run_service(repo, db, *, once=False):
                     records = load_records(repo)
                     references = load_reference_contents(repo, records)
                     if records:
-                        refresh_target(repo, settings.get("target_ref", "origin/main"))
+                        refresh_target(
+                            repo,
+                            settings.get("target_ref", "origin/main"),
+                            hook_runtime=settings.get("hook_runtime", {}),
+                        )
                     completed = (
                         target_completed(repo, settings.get("target_ref", "origin/main"))
                         if records

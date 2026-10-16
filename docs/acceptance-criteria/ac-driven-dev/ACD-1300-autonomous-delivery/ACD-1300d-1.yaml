@@ -16,6 +16,8 @@ criteria: |
   And each blocked item identifies the feature, affected AC, reason, required answer and supporting evidence
   And delivered items link the draft PR and its checked and reviewed revision
   And local checks, reviewed proposal and merged completion remain distinct outcomes
+  And agent communication blockers distinguish a request for input, an explicit refusal, a reported execution error and an unusable reply
+  And their reason identifies the interrupted phase and the next operator action without exposing credentials
 depends_on:
 - ACD-1300d
 doc_links:
@@ -52,6 +54,7 @@ expects_from: null
 origin_agent: business-analyst
 created: '2026-09-24'
 amended_by:
+- '2026-09-26 business-analyst: Retrospective behavioral review of C2/C3/C11 communication changes; amended existing authorized scope, retaining approval and in-progress status; no delivery proof claimed.'
 - '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
   remains medium.'
 superseded_by: null
@@ -62,11 +65,16 @@ implemented_by:
 - unit_tests/ac_driven_dev/test_background_worker_sources_notifications.py
 change_target: pipeline
 risk_surface: contract_boundary
-notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+notes: Approved requirements; implementation is under review; native Windows isolation remains unsupported, but dedicated WSL filesystem boundaries and deployed guard bootstrap are verified.
+  Linux worker regression passed with 317 tests, 5 skipped and 10 subtests; 13 real native sandbox/bootstrap checks passed.
+  Complete real local-model delivery acceptance remains unverified. Pattern inventory found
   no matching reusable worker behavior.
 declares_side_effect: false
 estimated_complexity: M
 it_requirements:
+- The durable status and inbox consumer must distinguish needs_input, refused, error and invalid-response failures
+  from execution evidence, retain the discovery or implementation phase and an actionable operator next step, and
+  apply credential redaction before persistence and display.
 - Status/inbox read from durable local state and preserve run/request identities across processes; do
   not infer delivered or merged state from prose.
 - Apply credential redaction and stable evidence references to both machine-readable and human-readable
@@ -84,6 +92,28 @@ it_requirements:
   {feature_id:string|null, ordered_ac_ids:string[], effective_priority:string|null, reasons:[{ac_id:string|null,
   reason:string}], snapshot_revision:string}.'
 test_spec:
+- name: test_discovery_budget_blocker_identifies_actual_cause
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: 'Exercise the real graph and durable store with three distinct causes: three completed implementation
+    attempts below the time limit, one completed attempt reaching the time limit, and an in-progress attempt with
+    uncertain execution. Assert exactly one persisted inbox item whose reason identifies only the actual attempt-limit,
+    elapsed-time or uncertainty cause; no model, review or publication calls, changed budget counters or new leases.
+    A generic time-exhausted-or-uncertain diagnosis must fail the attempt-limit case.'
+  covers:
+  - ACD-1300d-1
+- name: test_adapter_failure_blocks_graph_once_and_persists_diagnostics
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Persist discovery and implementation refusal/error/unsupported-handoff diagnostics and inspect
+    the durable store and inbox after reopening state; distinguish failure categories and phase. Status-view
+    next-action and credential-redaction assertions remain independently required.
+  covers:
+  - ACD-1300d-1
 - name: test_background_worker_reopened_cli_shows_durable_run_and_request_identity
   target_dir: unit_tests/ac_driven_dev/
   framework: pytest

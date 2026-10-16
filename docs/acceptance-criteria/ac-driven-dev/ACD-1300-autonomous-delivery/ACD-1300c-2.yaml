@@ -16,6 +16,13 @@ criteria: |
   And the feature releases execution capacity while retaining its claimed work identity
   And unchanged blocked work is not retried automatically
   And unrelated eligible features may continue
+  And declared missing runtime inputs create durable questions before any model dispatch or implementation write
+  And unknown ambiguities found during read-only discovery block at the same input gate before writable implementation
+  And a missing human decision becomes a specific question rather than an invented answer or a request to restate a supplied decision
+  And repository facts available to read are inspected rather than presented as decisions for the user
+  And an inability to inspect a required repository fact becomes an execution blocker with its cause, without declaring readiness or inventing that fact
+  And an agent request for input preserves each nonblank question as a pending request on the affected AC
+  And the request cannot also advance that AC as completed or release its dependent work
 depends_on:
 - ACD-1300c
 doc_links:
@@ -46,6 +53,9 @@ expects_from: null
 origin_agent: business-analyst
 created: '2026-09-24'
 amended_by:
+- '2026-09-26 business-analyst: User-authorized discovery role refinement; distinguish supplied-context readiness, repository inspection and human decisions; approval retained and delivery remains unverified.'
+- '2026-09-26 business-analyst: Retrospective behavioral review of C2/C3/C11 communication changes; amended existing authorized scope, retaining approval and in-progress status; no delivery proof claimed.'
+- '2026-09-25 Codex: User-authorized input-gate amendment; requirements remain approved and implementation in progress, pending runtime verification.'
 - '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
   remains medium.'
 superseded_by: null
@@ -56,11 +66,20 @@ implemented_by:
 - unit_tests/ac_driven_dev/test_background_worker_engine.py
 change_target: pipeline
 risk_surface: contract_boundary
-notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+notes: Approved requirements; implementation is under review; native Windows isolation remains unsupported, but dedicated WSL filesystem boundaries and deployed guard bootstrap are verified.
+  Linux worker regression passed with 317 tests, 5 skipped and 10 subtests; 13 real native sandbox/bootstrap checks passed.
+  Complete real local-model delivery acceptance remains unverified. Pattern inventory found
   no matching reusable worker behavior.
 declares_side_effect: true
 estimated_complexity: M
 it_requirements:
+- The discovery role distinguishes unresolved human decisions from missing repository facts in its actual
+  dispatch context. An inspection error uses the existing error outcome with cause; it must not masquerade
+  as ready or a human approval. Normalized needs_input preserves specific questions and saved-answer authority.
+- Communication blockers preserve the original phase and bounded redacted diagnosis before capacity is released;
+  a clarification request stores each nonblank question against its run and current AC without creating completion
+  evidence. Ordinary check-repair budgets do not authorize retrying a failed communication contract.
+- Persist declaring AC ID, input ID, feature scope digest and exact question with each declared-input request; never infer an answer from model output.
 - Commit the durable blocker and evidence before releasing execution capacity; a blocked feature retains
   claim identity but cannot hold a model slot indefinitely.
 - Store diagnostic evidence without credentials, and separate waiting capacity from blocked-for-human
@@ -78,6 +97,44 @@ it_requirements:
   workspace_claim:object, settings_revision:string, next_step:string, ac_evidence:object[], ac_budgets:object[],
   review_count:integer, in_flight_action:object|null, publication:object|null}.'
 test_spec:
+- name: test_discovery_question_and_execution_failure_remain_distinct
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Pair an unresolved human-decision needs_input report with an inspection-error report; assert
+    questions remain human requests and inspection errors remain execution blockers without coding or invented
+    answers.
+  covers:
+  - ACD-1300c-2
+- name: test_discovery_context_has_readiness_role_without_coding_directives
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Inspect the actual dispatched discovery context for supplied decisions, conditional read-only
+    inspection, precise human questions and inspection-failure reporting; pair needs_input and error replies
+    through existing durable blocker routing.
+  covers:
+  - ACD-1300c-2
+- name: test_adapter_failure_blocks_graph_once_and_persists_diagnostics
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Exercise refusal, error and unsupported handoff through both real adapter phases and graph; reopen
+    the blocked run and assert one invocation total, preserved diagnostic context, zero downstream checks/review/publication
+    and no completion evidence.
+  covers:
+  - ACD-1300c-2
+- name: test_background_worker_input_gate_c_2
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Assert a declared missing input opens a durable inbox item before any model call or file write; a read-only discovered question reaches the same gate.
+  covers:
+  - ACD-1300c-2
 - name: test_background_worker_blocker_preserves_all_progress_and_releases_slot
   target_dir: unit_tests/ac_driven_dev/
   framework: pytest
@@ -111,6 +168,18 @@ product_truth:
       - WorkerSettings
     source: real
     asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: input-gate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-25'
   - flow: leafcutter/background-ac-worker
     node: validation-blocked
     node_kind: branch

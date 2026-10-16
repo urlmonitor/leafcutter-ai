@@ -2,8 +2,6 @@
 
 import pytest
 import subprocess
-import json
-from pathlib import Path
 
 from scripts.background_worker.engine import WorkerEngine
 from scripts.background_worker.executors import ExecutorError
@@ -43,12 +41,16 @@ class ControlledLocal:
     def __init__(self, after=None, fail=False):
         self.calls, self.after, self.fail = 0, after, fail
 
+    def discover(self, workspace, context, **kwargs):
+        return {"status": "ready", "questions": [], "assessment": "Assigned requirements and saved decisions are sufficient to begin coding."}
+
     def implement(self, workspace, context, **kwargs):
         self.calls += 1
         if self.after:
             self.after()
         if self.fail:
             raise ExecutorError("controlled failure")
+        return {"status": "completed", "questions": []}
 
     def check(self, workspace, argv, **kwargs):
         assert kwargs["timeout"] > 0
@@ -111,6 +113,26 @@ def test_real_graph_delivers_exact_head_and_persists_checkpoint(scenario):
     assert (store.path.parent / "graph.sqlite").stat().st_size > 0
     engine().run(run["id"])
     assert git.published == 1
+
+
+def test_post_commit_hook_failure_blocks_instead_of_accepting_existing_commit(scenario):
+    # covers: ACD-1300e-3, ACD-1300g-2
+    from scripts.background_worker.git_hooks import GitHookError
+
+    store, run, git, engine = scenario
+
+    def failed_commit(run, ac_id):
+        git.sha = "created-but-hook-failed"
+        error = GitHookError("post-commit outcome needs reconciliation")
+        error.requires_reconciliation = True
+        raise error
+
+    git.commit = failed_commit
+    local, reviewer = ControlledLocal(), ControlledReview()
+    result = engine(local=local, reviewer=reviewer).run(run["id"])
+    assert result["state"] == "blocked"
+    assert result["budgets"]["AC-1-a"]["attempts"] == 1
+    assert local.calls == 1 and reviewer.calls == 0 and git.published == 0
 
 
 def test_off_drains_active_attempt_then_resume_retains_work(scenario):
@@ -206,16 +228,21 @@ def test_off_between_check_commands_stops_new_subprocess(scenario):
     assert commands == [["first"]]
 
 
-def test_coordinator_refuses_unisolated_git_hooks(tmp_path):
+def test_coordinator_refuses_unisolated_git_hooks(tmp_path, monkeypatch):
     # covers: ACD-1300g-1, ACD-1300g-4
     from scripts.background_worker.git_ops import GitOps
 
     hooks = tmp_path / "hooks"
     hooks.mkdir()
     (hooks / "pre-commit").write_text("execute generated code")
+    (hooks / "pre-commit").chmod(0o700)
+    from scripts.background_worker.git_hooks import GitHookSandbox
+
+    monkeypatch.setattr(GitHookSandbox, "original_hooks", lambda self, cwd: hooks)
+    monkeypatch.setattr("scripts.background_worker.git_hooks.shutil.which", lambda name: None)
     coordinator = GitOps(tmp_path, {})
     coordinator.git = lambda workspace, *args: str(hooks)
-    with pytest.raises(ExecutorError, match="will not execute"):
+    with pytest.raises(ExecutorError, match="bubblewrap"):
         coordinator._assert_hooks_safe(tmp_path)
 
 
@@ -240,7 +267,7 @@ def test_question_stops_checks_and_resumes_same_workspace_with_budget(scenario):
     assert blocked["state"] == "blocked" and git.sha == "base"
     assert store.list_inbox()[0]["details"]["questions"] == ["Which timezone?"]
     workspace = blocked["workspace"]
-    store.checkpoint(run["id"], "paused", {"request_answers": {"timezone": "UTC"}})
+    store.answer_request(run["id"], store.list_inbox()[0]["id"], "UTC")
     result = engine().run(run["id"])
     assert result["state"] == "delivered" and result["workspace"] == workspace
     assert result["budgets"]["AC-1-a"]["attempts"] == 2
@@ -255,111 +282,6 @@ def test_uncertain_validation_restart_does_not_relaunch_checks(scenario):
     assert instance.run(run["id"])["state"] == "blocked"
 
 
-@pytest.fixture
-def publisher(tmp_path):
-    from scripts.background_worker.git_ops import GitOps
-
-    state = {"entries": [], "creates": 0, "pushes": 0, "body": "", "lose_create_response": False}
-    run = {
-        "id": "run",
-        "feature_id": "ACD-1300g",
-        "workspace": str(tmp_path),
-        "plan": {
-            "ac_ids": ["ACD-1300g-4"],
-            "source_context": {"obligations": {"ACD-1300g-4": {}}, "source_revision": "revision"},
-        },
-        "payload": {
-            "branch": "codex/test",
-            "validated_sha": "head",
-            "review": {"disposition": "approved"},
-        },
-    }
-    source = tmp_path / "docs" / "acceptance-criteria" / "ACD-1300g-4.yaml"
-    source.parent.mkdir(parents=True)
-    source.write_text("id: ACD-1300g-4")
-
-    def invoke(argv, **kwargs):
-        if argv[:3] == ["gh", "pr", "list"]:
-            return subprocess.CompletedProcess(argv, 0, json.dumps(state["entries"]), "")
-        if argv[:3] == ["gh", "repo", "view"]:
-            return subprocess.CompletedProcess(
-                argv, 0, '{"url":"https://example.test/owner/repo"}', ""
-            )
-        assert argv[:3] == ["gh", "pr", "create"]
-        state["creates"] += 1
-        state["body"] = Path(argv[argv.index("--body-file") + 1]).read_text()
-        state["entries"] = [
-            {
-                "url": "https://example.test/pr/1",
-                "headRefOid": "head",
-                "isDraft": True,
-                "state": "OPEN",
-                "baseRefName": "main",
-            }
-        ]
-        if state["lose_create_response"]:
-            raise ExecutorError("Transport interrupted after publication")
-        return subprocess.CompletedProcess(argv, 0, "created", "")
-
-    coordinator = GitOps(tmp_path, {"target_ref": "origin/main"}, invoke=invoke)
-    coordinator.assert_workspace = lambda run: tmp_path
-    coordinator.head = lambda workspace: "head"
-    coordinator._assert_hooks_safe = lambda workspace: None
-
-    def git(workspace, *args):
-        if args[0] == "push":
-            state["pushes"] += 1
-        return ""
-
-    coordinator.git = git
-    return coordinator, run, state
-
-
-def test_publisher_requires_exact_head_before_push(publisher):
-    # covers: ACD-1300g-4, ACD-1300g-4-i
-    coordinator, run, state = publisher
-    with pytest.raises(ExecutorError, match="Head changed"):
-        coordinator.publish(run, "other")
-    assert state["creates"] == state["pushes"] == 0
-
-
-def test_uncertain_publication_reconciles_without_duplicate_pr(publisher):
-    # covers: ACD-1300g-4, ACD-1300g-4-i
-    coordinator, run, state = publisher
-    state["lose_create_response"] = True
-    with pytest.raises(ExecutorError):
-        coordinator.publish(run, "head")
-    assert coordinator.publish(run, "head") == "https://example.test/pr/1"
-    assert state["creates"] == state["pushes"] == 1
-    assert (
-        "[ACD-1300g-4](https://example.test/owner/repo/blob/head/docs/acceptance-criteria/ACD-1300g-4.yaml)"
-        in state["body"]
-    )
-    assert '"validated_sha": "head"' in state["body"]
-
-
-@pytest.mark.parametrize(
-    "field,value",
-    [("isDraft", False), ("state", "CLOSED"), ("baseRefName", "other"), ("headRefOid", "stale")],
-)
-def test_existing_unexpected_pr_is_never_reused(publisher, field, value):
-    # covers: ACD-1300g-4-i
-    coordinator, run, state = publisher
-    state["entries"] = [
-        {
-            "url": "https://example.test/pr/1",
-            "headRefOid": "head",
-            "isDraft": True,
-            "state": "OPEN",
-            "baseRefName": "main",
-            field: value,
-        }
-    ]
-    with pytest.raises(ExecutorError, match="Existing PR"):
-        coordinator.publish(run, "head")
-    assert state["creates"] == state["pushes"] == 0
-
-
 def test_worker_builds_a_real_state_graph():
     # covers: ACD-1300g-1, ACD-1300e-2
     assert WorkerEngine.graph_builder().nodes.keys() >= {
@@ -369,6 +291,34 @@ def test_worker_builds_a_real_state_graph():
         "review",
         "publish",
     }
+
+
+def test_publication_destination_is_durable_before_side_effect_and_cannot_change(scenario):
+    # covers: ACD-1300g-4, ACD-1300g-4-i
+    store, run, git, engine = scenario
+    destination = {
+        "remote": "origin",
+        "base": "main",
+        "repository": "https://github.com/team/project",
+    }
+    git.publication_destination = lambda workspace: dict(destination)
+
+    def uncertain(run, expected_sha):
+        assert store.get_run(run["id"])["payload"]["publication_destination"] == destination
+        raise ExecutorError("uncertain publication")
+
+    git.publish = uncertain
+    store.checkpoint(
+        run["id"],
+        "running",
+        {"workspace": str(git.workspace), "validated_sha": "base", "reviewed_sha": "base"},
+    )
+    instance = engine()
+    with pytest.raises(ExecutorError, match="uncertain publication"):
+        instance._publish(store.get_run(run["id"]))
+    destination["repository"] = "https://github.com/other/project"
+    with pytest.raises(ExecutorError, match="destination changed"):
+        instance._publish(store.get_run(run["id"]))
 
 
 def test_obligation_package_includes_positive_parent_and_negative_child():
@@ -386,3 +336,28 @@ def test_obligation_package_includes_positive_parent_and_negative_child():
     context = WorkerEngine.implementation_context(plan, "AC-1-1-i", {})
     assert "Positive behavior" in context
     assert "Negative scenario" in context
+
+
+def test_success_clears_resolved_failure_feedback(scenario):
+    # covers: ACD-1300g-1 ACD-1300g-2
+    import json
+
+    store, run, git, engine = scenario
+
+    class RetryLocal(ControlledLocal):
+        def implement(self, workspace, context, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                error = ExecutorError("temporary check problem")
+                error.evidence = {"stderr": "repair this"}
+                raise error
+            value = json.loads(context)
+            assert value["last_failure"] == "temporary check problem"
+            assert value["failed_check"] == {"stderr": "repair this"}
+            return {"status": "completed", "questions": []}
+
+    result = engine(local=RetryLocal()).run(run["id"])
+    assert result["state"] == "delivered"
+    assert result["budgets"]["AC-1-a"]["attempts"] == 2
+    assert result["payload"]["last_failure"] is None
+    assert result["payload"]["failed_check"] is None

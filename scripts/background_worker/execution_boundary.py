@@ -8,23 +8,40 @@ import re
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import time
 
 LOGGER = logging.getLogger(__name__)
+PROTECTED_RUNTIME_PATHS = (
+    ".leafcutter/scripts", ".leafcutter/config", ".leafcutter/skills/security-scanner/scripts",
+    ".leafcutter/pre-commit-config.yaml", ".pre-commit-config.yaml",
+)
 
 
 class ExecutorError(RuntimeError):
     """An external execution did not produce trustworthy evidence."""
 
 
-def permission_overrides(*, readonly=False):
+def permission_overrides(*, readonly=False, workspace=None):
     """Deny host reads as well as writes; unsupported native policies fail closed."""
     access = "read" if readonly else "write"
+    # The coordinator virtualenv contains check tools, not repository/user data.
+    runtime = ""
+    if sys.prefix != sys.base_prefix:
+        runtime = ", " + json.dumps(str(Path(sys.prefix).resolve())) + '="read"'
+    protected = ""
+    if workspace is not None:
+        for relative in PROTECTED_RUNTIME_PATHS:
+            path = Path(workspace) / relative
+            if path.is_symlink():
+                raise ExecutorError("Protected worker runtime cannot be a symlink")
+            if path.exists():
+                protected += ", " + json.dumps(relative) + '="read"'
     return [
         'default_permissions="leafcutter-worker"',
-        'permissions.leafcutter-worker.filesystem={ ":root"="deny", ":minimal"="read", ":workspace_roots"={ "."="'
+        'permissions.leafcutter-worker.filesystem={ glob_scan_max_depth=32, ":root"="deny", ":minimal"="read", ":workspace_roots"={ "."="'
         + access
-        + '", ".git"="read", ".codex"="read", "**/*.env"="deny" } }',
+        + '", ".git"="read", ".codex"="read", "**/*.env"="deny"' + protected + " }" + runtime + " }",
         "permissions.leafcutter-worker.network.enabled=false",
         'approval_policy="never"',
         "features.multi_agent=false",
@@ -54,11 +71,16 @@ def local_environment():
         "VIRTUAL_ENV",
         "PYTHONIOENCODING",
     }
-    return {
+    environment = {
         key: value
         for key, value in os.environ.items()
         if key.upper() in allowed or key.upper().startswith("LC_")
     } | {"AC_ENFORCE_STRICT": "1"}
+    if sys.prefix != sys.base_prefix:
+        binaries = Path(sys.prefix) / ("Scripts" if os.name == "nt" else "bin")
+        environment["PATH"] = str(binaries) + os.pathsep + environment.get("PATH", "")
+        environment["VIRTUAL_ENV"] = sys.prefix
+    return environment
 
 
 def safe_output(value):
@@ -118,8 +140,10 @@ def run_process(argv, *, cwd, input_text="", timeout=300, env=None, heartbeat=No
         if os.name == "nt"
         else {"start_new_session": True}
     )
+    from .owned_process import start_process
+
     try:
-        process = subprocess.Popen(
+        process = start_process(
             argv,
             cwd=str(cwd),
             stdin=subprocess.PIPE,
@@ -162,18 +186,28 @@ def run_process(argv, *, cwd, input_text="", timeout=300, env=None, heartbeat=No
                 )
                 if killed.returncode != 0:
                     raise OSError("Windows process-tree termination did not succeed")
-            else:
+            elif sys.platform != "linux":
                 os.killpg(process.pid, signal.SIGKILL)
             process.kill()
-            process.communicate(timeout=20)
-        except (OSError, subprocess.SubprocessError) as cleanup_error:
+            stdout, stderr = process.communicate(timeout=20)
+        except (OSError, subprocess.SubprocessError, ExecutorError) as cleanup_error:
             LOGGER.error("Could not prove executor termination: %s", cleanup_error)
             raise ExecutorError(
                 "Uncertain process termination; retain the execution lease"
             ) from cleanup_error
-        raise ExecutorError(
+        error = ExecutorError(
             "Execution timed out or lost its lease; process tree terminated"
-        ) from exc
+        )
+        error.evidence = {"termination_confirmed": True,
+                          "timed_out": isinstance(exc, subprocess.TimeoutExpired),
+                          "returncode": process.returncode}
+        if "--json" in argv and Path(argv[0]).stem == "codex":
+            from .local_outcome import event_diagnostics, parse_events
+
+            error.evidence.update(event_diagnostics(parse_events(stdout)))
+        else:
+            error.evidence.update(stdout=safe_output(stdout), stderr=safe_output(stderr))
+        raise error from exc
     if process.returncode:
         # Raw stderr may contain credentials or prompts. Keep it out of persistent status.
         error = ExecutorError(

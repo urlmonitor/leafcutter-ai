@@ -148,5 +148,38 @@ class TestContractShrinkingExcludesCommitGuardianPaths(unittest.TestCase):
         )
 
 
+
+class TestDiffDefinitionLineBoundaries(unittest.TestCase):
+    """Diff markers must apply only to definitions on the same line."""
+
+    def test_removed_blank_before_unchanged_definition_is_not_deletion(self):
+        # covers: GE-111f
+        diff = self._diff("-\n def test_preserved():\n     assert True\n")
+        result = _mod._scan_diff(diff)
+        self.assertTrue(result.has_production_changes)
+        self.assertFalse(result.is_contract_shrinking, result.violations)
+
+    def test_actual_removal_is_not_masked_by_added_blank(self):
+        # covers: GE-111f
+        diff = self._diff("-def test_removed():\n-    assert True\n+\n def test_removed_elsewhere():\n     assert True\n")
+        result = _mod._scan_diff(diff)
+        self.assertTrue(result.is_contract_shrinking)
+        self.assertTrue(any("test_removed" in context for _, context in result.violations))
+
+    def test_added_blank_cannot_pair_a_genuinely_removed_name(self):
+        # covers: GE-111f
+        diff = self._diff("-def test_duplicate():\n-    assert True\n+\n def test_duplicate():\n     assert True\n")
+        self.assertTrue(_mod._scan_diff(diff).is_contract_shrinking)
+
+    @staticmethod
+    def _diff(test_hunk):
+        return (
+            "diff --git a/core.py b/core.py\n--- a/core.py\n+++ b/core.py\n"
+            "@@ -1 +1 @@\n-value = 1\n+value = 2\n"
+            "diff --git a/tests/test_core.py b/tests/test_core.py\n"
+            "--- a/tests/test_core.py\n+++ b/tests/test_core.py\n@@ -1,4 +1,3 @@\n"
+            + test_hunk
+        )
+
 if __name__ == "__main__":
     unittest.main()

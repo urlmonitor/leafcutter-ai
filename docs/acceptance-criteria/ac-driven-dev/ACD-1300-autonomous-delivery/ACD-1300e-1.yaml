@@ -15,6 +15,13 @@ criteria: |
   Then that answer is persisted against the same request and run
   And after revalidation the next agent receives the answer with its preserved work and evidence
   And a reply to an unknown, already-resolved or different run's request cannot resume this feature
+  And a declared input answer is reused only for the same declaring AC ID, input ID and feature scope digest
+  And inherited inputs may reuse that same ancestor declaration while sibling declarations never borrow each other answers
+  And an answer outside declared choices is rejected without opening the writable phase
+  And only answers explicitly submitted through the worker's operator interface may resolve a pending request
+  And an agent claiming that the user approved, an answer copied into project content, or an echoed answer from another AC cannot resolve it
+  And the resumed agent receives only the saved answers applicable to its current AC and inherited declarations
+  And saving an answer does not prove that implementation, checks or review passed
 depends_on:
 - ACD-1300e
 doc_links:
@@ -47,6 +54,8 @@ expects_from: null
 origin_agent: business-analyst
 created: '2026-09-24'
 amended_by:
+- '2026-09-26 business-analyst: Retrospective behavioral review of C2/C3/C11 communication changes; amended existing authorized scope, retaining approval and in-progress status; no delivery proof claimed.'
+- '2026-09-25 Codex: User-authorized input-gate amendment; requirements remain approved and implementation in progress, pending runtime verification.'
 - '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
   remains medium.'
 superseded_by: null
@@ -58,11 +67,17 @@ implemented_by:
 - unit_tests/ac_driven_dev/test_background_worker_engine.py
 change_target: pipeline
 risk_surface: contract_boundary
-notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+notes: Approved requirements; implementation is under review; native Windows isolation remains unsupported, but dedicated WSL filesystem boundaries and deployed guard bootstrap are verified.
+  Linux worker regression passed with 317 tests, 5 skipped and 10 subtests; 13 real native sandbox/bootstrap checks passed.
+  Complete real local-model delivery acceptance remains unverified. Pattern inventory found
   no matching reusable worker behavior.
 declares_side_effect: true
 estimated_complexity: M
 it_requirements:
+- Both discovery and writable implementation obtain resolved operator answers from the same authoritative persisted
+  request records with existing run, AC/declaration and scope binding. Conflicting checkpoint mirrors, project text
+  and agent fields carry no answer authority; a persisted answer never counts as tool, check or review evidence.
+- Store answers separately from required_inputs declarations. Revalidate declaration identity and feature digest on resume; ignore model-supplied answer metadata.
 - Bind the answer atomically to unresolved request ID and run ID; repeated or cross-run answers must not
   dispatch duplicate work.
 - Continuation requires enabled admission, revalidation and remaining budget; the answer is data in the
@@ -80,6 +95,24 @@ it_requirements:
   {run_id:string, ac_id:string, attempts_used:integer, implementation_elapsed_ms:integer, remaining_attempts:integer,
   remaining_ms:integer, exhausted:boolean}.'
 test_spec:
+- name: test_real_operator_answer_overrides_conflicting_checkpoint_mirrors
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Save one answer through the real operator command, seed opposite values into non-authoritative checkpoint
+    mirrors, and assert both discovery and implementation receive the exact persisted answer; the valid run completes
+    through controlled checks, review and publication.
+  covers:
+  - ACD-1300e-1
+- name: test_background_worker_input_gate_e_1
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Answer one ancestor declaration and assert descendant reuse only for identical declaring AC, input ID and feature digest; reject sibling borrowing and out-of-choice values.
+  covers:
+  - ACD-1300e-1
 - name: test_background_worker_valid_answer_reaches_same_resumed_run
   target_dir: unit_tests/ac_driven_dev/
   framework: pytest
@@ -109,6 +142,18 @@ test_spec:
   covers:
   - ACD-1300e-1
 product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: input-gate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-25'
   - flow: leafcutter/background-ac-worker
     node: resume
     node_kind: branch

@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "config/ac_store_schema.json",
-    "title": "AC Store — Acceptance Criterion YAML Schema",
+    "title": "AC Store \u2014 Acceptance Criterion YAML Schema",
     "description": "JSON Schema (draft-07) for acceptance criterion files stored under docs/acceptance-criteria/. See ADR-008 for rationale and ID format specification.",
     "type": "object",
     "required": [
@@ -41,7 +41,7 @@
         },
         "criteria": {
             "type": "string",
-            "description": "Multi-line Gherkin scenario body (Given/When/Then/And). When implements_pattern is set and the AC has no unique behavior beyond what the pattern provides, a plain-text placeholder is acceptable (e.g. 'No page-specific behavior — all behavior inherited from pattern.').",
+            "description": "Multi-line Gherkin scenario body (Given/When/Then/And). When implements_pattern is set and the AC has no unique behavior beyond what the pattern provides, a plain-text placeholder is acceptable (e.g. 'No page-specific behavior \u2014 all behavior inherited from pattern.').",
             "minLength": 1
         },
         "created_by": {
@@ -120,18 +120,27 @@
         },
         "origin_agent": {
             "type": "string",
-            "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",
+            "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string \u2014 any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",
             "minLength": 1
         },
         "readiness": {
             "type": "string",
             "description": "Lifecycle readiness state of this AC. draft = written but not reviewed (scanner ignores); reviewed = IT PO v3 has enriched and approved (scanner ignores); approved = user has signed off (scanner may pick up).",
-            "enum": ["draft", "reviewed", "approved"]
+            "enum": [
+                "draft",
+                "reviewed",
+                "approved"
+            ]
         },
         "priority": {
             "type": "string",
             "description": "Implementation priority of this AC. Set by the user (or PO v3) at approval time. Used by the scanner for ranking.",
-            "enum": ["critical", "high", "medium", "low"]
+            "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low"
+            ]
         },
         "documentation_triggers": {
             "description": "List of documentation types that must be produced for this feature. Valid on L1 ACs only. Set by product-owner-v3 based on the nature of the feature. Empty array means no docs needed (provide documentation_rationale in that case).",
@@ -140,7 +149,13 @@
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["how-to", "sequence-diagram", "state-diagram", "component-diagram", "reference-doc"]
+                        "enum": [
+                            "how-to",
+                            "sequence-diagram",
+                            "state-diagram",
+                            "component-diagram",
+                            "reference-doc"
+                        ]
                     },
                     "uniqueItems": true
                 },
@@ -182,7 +197,7 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Hierarchy level of this AC. L0 = top-level composite (portfolio/program); L1 = composite (epic/feature); L2 = implementable leaf (story/task); L3 = fine-grained implementable leaf (sub-task). L0/L1 ACs are composite — fulfillment is derived from children, not directly verified.",
+                    "description": "Hierarchy level of this AC. L0 = top-level composite (portfolio/program); L1 = composite (epic/feature); L2 = implementable leaf (story/task); L3 = fine-grained implementable leaf (sub-task). L0/L1 ACs are composite \u2014 fulfillment is derived from children, not directly verified.",
                     "enum": [
                         "L0",
                         "L1",
@@ -199,7 +214,7 @@
             "oneOf": [
                 {
                     "type": "array",
-                    "description": "List of AC IDs that this AC depends on. Used for parent-child hierarchy links (child AC lists its structural parent) and for pattern composition (composite pattern lists its atomic component pattern IDs). Must not form a cycle — the check_ac_circular_deps pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all depends_on edges.",
+                    "description": "List of AC IDs that this AC depends on. Used for parent-child hierarchy links (child AC lists its structural parent) and for pattern composition (composite pattern lists its atomic component pattern IDs). Must not form a cycle \u2014 the check_ac_circular_deps pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all depends_on edges.",
                     "items": {
                         "type": "string",
                         "minLength": 1
@@ -268,7 +283,13 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "enum": ["XS", "S", "M", "L", "XL"]
+                    "enum": [
+                        "XS",
+                        "S",
+                        "M",
+                        "L",
+                        "XL"
+                    ]
                 },
                 {
                     "type": "null"
@@ -314,7 +335,7 @@
             ]
         },
         "package_surface": {
-            "description": "Explicit declaration that this AC registers a PACKAGE SURFACE — an entry in a registry the build reads to decide what a consumer project receives (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json). Set it to true, deliberately, when the AC's work brings such a surface into existence. This declaration is the SOLE trigger for the structured it_requirements obligation below (ACS-100i-6): the obligation is no longer inferred from assigned_agent or from how the AC spells its component, because that proxy both over-matched (243 of the store's 280 refusals were records registering no config key at all) and under-matched (440 records spelling the namespace 'build-pipeline' were invisible to it). Absent or false means no structured implementation spec is demanded, whatever the AC's agent, component or components values. Registering a surface without declaring it here is caught at landing time by the check-package-surface-declaration commit hook (ACS-100i-8), which reconciles the registry entries a change actually adds against the declarations of the ACs it cites.",
+            "description": "Explicit declaration that this AC registers a PACKAGE SURFACE \u2014 an entry in a registry the build reads to decide what a consumer project receives (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json). Set it to true, deliberately, when the AC's work brings such a surface into existence. This declaration is the SOLE trigger for the structured it_requirements obligation below (ACS-100i-6): the obligation is no longer inferred from assigned_agent or from how the AC spells its component, because that proxy both over-matched (243 of the store's 280 refusals were records registering no config key at all) and under-matched (440 records spelling the namespace 'build-pipeline' were invisible to it). Absent or false means no structured implementation spec is demanded, whatever the AC's agent, component or components values. Registering a surface without declaring it here is caught at landing time by the check-package-surface-declaration commit hook (ACS-100i-8), which reconciles the registry entries a change actually adds against the declarations of the ACs it cites.",
             "oneOf": [
                 {
                     "type": "boolean"
@@ -325,7 +346,7 @@
             ]
         },
         "it_requirements": {
-            "description": "Technical requirements for implementing this AC. May be a multi-line string, a list of requirement strings, or — for ACs declaring `package_surface: true` — a structured object with machine-checkable implementation fields (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands). Set by it-po during technical enrichment. NOTE: whenever the object form is used it is held to ALL five fields by the object branch below, independently of the package_surface declaration (ACS-100i-6-i) — narrowing the trigger must never become a way to file a half-populated structured spec.",
+            "description": "Technical requirements for implementing this AC. May be a multi-line string, a list of requirement strings, or \u2014 for ACs declaring `package_surface: true` \u2014 a structured object with machine-checkable implementation fields (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands). Set by it-po during technical enrichment. NOTE: whenever the object form is used it is held to ALL five fields by the object branch below, independently of the package_surface declaration (ACS-100i-6-i) \u2014 narrowing the trigger must never become a way to file a half-populated structured spec.",
             "oneOf": [
                 {
                     "type": "string",
@@ -339,7 +360,7 @@
                 },
                 {
                     "type": "object",
-                    "description": "Structured implementation spec required for ACs declaring `package_surface: true`. Must include all five required implementation fields. This branch's `required` list is enforced for EVERY record that uses the object form, declared or not — see ACS-100i-6-i.",
+                    "description": "Structured implementation spec required for ACs declaring `package_surface: true`. Must include all five required implementation fields. This branch's `required` list is enforced for EVERY record that uses the object form, declared or not \u2014 see ACS-100i-6-i.",
                     "required": [
                         "config_schema_fragment",
                         "reference_file_path",
@@ -354,7 +375,7 @@
                         "reference_file_path": {
                             "type": "string",
                             "minLength": 1,
-                            "description": "Path (relative to repo root) to the file that must be modified for registration. Must be a real, resolvable path — validated at authoring time by validate_ac.py."
+                            "description": "Path (relative to repo root) to the file that must be modified for registration. Must be a real, resolvable path \u2014 validated at authoring time by validate_ac.py."
                         },
                         "n_location_rule": {
                             "type": "string",
@@ -387,14 +408,17 @@
             ]
         },
         "test_spec": {
-            "description": "Source-of-truth test contract for this AC. The AC — not the ticket — owns what must be tested. A list of test-stub descriptors that test-writer authors as failing tests, and that generate_ticket_from_ac.py derives the ticket's ## Test Requirements section from (parallel to it_requirements -> ## Implementation Notes). Set by it-po during technical enrichment on L2/L3 code ACs. Null/absent means 'no test contract authored yet'; an empty list is not permitted (use test_required: false for genuinely test-free ACs).",
+            "description": "Source-of-truth test contract for this AC. The AC \u2014 not the ticket \u2014 owns what must be tested. A list of test-stub descriptors that test-writer authors as failing tests, and that generate_ticket_from_ac.py derives the ticket's ## Test Requirements section from (parallel to it_requirements -> ## Implementation Notes). Set by it-po during technical enrichment on L2/L3 code ACs. Null/absent means 'no test contract authored yet'; an empty list is not permitted (use test_required: false for genuinely test-free ACs).",
             "oneOf": [
                 {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                         "type": "object",
-                        "required": ["name", "target_dir"],
+                        "required": [
+                            "name",
+                            "target_dir"
+                        ],
                         "additionalProperties": false,
                         "properties": {
                             "name": {
@@ -409,23 +433,42 @@
                             },
                             "framework": {
                                 "type": "string",
-                                "enum": ["unittest", "pytest", "vitest", "playwright"],
-                                "description": "Test framework. Defaults to the project convention (unittest) when omitted. unittest and pytest are the project's Python test conventions; vitest runs leafcutter-web's suite (installed, wired via vitest.config.ts, executed by CI so the done-proof gate can read its results); playwright is the Playwright-driven webapp-testing skill, for headless browser/route-render checks, specified by BP-1400's route-render gate. MUST be kept identical to the same enum in config/test_requirements.schema.json — generate_ticket_from_ac.py copies this value straight onto the generated ticket, so a value legal here and not there produces a ticket that violates its own schema, and nothing enforces that schema. unit_tests/ac_store/test_test_spec_framework_vocabulary.py holds the two in step. Naming a framework does NOT assert it is installed: playwright is specified but is not yet a dependency of either package."
+                                "enum": [
+                                    "unittest",
+                                    "pytest",
+                                    "vitest",
+                                    "playwright"
+                                ],
+                                "description": "Test framework. Defaults to the project convention (unittest) when omitted. unittest and pytest are the project's Python test conventions; vitest runs leafcutter-web's suite (installed, wired via vitest.config.ts, executed by CI so the done-proof gate can read its results); playwright is the Playwright-driven webapp-testing skill, for headless browser/route-render checks, specified by BP-1400's route-render gate. MUST be kept identical to the same enum in config/test_requirements.schema.json \u2014 generate_ticket_from_ac.py copies this value straight onto the generated ticket, so a value legal here and not there produces a ticket that violates its own schema, and nothing enforces that schema. unit_tests/ac_store/test_test_spec_framework_vocabulary.py holds the two in step. Naming a framework does NOT assert it is installed: playwright is specified but is not yet a dependency of either package."
                             },
                             "type": {
                                 "type": "string",
-                                "enum": ["unit", "integration", "e2e", "behavioral", "component"],
-                                "description": "Test level. Guides where the test runs and how heavy its fixtures are. `component` is a rendered-in-isolation UI test — neither a unit test nor end-to-end — and forcing such a test to claim either would make the record misdescribe itself. Kept identical to config/test_requirements.schema.json for the same copy-through reason as `framework`."
+                                "enum": [
+                                    "unit",
+                                    "integration",
+                                    "e2e",
+                                    "behavioral",
+                                    "component"
+                                ],
+                                "description": "Test level. Guides where the test runs and how heavy its fixtures are. `component` is a rendered-in-isolation UI test \u2014 neither a unit test nor end-to-end \u2014 and forcing such a test to claim either would make the record misdescribe itself. Kept identical to config/test_requirements.schema.json for the same copy-through reason as `framework`."
                             },
                             "angle": {
                                 "type": "string",
-                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                                "enum": [
+                                    "criterion",
+                                    "reachability",
+                                    "seam",
+                                    "real_artifact",
+                                    "deployed",
+                                    "boundary",
+                                    "failure"
+                                ],
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md \u2014 five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
                             },
                             "surface_invoked": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here — the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
+                                "description": "BO-2900g-3: the entry-point field, carried under the name the (now-retired) ticket-facing definition already used. Names the CLI, hook script, slash command, or agent entrypoint a reachability-kind test must actually invoke, or holds the single 'entry point is not declared' sentinel when nothing upstream named one. Optional here \u2014 the generator's own reachability descriptor states the same fact via its 'asserts' field (BO-2900g-1-i) when this is omitted."
                             },
                             "description": {
                                 "type": "string",
@@ -453,7 +496,7 @@
             ]
         },
         "test_required": {
-            "description": "Whether test-writer must produce failing tests for this AC. Distinguishes 'intentionally no tests' (false — e.g. change_target prompt/docs) from 'test contract not yet authored' (null/absent). Defaults to true for code/schema ACs. When false, test-writer skips with an accurate, non-hardcoded reason instead of misclassifying the AC as docs-only.",
+            "description": "Whether test-writer must produce failing tests for this AC. Distinguishes 'intentionally no tests' (false \u2014 e.g. change_target prompt/docs) from 'test contract not yet authored' (null/absent). Defaults to true for code/schema ACs. When false, test-writer skips with an accurate, non-hardcoded reason instead of misclassifying the AC as docs-only.",
             "oneOf": [
                 {
                     "type": "boolean"
@@ -486,7 +529,9 @@
                     },
                     {
                         "type": "object",
-                        "required": ["path"],
+                        "required": [
+                            "path"
+                        ],
                         "additionalProperties": true,
                         "properties": {
                             "path": {
@@ -501,7 +546,10 @@
                             "status": {
                                 "type": "string",
                                 "description": "Existence status of the linked document.",
-                                "enum": ["exists", "planned"]
+                                "enum": [
+                                    "exists",
+                                    "planned"
+                                ]
                             },
                             "relevance": {
                                 "type": "string",
@@ -516,7 +564,12 @@
         "req_status": {
             "type": "string",
             "description": "Requirement lifecycle status. Tracks whether the requirement is still active from a product perspective (independent of implementation work_status).",
-            "enum": ["active", "draft", "approved", "superseded"]
+            "enum": [
+                "active",
+                "draft",
+                "approved",
+                "superseded"
+            ]
         },
         "roadmap_phase": {
             "type": "string",
@@ -530,7 +583,7 @@
         },
         "notes": {
             "type": "string",
-            "description": "Free-form contextual notes about this AC — authorship context, post-implementation findings, or rationale that does not belong in criteria.",
+            "description": "Free-form contextual notes about this AC \u2014 authorship context, post-implementation findings, or rationale that does not belong in criteria.",
             "minLength": 1
         },
         "parent": {
@@ -539,7 +592,7 @@
             "minLength": 1
         },
         "components": {
-            "description": "Authoritative component-membership list — the field the knowledge graph reads to build component_membership edges (config/paths.json 'acs' surface edge_fields), so it must be present and non-empty. Every value must be a component id declared in docs/components.json (the single canonical component registry, shared with the docs surface via check_doc_frontmatter). The scalar 'component' is a SEPARATE axis: it is the AC-store namespace/prefix key from docs/acceptance-criteria/index.yaml (kebab) used for AC id generation and file placement, and is intentionally NOT migrated to this vocabulary. Keep this enum in sync with docs/components.json keys.",
+            "description": "Authoritative component-membership list \u2014 the field the knowledge graph reads to build component_membership edges (config/paths.json 'acs' surface edge_fields), so it must be present and non-empty. Every value must be a component id declared in docs/components.json (the single canonical component registry, shared with the docs surface via check_doc_frontmatter). The scalar 'component' is a SEPARATE axis: it is the AC-store namespace/prefix key from docs/acceptance-criteria/index.yaml (kebab) used for AC id generation and file placement, and is intentionally NOT migrated to this vocabulary. Keep this enum in sync with docs/components.json keys.",
             "type": "array",
             "minItems": 1,
             "items": {
@@ -599,7 +652,7 @@
             "minLength": 1
         },
         "example_product": {
-            "description": "Self-declared example-product marker (ADR-044; supersedes the earlier `product` field of UXP-700d-2 -- that spelling MUST NOT be used, so the fact has one name). Set only on AC records that describe an example product shipped alongside the project's own record (e.g. the fern-and-fig demo plant shop under UXP-210-buy-a-plant / UXP-220-track-an-order), to that product's product-root slug -- never a display name, never on the project's own work. When present and different from the project's own product root, the ready-leaf scanner (scripts/ac_store/scan_ac_store.py's _is_example_content()) excludes the record from both the ready and blocked sets and reports it via the JSON output's set_aside_count instead of dropping it — separation, not deletion (ADR-022). Absent (the common case, and the ONLY representation of 'not an example') on every AC that belongs to the project's own record; a null or empty value is deliberately not accepted here -- omit the key entirely instead.",
+            "description": "Self-declared example-product marker (ADR-044; supersedes the earlier `product` field of UXP-700d-2 -- that spelling MUST NOT be used, so the fact has one name). Set only on AC records that describe an example product shipped alongside the project's own record (e.g. the fern-and-fig demo plant shop under UXP-210-buy-a-plant / UXP-220-track-an-order), to that product's product-root slug -- never a display name, never on the project's own work. When present and different from the project's own product root, the ready-leaf scanner (scripts/ac_store/scan_ac_store.py's _is_example_content()) excludes the record from both the ready and blocked sets and reports it via the JSON output's set_aside_count instead of dropping it \u2014 separation, not deletion (ADR-022). Absent (the common case, and the ONLY representation of 'not an example') on every AC that belongs to the project's own record; a null or empty value is deliberately not accepted here -- omit the key entirely instead.",
             "type": "string",
             "pattern": "^[a-z0-9-]+$"
         },
@@ -616,7 +669,7 @@
             ]
         },
         "change_target": {
-            "description": "Classification of what kind of artifact this AC targets. Used by the computed quality-gates pipeline to look up mandatory guardrail agents. Accepts either a single value (string) or a list of values (array of strings). Enum is the ADR-017 blast-radius vocabulary: 10 canonical change-target labels. Optional — absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
+            "description": "Classification of what kind of artifact this AC targets. Used by the computed quality-gates pipeline to look up mandatory guardrail agents. Accepts either a single value (string) or a list of values (array of strings). Enum is the ADR-017 blast-radius vocabulary: 10 canonical change-target labels. Optional \u2014 absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
             "anyOf": [
                 {
                     "type": "string",
@@ -655,7 +708,7 @@
             ]
         },
         "risk_surface": {
-            "description": "Classification of the blast-radius / risk exposure of this AC. Used by the computed quality-gates pipeline alongside change_target to select mandatory guardrail agents. Enum is the ADR-017 blast-radius vocabulary: 6 canonical risk-surface labels. Optional — absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
+            "description": "Classification of the blast-radius / risk exposure of this AC. Used by the computed quality-gates pipeline alongside change_target to select mandatory guardrail agents. Enum is the ADR-017 blast-radius vocabulary: 6 canonical risk-surface labels. Optional \u2014 absent when the AC predates the computed-gates pipeline (ticket 10 will backfill).",
             "type": "string",
             "enum": [
                 "internal",
@@ -667,7 +720,7 @@
             ]
         },
         "declares_side_effect": {
-            "description": "Declares that this AC's work produces a durable, observable side-effect on a user-facing surface (a file written, a record persisted, a command that changes state) rather than only returning a value. Authored by it-po (or business-analyst) during enrichment; set it to true whenever the AC's Then clause asserts something observable outside the process. Effect: generate_ticket_from_ac.py reads this field and automatically routes the user-surface-smoker phase agent into the generated ticket's agents map as 'needed', and propagates declares_side_effect: true to the ticket frontmatter (BP-1100f-5). The gate is NON-OVERRIDABLE — an explicit user-surface-smoker: not_needed override is ignored while this field is true (BP-1100f-5, mirroring the BO-550-1-i protection for the TDD agents). Absence (or false/null) means the AC makes no durable side-effect claim and is NOT force-routed to the smoker (BP-1100f-5-i); the exemption is data-driven, never by item name. This is the repo's one automatic guard against 'the code was built but is not wired into anything'.",
+            "description": "Declares that this AC's work produces a durable, observable side-effect on a user-facing surface (a file written, a record persisted, a command that changes state) rather than only returning a value. Authored by it-po (or business-analyst) during enrichment; set it to true whenever the AC's Then clause asserts something observable outside the process. Effect: generate_ticket_from_ac.py reads this field and automatically routes the user-surface-smoker phase agent into the generated ticket's agents map as 'needed', and propagates declares_side_effect: true to the ticket frontmatter (BP-1100f-5). The gate is NON-OVERRIDABLE \u2014 an explicit user-surface-smoker: not_needed override is ignored while this field is true (BP-1100f-5, mirroring the BO-550-1-i protection for the TDD agents). Absence (or false/null) means the AC makes no durable side-effect claim and is NOT force-routed to the smoker (BP-1100f-5-i); the exemption is data-driven, never by item name. This is the repo's one automatic guard against 'the code was built but is not wired into anything'.",
             "oneOf": [
                 {
                     "type": "boolean"
@@ -678,12 +731,22 @@
             ]
         },
         "product_truth": {
-            "description": "TOOL-OWNED derived back-reference into the product-truth store (docs/product-truth/). GENERATED by docs/product-truth/scripts/generate_product_truth.py as the inversion of every flow step/branch whose `implements` list contains this AC id — NEVER hand-edited. The authored link direction is flow->AC (step.implements); this list is the recomputed reverse edge so an AC is self-describing (which flow nodes / screens / mock data realise it). The relationship is many-to-many, so this is a LIST. The key is omitted entirely when no flow node references this AC. Regenerate (do not edit) if it drifts; the product-truth validator errors on any mismatch against the by_ac inversion.",
+            "description": "TOOL-OWNED derived back-reference into the product-truth store (docs/product-truth/). GENERATED by docs/product-truth/scripts/generate_product_truth.py as the inversion of every flow step/branch whose `implements` list contains this AC id \u2014 NEVER hand-edited. The authored link direction is flow->AC (step.implements); this list is the recomputed reverse edge so an AC is self-describing (which flow nodes / screens / mock data realise it). The relationship is many-to-many, so this is a LIST. The key is omitted entirely when no flow node references this AC. Regenerate (do not edit) if it drifts; the product-truth validator errors on any mismatch against the by_ac inversion.",
             "type": "array",
             "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["flow", "node", "node_kind", "flow_kind", "screen", "mock_data", "entities", "source", "asof"],
+                "required": [
+                    "flow",
+                    "node",
+                    "node_kind",
+                    "flow_kind",
+                    "screen",
+                    "mock_data",
+                    "entities",
+                    "source",
+                    "asof"
+                ],
                 "properties": {
                     "flow": {
                         "type": "string",
@@ -695,7 +758,10 @@
                     },
                     "node_kind": {
                         "type": "string",
-                        "enum": ["step", "branch"],
+                        "enum": [
+                            "step",
+                            "branch"
+                        ],
                         "description": "Whether the referencing node is a flow step or a branch."
                     },
                     "flow_kind": {
@@ -704,21 +770,31 @@
                     },
                     "screen": {
                         "oneOf": [
-                            {"type": "string"},
-                            {"type": "null"}
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
                         ],
                         "description": "Bare mockup screen id this node renders, or null when the node has no screen."
                     },
                     "mock_data": {
                         "oneOf": [
-                            {"type": "string"},
-                            {"type": "null"}
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
                         ],
                         "description": "id of the flow's mock_data_ref dataset, or null when the flow has none."
                     },
                     "entities": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {
+                            "type": "string"
+                        },
                         "description": "Sorted, de-duplicated entity names the node reads/writes."
                     },
                     "source": {
@@ -731,10 +807,43 @@
                     }
                 }
             }
+        },
+        "required_inputs": {
+            "type": "array",
+            "description": "Runtime human inputs declared by this AC. Answers are stored separately and scoped to declaring AC, input ID and feature digest; no implicit values or autofill. Duplicate IDs within one AC are rejected by the worker planner.",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "question"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                    },
+                    "question": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
+                    },
+                    "choices": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "pattern": "\\S"
+                        }
+                    }
+                }
+            }
         }
     },
     "if": {
-        "description": "Package-surface AC detection (ACS-100i-6): applies when, and only when, the record explicitly declares `package_surface: true`. Neither assigned_agent nor component (nor components) is consulted — a package surface can be registered from any namespace by any agent, and how a record spells its component must never change this verdict (ACS-100i-6-ii).",
+        "description": "Package-surface AC detection (ACS-100i-6): applies when, and only when, the record explicitly declares `package_surface: true`. Neither assigned_agent nor component (nor components) is consulted \u2014 a package surface can be registered from any namespace by any agent, and how a record spells its component must never change this verdict (ACS-100i-6-ii).",
         "properties": {
             "package_surface": {
                 "const": true

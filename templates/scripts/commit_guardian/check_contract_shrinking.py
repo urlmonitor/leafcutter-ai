@@ -129,10 +129,10 @@ _COMPILED_WEAKENING_PATTERNS: list[tuple[re.Pattern, str]] = [
 
 
 # Test-function definitions on each side of the diff, capturing the NAME so a
-# removal can be paired with its re-addition. The old pattern had no capture
-# group at all, so the guard could not even report which test it meant.
-_REMOVED_TEST_DEF_RE = re.compile(r"^-\s*(?:async\s+)?def\s+(test_\w+)", re.MULTILINE)
-_ADDED_TEST_DEF_RE = re.compile(r"^\+\s*(?:async\s+)?def\s+(test_\w+)", re.MULTILINE)
+# removal can be paired with its re-addition. Horizontal whitespace prevents
+# a blank diff line from matching a definition in unchanged context.
+_REMOVED_TEST_DEF_RE = re.compile(r"^-[ \t]*(?:async[ \t]+)?def[ \t]+(test_\w+)", re.MULTILINE)
+_ADDED_TEST_DEF_RE = re.compile(r"^\+[ \t]*(?:async[ \t]+)?def[ \t]+(test_\w+)", re.MULTILINE)
 
 # A file is only DELETED when its new-side header is /dev/null. Matching the
 # `--- a/...` side alone also matches every ordinary modification.

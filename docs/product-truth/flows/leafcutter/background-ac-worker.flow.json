@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "background-worker",
@@ -146,10 +146,67 @@
       "impl_status": "in_progress"
     },
     {
+      "id": "discover",
+      "label": "Discover missing context without edits",
+      "human": "Missing declared inputs route directly to the input gate before any model call. Otherwise the discovery agent assesses the current AC, inherited context and saved decisions, using read-only tools when relevant repository facts are missing. It returns a readiness assessment or the missing human decisions; sufficient supplied context can support readiness without tool calls. Discovery cannot edit the project or supply human answers and uses the existing AC model budget.",
+      "order": 5,
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.context",
+        "BuildRun.checkpoint"
+      ],
+      "produces": [
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "Ac",
+        "BuildRun",
+        "WorkerSettings"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300g-1"
+      ],
+      "impl_asof": "2026-09-25",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "input-gate",
+      "label": "Resolve scoped human inputs before edits",
+      "human": "The worker checks declared inputs and discovery questions against explicit saved human answers. Missing values become durable questions and block writable implementation. Answers survive restart and bind to the declaring AC, input ID and feature digest; descendants reuse that ancestor declaration but siblings cannot borrow other declarations. Only a satisfied gate proceeds to implementation.",
+      "order": 6,
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.context",
+        "BuildRun.checkpoint"
+      ],
+      "produces": [
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "Ac",
+        "BuildRun",
+        "WorkerSettings"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300c-2",
+        "ACD-1300e-1",
+        "ACD-1300e-2",
+        "ACD-1300g-1"
+      ],
+      "impl_asof": "2026-09-25",
+      "impl_status": "in_progress"
+    },
+    {
       "id": "implement",
       "label": "Build and check the next AC locally",
       "human": "The local tool-capable harness passes the next AC and accumulated worktree to Qwen3.5 9B through Ollama for code, tests, documentation and project-local dependency work. Passing checks checkpoint AC evidence and release the next internal dependent in this same worktree; they do not mark target-branch completion. The loop builds the whole feature, with up to three attempts and sixty total implementation minutes per AC including repair.",
-      "order": 5,
+      "order": 7,
       "agent": "Local implementation agent",
       "consumes": [
         "BuildRun.context",
@@ -183,7 +240,7 @@
       "id": "validate",
       "label": "Assemble evidence for the whole feature",
       "human": "After every planned AC has local evidence, project checks validate the accumulated feature head. The worker packages the exact revision, feature diff, AC results and source references for review. Failed checks return to local repair within remaining budgets, or to validation-blocked; only a passing package proceeds. Coverage includes required parent behavior and leaf scenarios; passing only a child failure-case check cannot complete the feature.",
-      "order": 6,
+      "order": 8,
       "agent": "Background worker and project checks",
       "consumes": [
         "BuildRun.ac_evidence",
@@ -211,7 +268,7 @@
       "id": "review",
       "label": "Review the complete feature",
       "human": "The selected SDK adapter and user-configured model receive the complete feature package; initial adapters are Codex SDK and Claude Agent SDK. Review records findings and disposition against the exact head: approval proceeds to handoff, first-review findings enter repair, and unresolved second-review findings or execution failure enter review-blocked. A failed or missing review is never approval.",
-      "order": 7,
+      "order": 9,
       "agent": "Configured review agent",
       "consumes": [
         "BuildRun.review_package",
@@ -240,7 +297,7 @@
       "id": "handoff",
       "label": "Publish a draft PR for the user",
       "human": "The worker pushes the approved, validated head and creates a draft PR with AC links, check evidence and review summary. A durable CLI inbox entry and desktop notification give the user the result; publication failure goes to publication-blocked. The worker can take another feature while the user decides whether to merge; only target-branch completion releases external dependents. A persistent delivered reservation prevents automatic reselection while the proposal awaits human disposition, even though source ACs remain todo. Closing it unmerged or changing its scope requires explicit recovery rather than a fresh automatic build.",
-      "order": 8,
+      "order": 10,
       "agent": "Background worker, then user",
       "consumes": [
         "BuildRun.review_result",
@@ -755,9 +812,9 @@
   ],
   "impl_summary": {
     "done": 0,
-    "in_progress": 19,
+    "in_progress": 21,
     "not_started": 0,
-    "total": 19,
-    "asof": "2026-09-24"
+    "total": 21,
+    "asof": "2026-09-25"
   }
 }

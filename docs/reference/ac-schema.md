@@ -34,6 +34,7 @@ Each AC file is a single YAML document with the following fields.
 | `component` | string | **yes** | AC-store namespace/prefix key — matches a kebab `id` in `docs/acceptance-criteria/index.yaml`. Used for file placement and ID-prefix resolution. Retained for backward compatibility; the knowledge graph reads the `components` **list** (below), not this scalar. This is a different axis from the `components` list; the two registries are intentionally separate. |
 | `status` | enum | **yes** | Lifecycle state: `active`, `deprecated`, `superseded_by`, or `superseded`. (`superseded_by` is canonical; `superseded` is accepted for older records.) |
 | `criteria` | string | **yes** | Multi-line Gherkin scenario body (`Given`/`When`/`Then`/`And`). |
+| `required_inputs` | list of objects | no | Human runtime decisions; see [declaration and answer contract](ac-required-inputs.md#required-runtime-inputs). |
 | `created` | date or string | no | Date this AC was created (`YYYY-MM-DD`). Most records use this field (92 %). YAML bare dates are parsed as native date objects; both forms are accepted. |
 | `created_by` | string | no | Path to the ticket that introduced this criterion. Used by some older authoring flows (14 % of records). Newer records use `created` + `created_by_ticket` instead. |
 | `created_by_ticket` | string or null | no | Path to the ticket that introduced this criterion. Used by newer authoring flows (10 % of records) alongside `created`. |
@@ -91,26 +92,10 @@ rather than being silently ignored.
 | `angle` | enum | no | Which proof-of-done question this test answers, from the set-cover taxonomy in [docs/testing/test-angles.md](../testing/test-angles.md): five core angles — `criterion`, `reachability`, `seam`, `real_artifact`, `deployed` — plus two conditional ones, `boundary` and `failure`. `generate_ticket_from_ac.py` passes an authored value straight through onto the ticket's `## Test Requirements` entry. Note the criteria-derived fallback (no `test_spec` authored) tags its own descriptors `criterion` and appends one mandatory `reachability` descriptor; an authored `test_spec` is taken as-is and gets no generator-added entries. Omit when the angle has not been classified. |
 | `requires_db` | boolean | no | Whether the test needs a live database (drives slow-test marking). |
 
-### Full example
+### AC record and runtime-input examples
 
-```yaml
-id: FIN-001
-title: "Merge main before running tests"
-component: finalize
-status: active
-created: 2026-06-04
-criteria: |
-  Given a worktree branched from an older commit of main
-  When the finalize-feature workflow begins
-  Then it merges origin/main into the current branch before running any tests
-  And it aborts with a clear error message if the merge produces a conflict
-covered_by:
-  - "unit_tests/test_finalize.py::test_merge_main_before_tests"
-implemented_by:
-  - "scripts/finalize.py#merge_main"
-amended_by: []
-origin_agent: business-analyst
-```
+See [AC examples and required runtime inputs](ac-required-inputs.md) for the full
+record example and the optional declaration/answer contract.
 
 ### Pattern AC example (with pattern_slots)
 

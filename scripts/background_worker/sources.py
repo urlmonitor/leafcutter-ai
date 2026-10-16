@@ -14,7 +14,7 @@ import yaml
 
 def _run_git(argv, **kwargs):
     try:
-        return subprocess.run(argv, **kwargs)
+        return subprocess.run([argv[0], "-c", "core.fsmonitor=false", *argv[1:]], **kwargs)
     except (OSError, subprocess.SubprocessError) as exc:
         raise ValueError("Git evidence operation failed: " + type(exc).__name__) from exc
 
@@ -59,7 +59,7 @@ def load_reference_contents(repo: Path, records: dict) -> dict:
     return result
 
 
-def refresh_target(repo: Path, target_ref: str) -> None:
+def refresh_target(repo: Path, target_ref: str, *, hook_runtime: dict | None = None) -> None:
     """Refresh a configured remote-tracking target without changing a checkout.
 
     Local refs deliberately stay local. Remote refs require fresh remote evidence;
@@ -97,24 +97,38 @@ def refresh_target(repo: Path, target_ref: str) -> None:
     )
     if verified.returncode:
         raise ValueError("Invalid remote target branch")
-    fetched = _run_git(
-        [
-            "git",
-            "-C",
-            str(repo),
-            "fetch",
-            "--no-tags",
-            "--",
-            remote,
-            "+refs/heads/" + branch + ":refs/remotes/" + normalized,
-        ],
-        capture_output=True,
-        timeout=60,
+    from .git_hooks import GitHookSandbox
+    from .execution_boundary import ExecutorError, run_process
+
+    config = hook_runtime or {}
+    boundary = GitHookSandbox(
+        repo,
+        repo,
+        runtime_read_paths=config.get("read_paths", []),
+        pre_commit_cache=config.get("pre_commit_cache"),
     )
-    if fetched.returncode:
+    try:
+        with boundary.invocation(repo) as overrides:
+            run_process(
+                [
+                    "git",
+                    "-c",
+                    "core.fsmonitor=false",
+                    *overrides,
+                    "fetch",
+                    "--no-tags",
+                    "--",
+                    remote,
+                    "+refs/heads/" + branch + ":refs/remotes/" + normalized,
+                ],
+                cwd=repo,
+                timeout=60,
+            )
+    except ExecutorError as exc:
         raise ValueError(
-            "Cannot refresh target reference; check remote availability and authentication"
-        )
+            "Cannot refresh target reference safely; check remote authentication and sandboxed Git hook results: "
+            + str(exc)
+        ) from exc
 
 
 def target_completed(repo: Path, target_ref: str) -> set[str]:
@@ -139,13 +153,14 @@ def target_completed(repo: Path, target_ref: str) -> set[str]:
         # A resolved target with no AC store is an empty baseline.
         return set()
     tree = _run_git(
-        ["git", "-C", str(repo), "ls-tree", "-r", "--name-only", target_sha],
+        ["git", "-C", str(repo), "ls-tree", "-r", "--name-only", "-z", target_sha],
         capture_output=True,
-        text=True,
         check=True,
         timeout=30,
     )
-    target_paths = set(tree.stdout.splitlines())
+    target_paths = {
+        path.decode("utf-8", errors="surrogateescape") for path in tree.stdout.split(b"\0") if path
+    }
     records = {}
     with tarfile.open(fileobj=io.BytesIO(proc.stdout)) as archive:
         for item in archive:

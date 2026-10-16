@@ -1,6 +1,7 @@
 """Target completion must observe remote merges without any hosted service."""
 
 import subprocess
+import os
 
 import pytest
 import yaml
@@ -25,18 +26,18 @@ def initialize(path, *, bare=False):
     return path
 
 
-def save_target(repo, *, done, parent=None):
+def save_target(repo, *, done, parent=None, evidence_name="tests/evidence.txt"):
     store = repo / "docs/acceptance-criteria/test"
     store.mkdir(parents=True, exist_ok=True)
-    evidence = repo / "tests/evidence.txt"
-    evidence.parent.mkdir(exist_ok=True)
+    evidence = repo / evidence_name
+    evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text("Executed target-branch check evidence", encoding="utf-8")
     record = {
         "id": "TEST-200a-1",
         "level": "L2",
         "status": "active",
         "work_status": "done" if done else "todo",
-        "implemented_by": ["tests/evidence.txt"],
+        "implemented_by": [evidence_name],
     }
     (store / "TEST-200a-1.yaml").write_text(yaml.safe_dump(record), encoding="utf-8")
     git(repo, "add", "--all")
@@ -88,6 +89,23 @@ def test_background_worker_local_target_needs_no_remote(tmp_path):
     assert git(repo, "remote") == ""
     refresh_target(repo, "main")
     assert git(repo, "rev-parse", "main") == initial
+    assert target_completed(repo, "main") == {"TEST-200a-1"}
+
+
+@pytest.mark.parametrize(
+    "evidence_name",
+    [
+        "tests/größer.txt", "  leading evidence.txt",
+        pytest.param("tests/line\nbreak.txt", marks=pytest.mark.skipif(
+            os.name == "nt", reason="Windows filenames cannot contain control characters")),
+        pytest.param("tests/cr\r\nlf.txt", marks=pytest.mark.skipif(
+            os.name == "nt", reason="Windows filenames cannot contain control characters")),
+    ],
+)
+def test_target_evidence_preserves_exact_git_filename(tmp_path, evidence_name):
+    # covers: ACD-1300f-2
+    repo = initialize(tmp_path / "exact-path")
+    save_target(repo, done=True, evidence_name=evidence_name)
     assert target_completed(repo, "main") == {"TEST-200a-1"}
 
 

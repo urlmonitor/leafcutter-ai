@@ -15,6 +15,14 @@ criteria: |
   Then the feature is blocked with the unavailable capability and preserved progress
   And it performs no substitute cloud implementation call
   And missing tool execution or a claimed but unperformed check cannot count as passing AC evidence
+
+  Given discovery or implementation returns an empty, unreadable or contradictory reply, an unsupported handoff, an explicit refusal or an execution error
+  When the worker considers the next phase
+  Then the run remains blocked for operator attention with the affected AC, phase, reason and preserved progress
+  And no automatic redispatch, substitute provider call or coordinator execution of the refused action occurs
+  And no dependent work, validation, review or publication is authorized by that reply
+  And explicit operator recovery retains the original attempt and elapsed-time budgets
+  And this communication blocker remains distinct from failed project checks eligible for bounded repair
 depends_on:
 - ACD-1300g-1
 doc_links:
@@ -39,6 +47,8 @@ expects_from: null
 origin_agent: business-analyst
 created: '2026-09-24'
 amended_by:
+- '2026-09-26 business-analyst: Retrospective behavioral review of C2/C3/C11 communication changes; amended existing authorized scope, retaining approval and in-progress status; no delivery proof claimed.'
+- '2026-09-26 Codex: User-authorized communication standardization applies analysis clusters C2/C3/C11; approved requirements remain in progress pending verification.'
 - '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
   remains medium.'
 superseded_by: null
@@ -52,11 +62,27 @@ implemented_by:
 - unit_tests/ac_driven_dev/test_background_worker_executors.py
 change_target: pipeline
 risk_surface: contract_boundary
-notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+notes: Approved requirements; implementation is under review; native Windows isolation remains unsupported, but dedicated WSL filesystem boundaries and deployed guard bootstrap are verified.
+  Linux worker regression passed with 317 tests, 5 skipped and 10 subtests; 13 real native sandbox/bootstrap checks passed.
+  Complete real local-model delivery acceptance remains unverified. Pattern inventory found
   no matching reusable worker behavior.
 declares_side_effect: false
 estimated_complexity: M
 it_requirements:
+- A bare ready reply, blank or non-string discovery assessment, or discovery assessment in an implementation
+  reply is a communication-contract failure. A successful shell command cannot rescue invalid readiness; valid
+  supplied-context discovery is not rejected solely for zero tools. Preserve immediate durable blocking without
+  repair, provider fallback or budget reset.
+- Adapter failures and graph-level invalid results, including a None result from an alternate adapter, block immediately
+  with diagnostic context. They cannot enter the ordinary bounded check-repair loop, substitute another provider,
+  execute the refused operation in the coordinator, or produce passing evidence.
+- Communication regression tests must pair valid replies with plausible wrong outcomes and assert exact dispatch,
+  downstream-check, review and publication counts. Tests must detect unconditional success, reintroduced generation-time
+  output-schema constraints, a missing phase-specific prompt contract or bypassed strict post-turn parser in either
+  phase, ignored refusal routing and forged-answer precedence; an import failure or source-string assertion alone
+  is not discrimination evidence.
+- Treat explicit refusal and error replies as durable blocked outcomes with bounded diagnostics, never success, implicit permission, a substitute provider call or coordinator execution of the refused action. Malformed and contradictory replies remain non-success.
+- Test the real reply adapter and graph routing with refusal, error, malformed output and forged human-answer fields; success-only executor stubs cannot establish these failure paths.
 - Separate endpoint availability from full harness/tool capability; an empty tool result or claimed check
   without execution evidence cannot satisfy the contract.
 - Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
@@ -66,6 +92,82 @@ it_requirements:
   head_sha:string, changed_files:string[], checks:[{command:string, exit_code:integer, evidence_ref:string}],
   outcome:passed|blocked|failed}.'
 test_spec:
+- name: test_unconstrained_generation_still_rejects_invalid_final_report
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: For both actual phase executors without constrained generation, return prose-wrapped JSON, missing
+    questions or forged approval fields; require strict parser rejection and no success transition. Pair with valid
+    reports under the same invocation.
+  covers:
+  - ACD-1300g-1-i
+- name: test_implementation_completion_without_tool_event_still_blocks
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Return valid completed JSON without any successful tool event from unconstrained implementation;
+    reject the completion claim while the actual tool-effect positive control remains accepted.
+  covers:
+  - ACD-1300g-1-i
+- name: test_discovery_ready_rejects_non_string_assessment
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Return discovery ready with a non-string assessment; reject at the contract boundary rather
+    than coercing a value to text.
+  covers:
+  - ACD-1300g-1-i
+- name: test_discovery_ready_requires_assessment_even_with_tool_event
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Pair valid zero-tool assessment with missing, blank, whitespace and wrong-type assessments,
+    including a successful ls event; invalid reports block before coding and cannot be rescued by tool activity.
+  covers:
+  - ACD-1300g-1-i
+- name: test_implementation_reply_rejects_discovery_assessment
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Return completed with real tool evidence plus discovery-only assessment; assert phase-contract
+    rejection. Valid completed without assessment remains accepted and actual checks retain authority.
+  covers:
+  - ACD-1300g-1-i
+- name: test_unusable_serialized_reply_blocks_without_retry
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Feed serialized null, an empty object and contradictory status/questions through the real parser
+    into the real graph; assert immediate durable blocking, one invocation, no retry and zero downstream success
+    effects.
+  covers:
+  - ACD-1300g-1-i
+- name: test_adapter_failure_blocks_graph_once_and_persists_diagnostics
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: seam
+  description: Pair each refusal/error/unsupported-handoff result in both phases with a valid execution control;
+    assert one call, durable blocker and exact zero downstream checks/reviews/publications, including a second graph
+    invocation.
+  covers:
+  - ACD-1300g-1-i
+- name: test_empty_adapter_result_never_runs_checks_or_retries
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Return None directly from each phase adapter to bypass parser protection; assert graph-level rejection,
+    no evidence, zero downstream checks/reviews/publications and no automatic retry. The plausible-wrong implementation
+    treats an empty reply as success.
+  covers:
+  - ACD-1300g-1-i
 - name: test_background_worker_lost_local_backend_blocks_without_cloud_call
   target_dir: unit_tests/ac_driven_dev/
   framework: pytest
