@@ -66,6 +66,7 @@ Fixed issues move to [`documentation-system/resolved/`](documentation-system/res
 | `high` | KI-DS-003 — Nothing resolves the paths in `pre_flight_reads`, so an agent can require a file that has never existed | [open-high-ki-ds-003.md](documentation-system/open-high-ki-ds-003.md) |
 | `low` | KI-DS-20260908-1535 — the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit | [open-low-ki-ds-20260908-1535.md](documentation-system/open-low-ki-ds-20260908-1535.md) |
 | `low` | KI-DS-20261014-token-scan-flags-f-string-fields-in-source-targets — documentation-verifier runs its unfilled-token check (6c) on every required path, so a `.py` target's f-string fields block the phase as placeholders | [open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md](documentation-system/open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md) |
+| `low` | KI-DS-20261016-c3-030-number-claimed-on-two-branches — diagram number c3-030 is on main (requirement rule check) and on the BO-4300 workspace epic branch (workspace request halt sequence); that branch renumbers at its next main merge | [open-low-ki-ds-20261016-c3-030-number-claimed-on-two-branches.md](documentation-system/open-low-ki-ds-20261016-c3-030-number-claimed-on-two-branches.md) |
 
 ## Resolved
 
