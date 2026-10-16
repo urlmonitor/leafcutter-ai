@@ -1,11 +1,11 @@
 ---
 title: "KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo"
-description: "high (as a blocker to registration) — the gate itself is dormant and harms nothing today."
+description: "high (as a blocker to registration) — the gate itself was dormant and harmed nothing. RESOLVED by GE-131a-2 (51c386618, PR #1110): check-complexity is registered and judges each function against its own previous score."
 type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-16'
 components:
   - commit_guardian
 related_docs:
@@ -16,12 +16,28 @@ related_docs:
 # KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high (as a blocker to registration) — the gate itself is dormant and harms nothing today.
-- **Status:** open — no AC. Needs its own session.
+- **Status:** RESOLVED 2026-10-16 (moved to `resolved/`; the fix landed earlier). Fixed by
+  `GE-131a-2` in `51c386618` ("hold each function to the greater of the limit and its own previous
+  score"), merged through PR #1110 on 2026-10-09. This entry's design (b), a per-function
+  comparison, is what shipped. Verified on main `496bfecee`:
+  - `check-complexity` is in `hooks_manifest.hooks` (`templates/scripts/commit_guardian/commit_guardian.json:1374`,
+    "Check Complexity (GE-131a-2 — per-function complexity ratchet)").
+  - `check_complexity.py:33` imports `judge_file` from `_complexity_ratchet`, and `:160` judges each
+    staged file with it against HEAD plus every MERGE_HEAD parent (`:148`).
+  - `_complexity_ratchet.py:158-173`: each function's ceiling is `max(limit, its highest previous
+    score)` (`previous_ceilings`, `:128-147`). A function already over the limit can be edited but not
+    made worse; a new or crossing function over the limit is refused.
+  - `unit_tests/commit_guardian/test_ge_131a_2.py` runs a real commit through the registered check:
+    a real offender file commits, a grown function and a new over-limit function are refused. All
+    pass on `496bfecee`.
+  - The definition of done below is met: existing offenders stay committable, a new or worsened
+    function is refused, the gate is registered.
+- **Status when filed:** open — no AC. Needs its own session.
 - **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_complexity.py:197` (`main`), `:130` (`process_staged_file`); limit `MAX_COMPLEXITY_SCORE = 15` from `config.py`.
 
