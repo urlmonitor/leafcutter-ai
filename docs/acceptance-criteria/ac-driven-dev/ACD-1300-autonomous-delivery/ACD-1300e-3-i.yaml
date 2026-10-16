@@ -1,0 +1,109 @@
+id: ACD-1300e-3-i
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: approved
+priority: high
+title: "Every pause of the same kind persists, not just some of them"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+declares_side_effect: true
+roadmap_phase: phase_1
+criteria: |
+  Given five separate planning runs, each with no person attached, each reaching the same
+    decision point with drafted criteria on disk, and the project's pause store writable,
+  When each run records that it is waiting,
+  Then all five end reported as waiting with a record present on disk for each run id,
+  And none of the five ends as "pause persist failed",
+  And the same holds when the five runs are started from a worktree of the project
+    rather than from the project root,
+  And when the pause store is not writable, the run reports the pause as failed, the
+    report names the store write as the cause (not a refusal by the step performing it),
+    and the drafted criteria are still present on disk unchanged.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-3
+  contract: "All pause-record operations dispatched to command-step-runner with request {step, command, target: {workspace, branch, ac_id}} and reply {command, workspace, exit_status, stdout, stderr} | decline {declined: true, step, agent, reason}; pause_persist_failed iff the read-back finds no record, with a message naming decline vs store write."
+it_requirements:
+  - "The executor id is a fixed value, never chosen per call, per run, or by fallback rotation, so the outcome cannot vary between runs reaching the same gate."
+  - "Runs started from a linked worktree and from the project root write to and read from the same repository-anchored store (<repo root via git --git-common-dir>/.leafcutter/paused_runs), unchanged from ACD-2100a-4."
+  - "When the store is not writable, pause_store.py's non-zero exit and stderr are carried into the pause_persist_failed message, which names the store write as the cause and not a refusal by the executor."
+  - "A pause failure never deletes, rewrites, stages or commits drafted criteria."
+test_intent:
+  - clause: "Then all five end reported as waiting with a record present on disk for each run id,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_five_headless_runs_all_reported_waiting_with_records (criterion)."
+  - clause: "And none of the five ends as \"pause persist failed\","
+    needs_test: true
+    reason: "Observable outcome; proved by test_none_of_five_runs_ends_pause_persist_failed (discrimination)."
+  - clause: "And the same holds when the five runs are started from a worktree of the project rather than from the project root,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_five_runs_from_worktree_persist_to_shared_store (boundary)."
+  - clause: "And when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged."
+    needs_test: true
+    reason: "Observable outcome; proved by test_unwritable_store_reports_store_write_cause_and_keeps_drafts (failure)."
+test_spec:
+  - name: test_five_headless_runs_all_reported_waiting_with_records
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Five run ids reaching the same gate each return paused_awaiting_input and each has paused_runs/<run_id>.json."
+    proves_clause: "Then all five end reported as waiting with a record present on disk for each run id,"
+  - name: test_none_of_five_runs_ends_pause_persist_failed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "No status is pause_persist_failed across the five runs and the executor id is identical for every pause-record dispatch."
+    proves_clause: "And none of the five ends as \"pause persist failed\","
+    must_catch:
+      - "executor chosen from a list or by fallback so that different runs hit different agents"
+  - name: test_five_runs_from_worktree_persist_to_shared_store
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Started from a linked worktree, the five records land in the main repository's paused_runs store and are readable from the project root."
+    proves_clause: "And the same holds when the five runs are started from a worktree of the project rather than from the project root,"
+  - name: test_unwritable_store_reports_store_write_cause_and_keeps_drafts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With a read-only store dir, the result is pause_persist_failed, its message names the store write (not an executor refusal), and drafted AC files are byte-identical."
+    proves_clause: "And when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged."
+test_rationale: "Consistency across runs is guaranteed structurally (one fixed executor) rather than statistically, so the discrimination entry pins the fixed id; the store-unwritable case uses a real pause_store.py against a read-only temp dir."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The user reported the routing as inconsistent (one later run's pause did persist).
+  An outcome that varies from run to run is the failure; this edge pins that the outcome
+  is the same every time. Compatible with ACD-2100a-4 (failure reported if and only if no
+  record is on disk).
