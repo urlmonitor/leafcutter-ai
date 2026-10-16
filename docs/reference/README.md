@@ -66,6 +66,7 @@ below by hand.
 |---|---|
 | [build-telemetry.md](build-telemetry.md) | JSONL schema for `agent_telemetry.jsonl` records, the lane-comparison aggregate fields, and the emitter/counter functions that produce them. |
 | [fast-lane-prompt-caching.md](fast-lane-prompt-caching.md) | Parameter table and ordering contract for `assemble_context_bundle`, the function that builds the fast lane's layered, cache-friendly context bundle. |
+| [shared-commit-step.md](shared-commit-step.md) | Inputs, answer keys, statuses, reason-code families, caller rules and remedy/handoff payload of the shared commit step `commit_changes.py`, with one real answer per status. |
 | [skills-config-fields.md](skills-config-fields.md) | Every key in `skills_config.json` â€” the single file controlling `build.py` output layout and agent runtime behaviour â€” with type, default, and effect. |
 | [workflow-authoring-contract.md](workflow-authoring-contract.md) | Copy-paste contract for Claude Code workflow scripts: the E2 canonical execution form, the E1-wrap compatibility shim, and the primitive mapping table. |
 | [workflow-constraints.md](workflow-constraints.md) | Runtime constraints on Claude Code workflow scripts â€” minimum version, token cost, the no-mid-run-steering rule, and the crash-resume mechanism. |
