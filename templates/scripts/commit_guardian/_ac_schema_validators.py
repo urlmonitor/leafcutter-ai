@@ -75,6 +75,28 @@ DECISION HISTORY:
     13.25x figure no longer describes any gate. Recorded here because a
     DECISION HISTORY that asserts a state the code has since left is the same
     defect class this session spent the day removing elsewhere.
+  - 2026-08-25 [python-coder/BO-2900g-2-ii, moved here 2026-10-15]: replaced two
+    bare alternatives of _DURABLE_EFFECT_RE, the word-bounded "is written" and
+    "are written", with the two object-aware forms now in the pattern.
+    Those two accounted for 108 of the 139 records the pattern then marked,
+    78% of every positive it produced, and they could not distinguish a
+    durable write from a write to a stream, from a reported clause whose
+    subject is a document ("the reference states that a notice is written
+    ..."), or from a relative clause merely naming where something lives
+    ("the file suppressions are written in"). Four false positives surfaced in
+    a single day; none was a real side-effect. Re-measured after the change:
+    139 -> 88 marked, 51 flipped to false, and zero records newly marked. A
+    blunt deletion of the two alternatives was measured first and rejected: it
+    left only 31 and dropped genuine positives such as "a record file is
+    written into that project's own tree" (BP-1500d-1). The comment holding
+    this text moved into the docstring to repay the file-size ratchet.
+  - 2026-10-15 [python-coder/ACS-900d-4]: VALID_STATUSES now includes
+    ``superseded`` so the manual validator agrees with config/ac_store_schema.json
+    and ac-schema.md. validate_test_contract takes a keyword-only ``retired``
+    flag (computed by _ac_supersession_validators.is_retired_record from the
+    shared ac_retirement predicate) that skips ONLY the "approved code AC must
+    declare a test contract" requirement for a retired record.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -89,7 +111,7 @@ _SLOT_REGEX = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 _HOOK_PREFIX = "[check-ac-schema]"
 
 REQUIRED_FIELDS = ["id", "title", "component", "status", "created_by", "criteria"]
-VALID_STATUSES = {"active", "deprecated", "superseded_by"}
+VALID_STATUSES = {"active", "deprecated", "superseded", "superseded_by"}  # agrees with config/ac_store_schema.json
 _ID_REGEX = re.compile(r"^[A-Z]{2,6}-[0-9]{3}$")
 
 # Agents that produce production code. A leaf AC assigned to one of these — or
@@ -547,7 +569,9 @@ def _is_leaf_ac(data: dict[str, Any]) -> bool:
     return bool(data.get("assigned_agent")) and not covered_by
 
 
-def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
+def validate_test_contract(
+    path: Path, data: dict[str, Any], *, retired: bool = False
+) -> list[str]:
     """Validate that a leaf code AC carries a test contract (source of truth).
 
     The AC — not the ticket — owns what must be tested. A leaf code AC that is
@@ -563,15 +587,23 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
     Runs on staged files only (per check_ac_schema Phase 1), so it is a forward
     ratchet — it does not retroactively fail the existing store.
 
+    A RETIRED record (ACS-900d-4-i; superseded status naming existing
+    successors, decided by ``ac_retirement`` and passed in as *retired*) is not
+    asked to declare a test contract: only that requirement is exempted. The
+    two shape checks (the contradiction above and ``test_required: false`` on
+    a code AC) still apply.
+
     Args:
         path: Filesystem path to the AC file (for error messages).
         data: Parsed AC YAML content.
+        retired: Whether the caller judged the record retired against the whole
+            store. Defaults to ``False`` (the rule applies).
 
     Returns:
         List of error message strings; empty when the contract is satisfied.
     """
     errors: list[str] = []
-    test_spec = data.get("test_spec")
+    test_spec: Any = data.get("test_spec")
     test_required = data.get("test_required")
     has_spec = isinstance(test_spec, list) and len(test_spec) > 0
 
@@ -600,7 +632,7 @@ def validate_test_contract(path: Path, data: dict[str, Any]) -> list[str]:
                 f"assigned_agent). A code AC with test_required: false generates a "
                 f"ticket that the check-ticket-test-requirements guard blocks."
             )
-        elif not has_spec:
+        elif not has_spec and not retired:
             errors.append(missing_contract_message(path, data))
 
     return errors
@@ -658,20 +690,7 @@ _TRANSIENT_DESTINATION = (
 # is indistinguishable from one that marks nothing one gate later (BO-2900g-2
 # constraints). Calibrated against the real on-disk store at authoring time:
 # ~3.6% of records with a Then clause matched (114 of 3148).
-#
-# BO-2900g-2-ii (2026-08-25) replaced two bare alternatives, `\bis written\b`
-# and `\bare written\b`, with the two object-aware forms below. Those two
-# accounted for 108 of the 139 records the pattern then marked — 78% of every
-# positive it produced — and they could not distinguish a durable write from
-# a write to a stream, from a reported clause whose subject is a document
-# ("the reference states that a notice is written ..."), or from a relative
-# clause merely naming where something lives ("the file suppressions are
-# written in"). Four false positives surfaced in a single day; none was a real
-# side-effect. Re-measured after the change: 139 -> 88 marked, 51 flipped to
-# false, and zero records newly marked. A blunt deletion of the two
-# alternatives was measured first and rejected — it left only 31 and dropped
-# genuine positives such as "a record file is written into that project's own
-# tree" (BP-1500d-1).
+# The two object-aware forms below (BO-2900g-2-ii): rationale in DECISION HISTORY.
 _DURABLE_EFFECT_RE = re.compile(
     r"written to disk|written to a file|"
     # (a) a durable noun governs the verb directly: "a record file is written"

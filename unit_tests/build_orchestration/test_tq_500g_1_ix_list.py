@@ -35,7 +35,7 @@ def test_list_each_owed_name_once_verbatim_with_its_in_scope_files(tmp_path):
     files = {o["name"]: o["files"] for o in out["owed"]}
     assert files[ix.N7] == ["refresh_config.py", "settings.py"]
     assert [n for n in ix.OWED if files[n] == ["refresh_config.py"]] == [n for n in ix.OWED if n != ix.N7]
-    assert list(out) == ["owed", "error"] and all(list(o) == ["name", "files"] for o in out["owed"])
+    assert list(out) == ["owed", "error"] and all(list(o)[:2] == ["name", "files"] for o in out["owed"])  # TQ-500g-1-x adds "scope" after these
 
 
 def test_list_omits_aliases_and_test_files(tmp_path):

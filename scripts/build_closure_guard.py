@@ -83,6 +83,7 @@ _CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
     "skill_registry.json": "build_ac_store",
     "guardrail_gates.yaml": "build_ac_store",
     "paths.json": "build_ac_store", "surface_craft_map.yaml": "build_ac_store",
+    "commit_step.json": "build_ac_store",
     "phase_deferral.yaml": "build_ac_store",
     "feedback_categories.yaml": "build_feedback",
     "knowledge_sink.json": "build_knowledge_sink_declaration",

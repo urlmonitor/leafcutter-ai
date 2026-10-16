@@ -22,6 +22,7 @@ children:
   - docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
   - docs/architecture/diagrams/c3-021-decision-kernel-flows-regression-memory.md
   - docs/architecture/diagrams/c3-022-decision-kernel-flows-open-points.md
+  - docs/architecture/diagrams/c3-023-decision-kernel-split-components.md
   - docs/architecture/diagrams/c3-024-decision-kernel-flows-forming-round.md
   - docs/architecture/diagrams/c3-025-decision-kernel-flows-decision-states.md
   - docs/architecture/diagrams/c3-026-decision-kernel-flows-record-staging.md
@@ -200,6 +201,7 @@ flowchart LR
 | [Learning loop](c3-020-decision-kernel-flows-learning-loop.md) | Live: approved records → Git → precedent. Planned: Langfuse → evaluator → Neo4j → routing |
 | [Regression memory](c3-021-decision-kernel-flows-regression-memory.md) | Confirmed mistakes → Langfuse datasets → regression evaluation before a change |
 | [Open points](c3-022-decision-kernel-flows-open-points.md) | Where the sources are silent or disagree, with their 2026-10-02 status |
+| [Split components](c3-023-decision-kernel-split-components.md) | Where the split of a bundled request sits among the kernel's containers: `host.decompose_goal` beside the other host handoffs, detection, the quote check, the split gate, the part scheduler, the report's split section, and the split record in the run root (ADR-067, in progress) |
 | [Decision forming round](c3-024-decision-kernel-flows-forming-round.md) | One round from your question to the ranked options: intent, precedent, grounding, synthesis, proposals, your approval, option research, assessment, and the budget-reserve exit |
 | [Decision states](c3-025-decision-kernel-flows-decision-states.md) | A decision from proposed through approved and ranked to resolved, with the re-rank loop and the no-answer exit |
 | [Record staging](c3-026-decision-kernel-flows-record-staging.md) | A resolved, human-approved decision staged as a record in the run folder, and the publish notice; nothing staged without a human approval |

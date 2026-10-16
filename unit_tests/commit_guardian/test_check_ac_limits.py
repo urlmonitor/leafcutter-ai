@@ -912,7 +912,11 @@ class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
             child_limit_override: Optional integer override for the child cap.
 
         Returns:
-            AcNode with status and optional child_limit_override set.
+            AcNode with status and optional child_limit_override set. A
+            non-active node also names its parent as ``superseded_by``: since
+            ACS-900d-4-ii a superseded child leaves the cap count only when it is
+            RETIRED (superseded status AND an existing successor), and the parent
+            is always in the node list.
         """
         return AcNode(
             ac_id=ac_id,
@@ -920,6 +924,7 @@ class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
             depends_on=depends_on,
             status=status,
             child_limit_override=child_limit_override,
+            superseded_by=None if status == "active" else [ac_id.rsplit("-", 1)[0]],
         )
 
     @_requires_import
@@ -933,7 +938,6 @@ class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
           - _check_limits counts all 5 children without filtering → violation
             fires when it should not.
         """
-        # 5 children total; 1 has status superseded_by
         nodes = [
             self._make_node("ACS-200", "L0", []),
             self._make_node("ACS-200a", "L1", ["ACS-200"]),
@@ -1010,9 +1014,6 @@ class TestSupersededChildrenExcludedFromCount(unittest.TestCase):
             3 superseded → filtered=5, raw=8; raw>7 fires a violation under
             the current code but filtered=5 <= cap=7 must pass.
         """
-        # 8 children raw, 3 superseded_by, filtered = 5; override=7
-        # Current code: raw=8 > effective cap=7 → violation (RED).
-        # Fixed code: filtered=5 <= 7 → passes.
         nodes = [
             self._make_node("ACS-400", "L0", []),
             self._make_node("ACS-400a", "L1", ["ACS-400"], child_limit_override=7),

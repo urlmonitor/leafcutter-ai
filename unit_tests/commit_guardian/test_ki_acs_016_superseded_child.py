@@ -11,6 +11,15 @@ GOAL: A superseded covered_by child must not block its composite from being prov
 === Fixtures ===
     AC records are written with yaml.safe_dump into a store-shaped temp tree.
     The covers tag lives in a real test file.
+
+=== Contract change (ACS-900d-4) ===
+    The old rule withdrew a child on ANY non-empty superseded_by or
+    req_status "superseded". The shared predicate (ac_retirement.is_retired) is
+    stricter: the child needs a superseded STATUS and EXISTING successors, and
+    req_status is ignored. The withdrawn children below therefore use the
+    retired shape (status superseded_by, or the older spelling superseded, with
+    a successor that exists in the temp store) instead of req_status-only
+    records or the nonexistent successor BO-9999. Each test keeps its intent.
 """
 from __future__ import annotations
 
@@ -37,11 +46,17 @@ COMPOSITE = "BO-9301"
 DONE_CHILD = "BO-9301-i"
 GONE_CHILD = "BO-9301-ii"
 TODO_CHILD = "BO-9301-iii"
-SUPERSEDED_FORMS: dict[str, dict[str, object]] = {
-    "req_status": {"req_status": "superseded"},
-    "superseded_by": {"superseded_by": ["BO-9999"]},
-    "both": {"req_status": "superseded", "superseded_by": ["BO-9999"]},
+SUCCESSOR = "BO-9302"  # exists in the temp store (written by _Store.setUp)
+RETIRED_FORMS: dict[str, dict[str, object]] = {
+    "status_superseded_by": {"status": "superseded_by", "superseded_by": [SUCCESSOR]},
+    "legacy_status_superseded": {"status": "superseded", "superseded_by": [SUCCESSOR]},
+    "status_and_req_status": {
+        "status": "superseded_by",
+        "req_status": "superseded",
+        "superseded_by": [SUCCESSOR],
+    },
 }
+RETIRED = RETIRED_FORMS["status_superseded_by"]
 
 
 def _write_ac(group_dir: Path, ac_id: str, **overrides) -> Path:
@@ -71,6 +86,7 @@ class _Store(unittest.TestCase):
         self.group = self.ac_root / "build-orchestration" / "grp"
         self.test_root = root / "unit_tests"
         self.test_root.mkdir(parents=True)
+        _write_ac(self.group, SUCCESSOR, work_status="todo")  # the successor every retired child names
         (self.test_root / "test_done_child.py").write_text(
             textwrap.dedent(
                 f"""\
@@ -106,7 +122,7 @@ class TestSupersededChildSkipped(_Store):
         # covers: BO-2500a-1-ii
         # angle: parity
         """KI-ACS-016: one superseded todo child + one done covered child passes both."""
-        for name, form in SUPERSEDED_FORMS.items():
+        for name, form in RETIRED_FORMS.items():
             with self.subTest(form=name):
                 data = self._build(
                     {DONE_CHILD: {}, GONE_CHILD: {"work_status": "todo", **form}}
@@ -119,7 +135,7 @@ class TestSupersededChildSkipped(_Store):
         # angle: parity
         """KI-ACS-016: the CI verdict never names the superseded child as uncovered."""
         data = self._build(
-            {DONE_CHILD: {}, GONE_CHILD: {"work_status": "todo", "req_status": "superseded"}}
+            {DONE_CHILD: {}, GONE_CHILD: {"work_status": "todo", **RETIRED}}
         )
         verdict = _verify_composite_eligible(
             COMPOSITE,
@@ -135,7 +151,7 @@ class TestSupersededChildSkipped(_Store):
         # angle: discrimination
         """KI-ACS-016: skipping must not strip the audit trail from covered_by."""
         data = self._build(
-            {DONE_CHILD: {}, GONE_CHILD: {"work_status": "todo", "req_status": "superseded"}}
+            {DONE_CHILD: {}, GONE_CHILD: {"work_status": "todo", **RETIRED}}
         )
         self.assertEqual(data["covered_by"], [DONE_CHILD, GONE_CHILD])
 
@@ -147,8 +163,8 @@ class TestStillRefused(_Store):
         """KI-ACS-016: nothing left to derive from, so the composite stays refused."""
         data = self._build(
             {
-                DONE_CHILD: {"work_status": "todo", "req_status": "superseded"},
-                GONE_CHILD: {"work_status": "todo", "superseded_by": ["BO-9999"]},
+                DONE_CHILD: {"work_status": "todo", **RETIRED},
+                GONE_CHILD: {"work_status": "todo", **RETIRED_FORMS["legacy_status_superseded"]},
             }
         )
         self.assertNotEqual(self._precommit(data), [])
@@ -169,7 +185,7 @@ class TestStillRefused(_Store):
         data = self._build(
             {
                 DONE_CHILD: {},
-                GONE_CHILD: {"work_status": "todo", "req_status": "superseded"},
+                GONE_CHILD: {"work_status": "todo", **RETIRED},
                 TODO_CHILD: {"work_status": "todo"},
             }
         )

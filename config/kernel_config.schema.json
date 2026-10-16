@@ -1329,6 +1329,44 @@
       ],
       "title": "SourceConfig",
       "type": "object"
+    },
+    "SplitConfig": {
+      "additionalProperties": false,
+      "description": "Settings of the split of a bundled request.",
+      "properties": {
+        "bundle_threshold": {
+          "description": "A subject counts as bundled only at or above this Jev probability; set high to avoid false splits.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Bundle Threshold",
+          "type": "number"
+        },
+        "enabled": {
+          "description": "The off switch: false restores today's behaviour exactly (no bundle question, no split).",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "max_parts": {
+          "description": "Most parts one split may offer to the person.",
+          "minimum": 2,
+          "title": "Max Parts",
+          "type": "integer"
+        },
+        "max_parts_per_run": {
+          "description": "Most parts one run may hold across all its splits (a split needs at least 2 left).",
+          "minimum": 2,
+          "title": "Max Parts Per Run",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "bundle_threshold",
+        "max_parts",
+        "max_parts_per_run"
+      ],
+      "title": "SplitConfig",
+      "type": "object"
     }
   },
   "$id": "kernel_config.schema.json",
@@ -1403,6 +1441,10 @@
       },
       "title": "Sources",
       "type": "array"
+    },
+    "split": {
+      "$ref": "#/$defs/SplitConfig",
+      "description": "Settings for splitting a bundled request into parts a person approves (ADR-067)."
     }
   },
   "required": [
@@ -1421,7 +1463,8 @@
     "host",
     "data_policy",
     "langfuse",
-    "memory"
+    "memory",
+    "split"
   ],
   "title": "KernelConfig",
   "type": "object"
