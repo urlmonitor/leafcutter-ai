@@ -1,0 +1,67 @@
+id: ACD-1300e-3
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "Recording and reading a pause never depends on an agent whose role excludes it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+declares_side_effect: true
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run with no person attached reaches a decision point and must record
+    that it is waiting (write the record, then read it back to confirm it persisted),
+  And a later run for the same run id must find, read, clear, and confirm the clearing of
+    that record when it resumes,
+  When each of those six record operations is carried out,
+  Then each is performed either by a fixed command step that involves no agent or by an
+    agent whose declared role explicitly includes reading and writing pause records,
+  And none of them is given to an agent whose declared role is limited to other work
+    (creating and removing worktrees, or investigating ticket state),
+  And the pause ends with the run reported as waiting and the record present on disk,
+    never ended as "pause persist failed" because the step that should have written the
+    record declined it as outside its role,
+  And the resume reads that record and applies the person's answer as ACD-2100c-3 requires,
+  And the bug symptom ("on runs gpt-flow-step-links and fast-lane-test-gates, 2026-10-15/16,
+    the pause record write was handed to the worktree agent, whose role is only worktree
+    create/remove; it refused, every pause ended pause_persist_failed and the run could
+    not be resumed at all") must not occur.
+depends_on: [ACD-1300e]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2300-interactive-pause-resume/BO-2300a-1-ii.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1300e-3-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  CONTRADICTS an approved, done AC: BO-2300a-1-ii requires these same dispatches to go to
+  worktree-agent (chosen 2026-09-25 because it was the only permits_shell agent). That
+  choice is now the defect. BO-2300a-1-ii's own notes name the residual ("worktree-agent's
+  charter names worktree lifecycle, not pause-store I/O; a dedicated shell-executor agent
+  would be the durable fix"). BO-2300a-1-ii needs amending or superseding by this AC --
+  flagged to the user, not edited by the BA. The status-checker exclusion it states is
+  kept here. The worktree-setup-script lookup it also covers is out of scope here.
+  Executor choice (fixed command step vs. a chartered executor agent) is for the IT PO.

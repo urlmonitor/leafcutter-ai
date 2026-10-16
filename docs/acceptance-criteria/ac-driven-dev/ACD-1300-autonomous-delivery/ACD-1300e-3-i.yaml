@@ -1,0 +1,50 @@
+id: ACD-1300e-3-i
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "Every pause of the same kind persists, not just some of them"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+declares_side_effect: true
+roadmap_phase: phase_1
+criteria: |
+  Given five separate planning runs, each with no person attached, each reaching the same
+    decision point with drafted criteria on disk, and the project's pause store writable,
+  When each run records that it is waiting,
+  Then all five end reported as waiting with a record present on disk for each run id,
+  And none of the five ends as "pause persist failed",
+  And the same holds when the five runs are started from a worktree of the project
+    rather than from the project root,
+  And when the pause store is not writable, the run reports the pause as failed, the
+    report names the store write as the cause (not a refusal by the step performing it),
+    and the drafted criteria are still present on disk unchanged.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The user reported the routing as inconsistent (one later run's pause did persist).
+  An outcome that varies from run to run is the failure; this edge pins that the outcome
+  is the same every time. Compatible with ACD-2100a-4 (failure reported if and only if no
+  record is on disk).

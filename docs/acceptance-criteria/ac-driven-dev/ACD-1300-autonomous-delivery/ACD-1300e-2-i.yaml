@@ -1,0 +1,41 @@
+id: ACD-1300e-2-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The answer a run was resumed with is never reused for the next decision"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R paused at decision D1 and is resumed with the person's answer "approve" for D1,
+  And after D1 the run reaches the final approval decision D2 with no person attached,
+  When the run arrives at D2,
+  Then the "approve" given for D1 is not applied to D2,
+  And no criterion is marked approved and no priority is set at D2,
+  And the run pauses at D2 with a durable record naming D2,
+  And a resume supplying "cancel" for D2 cancels at D2 while the criteria committed before
+    D2 remain committed and unchanged.
+depends_on: [ACD-1300e-2]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

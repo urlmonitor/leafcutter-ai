@@ -1,0 +1,46 @@
+id: ACD-1300e-4
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The resume how-to walks an operator through a run that waits more than once"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the how-to for resuming a paused planning run,
+  When an operator follows it for a run that pauses at two decision points in sequence,
+  Then the guide shows how to read which decision the record currently names, supply the
+    answer for that decision, and repeat for the next decision after the run pauses again,
+  And it states that one resume carries the answer for exactly one decision and that an
+    answer for a later decision is refused until the run is waiting on it,
+  And it states that a resumed run does not treat the criteria it committed itself as
+    existing coverage, so no covered-route decision appears for them,
+  And it states what the operator sees when recording a pause fails because the store
+    could not be written, and how to retry,
+  And every status value named in the guide is one the route actually reports.
+depends_on: [ACD-1300e-1, ACD-1300e-2, ACD-1300e-3]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-2
+  contract: "The shipped multi-decision resume behaviour and the status values it reports."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

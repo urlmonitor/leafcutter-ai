@@ -1,0 +1,63 @@
+id: ACD-1300e-2
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A run that needs several decisions can be resumed through each of them in turn"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run R with no person attached that paused at its first decision point
+    (decision D1) with a durable record naming D1, and whose remaining route contains a
+    second decision point (decision D2, for example the final approval),
+  When the route is started again for run R supplying the person's answer for D1,
+  Then the D1 answer is applied to D1 and the run continues past it,
+  And when the run reaches D2 with still no person attached it pauses again and the
+    durable record for run R now names D2 (not D1),
+  And the report from that resume says the run is waiting on D2,
+  And when the route is started again for run R supplying the person's answer for D2,
+    that answer is applied to D2 -- it is not refused as naming a different decision,
+  And the criteria committed before D1 and between D1 and D2 are carried forward
+    unchanged through both resumes,
+  And after the run moves past D2 no waiting record for run R remains on disk,
+  And the same holds for a run with three or more decision points: each resume that
+    supplies the answer for the decision currently named in the record advances the
+    run to its next decision point or to completion.
+depends_on: [ACD-1300e, ACD-1300e-1]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-1
+  contract: "A resume does not detour into the covered-route decision on the run's own criteria, so the decision named in the record is the one the resume reaches."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: [ACD-1300e-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Extends ACD-2100c-3 (single-decision resume) to a chain of decisions. Compatible with
+  ACD-2100c-3-i: an answer naming a decision other than the one in the record is still
+  not applied. The one-answer-per-resume shape is kept deliberately (BA assumption): each
+  pause is resumed by the answer for the decision it names. Supplying answers for several
+  decisions in one resume is NOT specified here.

@@ -1,0 +1,47 @@
+id: ACD-1300e-1-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A run's own criteria are recognised after a crash that left no pause record"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R committed three criteria in its behavioral stage and then the process was
+    killed before any pause record was written (no waiting record for R exists on disk),
+  And the store also holds one older criterion, authored by a different run, that covers
+    part of the same request,
+  When the route is started again for run R with the same request,
+  Then run R's three committed criteria are recognised as R's own from what the store
+    and its history record about them, without relying on a pause record,
+  And those three are not presented as existing coverage,
+  And the older criterion from the other run IS presented as existing coverage, so the
+    covered-route decision lists exactly that one criterion and none of R's three,
+  And when the store holds no criterion from another run that covers the request, no
+    covered-route decision is raised at all.
+depends_on: [ACD-1300e-1]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-1
+  contract: "Run-scoped record of which criterion ids run R committed, readable without a pause record."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

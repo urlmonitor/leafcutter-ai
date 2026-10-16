@@ -1,0 +1,46 @@
+id: ACD-1300e-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A sequence diagram shows a run paused and resumed across successive decisions"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the planning route's decision-point sequence diagram,
+  When a reader looks up what happens when a paused run is resumed,
+  Then the diagram shows a resume entering with one answer, passing the duplicate-coverage
+    check without counting the run's own committed criteria, applying the answer to the
+    decision named in the record, reaching the next decision, and pausing again with the
+    record now naming that next decision,
+  And it shows which participant writes, reads, and clears the pause record, and that
+    participant is not the worktree agent,
+  And it shows the outcomes the route actually reports for a resume: continued, waiting
+    again, answer refused as naming a different decision, nothing to resume, and pause
+    record unreadable.
+depends_on: [ACD-1300e-1, ACD-1300e-2, ACD-1300e-3]
+doc_links:
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-3
+  contract: "The chosen pause-record executor, so the diagram names the right participant."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
