@@ -34,7 +34,7 @@ def test_every_view_lists_exactly_the_declared_abilities_for_every_specialist(tm
     decl = H.declared_ids(real)
     assert len(decl) > 0 and any(not v for v in decl.values()), "population must include empty declarations"
     for name, view in H.all_views(real, tmp_path).items():
-        problems += H.mismatches(name, view, decl)
+        problems += H.mismatches(name, view, H.expected_for_view(name, real, decl))
 
     planted_root = H.lean_root(tmp_path, name="planted")
     assert H.run_hook(planted_root).returncode == 0

@@ -66,6 +66,7 @@ from build_helpers import (
 )
 from build_log_root import add_log_root_arguments, apply_log_root_input
 from build_ownership import assemble_claim_set
+from project_ability_slots import project_ids
 from seed_example_product import run_as_build_step as _seed_example_product
 from build_halt_guard import (
     check_halt_guard,
@@ -184,7 +185,9 @@ def _run_validation_guards(
 
     # AR-300c-3: report a registry copy that disagrees with the declarations
     # (continues); refuse when a declared ability resolves to no installed skill.
-    if refuse_on_ability_findings(package_root, config, args.dry_run):
+    given = getattr(args, "target_dir", None)  # a bare namespace (tests) carries none
+    target_dir = Path(given).resolve() if given else Path.cwd()  # == build.main()'s target_root
+    if refuse_on_ability_findings(package_root, config, args.dry_run, project_root=target_dir):
         return 1
 
     # Script reference guard: exit non-zero and halt before writing any output
@@ -518,6 +521,8 @@ def _run_clean_mode_if_requested(
     print()
     _heading("Clean mode")
     source_manifests = build_source_manifests(output_root)
+    # AR-400d-2-ii: an id any agent marks provided_by: project is the project's own; never stale (KI-BP-009).
+    source_manifests["skills"] = set(source_manifests["skills"]) | project_ids()
     clean_stale_artifacts(target_root, source_manifests)
 
 
@@ -608,5 +613,10 @@ DECISION HISTORY
   named otherwise. Wired here rather than in build.py, which the
   file-size ratchet forbids from growing.
   (#TICKET-20260930-RetireRenamedCommandOutputs)
+- 2026-10-16 [python-coder/AR-400d-2-ii]: _run_clean_mode_if_requested() adds every id
+  an agent marks ``provided_by: project`` (project_ability_slots.project_ids()) to the
+  expected skills set, so ``--clean`` never reaps a project's own ability as a stale
+  artifact (KI-BP-009). Wired here, not in build.py's _build_source_manifests, which the
+  file-size ratchet forbids from growing. (#AR-400d-2-ii)
 ====================================================================
 """

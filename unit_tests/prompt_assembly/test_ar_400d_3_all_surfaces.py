@@ -165,7 +165,7 @@ def test_hook_and_scripts_parsers_agree_on_every_real_template():
     sync = _sync_module()
     cases = []
     for path in sorted((F.REPO_ROOT / "templates" / "agents").glob("*.md")):
-        if path.name.startswith("_"):
+        if path.name.startswith("_") or path.name == "README.md":  # README.md is the folder guide, not a definition
             continue
         raw = _frontmatter(path).get("skills")
         if raw:

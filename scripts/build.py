@@ -284,7 +284,7 @@ def _handle_registry_errors(errors: list[str], dry_run: bool) -> int:
         0 if the build should continue, 1 to abort.
     """
     for err in errors:
-        _error(f"[REGISTRY] {err}")
+        print(f"ERROR: {err}", flush=True)  # same line the validator CLI prints (AR-400b-4: two doors, one finding)
     return 0 if dry_run else 1
 
 
@@ -379,7 +379,6 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 # _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
 # (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
-
 
 # _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
 
