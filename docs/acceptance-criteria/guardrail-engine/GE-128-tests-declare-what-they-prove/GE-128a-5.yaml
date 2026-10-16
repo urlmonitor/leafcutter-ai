@@ -1,0 +1,55 @@
+id: GE-128a-5
+title: "How-to: work on a test file that already holds undeclared tests without being refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a developer whose commit to a test file was refused by the
+    test-declaration check's per-file ratchet,
+  When they open the how-to guide for the test-declaration ratchet,
+  Then the guide states, as numbered steps, how to read the refusal (the file,
+    its undeclared count before and after the change, and the named tests that
+    raised it),
+  And it shows the two ways to make the same change commit: declare the
+    requirement on each new test, or bring the file's undeclared count back to
+    or below its previous value,
+  And it states that the tests already undeclared in the file never need to be
+    fixed before the file can be changed,
+  And it states that bulk, generated and merge changes get no implicit exemption,
+  And every rule it states matches the behaviour specified in GE-128a-2,
+    GE-128a-2-i and GE-128a-3.
+depends_on:
+  - GE-128a
+  - GE-128a-2
+  - GE-128a-3
+doc_links:
+  - path: docs/how-to/documentation/write-how-to.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: parent
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored for GE-128a's documentation_triggers 'how-to' while giving the L1 live children (its only child GE-128a-1 is retired). origin_agent BrainCandy per the requesting user's instruction."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal

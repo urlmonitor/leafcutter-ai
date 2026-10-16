@@ -1,0 +1,82 @@
+id: GE-128a-3
+title: "A file whose undeclared count goes down is allowed, judged against its own previous count and not a target"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - declaring one existing test lowers the count: allowed
+  Given a tracked test file that, before the change, holds 40 test functions of
+    which 40 declare no requirement,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds a declaration to one of those tests and
+    changes nothing else, leaving 39 undeclared,
+  When the author performs an ordinary commit,
+  Then the commit completes,
+  And the file is not refused for the 39 undeclared tests it still holds.
+
+  Scenario 2 - a declared test added alongside the backlog: allowed
+  Given the same 40-function, 40-undeclared file as it stood before the change,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds one new test function that declares the
+    requirement it proves, leaving the undeclared count at 40,
+  When the author performs an ordinary commit,
+  Then the commit completes.
+
+  Scenario 3 - removing an undeclared test lowers the count: allowed
+  Given the same file as it stood before the change,
+  And the test-declaration check is in error mode,
+  And a change is staged that deletes one undeclared test function, leaving 39,
+  When the author performs an ordinary commit,
+  Then the commit completes.
+
+  Scenario 4 - no target is applied
+  Given any of the three changes above,
+  When the check reaches its verdict,
+  Then the verdict depends only on the file's undeclared count before and after
+    the change,
+  And no project-wide or per-file maximum, percentage or goal for undeclared
+    tests is consulted.
+depends_on:
+  - GE-128a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      Parent L1. Its notes: a file whose count is the same or LOWER is allowed
+      even though undeclared tests remain; without this arm the ratchet is a
+      freeze and a frozen file never improves.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200c.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      The generic rule that the tolerated count is visible and only shrinks. Not
+      restated here; this AC fixes the counted quantity (undeclared test functions)
+      and its grain (per file).
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored as a live child of GE-128a, whose only child GE-128a-1 is retired (superseded_by TQ-100b-4-iii). Specifies the same-or-lower arm of the per-file ratchet and that the comparison is against the file's own previous state rather than any target, per GE-128a's criteria and notes. origin_agent BrainCandy per the requesting user's instruction."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
