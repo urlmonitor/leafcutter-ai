@@ -1,0 +1,119 @@
+id: UXP-590-2
+title: "Derived step status, by_ac index and AC back-references follow the corrected step links"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the product-truth generation flow's step links have been corrected per UXP-590-1,
+  When the product-truth generator runs over the store,
+  Then the by_ac entry for UXP-510 names exactly the nodes map and derive of that flow,
+  And the by_ac entry for UXP-511 names exactly the invert node,
+  And the by_ac entry for UXP-512 names exactly the backref node,
+  And the by_ac entry for UXP-513 names exactly the validate node,
+  And the by_ac entry for UXP-514 names exactly the validate node,
+  And the product_truth back-reference on each of UXP-510..UXP-514 equals its by_ac entry,
+  And no by_ac entry or AC back-reference names a node of this flow that the step links
+    no longer support (for example UXP-511 -> derive or UXP-513 -> backref),
+  And each step's impl_status equals the value recomputed from its linked ACs' work_status,
+  And a following run of the generator in check-only mode reports no pending change
+    and the product-truth validator reports zero errors.
+depends_on:
+  - UXP-590
+  - UXP-590-1
+  - UXP-590-4
+doc_links:
+- path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/index.json
+  relationship: context
+  status: exists
+  relevance: Holds the by_ac index whose entries this AC asserts
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+- path: docs/product-truth/README.md
+  relationship: describes
+  status: exists
+- path: docs/product-truth/scripts/README.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- index.json and every AC product_truth block must be produced only by running docs/product-truth/scripts/generate_product_truth.py;
+  no hand edits to derived data
+- generate_product_truth.py must not be modified (399 of 400 measured lines under the file-size ratchet);
+  if the regeneration cannot produce the asserted state without a generator change, stop and raise a blocker
+  rather than grow the file
+- The regeneration diff must be limited to records attributable to this flow (by_ac / by_flow entries
+  and product_truth blocks of the nine generation-flow ACs, impl_status of its five steps, and asof stamps
+  the generator itself rewrites); any other churn in index.json or the AC store is a blocker to investigate,
+  not to commit
+- The generator's AC write-back must leave every AC field other than product_truth byte-stable, in particular
+  the authored specifies_steps key added by UXP-590-4
+- After regeneration, `generate_product_truth.py --check` (check-only mode) must exit 0 and `validate_product_truth.py
+  --quiet` (the CI step and pre-commit hook entry) must exit 0
+delivers_to: null
+expects_from:
+- ac_id: UXP-590-1
+  contract: Corrected implements arrays on the five steps of docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    (shape as UXP-590-1 delivers_to)
+- ac_id: UXP-590-4
+  contract: specifies_steps claims present on the nine generation-flow AC YAML files, so the validator
+    run at the end of this AC reports zero mislink errors and zero unchecked links
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal
+test_required: true
+test_spec:
+- name: test_by_ac_entries_for_generation_acs_name_exactly_their_corrected_nodes
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: Reads live docs/product-truth/index.json and asserts by_ac[UXP-510] names exactly nodes
+    map and derive of the generation flow, UXP-511 exactly invert, UXP-512 exactly backref, UXP-513 and
+    UXP-514 exactly validate.
+- name: test_generation_ac_back_references_equal_their_by_ac_entries
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: For each of UXP-510..UXP-514, asserts the AC YAML's product_truth list equals its by_ac
+    entry in index.json.
+- name: test_no_by_ac_entry_or_back_reference_names_a_node_the_links_no_longer_support
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: discrimination
+  description: Asserts no by_ac entry or AC product_truth block pairs a generation-flow node with an AC
+    that node's implements list does not contain (e.g. UXP-511 -> derive, UXP-513 -> backref).
+  must_catch:
+  - regenerate index.json but skip the AC back-reference write
+  - leave the stale UXP-511 -> derive or UXP-513 -> backref entry in place
+- name: test_generation_step_impl_status_equals_recomputation_from_linked_acs
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: For each of the five steps, asserts the stored impl_status equals the value the generator's
+    derivation recomputes from its linked ACs' work_status.
+- name: test_generator_check_mode_has_no_pending_change_and_validator_reports_zero_errors
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: reachability
+  description: Runs generate_product_truth.py in check-only mode and validate_product_truth.py --quiet
+    as subprocesses over the live store and asserts both exit 0 with zero errors reported.
