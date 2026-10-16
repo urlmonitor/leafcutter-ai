@@ -316,7 +316,7 @@ Run the step **once** per attempt, with the exact explicit file list and the
 message file, unchanged. Interactive path:
 
 ```bash
-python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> <path-1> <path-2>
+COMMIT_AGENT_MODE=1 python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> <path-1> <path-2>
 ```
 
 Supervised path (name the run or the acceptance criterion the dispatch provides;
@@ -326,11 +326,11 @@ the ids are free-text attribution and the ticket is what this commit is for.
 With neither and no `ticket_path`, return `blocker` rather than inventing one):
 
 ```bash
-python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --run <run-id> <path-1> <path-2>
+COMMIT_AGENT_MODE=1 python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --run <run-id> <path-1> <path-2>
 ```
 
 ```bash
-python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --ac-id <ac-id> <path-1> <path-2>
+COMMIT_AGENT_MODE=1 python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --ac-id <ac-id> <path-1> <path-2>
 ```
 
 Rules:
@@ -548,7 +548,7 @@ file (for example with the subject `chore(ticket): commit phase sign-off`) and r
 the step on the supervised path with the ticket file named in the list:
 
 ```bash
-python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --run <run-id> <ticket_path>
+COMMIT_AGENT_MODE=1 python3 .leafcutter/scripts/commit_changes.py --message-file <message-file> --supervised --run <run-id> <ticket_path>
 ```
 
 Use the same `<run-id>` (or `--ac-id`) as the main commit, including the ticket-id
