@@ -400,8 +400,10 @@ def _refuse_held_index(root: Path) -> None:
     """
     lock = root / _git_out(["rev-parse", "--git-path", "index.lock"], root).strip()
     if lock.exists():
-        detail = f"Unable to create '{lock}': File exists."
-        raise lock_refusal(detail) or StepRefusal("step_index_locked", detail)
+        # No git command can be asked safely: one that is sure to take the lock would
+        # also rewrite the shared index when the lock is free. So this reason is the
+        # step's own observation, worded as such rather than imitating git's message.
+        raise StepRefusal("step_index_locked", f"{lock}: File exists -- another process holds the shared index lock, so nothing was staged or committed")
 
 
 def _checked_run(request: Request) -> dict:
