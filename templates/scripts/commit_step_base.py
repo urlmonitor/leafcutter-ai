@@ -4,7 +4,8 @@ MODULE: commit_step_base
 GOAL: The pieces every part of the shared commit step (commit_changes.py) leans on:
     the refusal type, the one answer object with every contract key (keys, empty
     values and version all read from config/commit_step.json), the guard that keeps
-    every emitted reason_code inside its family, and the git runners.
+    every emitted reason_code inside its family, the git runners, and supervised
+    mode (attribution rule and the runner that gives checks no terminal input).
 BUSINESS CONTEXT: Split out of commit_changes.py so the step can grow (BO-4500a-4
     moves its codes and vocabulary into config) without crossing the file-size
     limit.
@@ -24,14 +25,20 @@ DECISION HISTORY:
     step_vcs_error, visible to callers, rather than a silently wrong code); the
     ceiling comes from the config with no default; retired git_unavailable,
     git_error (-> step_vcs_error) and added step_index_locked detection.
+  - 2026-10-16 [python-coder/BO-4500a-4-iv]: Supervised mode added here (not as a new
+    sibling module) because templates/scripts/ is at its folder-density cap.
 """
 
 from __future__ import annotations
 
 import copy
+import os
 import re
+import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 from commit_step_config import ConfigError, allowed_codes, load_config, loaded
@@ -147,3 +154,87 @@ def ceiling() -> int:
     if config is None:
         raise StepRefusal("step_config_unreadable", "config/commit_step.json was not loaded")
     return config["max_automated_fix_retries"]
+
+
+# --- Supervised mode (BO-4500a-4-iv) -------------------------------------------------
+# A supervised call is made on behalf of a run with no person present, so it must stay
+# attributable (a run id or an AC id) and must never block on a check that wants
+# keyboard input. Supervised mode is an explicit input, never inferred from the
+# environment. A check is "waiting for input" when the commit it runs under has produced
+# no output for the whole input_wait_limit_seconds; it is then killed with its process
+# group and reported, and nothing is committed. Run and AC ids are free text.
+
+_HOOK_ID = re.compile(r"^- hook id:\s*(.+?)\s*$", re.MULTILINE)
+_RUNNING = re.compile(r"^(.+?)\.{3,}\s*Running\s*$", re.MULTILINE)
+_POLL_SECONDS = 0.05
+
+
+def require_attribution(supervised: bool, run: str | None, ac_id: str | None) -> None:
+    """Refuse a supervised call that names neither a run nor an acceptance criterion."""
+    if supervised and not run and not ac_id:
+        raise StepRefusal(
+            "policy_unattributed_supervised_call",
+            "a supervised call must name the run (--run) or the criterion (--ac-id) it commits for",
+        )
+
+
+def wait_limit() -> float:
+    """The input-wait limit in seconds from the loaded config; absent or invalid is a refusal."""
+    config = loaded()
+    value = None if config is None else config.get("input_wait_limit_seconds")
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        raise StepRefusal("step_config_unreadable", "config/commit_step.json needs input_wait_limit_seconds above 0 for a supervised call")
+    return float(value)
+
+
+def awaiting_check(output: str) -> str | None:
+    """Name the check that was running when the output stopped, else None."""
+    ids = _HOOK_ID.findall(output)
+    if ids:
+        return ids[-1]
+    running = _RUNNING.findall(output)
+    return running[-1].strip() if running else None
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """End the commit and every check it started (they share one process group)."""
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except OSError:  # already gone
+        proc.kill()
+
+
+def run_without_input(args: list[str], cwd: Path, env: dict | None, limit: float) -> tuple[subprocess.CompletedProcess, bool]:
+    """Run *args* with no terminal input; return (result, ended_for_silence).
+
+    Standard output and error are merged into result.stdout. The run is ended when
+    it produces no output for *limit* seconds.
+    """
+    try:
+        proc = subprocess.Popen(
+            args, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, start_new_session=True,
+        )
+    except OSError as exc:
+        raise StepRefusal("step_vcs_error", f"cannot run git: {exc}") from exc
+    chunks: list[bytes] = []
+    last = [time.monotonic()]
+
+    def _drain() -> None:
+        for chunk in iter(lambda: proc.stdout.read1(65536), b""):
+            chunks.append(chunk)
+            last[0] = time.monotonic()
+
+    reader = threading.Thread(target=_drain, daemon=True)
+    reader.start()
+    silent = False
+    while proc.poll() is None:
+        if time.monotonic() - last[0] > limit:
+            silent = True
+            _kill_group(proc)
+            break
+        time.sleep(_POLL_SECONDS)
+    proc.wait()
+    reader.join(timeout=5)
+    output = b"".join(chunks).decode("utf-8", errors="replace")
+    return subprocess.CompletedProcess(args, proc.returncode, output, ""), silent

@@ -51,5 +51,6 @@
     ]
   },
   "max_automated_fix_retries": 3,
-  "max_transient_retries": 3
+  "max_transient_retries": 3,
+  "input_wait_limit_seconds": 60
 }

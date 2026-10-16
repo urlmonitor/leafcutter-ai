@@ -92,6 +92,10 @@ def validate(config: object) -> dict:
     for name in _CEILINGS:
         if not _is_count(config.get(name)):
             raise ConfigError(name, "must be a non-negative integer")
+    if "input_wait_limit_seconds" in config:  # optional; a supervised call refuses when absent
+        limit = config["input_wait_limit_seconds"]
+        if isinstance(limit, bool) or not isinstance(limit, (int, float)) or limit <= 0:
+            raise ConfigError("input_wait_limit_seconds", "must be a number above 0")
     return config
 
 

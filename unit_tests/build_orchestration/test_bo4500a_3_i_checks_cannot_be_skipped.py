@@ -107,7 +107,10 @@ class TestChecksCannotBeSkipped(unittest.TestCase):
         self.assertEqual(usage.returncode, 0, usage.stderr)
         options = set(re.findall(r"(?<![\w-])(--?[A-Za-z][\w-]*)", usage.stdout))
         self.assertIn("--message-file", options, usage.stdout)
-        self.assertEqual(options - {"--message-file", "--help", "-h"}, set(), f"unexpected options: {usage.stdout}")
+        # --supervised / --run / --ac-id are BO-4500a-4-iv's supervised-mode inputs; none
+        # of them skips a check (the loop below still proves no option is skip-shaped).
+        known = {"--message-file", "--help", "-h", "--supervised", "--run", "--ac-id"}
+        self.assertEqual(options - known, set(), f"unexpected options: {usage.stdout}")
         for option in options:
             self.assertIsNone(re.search(r"skip|verify|exempt|bypass|ignore|force|^-n$", option), option)
 

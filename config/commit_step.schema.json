@@ -38,6 +38,11 @@
       "type": "integer",
       "minimum": 0,
       "description": "Fresh calls a caller may make on a step_ code."
+    },
+    "input_wait_limit_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Supervised calls only: seconds a check may stay silent (waiting for input) before it is ended and the call answers hook_failed / check_awaited_input."
     }
   },
   "definitions": {
