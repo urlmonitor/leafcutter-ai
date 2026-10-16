@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -51,9 +51,16 @@ doc_links:
     relationship: modifies
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-it_requirements: []
-delivers_to: null
+estimated_complexity: S
+it_requirements:
+  - "The shipped configuration (templates/scripts/commit_guardian/commit_guardian.json, as deployed by build.py) must carry an explicit mode value for the test-declaration check; which value is chosen is NOT decided by this record and must be recorded by whoever sets it, not defaulted by the implementer."
+  - "The check must report, on every run that evaluates a test file, the mode in force and its source as one of: explicitly configured, or not chosen (falling back to <mode>). The not-chosen wording must never describe the fallback as a configured choice."
+  - "If an environment-variable override of the mode (CHECK_TEST_AC_TAGS_MODE) is kept, a run governed by it must report the override as its source, distinct from both the configuration and the not-chosen fallback."
+  - "Do not restate or change whether the gate is registered at all (BP-1600a-2) or how a check reports its own strength (GE-126); this record covers only the mode setting and its report."
+  - "Edit the tracked templates only (check_test_ac_tags.py, commit_guardian.json); verify the deployed copies through the build.py round-trip, and note the inject_config build step rewrites literal {{config.*}} tokens in deployed files."
+delivers_to:
+  agent: documentation-expert
+  contract: "For GE-128a-6's reference entry: the configuration file and key that hold the test-declaration check's mode, its two allowed values (warning, error), and the exact source wording the check prints for explicitly configured, environment override (if kept) and not chosen."
 expects_from:
   ac_id: GE-128a-2
   contract: "The per-file ratchet verdict whose refusal this mode setting either enforces (error mode) or reports as a warning (warning mode)."
@@ -63,8 +70,54 @@ amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Authored as a live child of GE-128a, whose only child GE-128a-1 is retired (superseded_by TQ-100b-4-iii). Turns GE-128a's 'the configuration key is in scope only as a consequence' note into a testable rule: the mode is explicitly chosen and reported, without deciding which mode. Whether the gate is registered at all (BP-1600a-2) and whether a check reports its own strength (GE-126) are deliberately not restated. origin_agent BrainCandy per the requesting user's instruction."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO enrichment. Set estimated_complexity S; added five it_requirements (explicit mode in the shipped config without deciding which; report mode and source on every run; an env override, if kept, reported as its own source; BP-1600a-2 and GE-126 not restated; template-only edit with build.py round-trip); added delivers_to documentation-expert (the key, values and source wording GE-128a-6 documents); kept expects_from GE-128a-2. Added test_required: true and a 4-entry behavioral test_spec plus test_rationale that run the real hook against real configuration files. assigned_agent python-coder kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_shipped_config_states_the_mode_and_the_check_runs_in_it
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    description: "Scenario 1. Using the shared_reference_layout fixture (marked shared_layout_reader), loads the DEPLOYED commit-guardian configuration as JSON and asserts the test-declaration check's mode entry is present with value warning or error; then runs the deployed hook with no environment override over a temp repo staging one new undeclared test and asserts the outcome matches that mode (exit non-zero for error, exit 0 with a warning for warning)."
+    must_catch:
+      - "mode key absent from the shipped configuration"
+      - "configured mode read but not applied"
+  - name: test_explicit_warning_mode_is_reported_with_its_source
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 2. The real hook runs against a temp copy of the configuration with the mode set to warning and no environment override, over a staged file adding one undeclared test; asserts exit 0 and output stating warning mode is in force and was explicitly configured."
+  - name: test_absent_mode_entry_is_reported_as_not_chosen
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 3. Same run against a temp configuration with the mode entry removed; asserts the output states no mode has been chosen for this check and does not contain the explicitly-configured wording used in Scenario 2."
+    must_catch:
+      - "report the fallback mode as configured"
+  - name: test_reported_source_tracks_the_real_configuration_change
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "In one process, the real hook runs three times over the same staged file against configurations set to warning, set to error, and absent: the three outputs report three different mode/source pairs and the exit codes are 0, non-zero and the fallback's code respectively, so a hard-coded report string fails."
+test_rationale: >-
+  Scenario 1 is a claim about what a fresh install ships, so it reads the deployed
+  configuration from the shared reference layout and then runs the deployed hook
+  to prove the stated mode is the mode in force; parsing the JSON alone would pass
+  on a key the hook ignores. Scenarios 2 and 3 are claims about the hook's output,
+  so they run the real hook against real configuration files with any environment
+  override cleared, because the override would otherwise mask the configured
+  source. The discrimination test varies only the configuration across three runs
+  so a hook that prints a fixed source string, or ignores the key, fails.
