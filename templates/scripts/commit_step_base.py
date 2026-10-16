@@ -124,6 +124,23 @@ def git_out(args: list[str], cwd: Path, env: dict | None = None) -> str:
     return proc.stdout
 
 
+def refuse_protected_branch(root: Path) -> None:
+    """Refuse (BO-4500a-4-i) when the workspace is on no branch, main, master or origin's default.
+
+    Reads only locally recorded state (no network) and runs before any staging or check.
+    """
+    current = git(["symbolic-ref", "-q", "--short", "HEAD"], root)
+    branch = current.stdout.strip()
+    if current.returncode != 0 or not branch:
+        raise StepRefusal("policy_detached_head", "the workspace is on no branch (detached checkout); commit onto a branch of your own")
+    protected = {"main", "master"}
+    recorded = git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"], root)
+    if recorded.returncode == 0 and recorded.stdout.strip().startswith("origin/"):
+        protected.add(recorded.stdout.strip()[len("origin/"):])
+    if branch in protected:
+        raise StepRefusal("policy_protected_branch", f"refusing to commit onto protected branch {branch}; work on a branch of your own")
+
+
 def ceiling() -> int:
     """max_automated_fix_retries from the loaded config; there is no built-in default."""
     config = loaded()

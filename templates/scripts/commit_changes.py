@@ -60,7 +60,7 @@ from commit_step_base import answer as _answer
 from commit_step_base import ceiling as _ceiling
 from commit_step_base import git as _git
 from commit_step_base import git_out as _git_out
-from commit_step_base import load_contract, lock_refusal
+from commit_step_base import load_contract, lock_refusal, refuse_protected_branch
 from commit_step_parents import parent_candidates
 
 _USAGE = (
@@ -347,6 +347,7 @@ def _checked_run(argv: list[str]) -> dict:
     _check_message_file(message_file)
     cwd = Path.cwd()
     root = Path(_git_out(["rev-parse", "--show-toplevel"], cwd).strip())
+    refuse_protected_branch(root)
     tracked = {p for p in _git_out(["ls-files", "-z"], root).split("\0") if p}
     named = validate_paths(entries, cwd, root, tracked)
     scratch = Path(tempfile.mkdtemp(prefix="commit_changes_"))
