@@ -57,6 +57,9 @@ class TestParentResolverUnavailable(unittest.TestCase):
         holder.mkdir(parents=True)
         self.isolated_step = holder / "commit_changes.py"
         shutil.copy2(STEP, self.isolated_step)
+        # The step's sibling modules travel with it, as they do when deployed.
+        for sibling in STEP.parent.glob("commit_step_*.py"):
+            shutil.copy2(sibling, holder / sibling.name)
 
     def _run_isolated(self, sc: StepScenario, paths: list[str]) -> dict:
         proc = subprocess.run(
