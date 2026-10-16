@@ -182,8 +182,19 @@ class TestBO4300a1iaWorkspaceDispatch(unittest.TestCase):
                 if step not in labels:
                     failures.append(f"{name}/{case}: step {step!r} never dispatched: {labels}")
                     continue
-                if terminal(result).get("status") != "error":
-                    failures.append(f"{name}/{case}: status {terminal(result).get('status')!r}")
+                term = terminal(result)
+                # BO-4300a-1-ia (amended): a plain error, OR -- where a more
+                # specific rule classifies the refusal (fast lane's
+                # BO-2400f-5-iii declined step) -- that rule's halt, which
+                # must carry its own classification/halt_kind.
+                declined_halt = (
+                    name == "fast-lane-ship.js"
+                    and term.get("status") == "halt"
+                    and term.get("classification") == "halt"
+                    and term.get("halt_kind") == "declined_step"
+                )
+                if term.get("status") != "error" and not declined_halt:
+                    failures.append(f"{name}/{case}: status {term.get('status')!r}")
                 if f"TOKEN-{case}" not in terminal_text(result):
                     failures.append(f"{name}/{case}: terminal payload does not quote the reply")
                 if labels[-1] != step:

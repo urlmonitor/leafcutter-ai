@@ -25,10 +25,14 @@ if str(_REPO_ROOT) not in sys.path:
 from unit_tests.workflows._bo2400f5iii_fixtures import (  # noqa: E402
     AC_ID,
     BASE_RESPONSES,
+    BRANCH,
+    WORKTREE_PATH,
     classify_in_node,
     decline_reply_for,
     run_lane,
 )
+
+from _workflow_engine_workspace import shell_step_reply, workspace_ensure_reply  # noqa: E402
 
 _PLAIN = {"step": "x", "agent": "a", "isCommandStep": False}
 _WEAK = "I declined to do the optional part of this"
@@ -89,11 +93,9 @@ class TestStrongMarkerWithFailureStatusIsDeclined(unittest.TestCase):
         cases = [
             ("fastlane-commit", "commit",
              {"status": "error", "reason": "Refusing this task. I am status-checker, scoped to ticket state"}),
-            ("fastlane-worktree", "worktree-agent",
-             {"outcome": None, "message": "I am declining: this is outside my role"}),
             ("test-writer-connected", "test-writer",
              {"status": "blocker", "message": "I am the pr-reviewer, not a test writer"}),
-            ("resolve-connected", "status-checker",
+            ("resolve-connected", "command-step-runner",
              {"status": "error",
               "message": "wrong agent; I am status-checker, scoped to investigating ticket state"}),
         ]
@@ -130,9 +132,9 @@ class TestSuccessSignalIsAlwaysAResult(unittest.TestCase):
             ("coder-connected", _with("coder-connected", green=True, message="I refused to touch unrelated files"), True),
             ("coder-connected", _with("coder-connected", message="I declined the optional refactor"), True),
             ("fastlane-review", _with("fastlane-review", verdict_obtained=True, message="I declined to file the low findings"), True),
-            ("resolve-connected", {"ac_ids": [AC_ID], "message": "I declined to include Y"}, True),
+            ("resolve-connected", shell_step_reply([AC_ID], stderr="I declined to include Y"), True),
             ("fastlane-pr", _with("fastlane-pr", message="I declined to add labels"), True),
-            ("fastlane-worktree", _with("fastlane-worktree", outcome="opened", message="I declined to reuse the old one"), True),
+            ("workspace-ensure", workspace_ensure_reply(WORKTREE_PATH, branch=BRANCH, message="I declined to reuse the old one"), True),
             ("fastlane-context-bundle", _with("fastlane-context-bundle", message="I declined to include the stale layer"), True),
             ("check-producibility",
              {"producible": False, "reason": "I refuse to build a set with an unapproved member"}, False),
@@ -234,7 +236,7 @@ class TestDeclinedStepMessageIsNeutral(unittest.TestCase):
     """The halt message must not claim the step was 'never attempted'."""
 
     _LABELS = (
-        "fastlane-worktree", "fastlane-worktree-verify", "resolve-connected",
+        "resolve-connected",
         "check-producibility", "claim-connected", "fastlane-context-bundle",
         "test-writer-connected", "coder-connected", "fastlane-review",
         "fastlane-changelog", "fastlane-commit", "fastlane-pr",

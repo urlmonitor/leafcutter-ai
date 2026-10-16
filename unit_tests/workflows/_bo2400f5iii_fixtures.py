@@ -21,10 +21,12 @@ ASSUMED API (stated once here, used by every BO-2400f-5-iii test file):
     agent: <agentType actually dispatched for that label>, reason: <the
     decline reply, quoted verbatim>, target: {workspace, branch, ac_id} | null}.
     `step` is assumed to equal the agent() call's own `label` (the only stable,
-    discoverable per-step identifier in this file); `target` is assumed null
-    only while the two worktree-confirming labels ("fastlane-worktree",
-    "fastlane-worktree-verify") are themselves the ones declining, and a real
-    dict for every later label.
+    discoverable per-step identifier in this file); `target` is a real dict
+    for every classified step. The ONE workspace step ("workspace-ensure",
+    BO-4300c-3) is not part of that classification: a refusal, decline or
+    unreadable reply there ends the run as `status: "error"` quoting what came
+    back (the shared WORKSPACE-ANSWER rule), before any workspace exists to
+    name as a target.
   - A pure classifier `classifyStepReply(reply, {step, agent, isCommandStep})`
     returning `{kind: 'result'|'declined'|'failed', ...}` MAY exist as a
     top-level function in fast-lane-ship.js — see
@@ -45,6 +47,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from workflows._fast_lane_claim_fixtures import claim_declined, claim_ran  # noqa: E402
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_workspace import resolve_connected_reply, workspace_ensure_from_opened  # noqa: E402
 
 WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
@@ -65,8 +68,12 @@ WORKTREE_PATH = "/tmp/fastlane-harness-wt"
 #     `item` null and the lane falls back; it is not a lane step.
 #   - "knowledge-routing-observe": read-only and fail-open (INF-700a-5) — it
 #     must "never block, retry, or fail the build"; it is not a lane step.
+#   - "workspace-ensure" (BO-4300c-3): the maker step ends the run through the
+#     shared workspaceFailure() shape (status "error", quoting the reply), not
+#     the declined_step halt; it has its own test in
+#     test_bo2400f5iii_declined_step_core.py.
 EXCLUDED_LABELS = frozenset(
-    {"knowledge-routing-step", "scratch-item", "knowledge-routing-observe"}
+    {"knowledge-routing-step", "scratch-item", "knowledge-routing-observe", "workspace-ensure"}
 )
 
 
@@ -83,21 +90,16 @@ _RELEASABLE_FILES_MODIFIED = ["scripts/build_orchestration/fast_lane.py"]
 # test_bo2400f_4_changelog_family.py's own _BASE_RESPONSES (same AC id,
 # worktree path and branch, so both files' fixtures stay comparable).
 BASE_RESPONSES: dict[str, Any] = {
-    "fastlane-worktree": {
+    # Maker-era steps (BO-4300c-3 / BO-4300a-1-ia): the ONE workspace step is the shell-runner
+    # `workspace-ensure` dispatch carrying the maker's ok answer; the resolver is a command-step-runner
+    # reply `{exit_status, stdout}` whose stdout is the JSON list of AC ids.
+    "workspace-ensure": workspace_ensure_from_opened({
         "worktree_path": WORKTREE_PATH,
         "branch": BRANCH,
         "ac_store_path": f"{WORKTREE_PATH}/docs/acceptance-criteria",
         "created": True,
-    },
-    "fastlane-worktree-verify": {
-        "worktree_path": WORKTREE_PATH,
-        "raw": (
-            f"worktree {WORKTREE_PATH}\n"
-            "HEAD 0000000000000000000000000000000000000000\n"
-            f"branch refs/heads/{BRANCH}"
-        ),
-    },
-    "resolve-connected": {"ac_ids": [AC_ID], "message": "1 to build"},
+    }),
+    "resolve-connected": resolve_connected_reply([AC_ID]),
     "check-producibility": {"producible": True, "unproducible": [], "message": "all producible"},
     # command-step-runner shape (PR #967 / BO-2400a-1-v): the gate payload rides
     # as JSON text inside `stdout`, built by the ONE shared helper.
