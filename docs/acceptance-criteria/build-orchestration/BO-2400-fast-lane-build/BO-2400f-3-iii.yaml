@@ -1,0 +1,80 @@
+id: BO-2400f-3-iii
+components:
+  - build_orchestration
+title: "The run acts on the worktree setup's own finished result, however long the setup takes"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane is pointed at UXP-510,
+  And setting up that run's worktree, including its bootstrap, takes 180 seconds —
+    longer than the 2 minutes a single command an agent runs may last before it is
+    cut off or moved to the background,
+  And the setup finishes and reports that it opened the worktree at a location on
+    branch fast-lane/uxp-510,
+  When the run decides the outcome of its worktree step,
+  Then the run waits for the setup to finish and reads the setup's complete final
+    result, not the part of its output that existed when 2 minutes had passed,
+  And the run proceeds on the location and branch the setup reported,
+  And the run does not end in a refusal.
+
+  Given the same setup is still running, or has ended without a final result the
+    run can read, at the moment the run must decide,
+  When the run decides the outcome of its worktree step,
+  Then the run halts as "worktree setup result not obtained", naming the criterion,
+    how long it waited, and that the setup's own result was never read,
+  And that halt is not reported as a refusal by the setup and carries no refusal
+    reason,
+  And no later step runs.
+
+  Given four fast-lane runs are started at the same time for UXP-510, UXP-511,
+    UXP-512 and UXP-513, and each setup reports success after between 90 and 180
+    seconds,
+  When each run decides the outcome of its worktree step,
+  Then all four runs proceed on their reported worktrees — a setup that is slower
+    because its siblings are running in parallel ends no differently from a fast one.
+depends_on: [BO-2400f-3, BO-2400f-13]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The worktree step and the place its outcome is decided."
+  - path: templates/agents/worktree-agent.md
+    relationship: related
+    status: exists
+    relevance: "The agent that runs the setup today; its command window is what truncated the read."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: related
+    status: exists
+    relevance: "The setup whose final result is the one the run must act on."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The setup's complete final result (outcome, location, branch, and refusal reason when refused), as the single input to the worktree step's outcome."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-10-12..14 on UXP-510. The setup succeeded; the worktree agent's command
+  hit its 2-minute window, was moved to the background, and the agent read partial output
+  and returned a refusal. Four parallel sibling runs opened fine, so the failure depends on
+  timing, not on the criterion. The halt in the second scenario is deliberately not a
+  refusal: a refusal is a statement by the setup, and here the setup said nothing the run
+  read. Whether the waiting is done by a longer command window or by the run itself
+  reading the setup's result is the IT PO's call; the criterion only requires that the
+  result acted on is the setup's own finished one.

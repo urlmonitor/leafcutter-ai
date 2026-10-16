@@ -1,0 +1,61 @@
+id: BO-2400f-3-v
+components:
+  - build_orchestration
+title: "Every warning a successful worktree setup prints says it did not stop the setup, and the agent-tool probe's miss is one of them"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the worktree setup checks which version of the agent command-line tool is
+    installed, and that tool cannot be found on the search path the setup's own
+    commands run with,
+  When the setup finishes opening and bootstrapping the worktree,
+  Then the setup's result is success,
+  And the message about the tool states that the tool was not found on the setup's
+    search path, that the setup continued, and that the worktree is usable,
+  And the message is labelled as not stopping the setup, in words an operator and an
+    agent both read the same way (for example "non-fatal").
+
+  Given a setup that succeeds and prints 2 warnings,
+  When its output is read in full,
+  Then each of the 2 warnings is labelled as not stopping the setup,
+  And the output ends with the setup's success result after the warnings, so no
+    warning is the last thing a reader sees.
+
+  Given a setup that does stop because of a problem,
+  When its output is read in full,
+  Then the problem that stopped it is labelled as stopping the setup, never as
+    non-fatal,
+  And the setup's result is a refusal or failure naming that problem.
+depends_on: [BO-2400f-3, BO-2400f-3-iii]
+doc_links:
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The setup whose warnings are relabelled and whose agent-tool probe is softened."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "What an operator sees during setup; should say which messages are harmless."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  On 2026-10-12..14 the agent-tool version probe failed because the tool was not on the
+  subprocess search path; the setup still succeeded, and the agent cited this warning as
+  evidence of failure. Labelling is the defence that holds even after BO-2400f-3-iii and
+  -iv are fixed, because a human reading the log draws the same wrong conclusion.

@@ -1,0 +1,72 @@
+id: BO-2400f-4-viii
+components:
+  - build_orchestration
+title: "A push or pull request refused for lack of permission is reported as a credential failure, with the committed branch left ready to push"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run for UXP-514 has committed its green change on branch
+    fast-lane/uxp-514,
+  And the remote refuses the push with "Permission denied" under every credential the
+    lane uses,
+  When the run reports its outcome,
+  Then the outcome is blocked, classified as a credential failure, distinct from a gate
+    failure, a declined step and a refusal to build,
+  And it names the step that was refused (push), the branch, the commit, and the
+    remote's own refusal text,
+  And it states the operator's next action: push that branch and open its pull request
+    with a login that can push — not rebuild,
+  And the outcome never says a pull request was opened.
+
+  Given the push succeeded but opening the pull request is refused for lack of
+    permission,
+  When the run reports its outcome,
+  Then the outcome is the same credential failure, naming the step pull-request
+    creation, and states that the branch is already on the remote.
+
+  Given either credential failure above,
+  When the operator inspects the run's worktree afterwards,
+  Then the worktree still exists, is on fast-lane/uxp-514, holds the run's commit, and
+    has no uncommitted changes, so the branch can be pushed as it stands.
+
+  Given instead the remote refuses the push because the branch has diverged from the
+    remote's copy, or the remote cannot be reached,
+  When the run reports its outcome,
+  Then the outcome is not classified as a credential failure, and names the remote's
+    own refusal text.
+depends_on: [BO-2400f-4, BO-2400f-4-vii, BO-2400f-4-vi]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Builds the terminal outcome; the credential-failure classification belongs at its single construction site (see BO-2400f-4-vi)."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Should tell the operator what a credential failure means and how to finish the delivery by hand."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-4-vii
+  contract: "Push and pull-request outcomes carrying the remote's own refusal text."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The last scenario guards against a classifier that calls every push refusal a
+  credential failure. Not decided here: whether the run's claim on the built criteria is
+  released (BO-2400f-10) or kept after a credential failure. The work is committed and
+  only delivery is missing, so releasing to todo invites a rebuild that BO-2400f-13 would
+  then refuse on the occupied workspace. Flagged for the Product Owner.

@@ -1,0 +1,73 @@
+id: BO-2400f-3-iv
+components:
+  - build_orchestration
+title: "A worktree refusal is reported only with a reason the setup itself gave; an invented reason is never passed on as the setup's"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the worktree setup declares a fixed set of refusal reasons, one of which is
+    that the build workspace is already occupied (BO-2400f-13),
+  And the agent asked to run the setup replies with outcome refused and the reason
+    "bootstrap_script_failed", which is not one of the setup's declared reasons,
+  When the run reads that reply,
+  Then the run does not report a worktree refusal with reason
+    "bootstrap_script_failed",
+  And the run halts as a worktree step whose reply could not be trusted, naming the
+    criterion, the agent asked, and the reason it gave, labelled as a reason the setup
+    does not have,
+  And no later step runs.
+
+  Given the agent replies with outcome refused and a declared reason, the workspace
+    already occupied, and the setup's own result says the same,
+  When the run reads that reply,
+  Then the run ends in the occupied-workspace refusal of BO-2400f-13, with that reason
+    unchanged.
+
+  Given the agent replies with outcome refused and a declared reason, but the setup's
+    own result says it opened the worktree,
+  When the run reads that reply,
+  Then the run proceeds on the worktree the setup reported, because the setup's own
+    result outranks the agent's account of it,
+  And the run's report records that the agent's reply disagreed with the setup's
+    result.
+depends_on: [BO-2400f-3, BO-2400f-3-iii, BO-2400f-13, BO-2400f-5-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Where the worktree step's reply is read and turned into a refusal, a halt, or a location."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: related
+    status: exists
+    relevance: "Owns the declared refusal vocabulary the run checks replies against."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Occupied Build Workspace section — the one refusal the setup gives today."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-3-iii
+  contract: "The setup's complete final result, including its refusal reason when it refused."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The 2026-10-12..14 UXP-510 reply carried refusal.reason bootstrap_script_failed and cited
+  two warnings as its evidence (see BO-2400f-3-v and BO-2400f-3-vi). Distinct from
+  BO-2400f-5-iii: that record covers an agent that declines the task; this one covers an
+  agent that performs the task and then misreports its result. The halt classification
+  should sit beside the declined-step classification, not be merged into it, because the
+  remedy differs (look at the setup's own result, not at who was asked).

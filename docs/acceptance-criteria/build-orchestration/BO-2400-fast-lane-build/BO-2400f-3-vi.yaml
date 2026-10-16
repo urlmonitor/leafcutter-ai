@@ -1,0 +1,49 @@
+id: BO-2400f-3-vi
+components:
+  - build_orchestration
+title: "The setup looks for the worktree's pre-commit hooks where they are installed, so a correctly bootstrapped worktree reports no missing hooks"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a worktree whose bootstrap installed the package pre-commit hooks into the
+    package's commit-guardian hooks folder,
+  When the setup checks whether those hooks are present,
+  Then it checks inside that hooks folder, not in the folder one level above it,
+  And it reports the hooks as present,
+  And it prints no warning about hooks being missing.
+
+  Given a worktree whose bootstrap did not install the hooks, so the hooks folder is
+    absent,
+  When the setup checks whether those hooks are present,
+  Then it reports them missing, naming the folder it looked in,
+  And that folder is the commit-guardian hooks folder itself.
+depends_on: [BO-2400f-3, BO-2400f-3-v]
+doc_links:
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns the hook-location check that looked one folder too high."
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The 2026-10-12..14 UXP-510 refusal cited this warning. The second scenario keeps the
+  check honest: a fix that simply deletes the warning passes the first scenario and fails
+  the second. Whether a missing-hooks finding should stop the setup is not decided here;
+  BO-2400f-3 says the worktree is bootstrapped so hooks are active, and BO-2400f-3-v
+  requires whichever label applies to be stated.

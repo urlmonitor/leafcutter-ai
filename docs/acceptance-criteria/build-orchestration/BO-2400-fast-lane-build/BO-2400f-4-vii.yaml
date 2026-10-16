@@ -1,0 +1,73 @@
+id: BO-2400f-4-vii
+components:
+  - build_orchestration
+title: "The lane pushes and opens its pull request with the operator's stored login, not an environment token that cannot push"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run for UXP-513 has committed its green change on branch
+    fast-lane/uxp-513,
+  And the run's environment carries an access token that the repository refuses with
+    "Permission denied" when it is used to push,
+  And the operator's stored login on the machine can push to the repository and open
+    pull requests in it,
+  When the run pushes the branch and opens its pull request,
+  Then both the push and the pull-request creation are made with the operator's stored
+    login, and the environment token is not used for either,
+  And the branch is present on the remote at the run's commit,
+  And a pull request from fast-lane/uxp-513 against main exists,
+  And the operator pushes nothing and opens nothing by hand.
+
+  Given the same run with no access token in its environment,
+  When the run pushes the branch and opens its pull request,
+  Then the push and the pull request succeed with the operator's stored login, as
+    before.
+
+  Given a project that has installed the lane and names no particular account,
+  When the run pushes and opens its pull request,
+  Then it does not switch to any account name written into the lane itself, and uses
+    whichever stored login the operator's machine has active.
+depends_on: [BO-2400f-4]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The pull-request step that pushes and opens the PR."
+  - path: templates/agents/pull-request.md
+    relationship: related
+    status: exists
+    relevance: "The agent the step dispatches; its instructions carry no credential guidance today."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260925-templates-hardcode-a-personal-gh-account.md
+    relationship: describes
+    status: exists
+    relevance: "Records that no site clears the environment token and that a personal account is written into the lane."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The push and pull-request outcomes, each with the remote's own refusal text when refused, consumed by the credential-failure report."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  UXP-513 and UXP-514 (2026-10-12..14) committed on their branches and failed at push with
+  403 "Permission denied" under the environment token; both were pushed by hand with the
+  stored login. The third scenario carries the portability rule from the 2026-09-25 known
+  issue (no account name shipped in the lane), so the fix is not a second hard-coded
+  account switch. The existing parent clause about a REST fallback when the CLI path is
+  blocked is untouched: it must use the same credential.
