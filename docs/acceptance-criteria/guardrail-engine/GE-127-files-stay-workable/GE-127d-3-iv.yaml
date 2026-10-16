@@ -50,10 +50,45 @@ doc_links:
       The second effect: with the restyle in HEAD, restoring the `//` lines was charged as
       growth and as added lines, raising the bar by 37 lines on build-feature.js and 30 on
       plan-feature.js for honest work. The second criterion forbids that.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. count_added_measured_lines strips both sides with
+      _strip_unmeasured_regions and diffs the remaining WHOLE lines with
+      difflib.SequenceMatcher(autojunk=False), summing insert/replace targets;
+      resolve_added_measured_lines takes the minimum across merge parents and returns 0 for a
+      staged deletion. Both keep their shape; only what is diffed changes.
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
 declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    state: existing
+it_requirements:
+  - >-
+    ADDED LINES ARE DIFFED OVER COUNTED LINES, KEYED BY THEIR NON-COMMENT TEXT. Both sides are
+    reduced, by the same tokenizer pass that produces the measured length, to the ordered list
+    of their counted lines, each keyed by the line's text with every comment removed and
+    trailing whitespace stripped; that list's length equals the measured length by
+    construction. Keying by the whole physical line would charge 1 added line for restyling a
+    trailing `// note` to `/* note */` on a code line, which is a comment rewrite with the code
+    unchanged. A blank line outside comments is a counted line keyed as empty.
+  - >-
+    GROSS, NEVER NET, AND THE MERGE AND DELETION RULES ARE UNCHANGED. Still the sum of
+    inserted/replacing lines from a SequenceMatcher with autojunk off, never current minus
+    previous; still the minimum across merge parents; still 0 for a staged deletion; still
+    AddedLineCountUnavailableError (INDETERMINATE) when it cannot be established — which now
+    includes either side failing to tokenize (GE-127d-3-ii).
+  - >-
+    The language for both sides comes from the staged file's own extension. A rename that
+    changes the extension is out of scope for this record; do not special-case it.
+  - >-
+    The Python arm uses docstring POSITION: a `#` run can only become an uncounted docstring
+    where a docstring can stand (first statement of the module, a class or a function). Tests
+    must place the run there; elsewhere the same triple-quoted text is code (GE-127d-3) and
+    the restyle would legitimately add lines.
 test_spec:
   - name: test_ge_127d_3_iv_restyling_comments_either_way_adds_zero_lines
     target_dir: unit_tests/commit_guardian/
@@ -63,7 +98,8 @@ test_spec:
     description: >-
       In a temporary git repository with an over-limit .js file and an over-limit .py
       file, stage a restyle-only change in each direction and run the hook: each completes
-      and states 0 lines added; the quoted lengths are equal before and after.
+      and states 0 lines added; the quoted lengths are equal before and after. The .py run
+      sits at the module docstring position and at a function docstring position.
     must_catch:
       - "the pre-2026-10-16 rule, under which restoring // lines counts 4 added"
       - "added lines counted from the raw diff rather than from measured content"
@@ -74,18 +110,46 @@ test_spec:
     angle: criterion
     description: >-
       The restyle plus K new code lines (K varied) states K added and requires the file
-      to stand at its previous length minus K or below.
+      to stand at its previous length minus K or below (or at the limit, whichever is less
+      demanding), and is refused when it does not.
+  - name: test_ge_127d_3_iv_restyling_a_trailing_comment_on_a_code_line_adds_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      On an over-limit .js and .sql file, rewriting T trailing comments on code lines from the
+      line form to the block form (`x(); // n` -> `x(); /* n */`, `-- n` -> `/* n */`), T
+      varied, states 0 lines added and passes; changing the code on one of those lines in the
+      same change states exactly 1 added.
+    must_catch:
+      - "added lines diffed over whole physical lines, so a trailing-comment restyle costs one line each"
 test_rationale: |
   Both directions of the restyle are run through the real hook, because the KI's second
   effect appeared only in the restore direction. The mixed descriptor proves that zero-cost
-  restyling cannot be used as cover for added code.
+  restyling cannot be used as cover for added code. The trailing-comment descriptor pins the
+  one place a correct length measure can still charge a restyle: diffing whole lines instead
+  of their non-comment content.
 delivers_to: null
 expects_from:
-  ac_id: GE-127f-2
-  contract: "The added-measured-lines count, computed with the shared measure."
+  ac_id: GE-127d-3
+  contract: >-
+    For a file's content and extension, the ordered list of counted lines keyed by their
+    non-comment text with trailing whitespace stripped, produced by the same pass as the
+    measured length (len(list) == measured length); and the distinct tokenizer-failure signal.
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Added it_requirements (none before): the added-lines diff runs over
+    counted lines keyed by their non-comment text, so a trailing-comment restyle on a code
+    line costs nothing while a code change on that line still costs one; gross / minimum
+    across parents / deletion-is-zero / INDETERMINATE are unchanged; the Python arm uses
+    docstring position. expects_from re-pointed from GE-127f-2 (done, and unchanged) to
+    GE-127d-3, which supplies the new counted-line list. Added a trailing-comment descriptor.
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -40,6 +40,7 @@ depends_on:
   - GE-127d
   - GE-127d-1
   - GE-127d-3
+  - GE-127d-4
 doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
     relationship: parent
@@ -52,6 +53,17 @@ doc_links:
       (README.md and commit_guardian.json today). This record requires that comparison to
       cover the measurement rule as well; if it compares only scope, timing and limits
       today, extend it in this change rather than adding a parallel check.
+  - path: templates/scripts/commit_guardian/check_file_size_rule_parity.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16: it compares exactly THREE facts per surface today — covered
+      kinds (vs CHECKED_EXTENSIONS), when it applies (by exercising _classify_file on a
+      probe), and per-kind limits (vs FILE_LINE_LIMITS). It does NOT compare the measurement
+      rule, so a stale MEASUREMENT RULE paragraph passes it now. A surface that makes no claim
+      about a fact is never a disagreement on that fact. Its README excerpt is narrowed to
+      lines carrying check_file_size.py / check-file-size / file_size. This record adds the
+      fourth fact here.
   - path: templates/scripts/commit_guardian/check_file_size.py
     relationship: modifies
     status: exists
@@ -59,8 +71,9 @@ doc_links:
       The advice printed with every refusal (lines 144-148 per the 2026-10-13 KI, printed
       at 379-380): "blank lines and '#' comments count toward this length and removing them
       WILL reduce it" and "content inside triple-quoted strings or block comments does NOT
-      count toward this length". Written to say "deleting docstrings will not help"; it
-      also told an agent which comment style is free. Both sentences are replaced.
+      count toward this length and removing it will NOT reduce it". Written to say "deleting
+      docstrings will not help"; it also told an agent which comment style is free. Both
+      sentences are replaced.
   - path: templates/scripts/commit_guardian/commit_guardian.json
     relationship: modifies
     status: exists
@@ -69,18 +82,49 @@ doc_links:
       content inside triple-quoted strings ... and content inside C-style block comments;
       every remaining line -- including blank lines and hash comment lines -- is counted").
       Rewrite it to the new rule. A nested key only; no new top-level key, so no package
-      surface.
+      surface. Also carries the check-file-size-rule-parity hooks_manifest entry, whose
+      `files` trigger today matches only README.md, commit_guardian.json and
+      check_file_size.py (plus docs/pre-commit-hooks.md) — not _file_size_ratchet.py or the
+      measure modules — and its consumer-layout ground entry, which restates that list.
   - path: templates/scripts/commit_guardian/README.md
     relationship: modifies
     status: exists
-    relevance: "The second published rule surface; it states the rule GE-127d-2 published."
+    relevance: >-
+      IT PO, read 2026-10-16: the check-file-size row does NOT restate the rule today — it
+      says the rule is "published — never restated as prose here — by
+      _file_size_ratchet.describe_measurement_rule()". The criteria require every published
+      place that states the size rule to state the measurement rule, so this row gains the
+      generated statement and becomes machine-compared like the _comment.
   - path: docs/pre-commit-hooks.md
     relationship: related
     status: exists
+    relevance: >-
+      IT PO, read 2026-10-16: states no file-size measurement rule (it mentions the docstring
+      hook only). Nothing to change unless it gains such a statement, in which case it must join
+      file_size.published_rule_surfaces.
+  - path: unit_tests/commit_guardian/_ge_127d_2_fixture.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      References the two pinned advice markers this record replaces (_HELPS_MARKER /
+      _NO_HELP_MARKER) for GE-127d-2's mutation proof; updated in the same change.
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 package_surface: false
 declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    state: existing
+  - path: templates/scripts/commit_guardian/check_file_size_rule_parity.py
+    state: existing
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    state: existing
+  - path: templates/scripts/commit_guardian/README.md
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/rule_statement.py
+    state: to_be_created
+  - path: unit_tests/commit_guardian/_ge_127d_2_fixture.py
+    state: existing
 it_requirements:
   - >-
     The statement of what a quoted length measures is generated from the shared measure
@@ -90,6 +134,62 @@ it_requirements:
     The advice may keep telling authors that formatting-only reductions are not the
     remedy and may point at restructuring (GE-127e / GE-127f). It must not recommend
     deleting blank lines, even though blank lines count.
+  - >-
+    THE GENERATED STATEMENT IS PROBED PER LANGUAGE (IT PO). The probe set GE-127d-2 built
+    (triple-quoted, block comment, hash comment — language-blind) is replaced by probes run
+    through the shared measure for EVERY extension in file_size.checked_extensions: each line
+    and block comment form the language's lexer declares, a Python docstring, a Python
+    non-docstring triple-quoted string, and a blank line outside comments. The statement is
+    built from what the measure actually did with each probe, never from a table of what it
+    is supposed to do, so a change that made any one style counted again changes the
+    statement in the same call (GE-127d-2's seam). The per-file Measures line may use the
+    refused file's own language; the published statement covers every checked extension.
+  - >-
+    THE PARITY GATE GAINS A FOURTH FACT — THE MEASUREMENT RULE — AND FOR THIS FACT SILENCE IS
+    A DISAGREEMENT. Extend check_file_size_rule_parity.py; do not add a parallel check. The
+    enforced side is the generated statement above. The published side is each configured
+    surface's measurement-rule passage, located by a fixed marker and compared WHOLE against
+    the generated statement, so a surface carrying the new sentence beside an old one still
+    disagrees. Unlike the other three facts (where a surface that makes no claim is not
+    compared), a configured surface with no measurement-rule passage is a DISAGREEMENT naming
+    that surface, because the criteria require every published place to state the rule. The
+    passage on README.md must sit where the gate's anchor-line narrowing can see it. Surfaces
+    come from file_size.published_rule_surfaces only; an unreadable one stays INDETERMINATE
+    (exit 2); the outcome keeps stating the count of surfaces compared.
+  - >-
+    THE GATE MUST FIRE WHEN ONLY THE MEASURE CHANGES. Widen the check-file-size-rule-parity
+    hooks_manifest entry's `files` trigger to also match _file_size_ratchet.py and every
+    module under _file_size_measure/, in both templates/scripts/commit_guardian/ and
+    scripts/commit_guardian/, and update that hook's consumer-layout ground entry
+    (commit_guardian.json, the second check-file-size-rule-parity entry) so it names the same
+    set. A widened `files` regex on an existing hook id is not a hooks_manifest.hooks id
+    registration, so package_surface stays false. Rebuild (`python scripts/build.py
+    --target-dir .`) so the generated .pre-commit-config.yaml carries it.
+  - >-
+    THE ADVICE IS REPLACED, NOT APPENDED TO. _HELPS_MARKER, _NO_HELP_MARKER and
+    _print_asymmetry_advice's two sentences go; the replacement is shared by both refusal
+    printers (FILE TOO LARGE and FILE GREW) as today, states the rule from the generated
+    statement, says restyling comments, deleting comments or docstrings and joining lines are
+    not remedies, names no comment style as counted or free, does not recommend deleting blank
+    lines, and stays consistent with GE-127d-4's separate-commits remedy. Update every test
+    and fixture that references the removed markers (_ge_127d_2_fixture.py) in the same change.
+  - >-
+    NO AGENT OR SKILL PROSE NEEDS TO CHANGE — CHECKED, SO NO llm-expert COMPANION IS AUTHORED.
+    Searched templates/agents/ and templates/skills/ on 2026-10-16 for statements of the size
+    rule: python-coder.md (File-Size Limit: states only the limit), restructuring-specialist.md
+    ("measured lines", no rule), complexity-reduction (complexity scoring, not file size),
+    pr-reviewer.md, precommit-autofix (routing only) — none states which lines count. The only
+    surfaces stating the old measurement rule are check_file_size.py's advice, the
+    file_size._comment, the code comments in _file_size_ratchet.py, and two known-issue entries
+    (KI-CG-20261013 and KI-BO-20260930), which are history, not published rule. If an
+    implementer finds prose stating the rule after all, it is routed to llm-expert as a
+    follow-up, not edited by python-coder.
+  - >-
+    The `_comment` change is a nested key under file_size: no new top-level key, no
+    config_schema_fragment (the BP-100k-4 fictional-key precedent is not repeated).
+  - >-
+    Must follow the repo error-handling policy: specific exceptions around surface reads and
+    JSON parsing; an unreadable surface is never folded into agreement.
 test_spec:
   - name: test_ge_127d_5_the_refusal_advice_states_the_rule_and_names_no_free_comment_style
     target_dir: unit_tests/commit_guardian/
@@ -98,11 +198,12 @@ test_spec:
     angle: criterion
     description: >-
       Run the hook in a temporary git repository on an over-limit .py file and an
-      over-limit .js file and read the advice from the hook's own output: it states that
-      every comment style and docstrings are uncounted and blank lines counted, and it
-      contains no statement that one style counts or that removing comments reduces the
-      length. Then verify the advice by behaviour: deleting every comment from the refused
-      file leaves the quoted length unchanged on the next run.
+      over-limit .js file, through both refusal paths (crossing and growth), and read the
+      advice from the hook's own output: it states that every comment style and docstrings
+      are uncounted and blank lines counted, and it contains no statement that one style
+      counts or that removing comments reduces the length. Then verify the advice by
+      behaviour: deleting every comment from the refused file leaves the quoted length
+      unchanged on the next run.
     must_catch:
       - "the incumbent advice: '#' comments count and removing them WILL reduce it"
       - "advice says block comments do not count but is silent on line comments"
@@ -123,29 +224,70 @@ test_spec:
     description: >-
       In a fixture tree, restore the pre-2026-10-16 MEASUREMENT RULE paragraph to one
       published surface only and run the comparison through its hook entry point: it names
-      that surface and the commit does not complete; reverting it returns to clean.
+      that surface and the commit does not complete; reverting it returns to clean. Repeat
+      with the old sentence ADDED beside the new one, and with the passage deleted from one
+      surface: both are disagreements naming that surface.
     must_catch:
       - "comparison checks scope, timing and limits but not the measurement rule"
+      - "comparison passes a surface that carries the new sentence beside an old one"
+      - "a surface with no measurement passage treated as agreeing"
+  - name: test_ge_127d_5_changing_the_measure_alone_changes_the_generated_rule_and_the_gate_reports_it
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      In a fixture copy, make the in-force measure count one comment form again (e.g. `--` in
+      SQL) without touching any surface: the generated statement changes and the comparison
+      reports a disagreement on every surface. The check-file-size-rule-parity hook's
+      registered `files` trigger, applied as pre-commit applies it (re.search on the staged
+      path), selects a staged change to _file_size_ratchet.py and to each module under
+      _file_size_measure/.
+    must_catch:
+      - "statement built from a table of expected behaviour rather than probing the measure"
+      - "parity trigger still blind to the measure modules"
 test_rationale: |
   The advice test reads the hook's real output and then checks the advice against
   behaviour (deleting comments does not move the number), so wording that names a free
   style fails either way. The surface descriptors evaluate the published side and the
   enforced side together, as GE-127d-1 requires, and the seam descriptor plants the exact
-  stale paragraph that is on disk today.
+  stale paragraph that is on disk today, plus the two partial-fix shapes (old beside new,
+  passage missing). The discrimination descriptor proves the enforced side is read from the
+  measure's behaviour and that the gate is actually triggered by a change to the measure
+  alone — today it is not.
 delivers_to:
   - agent: documentation-expert
     ac_id: null
     contract: >-
       The new measurement rule for the reference-doc GE-127d's documentation_triggers
-      require; the text must be machine-comparable by GE-127d-1's comparison.
+      require; the text must be machine-comparable by GE-127d-1's comparison. Today no doc
+      outside the two configured surfaces states the rule (docs/pre-commit-hooks.md checked);
+      any doc that comes to state it must be added to file_size.published_rule_surfaces and
+      carry the generated passage verbatim.
 expects_from:
   - ac_id: GE-127d-3
     contract: "The shared measure and its generated description of what is measured."
   - ac_id: GE-127d-1
     contract: "The published-versus-enforced comparison over file_size.published_rule_surfaces."
+  - ac_id: GE-127d-4
+    contract: >-
+      The backstop refusal block's heading and separate-commits remedy, which the rewritten
+      advice must not contradict.
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Read check_file_size_rule_parity.py: it compares three facts and not
+    the measurement rule, and its hook trigger cannot see the measure modules; both are fixed
+    here (fourth fact compared whole against a per-language generated statement, silence is a
+    disagreement for this fact only; trigger widened in both trees plus the consumer-layout
+    ground entry). README.md does not restate the rule today and gains the generated passage.
+    Searched agent and skill prose: none states the size rule, so no llm-expert companion.
+    depends_on and expects_from gain GE-127d-4 (its refusal text constrains this advice).
+    Complexity S -> M. Added a discrimination descriptor.
 superseded_by: null
 covered_by: []
 implemented_by: []

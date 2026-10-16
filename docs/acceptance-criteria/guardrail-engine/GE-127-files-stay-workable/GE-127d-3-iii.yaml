@@ -45,15 +45,43 @@ doc_links:
       The growth ratchet compares a file's previous length with its new one. This record
       pins that both sides use the rule in force now; the ratchet's own boundary is
       unchanged.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. get_previous_length / resolve_previous_lengths already
+      re-measure each parent's blob at call time with the default measure (no persisted
+      baseline, per GE-127b-1's enrichment), and during a merge take the maximum across
+      HEAD and every MERGE_HEAD line. This record holds that shape through the measure's
+      signature change: the default measure they apply must be the same path-aware code
+      measure measure_current_length applies to the staged content.
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
 declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    state: existing
 it_requirements:
   - >-
     No stored baseline: the previous length is re-derived from the previous version's
     content with the current measure on every run. If any cache or recorded length is
     introduced later, it must be invalidated whenever the rule changes.
+  - >-
+    ONE MEASURE ON BOTH SIDES, BY CONSTRUCTION. The previous-length lookup and the
+    current-length measurement must resolve the measure for a path through the same
+    selection (the file's extension) and the same function object, so they cannot diverge
+    even if one call site is edited; the "Compared N file(s) against their previous length"
+    count and every quoted previous length come from that lookup.
+  - >-
+    MERGES INCLUDED. During a merge every parent's blob (HEAD and every MERGE_HEAD line) is
+    measured with the rule in force before the maximum is taken; the over-limit decision
+    ("already over" versus "crossed") uses that same maximum.
+  - >-
+    THE COMMIT THAT LANDS THE RULE. The hook judges commits from the DEPLOYED layout, so the
+    commit that introduces the new rule is judged by whichever rule the deployed copy carries
+    at that moment. The implementer rebuilds (`python scripts/build.py --target-dir .`) before
+    committing GE-127d-3 so that commit, too, is judged with one rule on both sides.
 test_spec:
   - name: test_ge_127d_3_iii_a_file_that_measures_longer_under_the_new_rule_is_not_refused_as_crossing
     target_dir: unit_tests/commit_guardian/
@@ -64,7 +92,8 @@ test_spec:
       In a temporary git repository, commit the first criterion's file, then stage the
       3-line removal and run the hook: it completes, quoting previous and new lengths
       that are both new-rule measurements (re-derived at run time with the shared
-      measure, not literals). Under the named wrong version it is refused as crossing.
+      measure, not literals), and reports the file as already over rather than crossed.
+      Under the named wrong version it is refused as crossing.
     must_catch:
       - "previous length measured with the pre-2026-10-16 rule and new length with the new rule"
   - name: test_ge_127d_3_iii_a_file_that_measures_shorter_under_the_new_rule_uses_the_shorter_previous
@@ -75,17 +104,40 @@ test_spec:
     description: >-
       The second criterion's file through the hook: completes, and the quoted previous
       length equals the shared measure applied to the HEAD content now.
+  - name: test_ge_127d_3_iii_every_merge_parent_is_measured_by_the_rule_in_force
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      In a temporary repository with a real merge in progress (MERGE_HEAD present), where one
+      parent's version of a .py file carries a large non-docstring string and the other a run
+      of `#` comments, the quoted previous length equals the maximum of the shared measure
+      applied at run time to each parent's blob, and the verdict follows from that maximum.
+    must_catch:
+      - "MERGE_HEAD parents measured with a different measure than HEAD"
 test_rationale: |
   The only failure this record forbids is a mixed-rule comparison, so the discrimination
   descriptor builds the one file where a mixed comparison flips the verdict (380 old, 440
-  new, 437 staged against a 400 limit) and requires the hook to pass it.
+  new, 437 staged against a 400 limit) and requires the hook to pass it. The merge
+  descriptor covers the second lookup path (MERGE_HEAD parents) that reaches the same
+  measure through a different loop.
 delivers_to: null
 expects_from:
   ac_id: GE-127d-3
   contract: "The single shared measure applied to both the previous and the staged content."
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Confirmed from source that previous lengths are already re-measured
+    at call time with no baseline; pinned that the measure must stay one selection on both
+    sides through GE-127d-3's signature change, that merges measure every parent with the
+    rule in force, and that the landing commit is judged from a rebuilt deployed copy. Added
+    a merge descriptor.
 superseded_by: null
 covered_by: []
 implemented_by: []

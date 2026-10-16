@@ -57,10 +57,34 @@ doc_links:
       anywhere later. 16 covered files lose 870 lines on origin/main fd9a5b4a4;
       finalize-feature.js measures 1622 against a string-aware 1986. The 8-line repro in
       the first criterion is the KI's own, where the incumbent measure returns 2.
+  - path: leafcutter-web/app/architecture/page.tsx
+    relationship: related
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. Real JSX text carrying an apostrophe ("most don't", line 149).
+      A JS lexer without JSX states opens a string at that apostrophe and silently
+      mis-measures every line up to the next `'` — the same false-span failure as the KI,
+      one language over. Part of the real-file corpus below.
+  - path: leafcutter-web/package.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Declares typescript ^5 as a dev dependency. CI's pytest shards run `npm ci --prefix
+      leafcutter-web` with Node 20 (ci.yml, "Install leafcutter-web dependencies"), so the
+      TypeScript compiler is available there as an independent oracle for the JS/TS lexer.
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
 package_surface: false
 declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_measure/c_family_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/jsx_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/sql_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/shell_lines.py
+    state: to_be_created
 it_requirements:
   - >-
     Markers are recognised only by a tokenizer for the file's language that tracks
@@ -72,6 +96,47 @@ it_requirements:
     accident: a PL/pgSQL body and a `${}` expression are code in the same language, so
     their comments are comments. A tokenizer that treats a whole dollar-quoted body as
     one opaque string reintroduces a restyle asymmetry inside every SQL function.
+  - >-
+    DOLLAR-QUOTE MECHANICS (IT PO). The body ends at the first matching `$tag$`, found by a
+    raw scan exactly as PostgreSQL does, and only then is the body lexed as SQL. A body that
+    cannot itself be lexed as SQL (e.g. a LANGUAGE plpython3u body with an unbalanced quote)
+    is lexically still a closed string literal: its lines are counted as a string, never
+    INDETERMINATE. Only a dollar quote with no closing tag is untokenizable (GE-127d-3-ii).
+    Known residue, accepted: a plain dollar-quoted string literal (not a function body)
+    holding `--` loses that line, and a body in another procedural language keeps that
+    language's comments counted.
+  - >-
+    REGEX VERSUS DIVISION (IT PO). Decided by the previous significant token: a `/` opens a
+    regex at file start, after an operator or punctuator other than `)` `]` `}`-of-a-template,
+    and after the keywords return, typeof, instanceof, in, of, new, delete, void, throw, case,
+    do, else, yield, await; it is division after an identifier, a number, a string or
+    template end, `]`, and a `)` — EXCEPT a `)` that closes an if / while / for / with header,
+    which the lexer tracks with its paren stack, after which a regex may start. A `}` that
+    ends a block is regex-allowed. Inside a regex, `/` within a character class does not end
+    it.
+  - >-
+    JSX (IT PO, .js / .mjs / .tsx only — .ts has type assertions instead). JSX text children
+    are text: `'`, `"`, `//` and `/*` in them are literal characters, never a string or a
+    comment. Attribute values in quotes are strings; `{...}` containers in attributes and
+    children re-enter code mode with their own nesting; the only JSX comment is a `{/* */}`
+    container. In .tsx, `<T,>` and `<T extends ...>` at an expression start are type
+    parameters, not JSX. Measured on the real leafcutter-web tree: app/architecture/page.tsx
+    carries JSX text with an apostrophe.
+  - >-
+    SHELL `#` AND HERE-DOCUMENTS (IT PO). `#` starts a comment only at the start of a word;
+    `$#`, `${#name}`, `${name#pat}`, `a#b`, `16#ff` are code. A here-document body (`<<WORD`,
+    `<<-WORD` with leading tabs stripped from the terminator line, quoted or backslashed WORD,
+    several on one line, `<<<` excluded) is a literal: every body line counts, including lines
+    beginning with `#` and blank lines.
+  - >-
+    TEST ORACLES MUST SHARE NO CODE WITH THE MEASURE. For Python the oracle derives docstring
+    positions from `ast` (first-statement Expr nodes, lineno to end_lineno) and comments from
+    tokenize COMMENT tokens — the measure itself reads docstring position from the token
+    stream, so the two disagree whenever either docstring logic is wrong. For JS/MJS/TS/TSX the
+    oracle is the TypeScript compiler from leafcutter-web's installed dependencies (parse with
+    the file's script kind, collect comment ranges from leading/trailing trivia). In CI that
+    oracle test must FAIL, not skip, when Node or typescript is absent — the precedent the
+    done-proof JS tests set on the same shards; locally it may skip with a stated reason.
 test_spec:
   - name: test_ge_127d_3_i_the_ki_glob_repro_measures_seven_not_two
     target_dir: unit_tests/commit_guardian/
@@ -94,11 +159,43 @@ test_spec:
       Generated files, one per covered extension, each holding N code lines that carry
       the marker sequences the criteria list inside literals and M genuine comments, with
       N and M varied; each measures exactly N. A file built so a false span would swallow
-      lines (marker in a string early, `*/` in a string late) still measures N.
+      lines (marker in a string early, `*/` in a string late) still measures N. Includes a
+      `//` comment containing `/*` followed later by a `*/` in a string, a `${}` expression
+      holding a genuine `//` and `/* */` comment, a nested template literal inside `${}`, a
+      dollar-quoted PL/pgSQL body holding `--` and nested `/* /* */ */` comments, a
+      here-document whose body lines begin with `#`, and `$#` / `${#name}` / `a#b` lines.
     must_catch:
       - "a # inside a Python or shell string treated as a comment"
       - "-- inside a SQL string literal treated as a comment"
       - "dollar-quoted SQL body treated as one opaque string, its comments counted"
+      - "here-document body lines beginning with # treated as comments"
+  - name: test_ge_127d_3_i_regex_literals_and_division_are_told_apart
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      A JS corpus where a misread flips the count: `/[/*]/` and `/\/\*/` regex literals,
+      `if (x) /'/.test(s)` (regex after an if-header `)`), `a / b / c` and `(a) / 2 // c`
+      (division), `return /"/` and `x = y++ / 2`. Each file measures its code-line count,
+      with code and comment counts varied between runs.
+    must_catch:
+      - "every / after ) read as division, so the quote in /'/ opens a string"
+      - "every / read as a regex start"
+  - name: test_ge_127d_3_i_jsx_text_is_text_not_a_string_or_a_comment
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      .tsx and .js files whose JSX text children carry an apostrophe, a double quote, `//`
+      and `/*`, whose attributes carry a URL string, and which hold a standalone
+      `{/* comment */}` line and a `<T,>(x) => x` generic arrow; each measures its code-line
+      count (the comment container line uncounted, every JSX text line counted). The same
+      `<T>expr` construct in a .ts file is a type assertion, not JSX.
+    must_catch:
+      - "JSX text apostrophe opens a string that swallows later lines"
+      - "// inside JSX text treated as a line comment"
   - name: test_ge_127d_3_i_a_real_python_file_measures_what_an_independent_tokenizer_says
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -107,22 +204,53 @@ test_spec:
     description: >-
       For the repository's real tests/knowledge/test_native_decision.py (which the KI
       shows losing 127 lines to a false span) and a sample of real tracked .py files, the
-      measured length equals the line count derived independently with the standard
-      library tokenize module (lines carrying any non-comment, non-docstring token, plus
-      blank lines outside docstrings) — computed at run time, never a literal.
+      measured length equals the line count derived independently — docstring positions
+      from `ast`, comments from tokenize COMMENT tokens (lines carrying any non-comment,
+      non-docstring token, plus blank lines outside docstrings) — computed at run time,
+      never a literal.
+  - name: test_ge_127d_3_i_every_tracked_js_and_ts_file_measures_what_the_typescript_compiler_says
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      For every tracked .js, .mjs, .ts and .tsx file in the repository (templates/workflows-js,
+      tests/*.js, the .mjs harness and leafcutter-web), the shared measure's length equals the
+      count derived from the TypeScript compiler's own comment ranges (lines carrying any
+      non-comment token, plus blank lines outside comments), computed at run time in a Node
+      subprocess using leafcutter-web's installed typescript. Fails rather than skips in CI
+      when Node or typescript is missing.
 test_rationale: |
   The KI repro is kept as a discrimination descriptor because the incumbent returns 2 on it
   and the fix returns 7; it cannot pass by accident. The generated per-language descriptor
-  covers every marker the criteria list in every covered extension. The real-artifact
-  descriptor uses the stdlib tokenizer as an oracle that shares no code with the measure,
-  over a real file the KI shows is mis-measured today.
+  covers every marker the criteria list in every covered extension. The regex and JSX
+  descriptors cover the two lexer decisions most likely to be got wrong silently: both
+  misreads open a false string that swallows later lines, which is the KI's own failure
+  shape reached by a different door. The two real-artifact descriptors use oracles that share
+  no code with the measure — ast plus tokenize for Python, the TypeScript compiler for the
+  JS family — over every real file of those kinds the repository tracks.
 delivers_to: null
 expects_from:
   ac_id: GE-127d-3
-  contract: "The per-language tokenizer behind the single shared measure."
+  contract: >-
+    The per-language lexer modules behind the single shared measure, under
+    templates/scripts/commit_guardian/_file_size_measure/, reached through the measure's
+    (content, extension) entry point rather than called directly by the hook.
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Complexity M -> L: the covered set includes ~100 tracked .tsx files,
+    and real JSX text carries apostrophes (leafcutter-web/app/architecture/page.tsx), so the JS
+    lexer needs JSX states on top of strings, templates and regex. Pinned the dollar-quote
+    mechanics (raw scan for the terminator, body lexed as SQL, an unlexable body counted as a
+    string), the regex-versus-division rule incl. the if-header `)` case, JSX on for
+    .js/.mjs/.tsx and off for .ts, shell word-start `#` and here-documents, and two oracles
+    that share no code with the measure (ast + tokenize for Python, the TypeScript compiler
+    for JS/TS — fail, not skip, in CI). Added regex, JSX and TypeScript-oracle descriptors.
 superseded_by: null
 covered_by: []
 implemented_by: []
