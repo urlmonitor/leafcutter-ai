@@ -16,7 +16,7 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
   pull-request: needed
 ---
 
@@ -68,7 +68,7 @@ tests:
 - [x] test-writer — 2026-10-17 09:31
 - [x] python-coder — 2026-10-17 10:05
 - [x] pr-reviewer — 2026-10-17 09:35
-- [ ] commit
+- [x] commit — 2026-10-17 09:38
 - [ ] pull-request
 
 ## Comments
@@ -94,3 +94,7 @@ red_baseline_results:
 ### 2026-10-17 09:35 — pr-reviewer (status: ok)
 feedback-id: fb_2026-10-17_c6fdda65
 No high-confidence findings. Plain commit unchanged; merge/revert/cherry-pick judge only get_authored_change().diff_text; None on could-not-check is never widened; emit_result(OUTCOME_COULD_NOT_CHECK)+return 0 matches check_contract_shrinking; HOOK_TEST_DIFF short-circuits to the staged diff. Tests use real git, no mocks; test 1 would pass if the hook ignored merges, but test 2 (resolution-added assertion refused, with clean-merge control) fails in that case, so the pair is sound. Medium: [M-1] no revert/cherry-pick test; [M-2] could-not-check path untested. Low: docstring sentence in ARCHITECTURE reads "...unscoped diff and the `presence_only_assertion_guard` config section" (missing words); "covers: UNKNOWN" tags. 17 tests pass (new + test_bp_1100b_5).
+
+### 2026-10-17 09:38 — commit (status: ok)
+feedback-id: fb_2026-10-17_1be0764b
+Committed 5d26dee3d as "fix(commit-guardian): check-presence-only-assertions judges only what a merge itself adds"; all pre-commit hooks passed.
