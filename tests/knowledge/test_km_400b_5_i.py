@@ -137,7 +137,7 @@ class FailureDouble(StoreDouble):
             return self._delete(statement, params)
         return None
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         handled = self._dispatch(statement, params or {}, write)
         if handled is not None:
             return handled
@@ -272,7 +272,7 @@ def test_failure_before_any_write_attempts_no_removal(tmp_path):
 class StatusWriteFailureDouble(FailureDouble):
     """FailureDouble whose write marking the generation failed is itself unavailable."""
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         if 'g.status="failed"' in statement:
             from knowledge.errors import BackendUnavailable
 

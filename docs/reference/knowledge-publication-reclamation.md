@@ -114,3 +114,4 @@ The failure message of a build failure appends the reclaimed figure after the re
 
 - [Knowledge Retention Bound](knowledge-retention-bound.md) - Bound settings, the evaluation, the reason vocabulary and failed publication removal.
 - [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md) - Active generation, reclaimable bases, reconciliation and assessment outcome.
+- [Knowledge Publication Capacity Headroom](knowledge-publication-capacity.md) - The gate that runs before the first write; a refusal reclaims nothing.

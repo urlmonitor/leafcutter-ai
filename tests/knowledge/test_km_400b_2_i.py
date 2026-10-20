@@ -97,8 +97,12 @@ class RecordingDb:
     def __init__(self):
         self.calls = []  # (statement, params, write)
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         self.calls.append((statement, params or {}, write))
+        if "MATCH (n) RETURN count(n)" in statement or "MATCH ()-[r]->() RETURN count(r)" in statement:
+            return [{"count": 0}]  # whole-database usage: this double stores nothing
+        if "SHOW DATABASE" in statement:
+            return [{"access": "read-write"}]
         if "generation_key IS NULL" in statement:
             return [{"count": 0}]
         if "MERGE (g:Snapshot" in statement:
@@ -249,8 +253,12 @@ _DRIVER = textwrap.dedent(
         def __init__(self, *a, **k):
             pass
 
-        async def _run(self, statement, params=None, write=False):
+        async def _run(self, statement, params=None, write=False, **_ignored):
             calls.append((statement, params or {}, write))
+            if "MATCH (n) RETURN count(n)" in statement or "MATCH ()-[r]->() RETURN count(r)" in statement:
+                return [{"count": 0}]
+            if "SHOW DATABASE" in statement:
+                return [{"access": "read-write"}]
             if "generation_key IS NULL" in statement:
                 return [{"count": 0}]
             if "MERGE (g:Snapshot" in statement:
