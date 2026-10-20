@@ -42,6 +42,15 @@ from ._test_helpers_tq_600a_9 import (
 _CONSUMER_INSTALL_FILE = "unit_tests/portability/test_inf_400c_4_i.py"
 _SURFACE_IDS = ("signoff", "product-owner", "business-analyst", "it-po")
 _LEGACY_LITERAL_SENTENCE = "Append to `debugging/logs/agent_telemetry.jsonl`"
+# INF-700b-1: the shipped surfaces run emit_knowledge.py, which
+# test_inf_400c_4_i.py's revert marks with a self-carried --sink instead of the
+# legacy sentence. A tree is "reverted" when it carries EITHER marker; no
+# unmodified shipped surface carries either, so exactly-one-reverted-tree still
+# discriminates a leaked or shared mutation.
+_REVERTED_MARKERS = (
+    _LEGACY_LITERAL_SENTENCE,
+    "--sink debugging/logs/agent_telemetry.jsonl",
+)
 
 
 def _surface_relpath(surface_id: str) -> str:
@@ -162,7 +171,10 @@ class TestTQ600a9iCopyOnWriteIsolation(unittest.TestCase):
                 d
                 for d in project_dirs
                 if (d / relpath).is_file()
-                and _LEGACY_LITERAL_SENTENCE in (d / relpath).read_text(encoding="utf-8")
+                and any(
+                    marker in (d / relpath).read_text(encoding="utf-8")
+                    for marker in _REVERTED_MARKERS
+                )
             ]
             self.assertEqual(
                 1,

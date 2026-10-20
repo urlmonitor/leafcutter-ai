@@ -75,7 +75,8 @@ amended_by:
     at: 2026-08-26
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md
 notes: |
   Satisfies the sequence-diagram entry in INF-700b's documentation_triggers.
   The "names no retired step" clause exists because the current architecture
@@ -84,3 +85,4 @@ notes: |
   reference in picture form.
 change_target: docs
 risk_surface: internal
+target_epic: EPIC-ALearningAnAgentHasTodayActuallyGets
