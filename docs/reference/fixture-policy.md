@@ -201,6 +201,18 @@ A proof of a script that an install delivers must run the **delivered** copy, ne
 
 Fixture commits run git with the working directory set to the repository, never as `git -C <path> commit`.
 
+### Developer-repository guard (BO-4300f-4-i)
+
+Running the workspace proof suite must leave the developer's own project unchanged: its registered workspaces, branches and local version-control settings are identical afterwards, and nothing the suite made is registered in, or linked from, it. Fixture git runs with an isolated global and system config bounded to the test's temp folder (`bounded_env`), so no fixture identity reaches the real config.
+
+| Function (in `_workspace_maker_fixtures.py`) | Contract |
+|---|---|
+| `developer_repo_snapshot(repo=None)` | Returns `{worktrees, refs, config}`, each a string: `git worktree list --porcelain`, `git for-each-ref`, `git config --local --list`. Default repository: the developer's project (`REPO_ROOT`). |
+| `developer_repo_references_into(folder, repo=None)` | Every worktree entry, local config value (remotes included) and alternates line of `repo` that points into `folder`; `[]` when none does. |
+| `developer_repo_guard(repo=None)` | Context manager: snapshots on entry, raises `AssertionError` naming the changed record kinds on exit if any differ. |
+
+The same snapshot runs for every pytest session through the plugin `scripts/suite_performance/pytest_developer_repo_guard.py`, registered in `pytest.ini` `addopts`. It compares at session end, prints `developer-repo-guard: unchanged` or `developer-repo-guard: CHANGED (<kinds>)` in the terminal summary, and fails the session on a change. Outside a git repository it prints `developer-repo-guard: unavailable` and does not fail.
+
 ---
 
 ## Relationship to load_fixture() (ADR-028)
@@ -221,3 +233,7 @@ The Fixture Authenticity Rule governs how the fixture **content is produced**. B
 - `docs/architecture/adrs/ADR-028-test-fixture-convention.md` — architectural decision for the `load_fixture()` helper and `tests/fixtures/` directory layout.
 - `templates/agents/test-writer.md` §2h.2 — the authoritative rule enforced in every `test-writer` invocation.
 - `unit_tests/build_orchestration/_workspace_maker_fixtures.py` — the deployed-copy fixture module described in "Deployed-Copy Fixtures"; proven by `unit_tests/build_orchestration/test_bo_4300f_4.py`.
+- `unit_tests/build_orchestration/test_bo_4300f_4_i.py` — proof of the "Developer-repository guard" (snapshot equality, no reference into the suite's temp folder, session-guard reachability).
+- `scripts/suite_performance/pytest_developer_repo_guard.py` — the session plugin that runs the developer-repository snapshot for every pytest session.
+- [Worktree manager component](../architecture/components/worktree-manager.md) — the one maker whose proof suite the guard protects.
+- [Test angles](../testing/test-angles.md) — the angle taxonomy (boundary, criterion, reachability) used by the guard's tests.

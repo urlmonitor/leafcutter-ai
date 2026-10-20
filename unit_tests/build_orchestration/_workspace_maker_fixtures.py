@@ -206,6 +206,24 @@ def starting_points(project: dict) -> dict:
     return points
 
 
+def developer_repo_snapshot(repo=None) -> dict:
+    """Record the worktrees, refs and local config of ``repo`` (default: REPO_ROOT)."""
+    from scripts.suite_performance import pytest_developer_repo_guard as guard
+    return guard.developer_repo_snapshot(repo if repo is not None else REPO_ROOT)
+
+
+def developer_repo_references_into(folder, repo=None) -> list:
+    """Return every record of ``repo`` pointing into ``folder``; [] when none does."""
+    from scripts.suite_performance import pytest_developer_repo_guard as guard
+    return guard.developer_repo_references_into(folder, repo if repo is not None else REPO_ROOT)
+
+
+def developer_repo_guard(repo=None):
+    """Context manager: raise AssertionError on exit if ``repo`` changed inside it."""
+    from scripts.suite_performance import pytest_developer_repo_guard as guard
+    return guard.developer_repo_guard(repo if repo is not None else REPO_ROOT)
+
+
 def legacy_worktree(project: dict, name: str, unsent: bool = False) -> Path:
     """Register a real legacy ``git worktree`` named ``name`` in the temp project.
 
