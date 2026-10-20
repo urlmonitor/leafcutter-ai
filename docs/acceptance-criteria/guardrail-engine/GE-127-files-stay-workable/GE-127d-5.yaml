@@ -13,22 +13,25 @@ roadmap_phase: phase_1
 criteria: |
   Given a staged covered file over its permitted length,
   When the author performs an ordinary commit and it is refused,
-  Then the advice in the outcome states that comments of every style and
-    docstrings do not count toward the length and that blank lines outside
+  Then the advice in the outcome states that comments of every style, and Python
+    strings standing alone as statements (docstrings and bare strings alike), do
+    not count toward the length, that a string which is used (assigned, passed,
+    returned or part of a larger expression) does, and that blank lines outside
     comments do,
   And the advice does not state that comments of any one style count, does not
     state that removing comments reduces the length, and does not name any
     comment style or form whose content is uncounted while another is counted,
   And the advice states that rewriting comments in another style, deleting
-    comments or docstrings, and joining lines are not ways to bring the file
+    comments or standalone strings, and joining lines are not ways to bring the file
     within its limit,
   And the outcome's statement of what the quoted length measures states the same
     rule,
   And given every published place that states the size rule,
   When the published-versus-enforced comparison runs over the repository's real
     published places and the rule in force,
-  Then each published place states that line comments, block comments and
-    docstrings are all uncounted and that blank lines outside them are counted,
+  Then each published place states that line comments, block comments and Python
+    strings standing alone as statements are all uncounted, that used strings
+    count, and that blank lines outside them are counted,
     and the comparison reports zero disagreements and a count of places compared
     greater than zero,
   And given one published place is left stating the earlier rule — that `#` or
@@ -288,6 +291,16 @@ amended_by:
     Searched agent and skill prose: none states the size rule, so no llm-expert companion.
     depends_on and expects_from gain GE-127d-4 (its refusal text constrains this advice).
     Complexity S -> M. Added a discrimination descriptor.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed to state BrainCandy's 2026-10-20 rule (GE-127d-3): the advice and every
+    published place say that Python strings standing alone as statements (docstrings and bare
+    strings) are uncounted and used strings count, replacing "docstrings". Title, depends_on
+    and req_status unchanged. The it_requirements probe list (a Python docstring and a
+    non-docstring triple-quoted string) is left for the IT PO; it needs a bare-string probe
+    and an assigned-string probe to generate the new statement.
 superseded_by: null
 covered_by: []
 implemented_by: []

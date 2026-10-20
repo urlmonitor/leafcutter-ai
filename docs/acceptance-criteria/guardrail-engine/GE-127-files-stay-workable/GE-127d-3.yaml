@@ -18,21 +18,25 @@ criteria: |
   Then the measured length is 2,
   And given the same 2 lines of code with the same 4 lines of text carried
     instead as one block comment (`/* ... */` in JavaScript, TypeScript and SQL),
-    or in Python as the docstring of the module, class or function,
+    or in Python as a string literal standing alone as a statement — the
+    docstring of the module, class or function, or a bare string anywhere else in
+    the file, including a trailing block such as a DECISION HISTORY string at the
+    end of the module,
   When its length is measured,
-  Then the measured length is again 2 — no comment of any style, and no
-    docstring, counts toward a file's length, and the style a comment is carried
-    in never changes the number,
+  Then the measured length is again 2 — no comment of any style, and no string
+    literal that stands alone as a statement, counts toward a file's length, and
+    the style a comment is carried in never changes the number,
   And a line holding code followed by a comment on the same line counts as one
     line,
-  And a line holding only whitespace, outside any comment or docstring, counts as
-    one line, exactly as under the rule published before this change, while every
-    line inside a block comment or docstring is uncounted whether or not it is
-    blank,
-  And a Python triple-quoted string that is not a docstring — assigned to a name,
-    passed to a call, returned, or standing as an expression anywhere other than
-    the first statement of a module, class or function — is a string value and
-    each of its lines counts like any other code,
+  And a line holding only whitespace, outside any comment or standalone string,
+    counts as one line, exactly as under the rule published before this change,
+    while every line inside a block comment or standalone string is uncounted
+    whether or not it is blank,
+  And a Python string that is used — assigned to a name, passed as an argument,
+    returned, or part of any larger expression, as embedded SQL, prompts and
+    templates are — is a string value and each of its lines counts like any other
+    code, and an f-string counts as code wherever it stands, because evaluating it
+    runs the expressions inside it,
   And given a staged change to a covered file whose only effect is rewriting
     existing comments from one style to another with their text unchanged,
   When the author performs an ordinary commit,
@@ -311,22 +315,37 @@ test_spec:
       - "blank lines dropped everywhere (raw non-blank measure)"
       - "blank lines inside a block comment counted"
       - "a CRLF file's uncounted region leaves a phantom line behind"
-  - name: test_ge_127d_3_a_python_triple_quoted_string_that_is_not_a_docstring_counts_as_code
+  - name: test_ge_127d_3_a_standalone_python_string_is_uncounted_wherever_it_stands
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
     angle: boundary
     description: >-
-      A .py file holding an S-line triple-quoted string assigned to a name, another
-      holding the same string as a bare expression after the first statement of a
-      function, and another holding it as a module-level expression at the END of the file
-      (the DECISION HISTORY shape), each measure S lines more than the same file without the
-      string, while the same text as the module's, a class's or a function's docstring adds 0;
-      an f-string or bytes literal in docstring position adds its lines, as Python itself
-      does not treat either as a docstring. S varied.
+      REPLACES the earlier docstring-position-only descriptor (BrainCandy 2026-10-20). An
+      S-line triple-quoted string standing alone as a statement adds 0 to the measured
+      length in every position: as the module's, a class's or a function's docstring; as a
+      bare string mid-module between two functions; as a bare string after the first
+      statement of a function; and as a trailing module-level DECISION HISTORY string at the
+      END of the file — each written to disk and measured by the shared measure against
+      the same file without the string. S varied.
     must_catch:
-      - "every triple-quoted string discarded regardless of position"
-      - "a trailing module-level string treated as a docstring"
+      - "docstring position only: a bare or trailing string counted as code"
+      - "a trailing DECISION HISTORY string counted as code"
+  - name: test_ge_127d_3_the_same_python_string_counts_once_it_is_used
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The same S-line text from the standalone descriptor, now assigned to a variable,
+      passed as an argument to a function call, returned from a function, and joined into a
+      larger expression (`PREFIX + """..."""`), each measures S lines more than the file
+      without it (plus the lines the surrounding statement occupies, derived at run time);
+      an S-line f-string standing alone also adds its lines. S varied.
+    must_catch:
+      - "every triple-quoted string discarded regardless of use (the pre-2026-10-16 rule)"
+      - "a string passed as an argument treated as standalone"
+      - "a standalone f-string treated as inert"
   - name: test_ge_127d_3_restyling_a_real_workflow_template_leaves_its_quoted_length_unchanged
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -370,7 +389,8 @@ test_spec:
     angle: seam
     description: >-
       Through the hook, refuse an over-limit .py file whose top-level functions carry `#`
-      comment runs and non-docstring triple-quoted strings (counts varied). Each part the
+      comment runs, bare standalone strings and assigned triple-quoted strings (counts
+      varied). Each part the
       refusal lists has a portion equal to the shared measure applied, at run time, to that
       part's own line range of the file; moving a comment run from one function to another
       leaves every listed portion unchanged.
@@ -473,6 +493,21 @@ amended_by:
     and a measured .py population (193 -> 164 over 400; 14 newly over, 6 only from trailing
     DECISION HISTORY strings). Added declared_files, a part-breakdown seam descriptor, and
     the two GE-127d-2 descriptor rewrites as test_spec entries covering GE-127d-2.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-20 decision, superseding the 2026-10-16
+    "docstring position only" confirmation: a Python string literal standing alone as a
+    statement (docstrings and bare strings, including a trailing DECISION HISTORY block) is
+    uncounted; a string that is assigned, passed, returned or part of a larger expression
+    counts; a standalone f-string counts (BA interpretation, flagged). test_spec: the
+    docstring-position-only boundary descriptor is replaced by a standalone-string descriptor
+    (docstrings, bare mid-module, bare in a function, trailing DECISION HISTORY all add 0)
+    and a used-string discrimination descriptor (assigned, argument, returned, larger
+    expression, standalone f-string all count); the part-breakdown seam names both kinds.
+    Title, depends_on and req_status unchanged. it_requirements left for the IT PO; the
+    items that now contradict the criteria are listed in the BA's 2026-10-20 report.
 superseded_by: null
 covered_by:
   - GE-127d-3-i
@@ -499,12 +534,23 @@ notes: |
   falsely-done-composite shape is not staged.
 
   TWO FURTHER DECISIONS:
-    (1) DOCSTRING MEANS DOCSTRING POSITION — CONFIRMED BY BRAINCANDY 2026-10-16.
-        GE-127d-2's published rule discarded EVERY triple-quoted string. A lexically
-        correct rule cannot call an assigned SQL template a comment, so only a string
-        literal that is the first statement of a module, class or function is uncounted;
-        any other triple-quoted string, assigned or bare, counts as code. This RAISES the
-        measured length of files with large embedded strings.
+    (1) A STANDALONE STRING IS INERT LIKE A COMMENT — BRAINCANDY 2026-10-20, SUPERSEDING
+        THE 2026-10-16 "DOCSTRING POSITION ONLY" CONFIRMATION. A Python string literal that
+        is an expression statement on its own — not assigned, passed, returned or otherwise
+        used — is uncounted wherever it stands: docstrings AND bare strings, including the
+        trailing `"""DECISION HISTORY ..."""` block about 250 Python files end in. A string
+        that is assigned, passed as an argument, returned, or part of any larger expression
+        (embedded SQL, prompts, templates) is code and counts. Trigger: the IT PO measured
+        that docstring-position-only would push 6 files over their limit purely through a
+        trailing DECISION HISTORY string and charge every doc-enforcer history entry as
+        added lines in the two-for-one repayment. BA interpretation, flagged for
+        confirmation: a standalone f-string counts as code, because evaluating it runs the
+        expressions in its replacement fields (not inert); a standalone bytes or raw string
+        is inert. The measure still decides by syntactic role only, never by the string's
+        name or content.
+        Superseded wording kept for the record: (2026-10-16) "only a string literal that is
+        the first statement of a module, class or function is uncounted; any other
+        triple-quoted string, assigned or bare, counts as code."
     (2) A BLANK LINE BETWEEN TWO LINE COMMENTS IS A BLANK LINE. With blank lines counted,
         `# a / (blank) / # b` measures 1 while the same text as one block comment with a
         blank line inside measures 0. The restyle invariant in the criteria is therefore
@@ -516,6 +562,8 @@ notes: |
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.
 
+  [RESOLVED 2026-10-20 by decision (1) above — trailing DECISION HISTORY strings are now
+  uncounted; the migration follow-up below is no longer needed for measurement reasons.]
   IT PO, 2026-10-16 — A CONSEQUENCE OF DECISION (1) TO PUT BEFORE BRAINCANDY, NOT A CRITERIA
   CHANGE. Most Python files in this repository (about 250 under templates/ and scripts/ alone)
   end in a module-level `"""DECISION HISTORY ..."""` string. Under decision (1) that string is

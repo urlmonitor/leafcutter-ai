@@ -111,7 +111,8 @@ test_spec:
     angle: boundary
     description: >-
       In a temporary repository with a real merge in progress (MERGE_HEAD present), where one
-      parent's version of a .py file carries a large non-docstring string and the other a run
+      parent's version of a .py file carries a large string assigned to a name (counted under
+      the 2026-10-20 rule; a bare standalone string would not be) and the other a run
       of `#` comments, the quoted previous length equals the maximum of the shared measure
       applied at run time to each parent's blob, and the verdict follows from that maximum.
     must_catch:

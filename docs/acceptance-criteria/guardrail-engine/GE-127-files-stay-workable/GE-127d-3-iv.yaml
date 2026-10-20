@@ -28,7 +28,9 @@ criteria: |
   Then the commit does not complete, and the outcome states that the change added
     5 lines and that the file is required to stand at 1195 or below,
   And the same three outcomes hold for a Python file over its limit when `#` lines
-    are rewritten as a docstring and back.
+    are rewritten as a string literal standing alone as a statement and back —
+    whether that string is a docstring, a bare string between two functions, or a
+    trailing DECISION HISTORY string at the end of the module.
 depends_on:
   - GE-127d-3
   - GE-127f-2
@@ -99,10 +101,25 @@ test_spec:
       In a temporary git repository with an over-limit .js file and an over-limit .py
       file, stage a restyle-only change in each direction and run the hook: each completes
       and states 0 lines added; the quoted lengths are equal before and after. The .py run
-      sits at the module docstring position and at a function docstring position.
+      is repeated at the module docstring position, at a function docstring position, as a
+      bare string between two functions, and as a trailing module-level DECISION HISTORY
+      string converted to and from the `#`-comment form (BrainCandy 2026-10-20).
     must_catch:
       - "the pre-2026-10-16 rule, under which restoring // lines counts 4 added"
       - "added lines counted from the raw diff rather than from measured content"
+      - "docstring position only, so a bare or trailing standalone string is charged as added lines"
+  - name: test_ge_127d_3_iv_appending_to_a_trailing_decision_history_string_adds_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Copy a real tracked over-limit .py file that ends in a module-level DECISION HISTORY
+      string into a temporary git repository, stage a change that appends E new entry lines
+      inside that string (E varied), and run the hook: it completes, states 0 lines added,
+      and quotes the same length before and after.
+    must_catch:
+      - "a trailing DECISION HISTORY string counted as code"
   - name: test_ge_127d_3_iv_a_restyle_does_not_hide_code_added_in_the_same_change
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -150,6 +167,18 @@ amended_by:
     across parents / deletion-is-zero / INDETERMINATE are unchanged; the Python arm uses
     docstring position. expects_from re-pointed from GE-127f-2 (done, and unchanged) to
     GE-127d-3, which supplies the new counted-line list. Added a trailing-comment descriptor.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-20 decision (GE-127d-3): the Python arm now
+    covers `#` lines rewritten as any string literal standing alone as a statement —
+    docstring, bare string between functions, or trailing DECISION HISTORY string — not only
+    a docstring. test_spec: the restyle descriptor repeats the .py run in those positions
+    and gains a docstring-position-only must_catch; a real-artifact descriptor proves that
+    appending entries inside a trailing DECISION HISTORY string adds 0 lines. Title,
+    depends_on and req_status unchanged. The it_requirements item "The Python arm uses
+    docstring POSITION" now contradicts the criteria and is left for the IT PO.
 superseded_by: null
 covered_by: []
 implemented_by: []

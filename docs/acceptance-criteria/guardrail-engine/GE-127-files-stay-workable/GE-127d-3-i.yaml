@@ -20,7 +20,9 @@ criteria: |
   And given covered files whose code lines carry these sequences inside string
     literals or other non-comment syntax, each on its own line between ordinary
     code lines:
-      a Python string holding `#`, `"""`, `/*` or `*/`;
+      a Python string holding `#`, `"""`, `/*` or `*/` that is assigned to a
+        name or passed as an argument (a string standing alone as a statement is
+        uncounted under GE-127d-3, whatever it holds);
       a JavaScript or TypeScript single-quoted, double-quoted or template-literal
         string holding `//`, `/*`, `*/` or `#`, including a URL such as
         "https://example.com/a";
@@ -204,10 +206,12 @@ test_spec:
     description: >-
       For the repository's real tests/knowledge/test_native_decision.py (which the KI
       shows losing 127 lines to a false span) and a sample of real tracked .py files, the
-      measured length equals the line count derived independently — docstring positions
-      from `ast`, comments from tokenize COMMENT tokens (lines carrying any non-comment,
-      non-docstring token, plus blank lines outside docstrings) — computed at run time,
-      never a literal.
+      measured length equals the line count derived independently — standalone strings
+      from `ast` (every Expr statement whose value is a non-f-string Constant str or bytes,
+      lineno to end_lineno, in any position — docstrings, bare mid-module and trailing
+      DECISION HISTORY strings alike, per BrainCandy 2026-10-20), comments from tokenize
+      COMMENT tokens (lines carrying any token outside those, plus blank lines outside
+      them) — computed at run time, never a literal.
   - name: test_ge_127d_3_i_every_tracked_js_and_ts_file_measures_what_the_typescript_compiler_says
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -251,6 +255,16 @@ amended_by:
     .js/.mjs/.tsx and off for .ts, shell word-start `#` and here-documents, and two oracles
     that share no code with the measure (ast + tokenize for Python, the TypeScript compiler
     for JS/TS — fail, not skip, in CI). Added regex, JSX and TypeScript-oracle descriptors.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-20 decision (GE-127d-3): the Python arm now
+    names a string that is assigned or passed as an argument, because a string standing
+    alone as a statement is uncounted whatever it holds. The Python real-artifact oracle
+    description now derives every standalone string from `ast` (any position), not only
+    docstring positions. Title, depends_on and req_status unchanged. The it_requirements
+    oracle paragraph still says "docstring positions" and is left for the IT PO.
 superseded_by: null
 covered_by: []
 implemented_by: []
