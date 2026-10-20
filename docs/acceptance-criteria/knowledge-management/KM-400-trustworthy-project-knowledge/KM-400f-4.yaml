@@ -99,7 +99,8 @@ amended_by:
     priority to high at the user's approval gate."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261020-KM-400f-4.md
 change_target: [code, docs]
 risk_surface: contract_boundary
 notes: |
