@@ -1,0 +1,89 @@
+id: BO-100d-2a-i
+components:
+  - build_orchestration
+readiness: approved
+priority: high
+title: "Remediation that makes a failing probe pass lets the drive proceed"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given /build-feature is invoked for an epic with at least one ready ticket,
+  And the install's telemetry location query has printed an absolute stream path
+    (for example /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
+  And the first pre-drive feedback-sink reachability probe against that printed
+    path fails because its log directory is absent,
+  When the remediation step creates the missing log directory and the probe is
+    retried,
+  And the retried append to the same printed path succeeds,
+  Then the drive proceeds past the pre-dispatch stage and dispatches
+    ticket-supervisors normally,
+  And no hard-block operator message is shown,
+  And the earlier first-attempt failure does not cause the drive to halt.
+depends_on: [BO-100d-2a, BO-100d-1a]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "When the directory-absent remediation makes the re-probe succeed, the gate must treat the overall probe as PASS and proceed to normal dispatch — the earlier first-attempt failure must not latch the drive into a halt state."
+  - "No hard-block operator message may be shown when remediation resolves the issue; the recovered path is silent-success (aside from any WARNING-level log of the transient first-miss)."
+  - "Idempotent: across first-probe + remediation + re-probe, exactly one probe line ends up appended to the absolute stream path printed by the telemetry location query."
+  - "Dual-surface parity (the KI-3 lesson): the remediate-then-proceed outcome must be identical whether the drive enters via build-epic.js or via the build-feature.md prose gate, since both use the single shared probe helper."
+delivers_to: null
+expects_from:
+  ac_id: BO-100d-1a
+  contract: "The shared pre-drive sink probe helper exposing the full first-probe -> mkdir-and-reprobe -> success sequence and a single typed PASS result on recovery. This L3 specifies the recovered-success branch (transient first-miss followed by a successful re-probe -> proceed)."
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Created as the replacement for BO-100d-2-i, whose id-derived parent BO-100d-2 is retired, so done-proof skipped its subtree and its work never counted toward BO-100d. Homed under BO-100d-2a rather than BO-100d-2b: its criteria are the proceed-on-success outcome that BO-100d-2a owns (BO-100d-2 lineage), and it is a python-coder record exercising the shared probe helper, which matches BO-100d-2a's deterministic build-epic.js surface, not BO-100d-2b's llm-expert prose surface. depends_on adds BO-100d-2a (the new id-derived parent) and keeps BO-100d-1a (the helper it exercises, as its expects_from still says). criteria, it_requirements, delivers_to, expects_from, doc_links, assigned_agent and estimated_complexity are copied verbatim from BO-100d-2-i as of 2026-10-16 (the old record had no test fields). BO-100d-2-i is retired with superseded_by [BO-100d-2a-i]. work_status carried over unchanged; readiness draft pending IT PO review and the user's approval."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review. Added test_required: true and a 3-entry behavioral test_spec plus test_rationale: each test runs the real location query against a real temp declaration whose log directory is absent under a live enduring root and drives build-epic.js under the E2 harness, covering proceed-and-dispatch after remediation, no hard-block message, and exactly one probe line across first probe, remediation and re-probe. No stale sibling id and no KI doc_link were present. assigned_agent python-coder, estimated_complexity S and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged. Approval given for BO-100d-2-i, carried to this replacement."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_remediated_probe_lets_the_drive_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A temp install whose real declaration has a live enduring root and an absent log directory; the real location query (sink_resolution.py --print-location telemetry) prints the stream path. build-epic.js runs under the E2 harness over an epic with one ready ticket; asserts the terminal payload is not blocked and the ticket receives its phase dispatches."
+    must_catch:
+      - "latch a halt on the first-attempt failure even though the re-probe passed"
+  - name: test_no_hard_block_message_after_successful_remediation
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Same run: no hard-block operator message and no sink_unreachable field; at most a WARNING-level log of the transient first miss."
+  - name: test_exactly_one_probe_line_across_miss_remediation_and_reprobe
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "After the recovered run, the stream at the printed path exists and holds exactly one line, and no file was created at <worktree>/debugging/logs/agent_telemetry.jsonl."
+    must_catch:
+      - "the failed first attempt leaves a partial line that the re-probe then duplicates"
+test_rationale: >-
+  The recovered path is a sequence (fail, mkdir, retry, pass) whose only observable
+  outcome that matters is that the real workflow dispatches, so every test drives
+  build-epic.js's top-level body under the E2 harness over a real temp declaration
+  whose target comes from the real location query. The one-line test pins the
+  idempotency requirement across the whole sequence, and the latch must_catch is
+  the wrong version this record exists to rule out: a gate that remembers the
+  first failure and halts despite a passing re-probe.

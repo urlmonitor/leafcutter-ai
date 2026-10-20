@@ -14,7 +14,7 @@ related_docs:
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
   - docs/architecture/feedback-lifecycle.md
   - reports/feedback-snapshots/README.md
-  - docs/known-issues/build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md
+  - docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md
 ---
 
 # KI-FC-001 — The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora
@@ -194,7 +194,7 @@ under `AC_ENFORCE_STRICT=1`. The entry still stays open until the epic PR is mer
 **Still open after the epic:**
 
 - The BO-100d probe ACs still pin the relative `debugging/logs/agent_telemetry.jsonl`. See
-  [KI-BO-20261009](../../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
+  [KI-BO-20261009](../../build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
   Their owner has to change them.
 - The harvester's record identity collides. `harvest_learnings._event_hash` keys a record on
   `(timestamp, agent, component, destination, entry_kind)` and leaves out `text`. The
@@ -233,8 +233,8 @@ Fixed on the branch since the first amendment, and no longer open:
   appending probe pinned to the relative `debugging/logs/agent_telemetry.jsonl` (for example
   `BO-100d.yaml`, `BO-100d-1.yaml` and `BO-100d-2.yaml` under
   `docs/acceptance-criteria/build-orchestration/BO-100-smart-sequencing/`). That is owned by
-  [KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path](../../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md),
-  which stays open.
+  [KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path](../../build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md),
+  which stayed open when this entry was written and was resolved 2026-10-16.
 
 **Not done here.** No sink was moved or merged. The 2026-09-30 census records stay where they
 are, as the 2026-10-12 migration decision says.

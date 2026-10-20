@@ -6,7 +6,7 @@ priority: high
 title: "Remediation that makes a failing probe pass lets the drive proceed"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -45,7 +45,11 @@ amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl and debugging/logs/ to the absolute stream the install's telemetry location query prints and that stream's log directory (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The idempotency it_requirement was updated to match. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
-superseded_by: null
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Retired: status superseded_by, superseded_by [BO-100d-2a-i]. This record's id-derived parent BO-100d-2 is retired, so done-proof skipped this subtree and its work never counted toward BO-100d. The replacement BO-100d-2a-i sits under the live L2 BO-100d-2a, the build-epic.js proceed-on-success successor that matches this record's criteria and python-coder assignment, and carries this record's criteria, it_requirements, contracts and doc_links verbatim. This record stays in BO-100d-2's covered_by for the audit trail. work_status unchanged."
+superseded_by:
+  - BO-100d-2a-i
 covered_by: []
 implemented_by: []
 change_target: pipeline

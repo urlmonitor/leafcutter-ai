@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -65,18 +65,71 @@ doc_links:
     relationship: modifies
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-it_requirements: []
+estimated_complexity: S
+it_requirements:
+  - "The allow verdict must be a function of exactly two inputs, the file's undeclared count at HEAD and in the staged content; no project-wide or per-file maximum, percentage, goal or allowlist of files may be read or applied, and none may be added to configuration by this work."
+  - "The same-count and lower-count arms must be implemented by the same comparison as the refusal arm in GE-128a-2 (after <= before allows), not by a separate exemption path, so the two arms cannot drift."
+  - "An allowed file must produce no violation line for the undeclared tests it still holds; any informational report of the remaining count must not be phrased as a failure."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-128a-2
+  contract: "The per-file ratchet verdict { path: str, before: int, after: int, new_undeclared: list[str], verdict: 'refuse' | 'allow' }; this record specifies the 'allow' arm (after <= before) of the same comparison."
 origin_agent: BrainCandy
 created: 2026-10-16
 amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Authored as a live child of GE-128a, whose only child GE-128a-1 is retired (superseded_by TQ-100b-4-iii). Specifies the same-or-lower arm of the per-file ratchet and that the comparison is against the file's own previous state rather than any target, per GE-128a's criteria and notes. origin_agent BrainCandy per the requesting user's instruction."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO enrichment. Set estimated_complexity S; added three it_requirements (verdict depends only on before and after counts, no target or allowlist; allow arm is the same comparison as GE-128a-2's refusal arm; no violation line for retained undeclared tests); added expects_from GE-128a-2 (the verdict shape) and test_required: true with a 4-entry behavioral test_spec plus test_rationale, run over real temp git repos. assigned_agent python-coder kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_declaring_one_existing_test_lowers_the_count_and_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 1. A temp git repo commits a file with 40 tests, all undeclared; the staged change adds a declaration to one. The real hook CLI (templates/scripts/commit_guardian/check_test_ac_tags.py) in error mode exits 0 and lists none of the 39 remaining undeclared tests as a violation."
+    must_catch:
+      - "flat rule that refuses any file still holding an undeclared test"
+  - name: test_declared_test_added_alongside_the_backlog_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 2. Same 40/40 file; the staged change adds one new test that carries a declaration, leaving 40 undeclared. The real hook in error mode exits 0."
+    must_catch:
+      - "refuse when the count is unchanged (strict decrease required)"
+  - name: test_deleting_an_undeclared_test_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Scenario 3. Same file; the staged change deletes one undeclared test, leaving 39. The real hook in error mode exits 0."
+  - name: test_verdict_uses_only_the_files_own_before_and_after_counts
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Scenario 4. In one process the real hook judges, in separate temp repos: a file with 500 undeclared tests edited without changing the count (allowed, so no maximum applies), and a file going 0 -> 1 undeclared with a previous version present (refused, so no percentage or 'mostly declared' target excuses growth). Both verdicts must hold together."
+    must_catch:
+      - "apply a project-wide or per-file maximum of undeclared tests"
+      - "apply a percentage target instead of the before/after direction"
+test_rationale: >-
+  The allow arm is what stops the ratchet from becoming a freeze, and an
+  allow-everything hook would pass all three positive scenarios, so each test runs
+  the real hook over a real temp repository whose committed version supplies the
+  previous count, and the discrimination test pairs a huge unchanged backlog
+  (must be allowed) with a tiny increase (must be refused) so that neither a cap
+  nor a percentage target can satisfy both. The 40-test fixture size follows the
+  criteria; the 500 and 0 -> 1 files exist only to separate direction from
+  magnitude.
