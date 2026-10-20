@@ -1,0 +1,62 @@
+id: BO-2400a-8-ii
+components:
+  - build_orchestration
+title: "Component diagram update: the mutation proof inside the fast-lane gate script and the shared wrong-version runner it reuses"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane component diagram after BO-2400a-3-x and BO-2400a-3-xii are built,
+  When a reader looks at the lane's collaborators,
+  Then the mutation proof appears as part of the fast-lane gate script, run by the lane
+    as a command step,
+  And the shared wrong-version runner parts it reuses, for putting files back and for
+    the strict test run, appear as its collaborators,
+  And no agent is shown deciding whether a backfilled test is proven.
+depends_on: [BO-2400a-8, BO-2400a-3-x, BO-2400a-3-xii]
+doc_links:
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take module, step and participant names verbatim from the built lane, never from
+    these ACs' drafts.
+  - >-
+    Author through the write-c4-diagram skill, keeping the diagram's existing type,
+    level and file. Refresh last_updated, and stay within the doc-length and
+    doc-compliance hooks.
+test_required: false
+test_rationale: |
+  Architecture diagram. The store's convention for this tree is test_required: false, as
+  on the parent BO-2400a-8.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "The built mutation-proof modules and the shared wrong-version runner parts they import."
+origin_agent: it-po
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Added by it-po in /plan-feature run fast-lane-test-gates, for the parent L1's
+  component-diagram documentation trigger. BO-2400a-7-ii's note asked for this update if
+  the mutation proof was placed in a new module. It-po put the proof in new modules
+  (_fl_mutation_gen.py, _fl_mutation_proof.py) that reuse the shared wrong-version runner
+  (_wvr_gate.py, _wvr_pytest.py), so the fast lane gains collaborators the diagram does
+  not show. The criteria only restate that placement and invent no new behaviour.

@@ -25,6 +25,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from _bo4500a3_support import CONFIG_ENV, PACKAGE_CONFIG  # noqa: E402
 from _commit_step_support import STEP, StepScenario  # noqa: E402
 
 FOLDER = "docs/acceptance-criteria/reliable-builds/BP-100-reliable-builds"
@@ -57,12 +58,18 @@ class TestParentResolverUnavailable(unittest.TestCase):
         holder.mkdir(parents=True)
         self.isolated_step = holder / "commit_changes.py"
         shutil.copy2(STEP, self.isolated_step)
+        # The step's sibling modules travel with it, as they do when deployed.
+        for sibling in STEP.parent.glob("commit_step_*.py"):
+            shutil.copy2(sibling, holder / sibling.name)
 
     def _run_isolated(self, sc: StepScenario, paths: list[str]) -> dict:
         proc = subprocess.run(
             [sys.executable, str(self.isolated_step), "--message-file", str(sc.message_file), *paths],
             cwd=sc.repo,
-            env=sc.env,
+            # The isolated copy has no config/ beside it and the step has no built-in
+            # fallback (BO-4500a-4), so name the package config explicitly: the scenario
+            # still isolates only the parent resolver.
+            env={**sc.env, CONFIG_ENV: str(PACKAGE_CONFIG)},
             capture_output=True,
             text=True,
             timeout=120,

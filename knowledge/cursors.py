@@ -17,6 +17,10 @@ import hmac
 import json
 import time
 
+# No continuation outlives this many seconds after its first issue (disclosure keeps the first
+# expiry). Generation reclamation reads it to know when an unrecorded pin cannot still be live.
+CONTINUATION_LIFETIME_SECONDS = 3600
+
 
 def request_hash(request: KnowledgeRetrievalRequest) -> str:
     """Bind continuations to the retrieval semantics rather than transport identity.
@@ -87,4 +91,5 @@ def decode(token: str, secret: bytes, request: KnowledgeRetrievalRequest) -> dic
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-16 09:00 [python-coder]: One shared continuation lifetime constant so reclamation can rely on the expiry disclosure enforces. (#KM-400f-2/02)
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)

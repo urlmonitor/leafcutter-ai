@@ -1,0 +1,216 @@
+id: BO-2400f-3-iv
+components:
+  - build_orchestration
+title: "A worktree refusal is reported only with a reason the setup itself gave; an invented reason is never passed on as the setup's"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the worktree setup declares a fixed set of refusal reasons, one of which is
+    that the build workspace is already occupied (BO-2400f-13),
+  And the agent asked to run the setup replies with outcome refused and the reason
+    "bootstrap_script_failed", which is not one of the setup's declared reasons,
+  When the run reads that reply,
+  Then the run does not report a worktree refusal with reason
+    "bootstrap_script_failed",
+  And the run halts as a worktree step whose reply could not be trusted, naming the
+    criterion, the agent asked, and the reason it gave, labelled as a reason the setup
+    does not have,
+  And no later step runs.
+
+  Given the agent replies with outcome refused and a declared reason, the workspace
+    already occupied, and the setup's own result says the same,
+  When the run reads that reply,
+  Then the run ends in the occupied-workspace refusal of BO-2400f-13, with that reason
+    unchanged.
+
+  Given the agent replies with outcome refused and a declared reason, but the setup's
+    own result says it opened the worktree,
+  When the run reads that reply,
+  Then the run proceeds on the worktree the setup reported, because the setup's own
+    result outranks the agent's account of it,
+  And the run's report records that the agent's reply disagreed with the setup's
+    result.
+depends_on: [BO-2400f-3, BO-2400f-3-iii, BO-2400f-13, BO-2400f-5-iii]
+doc_links:
+- path: templates/workflows-js/fast-lane-ship.js
+  relationship: modifies
+  status: exists
+  relevance: Where the worktree step's reply is read and turned into a refusal, a halt, or a location.
+- path: templates/scripts/setup_ticket_worktree.py
+  relationship: related
+  status: exists
+  relevance: Owns the declared refusal vocabulary the run checks replies against.
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+  relevance: 'Occupied Build Workspace section: the one refusal the setup gives today.'
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260930-fast-lane-ship-is-649-lines-over-and-cannot-grow.md
+  relationship: related
+  status: exists
+  relevance: The fast-lane-ship.js size ratchet that bounds the JS side of this change.
+- path: unit_tests/_workflow_engine_harness.py
+  relationship: specifies
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fastlane_refusal_reasons:
+      type: array
+      items:
+        type: string
+      description: 'The setup''s declared refusal-reason vocabulary, declared ONCE in templates/scripts/setup_ticket_worktree.py
+        and exposed to the lane, either carried in every BO-2400f-3-iii result record or printed by a
+        read entry point. Today it is implicit in literals only: workspace_occupied, branch_checked_out_elsewhere,
+        occupancy_undetermined (templates/scripts/setup_ticket_worktree.py:784, :794-800, :812-827).'
+    fastlane_worktree_reply_verdict:
+      type: object
+      required:
+      - verdict
+      - agent_reply_disagreed
+      properties:
+        verdict:
+          type: string
+          enum:
+          - proceed
+          - refused
+          - untrusted_reply_halt
+        agent_reply_disagreed:
+          type: boolean
+        asked_agent:
+          type: string
+        reported_outcome:
+          type:
+          - string
+          - 'null'
+        reported_reason:
+          type:
+          - string
+          - 'null'
+          description: Verbatim reason from the reply.
+        reported_reason_declared:
+          type:
+          - boolean
+          - 'null'
+      description: One decision function's output. The lane relays it and does not re-derive it.
+  reference_file_path: templates/scripts/setup_ticket_worktree.py
+  n_location_rule: '2: (1) one module-level declaration of the refusal vocabulary in templates/scripts/setup_ticket_worktree.py,
+    used by _determine_fastlane_occupancy and _build_fastlane_refusal_payload (:1089) and exposed to the
+    lane; (2) the Worktree phase of templates/workflows-js/fast-lane-ship.js, where the verbatim refusal
+    relay (:857-870) is replaced by relaying fastlane_worktree_reply_verdict.'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  - python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ unit_tests/setup/ -q
+  constraints:
+  - THE DEFECT IS THE UNCHECKED RELAY. fast-lane-ship.js:861 treats any reply with outcome 'refused' and
+    a refusal object as a real BO-2400f-13 refusal and relays it, checking the reason against nothing.
+    That is how 'bootstrap_script_failed' reached the operator on UXP-510.
+  - ONE DECISION FUNCTION, ONE PRECEDENCE. (a) A reply whose reason is not in the declared vocabulary
+    becomes untrusted_reply_halt (scenario 1). (b) A setup record that refused with a declared reason
+    becomes that refusal, reason unchanged (scenario 2). (c) A setup record that says opened means proceed
+    on the record's worktree with agent_reply_disagreed:true (scenario 3). The setup record (BO-2400f-3-iii)
+    is the only source of a path or branch. Compute the verdict in Python, so the JS only relays it.
+  - THE VOCABULARY IS DATA, NOT A SECOND LIST. The lane gets the declared set from the setup, so a reason
+    added to the setup later is accepted without changing the lane. A reason list hard-coded in fast-lane-ship.js
+    is a defect.
+  - 'THE UNTRUSTED-REPLY HALT IS ITS OWN CLASSIFICATION, next to buildDeclinedStepHalt (fast-lane-ship.js:735,
+    BO-2400f-5-iii) and not merged into it, because the remedy differs: {status:''error'', classification:''halt'',
+    failing_phase:''worktree'', halt_reason:''worktree reply untrusted'', target_ac, asked_agent, reported_reason:<verbatim>,
+    reported_reason_declared:false}. It has no `refusal` key. It ends the run before Resolve.'
+  - THE DISAGREEMENT IS CARRIED TO THE END. When the run proceeds against a refused reply, every later
+    terminal payload, ok or not, carries worktree_reply_disagreement {agent_outcome, agent_reason, setup_outcome:'opened'}.
+    It is added once, through the BO-2400f-4-vi terminal construction (buildFastLaneDeliveryOutcome, :438)
+    and the shared halt builders, not at each return site.
+  - This AC adds no new refusal reason and does not change the BO-2400f-13 refusal payload shape.
+  - 'JS SIZE: templates/workflows-js/fast-lane-ship.js is over its 1000 counted-line cap (KI-BO-20260930)
+    and the check-file-size ratchet refuses any growth. The change to the lane must be a net shrink in
+    counted lines: put the logic in Python and replace the existing prompt/branch rather than adding beside
+    it.'
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-3-iii
+  contract: 'fastlane_worktree_setup_result obtained through fastlane_worktree_result_read: result.outcome
+    (''opened''|''refused''|''failed''), result.refusal.reason when refused, and the opened worktree_path
+    and branch. A record that was not obtained is BO-2400f-3-iii''s halt and never reaches this decision.'
+test_required: true
+test_spec:
+- name: test_undeclared_refusal_reason_is_not_reported_as_a_worktree_refusal
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'The reply is outcome ''refused'' with reason ''bootstrap_script_failed'': the terminal
+    payload is not status ''refused'' and has no refusal.reason equal to that string.'
+  must_catch:
+  - Any outcome:'refused' reply is relayed verbatim (today's behaviour).
+  - Any non-empty reason string is accepted as declared.
+- name: test_undeclared_reason_halts_as_untrusted_reply_naming_criterion_agent_and_reason
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The same reply ends the run with halt_reason 'worktree reply untrusted', target_ac, asked_agent,
+    and reported_reason 'bootstrap_script_failed' with reported_reason_declared false.
+- name: test_no_step_after_worktree_runs_on_untrusted_reply
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: After the untrusted-reply halt, the harness records no dispatch with a phase after Worktree.
+- name: test_declared_occupied_reason_confirmed_by_setup_is_the_bo2400f13_refusal_unchanged
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Reply and setup record both refused with workspace_occupied: the terminal payload is the
+    BO-2400f-13 refusal, refusal.reason is exactly ''workspace_occupied'', and the refusal object is unchanged.'
+- name: test_setup_opened_record_outranks_an_agent_refused_reply
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Reply refused with a declared reason while the setup record says opened: the lane proceeds
+    on the record''s worktree_path and branch.'
+  must_catch:
+  - The agent's reply outranks the setup record and the run refuses.
+- name: test_reply_setup_disagreement_is_recorded_in_the_run_report
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: In the previous case the terminal payload carries worktree_reply_disagreement with agent_outcome
+    'refused', agent_reason, and setup_outcome 'opened'.
+- name: test_refusal_vocabulary_is_read_from_the_setup_not_hard_coded
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: 'The decision function accepts exactly the setup''s declared set: a reason added to that
+    declaration in a fixture is accepted, and a reason removed from it is treated as undeclared. The lane
+    source contains no literal list of the reasons.'
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The 2026-10-12..14 UXP-510 reply carried refusal.reason bootstrap_script_failed and cited
+  two warnings as its evidence (see BO-2400f-3-v and BO-2400f-3-vi). Distinct from
+  BO-2400f-5-iii: that record covers an agent that declines the task; this one covers an
+  agent that performs the task and then misreports its result. The halt classification
+  should sit beside the declined-step classification, not be merged into it, because the
+  remedy differs (look at the setup's own result, not at who was asked).

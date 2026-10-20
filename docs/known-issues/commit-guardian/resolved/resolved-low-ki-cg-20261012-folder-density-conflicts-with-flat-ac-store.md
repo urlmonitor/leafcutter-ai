@@ -1,30 +1,46 @@
 ---
 title: "KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — check-folder-density (GE-120h-3) conflicts with the flat AC-store layout, so every business-analyst stage commit of a normal-sized AC tree is refused"
-description: "medium — the AC store keeps every AC of one L0 tree flat in one folder, an L0 tree routinely holds far more than the 15-file density cap, and check-folder-density has no exemption for docs/acceptance-criteria/. So the commit that first takes a tree past 15 ACs is refused, and has needed a user-authorized SKIP=check-folder-density. Tree size is already governed by check_ac_limits, so the generic cap adds no protection there."
+description: "medium — the AC store keeps every AC of one L0 tree flat in one folder, an L0 tree routinely holds far more than the 15-file density cap, and check-folder-density has no exemption for docs/acceptance-criteria/. So the commit that first takes a tree past 15 ACs is refused, and has needed a user-authorized SKIP=check-folder-density. Tree size is already governed by check_ac_limits, so the generic cap adds no protection there. RESOLVED by GE-133a (PR #1168): folder_density.set_aside_locations sets docs/acceptance-criteria/ aside."
 type: reference
 category: reference
 status: active
 created: '2026-10-12'
-last_updated: '2026-10-12'
+last_updated: '2026-10-16'
 components:
   - commit_guardian
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
   - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
-  - docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md
+  - docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-20260909-gate-folder-density.md
 ---
 
 # KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — check-folder-density conflicts with the flat AC-store layout
 
-> Index: [commit-guardian.md](../commit-guardian.md).
+> Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below.
 
 - **Severity:** medium. The refusal is loud and nothing wrong lands, but the normal authoring path
   for any AC tree larger than 15 records cannot commit without a user-authorized
   `SKIP=check-folder-density`, and that skip is a habit that hides real density refusals elsewhere.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-10-16 (moved to `resolved/`; the fix landed earlier). Fixed by `GE-133a`,
+  merged through PR #1168 on 2026-10-12 (fast-lane commit `d6c31e833`), with `a5e280a4b`
+  (`GE-133a-1`, `GE-133a-2`) adding Windows path handling and `docs/decisions/` as a second store.
+  The fix takes this entry's preferred direction: a path-based set-aside, with AC tree size left to
+  `check_ac_limits`. Verified on main `496bfecee`:
+  - `templates/scripts/commit_guardian/commit_guardian.json:198-201`: `folder_density.set_aside_locations`
+    declares `docs/acceptance-criteria/` with a stated ground.
+  - `templates/scripts/commit_guardian/_density_set_aside.py` loads the declaration
+    (`load_set_aside`, `:26`) and matches a folder to it (`ground_for`, `:52`).
+  - `check_folder_density.py:347-350` removes set-aside folders from the judged set before
+    `_classify_folders` runs, and `:356` reports them by name, so an AC-tree crossing is reported,
+    not refused.
+  - `unit_tests/commit_guardian/test_folder_density_set_aside.py`
+    (`test_store_crossing_and_new_family_commit_without_declaration_edit`, plus lookalike folders
+    outside the store still judged) and `test_folder_density_shipped_declaration.py` pass on
+    `496bfecee`.
+- **Status when filed:** open, no AC.
 - **Occurrences:** 2 BA-stage commits (see Evidence). · **First seen:** 2026-10-09 · **Last seen:** 2026-10-09
 - **Where:** `templates/scripts/commit_guardian/check_folder_density.py` (deployed as
   `scripts/commit_guardian/check_folder_density.py`), configured by the `folder_density` section
@@ -68,7 +84,7 @@ the generic density cap refuses it anyway and offers no remedy the AC tooling su
 A user-authorized `SKIP=check-folder-density` on the BA-stage commit, stating in the message that the
 flagged folder is an AC tree and the store is flat per L0. All other hooks still run.
 
-## Fix direction (not implemented)
+## Fix direction (the preferred one was implemented by GE-133a; see Status)
 
 - **Preferred:** exempt `docs/acceptance-criteria/` from `check_folder_density` with a path-based
   exclusion (the current `excluded_dirs` matches directory names only, so this needs a new

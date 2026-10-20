@@ -1,3 +1,56 @@
 {
-  "max_automated_fix_retries": 3
+  "_comment": "BO-4500a-4: the ONE source of the shared commit step's answer contract. The step (templates/scripts/commit_changes.py) holds no copy of any of this and refuses with step_config_unreadable when the file is missing or malformed. Adding a code or key is additive; renaming/removing a code or moving it between families is breaking and needs answer_version to change. Shape: config/commit_step.schema.json.",
+  "answer_version": 1,
+  "answer_keys": {
+    "status": null,
+    "reason_code": null,
+    "reason": null,
+    "sha": null,
+    "paths": [],
+    "added_parents": [],
+    "unlisted_changes": [],
+    "autofixed": [],
+    "hook_name": null,
+    "failing_files": [],
+    "hook_output": null,
+    "remedy": null,
+    "handoff": null,
+    "skip_request_ignored": [],
+    "run": null,
+    "ac_id": null,
+    "answer_version": null
+  },
+  "reason_codes": {
+    "policy": [
+      "policy_no_explicit_paths",
+      "policy_path_not_a_file",
+      "policy_path_outside_workspace",
+      "policy_path_not_found",
+      "policy_message_missing",
+      "policy_message_not_found",
+      "policy_message_unreadable",
+      "policy_message_empty",
+      "policy_protected_branch",
+      "policy_detached_head",
+      "policy_unattributed_supervised_call",
+      "policy_unknown_option"
+    ],
+    "step": [
+      "step_index_locked",
+      "step_vcs_error",
+      "step_config_unreadable",
+      "step_parent_resolver_unavailable"
+    ],
+    "check": [
+      "check_failed",
+      "check_unsettled",
+      "check_awaited_input"
+    ],
+    "nothing": [
+      "nothing_changed"
+    ]
+  },
+  "max_automated_fix_retries": 3,
+  "max_transient_retries": 3,
+  "input_wait_limit_seconds": 60
 }

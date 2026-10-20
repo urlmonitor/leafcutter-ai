@@ -1,0 +1,98 @@
+id: ACD-1300e-2-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "The answer a run was resumed with is never reused for the next decision"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R paused at decision D1 and is resumed with the person's answer "approve" for D1,
+  And after D1 the run reaches the final approval decision D2 with no person attached,
+  When the run arrives at D2,
+  Then the "approve" given for D1 is not applied to D2,
+  And no criterion is marked approved and no priority is set at D2,
+  And the run pauses at D2 with a durable record naming D2,
+  And a resume supplying "cancel" for D2 cancels at D2 while the criteria committed before
+    D2 remain committed and unchanged.
+depends_on: [ACD-1300e-2]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+  - "A resume_answer is consumed at most once and only at the gate whose id it names; reaching any other gate in the same invocation behaves exactly as an unanswered headless gate (pause + durable record), never as an applied answer."
+  - "At the unanswered final gate nothing is written to any AC: no readiness: approved, no priority field, no approval commit."
+  - "A 'cancel' at D2 leaves every criterion committed before D2 byte-identical and committed; only D2's own uncommitted drafts are left as drafts (existing final-gate cancel semantics)."
+test_intent:
+  - clause: "Then the \"approve\" given for D1 is not applied to D2,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_d1_approve_not_applied_at_d2 (discrimination)."
+  - clause: "And no criterion is marked approved and no priority is set at D2,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_no_approval_or_priority_written_at_d2 (criterion)."
+  - clause: "And the run pauses at D2 with a durable record naming D2,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_run_pauses_at_d2_with_record_naming_d2 (criterion)."
+  - clause: "And a resume supplying \"cancel\" for D2 cancels at D2 while the criteria committed before D2 remain committed and unchanged."
+    needs_test: true
+    reason: "Observable outcome; proved by test_cancel_at_d2_keeps_committed_criteria_unchanged (failure)."
+test_spec:
+  - name: test_d1_approve_not_applied_at_d2
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Resume with approve for D1; at D2 the gate result is a pause, not an approve."
+    proves_clause: "Then the \"approve\" given for D1 is not applied to D2,"
+    must_catch:
+      - "resolveGate applies any shape-valid resume_answer without comparing its gate_id to the current gate"
+      - "peekPausedGateId result from the D1 step is cached and reused at the D2 step"
+  - name: test_no_approval_or_priority_written_at_d2
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "No AC file gains readiness: approved or a priority value, and no approval commit is made, at D2."
+    proves_clause: "And no criterion is marked approved and no priority is set at D2,"
+  - name: test_run_pauses_at_d2_with_record_naming_d2
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Return status paused_awaiting_input with gate_id D2 and the pause store record names D2."
+    proves_clause: "And the run pauses at D2 with a durable record naming D2,"
+  - name: test_cancel_at_d2_keeps_committed_criteria_unchanged
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Resume with cancel for D2 cancels at D2; criteria committed before D2 remain committed and byte-identical."
+    proves_clause: "And a resume supplying \"cancel\" for D2 cancels at D2 while the criteria committed before D2 remain committed and unchanged."
+test_rationale: "This is a safety edge (an answer silently applied to the wrong decision approves criteria), so the core entry is a discrimination test naming the two plausible wrong versions."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety

@@ -1,0 +1,95 @@
+id: BO-2400a-6-ii
+components:
+  - build_orchestration
+title: "How-to update: the green gate cannot be fooled by masked failures, and a test backfill is proven by a mutation check"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane how-to after BO-2400a-4-ii, BO-2400a-4-iii and BO-2400a-3-ix to
+    BO-2400a-3-xiv are built,
+  When a reader looks up why a green gate failed on tests that pass in an ordinary
+    local run,
+  Then the guide explains that the green gate runs the batch's tests with the
+    enforcement plugin's downgrading switched off, that only passed counts as passing,
+    and how to reproduce the gate's run locally with the same setting.
+
+  Given the same how-to,
+  When a reader wants to add tests for a criterion whose code already exists,
+  Then the guide explains that the lane recognises such a test backfill from its
+    green-at-baseline tests and proves them with a mutation check, not with red-first,
+  And it lists every mutation halt reason (tests_survive_mutation,
+    no_existing_implementation_to_mutate, mutation_inconclusive,
+    mutation_restore_unconfirmed), each with what it means and what the reader does
+    next,
+  And it states that a batch of only proven backfills skips the coder, while a mixed
+    batch mutation-proves its backfill criteria individually,
+  And the Step 3 failure guidance no longer tells the reader to confirm by hand that a
+    criterion is already implemented when its new tests are green at baseline.
+depends_on: [BO-2400a-6, BO-2400a-4-ii, BO-2400a-4-iii, BO-2400a-3-ix, BO-2400a-3-x, BO-2400a-3-xi, BO-2400a-3-xii, BO-2400a-3-xiii, BO-2400a-3-xiv]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+    relevance: "The Step 3 guidance currently links here for the green-at-baseline case."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take halt-reason names, verdict field names and the strict-mode setting verbatim
+    from the built lane, never from these ACs' drafts.
+  - >-
+    The doc's frontmatter last_updated is refreshed and the doc stays within the
+    doc-length and doc-compliance hooks. An over-long doc is split by section, not
+    trimmed of required content.
+  - >-
+    Sections to change in docs/how-to/fast-lane-build.md: "Step 3 — verify_red_baseline"
+    (the backfill route and the mutation proof; replace the current advice, around lines
+    305-312, to "fix the test stub or confirm that the AC is already implemented (see
+    docs/how-to/prove-ac-done.md)"), "Step 4 — python-coder" (the coder's strict self
+    check, BO-2400a-4-iv), "Step 5 — verify_green_and_coverage" (strict run, only PASSED
+    counts, the gate is run by the workflow and not taken from the coder's reply) and
+    "4. When a Gate Blocks the Loop" (one row per mutation halt reason: its meaning and
+    the reader's next step).
+  - >-
+    The local reproduction of the gate's run names the switch and where it is read:
+    AC_ENFORCE_STRICT=1, read by scripts/ac_store/pytest_ac_enforcement.py, which
+    pytest.ini loads into every pytest process. Give the command in a form that works
+    in Git Bash on Windows and in a POSIX shell.
+  - >-
+    The mutation-proof explanation says which code can be broken (unchanged code that
+    existed at the merge-base and that the new tests import), that test files are never
+    altered, how many breaks are tried at most, and that the work tree is restored and
+    checked byte for byte. Take these facts from the built lane.
+test_required: false
+test_rationale: |
+  How-to documentation. The store's convention for this tree is test_required: false, as
+  on the parent BO-2400a-6. The author checks agreement with the built lane at sign-off,
+  and review checks it again.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-xi
+  contract: "The built mutation halt-reason vocabulary."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Produced for the parent L1's how-to documentation trigger. Placed under BO-2400a-6,
+  which is the existing how-to AC for the same guide.

@@ -19,9 +19,9 @@ ARCHITECTURE: Stdlib only. The commit is built in a PRIVATE temporary index
 
 CLI: commit_changes.py --message-file FILE PATH [PATH ...]   (cwd = workspace)
 
-Answer keys (always present): status, sha, paths, added_parents, unlisted_changes,
-    hook_name, failing_files, reason_code, reason, hook_output, autofixed,
-    skip_request_ignored, remedy, handoff.
+Answer keys (always present), reason_code families and answer_version: read from
+    config/commit_step.json (validated at start; unusable -> refused +
+    step_config_unreadable). Standard output carries the one answer only.
 
 Checks (BO-4500a-3): run once over the named files; a fixing check's rewrite is
     taken in and the checks re-run up to config/commit_step.json
@@ -34,11 +34,18 @@ DECISION HISTORY:
     commit.md's stage-by-name (the hardened copy), not the fast lane's add -A or
     precommit-autofix's add -u. Private-index mechanism chosen so the property
     "commit = HEAD + named paths" holds whatever the shared index contains.
+  - 2026-10-16 [BO-4500]: Split, behaviour unchanged. Answer/git/config primitives
+    moved to commit_step_base.py and AC-parent resolution to commit_step_parents.py,
+    both deployed beside this script, to make room for BO-4500a-4.
+  - 2026-10-16 [python-coder/BO-4500a-4]: One-answer contract. The vocabulary is
+    loaded once from config (commit_step_config.py); git_error, commit_error,
+    git_unavailable and internal_error retired for step_vcs_error / step_index_locked;
+    unexpected failures become refused + step_vcs_error, composed before anything
+    is written to stdout.
 """
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import re
@@ -46,61 +53,60 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
-_CONFIG_ENV = "LEAFCUTTER_COMMIT_STEP_CONFIG"
-_CEILING_KEY = "max_automated_fix_retries"
-_DEFAULT_CEILING = 3
-_AC_STORE_DEFAULT = "docs/acceptance-criteria"
-_AC_STORE_ENV = "LEAFCUTTER_AC_STORE_ROOT"
+from commit_step_base import StepRefusal
+from commit_step_base import answer as _answer
+from commit_step_base import ceiling as _ceiling
+from commit_step_base import git as _git
+from commit_step_base import git_out as _git_out
+from commit_step_base import awaiting_check, require_attribution, run_without_input, wait_limit
+from commit_step_base import load_contract, lock_refusal, refuse_protected_branch
+from commit_step_parents import parent_candidates
+
 _USAGE = (
-    "usage: commit_changes.py --message-file FILE PATH [PATH ...]\n"
+    "usage: commit_changes.py --message-file FILE [--supervised (--run ID | --ac-id ID)] PATH [PATH ...]\n"
     "  --message-file FILE   file holding the commit message (required)\n"
+    "  --supervised          no person present: checks get no terminal input and a silent\n"
+    "                        check is ended after input_wait_limit_seconds (config)\n"
+    "  --run ID, --ac-id ID  the run or criterion a supervised call commits for (one required)\n"
     "  PATH                  explicit repo file to commit; at least one is required.\n"
     "                        Directories, globs and 'all' requests are refused.\n"
     "  --help                show this text\n"
 )
 
 
-class StepRefusal(Exception):
-    """A request the step declines; carries the answer's reason_code and reason."""
+class Request(NamedTuple):
+    """One parsed call: message file, named entries and the supervised-mode inputs."""
 
-    def __init__(self, code: str, reason: str) -> None:
-        super().__init__(reason)
-        self.code = code
-        self.reason = reason
-
-
-def _answer(status: str, **fields: object) -> dict:
-    """Build the one answer object with every contract key present."""
-    answer: dict = {"status": status, "sha": None, "paths": [], "added_parents": [], "unlisted_changes": []}
-    answer.update(hook_name=None, failing_files=[], reason_code=None, reason=None, hook_output=None)
-    answer.update(autofixed=[], skip_request_ignored=[], remedy=None, handoff=None)
-    answer.update(fields)
-    return answer
+    message_file: str
+    entries: list[str]
+    supervised: bool = False
+    run: str | None = None
+    ac_id: str | None = None
 
 
-def _git(args: list[str], cwd: Path, env: dict | None = None, stdin: str | None = None):
-    """Run git; an unrunnable git is a refusal, a non-zero exit is the caller's to read."""
-    try:
-        return subprocess.run(["git", *args], cwd=cwd, env=env, input=stdin, capture_output=True, text=True, check=False)
-    except OSError as exc:
-        raise StepRefusal("git_unavailable", f"cannot run git: {exc}") from exc
+_GIT_FATAL = re.compile(r"^fatal: ", re.MULTILINE)
+_VALUE_OPTIONS = {"--message-file": "message_file", "--run": "run", "--ac-id": "ac_id"}
 
 
-def _git_out(args: list[str], cwd: Path, env: dict | None = None) -> str:
-    """Run git and return stdout, refusing on a non-zero exit."""
-    proc = _git(args, cwd, env)
-    if proc.returncode != 0:
-        raise StepRefusal("git_error", f"git {' '.join(args[:2])} failed: {proc.stderr.strip()}")
-    return proc.stdout
+def _option(item: str, items: list[str]) -> tuple[str, str] | None:
+    """Return (field, value) when *item* is a value option (either form), else None."""
+    name, eq, inline = item.partition("=")
+    field = _VALUE_OPTIONS.get(name)
+    if field is None:
+        return None
+    if eq:
+        return field, inline
+    return (field, items.pop(0)) if items else None
 
 
-def parse_args(argv: list[str]) -> tuple[str, list[str]]:
-    """Split argv into (message_file, explicit path entries); unknown options are refused."""
-    message_file: str | None = None
+def parse_args(argv: list[str]) -> Request:
+    """Split argv into a Request; unknown options are refused."""
+    values: dict[str, str] = {}
     entries: list[str] = []
+    supervised = False
     items = list(argv)
     only_paths = False
     while items:
@@ -109,17 +115,18 @@ def parse_args(argv: list[str]) -> tuple[str, list[str]]:
             entries.append(item)
         elif item == "--":
             only_paths = True
-        elif item == "--message-file" and items:
-            message_file = items.pop(0)
-        elif item.startswith("--message-file="):
-            message_file = item.split("=", 1)[1]
+        elif item == "--supervised":
+            supervised = True
         else:
-            raise StepRefusal("policy_unknown_option", f"unknown option {item!r}; only --message-file is accepted")
-    if message_file is None:
+            found = _option(item, items)
+            if found is None:
+                raise StepRefusal("policy_unknown_option", f"unknown option {item!r}; only --message-file, --supervised, --run and --ac-id are accepted")
+            values[found[0]] = found[1]
+    if "message_file" not in values:
         raise StepRefusal("policy_message_missing", "a message file (--message-file FILE) is required")
     if not entries:
         raise StepRefusal("policy_no_explicit_paths", "an explicit list of files is required")
-    return message_file, entries
+    return Request(values["message_file"], entries, supervised, values.get("run") or None, values.get("ac_id") or None)
 
 
 def _classify_entry(entry: str, cwd: Path, root: Path, tracked: set[str]) -> tuple[str | None, str]:
@@ -150,73 +157,6 @@ def validate_paths(entries: list[str], cwd: Path, root: Path, tracked: set[str])
         detail = "; ".join(f"{entry} ({code})" for code, entry in bad)
         raise StepRefusal(bad[0][0], f"cannot commit these entries: {detail}")
     return good
-
-
-def _load_derive_parent_id() -> Callable[[str], str | None] | None:
-    """Load the canonical derive_parent_id; None when the module is not deployed."""
-    here = Path(__file__).resolve().parent
-    # Deployed: scripts/ac_store beside this file. Source tree: <repo>/scripts/ac_store.
-    for candidate in (
-        here / "ac_store" / "ac_parent_id.py",
-        here.parent.parent / "scripts" / "ac_store" / "ac_parent_id.py",
-    ):
-        if not candidate.is_file():
-            continue
-        spec = importlib.util.spec_from_file_location("ac_parent_id", str(candidate))
-        if spec is None or spec.loader is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module.derive_parent_id
-    return None
-
-
-def _record_id(path: Path) -> str:
-    """Read an AC record's id (first top-level id: line); fall back to the file stem."""
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return path.stem
-    match = re.search(r"^id:\s*['\"]?([^\s'\"#]+)", text, re.MULTILINE)
-    return match.group(1) if match else path.stem
-
-
-def _find_parent_file(child: Path, parent_id: str, store: Path) -> Path | None:
-    """Locate the parent record: same folder first, then anywhere in the AC store."""
-    sibling = child.parent / f"{parent_id}.yaml"
-    if sibling.is_file():
-        return sibling
-    return next(iter(sorted(store.rglob(f"{parent_id}.yaml"))), None) if store.is_dir() else None
-
-
-def parent_candidates(named: list[str], root: Path) -> list[str]:
-    """Return repo-relative structural parents (one hop) of the named AC records."""
-    store_rel = os.environ.get(_AC_STORE_ENV, _AC_STORE_DEFAULT).strip("/")
-    records = [rel for rel in named if rel.endswith(".yaml") and rel.startswith(store_rel + "/")]
-    if not records:
-        return []
-    derive = _load_derive_parent_id()
-    if derive is None:
-        # Fail closed: AC records are being committed but their parents cannot be
-        # worked out, so silently committing without them would recreate
-        # KI-BO-20260928 (the edited parent left unstaged) as an apparent success.
-        msg = (
-            "AC records were named but the parent resolver (ac_store/ac_parent_id.py) "
-            "is not deployed beside this script, so their edited parents cannot be "
-            f"included: {', '.join(records)}"
-        )
-        raise StepRefusal("step_parent_resolver_unavailable", msg)
-    found: list[str] = []
-    for rel in named:
-        if not rel.endswith(".yaml") or not rel.startswith(store_rel + "/"):
-            continue
-        parent_id = derive(_record_id(root / rel))
-        parent = _find_parent_file(root / rel, parent_id, root / store_rel) if parent_id else None
-        if parent is not None:
-            parent_rel = parent.relative_to(root).as_posix()
-            if parent_rel not in named and parent_rel not in found:
-                found.append(parent_rel)
-    return found
 
 
 def _changed_vs_base(root: Path, env: dict, base: str | None) -> set[str]:
@@ -253,7 +193,7 @@ def _drop_unlisted(root: Path, env: dict, base: str | None, unlisted: list[str],
     parent_args = ["-p", base] if base else []
     proc = _git(["commit-tree", tree, *parent_args], root, author, stdin=msg)
     if proc.returncode != 0:
-        raise StepRefusal("git_error", f"commit-tree failed: {proc.stderr.strip()}")
+        raise StepRefusal("step_vcs_error", f"commit-tree failed: {proc.stderr.strip()}")
     new = proc.stdout.strip()
     _git_out(["update-ref", "-m", "commit_changes: drop unlisted paths", "HEAD", new, old], root)
     return new
@@ -267,9 +207,16 @@ def _sync_shared_index(root: Path, paths: list[str]) -> None:
         print(f"[commit_changes] warning: index sync failed: {proc.stderr.strip()}", file=sys.stderr)
 
 
-def _run_commit(root: Path, env: dict, msg_file: str) -> subprocess.CompletedProcess:
-    """Run the real `git commit` (hooks active) against the private index."""
-    return _git(["commit", "-q", "--cleanup=verbatim", "-F", msg_file], root, env)
+def _run_commit(root: Path, env: dict, msg_file: str, limit: float | None = None) -> tuple[subprocess.CompletedProcess, bool]:
+    """Run the real `git commit` (hooks active) against the private index.
+
+    Returns (result, awaited_input). With a *limit* (supervised call) the checks get
+    no terminal input and a run silent for *limit* seconds is ended (BO-4500a-4-iv).
+    """
+    args = ["commit", "-q", "--cleanup=verbatim", "-F", msg_file]
+    if limit is None:
+        return _git(args, root, env), False
+    return run_without_input(["git", *args], root, env, limit)
 
 
 def _content_ids(root: Path, paths: list[str]) -> dict[str, str]:
@@ -306,7 +253,7 @@ def _check_message_file(message_file: str) -> None:
         raise StepRefusal("policy_message_empty", f"message file is empty: {message_file}")
 
 
-def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratch: Path) -> dict:
+def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratch: Path, limit: float | None = None) -> dict:
     """Build HEAD + named paths (+ parents) in a private index and commit it."""
     base_proc = _git(["rev-parse", "--verify", "-q", "HEAD"], root)
     base = base_proc.stdout.strip() if base_proc.returncode == 0 else None
@@ -320,32 +267,11 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
     if not paths:
         return _answer("nothing_to_commit", reason_code="nothing_changed", reason="named paths have no changes")
     added = [p for p in parents if p in changed]
-    failure, fixed = _run_checks_and_commit(root, env, msg_file, [*named, *parents])
+    failure, fixed = _run_checks_and_commit(root, env, msg_file, [*named, *parents], limit)
     extra = {"autofixed": fixed, "skip_request_ignored": ignored}
     if failure is not None:
         return {**failure, **extra}
     return {**_finish(root, env, base, paths, added, msg_file), **extra}
-
-
-def _ceiling() -> int:
-    """Read max_automated_fix_retries once, before any check runs (BO-4500a-3-ii).
-
-    Source: the file named by LEAFCUTTER_COMMIT_STEP_CONFIG, else config/commit_step.json
-    beside the source tree or the deployed install; default 3 when no file exists.
-    """
-    here = Path(__file__).resolve().parent
-    override = os.environ.get(_CONFIG_ENV)
-    for path in [Path(override)] if override else [here.parent.parent / "config" / "commit_step.json", here.parent / "config" / "commit_step.json"]:
-        if not path.is_file():
-            continue
-        try:
-            value = json.loads(path.read_text(encoding="utf-8")).get(_CEILING_KEY, _DEFAULT_CEILING)
-        except (OSError, ValueError, AttributeError) as exc:
-            raise StepRefusal("step_config_unreadable", f"cannot read {path}: {exc}") from exc
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-            raise StepRefusal("step_config_unreadable", f"{path}: {_CEILING_KEY} must be a non-negative integer")
-        return value
-    return _DEFAULT_CEILING
 
 
 def _scrub_environment(env: dict) -> tuple[dict, list[str]]:
@@ -394,7 +320,14 @@ def _handoff(root: Path, check: str | None, output: str) -> dict | None:
         return None
 
 
-def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[str]) -> tuple[dict | None, list[dict]]:
+def _awaited_input(output: str, limit: float) -> dict:
+    """The hook_failed answer for a check ended after *limit* seconds without output."""
+    check = awaiting_check(output)
+    reason = f"check {check or '(unnamed)'} was waiting for input and was ended after {limit:g}s with none supplied"
+    return _answer("hook_failed", hook_name=check, reason_code="check_awaited_input", reason=reason, hook_output=output)
+
+
+def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[str], limit: float | None = None) -> tuple[dict | None, list[dict]]:
     """Run the checks through `git commit`; return (failure answer or None, autofixed).
 
     Only a fixing check that rewrote a file this commit carries earns a re-run, and
@@ -406,10 +339,15 @@ def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[s
     before = _content_ids(root, carried)
     retries = 0
     while True:
-        proc = _run_commit(root, env, msg_file)
+        proc, awaited = _run_commit(root, env, msg_file, limit)
+        output = proc.stdout + proc.stderr
+        if awaited:
+            return _awaited_input(output, limit), fixed
         if proc.returncode == 0:
             return None, fixed
-        output = proc.stdout + proc.stderr
+        locked = lock_refusal(output)
+        if locked is not None:  # a held .lock is the step's failure, never a check's
+            raise locked
         rewritten = _rewritten_by_checks(root, before, carried)
         if not rewritten or not _hooks_present(root, env):
             return _failed_commit(root, env, output, carried), fixed
@@ -431,8 +369,10 @@ def _hook_name(output: str) -> str | None:
 def _failed_commit(root: Path, env: dict, output: str, carried: list[str]) -> dict:
     """Map a failed `git commit` to hook_failed or refused; nothing was recorded."""
     if not _hooks_present(root, env):
-        return _answer("refused", reason_code="commit_error", reason=output.strip()[-400:])
+        return _answer("refused", reason_code="step_vcs_error", reason=f"git commit failed: {output.strip()[-400:]}")
     check = _hook_name(output)
+    if check is None and _GIT_FATAL.search(output):  # git itself failed after the checks passed
+        return _answer("refused", reason_code="step_vcs_error", reason=f"git commit failed: {output.strip()[-400:]}")
     handoff = _handoff(root, check, output)
     named_in_output = [p for p in carried if re.search(rf"(?<![\w/.-]){re.escape(p)}(?![\w])", output)]
     return _answer("hook_failed", hook_name=check, failing_files=named_in_output, reason_code="check_failed", reason=output.strip()[-400:], hook_output=output, remedy=handoff["remedy"] if handoff else None, handoff=handoff)
@@ -451,17 +391,35 @@ def _finish(root: Path, env: dict, base: str | None, paths: list[str], added: li
     return _answer("committed", sha=sha, paths=sorted(set(paths) | set(added)), added_parents=added, unlisted_changes=unlisted)
 
 
-def _checked_run(argv: list[str]) -> dict:
+def _refuse_held_index(root: Path) -> None:
+    """Refuse (step_index_locked) when another process holds the shared index.
+
+    The commit itself is built in a private index, so git would not notice the
+    lock until after the commit was recorded; checking first keeps the answer
+    honest and leaves a lock this step did not create untouched (BO-4500a-4-v).
+    """
+    lock = root / _git_out(["rev-parse", "--git-path", "index.lock"], root).strip()
+    if lock.exists():
+        # No git command can be asked safely: one that is sure to take the lock would
+        # also rewrite the shared index when the lock is free. So this reason is the
+        # step's own observation, worded as such rather than imitating git's message.
+        raise StepRefusal("step_index_locked", f"{lock}: File exists -- another process holds the shared index lock, so nothing was staged or committed")
+
+
+def _checked_run(request: Request) -> dict:
     """Validate the request, then commit; refusals propagate as StepRefusal."""
-    message_file, entries = parse_args(argv)
+    message_file, entries = request.message_file, request.entries
     _check_message_file(message_file)
+    limit = wait_limit() if request.supervised else None
     cwd = Path.cwd()
     root = Path(_git_out(["rev-parse", "--show-toplevel"], cwd).strip())
+    refuse_protected_branch(root)
+    _refuse_held_index(root)
     tracked = {p for p in _git_out(["ls-files", "-z"], root).split("\0") if p}
     named = validate_paths(entries, cwd, root, tracked)
     scratch = Path(tempfile.mkdtemp(prefix="commit_changes_"))
     try:
-        return _commit_in_private_index(root, named, str(Path(message_file).resolve()), scratch)
+        return _commit_in_private_index(root, named, str(Path(message_file).resolve()), scratch, limit)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
 
@@ -469,9 +427,25 @@ def _checked_run(argv: list[str]) -> dict:
 def run(argv: list[str]) -> dict:
     """Run the step; every outcome, refusals included, is returned as an answer."""
     try:
-        return _checked_run(argv)
+        load_contract()  # once, before anything else: no usable config, no commit
+        request = parse_args(argv)
+        require_attribution(request.supervised, request.run, request.ac_id)  # before anything is staged
+        return {**_checked_run(request), "run": request.run, "ac_id": request.ac_id}
     except StepRefusal as refusal:
         return _answer("refused", reason_code=refusal.code, reason=refusal.reason)
+
+
+def _safe_run(args: list[str]) -> dict:
+    """run(), with any unexpected failure turned into refused + step_vcs_error.
+
+    Nothing is printed here: the answer is composed first and written once by main(),
+    so a crash can never leave partial JSON or a traceback on standard output.
+    """
+    try:
+        return run(args)
+    except (OSError, subprocess.SubprocessError, ValueError, LookupError, RuntimeError) as exc:
+        print(f"[commit_changes] unexpected error: {exc!r}", file=sys.stderr)
+        return _answer("refused", reason_code="step_vcs_error", reason=f"unexpected error: {exc!r}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -480,11 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     if "--help" in args or "-h" in args:
         sys.stdout.write(_USAGE)
         return 0
-    try:
-        answer = run(args)
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        print(f"[commit_changes] unexpected error: {exc}", file=sys.stderr)
-        answer = _answer("refused", reason_code="internal_error", reason=str(exc))
+    answer = _safe_run(args)
     sys.stdout.write(json.dumps(answer) + "\n")
     return 0 if answer["status"] in {"committed", "nothing_to_commit"} else 1
 

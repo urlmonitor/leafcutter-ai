@@ -51,6 +51,7 @@ below by hand.
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 | [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
 | [knowledge-retention-evaluation-details.md](knowledge-retention-evaluation-details.md) | Detail sections of the retention evaluation result: active generation, reclaimable bases, entity-node reconciliation, assessment outcome and the read-only condition. |
+| [knowledge-publication-reclamation.md](knowledge-publication-reclamation.md) | How a successful publication reclaims superseded generations: entry points, ordering, result keys, retained reasons, guards (including the continuation-lifetime pin rule) and failure results. |
 
 ## Documentation & Architecture Conventions
 
@@ -66,6 +67,7 @@ below by hand.
 |---|---|
 | [build-telemetry.md](build-telemetry.md) | JSONL schema for `agent_telemetry.jsonl` records, the lane-comparison aggregate fields, and the emitter/counter functions that produce them. |
 | [fast-lane-prompt-caching.md](fast-lane-prompt-caching.md) | Parameter table and ordering contract for `assemble_context_bundle`, the function that builds the fast lane's layered, cache-friendly context bundle. |
+| [shared-commit-step.md](shared-commit-step.md) | Inputs, answer keys, statuses, reason-code families, caller rules and remedy/handoff payload of the shared commit step `commit_changes.py`, with one real answer per status. |
 | [skills-config-fields.md](skills-config-fields.md) | Every key in `skills_config.json` â€” the single file controlling `build.py` output layout and agent runtime behaviour â€” with type, default, and effect. |
 | [workflow-authoring-contract.md](workflow-authoring-contract.md) | Copy-paste contract for Claude Code workflow scripts: the E2 canonical execution form, the E1-wrap compatibility shim, and the primitive mapping table. |
 | [workflow-constraints.md](workflow-constraints.md) | Runtime constraints on Claude Code workflow scripts â€” minimum version, token cost, the no-mid-run-steering rule, and the crash-resume mechanism. |

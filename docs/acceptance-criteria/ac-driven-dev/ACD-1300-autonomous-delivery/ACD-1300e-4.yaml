@@ -1,0 +1,117 @@
+id: ACD-1300e-4
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "The resume how-to walks an operator through a run that waits more than once"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the how-to for resuming a paused planning run,
+  When an operator follows it for a run that pauses at two decision points in sequence,
+  Then the guide shows how to read which decision the record currently names, supply the
+    answer for that decision, and repeat for the next decision after the run pauses again,
+  And it states that one resume carries the answer for exactly one decision and that an
+    answer for a later decision is refused until the run is waiting on it,
+  And it states that a resumed run does not treat the criteria it committed itself as
+    existing coverage, so no covered-route decision appears for them,
+  And it states what the operator sees when recording a pause fails because the store
+    could not be written, and how to retry,
+  And every status value named in the guide is one the route actually reports.
+depends_on: [ACD-1300e-1, ACD-1300e-2, ACD-1300e-3]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    relationship: related
+    status: exists
+  - path: .claude/skills/plan-feature/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-2
+  contract: "The shipped multi-decision resume behaviour and the status values it reports."
+it_requirements:
+  - "Edit the existing guide docs/how-to/resume-a-paused-plan-feature-run.md in place (extend sections 2-4, keep its Diataxis how-to genre); no new how-to file."
+  - "Status values quoted must be exactly the strings the route returns: paused_awaiting_input, nothing_to_resume, unresumable_stale, pause_persist_failed, pause_record_unreadable (TERMINAL_GATE_STATUSES in templates/workflows-js/plan-feature.js) plus the continued/no-terminal-status outcome; no invented status."
+  - "Consistent with .claude/skills/plan-feature/SKILL.md section RS (resume invocation and provenance obligation: channel 'person'); where they disagree, flag it rather than silently diverge."
+  - "check-doc-length ratchet applies to docs/**.md: the guide must not cross or grow past its limit; tighten existing prose to make room if needed."
+  - "Names command-step-runner (not worktree-agent) wherever it says who records the pause, matching ACD-1300e-3."
+test_intent:
+  - clause: "Then the guide shows how to read which decision the record currently names, supply the answer for that decision, and repeat for the next decision after the run pauses again,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_guide_shows_read_answer_repeat_loop (real_artifact)."
+  - clause: "And it states that one resume carries the answer for exactly one decision and that an answer for a later decision is refused until the run is waiting on it,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_guide_states_one_answer_per_resume (real_artifact)."
+  - clause: "And it states that a resumed run does not treat the criteria it committed itself as existing coverage, so no covered-route decision appears for them,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_guide_states_own_criteria_not_coverage (real_artifact)."
+  - clause: "And it states what the operator sees when recording a pause fails because the store could not be written, and how to retry,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_guide_describes_pause_persist_failed_and_retry (real_artifact)."
+  - clause: "And every status value named in the guide is one the route actually reports."
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_guide_status_values_are_route_statuses (discrimination)."
+test_spec:
+  - name: test_resume_guide_shows_read_answer_repeat_loop
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The guide contains a two-decision walkthrough: read the record's gate_id, resume with that gate's answer, read again after the second pause, resume again."
+    proves_clause: "Then the guide shows how to read which decision the record currently names, supply the answer for that decision, and repeat for the next decision after the run pauses again,"
+  - name: test_resume_guide_states_one_answer_per_resume
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The guide states one resume carries exactly one decision's answer and a later decision's answer is refused until the run waits on it."
+    proves_clause: "And it states that one resume carries the answer for exactly one decision and that an answer for a later decision is refused until the run is waiting on it,"
+  - name: test_resume_guide_states_own_criteria_not_coverage
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The guide states a resumed run does not treat its own committed criteria as existing coverage."
+    proves_clause: "And it states that a resumed run does not treat the criteria it committed itself as existing coverage, so no covered-route decision appears for them,"
+  - name: test_resume_guide_describes_pause_persist_failed_and_retry
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The guide names pause_persist_failed, says it means the store could not be written, and gives the retry step."
+    proves_clause: "And it states what the operator sees when recording a pause fails because the store could not be written, and how to retry,"
+  - name: test_resume_guide_status_values_are_route_statuses
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "Every snake_case status token in the guide is in TERMINAL_GATE_STATUSES parsed from templates/workflows-js/plan-feature.js."
+    proves_clause: "And every status value named in the guide is one the route actually reports."
+    must_catch:
+      - "guide names a status the route never returns (e.g. 'paused' or 'resume_refused')"
+test_rationale: "Doc ACs normally carry no executable test, but the last clause is mechanically checkable against the workflow source and the others are cheap presence checks on the real artifact; the status-value check catches doc drift when the route's statuses change."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
