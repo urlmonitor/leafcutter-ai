@@ -13,7 +13,7 @@ work_status: todo
 roadmap_phase: phase_1
 criteria: |
   Given the profile-consistency check's module (scripts/build_phases_profile_consistency.py)
-    carries, in its module docstring at about lines 24-62, decision-history entries about the
+    carries, in its module docstring at lines 24-73, decision-history entries about the
     agent self-description check (validate_agent_self_description), introduced by the
     sentence "The entry below was carried here verbatim from the docstring of
     validate_agent_self_description (build_phases_agent_validation.py) to restore headroom
@@ -77,7 +77,10 @@ file_findings_opened_files:
 - scripts/build_phases_agent_validation.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: "criteria: line reference corrected from 'about lines 24-62' to 'lines 24-73', the real range of the introducing sentence and the moved entries (checked 2026-10-20 at e03501092)."
+  date: '2026-10-20'
+  by: business-analyst
 superseded_by: null
 covered_by: []
 implemented_by: []

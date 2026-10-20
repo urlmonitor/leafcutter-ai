@@ -4,7 +4,7 @@ components:
   - ac_store
 readiness: reviewed
 priority: high
-title: "Which protected fields a stage may change comes from one per-stage owner map; the planner's hand-back may change the assignment and the finding decision"
+title: "Which protected fields a stage may change comes from one per-stage owner map; the planner's hand-back may change the assignment, the finding decision and its own enrichment fields"
 component: ac-driven-dev
 level: L3
 status: active
@@ -17,13 +17,21 @@ criteria: |
     and ACD-9990a-2 carries one file finding with verdict "describes, does not implement"
     and no decision,
     and in the hand-back pass ACD-9990a-2's assigned_agent changes from python-coder to
-    sql-coder and that finding's decision changes from none to the choice "reassign" by it-po,
+    sql-coder, that finding's decision changes from none to the choice "reassign" by it-po,
+    its declared_files gains the entry scripts/example_writer.py with state existing, its
+    it_requirements gains the entry "Writes through the shared writer", and its delivers_to
+    and expects_from contract texts change,
     and ACD-9990a-1's criteria text changes, and ACD-9990a-2's finding verdict changes to
     "consistent",
   When the requirement rule check runs at the end of the hand-back pass,
-  Then no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision,
+  Then no finding is raised for ACD-9990a-2's assigned_agent, the finding's decision,
+    declared_files, it_requirements, delivers_to or expects_from,
   And exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and
     ACD-9990a-2 file-finding verdict, each naming the hand-back pass as the stage,
+  And in a separate hand-back run whose only change is to ACD-9990a-1's test_intent, exactly
+    one "protected fields" finding is raised, naming test_intent and the hand-back pass; the
+    hand-back pass may never change criteria, test_intent, test_spec, a file finding's
+    fields other than its decision, or a test_design_* mark,
   And the same assigned_agent change made during the test-design stage instead is reported,
     as ACD-2500a-2-vi requires,
   And which protected fields each stage may change is read from one owner map, so allowing
@@ -58,8 +66,11 @@ it_requirements:
 - The owner map is held in exactly one place and read only by the protected-fields family; no other code
   branches on a stage name to allow a field.
 - For itpo-handback the protected set also covers the test designer's outputs (file_findings verdict,
-  reason, line_range, found_in, file_findings_opened_files, test_spec, test_design_authorship), and of
-  all protected fields it allows only assigned_agent and each file finding's decision (it-po S3b).
+  reason, line_range, found_in, file_findings_opened_files, test_spec, test_design_* marks), and of all
+  protected fields it allows only assigned_agent, each file finding's decision (it-po S3b) and the planner's
+  own enrichment fields it_requirements, declared_files, delivers_to and expects_from. It never allows
+  criteria, test_intent, test_spec, a file finding's fields other than its decision, or a test_design_*
+  mark.
 - Wiring /plan-feature to run the check with --stage itpo-handback after the hand-back pass is not in
   this record's scope (logged as a caveat).
 - The itpo-handback before-state is the post-design batch (provided by ACD-2500a-2-ix's stage commit).
@@ -72,10 +83,12 @@ declared_files:
   state: existing
 delivers_to:
   agent: python-coder
-  contract: 'The rule check accepts --stage itpo-handback and applies that stage''s owner map: assigned_agent
-    and file_findings[].decision allowed, every other protected field (including the test designer''s
-    outputs) reported as a ''protected fields'' finding with disposition ''needs a decision''; exit 0
-    only on verdict passed. Consumed by ACD-2500a-2-ix''s /plan-feature step.'
+  contract: 'The rule check accepts --stage itpo-handback and applies that stage''s owner map: assigned_agent,
+    file_findings[].decision, it_requirements, declared_files, delivers_to and expects_from allowed; every
+    other protected field (criteria, test_intent, test_spec, a file finding''s fields other than its decision,
+    file_findings_opened_files and test_design_* marks) reported as a ''protected fields'' finding with
+    disposition ''needs a decision''; exit 0 only on verdict passed. Consumed by ACD-2500a-2-ix''s /plan-feature
+    step.'
 expects_from:
 - ac_id: ACD-2500a-1
   contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message,
@@ -85,14 +98,23 @@ expects_from:
   contract: Rule family 'protected fields' with its fixed protected-field list and findings carrying detail
     {field, stage, before, after}; this record adds the per-stage owner map it reads.
 test_intent:
-- clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+- clause: no finding is raised for ACD-9990a-2's assigned_agent, the finding's decision, declared_files,
+    it_requirements, delivers_to or expects_from
   needs_test: true
-  reason: The hand-back pass's allowed changes must pass, or every legitimate reassignment fails the stage.
+  reason: The hand-back pass's allowed changes must pass, or every legitimate reassignment or newly declared
+    file fails the stage.
 - clause: 'exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and ACD-9990a-2
     file-finding verdict, each naming the hand-back pass as the stage'
   needs_test: true
   reason: The fields the hand-back pass must not touch, including another stage's finding verdict, must
     still be caught.
+- clause: 'in a separate hand-back run whose only change is to ACD-9990a-1''s test_intent, exactly one "protected
+    fields" finding is raised, naming test_intent and the hand-back pass; the hand-back pass may never change
+    criteria, test_intent, test_spec, a file finding''s fields other than its decision, or a test_design_*
+    mark'
+  needs_test: true
+  reason: Widening the hand-back's allowed set must not let it rewrite the planner's own test_intent or the
+    designer's output, and only a run that changes test_intent alone shows that.
 - clause: the same assigned_agent change made during the test-design stage instead is reported, as ACD-2500a-2-vi
     requires
   needs_test: true
@@ -213,7 +235,11 @@ file_findings_opened_files:
 - scripts/ac_store/requirement_rule_check.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: "criteria and title: the hand-back pass may also change the planner's own enrichment fields it_requirements, declared_files, delivers_to and expects_from (example extended; allowed edits pass); it never changes criteria, test_intent, test_spec, file findings other than decision, or test_design_* marks (new separate-run test_intent clause). Reason: in this run the hand-back had to declare 7 files the designer's findings revealed, and the old owner map would have stopped the run."
+  date: '2026-10-20'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

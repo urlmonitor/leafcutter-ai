@@ -79,7 +79,7 @@ declared_files:
 delivers_to: null
 expects_from:
   ac_id: ACD-2500a-2-vii
-  contract: "The rule check accepts the hand-back stage (planner decision: --stage itpo-handback) and applies that stage's owner map: assigned_agent and file_findings[].decision allowed, every other protected field reported."
+  contract: "The rule check accepts the hand-back stage (planner decision: --stage itpo-handback) and applies that stage's owner map: assigned_agent, file_findings[].decision, it_requirements, declared_files, delivers_to and expects_from allowed; every other protected field (criteria, test_intent, test_spec, a file finding's fields other than its decision, file_findings_opened_files and test_design_* marks) reported as a 'protected fields' finding with disposition 'needs a decision'; exit 0 only on verdict passed."
 test_intent:
 - clause: /plan-feature runs the requirement rule check for the hand-back stage on the batch, with the
     batch as committed before the hand-back pass as its before-state

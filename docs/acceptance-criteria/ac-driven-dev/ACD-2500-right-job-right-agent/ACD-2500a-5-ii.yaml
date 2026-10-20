@@ -23,12 +23,17 @@ criteria: |
   And each of the two Consequences bullets carries a dated amendment note naming the record
     that closed it, ACD-2500a-2-vi and ACD-300c-4 respectively,
   And the original sentences stay readable beneath the notes,
+  And section 4 gains a dated amendment sentence stating that /plan-feature commits the
+    test-design output before the IT PO's hand-back round, so the hand-back rule check's
+    before-state is the post-design batch (ACD-2500a-2-ix), with section 4's original text
+    unchanged,
   And ADR-072's status and its decisions are otherwise unchanged, and it links ADR-073.
 depends_on:
   - ACD-2500a-5
   - ACD-2500a-5-i
   - ACD-2500a-2-vi
   - ACD-300c-4
+  - ACD-2500a-2-ix
 doc_links:
   - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
     relationship: describes
@@ -41,7 +46,7 @@ it_requirements:
 - Build only after ACD-2500a-2-vi and ACD-300c-4 are done. ADR-072's status and decisions do not change.
 - 'ADR-072 section 4 (stage order and commits) gains a dated amendment sentence: the test-design output
   is committed before the planner''s hand-back round, so the hand-back rule check''s before-state is the
-  post-design batch (ACD-2500a-2-ix). The criteria do not name this sentence yet (logged for the BA).'
+  post-design batch (ACD-2500a-2-ix).'
 declared_files:
 - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
   state: existing
@@ -60,7 +65,10 @@ file_findings_opened_files:
 - docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: "criteria: new clause for the dated ADR-072 section 4 sentence (test-design output committed before the IT PO's hand-back round, so the hand-back check's before-state is the post-design batch, ACD-2500a-2-ix); depends_on gains ACD-2500a-2-ix. Original clauses unchanged."
+  date: '2026-10-20'
+  by: business-analyst
 superseded_by: null
 covered_by: []
 implemented_by: []
