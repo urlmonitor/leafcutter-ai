@@ -223,33 +223,6 @@ def _check_expands(flows: dict, index: dict, errors: list[str]) -> None:
             errors.append(f"[expands] by_flow['{flow_id}'].expands does not match a fresh rebuild — run generate_product_truth.py")
 
 
-def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> None:
-    """D2 — each AC's product_truth must equal the by_ac inversion of implements.
-
-    Comparison strips the ``asof`` timestamp from both sides so that a
-    re-validate on a later calendar date (without any content change) does not
-    produce false "does not match" errors.  The generator preserves existing
-    asof values when content is unchanged; the validator only cares whether the
-    logical content (flow, node, entities, source, …) is correct.
-    """
-    for ac_id, expected in by_ac.items():
-        record = ac_records.get(ac_id)
-        if record is None:
-            continue
-        stored = record.get("product_truth") or []
-        # Strip asof from both sides: the date stamp is not part of the logical content.
-        stored_stripped = [_without_asof(e) for e in stored if isinstance(e, dict)]
-        expected_stripped = [_without_asof(e) for e in expected]
-        if stored_stripped != expected_stripped:
-            errors.append(
-                f"[product_truth] AC '{ac_id}': product_truth does not match the by_ac inversion "
-                "— run generate_product_truth.py"
-            )
-    for ac_id, record in ac_records.items():
-        if record.get("product_truth") and ac_id not in by_ac:
-            errors.append(f"[product_truth] AC '{ac_id}': has a product_truth block but no flow node references it")
-
-
 def _check_screens(flows: dict, mockups: dict, errors: list[str], warnings: list[str]) -> None:
     """D4 — every step/branch screen must resolve to a registered mockup artifact."""
     registered = {mockup.get("screen") for mockup in mockups.values()}

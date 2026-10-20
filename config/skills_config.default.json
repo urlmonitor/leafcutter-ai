@@ -24,7 +24,6 @@
   "precommit_autofix_config_path": ".claude/precommit-autofix.json",
   "default_branch": "main",
 
-  "collector_enforcer_paths": ["collector/"],
   "top_level_packages": [
     "live_trader",
     "collector",
@@ -41,6 +40,7 @@
   "settings_module": "settings",
   "changelog_folder": "changelogs/",
   "changelog_categories_path": ".claude/changelog_categories.md",
+  "reachability_exemptions_path": "config/reachability_exemptions.yaml",
 
   "glossary": {
     "exclude_paths": []

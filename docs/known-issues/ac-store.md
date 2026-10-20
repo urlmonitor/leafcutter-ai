@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-25'
+last_updated: '2026-10-14'
 components:
   - ac_store
 related_docs:
@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 25** (1 blocker, 14 high, 10 low) · **Resolved: 3**
+**Open: 26** (1 blocker, 15 high, 10 low) · **Resolved: 4**
 
 ## Open
 
@@ -80,18 +80,20 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `low` | KI-ACS-009 — The documented AC-store pre-flight runs a weaker validator than the required CI gate, so a clean local check does not predict CI | [open-low-ki-acs-009.md](ac-store/open-low-ki-acs-009.md) |
 | `low` | KI-ACS-011 — `documentation_triggers: []` is refused on an L2 while `null` is accepted, so declaring "no documentation needed" is uncommittable | [open-low-ki-acs-011.md](ac-store/open-low-ki-acs-011.md) |
 | `low` | KI-ACS-015 — A `test_spec` descriptor has no link to the criterion it was promised for, so "which behaviour is this proof for" is unrepresentable | [open-low-ki-acs-015.md](ac-store/open-low-ki-acs-015.md) |
-| `low` | KI-ACS-016 — There is no retired `work_status`, so a superseded child stays in its parent's `covered_by` and the parent can never be proved done | [open-low-ki-acs-016.md](ac-store/open-low-ki-acs-016.md) |
 | `low` | KI-ACS-20260901-1810 — Generating a ticket into a throwaway `--tickets-root` permanently stamps the SOURCE AC with a path that will never exist, and mangles it into one that looks repo-relative | [open-low-ki-acs-20260901-1810.md](ac-store/open-low-ki-acs-20260901-1810.md) |
 | `low` | KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them — KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them | [open-low-ki-acs-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them.md](ac-store/open-low-ki-acs-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them.md) |
 | `low` | KI-ACS-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it — the generated ticket tells the test author the AC declared nothing, six paragraphs below the six things it declared | [open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md](ac-store/open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md) |
 | `low` | KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect — `validate_ac_schema.py` passes records the commit hook then rejects, so a clean bulk run is not evidence on every field | [open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md](ac-store/open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md) |
 | `low` | KI-ACS-20260923-doc-links-status-not-reconciled — an AC's `doc_links[].status` field is never reconciled against whether its target document actually exists or shipped | [open-low-ki-acs-20260923-doc-links-status-not-reconciled.md](ac-store/open-low-ki-acs-20260923-doc-links-status-not-reconciled.md) |
 | `low` | KI-ACS-20260928 — the done-proof pytest rootdir walk has no upper bound, so a config file above the project can become the test run's cwd | [open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md](ac-store/open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md) |
+| `low` | KI-ACS-20261014-untagged-done-ratchet-counts-composites-as-untested — the KM-ADM-005 ratchet wants a `# covers:` tag on a composite AC itself, although the required done-proof gate proves a composite through its children, so marking a fully tested parent done fails the required pytest check | [open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md](ac-store/open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md) |
 
 ## Resolved
 
 | Severity | Issue | File |
 |---|---|---|
+| `high` | KI-ACS-20261015-superseded-records-held-to-forward-rules — an AC marked superseded is still held to the forward-build rules (fixed by ACS-900d-4: one shared retired-record predicate) | [resolved-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md](ac-store/resolved/resolved-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md) |
 | `high` | KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines | [resolved-high-ki-acs-010.md](ac-store/resolved/resolved-high-ki-acs-010.md) |
 | `blocker` | KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke | [resolved-blocker-ki-acs-017.md](ac-store/resolved/resolved-blocker-ki-acs-017.md) |
 | `low` | KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md` | [resolved-low-ki-acs-018.md](ac-store/resolved/resolved-low-ki-acs-018.md) |
+| `low` | KI-ACS-016 — There is no retired `work_status`, so a superseded child stays in its parent's `covered_by` and the parent can never be proved done (fixed on branch `fix/open-items-ki-fc-001-links-and-acs-016`, PR pending) | [resolved-low-ki-acs-016.md](ac-store/resolved/resolved-low-ki-acs-016.md) |

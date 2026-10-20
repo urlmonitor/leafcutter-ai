@@ -100,7 +100,8 @@ amended_by:
       ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-5.md
 notes: |
   Documentation AC for DK-400a documentation_triggers [reference-doc]. DK-400a and DK-400b
   share one reference entry; this AC writes the routing rule, DK-400b-4 adds the kinds and

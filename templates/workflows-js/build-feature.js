@@ -861,10 +861,8 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
     };
   }
   const latest = entries[entries.length - 1];
-  if (!isPassingSignoff(latest)) {
-    if (String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest)) {
-      return { verified: true, entries: entries.length, reason: null };
-    }
+  const resolvedHandoff = String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest);
+  if (!isPassingSignoff(latest) && !resolvedHandoff) {
     return {
       verified: false,
       entries: entries.length,
@@ -978,10 +976,6 @@ function completionVerdictFromRecord(record, ctx) {
       let reason;
       if (ctx.unverifiedReasons && ctx.unverifiedReasons[agentName]) {
         reason = ctx.unverifiedReasons[agentName];
-      } else if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
-        reason =
-          `'${agentName}' was skipped after a cross_agent blocker and left no ` +
-          `sign-off entry in the record`;
       } else if ((ctx.dispatchedAgents || []).indexOf(agentName) === -1) {
         reason =
           `'${agentName}' is still needed and was never dispatched, so the ` +
@@ -1355,6 +1349,9 @@ function buildTicketOutcome(spec) {
   if (spec.verdict.duplicates && spec.verdict.duplicates.length > 0) {
     base.duplicate_signoff_entries = spec.verdict.duplicates;
   }
+  if (spec.noPhasesToRun) {
+    base.no_phases_dispatched = true;
+  }
 
   if (spec.verdict.completed && spec.writeApplied) {
     base.ticket_completed = true;
@@ -1368,9 +1365,6 @@ function buildTicketOutcome(spec) {
         (skippedOut.length > 0
           ? `, ${skippedOut.length} skipped (cross_agent blockers).`
           : ".");
-    if (spec.noPhasesToRun) {
-      base.no_phases_dispatched = true;
-    }
     return base;
   }
 
@@ -1383,9 +1377,6 @@ function buildTicketOutcome(spec) {
   }
   if (spec.writeError) {
     base.completion_write_error = spec.writeError;
-  }
-  if (spec.noPhasesToRun) {
-    base.no_phases_dispatched = true;
   }
 
   if (spec.verdict.noPhaseRequired) {
@@ -2142,6 +2133,17 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             `self-skipped) — an empty list is the correct, honest answer and will stop the coder ` +
             `phase rather than let it run untested. Do not list a file you did not actually write.`
           : "") +
+        (phaseName === "documentation-expert"
+          ? ` LEAF MODE (BO-2200c-5-vii): this flat depth-1 dispatch CANNOT spawn sub-agents. For ` +
+            `each required doc in the ticket's "## Agent Contracts" -> "### documentation-expert" ` +
+            `block, classify its intent exactly as your template says, pick the specialist ` +
+            `(how-to-author, reference-author, explanation-author, adr-author, architecture-diagram-author ` +
+            `or architecture-author), read its template (.claude/agents/<specialist>.md in the worktree, ` +
+            `else templates/agents/<specialist>.md) and canonical how-to, and author the doc yourself by ` +
+            `its rules. For this dispatch ONLY, this overrides the "never author a doc file yourself" ` +
+            `rule. Never return status "handoff" to a specialist that is not a key of the ticket's ` +
+            `agents map; author that doc yourself instead.`
+          : "") +
         (from
           ? ` You are being RE-DISPATCHED because phase '${from.from}' returned 'status: handoff' naming you as the agent that must act before it can proceed. Handoff message: ${JSON.stringify(from.message)}.`
           : "") +
@@ -2278,9 +2280,10 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
          * a deliberate targetless halt looks like. The ticket body is never read.
          */
         if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
-
         /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
         const remedy = phaseResult.remedy; let brief = null;
+        /* BO-3800e-1: a remedy that is not an object, or whose disposition is not text, is UNREADABLE (never absent): a named stop, nobody engaged, delivery not retried. Absent/null/blank take the existing route. */
+        if (remedy !== undefined && remedy !== null && (typeof remedy !== "object" || Array.isArray(remedy) || (remedy.disposition !== undefined && remedy.disposition !== null && typeof remedy.disposition !== "string"))) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but its remedy could not be read as a disposition (remedy was ${JSON.stringify(remedy)}). An unreadable outcome is not an absent one. Stopping; nobody was engaged and delivery was not attempted again.`);
         if (remedy && remedy.disposition === "engage-specialist") {
           const decl = await agent(
             `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
@@ -2292,7 +2295,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         }
         /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
         if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
-
         /*
          * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
          * is not on this ticket (orderedPhases keeps not_needed keys) or a deferred target.
@@ -2921,16 +2923,11 @@ if (target_type === "epic") {
   // prerequisite finishes) is still part of what the completion-time re-read
   // below is compared against.
   //
-  // BO-100e-1's own scope boundary against BO-300a-5 (done), restated because
-  // it is easy to blur with the paragraph above: a path is folded in here
-  // ONLY after passing the FIRST-LOOK RUN-SET LOCK below, which is what makes
-  // this an admitted set rather than simply "everything any look ever said".
-  // Look 1's own offer is admitted unconditionally — it defines the set this
-  // run started with. A later look's offer is admitted only when it links
-  // back into what THIS variable already holds (see the lock's own comment).
-  // A path the lock rejects is never folded in here, which is exactly what
-  // keeps it visible to `discovered_after_planning` at the completion-time
-  // re-read below instead of being silently absorbed.
+  // BO-100e-1's scope boundary against BO-300a-5 (done): a path is folded in
+  // here ONLY after passing the FIRST-LOOK RUN-SET LOCK below. Look 1's offer
+  // is admitted unconditionally; a later look's only if look 1 enumerated it
+  // (or, degraded, if its depends_on links into this set). A rejected path
+  // stays visible to `discovered_after_planning` at the completion re-read.
   const plannedTicketPaths = [];
 
   // The epic's full contents as look 1 found them — the run set, frozen.
@@ -2994,13 +2991,7 @@ if (target_type === "epic") {
       epicTitle = plan.title;
     }
 
-    // Work that was already finished before this run began. Kept SEPARATE
-    // from completedTicketOutcomes on purpose: that map is this run's own
-    // first-hand verdict, and folding a frontmatter reading into it would
-    // erase the difference between "this drive watched it succeed" and "the
-    // record says it succeeded". The eligibility gate below needs both to
-    // count as satisfied, and the withheld report needs to be able to say
-    // which kind of evidence it had.
+    // Already done before this run began; kept apart from completedTicketOutcomes (see priorCompletedPaths).
     inWorktree(plan.already_done).forEach((p) => priorCompletedPaths.add(p));
 
     // Freeze the run set from the FIRST look only. Later looks re-enumerate a
@@ -3033,28 +3024,7 @@ if (target_type === "epic") {
     // principle one level up: re-check rather than trust the planner got it
     // right.
     //
-    // FIRST-LOOK RUN-SET LOCK (the second condition below) is the fix for the
-    // separate regression this ticket exists to close: a later look's own
-    // enumeration re-reads the epic folder fresh, so it may legitimately
-    // contain a path no EARLIER look ever offered, for either of two reasons
-    // that are NOT distinguishable by path alone:
-    //
-    //   * a genuine next LAYER of the set this run started with — a chain
-    //     member whose own depends_on names something this run has already
-    //     admitted (`plannedTicketPaths`) or that was already done before
-    //     this run began (`priorCompletedPaths`), unlocked now that its
-    //     prerequisite finished. This is the ENTIRE reason the loop keeps
-    //     looking (BO-100e-1's own criterion) and must still be driven.
-    //   * work ADDED to the epic folder after this run began — no such link.
-    //     Absorbing this is BO-300a-5's (done) job to prevent: that work must
-    //     be reported via `discovered_after_planning` at the completion-time
-    //     re-read, never silently driven by a later look.
-    //
-    // `readTicketRecordBack` is the SAME helper the (unchanged) eligibility
-    // gate below already dispatches per driven ticket to read depends_on —
-    // reused here, before this ticket ever reaches that gate, so a path that
-    // fails the link check is dropped BEFORE it is ever driven, not merely
-    // withheld after being dispatched.
+    // FIRST-LOOK RUN-SET LOCK (second condition below): see runSetPaths for why look 1's enumeration decides it.
     //
     // `lookNumber > 1` guards it because look 1's own offer is unconditional:
     // it IS the set this run started with, by definition, with nothing yet
@@ -3134,13 +3104,8 @@ if (target_type === "epic") {
       if (lookNumber === 1) {
         // The EXISTING empty-plan return, unchanged in substance: nothing was
         // ever eligible, or the epic is genuinely empty / already done.
-        // BO-300a-5-iii — the completed set is passed at ALL FOUR call sites, not
-        // only the two that can exhibit the bug today. This return ran no batches,
-        // so its record of completed work is empty BY CONSTRUCTION and it reports no
-        // `completed_batches` at all. Passing the literal empty set (rather than
-        // reaching for a `completedBatches` that is not yet in scope here) states
-        // that emptiness explicitly and keeps the partition's one input the same
-        // shape at every site.
+        // BO-300a-5-iii — no batch ran, so the completed set is empty BY
+        // CONSTRUCTION; the literal [] states that explicitly.
         const emptyRecheck = epicRecheckReport(
           compareEpicTicketSets(
             plannedTicketPaths,
@@ -3550,7 +3515,6 @@ if (target_type === "epic") {
    */
   if (classifyPathForm(singleTicketPath) === "unrecognised") {
     return {
-      status: "blocked",
       resolved_target: resolvedTarget,
       ...pathFormRefusal(singleTicketPath, ""),
     };

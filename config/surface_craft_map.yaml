@@ -1,0 +1,58 @@
+# Surface -> craft map (ACD-1700b-1). ORDERED, FIRST-MATCH-WINS list of
+# {glob, craft}. SINGLE source of truth read by
+# scripts/ac_store/assignment_quality.py (verdict + split detection) and by any
+# assignment tooling; never duplicate these rules in code.
+#
+# Path-aware precedence: the templates/workflows-js/ entries MUST stay ahead of
+# any generic web *.js -> frontend-coder entry (Node orchestration is
+# python-coder's craft per project convention). Globs: `**/` spans any number of
+# directories (including none), `*` stays within one path segment.
+# A surface matching no entry is reported "unresolved" (advisory), never a
+# silent pass and never a false mismatch.
+entries:
+  # Node workflow / orchestration bodies are python-coder's craft.
+  - glob: "templates/workflows-js/**/*.js"
+    craft: python-coder
+  - glob: "templates/workflows-js/**/*.mjs"
+    craft: python-coder
+  # LLM instructions: agent templates, skill bodies, command and workflow prose.
+  - glob: "templates/agents/*.md"
+    craft: llm-expert
+  - glob: "templates/skills/**/SKILL.md"
+    craft: llm-expert
+  - glob: "templates/commands/**/*.md"
+    craft: llm-expert
+  - glob: "templates/workflows/**/*.md"
+    craft: llm-expert
+  # Frontend component files, by extension alone.
+  - glob: "**/*.jsx"
+    craft: frontend-coder
+  - glob: "**/*.tsx"
+    craft: frontend-coder
+  - glob: "**/*.vue"
+    craft: frontend-coder
+  - glob: "**/*.svelte"
+    craft: frontend-coder
+  # Web assets, only under a web-app path.
+  - glob: "web/**/*.js"
+    craft: frontend-coder
+  - glob: "web/**/*.mjs"
+    craft: frontend-coder
+  - glob: "web/**/*.ts"
+    craft: frontend-coder
+  - glob: "web/**/*.css"
+    craft: frontend-coder
+  - glob: "web/**/*.html"
+    craft: frontend-coder
+  - glob: "frontend/**/*.js"
+    craft: frontend-coder
+  - glob: "frontend/**/*.ts"
+    craft: frontend-coder
+  - glob: "frontend/**/*.css"
+    craft: frontend-coder
+  - glob: "frontend/**/*.html"
+    craft: frontend-coder
+  - glob: "**/*.sql"
+    craft: sql-coder
+  - glob: "**/*.py"
+    craft: python-coder

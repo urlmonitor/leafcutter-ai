@@ -2,9 +2,9 @@
 title: "ADR-010: AC Store as Authoritative Backlog — Source-of-Truth Inversion"
 description: "Records the decision to treat the AC YAML store as the single source of truth for the product backlog, inverting the traditional ticket-first model. Covers staged-commit model and partial-run recovery."
 type: "adr"
-status: "accepted"
+status: "active"
 created: "2026-06-05"
-last_updated: "2026-06-22"
+last_updated: "2026-10-12"
 deciders:
   - BrainCandy
 components:
@@ -16,7 +16,14 @@ related_docs:
   - docs/acceptance-criteria/index.yaml
   - docs/architecture/adrs/ADR-007-contract-driven-acs.md
   - docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
-  - tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md
+  - tickets/99_done/EPIC-ACDrivenDevelopment/done/01_ac_scanner_and_ticket_generator.md
+  - docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4.yaml
+  - docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3.yaml
+  - docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3-i.yaml
+  - docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-4.yaml
+  - docs/known-issues/ac-store/open-high-ki-acs-002.md
+  - docs/reference/ac-schema.md
+  - docs/reference/ac-declared-files.md
 ---
 
 # ADR-010: AC Store as Authoritative Backlog — Source-of-Truth Inversion
@@ -73,7 +80,10 @@ This design creates a coordination problem as the AC store grows:
   never been reflected in `work_status`.
 
 The AC store already contains everything required to generate a valid ticket:
-`criteria` (Gherkin), `assigned_agent`, `doc_links` (maps to `files_touched`),
+`criteria` (Gherkin), `assigned_agent`, `doc_links` (maps to `files_touched`;
+*amended 2026-10-12: only for a record in the "no declared files" state; a
+record that declares its files takes `files_touched` from `declared_files`, see
+[Amendment 1](#amendment-1--2026-10-12--declared-files-are-the-generated-ticket-surface)*),
 `depends_on` (dependency ordering), and `estimated_complexity` (priority
 sorting). The only missing piece is the automated step that reads the store and
 produces the ticket.
@@ -108,7 +118,10 @@ created. The component diagram for this pipeline is at
 ### Positive
 
 - **Eliminates mechanical ticket transcription.** The mapping from AC YAML
-  fields to ticket frontmatter fields (`doc_links → files_touched`,
+  fields to ticket frontmatter fields (`doc_links → files_touched`
+  (*amended 2026-10-12: only for a record in the "no declared files" state; a
+  record that declares its files maps `declared_files → files_touched`, see
+  [Amendment 1](#amendment-1--2026-10-12--declared-files-are-the-generated-ticket-surface)*),
   `assigned_agent → agents`, `criteria → ## Acceptance Criteria`) is
   deterministic and automated. Transcription errors are removed.
 - **Single source of backlog truth.** `work_status` in the AC store is the
@@ -278,6 +291,99 @@ on the AC store directory and qualifying files by their `origin_agent`
 
 This recovery behaviour is defined in full in
 `templates/skills/create-ac/SKILL.md §PRR`.
+
+## Amendment 1 — 2026-10-12 — Declared files are the generated ticket surface
+
+| Field | Value |
+|---|---|
+| Amends | Context ("`doc_links` (maps to `files_touched`)") and Consequences / Positive ("`doc_links → files_touched`"). Both sentences keep their 2026-06 wording and now carry the qualification inline. |
+| Decided in | [ACD-1600c-4](../../acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4.yaml) (the declared-files list), [TKT-600a-3](../../acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3.yaml) (the ticket reads it), [TKT-600a-3-i](../../acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3-i.yaml) (the labelled legacy path). Recorded here by [TKT-600a-4](../../acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-4.yaml). |
+| Supersedes this ADR? | No. The AC store stays the authoritative backlog and tickets stay derived artefacts. Only the source of one ticket field moves. |
+
+### Why
+
+The 2026-06 decision above made `doc_links` the source of a generated ticket's
+`files_touched`. [KI-ACS-002](../../known-issues/ac-store/open-high-ki-acs-002.md)
+shows that derivation is wrong in both directions: a link that only describes the
+work is counted as a file the work changes, and the file the work does change is
+missed when its link is tagged `describes`. Meanwhile ACD-1600c-4 gave each record
+its own list of the files its work changes, and the checks are specified to read
+that list. Left alone, the store would give two answers to one question. This
+amendment leaves one.
+
+### Decision
+
+1. **A record that declares its files.** When a record carries `declared_files`,
+   the generated ticket's `files_touched` MUST be exactly that list's paths, in
+   declared order, and nothing else. The generator MUST NOT add a `doc_links` path,
+   a path named in `it_requirements` prose, or `reference_file_path`, and MUST NOT
+   sort or de-duplicate the list. A path marked `to_be_created` is emitted although
+   it is absent on disk. Example: a record declaring
+   `scripts/ac_store/scan_ac_store.py` (`existing`) then
+   `unit_tests/ac_store/test_hold_reasons.py` (`to_be_created`) gets exactly those
+   two paths in that order, even when its `doc_links` name another file as `modifies`.
+2. **One read seam.** The generator MUST read the list only through the single read
+   seam `scripts/ac_store/declared_files.py` (`get_declared_files`). The commit
+   hook `check_ac_schema.py`, the agent-side validator `validate_ac_schema.py` and
+   the implementation-readiness gate read the same seam. The requirement rule check
+   (ACD-2500a-3) and the file-aware pre-pass (ACD-2500d-5-i) are not built yet and
+   MUST read it too when they are. The generator MUST NOT parse `declared_files`
+   itself, and it MUST pick its branch from the seam's named state "no declared
+   files", never from an empty list.
+3. **The legacy path, for "no declared files" only.** The `doc_links` derivation of
+   2026-06, with the selection rules of TKT-600a-1, TKT-600a-2 and TKT-500f-8-i
+   unchanged, is the legacy path. It MUST run only for a record in the "no declared
+   files" state, and the ticket MUST be labelled "derived, not declared": the body
+   names the record and gives each path's true source (a `doc_links` entry,
+   `reference_file_path`, or a prose bullet). The `--verify` report MUST show that
+   surface at INFO, never PASS, and MUST NOT call a derived path declared.
+   Generation MUST NOT be refused for such a record. Holding it back is the
+   implementation-readiness gate's decision (reason "missing file targets",
+   ACD-1600c-1). Example: a record with no declared files whose `doc_links` name
+   `scripts/build.py` as `modifies` gets `scripts/build.py`, labelled derived.
+4. **Frontmatter shape is unchanged.** `files_touched` stays a flat list of
+   repo-relative path strings with no new key, so `ticket_frontmatter_guard`, the
+   epic-supervisor file-overlap gate and change-scope-reviewer read it as before.
+   The markers and per-path sources live in the ticket body's `## Files Touched`
+   section and in the `--verify` report.
+
+The legacy derivation is not removed. KI-ACS-002 is the known issue it still
+carries, and that issue stays open for every record in the "no declared files"
+state until the record declares its files.
+
+**Delivery status at the time of writing (2026-10-12).** ACD-1600c-4 has shipped:
+the `declared_files` field, its commit-time and agent-side validation, and the seam
+are on `main`. TKT-600a-3 and TKT-600a-3-i are implemented in
+`scripts/ac_store/_gtfa_declared_surface.py`, which `_gtfa_files_touched.py`
+(`files_touched`), `_gtfa_body.py` (`## Files Touched`) and `_gtfa_report.py`
+(`--verify`) call. They land in the same EPIC-RightJobRightAgent change as this
+amendment, and both records read `work_status: todo` until that change is
+accepted. Until then, a generator built from an earlier `main` applies the 2026-06
+mapping to every record.
+
+### Consequences
+
+- **Positive.** For a declaring record the ticket and the readiness gate read one
+  list, so the KI-ACS-002 derivation failure (describing link counted, changed file
+  dropped by its link tag) does not apply. A file the work creates is on the
+  surface before it exists.
+- **Negative.** Every record written before ACD-1600c-4 is in the "no declared
+  files" state and still gets the derived surface. Its accuracy now depends on
+  someone adding `declared_files` to the record.
+- **Operational.** A reader of a generated ticket sees each path's source in its
+  `## Files Touched` section. Field shape, markers and path rules:
+  [AC `declared_files` field](../../reference/ac-schema.md#the-declared_files-field);
+  generated `files_touched`: [ac-declared-files.md](../../reference/ac-declared-files.md).
+
+### Alternatives
+
+- **Refuse to generate for a "no declared files" record.** Rejected. Every record
+  written before ACD-1600c-4 is in that state, so all existing work would stop at
+  once. Holding a record is the readiness gate's job, and one gate holds.
+- **Keep the derivation as a silent fallback.** Rejected. It would re-create
+  KI-ACS-002 behind a ticket that looks declared.
+- **Supersede ADR-010 with a new ADR.** Rejected. The core decision is unchanged,
+  and a superseding record would split one decision across two files.
 
 ## References
 

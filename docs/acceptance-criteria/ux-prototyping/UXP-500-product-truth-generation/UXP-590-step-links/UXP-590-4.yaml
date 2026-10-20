@@ -1,0 +1,91 @@
+id: UXP-590-4
+title: "The generation-flow ACs each declare the step(s) they specify"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the AC-side step claim defined by UXP-590-3,
+  When the step claims are added to the generation-flow ACs,
+  Then UXP-510 claims steps [map, derive] of flow "leafcutter/generate-product-truth",
+  And UXP-511 claims [invert], UXP-512 claims [backref], UXP-513 claims [validate]
+    and UXP-514 claims [validate] of that flow,
+  And UXP-700e-2-ii claims [derive] and UXP-300-1, UXP-300-2 and UXP-300-3 each claim
+    [validate] of that flow,
+  And no other field of those nine ACs changes,
+  And with the corrected links of UXP-590-1 in place the product-truth validator reports
+    zero mislink errors and zero unchecked links for that flow.
+depends_on:
+  - UXP-590
+  - UXP-590-3
+doc_links:
+- path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+  relationship: implements
+  status: exists
+- path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-510.yaml
+  relationship: context
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- Insert only the specifies_steps key into each of the nine AC YAML files (UXP-510..UXP-514, UXP-700e-2-ii,
+  UXP-300-1, UXP-300-2, UXP-300-3); no whole-file rewrite through a YAML dump, so that git diff of each
+  file shows added lines only
+- Every claim uses flow id 'leafcutter/generate-product-truth' and exactly the step ids the criteria give,
+  in the shape defined by UXP-590-3
+- The nine files must be located through the AC store by id, not by guessed path (UXP-300-1..3 live under
+  UXP-300-product-truth-store/, UXP-700e-2-ii under UXP-700-truthful-project-record/)
+- Must land after the UXP-590-3 schema change; before it, check-ac-schema rejects the unknown key
+- Every one of the nine files must pass validate_ac_schema.py after the edit
+- With UXP-590-1 in place, validate_product_truth.py must report zero step-claim errors and zero unchecked
+  links for the generation flow and exit 0
+delivers_to:
+  agent: python-coder
+  contract: 'Nine AC YAML files carrying specifies_steps: [{flow: leafcutter/generate-product-truth, steps:
+    [...]}] per the criteria; consumed by UXP-590-2''s regeneration and final validator run'
+expects_from:
+  ac_id: UXP-590-3
+  contract: 'Top-level AC key specifies_steps: list of {flow: string, steps: list[string] non-empty, unique},
+    accepted by config/ac_store_schema.json and documented in docs/reference/ac-schema.md'
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal
+test_required: true
+test_spec:
+- name: test_generation_flow_acs_carry_their_step_claims
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: 'Reads the nine live AC files and asserts each specifies_steps equals the criteria''s value:
+    UXP-510 [map, derive]; UXP-511 [invert]; UXP-512 [backref]; UXP-513, UXP-514, UXP-300-1, UXP-300-2,
+    UXP-300-3 [validate]; UXP-700e-2-ii [derive], all of flow ''leafcutter/generate-product-truth''.'
+- name: test_nine_claimed_acs_pass_the_ac_schema
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: seam
+  description: Runs validate_ac_schema.py over the nine live AC files and asserts it exits 0.
+- name: test_validator_reports_no_mislinks_and_no_unchecked_links_for_the_generation_flow
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: Runs validate_product_truth.py over the live store and asserts zero step-claim errors and
+    an unchecked-link count of 0 for flow 'leafcutter/generate-product-truth'.

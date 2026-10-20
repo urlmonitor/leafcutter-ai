@@ -38,6 +38,7 @@ from kernel.config_sections import (
     SourceConfig,
     _Section,
 )
+from kernel.config_split import SplitConfig
 from kernel.contracts.base import fail
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,8 @@ class KernelConfig(_Section):
     """Settings for exporting traces."""
     memory: MemoryConfig
     """Decision store and precedent lookup settings."""
+    split: SplitConfig
+    """Settings for splitting a bundled request into parts a person approves (ADR-067)."""
 
     @model_validator(mode="after")
     def _unique_sources(self) -> KernelConfig:
@@ -242,8 +245,7 @@ def write_config_schema(path: Path) -> None:
 #   the only place a threshold value exists; max_cost_usd and price use null for unknown.
 #   (#KernelBootstrapV0/P1)
 # ====================================================================
-
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
-
 # - 2026-10-03 15:05 [python-coder]: Keep pre-intent meanings deterministic, scoped and separate from task evidence. (#TICKETLESS reason=user-approved-ac-first-DK300)
 # - 2026-10-03 17:00 [python-coder]: Separate catalog permission from automatic research eligibility so meaning owners do not bypass precedent filtering. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Add the split section to the kernel config model. (#TICKET-20261006-DK-400a-1)

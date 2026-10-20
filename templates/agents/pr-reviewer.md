@@ -482,10 +482,10 @@ visible, never invisible.
 
 ## Escalation
 
-Always append this section, whether or not Opus was invoked:
+Always append this section as an `**Escalation**` label line, whether or not Opus was invoked:
 
 ```
-## Escalation
+**Escalation**
 
 Branch: <none | opus>
 Reason: <one-line — e.g. "not escalated: medium count was 2 (threshold > 3)"

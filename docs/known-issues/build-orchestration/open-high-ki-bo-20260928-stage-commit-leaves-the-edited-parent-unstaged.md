@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/build-orchestration.md
   - docs/known-issues/commit-guardian/open-high-ki-cg-001.md
-  - docs/known-issues/ac-store/open-low-ki-acs-016.md
+  - docs/known-issues/ac-store/resolved/resolved-low-ki-acs-016.md
 ---
 
 # KI-BO-20260928-stage-commit-leaves-the-edited-parent-unstaged — plan-feature's stage commit stages only the AC ids the stage agent reported, never the parent whose covered_by the agent was required to edit, so check-ac-parent-covered-by refuses every stage that adds children to an existing parent

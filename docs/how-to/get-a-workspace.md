@@ -13,7 +13,7 @@ related_docs:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
   - docs/architecture/diagrams/c3-031-workspace-request-states.md
 ---
 
@@ -75,7 +75,7 @@ Asking again for the same work is always safe. A workspace that is already ready
 re-readied and returned as it is, a half-made one is finished in place, and one that holds
 other work is left untouched and refused. See
 [the state diagram](../architecture/diagrams/c3-031-workspace-request-states.md) and
-[the halt sequence](../architecture/diagrams/c3-030-workspace-request-halt-sequence.md).
+[the halt sequence](../architecture/diagrams/c3-034-workspace-request-halt-sequence.md).
 
 Every code and what it means is in [the answer reference](../reference/workspace-maker-answer.md).
 

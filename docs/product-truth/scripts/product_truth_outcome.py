@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 
 from product_ownership import is_example_artifact_id
 from product_truth_checks import _ARTIFACT_TYPES
@@ -32,6 +33,13 @@ _TOP_OUTCOME_SOUND = "checked-and-sound"
 _TOP_OUTCOME_NOTHING = "nothing-examined"
 _TOP_OUTCOME_DEGRADED = "degraded"
 _TOP_OUTCOME_FAILED = "failed"
+
+
+def ensure_utf8_streams() -> None:
+    """Make stdout/stderr UTF-8 so a finding quoting record text is never mangled by a legacy code page."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
 
 def record_check_executed(checks: list[dict], name: str, examined: int) -> None:
@@ -119,10 +127,6 @@ CHECK_READS: dict[str, tuple[str, ...]] = {
     "screen-shape": ("mockups",),
     "example-data-refs": ("flows",),
     "index": ("index",),
-    "impl-status": ("flows",),
-    "product-truth-links": ("acceptance-criteria",),
-    "derived-indexes": ("flows", "mock-data", "acceptance-criteria"),
-    "screen-refs": ("flows",),
     "expansions": ("flows",),
     "shape-bounds": ("flows", "mock-data", "mockups"),
     "artifact-paths": ("index",),
@@ -217,7 +221,7 @@ def compute_example_only_types(type_population: dict[str, dict[str, int]]) -> li
 
 def _top_level_outcome(
     examined: int, unreadable: list[str], has_errors: bool, empty_types: list[str],
-    unresolvable_pointers: int = 0,
+    unresolvable_pointers: int = 0, unexercised_checks: int = 0,
 ) -> str:
     """Return the run outcome, applying ADR-042's conditions in a fixed order.
 
@@ -246,8 +250,8 @@ def _top_level_outcome(
         return _TOP_OUTCOME_DEGRADED
     if examined == 0 and len(empty_types) == len(_ARTIFACT_TYPES):
         return _TOP_OUTCOME_NOTHING
-    if unresolvable_pointers:
-        return _TOP_OUTCOME_DEGRADED
+    if unresolvable_pointers or unexercised_checks:
+        return _TOP_OUTCOME_DEGRADED  # a drift check with nothing to compare did not establish soundness
     return _TOP_OUTCOME_SOUND
 
 

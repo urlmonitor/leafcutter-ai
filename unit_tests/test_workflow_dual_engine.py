@@ -570,6 +570,13 @@ def test_dispatch_order_plan_feature() -> None:
 
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
         8. it-po           label='stage-itpo-author'
+           then shell-runner label='rule-check-itpo' (ACD-2500a-1: the
+           requirement rule check runs at the end of the authoring stage).
+           itpo is auto-approved (ACD-2500c-2), so its output is committed
+           (status-checker 'branch-check', commit 'commit-stage-output') before
+           the test-design stage: shell-runner 'design-prepass', then
+           'approval-holds' (the stock pre-pass reply names no records, so no
+           designer is dispatched).
 
       Final gate (ACD-2100c-1: resolveGate() no longer dispatches a live
       "final-gate" agent() call to obtain an answer at all -- with no
@@ -626,6 +633,11 @@ def test_dispatch_order_plan_feature() -> None:
         ("ac-triage", "stage-0-triage"),
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
+        ("shell-runner", "rule-check-itpo"),  # ACD-2500a-1: stage-end rule check
+        ("status-checker", "branch-check"),
+        ("commit", "commit-stage-output"),
+        ("shell-runner", "design-prepass"),
+        ("shell-runner", "approval-holds"),
         ("worktree-agent", "pause-persist"),
     ]
 
@@ -891,18 +903,6 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
         f"main_clone_prefix {main_clone_prefix!r} was expected to be in the prompt.\n"
         f"Prompt: {prompt_str!r}"
     )
-
-
-# ---------------------------------------------------------------------------
-# M-2: no-commit-to-main guard must be fail-CLOSED (RED baseline — ticket 10)
-#
-# MOVED to unit_tests/workflows/test_bo_1500a_5_i_dual_engine.py
-# (test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable) —
-# BO-1500a-5-i's rewrite of this test grew this file past the check-file-size
-# ratchet's baseline; the new file's own docstring explains why the test was
-# rewritten and carries the full, unabridged assertions. Not deleted, only
-# relocated — see that file for the current test.
-# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------

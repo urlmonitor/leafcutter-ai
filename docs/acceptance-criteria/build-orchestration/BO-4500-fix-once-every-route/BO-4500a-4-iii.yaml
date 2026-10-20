@@ -1,0 +1,79 @@
+id: BO-4500a-4-iii
+title: "Committing never stops other work on the machine or touches the shared stash"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given a test run started by another caller is running in a sibling workspace of the same
+    repository, and a second test run started by another caller is running in this workspace,
+  When the shared commit step runs to any of its four outcomes,
+  Then both test runs are still running when the step answers,
+  And the step has ended no process that it did not start itself.
+
+  Given the repository's shared stash holds two entries before the call,
+  When the step runs to any of its four outcomes,
+  Then the shared stash holds the same two entries, in the same order, after the call,
+  And the step has added no stash entry at any point during the call.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260925-commit-agent-pkill-kills-parallel-test-runs.md
+    relationship: describes
+    status: exists
+    relevance: "commit.md Step 0 runs a machine-wide test-process kill, and its failure path uses the stash every worktree shares. Its fix direction says both belong in the single shared commit step."
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "BP-600c-3-ii already forbids a bare stash in quick-fix -- the HARDENED copy of this rule, taken here."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - The step signals, kills or waits on no process it did not start itself; any process it starts (the check runner, version-control calls) is ended only through its own handle.
+  - The step reads and writes no stash entry at any point, on any outcome; rollback uses only the caller's named paths (BO-4500a-1-i).
+  - HARDENED SOURCE is quick-fix's BP-600c-3-ii no-bare-stash rule; commit.md's machine-wide test-process kill and stash failure path are the weak copy and are removed in BO-4500a-5-v.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract."
+test_required: true
+test_spec:
+  - name: test_parallel_test_runs_survive_every_outcome
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two long-running fixture processes named like test runs, one in a sibling worktree and one in this workspace, are still alive after each of the four outcomes."
+    must_catch:
+      - "pkill of pytest or unittest processes"
+  - name: test_shared_stash_is_unchanged_on_every_outcome
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With two stash entries present, the stash list is identical in content and order after each of the four outcomes, and no entry was added during the call (observed through a reflog of refs/stash)."
+    must_catch:
+      - "stash, run checks, pop"
+test_rationale: >-
+  Both failures are side effects on shared machine state, so the tests observe that state directly
+  (live process ids, the stash reflog) around real calls.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  MIGRATION RULE: quick-fix's no-bare-stash rule (BP-600c-3-ii) is the hardened copy; commit.md's
+  stash and process kill are the weak copy and are removed from it in BO-4500a-5-v. The stash check
+  observes the shared stash list before and after, which is what makes "never touched" testable.

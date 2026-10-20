@@ -37,7 +37,7 @@ doc_links:
   - path: docs/architecture/components/agent-telemetry.md
     relationship: describes
     status: exists
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     relationship: describes
     status: exists
     relevance: "Its 2026-09-30 amendment asks for a reader that reports where it looked and how many records it found, so a low count can be traced to its cause and is not mistaken for silence."

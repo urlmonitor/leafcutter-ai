@@ -1,6 +1,6 @@
 /**
  * Shared harness for the UXP-591-5 history tests (select / drill / breadcrumb
- * pushes, Back / Forward restore, filter re-picks). Not a test file.
+ * pushes, Back / Forward restore, filter changes that keep the drawn flow). Not a test file.
  *
  * Every test file must declare the same vi.mock calls for next/headers and
  * next/navigation as the UXP-591-4 files. jsdom's History is real: pushState,
@@ -224,6 +224,14 @@ export async function replayRows(nav: NavState, rows: any[]) {
         const names = rec.crumbs.map(nameOf);
         expect(crumbNames(), `${rec.id} crumbs`).toEqual(names.length > 1 ? names : []);
         expect(flowNotFoundNoticeShown(), `${rec.id} no notice`).toBe(false);
+        // the 'Outside the current filters' notice is derived from the entry flow and the filters
+        const body = squash(document.body.textContent);
+        if (rec.scope_notice) {
+          expect(body, `${rec.id} scope notice title`).toContain(rec.scope_notice.title);
+          expect(body, `${rec.id} scope notice detail`).toContain(rec.scope_notice.detail);
+        } else {
+          expect(body, `${rec.id} no scope notice`).not.toContain("Outside the current filters");
+        }
       } else {
         expect(flowNotFoundNoticeShown(), `${rec.id} notice`).toBe(true);
       }
@@ -233,6 +241,12 @@ export async function replayRows(nav: NavState, rows: any[]) {
       expect(activeOf("Kind"), `${rec.id} kind`).toBe(
         rec.filters.kind[0].toUpperCase() + rec.filters.kind.slice(1),
       );
+      // the Realization control is not offered for every source; check it where it is
+      if (groupButtons("Realization").length > 0) {
+        expect(activeOf("Realization").toLowerCase(), `${rec.id} realization`).toBe(
+          rec.filters.realization,
+        );
+      }
     }
     prevFlow = rec.rendered_flow;
   }

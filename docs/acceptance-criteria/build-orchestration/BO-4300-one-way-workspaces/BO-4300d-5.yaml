@@ -85,7 +85,7 @@ amended_by:
     doc_links only; criteria, it_requirements and test_spec unchanged. The planned diagram
     path c3-010 was taken (c3-010-reachability-guard-data-flow.md), as was the c3-011 the
     ticket proposed, so the diagram was written at the next free number after the sibling
-    c3-030 sequence diagram, docs/architecture/diagrams/c3-031-workspace-request-states.md,
+    c3-034 sequence diagram, docs/architecture/diagrams/c3-031-workspace-request-states.md,
     and its status set to exists. The it_requirements' "next free c3 number; verify before
     writing" is what was followed.
 superseded_by: null

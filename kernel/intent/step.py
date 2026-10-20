@@ -52,6 +52,7 @@ from kernel.intent.roots import (
 if TYPE_CHECKING:  # the scheduler imports this package, so these are for the type checker only
     from kernel.config import KernelConfig
     from kernel.contracts import RequestProposal
+    from kernel.providers.base import QuestionSpec
     from kernel.scheduler.context import KernelRuntime
     from kernel.scheduler.merge import Draft
     from kernel.scheduler.state import KernelState
@@ -78,6 +79,12 @@ class IntentStep:
 
         def _park(self, item: WorkItem, proposal: RequestProposal) -> bool: ...
 
+        def bundle_questions(self, item: WorkItem) -> tuple[QuestionSpec, ...]: ...
+
+        def note_bundle(self, item: WorkItem, probability: float | None) -> None: ...
+
+        def bundle_threshold_for(self, probability: float | None) -> float | None: ...
+
     def answers_of(self, item: WorkItem) -> list[ClarificationAnswer]:
         """Return the human clarification answers given to an item, oldest first."""
         answers: list[ClarificationAnswer] = []
@@ -101,6 +108,8 @@ class IntentStep:
         item = self.draft.items[task.root_work_item_id]
         answers = self.answers_of(item)
         assessment = await self._classify(task, item, answers)
+        self.note_bundle(item, assessment.bundle_probability)
+        item = self.draft.items[item.id]
         self._record_intent(item, assessment)
         item = self.draft.items[item.id]
         if assessment.kind is not None:
@@ -136,7 +145,8 @@ class IntentStep:
             run_corr(self.state, work_item_id=item.id), context=context,
             entity_context=self.state.get("entity_context"),
             max_state_chars=self.cfg.jev.max_state_chars,
-            send_repo_excerpts=self.cfg.data_policy.send_repo_excerpts_to_jev)
+            send_repo_excerpts=self.cfg.data_policy.send_repo_excerpts_to_jev,
+            extra_questions=self.bundle_questions(item))
         self.draft.budgets = guards.account_usage(
             self.draft.budgets.model_copy(update={
                 "jev_calls": self.draft.budgets.jev_calls + 1}),
@@ -157,7 +167,9 @@ class IntentStep:
             template_version=INTENT_TEMPLATE_REV if result.jev_called else None,
             model_id=result.model_id, outcome=result.outcome, reason_codes=result.reason_codes,
             thresholds={"min_selected_probability": cfg.min_selected_probability,
-                        "min_confidence": cfg.min_confidence}, jev_called=result.jev_called)
+                        "min_confidence": cfg.min_confidence}, jev_called=result.jev_called,
+            bundle_probability=result.bundle_probability,
+            bundle_threshold=self.bundle_threshold_for(result.bundle_probability))
         self.assessments[assessment.id] = assessment
         self.draft.put_item(item, routing_ref=assessment.id)
         self.ctx.tracer.event("intent.assessed", run_corr(self.state, work_item_id=item.id),
@@ -221,4 +233,5 @@ class IntentStep:
 # - 2026-10-01 22:00 [python-coder]: A human's own pick from the offered kinds needs no Jev call;
 #   free text is re-classified on the goal as clarified. (#KernelBootstrapV0/INTENT)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Pass the bundle question through the intent step. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

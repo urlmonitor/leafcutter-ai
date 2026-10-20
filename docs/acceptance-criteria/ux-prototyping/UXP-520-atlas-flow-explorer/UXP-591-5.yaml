@@ -83,7 +83,9 @@ delivers_to:
     Popstate restore reads the URL for the flow and the drawer (?step=) and history.state for crumbs and
     filters. An entry with no stored state falls back to {crumbs: [urlFlowId], filters: the flow''s own
     source and kind with realization ''all''}, or {crumbs: [], filters: real/user/all} for an unknown
-    id, or {crumbs: [default entry], filters: real/user/all} for /flows. Used by UXP-591-5-i to -v.'
+    id, while an entry whose path is exactly /flows is a finder entry with no flow state: the finder reads
+    its search and facets from the query (UXP-617-2-i). Used by UXP-591-5-i to -v and by UXP-617-2-i
+    (open a finder result).'
 expects_from:
   - ac_id: UXP-591-1
     contract: The target flow's canonical address /flows/<flow id>, used as the address of each added
@@ -139,7 +141,7 @@ test_spec:
     must_catch:
       - the App Router adds a second entry for one pushState
       - the drill replaces the entry under the real router
-test_rationale: The 44 FlowNavigation records are the approved specification of push, replace and pop,
+test_rationale: The FlowNavigation records (49 in dataset v4) are the approved specification of push, replace and pop,
   so replaying them against the pure navigation function covers every session; the component and route
   tests prove the React glue performs what the function decides, and the Playwright spec proves the entry
   count under the real App Router.

@@ -28,7 +28,7 @@ ASSIGNED_AGENT = "python-coder"
 OTHER_AGENT = "plain-agent"
 HEADING = "## AC Assignments"
 
-_TEMPLATE_FM = {
+_TEMPLATE_FM: dict[str, dict] = {
     ASSIGNED_AGENT: {
         "name": ASSIGNED_AGENT,
         "description": "Standards-enforcing Python implementation agent.",
@@ -36,7 +36,7 @@ _TEMPLATE_FM = {
         "tools": "Bash, Read, Edit, Write, Agent",
         "portable": True,
         "signoff": True,
-        "skills_used": ["signoff", "doc-enforcer"],
+        "skills": [{"skill_id": "signoff", "mode": "always"}, {"skill_id": "doc-enforcer", "mode": "always"}],
     },
     OTHER_AGENT: {
         "name": OTHER_AGENT,
@@ -45,7 +45,7 @@ _TEMPLATE_FM = {
         "tools": "Read",
         "portable": False,
         "signoff": False,
-        "skills_used": ["signoff"],
+        "skills": [{"skill_id": "signoff", "mode": "always"}],
     },
 }
 
@@ -91,7 +91,7 @@ def _make_package_root(root: Path) -> None:
             "priority": 6,
             "spawned_by": ["ticket-supervisor"],
             "spawn_allowlist": ["research-agent"],
-            "skills_used": fm["skills_used"],
+            "skills_invoked": [dict(e) for e in fm["skills"]],
         })
     config = root / "config"
     config.mkdir(parents=True, exist_ok=True)
@@ -238,7 +238,7 @@ class TestAcStoreIsNotReadByCardGeneration(unittest.TestCase):
         (root / "config").mkdir()
         (root / "config" / "agent_registry.json").write_text(
             json.dumps([{"id": "test-agent", "name": "Test Agent", "tier": "phase",
-                         "spawned_by": [], "spawn_allowlist": [], "skills_used": []}]),
+                         "spawned_by": [], "spawn_allowlist": [], "skills_invoked": []}]),
             encoding="utf-8",
         )
         ac_dir = root / "docs" / "acceptance-criteria"

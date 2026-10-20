@@ -3,7 +3,7 @@ title: How to create an agent template
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-10-09
+last_updated: 2026-10-15
 components:
 - build_pipeline
 related_docs:
@@ -121,10 +121,10 @@ Do NOT:
 
 - write a `{{my_skills_used}}` marker or a hand-written skills table in the body
   (the build warns about a duplicate table and strips a retired marker with a warning);
-- hand-edit `skills_used` or `skills_invoked` in `config/agent_registry.json` —
-  they are a derived copy. The `transform-agent-registry` pre-commit hook
-  (shown as "Transform agent registry") regenerates them from `skills:`, and the
-  build reports a disagreeing copy while the declaration wins;
+- hand-edit `skills_invoked` in `config/agent_registry.json` (a derived copy; the
+  "Transform agent registry" pre-commit hook regenerates it from `skills:`, and the
+  build reports a disagreeing copy while the declaration wins) or write the
+  retired `skills_used` there (the validator and build refuse it);
 - list a skill that is not installed (a missing skill id refuses the build) or
   a non-empty `skills:` without `Skill` in `tools:` (also refuses).
 
@@ -268,14 +268,14 @@ Every entry must satisfy the schema in `config/agent_registry.schema.json`.
   "spawned_by": ["ticket-supervisor"],
   "is_ticket_phase": true,
   "template_path": "templates/agents/my-agent.md",
-  "model": "sonnet",
-  "skills_used": []
+  "model": "sonnet"
 }
 ```
 
-`spawn_allowlist` and `skills_used` (and `skills_invoked`) are derived from the
-template frontmatter (Steps 4 and 5): leave them empty here. The
-`transform-agent-registry` pre-commit hook fills them when you commit.
+`spawn_allowlist` and `skills_invoked` are derived from the template frontmatter
+(Steps 4 and 5): do not write `skills_invoked` and leave `spawn_allowlist` empty
+here. The `transform-agent-registry` pre-commit hook fills them when you commit.
+Never add `skills_used`: it is retired and the validator and build refuse it.
 
 **Additional fields for ticket-phase agents:**
 
@@ -308,7 +308,7 @@ template frontmatter (Steps 4 and 5): leave them empty here. The
 | `selection_criteria` | object or null | How `business-analyst` decides to assign this agent. Null for non-ticket-phase agents. |
 | `priority` | integer | Phase execution order. Lower runs first. See canonical ordering table in `ticket-supervisor`. Required for `is_ticket_phase: true` agents. |
 | `requires_ticket_section` | boolean | When `true`, every ticket that marks this agent `needed` must include a `### <agent-id>` subheading under `## Implementation Tasks`. |
-| `skills_used` | array | DERIVED from the template's `skills:` frontmatter (Step 4); do not hand-edit. |
+| `skills_invoked` | array | DERIVED from the template's `skills:` frontmatter (Step 4); do not hand-edit. (`skills_used` is retired and refused.) |
 | `owns_file_extensions` | array | File extensions (e.g. `[".py"]`) this agent is primary implementer for. Consumed by commit-guardian hooks. |
 
 ---

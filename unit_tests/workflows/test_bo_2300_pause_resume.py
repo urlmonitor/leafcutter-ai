@@ -79,21 +79,6 @@ _FINALIZE_PREFLIGHT_RESPONSES = {
 }
 
 
-# ---------------------------------------------------------------------------
-# BO-1500f-1 regression fix (test-runner blocker, 2026-08-18 09:46):
-# plan-feature.js now dispatches a "resolve-workspace-setup-permission"
-# agent() call unconditionally, before Stage 0, to gate the isolated-
-# workspace ("worktree-setup") dispatch on the target agent's registered
-# `permits_shell` charter field (see TICKET-20260817-BO-1500f-1 and
-# unit_tests/workflows/test_bo_1500f_1.py). Every
-# run_workflow_under_e2(_PLAN_FEATURE_JS, ...) call in this file must mock
-# that label — an unmocked call gets the harness's default stub response,
-# JSON.parse fails, permitsShell fails closed to False, and the workflow
-# halts before pause-persist/read-pause-record/apply-approval ever run.
-# finalize-feature.js and build-feature.js have no such gate, so calls
-# targeting _FINALIZE_FEATURE_JS or _BUILD_FEATURE_JS do NOT need this mock.
-# ---------------------------------------------------------------------------
-
 _PERMISSION_LOOKUP_LABEL = "resolve-workspace-setup-permission"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 
@@ -759,7 +744,13 @@ def test_resume_preserves_committed_earlier_stages():
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
         label_responses=_with_workspace_permission(
-            {"read-pause-record": {"exists": True, "stale": False}}
+            {
+                "read-pause-record": {"exists": True, "stale": False},
+                # itpo was committed by run 1 (auto-approved, ACD-2500c-2): a real resume sees it in git log.
+                "scan-committed-stages": {"output": "abc1234 plan-feature(IT-PO): comp\n", "exit_code": 0},
+                "approval-holds": {"output": '{"approved": ["ACD-X"], "held": []}', "exit_code": 0},
+                "resume-log": {"output": "plan-feature(IT-PO): comp\n\nAC IDs: ACD-X\n", "exit_code": 0},
+            }
         ),
         args={"run_id": run_id, "resume_answer": approve_answer},
     )

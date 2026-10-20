@@ -1,8 +1,9 @@
 """
 MODULE: leafcutter/scripts/commit_guardian/transform_agent_registry.py
 GOAL: Pre-stage transformer that regenerates the derived fields
-      (``skills_used`` / ``skills_invoked`` from the frontmatter ``skills``
-      declaration, ``spawn_allowlist`` from the frontmatter ``spawn_allowlist``
+      (``skills_invoked`` from the frontmatter ``skills``
+      declaration -- the retired ``skills_used`` is never written and is dropped
+      from any record that carries it -- and ``spawn_allowlist`` from the frontmatter ``spawn_allowlist``
       declaration) of config/agent_registry.json from each agent template, and
       re-stages the registry when it changed.
 BUSINESS CONTEXT: AR-300c made the template frontmatter the one source of truth
@@ -15,8 +16,7 @@ BUSINESS CONTEXT: AR-300c made the template frontmatter the one source of truth
 ARCHITECTURE: Modelled on transform_doc_index.py. ``main(argv)`` resolves the
       package root (``--package-root DIR`` when given, otherwise the git
       toplevel), reads the registry and every agent's template, regenerates the
-      ability fields through the sibling ``_agent_ability_sync`` module (shared
-      with the one-shot migration, so both write the identical record) and each
+      ability field through the sibling ``_agent_ability_sync`` module and each
       templated agent's ``spawn_allowlist`` from its declaration (macro kept as
       written; an absent declaration gives ``[]``), and writes the registry only
       when its parsed content changed. It changes no other field (``spawned_by``
@@ -37,6 +37,9 @@ DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300c-5]: Also regenerates ``spawn_allowlist`` from
   each template's declaration (user decision: the registry copy of the sub-agent
   permission is derived exactly like the abilities). (#AR-300c-5-ii)
+- 2026-10-12 [python-coder/AR-400e-2]: Regenerates ONLY ``skills_invoked`` (with
+  ``provided_by``) and drops the retired ``skills_used`` from every templated
+  record; byte-stable and idempotent. (#AR-400e-2)
 ====================================================================
 """
 

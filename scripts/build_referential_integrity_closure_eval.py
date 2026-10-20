@@ -42,11 +42,11 @@ ARCHITECTURE: ``_eval_static_path()`` is a thin dispatcher (AC BP-100n-4
 from __future__ import annotations
 
 import ast
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 
-def _iter_same_scope(node: ast.AST) -> ast.AST:
+def _iter_same_scope(node: ast.AST) -> Iterator[ast.AST]:
     """Yield *node* and its descendants, without crossing into a nested function/class.
 
     Used to collect a scope's OWN local assignments without leaking in (or
@@ -68,7 +68,7 @@ def _annotate_parents(tree: ast.AST) -> None:
     """Attach a ``_closure_parent`` back-reference to every node in *tree*."""
     for node in ast.walk(tree):
         for child in ast.iter_child_nodes(node):
-            child._closure_parent = node  # noqa: SLF001
+            child._closure_parent = node  # type: ignore[attr-defined]  # noqa: SLF001
 
 
 def _enclosing_scope(node: ast.AST, tree: ast.AST) -> ast.AST:
@@ -267,7 +267,7 @@ def _eval_parent_attr_path(
 
 
 def _eval_call_resolve_path(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -283,7 +283,7 @@ def _eval_call_resolve_path(
 
 
 def _eval_call_str_path(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -303,7 +303,7 @@ def _eval_call_str_path(
 
 
 def _eval_call_path_from_file(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -325,7 +325,7 @@ def _eval_call_path_from_file(
 
 
 def _eval_call_path_literal(
-    node: ast.AST,
+    node: ast.Call,
     script: Path,
     assignments: dict[str, ast.AST],
     _seen: frozenset[str],
@@ -353,7 +353,7 @@ def _eval_call_path_literal(
 
 
 _CALL_PATH_HANDLERS: tuple[
-    Callable[[ast.AST, Path, dict[str, ast.AST], frozenset[str]], list[Path] | None], ...
+    Callable[[ast.Call, Path, dict[str, ast.AST], frozenset[str]], list[Path] | None], ...
 ] = (
     _eval_call_resolve_path,
     _eval_call_str_path,

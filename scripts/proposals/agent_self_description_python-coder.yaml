@@ -51,10 +51,6 @@ proposed_frontmatter:
     trigger: task requiring sql-coder capabilities
     behavior: Delegates to sql-coder via Agent tool
     related_agent: sql-coder
-  - name: Delegation to collector-enforcer
-    trigger: task requiring collector-enforcer capabilities
-    behavior: Delegates to collector-enforcer via Agent tool
-    related_agent: collector-enforcer
   - name: Conditional Behavior
     trigger: you discover or fix a bug/error during implementation
     behavior: you MUST add a new unit test that reproduces the bug and verifies the
@@ -68,8 +64,6 @@ proposed_registry:
   category: implementation
   skills_invoked:
   - skill_id: signoff
-    mode: conditional
-  - skill_id: collector-enforcer
     mode: conditional
   - skill_id: doc-enforcer
     mode: conditional

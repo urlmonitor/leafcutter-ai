@@ -204,7 +204,11 @@
     "set_aside_locations": [
       {
         "path": "docs/acceptance-criteria/",
-        "ground": "the AC store is flat by design: records read by tools and navigated by nobody (GE-133a)"
+        "ground": "Holds acceptance-criteria records that tools read and write and nobody navigates by hand. It is flat by design, one folder per feature family, and its folders are bounded by the AC store's tree limits rather than by a file count."
+      },
+      {
+        "path": "docs/decisions/",
+        "ground": "Holds kernel decision records, one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing the folder."
       }
     ]
   },
@@ -553,7 +557,7 @@
       {
         "id": "transform-agent-registry",
         "tier": "transform",
-        "name": "Transform agent registry (regenerate skills_used/skills_invoked/spawn_allowlist from template declarations)",
+        "name": "Transform agent registry (regenerate skills_invoked/spawn_allowlist from template declarations)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py",
         "language": "system",
         "files": "^(templates/agents/.*\\.md|config/agent_registry\\.json)$",
@@ -563,7 +567,7 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "always_run": false,
-        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability fields are a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_used/skills_invoked/spawn_allowlist (never spawned_by) and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
+        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability field (skills_invoked; the older skills_used is retired, AR-400e) is a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_invoked/spawn_allowlist (never spawned_by) and drops skills_used from any record that carries it and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
       },
       {
         "id": "check-doc-frontmatter",

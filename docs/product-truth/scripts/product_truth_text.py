@@ -1,16 +1,23 @@
 """MODULE: product_truth_text
 GOAL: Serialize and replace derived AC backlinks without changing adjacent YAML.
 BUSINESS CONTEXT: Product-flow links must remain reproducible and preserve authored metadata.
-ARCHITECTURE: Pure text helpers used by the single-writer generator; no filesystem writes.
+ARCHITECTURE: Text helpers used by the single-writer generator, plus its UTF-8/LF file
+    read-write boundary (_read_text/_write_text, log + re-raise on OSError).
 
 DECISION HISTORY
 - 2026-10-02 14:20 [commit]: Extract unchanged backlink serialization and replacement
   from the oversized generator, preserving its public imports and regression fix.
   (#TICKETLESS reason=retrieval-publication-size-ratchet)
+- 2026-10-14 [UXP-512]: Move _read_text/_write_text here from the oversized generator
+  (re-imported there, so existing imports keep working); _write_text writes LF endings.
 """
 from __future__ import annotations
 
+import logging
 import re
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Include indentless sequence items and column-zero comments; stop at the
 # next top-level field or document boundary. Preserve comments on removal.
@@ -56,3 +63,19 @@ def apply_product_truth_text(text: str, entries: list) -> str:
     if stripped and not stripped.endswith("\n"):
         return stripped + "\n"
     return stripped
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        logger.exception("cannot read %s", path)
+        raise
+
+
+def _write_text(path: Path, text: str) -> None:
+    try:
+        path.write_text(text, encoding="utf-8", newline=chr(10))  # no CRLF translation on Windows
+    except OSError:
+        logger.exception("cannot write %s", path)
+        raise

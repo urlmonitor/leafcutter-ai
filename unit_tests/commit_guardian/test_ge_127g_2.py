@@ -58,6 +58,7 @@ def _lines_naming(output: str, rel: str) -> list[str]:
 
 def test_judged_and_set_aside_counts_reported_separately_with_grounds(tmp_path: Path) -> None:
     # covers: GE-127g-2
+    # covers: GE-127g
     # angle: criterion
     """Arm 1. 5 documents staged -- 2 in declared locations, 3 hand-authored, all
     within their limits. The commit completes; the run states 3 judged and 2 set

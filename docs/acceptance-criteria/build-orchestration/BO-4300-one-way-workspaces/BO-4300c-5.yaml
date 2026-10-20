@@ -36,7 +36,7 @@ doc_links:
   relationship: describes
   status: exists
   relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
-- path: docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+- path: docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
   relationship: describes
   status: exists
 assigned_agent: architecture-diagram-author
@@ -86,7 +86,7 @@ amended_by:
     doc_links only; criteria, it_requirements and test_spec unchanged. The planned diagram
     path c3-009 was taken (c3-009-record-freshness-check-sequence.md), as was the c3-010 the
     ticket proposed, so the diagram was written at the next free number the allocator gave,
-    docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md, and its status set
+    docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md, and its status set
     to exists. The it_requirements' "next free c3 number; verify before writing" is what was
     followed.
 superseded_by: null
@@ -94,7 +94,7 @@ covered_by:
 - unit_tests/build_orchestration/test_bo_4300_docs.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md
-- docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+- docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
 notes: |
   documentation_trigger sequence-diagram on BO-4300c: more than two actors, and the halt is the
   whole of the visible difference.
@@ -112,5 +112,5 @@ target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
 #   + test_rationale. criteria unchanged.
 # - 2026-10-13 [architecture-diagram-author/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
 #   doc_links diagram path re-pointed from the taken c3-009 to the written
-#   c3-030-workspace-request-halt-sequence.md (status exists). criteria unchanged.
+#   c3-034-workspace-request-halt-sequence.md (status exists). criteria unchanged.
 # ====================================================================

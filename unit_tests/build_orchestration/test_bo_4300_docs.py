@@ -45,7 +45,7 @@ GET_DOC = REPO / "docs/how-to/get-a-workspace.md"
 CLEAR_DOC = REPO / "docs/how-to/clear-a-workspace.md"
 REF_DOC = REPO / "docs/reference/workspace-maker-answer.md"
 COMPONENT_DOC = REPO / "docs/architecture/components/worktree-manager.md"
-SEQ_DOC = REPO / "docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md"
+SEQ_DOC = REPO / "docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md"
 STATE_DOC = REPO / "docs/architecture/diagrams/c3-031-workspace-request-states.md"
 INDEX = REPO / "docs/INDEX.md"
 AC_DIR = REPO / "docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces"
@@ -292,7 +292,7 @@ class TestComponentDiagram(unittest.TestCase):
             self.assertRegex(diagram, rf"(?i){re.escape(needle)}", f"diagram lacks {needle}")
         for name in RETIRED:
             self.assertNotIn(name, diagram)
-        for rel in ("c3-030-workspace-request-halt-sequence.md", "c3-031-workspace-request-states.md"):
+        for rel in ("c3-034-workspace-request-halt-sequence.md", "c3-031-workspace-request-states.md"):
             self.assertIn(rel, read(COMPONENT_DOC))
 
 

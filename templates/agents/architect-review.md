@@ -256,12 +256,12 @@ to a nested object with `result`, `reason`, and `remediation`.
 
 ## Step 5 — Escalation Log
 
-Whichever branch fires, append `## Escalation` to your output naming the chosen
+Whichever branch fires, append an `**Escalation**` label line to your output naming the chosen
 branch (`small` or `large`) and the one-line reason. Never skip this section.
 Example:
 
 ```
-## Escalation
+**Escalation**
 
 Branch: small
 Reason: 3 files in one component (live_trader/); no always-large trigger fired.
@@ -270,7 +270,7 @@ Reason: 3 files in one component (live_trader/); no always-large trigger fired.
 or:
 
 ```
-## Escalation
+**Escalation**
 
 Branch: large
 Reason: has_alembic_migration=true — always-large trigger; analysed in place

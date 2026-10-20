@@ -96,10 +96,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/epic-supervisor.md",
             "model": "sonnet",
-            "skills_used": [
-                "building-epics",
-                "signoff"
-            ],
             "deprecated": true,
             "legacy_only": true,
             "category": "supervisor",
@@ -146,7 +142,7 @@
             "spawn_allowlist": [
                 "__ticket_phase_agents__",
                 "brainstorm-lead",
-                "llm-expert"
+                "test-breaker"
             ],
             "spawned_by": [
                 "user",
@@ -156,10 +152,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/ticket-supervisor.md",
             "model": "sonnet",
-            "skills_used": [
-                "building-epics",
-                "signoff"
-            ],
             "description": "Drives a single ticket from needed agents to fully signed off. Dispatched directly at depth-0 by /build-feature (the user-facing entrypoint) or by the deprecated epic-supervisor during the deprecation window. Phase agents run at depth-1.",
             "legacy_only": true,
             "category": "supervisor",
@@ -217,7 +209,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/brainstorm-lead.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -263,7 +254,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/brainstorm-worker.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "research",
             "skills_invoked": [
                 {
@@ -322,9 +312,14 @@
             "selection_criteria": null,
             "template_path": "templates/agents/research-agent.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "research",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "knowledge-query",
+                    "mode": "conditional",
+                    "condition": "Use when the question is about cross-surface knowledge graph queries (nodes, edges, surfaces) rather than code search."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -390,9 +385,6 @@
             },
             "template_path": "templates/agents/architect-review.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 4,
             "priority_rationale": "Runs after ADR and diagram authors; shapes design before any implementation begins",
             "requires_ticket_section": false,
@@ -468,11 +460,6 @@
             },
             "template_path": "templates/agents/python-coder.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff",
-                "doc-enforcer",
-                "complexity-reduction"
-            ],
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
@@ -508,9 +495,9 @@
                 },
                 {
                     "channel": 5,
-                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer",
+                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction",
                     "injection_mode": "on-demand",
-                    "description": "Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement"
+                    "description": "Sign-off protocol, docstring enforcement, complexity scoring"
                 },
                 {
                     "channel": 6,
@@ -522,7 +509,7 @@
                     "channel": 7,
                     "source": "skills_config.json + settings.json",
                     "injection_mode": "spawn-scoped",
-                    "description": "test_command, collector_enforcer_paths, file_size_limit_py"
+                    "description": "test_command, file_size_limit_py"
                 },
                 {
                     "channel": 8,
@@ -607,9 +594,6 @@
             },
             "template_path": "templates/agents/test-writer.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 5,
             "priority_rationale": "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written",
             "requires_ticket_section": true,
@@ -687,9 +671,6 @@
             },
             "template_path": "templates/agents/test-runner.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 9,
             "priority_rationale": "Validates test suite after test-writer completes; must run after tests are written",
             "requires_ticket_section": false,
@@ -776,10 +757,6 @@
             },
             "template_path": "templates/agents/documentation-expert.md",
             "model": "sonnet",
-            "skills_used": [
-                "route-knowledge",
-                "signoff"
-            ],
             "priority": 10,
             "priority_rationale": "Documents changes after code and tests are complete; runs before final PR review",
             "requires_ticket_section": true,
@@ -876,9 +853,6 @@
             },
             "template_path": "templates/agents/change-scope-reviewer.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 10,
             "priority_rationale": "Runs after coder phase and before pr-reviewer; verifies the actual change set matches the planned scope",
             "requires_ticket_section": false,
@@ -951,9 +925,6 @@
             },
             "template_path": "templates/agents/pr-reviewer.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11,
             "priority_rationale": "Final quality gate; runs after all implementation and documentation is complete",
             "requires_ticket_section": false,
@@ -1007,7 +978,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/code-review-architect.md",
             "model": "opus",
-            "skills_used": [],
             "requires_ticket_section": false,
             "requires_verification": true,
             "category": "supervisor",
@@ -1046,10 +1016,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/find-structural-smells.md",
             "model": "sonnet",
-            "skills_used": [
-                "review-for-code-smells",
-                "review-for-structural-code-smells"
-            ],
             "requires_ticket_section": false,
             "requires_verification": false,
             "category": "supervisor",
@@ -1097,10 +1063,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/find-design-smells.md",
             "model": "opus",
-            "skills_used": [
-                "review-for-code-smells",
-                "review-for-design-code-smells"
-            ],
             "requires_ticket_section": false,
             "requires_verification": false,
             "category": "supervisor",
@@ -1157,10 +1119,6 @@
             },
             "template_path": "templates/agents/commit.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff",
-                "precommit-autofix"
-            ],
             "priority": 12,
             "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
             "requires_ticket_section": false,
@@ -1230,9 +1188,6 @@
             },
             "template_path": "templates/agents/pull-request.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 13,
             "priority_rationale": "Pushes branch and opens PR; final step in the ticket lifecycle",
             "requires_ticket_section": false,
@@ -1290,7 +1245,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/conflict-resolver.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -1344,9 +1298,6 @@
             },
             "template_path": "templates/agents/status-checker.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 1,
             "priority_rationale": "Runs before any author or coder; verifies current system state is as expected",
             "requires_ticket_section": false,
@@ -1399,7 +1350,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/worktree-agent.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -1451,7 +1401,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/changelog-agent.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -1493,9 +1442,14 @@
             "selection_criteria": null,
             "template_path": "templates/agents/retrospective-agent.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "route-knowledge",
+                    "mode": "conditional",
+                    "condition": "Use in Step 5 to classify each proposed Knowledge Item and rule update into its target surface."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -1530,9 +1484,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/feedback-analyst.md",
             "model": "sonnet",
-            "skills_used": [
-                "feedback-analysis"
-            ],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -1605,9 +1556,6 @@
             },
             "template_path": "templates/agents/sql-coder.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 7,
             "priority_rationale": "Database implementation; co-equal with python-coder but sequential by default (priority 7 vs 6)",
             "requires_ticket_section": true,
@@ -1683,10 +1631,6 @@
             },
             "template_path": "templates/agents/frontend-coder.md",
             "model": "sonnet",
-            "skills_used": [
-                "webapp-testing",
-                "signoff"
-            ],
             "priority": 8,
             "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
             "requires_ticket_section": true,
@@ -1765,7 +1709,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-table-creator.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -1832,10 +1775,6 @@
             },
             "template_path": "templates/agents/sql-query.md",
             "model": "sonnet",
-            "skills_used": [
-                "sql-query-past-queries",
-                "signoff"
-            ],
             "priority": 7,
             "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
             "requires_ticket_section": true,
@@ -1896,9 +1835,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-test-writer.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "category": "testing",
             "skills_invoked": [
                 {
@@ -1951,7 +1887,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-procedure-creator.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -2004,7 +1939,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-function-creator.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -2057,7 +1991,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-index-creator.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -2110,7 +2043,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/sql-view-creator.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -2161,12 +2093,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/workflow-architect.md",
             "model": "sonnet",
-            "skills_used": [
-                "package-audit",
-                "create-hook",
-                "add-agent-to-package",
-                "add-skill-to-package"
-            ],
             "category": "supervisor",
             "skills_invoked": [
                 {
@@ -2242,7 +2168,6 @@
             },
             "template_path": "templates/agents/adr-author.md",
             "model": "opus",
-            "skills_used": [],
             "priority": 2,
             "priority_rationale": "ADR must exist before coders or diagram authors reference architectural decisions",
             "requires_ticket_section": true,
@@ -2252,10 +2177,6 @@
                     "skill_id": "signoff",
                     "mode": "conditional",
                     "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
-                },
-                {
-                    "skill_id": "doc-enforcer",
-                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -2314,9 +2235,6 @@
             },
             "template_path": "templates/agents/architecture-diagram-author.md",
             "model": "opus",
-            "skills_used": [
-                "write-c4-diagram"
-            ],
             "priority": 3,
             "priority_rationale": "Diagram must exist before coders reference the architecture; runs after ADR author",
             "requires_ticket_section": true,
@@ -2379,7 +2297,6 @@
             },
             "template_path": "templates/agents/explanation-author.md",
             "model": "sonnet",
-            "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
             "requires_ticket_section": true,
@@ -2443,7 +2360,6 @@
             },
             "template_path": "templates/agents/how-to-author.md",
             "model": "sonnet",
-            "skills_used": [],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
             "requires_ticket_section": true,
@@ -2509,9 +2425,6 @@
             },
             "template_path": "templates/agents/reference-author.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 10,
             "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
             "requires_ticket_section": true,
@@ -2561,7 +2474,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/glossary-triage.md",
             "model": "haiku",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -2631,9 +2543,6 @@
             },
             "template_path": "templates/agents/user-surface-smoker.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11.5,
             "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects.",
             "conditional": true,
@@ -2641,7 +2550,12 @@
             "conditional_field_legacy": "user_facing_surface",
             "requires_ticket_section": false,
             "category": "testing",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2697,16 +2611,19 @@
             },
             "template_path": "templates/agents/live-surface-tester.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11.8,
             "priority_rationale": "Runs after user-surface-smoker (11.5) confirms surface is reachable, before commit (12) locks the worktree. Issues structured HTTP assertions against live fixtures. See ADR-020.",
             "conditional": true,
             "conditional_field": "live_surface_test",
             "requires_ticket_section": true,
             "category": "testing",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2766,9 +2683,6 @@
             },
             "template_path": "templates/agents/documentation-verifier.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11.9,
             "priority_rationale": "Documentation coverage gate; runs after coder (6/7/8), test-runner (9), documentation-expert (10), pr-reviewer (11), user-surface-smoker (11.5), and live-surface-tester (11.8), and BEFORE commit (12). Verifies that documentation produced by coders and documentation-expert is complete and accurate. See BO-2200b-1.",
             "conditional": true,
@@ -2825,7 +2739,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -2862,7 +2775,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard-config-section.md",
             "model": "haiku",
-            "skills_used": [],
             "category": "supervisor",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -2895,7 +2807,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/test-failure-triage.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "testing",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -2945,9 +2856,6 @@
             },
             "template_path": "templates/agents/ac-validator.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11.5,
             "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
             "requires_ticket_section": false,
@@ -3011,9 +2919,6 @@
             },
             "template_path": "templates/agents/ac-fulfillment-gate.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff"
-            ],
             "priority": 11.7,
             "priority_rationale": "AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) to verify AC YAML store fields are accurate and up-to-date",
             "requires_ticket_section": false,
@@ -3083,11 +2988,6 @@
             },
             "template_path": "templates/agents/llm-expert.md",
             "model": "sonnet",
-            "skills_used": [
-                "signoff",
-                "add-agent-to-package",
-                "add-skill-to-package"
-            ],
             "priority": 6,
             "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
             "requires_ticket_section": true,
@@ -3153,18 +3053,9 @@
             "selection_criteria": null,
             "template_path": "templates/agents/product-owner.md",
             "model": "opus",
-            "skills_used": [
-                "signoff",
-                "knowledge-query",
-                "ac-tree-split"
-            ],
             "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
             "category": "planning",
             "skills_invoked": [
-                {
-                    "skill_id": "signoff",
-                    "mode": "always"
-                },
                 {
                     "skill_id": "knowledge-query",
                     "mode": "conditional",
@@ -3218,13 +3109,20 @@
             "selection_criteria": null,
             "template_path": "templates/agents/business-analyst.md",
             "model": "opus",
-            "skills_used": [
-                "knowledge-query",
-                "ac-tree-split"
-            ],
             "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
             "category": "planning",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "knowledge-query",
+                    "mode": "conditional",
+                    "condition": "Use when you need to search a keyword across agents, skills, docs and ADRs for component context."
+                },
+                {
+                    "skill_id": "ac-tree-split",
+                    "mode": "conditional",
+                    "condition": "When a split L1 is overcrowded, load ac-tree-split to redistribute its L2s (Pattern C)."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -3252,7 +3150,7 @@
             "id": "it-po",
             "name": "IT Product Owner",
             "tier": "utility",
-            "role": "analysis",
+            "role": "planning",
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
@@ -3261,12 +3159,15 @@
             "selection_criteria": null,
             "template_path": "templates/agents/it-po.md",
             "model": "opus",
-            "skills_used": [
-                "knowledge-query"
-            ],
-            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
+            "description": "IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, doc_links to architecture documents, and the test intent (test_intent / test_required): per outcome clause, whether a test is needed and why. It writes no test design. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
             "category": "planning",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "knowledge-query",
+                    "mode": "conditional",
+                    "condition": "Use when you need to search a keyword across agents, skills, docs and ADRs for component context."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -3283,6 +3184,43 @@
                 {
                     "channel": 8,
                     "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "requirement_records",
+            "components": [
+                "product_ownership"
+            ]
+        },
+        {
+            "id": "test-designer",
+            "name": "Test Designer",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "plan-feature.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-designer.md",
+            "model": "sonnet",
+            "description": "Code-aware planning agent that reads the pre-pass report, then the real code files and existing tests, and writes the test design (ACD-2500c) and the file findings (ACD-2500d) onto the requirement record in separate fields before the build. The only planning step that may read source (ADR-072).",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (date, git)"
                 }
             ],
             "produces": "analysis",
@@ -3307,7 +3245,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/build-ac.md",
             "model": "sonnet",
-            "skills_used": [],
             "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
             "produces": "orchestration",
             "category": "supervisor",
@@ -3342,7 +3279,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/ac-triage.md",
             "model": "haiku",
-            "skills_used": [],
             "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs.",
             "produces": "analysis",
             "category": "research",
@@ -3381,7 +3317,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/knowledge-harvester.md",
             "model": "sonnet",
-            "skills_used": [],
             "category": "research",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -3422,7 +3357,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/pt-classifier.md",
             "model": "haiku",
-            "skills_used": [],
             "description": "Product-truth request classifier. Given a plain-language feature request, decides needs_flow / needs_mock_data / needs_mockup (a boolean each), derives the routing outcome (full-set / mockup+data / mockup-only / mock-data-only / none), and names the target component, entities, and add-vs-create decision. Read-only — returns a structured JSON decision the authoring pipeline routes on so only the needed authoring agents run. Scored against docs/product-truth/classifier/eval.jsonl.",
             "category": "research",
             "skills_invoked": [],
@@ -3460,7 +3394,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/mock-data-author.md",
             "model": "opus",
-            "skills_used": [],
             "description": "Mock-data authoring agent for the product-truth store. Given a classified request naming a component and entities, drafts or EXTENDS the one canonical dataset for those entities (realistic *.mock.json records conforming to mock-data.schema.json), enforcing the add-vs-create rule: one canonical dataset per entity per component, extended in place, never duplicated. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
             "category": "planning",
             "skills_invoked": [],
@@ -3498,7 +3431,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/mockup-author.md",
             "model": "sonnet",
-            "skills_used": [],
             "description": "Mockup authoring agent for the product-truth store. Given drafted mock data and a request that involves screens, drafts or extends in place a mockup per screen (*.mockup.json conforming to mockup.schema.json plus a self-contained HTML rendering), populated from the mock records rather than placeholder text, registering a screen id the flow's steps resolve. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
             "category": "planning",
             "skills_invoked": [],
@@ -3536,7 +3468,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/flow-author.md",
             "model": "opus",
-            "skills_used": [],
             "description": "Flow authoring agent for the product-truth store. Given drafted mock data and mockups for a multi-step request, assembles a draft flow (*.flow.json conforming to flow.schema.json): ordered steps wired to their screens and read/write entities, with one acceptance_scenario per step for the business-analyst to turn into ACs. Follows the add-vs-create rule (extends an existing journey rather than creating a new flow). Leaves step.implements and impl_status to the business-analyst / generator. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py.",
             "category": "planning",
             "skills_invoked": [],
@@ -3576,7 +3507,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/command-step-runner.md",
             "model": "haiku",
-            "skills_used": [],
             "description": "Runs exactly one given command, once, in one named workspace, and hands back that command's exit status, stdout and stderr untouched. Holds no allow-list of lane commands or step names and no judgement about whether a command is wise — the fast lane's dedicated executor for command steps (BO-2400a-1-i). Declines only requests outside its role: no workspace named, a request to edit files by hand, write code or tests, act as another agent's role, or run a command aimed somewhere other than the named workspace. Adopted by fast-lane-ship.js for the claim command step; further dispatch classes are listed as residual in KI-BO-20260927-status-checker-runs-workflow-shell-commands.",
             "category": "supervisor",
             "skills_invoked": [],
@@ -3624,7 +3554,6 @@
             "selection_criteria": null,
             "template_path": "templates/agents/shell-runner.md",
             "model": "haiku",
-            "skills_used": [],
             "description": "Runs exactly one given command line, once, unchanged, and relays its exit status, stdout and stderr verbatim. The one narrow shell executor every workflow shell step (and the workspace step of every workflow) is dispatched to (ADR-070): no allow-list, no decisions, no compound or substituted command. Declines anything that is not run this one command. Holds Bash only.",
             "category": "supervisor",
             "skills_invoked": [],
@@ -3674,7 +3603,6 @@
             },
             "template_path": "templates/agents/restructuring-specialist.md",
             "model": "sonnet",
-            "skills_used": [],
             "priority": 8.5,
             "description": "Restructures named code to meet a complexity or file-size demand without changing behaviour. Brought in by a depth-0 driver after a refusal, as a different party from the coder that wrote the change. Applies complexity-reduction only when the demand is about complexity, and returns a machine-readable skills_applied report.",
             "skills_invoked": [
@@ -3709,6 +3637,47 @@
             "produces": "production_code",
             "components": [
                 "infrastructure"
+            ]
+        },
+        {
+            "id": "test-breaker",
+            "name": "Test Breaker",
+            "tier": "utility",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "fast-lane-ship.js",
+                "build-feature.js",
+                "build-ticket.js",
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-breaker.md",
+            "model": "sonnet",
+            "description": "Wrong-version preparer (TQ-500g-1-iv). Reads the finished code and, for each named wrong version a guarding test must catch, replies with the minimal exact-match replacement that does what the name says and nothing else; a name it cannot act on is reported as could_not_prepare with a one-line reason, never dropped. Read-only: it writes no file, never runs tests and never says whether a test would catch anything. A deterministic writer step turns its reply into altered copies and the alterations manifest.",
+            "permits_shell": false,
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "dispatch inputs from the build route (work_key, repo_root, requirement_ids, wrong_versions)"
+                },
+                {
+                    "channel": 6,
+                    "source": "source files read during execution"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
             ]
         }
     ]

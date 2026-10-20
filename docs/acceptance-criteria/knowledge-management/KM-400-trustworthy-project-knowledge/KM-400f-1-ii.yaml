@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f-1
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
@@ -64,8 +64,11 @@ origin_agent: business-analyst
 created: '2026-10-12'
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_km_400f_1_ii.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-1-ii.md
+- knowledge/adapters/neo4j_projection.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

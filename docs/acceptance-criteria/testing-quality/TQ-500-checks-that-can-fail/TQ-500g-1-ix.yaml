@@ -1,0 +1,796 @@
+id: TQ-500g-1-ix
+components:
+  - testing_quality
+  - build_orchestration
+title: "The preparer's reply becomes the alterations manifest only through a writer that applies each replacement where it matches exactly once, computes every diff itself, and records every owed name once"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the guarding test entries of requirement TQ-9101 owe nine named
+    wrong versions, plus "revert the fix", and the code as written in
+    refresh_config.py contains "if refresh_due and retry_due" once and
+    "retry_due" three times,
+    and the owed list for TQ-9101 (the second scenario below) puts
+    refresh_config.py in scope for every owed name, and settings.py, an
+    ordinary source file of the repository, in scope for "retry on a
+    timeout" only,
+    and the preparer, which changes no file itself, replies for each name
+    with exact-match replacements (per file: old text, new text) or with
+    "could not be prepared" and a one-line reason —
+      R1 "drop the retry_due condition": in refresh_config.py, replace
+         "if refresh_due and retry_due" with "if refresh_due"; the reply also
+         carries a diff of its own and says that
+         test_refresh_gate_requires_retry would catch it,
+      R2 "ignore retry_due": in refresh_config.py, replace "retry_due" with
+         "True",
+      R3 "retry only once": in refresh_config.py, replace "max_retries = 3"
+         with "max_retries = 1", text the file does not contain,
+      R4 "skip the refresh when the cache is warm": one replacement in
+         refresh_config.py whose old text occurs once, and one in
+         tests/test_refresh_config.py,
+      R5 "refresh on every call": a replacement in
+         ../shared/refresh_config.py, outside the repository,
+      R6 "refresh without a due check": a replacement in
+         .git/hooks/pre-commit, inside the repository's version-control
+         folder,
+      R7 "retry on a timeout": could not be prepared, with the reason
+         "refresh_config.py has no timeout handling",
+      R8 "refresh twice": no answer at all,
+      R9 "refresh from the settings file": one replacement in
+         refresh_config.py whose old text occurs once, and one in
+         settings.py, which the list puts in scope for another name but not
+         for this one,
+    and the reply also answers "revert the fix", and "invert refresh_due", a
+    name the work did not owe,
+  When the reply is turned into the alterations manifest for the runs,
+  Then R1 is recorded as prepared under "drop the retry_due condition", with
+      one altered copy of refresh_config.py that is byte-for-byte the code as
+      written except that "if refresh_due and retry_due" reads
+      "if refresh_due",
+    And the diff shown next to R1's name is computed by comparing the code as
+      written with that altered copy; the diff the reply carries is not used,
+    And R2 and R3 are each recorded as "could not be prepared", with a reason
+      naming refresh_config.py and saying the old text was found 3 times (R2)
+      or was not found (R3); no replacement is guessed and no altered copy is
+      made for either,
+    And R4, R5 and R6 are each refused: recorded as "could not be prepared"
+      with a reason naming the refused path and saying that it is a test
+      file, outside the repository, or inside the version-control folder,
+      and no altered copy is made for any of them, not even of
+      refresh_config.py for R4, whose old text there occurs once,
+    And R9 is refused the same way: recorded as "could not be prepared" with
+      a reason naming settings.py and saying that it was not in scope for
+      "refresh from the settings file", and no altered copy is made for that
+      name at all, not even of refresh_config.py, whose old text there
+      occurs once; a file is in scope for a name only when the owed list
+      puts it in scope for that name, and being an ordinary source file
+      inside the repository, or being in scope for another name, does not
+      make it so,
+    And R7 is recorded as "could not be prepared" with the reason
+      "refresh_config.py has no timeout handling", word for word,
+    And R8 is recorded as "could not be prepared: no alteration returned",
+    And each of the nine owed names appears in the manifest exactly once,
+      spelled exactly as the test entries spell it, and the manifest holds no
+      entry for "revert the fix" or "the fix undone", and none for
+      "invert refresh_due",
+    And no entry says which test would catch a wrong version: the reply's
+      claim about test_refresh_gate_requires_retry appears nowhere in the
+      manifest,
+    And every name recorded as "could not be prepared" leaves the work
+      unfinished when the runs read the manifest; no owed name is dropped
+      without a word,
+    And afterwards no file in the working tree has been changed, added or
+      removed; the altered copy and the alterations manifest are written
+      only to the work's own folder outside the working tree,
+    And when the reply instead cannot be read at all (it is empty, or it is
+      cut off part-way), the step stops with an error saying that the
+      preparer's reply could not be read, no manifest is written, and no
+      manifest left by an earlier preparation of the same work remains to be
+      read in its place, so the work never looks as if it owed no wrong
+      version.
+
+  Given the same test entries guarding TQ-9101, which owe the nine named
+    wrong versions above plus "revert the fix" and "the fix undone", and put
+    refresh_config.py and the test file tests/test_refresh_config.py in
+    scope for every name, and settings.py also for "retry on a timeout",
+    and the test entries guarding requirement TQ-9102, which declare no
+    wrong version at all,
+  When the writer is asked to list what is owed for TQ-9101 and TQ-9102,
+  Then each of the nine owed names of TQ-9101 appears in the list exactly
+      once, spelled exactly as the test entries spell it: "retry on a
+      timeout" with refresh_config.py and settings.py as its in-scope files,
+      and each of the other eight with refresh_config.py as its only
+      in-scope file,
+    And neither "revert the fix" nor "the fix undone" is listed,
+    And tests/test_refresh_config.py is listed as in scope for no name,
+      although the test entries put it in scope; no test's own file is ever
+      listed as in scope,
+    And nothing is listed for TQ-9102: no name and no file, and that is not
+      an error,
+    And the names listed are exactly the names the writer then records in
+      the manifest for the same requirement ids and the names the runner
+      holds the tests to, because all three read the test entries the same
+      way; the list, the writer and the runner never disagree about what is
+      owed,
+    And the route sends this list to the preparer unchanged, as the names
+      to prepare and, for each, the files it may alter,
+    And listing changes no file in the working tree.
+declares_side_effect: true
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iv.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The preparer (agent test-breaker) whose reply this step reads, and the alterations manifest contract in its delivers_to ({work_key, entries:[{name, status, reason, files:[{path, altered_copy}], diff}]}), which this step now writes in the agent's place."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The shared runner that reads the manifest; its alias rule for 'revert the fix' / 'the fix undone', its rule that no wrong version alters a test file, and where per-work gate files live (outside the working tree)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The runner, not this step, judges an alteration that changes nothing or no longer loads; this step does not repeat that judgement."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: relates-to
+    status: exists
+    relevance: "requires_verification: an agent holding Write gets the post-edit git-diff verification block, which needs a shell. That is why the preparer was made read-only and this step was introduced."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 3 (the test-breaker phase applying each named wrong version) and incident 1, the refresh gate used in the criteria."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "Reference page produced by TQ-500g-5; the writer's refusal and could-not-be-prepared rules belong there."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Normative AC schema reference; the new optional test_spec item field in_scope_files (per-name scope for the list and write steps) is documented here."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component the writer CLI joins. Decision logic stays in Python CLIs, and the workflow JS only dispatches and parses fail-closed (TQ-500g-1 it_requirements)."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-1-i
+  contract: 'Alterations manifest (JSON), written to <git-dir>/leafcutter/work/<work-key>/alterations.json:
+    {work_key: str, entries: [{name: str (the must_catch string verbatim), status: ''prepared''|''could_not_prepare'',
+    reason: str|null (one line; required when could_not_prepare), files: [{path: str (repo-relative POSIX),
+    altered_copy: str (absolute path of the full altered file, outside the working tree)}], diff: str
+    (unified diff against the code as written, shown next to the name)}]}. There is one entry per named
+    wrong version other than the fix-undone aliases. Nothing is ever omitted silently, and there are no
+    outcome claims.'
+- agent: python-coder
+  ac_id: TQ-500g-1-v
+  contract: 'Owed list (list step, user decision 2026-10-14): python scripts/build_orchestration/wrong_version_writer.py
+    list --ac-ids <ids> --ac-root <path> --test-root <path> (the same values as the runner). It prints exactly
+    one JSON object on stdout: {owed: [{name: str (the must_catch string verbatim, never an alias), files:
+    [str (repo-relative POSIX source paths in scope for that name; never a test file; order of first declaration)]}],
+    error: str|null}. Each owed name appears once, in the order the runner''s declared-scope reader yields
+    it. A requirement id with no declared wrong version contributes nothing, and that is not an error.
+    Exit 0 when the list was printed (also when owed is []); exit 1 when the AC store or test root cannot
+    be read, or on an internal error, with owed [] and error set. Listing writes nothing anywhere. The route
+    passes owed to agent test-breaker unchanged as its wrong_versions input ({name, files} per entry, TQ-500g-1-iv),
+    and runs the list immediately before the dispatch, never from a cached copy.'
+- agent: python-coder
+  ac_id: TQ-500g-1-v
+  contract: 'Writer CLI (write step): python scripts/build_orchestration/wrong_version_writer.py write --work-key
+    <key> --reply <path, or - for stdin> --ac-ids <ids> --ac-root <path> --test-root <path> (the last three
+    take the same values as the runner and as the list step). It prints exactly one JSON object: {written:
+    bool, manifest_path: str|null (absolute <git-dir>/leafcutter/work/<work-key>/alterations.json; pass it
+    to the runner''s --alterations), error: str|null, entries: [{name: str, status: ''prepared''|''could_not_prepare'',
+    reason: str|null}], ignored_reply_names: [str], preparer_anomalies: [str]}. It exits 0 when the manifest
+    was written, whatever the entries say. It exits 1 when the step stopped (unreadable reply, the failed
+    shape, a reply for another work key, or an internal error), with written false, manifest_path null and
+    no manifest on disk. The route passes no scope to the write step; the writer derives each name''s in-scope
+    files itself.'
+- agent: python-coder
+  ac_id: TQ-500g-1-vi
+  contract: Same list step and same writer CLI, with the same JSON, as for TQ-500g-1-v. The route sends
+    the list's owed array to test-breaker unchanged.
+- agent: llm-expert
+  ac_id: TQ-500g-1-vii
+  contract: Same list step and same writer CLI, with the same JSON, as for TQ-500g-1-v. The route sends
+    the list's owed array to test-breaker unchanged.
+expects_from:
+- ac_id: TQ-500g-1-iv
+  contract: 'Reply of agent test-breaker. Exactly one JSON value, either {work_key: str, entries: [{name:
+    str (must_catch string verbatim), status: ''prepared''|''could_not_prepare'', reason: str|null, replacements:
+    [{path: str (repo-relative POSIX), old: str, new: str}]}], anomalies: [str]} or {status: ''failed'',
+    blocker_summary: str, anomalies: [str]}. The full rules are in TQ-500g-1-iv delivers_to.'
+- ac_id: TQ-500g-1-i
+  contract: The runner's shared helpers in scripts/build_orchestration/_wvr_scope.py (_safe_rel, is_test_path,
+    the alias constant) and its declared-scope reader for the owed names. All are reused, never forked.
+    The reader is extended in place to also yield each owed name's in-scope files (it_requirements, "Per-name
+    scope"), so the runner, the list step and the write step share one reading of the test entries.
+it_requirements:
+- 'Placement (decision 2a). A new public sibling CLI, scripts/build_orchestration/wrong_version_writer.py
+  (no leading underscore, its own CLI entry), not a prepare subcommand on wrong_version_runner.py. The
+  runner''s flag-based CLI and its one JSON verdict are already used by the routes and the TQ-200d-1-i
+  eval, and subcommands would change how that entry parses its arguments. Preparing and judging also stay
+  separate steps, as the BA split them. The writer CLI has two steps, list and write (a new CLI, so steps
+  here change no existing entry). The entry module holds only argument parsing, git-dir resolution
+  and the JSON output. The logic lives in private siblings (for example _wvw_list.py and _wvw_prepare.py). Every new or
+  changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Today wrong_version_runner.py is at 258 and _wvr_scope.py at 211.'
+- 'Reuse, never fork. Use _wvr_scope''s _safe_rel (path acceptance), is_test_path (the runner''s test-file
+  rule, TQ-500g-1-i) and its alias constant (''revert the fix'' / ''the fix undone'', trimmed and case-folded).
+  Use the declared-scope reader the runner uses to find the owed names, and the runner''s per-work-folder
+  helper if it has one. If a helper lacks something the writer needs, for example telling "outside the
+  repository" apart from "inside the version-control folder", extend it in _wvr_scope in place, without
+  changing the runner''s behaviour, and never copy it. If a lint rule refuses importing an underscore name
+  across modules, add a public alias in _wvr_scope rather than a copy.'
+- 'Per-name scope (user decision 2026-10-14). The test_spec item schema in config/ac_store_schema.json has
+  NO field today that puts a file in scope for a wrong version: its item properties are name, target_dir,
+  framework, type, angle, must_catch, surface_invoked, description, covers and requires_db, with additionalProperties
+  false, and the AC-level declared_files is per AC, not per name. This AC therefore adds one optional test_spec
+  item field, in_scope_files: a non-empty list of repo-relative POSIX paths (each with at least one non-whitespace
+  character), meaning "the files a wrong version named in this entry''s must_catch may alter". Add it to
+  the test_spec item in config/ac_store_schema.json and describe it in docs/reference/ac-schema.md; the
+  gate that refuses unknown test_spec keys today (validate_ac_schema.py, run by the check-ac-schema hook)
+  must accept it and still refuse every other unknown key. generate_ticket_from_ac.py does not copy it onto
+  the ticket descriptor; if it ever does, config/test_requirements.schema.json gains the same property
+  in the same change. A name''s in-scope files are the union of in_scope_files over every in-scope test
+  entry of the given ids whose must_catch carries that exact name, in order of first declaration, duplicates
+  dropped, minus every path is_test_path counts as a test file (a test''s own file is never listed, even
+  when an entry names it). An owed name with no in_scope_files on any of its entries has files [], so every
+  replacement for it is refused as out of scope (fail closed; scope is never inferred from changed files,
+  declared_files or the reply).'
+- 'List step (user decision 2026-10-14). CLI: wrong_version_writer.py list --ac-ids <ids> --ac-root <path>
+  --test-root <path>, the same values the runner takes. stdout: exactly one JSON object {owed: [{name, files:
+  [...]}], error: str|null}, fixed key order, the shape in the delivers_to entry for TQ-500g-1-v. Names
+  come from the runner''s declared-scope reader (covers-tagged entries carrying must_catch), minus the aliases,
+  each exactly once, verbatim, in the reader''s order; files come from the per-name scope rule above. A
+  requirement id with no declared wrong version contributes nothing and is not an error. Exit 0 when the
+  list was printed, including owed []; exit 1 when the AC store or test root cannot be read, or on an internal
+  error, still printing the shape with owed [] and error set. Progress logging goes to stderr only. Listing
+  reads the AC store only and writes nothing: no work folder, no file in the working tree. It finishes
+  within 2 seconds for up to 50 requirement ids.'
+- 'One reading for list, write and runner. The list step and the write step call the same function for the
+  owed names and their in-scope files, and that function is built on the runner''s declared-scope reader
+  in _wvr_scope (or wherever the runner''s reader lives), extended in place. For the same ids, AC store and
+  test root, the list''s names, the manifest''s names and the names the runner holds the tests to are identical
+  sets. The write step never takes scope from the route, from the list''s output, or from the reply.'
+- 'Inputs and output of the write step (decision 2b). wrong_version_writer.py write with the flags --work-key; --reply <path of the file holding the agent''s raw
+  reply text, or - for stdin>; --ac-ids, --ac-root and --test-root, which take the same values as the runner
+  (--test-root is the working-tree root). The owed names and their in-scope files are DERIVED, never passed in. The writer reads
+  them from the AC test entries through the same declared-scope reader the runner uses (covers-tagged tests
+  whose test_spec entry carries must_catch), minus the aliases. Why: the owed set must be exactly the set
+  the runner later holds the tests to. One reader means the writer and the runner cannot disagree, a route
+  bug cannot shrink the set, and the reply never defines it. Output: one JSON object on stdout, the shape
+  in the delivers_to entries for the routes. The manifest path it prints is what the runner''s --alterations
+  takes. Exit 0 when the manifest was written, whatever its entries say; exit 1 when the step stopped. An
+  internal error still prints the shape, with written false. Progress logging goes to stderr only. With
+  nothing owed, it writes a manifest with entries [] and exits 0; a missing or unreadable reply is then
+  no error.'
+- 'Name matching (decision 2c; the BA''s open points 1 and 2). A reply name matches an owed name only when
+  the two strings are identical. A reply name that differs in case, spacing or anything else is unowed.
+  Unowed names and alias names in the reply get no manifest entry and are listed under ignored_reply_names
+  on stdout. An owed name the reply does not answer becomes could_not_prepare with the reason "no alteration
+  returned". An owed name answered by more than one reply entry becomes could_not_prepare with the reason
+  "more than one alteration returned", even when the answers agree; one is never picked. The manifest holds
+  each owed name exactly once, spelled as the test entries spell it, in the order the declared-scope reader
+  yields them.'
+- 'Replacements (decision 2d; the BA''s open point 3). Each name starts from the code as written, never from
+  another name''s result. Within one name, replacements on the same file apply in reply order, each against
+  the result of the one before. Each old must be non-empty and occur exactly once in that current text,
+  counting overlapping occurrences, so the sequence settles overlaps and no separate rule is needed. All
+  or nothing per name: if any replacement of the name is refused, on any file, the name is could_not_prepare
+  and no altered copy is written for any of its files. The one-line reason names the first refused replacement
+  in reply order. Wording: "old text found 3 times in refresh_config.py", "old text not found in refresh_config.py",
+  "tests/test_refresh_config.py is a test file", "../shared/refresh_config.py is outside the repository",
+  ".git/hooks/pre-commit is inside the version-control folder", "settings.py is not in scope for \"refresh
+  from the settings file\"" (the name quoted verbatim), "<path> not found", "<path> is not UTF-8 text".
+  Path checks run in this order: path acceptance (outside the repository, inside the version-control folder),
+  then test file, then in scope for this name, so a test file is always reported as a test file. A file
+  in scope for another name, or an ordinary in-repository source file, is still out of scope for this
+  name. Paths are checked before any file is read. A replacement whose new equals its old is still recorded
+  prepared; the runner reports it as not_applied (TQ-500g-1-ii).'
+- 'Line endings and bytes (decision 2e; the BA''s open point 4). Read each file as bytes and decode it as
+  strict UTF-8. A leading BOM stays part of the text and is written back. A file counts as CRLF when it
+  contains at least one CRLF, every LF in it is part of a CRLF, and it has no lone CR. For a CRLF file:
+  convert the file text, old and new each from CRLF to LF, match and replace on the LF text, then turn
+  every LF of the result back into CRLF. Because the file was uniformly CRLF, every byte outside the replaced
+  text comes back unchanged, and an LF old (as the Read tool shows it) matches a CRLF checkout. Every other
+  file (LF only, mixed, or without newlines) is matched raw, old against the text as it is, with nothing
+  normalised. In a mixed file, an old that does not match raw is "old text not found", never a guess.
+  Copies are written as bytes, never through text-mode newline translation.'
+- 'Diff. The writer computes the diff from the code as written and the altered copy; it never takes one
+  from the reply. Unified format: --- a/<path> and +++ b/<path> headers, 3 lines of context, and the name''s
+  files in reply order joined into one string. A CRLF file is diffed in its LF form, so the diff reads
+  the same on every checkout. A could_not_prepare entry has files [] and diff "".'
+- 'Stale and unreadable (decision 2f). The writer''s first filesystem action removes any alterations.json
+  and copies folder that an earlier preparation of the same work left in the work folder. That happens
+  before the reply is read. The reply is unreadable when it is empty, is not one JSON object (for example
+  cut off part-way), matches neither the success shape (work_key plus an entries list) nor the failed shape,
+  or carries a work_key other than --work-key. Unreadable stops the step with the error "the preparer''s
+  reply could not be read: <detail>". The failed shape stops it with "the preparer reported failure: <blocker_summary>".
+  Both exit 1 and write no manifest, so no earlier manifest remains to be read in its place. The manifest
+  is written last, after every copy: first to a temporary file in the work folder, then renamed over alterations.json
+  in one step. A crash never leaves a partial manifest. A malformed entry inside a readable reply does
+  not stop the step; that name becomes could_not_prepare "malformed reply entry: <field>". Malformed means
+  a status outside the two values, a prepared entry with no replacement, or a replacement that lacks path,
+  old or new or holds a non-string.'
+- 'Claims and anomalies (decision 2g). anomalies is accepted (absent, or a list of strings). It is never
+  copied into the manifest and appears only as preparer_anomalies on stdout, for the route''s log. Every
+  other reply key is ignored and never copied: a diff, a caught or would_catch claim, a test name. Manifest
+  entries are built only from the writer''s own values: the owed name, status, reason, files and the computed
+  diff. A could_not_prepare reason is copied word for word. A missing or empty reason becomes "no reason
+  given", and newlines in it become spaces so it stays one line.'
+- 'Gate-file location (decision 2h). The work folder is <git-dir>/leafcutter/work/<work-key>/. git-dir comes
+  from git rev-parse --absolute-git-dir run in --test-root, or from the runner''s work-folder helper if
+  it has one; there is never a second path rule. The folder holds alterations.json and a copies/ folder
+  with one subfolder per prepared name, mirroring the repo-relative paths. The work key must be one plain
+  path segment (no separator, no ..), or the step stops. No git stash, no commit, and no write anywhere
+  in the working tree: git status --porcelain and git stash list are identical before and after.'
+- Deterministic and idempotent. The same reply, owed names and code as written give a byte-identical manifest
+  and identical copies on a re-run. JSON key order is fixed, entries follow the owed order, and nothing
+  time-dependent is written.
+- 'Scope of reading. Read only the files named in the replacements, plus the AC store through the scope
+  reader; never scan the repository. One preparation of up to 50 owed names finishes within 5 seconds
+  on a typical work.'
+- 'Out-of-scope refusal (the BA''s open point 5, reversed by the user on 2026-10-14; reply case R9). A replacement
+  in any file that is not in the name''s in-scope files is refused, exactly like a test file: the name is
+  could_not_prepare with the reason above, and no altered copy is written for any of its files (all or
+  nothing per name). The in-scope files are those the per-name scope rule derives; there is no second scope
+  input and no exemption by path or by name.'
+- 'Route wiring is not tested here. The clause "the route sends this list to the preparer unchanged" is
+  proven by the route ACs TQ-500g-1-v, -vi and -vii (their contracts in delivers_to). This AC proves only
+  what the list step prints.'
+test_spec:
+- name: test_r1_prepared_copy_is_code_as_written_but_the_one_replacement
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: R1 is recorded prepared under its owed name with one altered copy of refresh_config.py under
+    <git-dir>/leafcutter/work/<work-key>/. The copy equals the as-written bytes except that "if refresh_due
+    and retry_due" reads "if refresh_due".
+  must_catch:
+  - altered copy re-serialised, with whitespace, quotes or the final newline changed
+  - replacement applied to the working-tree file instead of a copy
+- name: test_r1_diff_is_computed_and_reply_diff_ignored
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: R1's manifest diff equals a unified diff of the as-written file against the altered copy.
+    A deliberately wrong diff carried in the reply appears nowhere in the manifest.
+  must_catch:
+  - the reply's own diff copied into the manifest
+- name: test_r2_r3_ambiguous_or_missing_old_text_is_could_not_prepare
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: R2 ("retry_due", found 3 times) and R3 ("max_retries = 3", absent) are could_not_prepare,
+    with reasons naming refresh_config.py and saying found 3 times or not found. No copy exists for either.
+  must_catch:
+  - the first of several matches replaced
+  - missing old text skipped and the entry recorded prepared
+- name: test_r4_r5_r6_refused_paths_leave_no_copy_at_all
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: R4 (a replacement in tests/test_refresh_config.py), R5 (../shared/refresh_config.py) and
+    R6 (.git/hooks/pre-commit) are could_not_prepare. Their reasons name the path and say test file, outside
+    the repository, or inside the version-control folder. No copy is made for any of them, not even of refresh_config.py
+    for R4.
+  must_catch:
+  - partial copy of refresh_config.py kept for R4
+  - a path escaping the repository resolved and copied
+  - a .git path accepted as a source file
+- name: test_r9_out_of_scope_file_refused_and_no_copy_for_the_name
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: R9 ("refresh from the settings file") replaces once-occurring text in refresh_config.py and
+    text in settings.py, which the test entries put in scope only for "retry on a timeout". R9 is could_not_prepare
+    with a reason naming settings.py and saying it is not in scope for "refresh from the settings file",
+    and no copy exists for R9 at all, not even of refresh_config.py. "retry on a timeout" may still alter
+    settings.py.
+  must_catch:
+  - any ordinary non-test file inside the repository accepted for every name
+  - a file in scope for another name accepted for this name
+  - in-scope files taken from the reply or the route instead of the test entries
+  - partial copy of refresh_config.py kept for R9
+- name: test_r7_reason_verbatim_and_r8_no_alteration_returned
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: R7 carries "refresh_config.py has no timeout handling" word for word. R8, which the reply
+    does not answer, is could_not_prepare with the reason "no alteration returned".
+  must_catch:
+  - an unanswered owed name dropped from the manifest
+- name: test_owed_names_exactly_once_and_unowed_or_alias_names_absent
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Each of the nine owed names appears exactly once, spelled as the test entries spell it.
+    There is no entry for "revert the fix", "the fix undone" or "invert refresh_due". A reply name that
+    differs only in case counts as unowed. A name answered twice is could_not_prepare with "more than one
+    alteration returned".
+  must_catch:
+  - an unowed name from the reply written to the manifest
+  - 'name answered twice: one answer picked'
+  - the owed set taken from the reply instead of the test entries
+- name: test_outcome_claims_and_anomalies_never_reach_the_manifest
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: The reply's claim that test_refresh_gate_requires_retry would catch R1, its extra keys and
+    its anomalies appear nowhere in the manifest. Entries carry only name, status, reason, files and diff.
+  must_catch:
+  - a reply claim field copied into a manifest entry
+- name: test_unreadable_or_failed_reply_stops_with_named_error
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: An empty reply, a reply cut off part-way, and the failed shape each stop the step. The error
+    says the preparer's reply could not be read (or that the preparer reported failure), the exit is 1, and
+    no manifest exists.
+  must_catch:
+  - an empty reply read as owing no wrong version
+- name: test_stale_manifest_never_survives_a_new_preparation
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: With alterations.json and copies left by an earlier preparation of the same work, an unreadable
+    reply leaves neither behind. A readable reply replaces them with exactly the new ones.
+  must_catch:
+  - the stale manifest from an earlier preparation left in place
+- name: test_working_tree_unchanged_and_no_stash
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: After a full preparation, git status --porcelain and git stash list in the temp repo are identical
+    to before. Every file the writer wrote lies under <git-dir>/leafcutter/work/<work-key>/.
+  must_catch:
+  - copies written inside the working tree
+  - git stash used to hold the alterations
+- name: test_crlf_checkout_lf_old_matches_and_copy_keeps_crlf
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: On a refresh_config.py checked out with CRLF line endings, an LF old text spanning two lines
+    matches. The altered copy keeps CRLF throughout and is byte-identical to the as-written file outside
+    the replaced text.
+  must_catch:
+  - CRLF file rewritten with LF line endings
+  - LF old text refused as not found on a CRLF checkout
+- name: test_sequential_replacements_in_one_file_all_or_nothing
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Two replacements on one file apply in order, the second matched against the result of the
+    first. When the second's old text no longer occurs exactly once, the name is could_not_prepare and no
+    copy is made.
+  must_catch:
+  - second replacement matched against the code as written instead of the first result
+- name: test_writer_cli_end_to_end_feeds_the_runner
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/wrong_version_writer.py write
+  description: Runs the writer CLI's write step as a subprocess on a temp git repo, a temp AC store carrying
+    the must_catch entries, and a reply file. Asserts the stdout JSON shape and exit 0, and that the runner
+    CLI accepts the printed manifest path through --alterations.
+- name: test_list_each_owed_name_once_verbatim_with_its_in_scope_files
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Listing TQ-9101 and TQ-9102 prints each of the nine owed names of TQ-9101 exactly once, spelled
+    as the test entries spell it, "retry on a timeout" with [refresh_config.py, settings.py] and each other
+    name with [refresh_config.py] only.
+  must_catch:
+  - a name declared on two test entries listed twice
+  - in-scope files merged across names, so settings.py listed for every name
+- name: test_list_omits_aliases_and_test_files
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Neither "revert the fix" nor "the fix undone" is listed, and tests/test_refresh_config.py,
+    which every test entry puts in scope, is listed for no name.
+  must_catch:
+  - an alias listed as an owed name
+  - a test's own file listed as in scope
+  - a name spelled differently from the test entries (trimmed or case-folded)
+- name: test_list_requirement_without_wrong_versions_lists_nothing_and_exits_0
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: 'Listing TQ-9102 alone prints {owed: [], error: null} and exits 0; listing it beside TQ-9101
+    adds no name and no file.'
+  must_catch:
+  - a requirement with no declared wrong version treated as an error
+- name: test_list_writer_and_runner_owed_sets_agree
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: For the same ids, AC store and test root, the names the list prints, the names the write
+    step records in the manifest and the names the runner's declared-scope reader holds the tests to are
+    the same set; and the write step refuses exactly the files the list does not put in scope for a name.
+  must_catch:
+  - the list step reading the AC store with its own parser that drops an entry the runner keeps
+  - the write step deriving scope from the reply instead of the shared reader
+- name: test_list_changes_no_file_and_creates_no_work_folder
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: After listing, git status --porcelain and git stash list in the temp repo are identical to
+    before, and no <git-dir>/leafcutter/work/ folder was created.
+- name: test_list_cli_end_to_end_prints_owed_json
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/wrong_version_writer.py list
+  description: 'Runs the list step as a subprocess on a temp git repo and a temp AC store. Asserts exit 0
+    and exactly one JSON object {owed, error} on stdout; an unreadable AC store root exits 1 with owed []
+    and error set.'
+- name: test_test_spec_in_scope_files_field_accepted_and_unknown_keys_still_refused
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: An AC whose test_spec entry carries in_scope_files as a non-empty list of strings passes validate_ac_schema.py;
+    an empty list, a blank item or a non-string item is refused, and another unknown test_spec key is still
+    refused.
+  must_catch:
+  - additionalProperties dropped from the test_spec item to admit the new field
+test_required: true
+test_rationale: Every clause is deterministic, so every entry runs the real writer against a hand-written
+  reply fixture. The fixture is a temp git repo holding refresh_config.py ("if refresh_due and retry_due"
+  once, "retry_due" three times), settings.py and tests/test_refresh_config.py, plus a temp AC store whose
+  entries for TQ-9101 owe the nine names, "revert the fix" and "the fix undone", with in_scope_files putting
+  refresh_config.py and the test file in scope for every name and settings.py for "retry on a timeout" only,
+  and whose entries for TQ-9102 carry no must_catch. Assertions cover the manifest entries, the altered
+  copy byte for byte, the list's JSON, and git status. No LLM is involved. The discrimination, failure and
+  seam entries carry the non-obvious rules (computed diff, exact owed names, claim stripping, out-of-scope
+  refusal, one shared reading for list, write and runner). The two reachability entries go through the
+  CLI steps the routes call; the write one hands the printed path to the runner. The criteria clause "the
+  route sends this list to the preparer unchanged" is route wiring; its test belongs to TQ-500g-1-v, -vi
+  and -vii, and no entry here tests it. Red baseline caveat. The writer is a new module, and an entry
+  with must_catch has an ImportError/AttributeError-only red refused by the red-baseline reader. Follow
+  the convention TQ-500g-1-i's build used for its new module, so these entries go red on behaviour.
+origin_agent: business-analyst
+created: 2026-10-11
+amended_by:
+  - reason: "Criteria gain the owed list (second scenario) and the out-of-scope refusal (R9), user decision at the review gate"
+    by: business-analyst
+    at: 2026-10-14
+    note: >-
+      User decision at the review gate on 2026-10-14. (1) The writer CLI gains
+      a list step that reports the owed names and the in-scope files for each,
+      from the same reading of the test entries the runner uses; the route
+      sends that list to the preparer. (2) The writer refuses a replacement in
+      any file the list did not put in scope for that name, the same way it
+      refuses a test file. The owed count in the first scenario goes from
+      eight to nine (R9 added); every earlier clause is kept.
+  - reason: "Technical fields aligned with the amended criteria (list step, R9 out-of-scope refusal); readiness approved by the user at the review gate"
+    by: it-po
+    at: 2026-10-14
+    note: >-
+      it_requirements gain the list step, the per-name scope rule (new
+      optional test_spec item field in_scope_files), one shared reading for
+      list, write and runner, and the out-of-scope refusal; the entry that
+      accepted out-of-list files is reversed. The writer CLI becomes two
+      steps, list and write. test_spec goes from eight to nine owed names and
+      gains R9, list-step and schema-field entries. delivers_to gains the
+      list-output contract for TQ-500g-1-v, -vi and -vii. criteria unchanged.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS AC EXISTS. Decision Kernel run run-92227a2a275f44ff (2026-10-11),
+  on a basis the user approved, settled a conflict in TQ-500g-1-iv. The new
+  test-breaker agent (the preparer) was meant to have the tools Read and
+  Write and no shell. But the agent registry validator refuses any agent
+  holding Write unless it carries the post-edit git-diff verification step,
+  and that step needs a shell. The chosen option: test-breaker becomes
+  READ-ONLY (tools: Read). For each named wrong version it RETURNS exact-match
+  replacement pairs per file (old text, new text), or "could not be
+  prepared" with a one-line reason. A deterministic writer step, which is
+  code and not an agent, turns that reply into the alterations manifest the
+  shared runner (TQ-500g-1-i) consumes. It validates the reply, applies the
+  replacements to copies of the code as written, keeps the copies outside the
+  working tree, computes the real unified diff, and writes the manifest.
+
+  THIS REPLACES THE AGENT WRITING THE MANIFEST ITSELF. Until this decision,
+  TQ-500g-1-iv's delivers_to and constraints had the agent write the altered
+  copies under copies_dir and then the manifest. The IT-PO amends
+  TQ-500g-1-iv to the read-only reply. Its criteria stay about what each
+  alteration must be; this AC is the writer. The manifest contract itself is
+  unchanged; only its author changes.
+
+  DETERMINISTIC, TESTED STEP. Unlike TQ-500g-1-iv (prompt-only), every
+  clause here can be proven without an LLM: a hand-written reply fixture, a
+  temp git repo holding refresh_config.py and tests/test_refresh_config.py,
+  then assertions on the manifest's entries, on the altered copy byte for
+  byte, and on the working tree being unchanged. The technical fields
+  (assigned_agent, it_requirements, test_spec, delivers_to, expects_from,
+  estimated_complexity, change_target, risk_surface) are left to the IT-PO.
+
+  declares_side_effect: true is the value the schema check derives from the
+  Then clause (the manifest is written to disk); it is not a separate choice.
+
+  WHAT THIS STEP DOES NOT JUDGE. Whether an alteration changes anything or
+  still loads is the runner's call (TQ-500g-1-ii). An alteration whose new
+  text equals its old text is written as prepared, and the runner reports it
+  as not applied. What "a test file" means is the runner's existing rule (no
+  wrong version ever alters a test file, TQ-500g-1-i), not a second rule.
+  The refusal concerns where a replacement is AIMED. The writer's own copies
+  and manifest live under the worktree's git directory by design
+  (TQ-500g-1-i), which is not a contradiction.
+
+  CLAUSES THE BA ADDED BEYOND THE BRIEF, with reasons.
+    - All or nothing per name (R4). A name with one refused replacement gets
+      no altered copy at all. A partial copy would run a different wrong
+      version from the one named.
+    - Names the work did not owe are not written ("invert refresh_due").
+      Wrong versions the agent proposes itself are Phase C, still deferred
+      in TQ-500g's notes. The owed set comes from the test entries, never
+      from the reply.
+    - A stale manifest is not left to be read. If an earlier preparation of
+      the same work left a manifest and this reply is unreadable, the runner
+      would otherwise judge old alterations, possibly of older code.
+
+  OPEN POINTS FOR THE IT-PO (the BA did not decide these):
+    1. Name matching. The criteria pin that owed names appear verbatim. BA
+       assumption: a reply name is matched to an owed name exactly. A reply
+       that changes case or spacing counts as an unowed name, and the owed
+       name gets "no alteration returned". Confirm, or allow the alias
+       rule's trim-and-case-fold.
+    2. A name answered twice. "Exactly once" forbids two entries. BA
+       recommendation, in line with "never guessed": "could not be prepared:
+       more than one alteration returned", never picking one.
+    3. Several replacements in one file. Each old text must occur exactly
+       once in the code as written. Decide whether overlapping replacements
+       are refused and whether they are applied against the original or in
+       sequence.
+    4. Line endings. On a Windows checkout the code as written may have CRLF
+       line endings while the preparer's old text, read through the Read
+       tool, has LF. Decide whether matching normalises line endings. The
+       criteria pin only that everything outside the replaced text stays
+       byte-for-byte as written.
+    5. Non-test files out of scope. A replacement in a non-test source file
+       inside the repository that was not among the files passed to the
+       preparer is not refused by these criteria. Decide whether to refuse it.
+    6. An unreadable reply. The step stops with a named error and writes no
+       manifest. Whether the route then halts, or calls the runner (which
+       reports every owed name unfinished because no manifest exists), is
+       route wiring (TQ-500g-1-v, -vi, -vii). Either way the work never reads
+       as owing nothing.
+
+  IT-PO ENRICHMENT (2026-10-11)
+  python-coder, fast lane. Depends on TQ-500g-1-i (merged in #1044) and can
+  be built alongside TQ-500g-1-iv, using hand-written reply fixtures. The
+  BA's open points, decided (details in it_requirements):
+    1. Name matching: exact (BA assumption confirmed). Trim-and-case-fold
+       stays only for the two aliases.
+    2. A name answered twice: could_not_prepare "more than one alteration
+       returned"; one is never picked.
+    3. Several replacements in one file: applied in sequence, each old
+       unique when it is applied, so the sequence settles overlaps. All or
+       nothing per name. Names never build on each other.
+    4. Line endings: a uniformly CRLF file is matched in LF form and written
+       back with CRLF. Every other file is matched raw. Copies are written
+       as bytes.
+    5. Non-test files outside the dispatched list: NOT refused (open for the
+       user, below).
+    6. Unreadable reply: the writer stops with a named error and leaves no
+       manifest; stale ones are removed first. Whether the route then halts
+       or still calls the runner is route wiring.
+  PLACEMENT: a public sibling CLI, wrong_version_writer.py, not a subcommand
+  of the runner. Owed names are derived through the runner's declared-scope
+  reader, never passed in and never taken from the reply.
+
+  OPEN, WHO BUILDS THE DISPATCH LIST. The routes must hand test-breaker the
+  owed names with their in-scope files, and no AC yet names the code that
+  computes that list. Recommendation: one shared Python entry using the same
+  scope reader (for example a list mode on this writer's CLI), so no route
+  parses the AC store in JS. That needs a criteria amendment or a new AC; it
+  is not added here.
+  OPEN, HOW THE REPLY REACHES THE WRITER. test-breaker cannot write its reply
+  to a file, so the route must persist it or pipe it. The CLI accepts
+  --reply <path> and --reply - (stdin). The transport is route wiring for
+  TQ-500g-1-v, -vi and -vii.
+  OPEN, OUT-OF-LIST FILES (open point 5). Refusing them would add a second
+  scope input to the writer. Recommendation: accept them for now, and revisit
+  if a real preparation aims outside the list.
+
+  USER DECISIONS AT THE REVIEW GATE (2026-10-14). Both OPEN items above on
+  the dispatch list and on out-of-list files are settled; the criteria are
+  amended (amended_by, 2026-10-14).
+    1. Owed list (user decision at the review gate, 2026-10-14). The writer
+       CLI gains a list step. Given the requirement ids, it reports the owed
+       wrong-version names and, for each, the source files in scope for it.
+       It uses the same reading of the test entries that the runner uses, so
+       the route, the writer and the runner can never disagree about what is
+       owed. The route sends that list to the preparer. Pinned in the second
+       scenario of the criteria: every owed name exactly once, verbatim, with
+       its in-scope files; the fix-undone aliases not listed; tests' own
+       files never listed as in scope; an id with no declared wrong version
+       lists nothing for it.
+    2. Out-of-scope refusal (user decision at the review gate, 2026-10-14).
+       The writer refuses a replacement in any file that was not in scope
+       for that name in the list, even an ordinary non-test source file
+       inside the repository. It is refused the same way as a test file:
+       "could not be prepared", a reason naming the file and saying it was
+       not in scope, and no altered copy for that name at all. Pinned as
+       reply case R9 beside R4-R6. This reverses open point 5 and the
+       IT-PO's "accept them for now" recommendation.
+  BA FOLLOW-UPS FOR THE IT-PO PASS. The first scenario now owes nine names,
+  not eight. The it_requirements entry "Non-test files outside the
+  dispatched in-scope list ... are NOT refused here" now contradicts the
+  criteria and needs rewriting. BA recommendation: the writer takes the
+  in-scope files per name from the same reading the list step uses, not from
+  the route, so a route bug cannot widen them. The test_spec entries and test_rationale still
+  say "eight names" and have no entry for R9 or the list step. The list
+  step's output shape, and the route's use of it (TQ-500g-1-v, -vi, -vii),
+  belong in delivers_to. The sentence "the route sends this list to the
+  preparer unchanged" is route wiring the routes' ACs implement; it is kept
+  here because the user asked for it, and the IT-PO may move its test to the
+  route ACs.
+
+  IT-PO PASS (2026-10-14), after the review gate.
+  APPROVAL. The user approved this AC, together with the TQ-500g-1-iv
+  redesign (read-only test-breaker plus this writer), at the review gate on
+  2026-10-14. readiness is set to approved on that decision.
+  WHAT CHANGED (criteria untouched):
+    - The writer CLI has two steps, list and write. list prints
+      {owed: [{name, files}], error}; write keeps the earlier JSON.
+    - Per-name scope. The test_spec item schema had no field that puts a
+      file in scope for a wrong version (additionalProperties false; the
+      AC-level declared_files is per AC, not per name). This AC adds the
+      optional field in_scope_files to the test_spec item. A name's
+      in-scope files are the union over the entries naming it, minus test
+      files. A name with none has files [], so every replacement for it is
+      refused (fail closed). The schema change, its reference-doc line and
+      its validator test are part of this AC's work. If the user prefers a
+      separate AC for the schema field, split it out before the build and
+      make this AC depend on it.
+    - The list, the write step and the runner share one reading: the
+      runner's declared-scope reader, extended in place. The write step
+      never takes scope from the route or the reply.
+    - The out-of-scope refusal (R9) reverses the earlier "accept for now"
+      entry.
+    - Route wiring ("the route sends this list unchanged") is tested by
+      TQ-500g-1-v, -vi and -vii, not here.
+  FOLLOW-UP FOR THE ROUTE ACS. TQ-500g-1-v, -vi and -vii must run the list
+  step before dispatching test-breaker and pass its owed array unchanged as
+  wrong_versions. Their own fields do not name the writer yet; their next
+  IT-PO pass adds the matching expects_from.
+  FOLLOW-UP FOR EXISTING must_catch ENTRIES. Entries authored before
+  in_scope_files existed list their names with files []. Until the entries
+  are backfilled, the preparer can prepare nothing for those names, and the
+  runner reports them as unfinished. That is the fail-closed outcome, never
+  a silent pass.

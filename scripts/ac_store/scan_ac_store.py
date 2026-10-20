@@ -14,6 +14,8 @@ Options:
     --ac-root PATH              Root directory of the AC store (default:
                                 docs/acceptance-criteria/ relative to the
                                 worktree root detected at runtime).
+    --enforce-impl-readiness    Hold not-implementation-ready ACs out of the
+                                ready set (ACD-1600c-1; default advisory).
 
 Exit codes:
     0  Success (even when no ACs match the filter — empty is valid).
@@ -33,7 +35,6 @@ ACS-500e-2: resolve_behavior_stack() makes composition depth visible through
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -409,96 +410,12 @@ def _sort_ready(ready: list[AcRecord]) -> list[AcRecord]:
 
 
 # ---------------------------------------------------------------------------
-# Output formatting
+# Output formatting (_scan_output.py) and the ACD-1600c-1 readiness gate
 # ---------------------------------------------------------------------------
 
-
-def _to_ready_item(ac: AcRecord) -> dict[str, str]:
-    """Convert a ready AcRecord to the JSON output schema dict.
-
-    Args:
-        ac: Ready AC record.
-
-    Returns:
-        Dict with keys: ac_id, title, assigned_agent, estimated_complexity, path.
-    """
-    return {
-        "ac_id": ac.get("id", ""),
-        "title": ac.get("title", ""),
-        "assigned_agent": ac.get("assigned_agent", ""),
-        "estimated_complexity": ac.get("estimated_complexity", ""),
-        "path": ac.get("_path", ""),
-    }
-
-
-def _to_blocked_item(ac: AcRecord, blocking_deps: list[str]) -> dict[str, Any]:
-    """Convert a blocked AcRecord to the JSON output schema dict.
-
-    Args:
-        ac: Blocked AC record.
-        blocking_deps: List of dep AC ids that are not done.
-
-    Returns:
-        Dict with keys: ac_id, blocked_by.
-    """
-    return {
-        "ac_id": ac.get("id", ""),
-        "blocked_by": blocking_deps,
-    }
-
-
-def _print_human(
-    ready: list[AcRecord],
-    blocked: list[tuple[AcRecord, list[str]]],
-) -> None:
-    """Print human-readable READY and BLOCKED sections to stdout.
-
-    Args:
-        ready: Sorted list of ready AcRecords.
-        blocked: List of (AcRecord, blocking_dep_ids) tuples for blocked ACs.
-    """
-    print(f"READY ({len(ready)}):")
-    if ready:
-        for ac in ready:
-            print(
-                f"  [{ac.get('estimated_complexity', '?'):>2}] "
-                f"{ac.get('id', '?'):30s} {ac.get('title', '')}"
-            )
-    else:
-        print("  (none)")
-
-    print()
-    print(f"BLOCKED ({len(blocked)}):")
-    if blocked:
-        for ac, deps in blocked:
-            print(
-                f"  {ac.get('id', '?'):30s} blocked by: {', '.join(deps)}"
-            )
-    else:
-        print("  (none)")
-
-
-def _print_json(
-    ready: list[AcRecord],
-    blocked: list[tuple[AcRecord, list[str]]],
-    *,
-    set_aside_count: int = 0,
-) -> None:
-    """Print JSON output conforming to AC-5 schema.
-
-    Args:
-        ready: Sorted list of ready AcRecords.
-        blocked: List of (AcRecord, blocking_dep_ids) tuples for blocked ACs.
-        set_aside_count: Number of ACs excluded from both sets because they
-            describe an example product rather than the project's own record
-            (UXP-700d-2).
-    """
-    output = {
-        "ready": [_to_ready_item(ac) for ac in ready],
-        "blocked": [_to_blocked_item(ac, deps) for ac, deps in blocked],
-        "set_aside_count": set_aside_count,
-    }
-    print(json.dumps(output, indent=2))
+from _scan_output import _print_human, _print_json, _to_blocked_item, _to_ready_item  # noqa: E402,F401
+from _impl_readiness_gate import *  # noqa: E402,F403
+from _impl_readiness_gate import partition_by_readiness  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -940,6 +857,10 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Alias for --ac-root. Root directory of the AC store.",
     )
+    parser.add_argument(
+        "--enforce-impl-readiness", action="store_true", dest="enforce_impl_readiness",
+        help="ACD-1600c-1: hold not-implementation-ready ACs out of `ready` (default advisory).",
+    )
     return parser
 
 
@@ -1067,11 +988,14 @@ def main(argv: list[str] | None = None) -> int:
     # Sort ready list
     ready = _sort_ready(ready)
 
+    ready, not_ready = partition_by_readiness(ready, enforce=args.enforce_impl_readiness)
     # Output
     if args.json_output:
-        _print_json(ready, blocked, set_aside_count=set_aside_count)
+        _print_json(
+            ready, blocked, set_aside_count=set_aside_count, not_implementation_ready=not_ready
+        )
     else:
-        _print_human(ready, blocked)
+        _print_human(ready, blocked, not_ready)
 
     return 0
 

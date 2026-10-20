@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -86,8 +86,13 @@ amended_by:
     date: '2026-10-12'
     changed: "NOTE ONLY -- criteria unchanged. Under user decision 11 (BrainCandy, 2026-10-12) an ABSENT key means the shipped default path, so the existing clause 'in neither case does the build behave as if the setting were absent' now concretely means: a broken setting never falls back to the shipped default location. The it_requirements already state this ('no fallback to the default path')."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_1500h_1_i.py
+implemented_by:
+  - scripts/config_paths.py
+  - scripts/build_config_scaffolds.py
+  - scripts/build_helpers.py
+  - scripts/build_referential_integrity.py
 notes: |
   OVER-CORRECTION CONTROL. "Treat anything that is not a readable file as not
   configured" passes BP-1500h-1 and hides a typo in a real setting. Whether a

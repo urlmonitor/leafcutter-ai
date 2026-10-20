@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 69** (6 blocker, 38 high, 25 low) · **Resolved: 26** (recounted from the directory 2026-10-12)
+**Open: 72** (6 blocker, 41 high, 25 low) · **Resolved: 26** (recounted from the directory 2026-10-14)
 
 ## Open
 
@@ -78,7 +78,6 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260925-1309 — A phase agent wraps its whole reply in one `input` string, and the schema's misleading error sends every retry after the wrong field, so the drive halts with the work already done | [open-blocker-ki-bo-20260925-1309.md](build-orchestration/open-blocker-ki-bo-20260925-1309.md) |
 | `blocker` | KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide — /finalize-feature Step 3.5 walks the whole inbox and flips every ticket and AC to `done`, not just the finalizing branch's, so unbuilt work is marked complete and unblocks dependents | [open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md](build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md) |
 | `blocker` | KI-BO-20260925-finalize-gate-accepts-agent-answers — finalize-feature's copy of the human-gate code still asks an agent to answer live and never checks the answer came from the person, so the merge-to-main gate can be passed by an agent reply | [open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md](build-orchestration/open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md) |
-| `blocker` | KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — /build-feature wrote status: done on a ticket whose ac-fulfillment-gate had just failed and whose AC was still todo, because the completion decision takes the gate's last entry by file position and a blocker entry was inserted above an older ok | [open-blocker-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md](build-orchestration/open-blocker-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md) |
 | `blocker` | KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver — /build-feature runs documentation-expert as a flat depth-1 phase, where the one route its template allows to a written doc (dispatching a specialist through the Agent tool) does not exist, so a doc-bearing ticket either halts or passes by breaking the template | [open-blocker-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md](build-orchestration/open-blocker-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
 | `high` | KI-BO-20260922-0500 — the fast lane renders a crashed resolver as an empty build set, returning `status: ok` and `nothing_to_build` with a confident prose diagnosis for an AC that had two not-done leaves to build | [open-high-ki-bo-20260922-0500.md](build-orchestration/open-high-ki-bo-20260922-0500.md) |
@@ -117,6 +116,9 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20261009-completion-write-refuses-closes-the-script-allows — /build-feature's ticket close is a status-checker agent relaying a relative script call, and on the BO-4300 drive it refused closes that the shipped script and protocol both permit | [open-high-ki-bo-20261009-completion-write-refuses-closes-the-script-allows.md](build-orchestration/open-high-ki-bo-20261009-completion-write-refuses-closes-the-script-allows.md) |
 | `high` | KI-BO-20261009-epic-worktree-resolution-is-split-brained — whether /build-feature reuses the session's epic worktree depends on an LLM resolver's cwd and wording; when it falls through it opens a second worktree from origin/main, and the driver verifies there while the phase agents work in the first | [open-high-ki-bo-20261009-epic-worktree-resolution-is-split-brained.md](build-orchestration/open-high-ki-bo-20261009-epic-worktree-resolution-is-split-brained.md) |
 | `high` | KI-BO-20261009-parallel-tickets-interfere-through-one-worktree — /build-feature runs a batch's tickets concurrently in one epic worktree, and its only coupling test is disjoint files_touched, so one ticket's half-written file broke another ticket's tests and build | [open-high-ki-bo-20261009-parallel-tickets-interfere-through-one-worktree.md](build-orchestration/open-high-ki-bo-20261009-parallel-tickets-interfere-through-one-worktree.md) |
+| `high` | KI-BO-20261014-fast-lane-build-targets-the-shared-install — the fast lane leaves any rebuild to an agent's choice of `--target-dir`, and in the GE-127g-2-i lane the coder built into the workspace parent, deploying an unmerged `check_doc_length.py` over the shared install every session's hooks run for about 20 minutes | [open-high-ki-bo-20261014-fast-lane-build-targets-the-shared-install.md](build-orchestration/open-high-ki-bo-20261014-fast-lane-build-targets-the-shared-install.md) |
+| `high` | KI-BO-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children — the connected-set walk adds a not-done L2 prerequisite alone, never its children, then marks it done and reports `all_done`, so GE-127g-2 went done over an unbuilt GE-127g-2-i | [open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md](build-orchestration/open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md) |
+| `low` | KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — mostly fixed 2026-10-14 (was blocker): a failed or skipped phase now blocks the done write (BO-400a-2-v, PR #1201) and agent templates no longer write level-2 headings into Comments (BO-400a-2-vi); still open: the latest sign-off entry is the last one in file order | [open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md](build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
 | `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap | [open-low-ki-bo-021.md](build-orchestration/open-low-ki-bo-021.md) |

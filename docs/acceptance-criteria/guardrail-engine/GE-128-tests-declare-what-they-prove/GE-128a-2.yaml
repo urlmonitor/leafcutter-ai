@@ -1,0 +1,99 @@
+id: GE-128a-2
+title: "Adding one more undeclared test to a file that already has some is refused; editing that file any other way is allowed"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - the count grows by one: refused
+  Given a tracked test file that, before the change, holds 12 test functions of
+    which 7 declare no requirement,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds one new test function to that file, test_new,
+    which declares no requirement, and changes nothing else in the file,
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the outcome names the file, states that it held 7 undeclared tests before
+    the change and holds 8 after it,
+  And the outcome names test_new as the test that has no declaration.
+
+  Scenario 2 - the same file, edited without adding an undeclared test: allowed
+  Given the same file as it stood before the change in Scenario 1 (12 test
+    functions, 7 undeclared),
+  And the test-declaration check is in error mode,
+  And a change is staged that edits the body of one of the 7 undeclared tests and
+    adds a helper function that is not a test, leaving 7 undeclared tests,
+  When the author performs an ordinary commit,
+  Then the commit completes,
+  And the file is not refused for the 7 undeclared tests it still holds.
+
+  Scenario 3 - both arms in one run
+  Given the changes from Scenario 1 and Scenario 2 are evaluated by the same
+    check build in the same run, each against the file as it stood before it,
+  When both verdicts are read,
+  Then the Scenario 1 change is refused and the Scenario 2 change is allowed,
+  So that a check that refuses everything, and a check that allows everything,
+    each fail this criterion.
+depends_on:
+  - GE-128a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      Parent L1. Its notes name this pair as the MANDATORY NEGATIVE ARM: one
+      further undeclared test refused, paired in the same run with the same file
+      edited any other way, allowed. Either arm alone passes on a stuck answer.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same per-file before/after ratchet for file length, already built with a
+      shared helper. Reuse candidate for the comparison; the counted quantity here
+      is undeclared test functions, not lines.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      The generic grandfather-and-refuse-new policy this is one instance of. Not
+      restated here.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Owns what counts as a declaration. The count here consumes that recogniser
+      and does not define recognition.
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored as a live child of GE-128a, whose only child GE-128a-1 is retired (superseded_by TQ-100b-4-iii), which left the L1 with nothing to derive done from (KI-ACS-016 resolution, 'Not done here'). Specifies the growth arm of the per-file ratchet and the mandatory paired negative arm from GE-128a's notes. origin_agent BrainCandy per the requesting user's instruction."
+superseded_by: null
+covered_by:
+  - GE-128a-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The counts (12 functions, 7 undeclared) are illustrative fixture values; any file
+  with at least one undeclared test before the change exercises the same rule.
+  Whether a file with NO previous version is judged at all, and against what, is
+  GE-128b's subject and is deliberately not decided here: a scenario that treats
+  "no previous version" as "previous count of zero" would make GE-128b's decision
+  by accident.

@@ -1,0 +1,95 @@
+id: BO-4500a-5-viii
+title: "A route with no acceptance-criterion id can still reach the chartered executor by naming its run"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a request to the command-step-runner whose target names the workspace
+    /home/u/proj/worktrees/plan-x, the branch plan/x and the run plan-bo-4500-20261012, and
+    no acceptance-criterion id,
+  When the command-step-runner reads it,
+  Then it runs the command once in that workspace and returns its result in the usual shape,
+  And it does not decline the request for lacking an acceptance-criterion id.
+
+  Given a request whose target names neither a run nor an acceptance-criterion id,
+  When the command-step-runner reads it,
+  Then it declines naming the missing run-or-criterion as its reason, and runs nothing.
+
+  Given a request whose target names an acceptance-criterion id and no run, as the fast lane
+    sends today,
+  When the command-step-runner reads it,
+  Then its behaviour is unchanged from before this change.
+depends_on: [BO-4500a-5, BO-2400a-1-i]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the executor. Its request contract is {step, command, target: {workspace, branch, ac_id}}. This record widens target by one alternative key and nothing else."
+  - path: templates/agents/command-step-runner.md
+    relationship: modifies
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    The command-step-runner's request contract widens by exactly one alternative key: target is
+    {workspace, branch, ac_id} OR {workspace, branch, run_id}; at least one of ac_id / run_id is
+    required. The decline for neither names the missing run-or-criterion. Nothing else in the
+    runner's contract, tools or registry entry changes.
+  - >-
+    Under the adopted Q1 decision the commit step is run by the commit agent, so this widening is
+    NOT on the commit path; it is kept because BO-3200f's plan-feature and finalize command steps
+    need it. Recorded so no one routes commits through the runner on the strength of this record
+    (the commit-delegation guard would block it; BO-4500a-5-vii).
+  - BO-2400a-1-i is done and approved; its contract record needs an amended_by entry by its owner recording the widened target. This record does not edit it.
+  - Edit templates/agents/command-step-runner.md; the deployed copy is a build output.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-1-i
+  contract: "The executor's request and decline shapes ({step, command, target: {workspace, branch, ac_id}})."
+test_required: true
+test_spec:
+  - name: test_runner_template_accepts_run_id_in_place_of_ac_id
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The deployed command-step-runner template states a target with workspace, branch and run_id and no ac_id is run, not declined."
+  - name: test_runner_template_declines_neither_run_nor_ac
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The deployed template states that a target with neither run_id nor ac_id is declined naming the missing run-or-criterion and runs nothing."
+  - name: test_fast_lane_ac_id_requests_behave_as_before
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The existing BO-2400a-1-i runner tests still pass unchanged against the deployed template."
+test_rationale: >-
+  The runner is an LLM surface; its template text is the unit evidence, and the unchanged
+  BO-2400a-1-i suite is the regression guard for the fast lane's existing requests.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  L1 CONSTRAINT 1, NARROWLY: plan-feature and finalize have no AC id, so a route reaching the
+  executor must be able to name its run instead. This is the "narrowly-scoped L2" the L1 allows in
+  place of generalising the executor; nothing else about the executor changes. It is needed whoever
+  runs the commit step (Q1): BO-3200f's ~40 plan-feature and finalize command steps need the same
+  key. BO-2400a-1-i is done; amending its contract record is the IT PO's call.

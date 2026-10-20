@@ -13,7 +13,7 @@ components:
   - worktree_manager
   - build_orchestration
 related_diagrams:
-  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
   - docs/architecture/diagrams/c3-031-workspace-request-states.md
 related_docs:
   - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
@@ -101,7 +101,7 @@ C4Component
     Rel(maker, ws, "makes, re-readies, verifies, clears")
 ```
 
-See also: [Workspace Request — A Caller, the Workspace Maker, and the Halt Path](../diagrams/c3-030-workspace-request-halt-sequence.md)
+See also: [Workspace Request — A Caller, the Workspace Maker, and the Halt Path](../diagrams/c3-034-workspace-request-halt-sequence.md)
 (sequence) and [Workspace States — What Asking for the Same Work Does in Each Situation](../diagrams/c3-031-workspace-request-states.md)
 (state).
 
@@ -112,7 +112,7 @@ are retired under BO-4300f-2. No new caller may be added against them.
 
 | Caller | How it reaches the maker | What it does with the answer |
 |---|---|---|
-| Workflows | Use the answer handed in as `args.workspace`. Or confirm a handed-in location with one `verify` request. Or send the maker command, unchanged, in exactly one dispatch to the `shell-runner` agent (ADR-030: a workflow body cannot run a process) | One acceptance check. Anything but `ok` with a `workspace_path` ends the run before any working step ([c3-030](../diagrams/c3-030-workspace-request-halt-sequence.md)) |
+| Workflows | Use the answer handed in as `args.workspace`. Or confirm a handed-in location with one `verify` request. Or send the maker command, unchanged, in exactly one dispatch to the `shell-runner` agent (ADR-030: a workflow body cannot run a process) | One acceptance check. Anything but `ok` with a `workspace_path` ends the run before any working step ([c3-034](../diagrams/c3-034-workspace-request-halt-sequence.md)) |
 | Workspace skill and entry commands | Run `ensure` once, by absolute path | Stop on a non-zero exit. On exit 0, relay the answer word for word, as `args.workspace` |
 | Agents | Follow the workspace skill. The `shell-runner` agent runs only the exact command it is given | Work only inside the answer's `workspace_path` |
 | Person at a terminal | `python <install-root>/scripts/worktree.py <verb> ...` | On a refusal: stop, remedy the cause the refusal names, and ask again |
@@ -201,7 +201,7 @@ deploy-manifest entry:
 
 ## Cross-Links
 
-- Sequence: [Workspace request and the halt path](../diagrams/c3-030-workspace-request-halt-sequence.md)
+- Sequence: [Workspace request and the halt path](../diagrams/c3-034-workspace-request-halt-sequence.md)
 - State: [Workspace states](../diagrams/c3-031-workspace-request-states.md)
 - Topology decision: [ADR-018 Amendment 1](../adrs/ADR-018-agent-isolation-topology.md)
 - Why workflows reach the maker through an agent: [ADR-030](../adrs/ADR-030-dual-engine-workflow-support.md)

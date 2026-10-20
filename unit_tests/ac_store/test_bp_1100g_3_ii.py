@@ -87,8 +87,10 @@ _MODULE_FILES = (
     "yaml_safe_loader.py",
     "_done_proof_phase_helpers.py",
     "_done_proof_composite.py",
+    "ac_retirement.py",  # ACS-900d-4: _done_proof_composite imports it at module scope
     "_done_proof_entry_point_gate.py",
     "_done_proof_automation_gate.py",
+    "_done_proof_reachability_gate.py",
     "pytest_outcome_reader.py",  # TQ-500g-4: done_proof imports it at module scope
 )
 

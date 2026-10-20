@@ -3,14 +3,12 @@ title: 'Agent Reference: python-coder'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-10-14
 components:
 - infrastructure
 related_docs:
 - docs/agents/conventions.md
 - docs/architecture/adrs/ADR-033-agent-model-tiers.md
-- tickets/09_done/EPIC-CodingAgents/Master_Plan.md
-- tickets/09_done/EPIC-CodingAgents/06_python_coder_agent.md
 related_code:
 - .claude/agents/python-coder.md
 - .claude/commands/python-coder.md
@@ -36,7 +34,6 @@ Fire `python-coder` whenever a task produces new or edited Python files.
 | "Implement ticket X in Python" | Agent loads ticket, pre-flight docs, then codes |
 | "Write the code for Y" | Agent auto-fires via description |
 | "Refactor module Z" | Agent auto-fires; runs complexity-reduction automatically |
-| Ticket touches `collector/` paths | Agent auto-picks `collector-enforcer` before writing |
 
 Do **not** invoke `python-coder` for:
 
@@ -58,7 +55,6 @@ missing.
 |---|---|---|
 | `doc-enforcer` | After every edit pass, before declaring done | Always |
 | `complexity-reduction` | For any function flagged over the complexity threshold | Always (when flagged); skip only when zero functions are flagged |
-| `collector-enforcer` | When any edited path falls under `collector/` | Conditional — auto-picked by agent |
 | `code-analysis` | When an AST-driven refactor is requested | On demand |
 | `research-agent` | When a cross-file or symbol-level question arises | On demand |
 
@@ -73,7 +69,6 @@ missing.
 | "Which files import module Z" | `research-agent` | `Agent` tool (`find_importers`) |
 | "Does this SQL procedure exist?" | `research-agent` | `Agent` tool (then stop-and-ask if SQL edit needed) |
 | "AST structure of function W" | `code-analysis` skill | `Skill` tool |
-| "Collector structural rules" | `collector-enforcer` skill | `Skill` tool |
 
 Do **not** attempt to answer cross-file questions via guessing. The tools `Grep`,
 `Glob`, and all MCP search tools are removed from `python-coder`'s allowlist.
@@ -111,45 +106,39 @@ Agent notes these in its working context; it does NOT include raw search output 
 the final response — only the summary: "2 callers found; both pass `**kwargs`; no
 signature change required."
 
-**Step 3 — collector-enforcer**
+**Step 3 — Implementation**
 
-`CandleScoreWorker` lives under `collector/workers/`. Agent invokes
-`collector-enforcer` via the `Skill` tool before writing a line.
-
-**Step 4 — Implementation**
-
-Agent edits `collector/workers/candle_score_worker.py`. The change is a new
+Agent edits `src/workers/candle_score_worker.py`. The change is a new
 `p_min_volume` keyword argument with a default; it adds a guard clause inside
 `run()`.
 
-**Step 5 — Tests**
+**Step 4 — Tests**
 
 ```bash
 python unit_tests/live_trader/test_candle_score_worker.py
 # Result: 4 tests, 0 failures, 0 errors (1.2s)
 ```
 
-**Step 6 — Pre-completion checks**
+**Step 5 — Pre-completion checks**
 
-Agent invokes `doc-enforcer` on `collector/workers/candle_score_worker.py`.
+Agent invokes `doc-enforcer` on `src/workers/candle_score_worker.py`.
 `doc-enforcer` flags: missing `ARCHITECTURE:` field in module docstring. Agent
 fixes it. Second run: pass.
 
 Agent invokes `complexity-reduction` — `run()` is at cyclomatic complexity 6,
 within threshold. No refactor needed.
 
-**Step 7 — Response payload**
+**Step 6 — Response payload**
 
 ```
 ## Completion Report
 
 ### Files changed
-- collector/workers/candle_score_worker.py: added p_min_volume filter with default None
+- src/workers/candle_score_worker.py: added p_min_volume filter with default None
 
 ### Skills run
 - doc-enforcer: 1 violation fixed (ARCHITECTURE: field missing in module docstring)
 - complexity-reduction: pass (run() at CC=6, threshold=10)
-- collector-enforcer: invoked — no violations
 - research-agent: 1 query (blast radius of CandleScoreWorker.run()); 2 callers found, no signature impact
 
 ### Tests

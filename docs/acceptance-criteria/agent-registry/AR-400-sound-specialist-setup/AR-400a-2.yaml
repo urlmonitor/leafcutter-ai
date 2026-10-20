@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -33,7 +33,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The real shared-guide instance: an example instruction to load a retired ability (route-learning) at line 36. Shared guides are in scope, not only specialist instructions."
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "Ability bodies (signoff, building-epics) were the widest-blast-radius call sites of the original defect."
@@ -87,8 +87,10 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400a_2_shared_guides.py
+implemented_by:
+  - scripts/check_skill_refs.py
 notes: |
   ONLY EXISTENCE APPLIES TO A SHARED GUIDE. A guide has no grant of its own, so
   the "not granted" comparison (AR-400b-1) has no left side for it; only the

@@ -264,6 +264,9 @@ const planReplies = [];
 const dirtyReads = [];
 const workspaceEnsureCalls = [];
 const logs = [];
+// BO-3800e-2: every remedy-declaration read the driver made, in order (the shared
+// loader read is not a phase dispatch, so `dispatched` cannot see it). Observation only.
+const declarationReads = [];
 // INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
 // phase dispatches and routing calls together, so a test can see whether a
 // ticket's stage -> commit -> observe ran without another ticket's in between.
@@ -1058,6 +1061,7 @@ async function agent(prompt, opts = {}) {
   if (/remedy|declaration/i.test(label)) {
     const table = scenario.remedy_declarations || {};
     const hookId = Object.keys(table).find((h) => String(prompt).includes(h));
+    declarationReads.push({ label, hook_id: hookId || null });
     return hookId
       ? Object.assign({ status: "ok" }, table[hookId])
       : { status: "error", error: "harness: no remedy declaration for this prompt" };
@@ -1237,6 +1241,7 @@ console.log(
     readbacks,
     writes,
     enumerations,
+    declaration_reads: declarationReads,
     plan_replies: planReplies,
     dirty_reads: dirtyReads,
     workspace_ensure_calls: workspaceEnsureCalls,

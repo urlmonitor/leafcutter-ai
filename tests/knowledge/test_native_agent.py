@@ -42,7 +42,6 @@ def test_agent_preserves_all_registry_fields_and_separate_template_meanings(tmp_
         "spawned_by": ["user"],
         "is_ticket_phase": True,
         "template_path": "templates/agents/example.md",
-        "skills_used": [],
         "description": "Registry description",
         "category": "implementation",
         "components": ["finalize"],

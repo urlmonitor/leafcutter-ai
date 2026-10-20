@@ -59,7 +59,7 @@ risk_surface: contract_boundary
 it_requirements:
   - 'Route: add the catch-all server route leafcutter-web/app/flows/[...id]/page.tsx; it joins params.id
     with ''/'' and resolves the id against the flow set loaded by leafcutter-web/lib/data/flows.ts, answering
-    200 for a known id. leafcutter-web/app/flows/page.tsx stays the bare /flows entry. A single optional
+    200 for a known id. leafcutter-web/app/flows/page.tsx stays the bare /flows route, which shows the finder (UXP-591-1-i, UXP-617-1), not a flow. A single optional
     catch-all app/flows/[[...id]]/page.tsx in place of page.tsx is an acceptable alternative, but not
     both: Next.js 14 rejects a page.tsx beside an optional catch-all at the same level.'
   - A flow id is exactly two path segments (the leafcutter/atlas-flows invariant ^[a-z0-9-]+/[a-z0-9-]+$);
@@ -69,8 +69,8 @@ it_requirements:
   - 'The route passes the selected flow, its filters and the one-flow breadcrumb into leafcutter-web/components/flows/flows-view.tsx
     as initial props, replacing today''s hard-wired selectedId default. Source and Kind come from the
     flow record''s own source and kind fields, Realization is ''all''; nothing is hard-coded per flow.
-    The linked flow is in the server-rendered HTML: no first paint of leafcutter/deliver-a-feature and
-    no hydration mismatch.'
+    The linked flow is in the server-rendered HTML: no first paint of any other flow and no hydration
+    mismatch.'
   - 'One address format: a single edge-safe module (proposed leafcutter-web/lib/flow-url.ts) exports flowHref(flowId,
     stepId?) building ''/flows/<flow id>'' and ''/flows/<flow id>?step=<node id>'' with the ''/'' literal,
     and parses requested paths. It is imported by middleware (Edge runtime), server components and client
@@ -129,7 +129,7 @@ test_spec:
     description: Awaits the server route, renders its output and asserts the selected flow, its filters,
       a one-flow breadcrumb, no open drawer, and that notFound() was not called.
     must_catch:
-      - the catch-all route is missing and the view still opens leafcutter/deliver-a-feature
+      - the catch-all route is missing and the view opens a flow other than the linked one
       - the route resolves the flow but FlowsView ignores the initial flow prop
   - name: linked mock-journey and architecture flows open with their own Source and Kind and Realization
       All

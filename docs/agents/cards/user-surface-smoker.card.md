@@ -101,7 +101,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | — | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration

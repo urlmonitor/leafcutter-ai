@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
-  - docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md
+  - docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-20260909-gate-folder-density.md
   - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20260908-ratchet-reads-pre-merge-head.md
   - docs/known-issues/commit-guardian/open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md
   - tickets/00_inbox/TICKET-20261010-FolderDensityMergeCommit.md

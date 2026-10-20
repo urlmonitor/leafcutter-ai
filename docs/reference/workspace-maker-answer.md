@@ -12,7 +12,7 @@ related_docs:
   - docs/how-to/get-a-workspace.md
   - docs/how-to/clear-a-workspace.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
   - docs/architecture/diagrams/c3-031-workspace-request-states.md
 ---
 

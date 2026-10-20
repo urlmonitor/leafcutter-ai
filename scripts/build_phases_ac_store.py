@@ -30,6 +30,25 @@ ARCHITECTURE: One module-level constant, ``AC_STORE_DEPLOY_MAP`` (the single,
     sibling module, build_phases_ac_store_docs.py, and re-exported below so
     ``from build_phases_ac_store import build_ac_store_docs`` -- and
     build_phases.py's own re-export of it -- keep working unchanged.
+
+DECISION HISTORY:
+  - 2026-10-15 [python-coder/ACS-900d-4]: Added scripts/ac_store/ac_retirement.py
+    (the ONE retired-record predicate) to AC_STORE_DEPLOY_MAP, because
+    _done_proof_composite.py imports it at module scope and the commit-guardian
+    hooks reach it through _ac_store_locator. The comment paragraph explaining
+    why `_component_migration_map.py` is listed moved here from above the map
+    to repay this file's size ratchet. It is resolved by
+    generate_ticket_from_ac.py's `_load_migration_map()` via
+    `importlib.util.spec_from_file_location` at import time, but was never
+    listed in the map, so every consumer install shipped
+    generate_ticket_from_ac.py without its sibling and silently degraded (a
+    WARNING, not a crash -- see `_load_migration_map`'s except clause) per AC
+    BP-900g-8. Adding it there is NECESSARY but not SUFFICIENT to satisfy that
+    AC: the derived, transitive closure check in build.py
+    (`_check_intra_package_closure_guard`) is the actual mechanism that would
+    have caught this gap on its own, and is what prevents a future sibling
+    reference from silently reproducing this same defect.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -39,6 +58,7 @@ from pathlib import Path
 from typing import Any
 
 from build_phases_ac_store_docs import build_ac_store_docs  # noqa: F401  # re-exported for callers
+from build_phases_ac_store_rc import RULE_CHECK_DEPLOY_MAP
 
 
 # ---------------------------------------------------------------------------
@@ -58,19 +78,13 @@ from build_phases_ac_store_docs import build_ac_store_docs  # noqa: F401  # re-e
 # deployed it -- a guard whose view of "deployed" was really "exists in the
 # source directory" could never detect a file present in source but absent
 # from this map, which is exactly the defect class BP-900g-8 exists to close.
-#
-# `_component_migration_map.py` is included here per AC BP-900g-8: it is
-# resolved by generate_ticket_from_ac.py's `_load_migration_map()` via
-# `importlib.util.spec_from_file_location` at import time, but was never
-# listed here, so every consumer install shipped generate_ticket_from_ac.py
-# without its sibling and silently degraded (a WARNING, not a crash -- see
-# `_load_migration_map`'s except clause). Adding it here is NECESSARY but not
-# SUFFICIENT to satisfy the AC: the derived, transitive closure check in
-# build.py (`_check_intra_package_closure_guard`) is the actual mechanism that
-# would have caught this gap on its own, and is what prevents a future sibling
-# reference from silently reproducing this same defect.
+# (Why `_component_migration_map.py` is listed: see the module DECISION HISTORY.)
 AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
+    # scan_ac_store.py imports both at module scope (ACD-1600c-1).
+    ("scripts/ac_store/_impl_readiness_gate.py",     "_impl_readiness_gate.py"),
+    ("scripts/ac_store/_scan_output.py",             "_scan_output.py"),
+    ("scripts/ac_store/assignment_quality.py",       "assignment_quality.py"),  # ACD-1700b-1
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
     # generate_ticket_from_ac.py's 24 _gtfa_* siblings. The 4035-line original
@@ -97,6 +111,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_gtfa_constants.py",           "_gtfa_constants.py"),
     ("scripts/ac_store/_gtfa_contracts.py",           "_gtfa_contracts.py"),
     ("scripts/ac_store/_gtfa_decision_history.py",    "_gtfa_decision_history.py"),
+    ("scripts/ac_store/_gtfa_declared_surface.py",    "_gtfa_declared_surface.py"),  # TKT-600a-3
     ("scripts/ac_store/_gtfa_doc_gates.py",           "_gtfa_doc_gates.py"),
     ("scripts/ac_store/_gtfa_doc_genre.py",           "_gtfa_doc_genre.py"),
     ("scripts/ac_store/_gtfa_files_touched.py",       "_gtfa_files_touched.py"),
@@ -142,14 +157,14 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
     ("scripts/ac_store/_done_proof_composite.py", "_done_proof_composite.py"),
+    ("scripts/ac_store/ac_retirement.py", "ac_retirement.py"),  # ACS-900d-4: MUST deploy (see DECISION HISTORY)
     # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
     # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
     # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
     # same failure mode, same second-copy note above.
     ("scripts/ac_store/_done_proof_entry_point_gate.py", "_done_proof_entry_point_gate.py"),
-    # _done_proof_automation_gate.py (BO-2900a-3 rework): FOURTH sibling out
-    # of done_proof.py, same MODULE-scope import, same deploy requirement.
     ("scripts/ac_store/_done_proof_automation_gate.py", "_done_proof_automation_gate.py"),
+    ("scripts/ac_store/_done_proof_reachability_gate.py", "_done_proof_reachability_gate.py"),
     # done_proof_kind_support.py (TQ-500f-3-i) -- kind classification for the
     # red-baseline gate, imported by _fl_common.py. No leading underscore
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
@@ -172,11 +187,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # deployed layout even though unit tests -- which import from source --
     # stay green.
     ("scripts/ac_store/ac_coverage_resolver.py",      "ac_coverage_resolver.py"),
-    # The following seven were added per BP-900a-1: all seven source files
-    # already existed in scripts/ac_store/ but were never wired into this
-    # deploy_map, so consumer installs were missing 7 of the 13 AC-store
-    # scripts the AC requires (deploy_map completeness gap, not a
-    # missing-source gap).
     ("scripts/ac_store/validate_ac_schema.py",        "validate_ac_schema.py"),
     # declared_files.py (ACD-1600c-4): the single declared_files read seam.
     # Imported by validate_ac_schema.py (`from declared_files import
@@ -246,6 +256,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # ModuleNotFoundError in the deployed layout -- the exact done_proof.py
     # deploy-manifest incident CLAUDE.md documents, one level up.
     ("scripts/ac_store/yaml_safe_loader.py",          "yaml_safe_loader.py"),
+    *RULE_CHECK_DEPLOY_MAP,  # ACD-2500a-1: the eleven requirement-rule-check modules
 )
 
 
@@ -465,16 +476,6 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     # SAME core-config mechanism rather than a bespoke path, per this AC's
     # own doc_links relevance note: "extend that derivation rather than
     # adding a second, parallel one".
-    #
-    # config/skill_registry.json is a SECOND later addition, surfaced by
-    # turning the corrected (BP-900g-8-ii) closure guard on across the whole
-    # package rather than confined to the two named `*_types.json` files:
-    # three deployed commit-guardian scripts (_package_surface_registry.py,
-    # check_package_surface_declaration.py, check_surface_components_e3.py)
-    # read it via a fallback dict literal keyed the same way
-    # config/agent_registry.json and docs/roadmap.json are, and it was never
-    # deployed anywhere -- confirmed absent from every deploy phase before
-    # this fix (AC BP-900g-8-ii's own "enumerate, do not skip" constraint).
     for core_config_name in (
         "ac_store_schema.json",
         "agent_registry.json",
@@ -482,7 +483,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         "diagram_types.json",
         "skill_registry.json",
         "guardrail_gates.yaml",
-        "paths.json",
+        "paths.json", "surface_craft_map.yaml", "commit_step.json",
     ):
         core_config_src = _bp.PACKAGE_ROOT / "config" / core_config_name
         if not core_config_src.is_file():

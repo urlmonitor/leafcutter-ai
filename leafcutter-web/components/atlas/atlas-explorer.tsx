@@ -23,9 +23,7 @@ import {
   MiniMap,
   useReactFlow,
   ReactFlowProvider,
-  MarkerType,
   type Node,
-  type Edge,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { ChevronRight, ArrowLeft, Sparkles, GitBranch } from "lucide-react";
@@ -36,7 +34,7 @@ import { EmptyState } from "@/components/ui/kit";
 import type { AC, AcLevel, FlowAppearance, WorkStatus } from "@/lib/data/types";
 import { nodeTypes } from "./nodes";
 import { dagPositions, galaxyPositions } from "./layout";
-import { edgeStyle } from "./edges";
+import { detailEdges, galaxyEdges } from "./elements";
 import {
   AtlasLegend,
   FilterPanel,
@@ -65,15 +63,19 @@ function coverageHslFor(testCount: number): string {
 function ExplorerInner({
   acs,
   flowIndex,
+  initialAc,
 }: {
   acs: AC[];
   flowIndex?: Record<string, FlowAppearance[]>;
+  initialAc?: string;
 }) {
   const rf = useReactFlow();
+  // A linked criterion (/atlas?ac=<id>) opens in its component with its detail drawer open.
+  const linked = initialAc ? acs.find((a) => a.id === initialAc) : undefined;
   const [selectedComponent, setSelectedComponent] = React.useState<string | null>(
-    null,
+    linked?.component ?? null,
   );
-  const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(linked?.id ?? null);
   const [filters, setFilters] = React.useState<FilterState>(defaultFilters);
 
   const detailMode = selectedComponent !== null;
@@ -161,31 +163,7 @@ function ExplorerInner({
           draggable: true,
         };
       });
-      const edges: Edge[] = galaxyGraph.edges
-        .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
-        .map((e) => {
-          const w = e.weight ?? 1;
-          // Visual flip: data models dependent -> prerequisite, but the graph
-          // reads better prerequisite -> dependent (arrowhead lands on the
-          // thing that builds on the other). Swap endpoints for these dep edges.
-          return {
-            id: e.id,
-            source: e.target,
-            target: e.source,
-            animated: w >= 4,
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: "hsl(150 64% 52%)",
-              width: 16,
-              height: 16,
-            },
-            style: {
-              stroke: "hsl(150 64% 52%)",
-              strokeWidth: 1 + Math.min(w, 8) * 0.7,
-              opacity: 0.28 + Math.min(w, 10) * 0.05,
-            },
-          };
-        });
+      const edges = galaxyEdges(galaxyGraph.edges, visibleIds);
       return { baseNodes: nodes, baseEdges: edges };
     }
 
@@ -210,31 +188,7 @@ function ExplorerInner({
         draggable: true,
       };
     });
-    const edges: Edge[] = detailGraph.edges.map((e) => {
-      const spec = edgeStyle(e.kind);
-      // depends_on / expects_from point dependent -> prerequisite in the data;
-      // flip them so every arrowhead visually lands on the child / dependent.
-      // covers (parent -> child) and delivers_to (upstream -> downstream)
-      // already flow that way, so leave them untouched.
-      const flip = e.kind === "depends_on" || e.kind === "expects_from";
-      return {
-        id: e.id,
-        source: flip ? e.target : e.source,
-        target: flip ? e.source : e.target,
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: `hsl(${spec.hsl})`,
-          width: 14,
-          height: 14,
-        },
-        style: {
-          stroke: `hsl(${spec.hsl})`,
-          strokeWidth: e.kind === "depends_on" ? 1.8 : 1.4,
-          opacity: e.kind === "covers" ? 0.35 : 0.7,
-          strokeDasharray: spec.dashed ? "5 4" : undefined,
-        },
-      };
-    });
+    const edges = detailEdges(detailGraph.edges);
     return { baseNodes: nodes, baseEdges: edges };
   }, [
     detailMode,
@@ -458,13 +412,15 @@ function ExplorerInner({
 export function AtlasExplorer({
   acs,
   flowIndex,
+  initialAc,
 }: {
   acs: AC[];
   flowIndex?: Record<string, FlowAppearance[]>;
+  initialAc?: string;
 }) {
   return (
     <ReactFlowProvider>
-      <ExplorerInner acs={acs} flowIndex={flowIndex} />
+      <ExplorerInner acs={acs} flowIndex={flowIndex} initialAc={initialAc} />
     </ReactFlowProvider>
   );
 }

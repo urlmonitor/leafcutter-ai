@@ -13,7 +13,7 @@ components:
   - worktree_manager
   - build_orchestration
 related_diagrams:
-  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-034-workspace-request-halt-sequence.md
 related_docs:
   - docs/architecture/components/worktree-manager.md
   - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
@@ -64,7 +64,7 @@ stateDiagram-v2
 ```
 
 See also: [Worktree Manager — One Workspace Maker, Per-Feature Clones](../components/worktree-manager.md)
-(the component page) and [Workspace request and the halt path](c3-030-workspace-request-halt-sequence.md)
+(the component page) and [Workspace request and the halt path](c3-034-workspace-request-halt-sequence.md)
 (what the caller does with each answer).
 
 ## The states
@@ -118,7 +118,7 @@ takes a ready workspace back to absent, or refuses `UNSENT_WORK` with a one-time
 ## Cross-Links
 
 - Component page: [Worktree Manager — One Workspace Maker, Per-Feature Clones](../components/worktree-manager.md)
-- Sibling: [Workspace request and the halt path](c3-030-workspace-request-halt-sequence.md)
+- Sibling: [Workspace request and the halt path](c3-034-workspace-request-halt-sequence.md)
 - Topology decision: [ADR-018 Amendment 1](../adrs/ADR-018-agent-isolation-topology.md)
 - As-built answer table: [delivered-maker analysis §9.3](../../analysis/2026-09-25-worktree-delivered-maker.md)
 

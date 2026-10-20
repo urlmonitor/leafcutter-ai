@@ -167,7 +167,7 @@ Signal(s) that triggered refusal: <quote the triggering phrase(s)>
 
 ---
 
-## Step 1 — Load the Write-C4-Diagram Skill
+## Step 1 — Load the `write-c4-diagram` Skill
 
 Before reading any files or producing any output, invoke the write-c4-diagram
 skill via the `Skill` tool:

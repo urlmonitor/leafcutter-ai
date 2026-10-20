@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
@@ -134,8 +134,18 @@ amended_by:
     reached a terminal outcome (completed or failed), and its fixtures must include an
     in-progress generation that is outside both bounds and must survive."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_km_400f_2.py
+- tests/knowledge/test_km_400f_2_pin.py
+- tests/knowledge_live/publication/test_km_400f_2.py
+implemented_by:
+- knowledge/adapters/retention/reclaim.py
+- knowledge/adapters/neo4j_projection.py
+- knowledge/adapters/neo4j_backend.py
+- knowledge/cli_sync.py
+- knowledge/cursors.py
+- knowledge/disclosure.py
+- .github/workflows/knowledge-sync.yml
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -200,7 +210,7 @@ test_spec:
       - "reclaim before the new generation is proven publishable"
     requires_db: false
   - name: test_live_publication_reclaims_against_a_real_backend
-    target_dir: tests/knowledge_live/
+    target_dir: tests/knowledge_live/publication/
     framework: pytest
     type: integration
     angle: real_artifact

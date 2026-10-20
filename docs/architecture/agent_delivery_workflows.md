@@ -2025,7 +2025,7 @@ Parent: [Agent Code Delivery Workflows](agent_delivery_workflows.md#4-detail-vie
 ## Cross-References
 
 - [Agent Inventory](../agents/README.md) — Comprehensive table of all existing agents and slash commands.
-- [`signoff` skill](../../templates/skills/signoff/SKILL.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards.
+- [`signoff` skill](../../templates/skills/signoff/SKILL.md) — Formal specification for the frontmatter status enum, commit-phase serialization lock, and pre-commit parity guards; the commit itself goes through the [Shared Commit Step](../reference/shared-commit-step.md) (inputs, one-answer contract, reason codes).
 - [Agent Supervisor Design Spec](../superpowers/specs/2026-05-08-agent-supervisor-design.md) — In-depth breakdown of the supervisor execution algorithms.
 
 <!--

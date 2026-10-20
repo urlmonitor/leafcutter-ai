@@ -4,7 +4,7 @@ components:
 title: "The pause record is written and read by an agent chartered to run commands, so a pause never fails on a scope refusal"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: draft
 work_status: done
 readiness: approved
@@ -45,8 +45,9 @@ expects_from:
   contract: "The pauseAtGate / resolveGate pause-store round trip whose dispatch target this edge constrains."
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: '2026-10-16: superseded by ACD-1300e-3. This AC routes the plan-feature pause-record dispatches to worktree-agent, whose charter is worktree create/remove only, so it refuses them and every gate pause ends pause_persist_failed (runs gpt-flow-step-links, fast-lane-test-gates, plan-feature-resume-and-pause). ACD-1300e-3 routes them to an executor whose charter includes pause-record I/O; its pinned test is amended when ACD-1300e-3 is built.'
+superseded_by: ACD-1300e-3
 covered_by: [unit_tests/workflows/test_bo_2300a_1_ii.py]
 implemented_by: [templates/workflows-js/plan-feature.js]
 change_target: code

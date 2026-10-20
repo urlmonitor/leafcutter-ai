@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { FlowsView } from "@/components/flows/flows-view";
 import { RAW_FLOW_ID_HEADER } from "@/lib/flow-url";
+import { flowTitle, NOT_FOUND_TITLE } from "@/lib/flow-finder/titles";
 import { loadFlowsViewData } from "../flows-data";
 
 // The canonical flow address: /flows/<product>/<flow> opens that flow, selected
@@ -17,6 +18,14 @@ function rawIdFromRequest(): string | null {
   } catch {
     return null;
   }
+}
+
+// The tab title names the flow (also with ?step=); an unknown id says so.
+export function generateMetadata({ params }: { params: { id: string[] } }) {
+  const segments = params.id;
+  const flow =
+    segments.length === 2 ? loadFlowsViewData().flows.find((f) => f.id === segments.join("/")) : undefined;
+  return { title: { absolute: flow ? flowTitle(flow.name) : NOT_FOUND_TITLE } };
 }
 
 export default function FlowPage({
