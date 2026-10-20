@@ -51,6 +51,70 @@ test_intent:
     no error
   needs_test: true
   reason: The no-match case is exactly the code being changed, so its result must be pinned.
+test_spec:
+- name: test_outcome_clauses_unchanged_for_then_and
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'outcome_clauses(''Given a table,\nWhen the job runs,\nThen one row is written,\nAnd the
+    count is 1.\n'') returns exactly [''one row is written,'', ''the count is 1.''] (pinned literally:
+    today''s output), in that order.'
+  proves_clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change
+  code_file: scripts/ac_store/_test_intent.py
+- name: test_no_outcome_clause_returns_empty_without_error
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Criteria with Given/When only, plain prose lines that match no step keyword, and a non-string
+    value each return [] and raise nothing.
+  proves_clause: a criteria text with no outcome clause gives the same result as before the change, and
+    raises no error
+  code_file: scripts/ac_store/_test_intent.py
+- name: test_no_match_guard_keeps_other_lines
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Bug-fix discrimination: criteria mixing non-matching lines with a Then header, ''-'' bullets
+    and a wrapped continuation line return today''s clauses unchanged.'
+  proves_clause: a criteria text with no outcome clause gives the same result as before the change, and
+    raises no error
+  code_file: scripts/ac_store/_test_intent.py
+  must_catch:
+  - a guard that returns [] at the first line the step pattern does not match
+  - a guard that skips non-matching lines and so drops bullet and continuation lines
+  - reading match.group(2) without a guard, which raises on a non-matching line
+- name: test_test_intent_reader_reachable_from_rule_check_cli
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: requirement_rule_check.py as a subprocess on a tmp store whose record has
+    the Then/And criteria above and one test_intent entry per clause: no ''test intent coverage'' finding;
+    control record with one entry missing gets exactly one ''missing'' finding.'
+  proves_clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change
+  code_file: scripts/ac_store/_test_intent.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/_test_intent.py
+- unit_tests/ac_store/test_acd_2500b_1_i.py
+- unit_tests/ac_store/_rule_check_fixtures.py
+- scripts/ac_store/requirement_rule_check.py
+file_findings:
+- file: scripts/ac_store/_test_intent.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds outcome_clauses, whose step-line match at lines 64-65 is read without a None check.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/_test_intent.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

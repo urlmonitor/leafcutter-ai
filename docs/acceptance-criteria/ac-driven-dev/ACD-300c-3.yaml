@@ -78,6 +78,108 @@ test_intent:
 - clause: if the user approves, the workflow reports the count of ACs approved and the count held
   needs_test: true
   reason: The approved and held counts are computed from the approval step's report and can be wrong.
+test_spec:
+- name: test_final_gate_shows_enriched_fields_and_test_design
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Driven through plan-feature.js under run_workflow_under_e2 (technical route, 4 ids), the
+    final-gate pause record's question names assigned_agent, estimated_complexity, delivers_to, expects_from
+    and the test design (test_spec) for the batch, and its context lists every batch id.
+  proves_clause: 'it displays: all ACs in the batch with their enriched fields (assigned_agent, estimated_complexity,
+    delivers_to, expects_from) and their test design'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_asks_for_one_batch_priority
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: The persisted final-gate question is a priority choice that names critical, high, medium
+    and low, and the approve answer's priority is the one passed on to the approval step.
+  proves_clause: it prompts the user to set a priority (critical/high/medium/low) for the batch
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_approve_runs_the_approval_step_with_released_ids
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: A workflow run resumed with a person's approve answer (priority high) on a batch whose
+    hold report holds one id dispatches the approval step command (approve_acs.py with the released ids
+    and --priority high) and returns status ok; no status-checker apply-approval dispatch happens.
+  proves_clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
+    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; the pipeline
+    completes successfully'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_approve_never_lets_an_agent_write_readiness
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same approve run: the only approval dispatch is the deterministic approval-step command;
+    its --ids list is exactly the released ids, and no agent prompt asks to set readiness or priority.'
+  proves_clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
+    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; the pipeline
+    completes successfully'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the approve branch still dispatches the status-checker apply-approval agent to edit readiness and
+    priority
+  - the approval step is given every batch id, including the held one
+  - the chosen priority is dropped and the step is run with medium
+- name: test_final_gate_edit_redispatches_the_test_designer_with_feedback
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A person's edit answer with feedback at the final gate re-dispatches stage-test-design-author
+    whose prompt carries that feedback text; stage-itpo-author is not dispatched again after the gate.
+  proves_clause: '"edit" — provide feedback; the test-design stage is re-invoked with the feedback (loop
+    until approved)'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - edit re-dispatches the test designer but drops the user's feedback from its prompt
+  - edit re-dispatches the technical planner instead of the test-design stage
+- name: test_final_gate_defer_leaves_records_untouched
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: A defer answer returns status ok with acs_as_reviewed equal to the batch; no approval-step
+    dispatch and no commit-stage-output dispatch follow the gate.
+  proves_clause: '"defer" — set readiness: reviewed but do NOT promote to approved; ACs stay in store
+    but are not scanner-eligible'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_reports_approved_and_held_counts
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With an approval-step report of 3 approved and 1 held, the closing message states 3 approved
+    and 1 held.
+  proves_clause: if the user approves, the workflow reports the count of ACs approved and the count held
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the approved count is the size of the batch instead of the step report's approved list
+  - the held count is taken from the pre-gate hold list instead of the step's report
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
+- unit_tests/test_final_gate_and_commit_message.py
+file_findings:
+- file: templates/workflows-js/plan-feature.js
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its final-gate branch builds the gate prompt, the priority choice and the approve, edit and
+    defer actions that the criteria change.
+  decision: null
+file_findings_opened_files:
+- templates/workflows-js/plan-feature.js
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by:

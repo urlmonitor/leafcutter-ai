@@ -39,6 +39,9 @@ it_requirements:
 - Each amendment note is dated and names the record that closed the gap (ACD-2500a-2-vi, ACD-300c-4);
   the original sentences stay readable below the notes.
 - Build only after ACD-2500a-2-vi and ACD-300c-4 are done. ADR-072's status and decisions do not change.
+- 'ADR-072 section 4 (stage order and commits) gains a dated amendment sentence: the test-design output
+  is committed before the planner''s hand-back round, so the hand-back rule check''s before-state is the
+  post-design batch (ACD-2500a-2-ix). The criteria do not name this sentence yet (logged for the BA).'
 declared_files:
 - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
   state: existing
@@ -46,6 +49,15 @@ delivers_to: null
 expects_from: null
 test_required: false
 test_rationale: "Documentation-only amendment of an existing ADR; checked by the project's documentation checks at commit time."
+file_findings:
+- file: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the section 2 backstop sentence and the two Consequences bullets the amendment changes.
+  decision: null
+file_findings_opened_files:
+- docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

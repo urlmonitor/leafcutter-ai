@@ -53,8 +53,12 @@ it_requirements:
   the rule-agreement check of GE-127d-1 fails.
 - A file whose measured length drops because of this change is not reported as a violation, and no stored
   baseline needs a hand edit.
-- Language coverage comes from the standard's existing per-language comment syntax (GE-127c); no per-language
-  list is hard-coded for the block.
+- 'IT PO decision on the comment-prefix source: the measurement takes no language, and the config holds
+  only checked_extensions and limits, so the line-comment prefixes (#, //, --) are held once as a constant
+  in templates/scripts/commit_guardian/_file_size_ratchet.py. A block starts at a line whose text after
+  one of those prefixes is exactly DECISION HISTORY and continues over lines that start with the same
+  prefix as its heading, so no per-extension mapping is needed and every checked extension is covered.
+  The published rule names the three prefixes.'
 - 'A block does not need ''='' rule lines: about 50 of the headings in the repository have none.'
 - Measuring stays linear in file length.
 declared_files:
@@ -88,6 +92,97 @@ test_intent:
     before this change
   needs_test: true
   reason: Double subtraction is a computed edge case that would under-count files.
+test_spec:
+- name: test_ge_127h_1_python_and_javascript_history_blocks_are_not_measured
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Write the 80-line Python file plus its 25-line '#' history block (rule, heading, rule,
+    22 entries) and the 120-line JavaScript file whose header carries a 15-line '//' block with no rule
+    lines; measure_current_length gives 80 and 120.
+  proves_clause: the Python file measures 80 and the JavaScript file measures 120
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_1_history_block_is_left_out_of_the_length_the_size_check_quotes
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: 'Stage the 80-line Python file with its 25-line block under a limit of 80 and run the fixture
+    copy of check_file_size.py as a subprocess: it exits 0 and lists the file at 80 lines; the same file
+    with one more code line exits 1 quoting Lines: 81. Uses _ge_127d_2_fixture.build_fixture_tree (a copy
+    of the production modules in a temporary git repository, no build.py, no POSIX flock).'
+  proves_clause: the Python file measures 80 and the JavaScript file measures 120
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_1_line_comment_block_is_left_out_in_every_covered_language
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Parametrised over every language the standard''s per-language comment syntax covers (at
+    least Python ''#'', JavaScript ''//'', SQL ''--'' and shell ''#''): a file of N measured lines plus
+    a line-comment history block measures N.'
+  proves_clause: the same holds for the line-comment form of every other language the standard covers
+    (for example "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell)
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - only the '#' form recognised, so '-- DECISION HISTORY' in a .sql file is still counted
+  - a hard-coded language list that leaves out a language the standard covers
+- name: test_ge_127h_1_lines_outside_the_block_measure_as_before
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: A file with ordinary '#' and '//' comments, a docstring, a JSDoc /** */ block, blank lines
+    and a history block measures exactly its pre-change count (pinned) minus the block's lines.
+  proves_clause: every line outside the block is measured exactly as it was before this change, including
+    ordinary comments, docstrings, JSDoc and blank lines
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_1_file_without_a_history_block_measures_as_before
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Representative Python, SQL and JavaScript files without a block measure the same pinned
+    length the pre-change rule gives (the existing GE-127d-2 counts stay green).
+  proves_clause: a file with no decision-history block measures the same length as before this change
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A module whose history sits inside a trailing triple-quoted string (the form _file_size_ratchet.py
+    itself uses) and a JavaScript file whose history sits inside a /* */ header each measure what they
+    measured before this change.
+  proves_clause: a decision-history block that sits inside text the rule in force already leaves out (a
+    module docstring or a block comment) is not subtracted a second time, so that file measures what it
+    measured before this change
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - the block scan run on the raw text before docstrings and block comments are stripped, so the embedded
+    block's lines are subtracted a second time
+  - '''# DECISION HISTORY'' text inside a docstring treated as a line-comment block'
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/config.py
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+file_findings:
+- file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds count_content_lines and _strip_unmeasured_regions, the one measurement function whose
+    rule the criteria change.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

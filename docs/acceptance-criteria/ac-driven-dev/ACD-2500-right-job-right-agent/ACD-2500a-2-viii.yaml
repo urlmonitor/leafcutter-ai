@@ -54,8 +54,10 @@ it_requirements:
   not invoked, whatever the stage or family.'
 - Families that would repair without needing a before-state still evaluate and report the repair as 'needs
   a decision', with the value that would have been written in detail.
-- The 'no before-state, nothing repaired' statement is an additive report key placed before findings;
-  stdout stays one JSON document and consumers ignore keys they do not know.
+- 'The ''no before-state, nothing repaired'' statement is the additive top-level report key before_state,
+  an object {given: bool, repairs_applied: bool} (false/false on such a run); under the report''s sort_keys
+  output it sorts before family_counts and findings, which is how ''before any finding'' is met. stdout
+  stays one JSON document and consumers ignore keys they do not know.'
 - An authoring stage run without a before-state still ends with verdict failed (the existing fail-closed
   rule stays); the change is only that nothing is written.
 - /plan-feature's stage-end runs, which always pass --before-ref, behave byte for byte as before.
@@ -97,6 +99,129 @@ test_intent:
   needs_test: true
   reason: The normal path with a before-state must keep repairing, or the fix would break the /plan-feature
     gates.
+test_spec:
+- name: test_run_without_before_state_writes_no_file
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
+    ACD-9990a lacks the back-link; argv built by hand (not cli_argv, which adds a --before-snapshot) with
+    neither --before-ref nor --before-snapshot. snapshot_tree of the folder is byte-identical after the
+    run; the 3 records still read approved and ACD-9990a's covered_by is unchanged.
+  proves_clause: 'no record file in the folder is changed: all 3 records still read readiness "approved",
+    and ACD-9990a''s covered_by is unchanged'
+  code_file: scripts/ac_store/requirement_rule_check.py
+- name: test_before_state_families_list_not_evaluated
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
+    ACD-9990a lacks the back-link; argv built by hand (not cli_argv, which adds a --before-snapshot) with
+    neither --before-ref nor --before-snapshot. Every record gets a ''not evaluated'' finding whose message
+    reads ''not evaluated: no before-state'' from the readiness family and from the ''protected fields''
+    family.'
+  proves_clause: 'the readiness family and the protected-field family list every record as "not evaluated:
+    no before-state"'
+  code_file: scripts/ac_store/_rc_readiness.py
+- name: test_missing_backlink_reported_as_decision_with_id
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
+    ACD-9990a lacks the back-link; argv built by hand (not cli_argv, which adds a --before-snapshot) with
+    neither --before-ref nor --before-snapshot. The back-link finding is 'needs a decision' (not 'fixed'),
+    lands on ACD-9990a and its message or detail names ACD-9990a-4, the id that would have been appended.
+  proves_clause: the missing back-link is still reported, with disposition "needs a decision" and the
+    id that would have been added, instead of "fixed"
+  code_file: scripts/ac_store/requirement_rule_check.py
+- name: test_report_states_no_before_state_before_findings
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
+    ACD-9990a lacks the back-link; argv built by hand (not cli_argv, which adds a --before-snapshot) with
+    neither --before-ref nor --before-snapshot. The JSON stdout carries an additive key stating that no
+    before-state was given and nothing was repaired, and it appears in the raw stdout before the 'findings'
+    key (dump_report sorts keys, so the key name must sort first); stdout stays one JSON document.
+  proves_clause: the report states, before any finding, that no before-state was given and that the run
+    therefore repaired nothing
+  code_file: scripts/ac_store/_rc_report.py
+- name: test_before_ref_run_repairs_backlink_and_keeps_approved
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Same folder in a tmp git repo, committed; run with --before-ref HEAD. The parent file read
+    back from disk now lists ACD-9990a-4 in covered_by, the finding is 'fixed', and the 3 records still
+    read approved.
+  proves_clause: the same folder checked with a before-state taken from the last commit repairs the back-link
+    ("fixed") and leaves the 3 approved records approved
+  code_file: scripts/ac_store/requirement_rule_check.py
+- name: test_hand_run_without_before_state_reachable_from_cli
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: requirement_rule_check.py as a subprocess, hand-run argv with no before-state:
+    stdout is one JSON document, the folder is byte-identical afterwards, and an authoring --stage still
+    ends verdict failed (exit 1).'
+  proves_clause: 'no record file in the folder is changed: all 3 records still read readiness "approved",
+    and ACD-9990a''s covered_by is unchanged'
+  code_file: scripts/ac_store/requirement_rule_check.py
+- name: test_no_before_state_fix_is_total_not_partial
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Bug-fix discrimination for KI-ACS-20261015: with no before-state, no repair of any family
+    reaches the guarded writer.'
+  proves_clause: 'no record file in the folder is changed: all 3 records still read readiness "approved",
+    and ACD-9990a''s covered_by is unchanged'
+  code_file: scripts/ac_store/requirement_rule_check.py
+  must_catch:
+  - skipping only the readiness repair while the back-link is still appended
+  - treating every record as created during the stage and demoting approved to draft
+  - dropping the back-link finding instead of reporting it as needs a decision
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/requirement_rule_check.py
+- scripts/ac_store/_rc_report.py
+- scripts/ac_store/_rc_readiness.py
+- scripts/ac_store/_rc_records.py
+- scripts/ac_store/_rc_backlinks.py
+- unit_tests/ac_store/_rule_check_fixtures.py
+- unit_tests/ac_store/test_acd_2500a_2_iv.py
+file_findings:
+- file: scripts/ac_store/requirement_rule_check.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the before-state setup and the repair step that hands repairs to the guarded writer,
+    which a run without a before-state must skip.
+  decision: null
+- file: scripts/ac_store/_rc_report.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It builds the report keys, where the no-before-state statement is added before findings.
+  decision: null
+- file: scripts/ac_store/_rc_readiness.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the readiness decision that today demotes an approved record when no before-state is
+    loaded.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/requirement_rule_check.py
+- scripts/ac_store/_rc_report.py
+- scripts/ac_store/_rc_readiness.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

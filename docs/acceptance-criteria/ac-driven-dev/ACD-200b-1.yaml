@@ -50,6 +50,16 @@ declared_files:
   state: existing
 delivers_to: null
 expects_from: null
+file_findings:
+- file: templates/agents/it-po.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its section S5b names the rule check as owner, keeps the authoring duty for the documentation-trigger
+    finding and states the reviewed-barrier sentence the criteria describe.
+  decision: null
+file_findings_opened_files:
+- templates/agents/it-po.md
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by:

@@ -57,6 +57,68 @@ test_intent:
 - clause: the closing summary states "3 approved, 0 held"
   needs_test: true
   reason: The count is computed from the step's report and must include the feature record.
+test_spec:
+- name: test_id_list_mode_approves_an_l1_with_its_children
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Runs approve_acs.py --ids ACD-9990a,ACD-9990a-1,ACD-9990a-2 --priority high --json as a
+    subprocess on a tmp store where ACD-9990a is an L1 covering the two children; all three read readiness
+    approved.
+  proves_clause: all three records read readiness "approved"
+  code_file: scripts/ac_store/approve_acs.py
+- name: test_l1_is_approved_once_under_its_own_id
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Reads the files back: ACD-9990a gained exactly one approval entry, and each child gained
+    exactly one (not one per mention).'
+  proves_clause: 'ACD-9990a is approved once under its own id: it is not skipped because it has children,
+    and it gains exactly one approval entry in amended_by'
+  code_file: scripts/ac_store/approve_acs.py
+  must_catch:
+  - the id-list mode expands an L1 id to its covered_by children, so the L1 stays reviewed and each child
+    is approved twice
+  - the id-list mode skips any id whose record has covered_by children
+- name: test_workflow_summary_states_three_approved_zero_held
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'plan-feature.js under run_workflow_under_e2 with the step''s real --json report for the
+    L1 batch: the closing message states 3 approved, 0 held, and the dispatched --ids include ACD-9990a.'
+  proves_clause: the closing summary states "3 approved, 0 held"
+  code_file: templates/workflows-js/plan-feature.js
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
+- unit_tests/ac_store/test_acd_2500b_2_holds.py
+- unit_tests/ac_store/_acd_2500b_approval_fixtures.py
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
+file_findings:
+- file: scripts/ac_store/approve_acs.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its goal mode walks covered_by and its single-id mode promotes one record, the modes beside
+    which the criteria add an id-list mode that approves an L1 under its own id.
+  decision: null
+- file: templates/workflows-js/plan-feature.js
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its final-gate approve branch decides which batch ids reach approval and writes the closing
+    summary counts.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

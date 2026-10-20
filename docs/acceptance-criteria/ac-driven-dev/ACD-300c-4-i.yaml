@@ -59,6 +59,79 @@ test_intent:
     rather than reporting a failure
   needs_test: true
   reason: Reporting an idempotent no-op as a failure would block resumed runs.
+test_spec:
+- name: test_second_application_rewrites_no_file
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Runs approve_acs.py --ids ACD-9990a-1,ACD-9990a-2,ACD-9990a-4 --priority high --json twice
+    as a subprocess on a tmp store; after the second run all 4 files are byte-identical to the state after
+    the first, and both runs exit 0.
+  proves_clause: all 4 record files are byte-identical to what they were after the first application
+  code_file: scripts/ac_store/approve_acs.py
+- name: test_second_application_adds_no_approval_entry
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: 'Reads the three approved files back after the second run: each amended_by list has the
+    same length as after the first run, with exactly one approval entry.'
+  proves_clause: none of the three approved records gains a second approval entry in amended_by
+  code_file: scripts/ac_store/approve_acs.py
+- name: test_second_application_reports_already_approved
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: The second run's --json report has approved [], held [ACD-9990a-3] and already_approved
+    listing the three ids, with exit 0.
+  proves_clause: the closing summary states "3 approved, 1 held" again and states that the 3 were already
+    approved, rather than reporting a failure
+  code_file: scripts/ac_store/approve_acs.py
+- name: test_workflow_summary_reports_already_approved_not_failure
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: plan-feature.js under run_workflow_under_e2, resumed with approve; the approval reply is
+    the real second-run --json stdout. The run returns status ok and its message states 3 approved, 1
+    held and that the 3 were already approved.
+  proves_clause: the closing summary states "3 approved, 1 held" again and states that the 3 were already
+    approved, rather than reporting a failure
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the summary counts only the step's approved list and states 0 approved
+  - an empty approved list is treated as a failed approval and the run is reported failed
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
+- unit_tests/ac_store/test_acd_2500b_2_holds.py
+- unit_tests/ac_store/_acd_2500b_approval_fixtures.py
+- unit_tests/ac_store/test_acd_1200b_5.py
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
+file_findings:
+- file: scripts/ac_store/approve_acs.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its promote path already skips a record at readiness approved without writing, which is the
+    idempotent no-op the criteria require of the id-list mode.
+  decision: null
+- file: templates/workflows-js/plan-feature.js
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its final-gate approve branch writes the closing summary that must report already-approved records
+    as such.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

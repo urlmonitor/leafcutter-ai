@@ -67,6 +67,70 @@ test_intent:
 - clause: its result lists ACD-9990a-2 as held with the reason "test design pending"
   needs_test: true
   reason: The result's held list is what the caller acts on, and its reason must come through unchanged.
+test_spec:
+- name: test_scripted_workflow_approves_through_the_step
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Calls run_authoring_pipeline (the module's public entry point) on the technical route with
+    a dispatch stub returning ACD-9990a-1 and ACD-9990a-2, a final gate answering approve, and a tmp store;
+    ACD-9990a-1 reads back readiness approved with one new approval entry in amended_by.
+  proves_clause: ACD-9990a-1 reads readiness "approved" and has gained one approval entry in amended_by
+  code_file: scripts/ac_store/create_ac_workflow.py
+- name: test_scripted_workflow_leaves_the_held_record_reviewed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: 'Same run: ACD-9990a-2 (test intent with no test design) is read back from disk at readiness
+    reviewed with its bytes unchanged.'
+  proves_clause: ACD-9990a-2 still reads readiness "reviewed"
+  code_file: scripts/ac_store/create_ac_workflow.py
+- name: test_scripted_workflow_writes_no_readiness_itself
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same run with a recording write_ac_fields_fn: it is never called with a readiness value,
+    and the only change to readiness on disk is the approval step''s.'
+  proves_clause: the value "approved" reaches a record's readiness only through the store's one approval
+    step, so this workflow writes no readiness value of its own
+  code_file: scripts/ac_store/create_ac_workflow.py
+  must_catch:
+  - the pipeline still calls write_ac_fields_fn with readiness approved for every written id
+  - the pipeline approves through the step but also writes readiness for the held id
+- name: test_scripted_workflow_result_lists_the_held_record
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'The result carries held [{id: ACD-9990a-2, file, reason: test design pending}], the reason
+    exactly as the step reports it.'
+  proves_clause: its result lists ACD-9990a-2 as held with the reason "test design pending"
+  code_file: scripts/ac_store/create_ac_workflow.py
+  must_catch:
+  - the held list is dropped from the result
+  - the held reason is rewritten or paraphrased instead of passed through from the step
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/create_ac_workflow.py
+- scripts/ac_store/approve_acs.py
+- unit_tests/ac_store/test_acd_2500b_2_holds.py
+- unit_tests/ac_store/_acd_2500b_approval_fixtures.py
+- unit_tests/test_create_ac_workflow_canonical_names.py
+file_findings:
+- file: scripts/ac_store/create_ac_workflow.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its final-gate approve branch writes readiness approved for every written id through write_ac_fields_fn
+    without the approval step or the hold report, the behaviour the criteria change.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/create_ac_workflow.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

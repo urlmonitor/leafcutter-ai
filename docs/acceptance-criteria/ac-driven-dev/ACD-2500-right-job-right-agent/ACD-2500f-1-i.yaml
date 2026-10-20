@@ -69,6 +69,82 @@ test_intent:
   needs_test: true
   reason: Each mismatch reported once depends on how the two rules split the cases, which a fixture can
     show.
+test_spec:
+- name: test_requirement_store_writer_declaring_analysis_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Tmp package built like test_acd_2500e_1_i.py''s _package (yaml.safe_dump templates, json.dumps
+    registry). fixture-req-writer: mutates surface under docs/acceptance-criteria/, produces analysis.
+    It is listed by the new rule and the listing names the agent, the requirement-store surface and ''analysis''.'
+  proves_clause: '"fixture-req-writer" is listed, naming the agent, the requirement-store change surface
+    and the declared produces value "analysis"'
+  code_file: scripts/build_phases_profile_consistency.py
+- name: test_reader_declaring_no_change_not_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'Tmp package built like test_acd_2500e_1_i.py''s _package (yaml.safe_dump templates, json.dumps
+    registry). fixture-reader: read-only tools, mutates none, produces analysis: not listed by either
+    rule. Control in the same package: fixture-req-writer is listed.'
+  proves_clause: '"fixture-reader" is not listed'
+  code_file: scripts/build_phases_profile_consistency.py
+- name: test_real_requirement_writers_not_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'check_profiles on the real config/agent_registry.json and templates: none of it-po, product-owner,
+    business-analyst, test-designer is listed by either rule (red until ACD-2500f-1 is done).'
+  proves_clause: none of it-po, product-owner, business-analyst or test-designer is listed once ACD-2500f-1
+    is done
+  code_file: scripts/build_phases_profile_consistency.py
+- name: test_pre_fix_business_analyst_reported_once_by_existing_rule
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Tmp package built like test_acd_2500e_1_i.py''s _package (yaml.safe_dump templates, json.dumps
+    registry). Frozen pre-ACD-2500f-1 business-analyst profile (Write/Edit tools, mutates none, produces
+    analysis): reported exactly once, by the ACD-2500e-1-i rule, and not by the new rule.'
+  proves_clause: the business-analyst profile as it stood before ACD-2500f-1 (produces "analysis", changes
+    nothing) is listed by the check that ACD-2500e-1-i defines, not by this one, so each mismatch is reported
+    once
+  code_file: scripts/build_phases_profile_consistency.py
+  must_catch:
+  - a new rule that also fires on mutates none, so the agent is reported twice
+  - a new rule that derives 'changes the store' from Write/Edit tools instead of a declared mutates surface
+  - a hard-coded list of the four requirement writers
+- name: test_profile_rule_reachable_from_cli_and_build_validation
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry points: build_phases_profile_consistency.py as a subprocess lists fixture-req-writer
+    and exits 0 (warning first, ADR-026); validate_agent_self_description in a fresh interpreter on two
+    packages differing only in fixture-req-writer''s produces: the warning count rises by one, the error
+    count does not. Never spawns build.py.'
+  proves_clause: '"fixture-req-writer" is listed, naming the agent, the requirement-store change surface
+    and the declared produces value "analysis"'
+  code_file: scripts/build_phases_profile_consistency.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/build_phases_profile_consistency.py
+- scripts/build_phases_agent_validation.py
+- unit_tests/agents/test_acd_2500e_1_i.py
+file_findings:
+- file: scripts/build_phases_profile_consistency.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the existing profile rule and check_profiles, which the new rule extends.
+  decision: null
+file_findings_opened_files:
+- scripts/build_phases_profile_consistency.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

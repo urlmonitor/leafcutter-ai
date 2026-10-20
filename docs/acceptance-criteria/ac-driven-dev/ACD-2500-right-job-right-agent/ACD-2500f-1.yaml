@@ -101,6 +101,108 @@ test_intent:
   needs_test: true
   reason: The exact set of requirement writers is the outcome of the parent requirement and is cheap to
     assert over the registry.
+test_spec:
+- name: test_three_profiles_produce_requirement_records
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Parametrized over product-owner, business-analyst, test-designer: the template frontmatter
+    (parsed with template_compiler.parse_frontmatter) has produces == ''requirement_records''.'
+  proves_clause: each of the three profiles declares it produces "requirement_records"
+  code_file: templates/agents/product-owner.md
+- name: test_po_and_ba_declare_requirement_store_change_surface
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Parametrized over product-owner, business-analyst: mutates has no entry named none and
+    exactly one entry whose surface names docs/acceptance-criteria/, with a non-empty description that
+    names record fields the agent writes (e.g. criteria for the BA, title/criteria for the PO).'
+  proves_clause: the product-owner and business-analyst profiles each declare one change surface, the
+    requirement store (docs/acceptance-criteria/), with a description of the fields that agent writes,
+    instead of "none"
+  code_file: templates/agents/business-analyst.md
+- name: test_registry_entries_match_profile_produces
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: For the three ids, config/agent_registry.json's produces equals the template's produces;
+    both read from the real files, never retyped.
+  proves_clause: each agent card and registry entry shows the same produces value as its profile
+  code_file: config/agent_registry.json
+- name: test_cards_show_profile_produces
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: The committed generated cards of the three agents (docs/agents/cards/<id>.card.md, as test_acd_2500e_1.py
+    reads it) show the template's produces and contain generate_agent_cards.render_io_contract's output
+    for the template; reads the cards, never spawns build.py.
+  proves_clause: each agent card and registry entry shows the same produces value as its profile
+  code_file: templates/agents/test-designer.md
+- name: test_requirement_record_writers_are_exactly_four
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Over the real registry: the set of ids with produces == ''requirement_records'' equals
+    {it-po, product-owner, business-analyst, test-designer}.'
+  proves_clause: the list of agents declaring "requirement_records" is exactly it-po, product-owner, business-analyst
+    and test-designer
+  code_file: config/agent_registry.json
+- name: test_registry_gate_accepts_the_new_profiles
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: python scripts/registry_validator.py as a subprocess on a tmp copy of the
+    package (as test_acd_2500e_1.py does): exits 0 with the three entries at requirement_records; control
+    with one entry at a typo exits 1 naming it.'
+  proves_clause: each of the three profiles declares it produces "requirement_records"
+  code_file: config/agent_registry.json
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/agents/product-owner.md
+- templates/agents/business-analyst.md
+- templates/agents/test-designer.md
+- config/agent_registry.json
+- unit_tests/agents/test_acd_2500e_1.py
+file_findings:
+- file: templates/agents/product-owner.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its frontmatter declares produces analysis and mutates none, the values the criteria change.
+  decision: null
+- file: templates/agents/business-analyst.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its frontmatter declares produces analysis and mutates none, the values the criteria change.
+  decision: null
+- file: templates/agents/test-designer.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its frontmatter declares produces analysis, the value the criteria change, beside the mutates
+    entry that stays.
+  decision: null
+- file: config/agent_registry.json
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its product-owner, business-analyst and test-designer entries carry produces analysis, the derived
+    copy the criteria change.
+  decision: null
+file_findings_opened_files:
+- templates/agents/product-owner.md
+- templates/agents/business-analyst.md
+- templates/agents/test-designer.md
+- config/agent_registry.json
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

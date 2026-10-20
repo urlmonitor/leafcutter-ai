@@ -67,6 +67,74 @@ test_intent:
 - clause: the commit completes, and the file is not reported as having crossed its limit
   needs_test: true
   reason: The crossing check must use the same rule as the growth ratchet.
+test_spec:
+- name: test_ge_127h_2_history_only_append_to_an_oversized_js_body_commits
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: 'Fixture with checked_extensions [''.js''] and limit 1,000: commit (bypassing the hook)
+    a JavaScript body measuring 1,400 with a ''//'' history block, append 3 entry lines, stage, and run
+    the fixture copy of check_file_size.py as a subprocess; it exits 0 and the file is listed at 1,400
+    lines. Uses _ge_127d_2_fixture.build_fixture_tree (a copy of the production modules in a temporary
+    git repository, no build.py, no POSIX flock).'
+  proves_clause: the commit completes, and the file's measured length before and after is 1,400
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_2_history_only_append_measures_1400_before_and_after
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: get_previous_length on the committed blob and measure_current_length on the staged file
+    both give 1,400, and resolve_added_measured_lines gives 0 for the 3 appended entry lines.
+  proves_clause: the commit completes, and the file's measured length before and after is 1,400
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - count_added_measured_lines still strips with the old rule, so the 3 entry lines count as added and
+    the required length becomes 1,397, refusing the change
+  - the previous length measured with the old rule and the current length with the new one
+- name: test_ge_127h_2_history_plus_one_code_line_is_refused_stating_1400_and_1401
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'The same append plus 1 code line: the check exits 1 and the grew refusal states Previous
+    length: 1400 and New length: 1401.'
+  proves_clause: the commit does not complete, and the outcome states a length before of 1,400 and a length
+    after of 1,401
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_2_history_append_to_a_399_line_python_file_does_not_cross_400
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Fixture with checked_extensions [''.py''] and limit 400: a committed 399-line file gets
+    20 appended entry lines; the check exits 0 and prints no too-large refusal for it.'
+  proves_clause: the commit completes, and the file is not reported as having crossed its limit
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - 'the crossing check measures the current content with the old rule and reports Lines: 419 (Limit:
+    400)'
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/config.py
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+file_findings:
+- file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the previous-length, current-length and added-line measurements both ratchet paths
+    use, including count_added_measured_lines, which must apply the same rule.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

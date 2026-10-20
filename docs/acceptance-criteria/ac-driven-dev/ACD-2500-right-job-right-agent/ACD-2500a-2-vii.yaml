@@ -62,6 +62,9 @@ it_requirements:
   all protected fields it allows only assigned_agent and each file finding's decision (it-po S3b).
 - Wiring /plan-feature to run the check with --stage itpo-handback after the hand-back pass is not in
   this record's scope (logged as a caveat).
+- The itpo-handback before-state is the post-design batch (provided by ACD-2500a-2-ix's stage commit).
+  Run against a pre-design before-state, the map would report every test_spec and file_findings entry
+  as a hand-back edit; that is a wiring error, not a finding to tune away in the map.
 declared_files:
 - path: scripts/ac_store/_rc_protected_fields.py
   state: to_be_created
@@ -105,6 +108,109 @@ test_intent:
   needs_test: true
   reason: Stages that own these fields must not be failed by this family, or the PO, BA and first planner
     pass could never complete.
+test_spec:
+- name: test_handback_allowed_changes_raise_no_finding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Tmp git repo via init_git_repo/commit_all from _rule_check_fixtures: the before-state
+    records are committed, the stage''s edits are written uncommitted, and the check runs with --before-ref
+    HEAD. Stage itpo-handback. ACD-9990a-2''s assigned_agent python-coder -> sql-coder and its one finding''s
+    decision none -> {choice: reassign, by: it-po}: no ''protected fields'' finding names assigned_agent
+    or the decision. Control in the same run: ACD-9990a-1''s criteria change is reported.'
+  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_handback_reports_criteria_and_finding_verdict
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Same scenario plus ACD-9990a-2''s finding verdict changed to ''consistent'': exactly two
+    ''protected fields'' findings, (ACD-9990a-1, criteria) and (ACD-9990a-2, the file-finding verdict),
+    each ''needs a decision'' and each naming stage itpo-handback.'
+  proves_clause: 'exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and ACD-9990a-2
+    file-finding verdict, each naming the hand-back pass as the stage'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_same_assignment_change_reported_at_test_design_stage
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: The identical on-disk change and before-state checked with --stage test-design reports
+    assigned_agent; with --stage itpo-handback it does not. Only the stage differs.
+  proves_clause: the same assigned_agent change made during the test-design stage instead is reported,
+    as ACD-2500a-2-vi requires
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_owner_map_is_the_single_source
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'In process, stage itpo-handback, a store whose only disallowed hand-back change is ACD-9990a-1''s
+    criteria: the baseline run fails with that one finding; with the module''s owner map monkeypatched
+    to also allow criteria for itpo-handback, the next run on the same store passes with no other edit;
+    restoring the map restores the finding.'
+  proves_clause: which protected fields each stage may change is read from one owner map, so allowing
+    one more field for one stage is a single edit to that map and changes this family's verdict on the
+    next run with no other edit
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  must_catch:
+  - an extra `if stage == 'itpo-handback'` branch outside the owner map, so editing the map does not change
+    the verdict
+  - the allowed fields copied into a second constant in requirement_rule_check.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_stages_outside_owner_map_listed_not_evaluated
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'Parametrized over --stage po, ba, itpo with the same criteria change: every record gets
+    ''not evaluated'' from ''protected fields'' and no blocking finding from it; the family never fails
+    the verdict at these stages.'
+  proves_clause: a stage the owner map does not list (the product owner, business analyst and the planner's
+    first pass, which own these fields) is listed "not evaluated" for this family and is not failed by
+    it
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_itpo_handback_stage_reachable_from_cli
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: requirement_rule_check.py as a subprocess with --stage itpo-handback --before-ref
+    HEAD on the tmp git repo: the stage is accepted (no ''unrecognised --stage'' finding), exit 0 when
+    only assigned_agent and the decision changed. Control: an unknown stage still fails.'
+  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+  code_file: scripts/ac_store/requirement_rule_check.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/requirement_rule_check.py
+- scripts/ac_store/_rc_report.py
+- scripts/ac_store/_rc_records.py
+- unit_tests/ac_store/_rule_check_fixtures.py
+- unit_tests/ac_store/test_acd_2500a_2_iv.py
+- templates/agents/test-designer.md
+- scripts/ac_store/_rc_protected_fields.py
+file_findings:
+- file: scripts/ac_store/requirement_rule_check.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the STAGES list and the --stage validation where the itpo-handback stage must be added.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/requirement_rule_check.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

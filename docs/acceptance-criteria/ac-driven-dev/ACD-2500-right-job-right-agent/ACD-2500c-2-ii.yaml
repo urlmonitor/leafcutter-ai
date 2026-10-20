@@ -39,6 +39,15 @@ delivers_to: null
 expects_from: null
 test_required: false
 test_rationale: "Type annotation on a test helper; the type checker run and the unchanged test-design-stage suite are the proof, and there is no new behaviour to test."
+file_findings:
+- file: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the unannotated variable near line 101 that the type checker reports.
+  decision: null
+file_findings_opened_files:
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

@@ -79,6 +79,12 @@ it_requirements:
   pending repairs, not by exempting covered_by.
 - The report stays deterministic (sorted findings, no timestamps), with at most one finding per (record,
   field).
+- The family needs each record's committed value of every protected field; today's before-state carries
+  readiness only, so the before-state loader in scripts/ac_store/_rc_records.py is extended to carry the
+  full committed record (or the protected fields) for each id.
+- it_requirements in list (or string) form is compared as one protected value; in mapping form every key
+  except reference_file_path is compared on its own; a change from one form to the other is reported as
+  a change of it_requirements.
 declared_files:
 - path: scripts/ac_store/_rc_protected_fields.py
   state: to_be_created
@@ -87,6 +93,8 @@ declared_files:
 - path: scripts/ac_store/_rc_report.py
   state: existing
 - path: scripts/build_phases_ac_store_rc.py
+  state: existing
+- path: scripts/ac_store/_rc_records.py
   state: existing
 delivers_to:
   agent: python-coder
@@ -133,6 +141,186 @@ test_intent:
   needs_test: true
   reason: Interaction with the back-link repair in the same run would otherwise raise a false finding
     on every repaired parent.
+test_spec:
+- name: test_protected_field_changes_reported_as_three_decisions
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Tmp git repo via init_git_repo/commit_all from _rule_check_fixtures: the before-state
+    records are committed, the stage''s edits are written uncommitted, and the check runs with --before-ref
+    HEAD. Stage test-design. ACD-9990a-1 gains test_spec + test_design_authorship and its criteria text
+    changes; ACD-9990a-2 gains file_findings, fills it_requirements.reference_file_path, drops hold_reason,
+    and changes assigned_agent and expects_from; ACD-9990a-3 is new. Exactly three ''protected fields''
+    findings, each ''needs a decision'', for (ACD-9990a-1, criteria), (ACD-9990a-2, assigned_agent), (ACD-9990a-2,
+    expects_from); each names the record file, id, field and stage test-design in message or detail.'
+  proves_clause: 'the rule family "protected fields" reports exactly three findings, each with disposition
+    "needs a decision": ACD-9990a-1 field criteria, ACD-9990a-2 field assigned_agent and ACD-9990a-2 field
+    expects_from, each naming the record''s file, the record id, the field and the stage'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_assigned_agent_finding_states_before_and_after
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Same scenario: the assigned_agent finding''s detail carries before ''python-coder'' (read
+    from the committed record) and after ''llm-expert'' (read from disk); swapping the two sources fails.'
+  proves_clause: the finding for assigned_agent states the value before ("python-coder") and after ("llm-expert")
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_stage_owned_fields_raise_no_finding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'No ''protected fields'' finding names test_spec, test_design_authorship, test_design_opened_files,
+    file_findings, file_findings_opened_files, it_requirements.reference_file_path or hold_reason. Control
+    in the same store: the criteria change IS reported, so an empty family cannot pass.'
+  proves_clause: no finding is raised for the test design, the authorship mark, the file findings, the
+    reference file path or the cleared marker
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_family_changes_no_record
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Byte snapshot (snapshot_tree) of the feature folder before and after the run: the files
+    of ACD-9990a-1 and ACD-9990a-2 are byte-identical, so every reported field keeps the stage''s value;
+    the fixture is otherwise coherent so no other family repairs anything.'
+  proves_clause: 'this family changes no record: every field it reports keeps the value the stage left'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_protected_field_finding_fails_stage_verdict
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'The run''s verdict is failed and main() returns 1. Control: the same store whose only
+    stage edits are the stage-owned fields passes with exit 0.'
+  proves_clause: the stage's verdict is failed, so the stage is not reported complete
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_new_record_listed_not_evaluated_new_record
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'ACD-9990a-3 (absent from the HEAD commit) gets exactly one ''protected fields'' finding
+    with disposition ''not evaluated'' whose message reads ''not evaluated: new record''; it is neither
+    passed silently nor reported as changed, and family_counts counts it under not_evaluated.'
+  proves_clause: 'ACD-9990a-3 is listed as "not evaluated: new record" for this family'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_protected_field_list_matches_test_designer_template
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Parity: the module''s one protected-field constant equals the exact list in the clause,
+    and equals the fields templates/agents/test-designer.md tells the designer never to touch (the ''Never
+    touch these fields'' sentence plus test_required); a field on one side only fails naming it. Behaviour
+    half: with a mapping it_requirements, a change to reference_file_path is not reported and a change
+    to another it_requirements key is.'
+  proves_clause: 'the protected fields are exactly: criteria, test_intent, assigned_agent, implements_pattern,
+    pattern_bindings, declared_files, covered_by, delivers_to, expects_from, test_required, and every
+    it_requirements key except reference_file_path'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  must_catch:
+  - a list that omits test_required
+  - a list that protects it_requirements as a whole, so filling reference_file_path is reported
+  - a second hand-typed copy of the list in requirement_rule_check.py that drifts from the module's
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_backlink_repair_in_same_run_not_reported_as_stage_change
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: 'Seam with the back-link family: the committed parent ACD-9990a lacks a child id; the run
+    appends it (''fixed'' in ''parent-to-child back-links'') and pass 2 sees the new covered_by entry,
+    which must not become a ''protected fields'' finding. Control in the same store: a covered_by entry
+    the stage itself added to another record is reported.'
+  proves_clause: a covered_by entry that the rule check itself appends in the same run as a parent back-link
+    repair is not reported as a change made by the stage
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  must_catch:
+  - exempting covered_by from the protected list altogether
+  - comparing pass 2 against the before-state without the run's pending repairs
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_protected_fields_reachable_from_cli
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: python scripts/ac_store/requirement_rule_check.py as a subprocess (run_cli_subprocess)
+    with --stage test-design --location <tmp folder> --before-ref HEAD on the tmp git repo; exit 1, stdout
+    is one JSON report holding the criteria finding under ''protected fields''.'
+  proves_clause: 'the rule family "protected fields" reports exactly three findings, each with disposition
+    "needs a decision": ACD-9990a-1 field criteria, ACD-9990a-2 field assigned_agent and ACD-9990a-2 field
+    expects_from, each naming the record''s file, the record id, the field and the stage'
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_protected_fields_module_in_rule_check_deploy_map
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: RULE_CHECK_DEPLOY_MAP in scripts/build_phases_ac_store_rc.py lists ('scripts/ac_store/_rc_protected_fields.py',
+    '_rc_protected_fields.py') and the module is in requirement_rule_check.FAMILIES, so the installed
+    check that /plan-feature runs carries the family and can fail the stage. Reads the tuple only; never
+    spawns build.py.
+  proves_clause: the stage's verdict is failed, so the stage is not reported complete
+  code_file: scripts/build_phases_ac_store_rc.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/requirement_rule_check.py
+- scripts/ac_store/_rc_report.py
+- scripts/ac_store/_rc_records.py
+- scripts/ac_store/_rc_backlinks.py
+- scripts/ac_store/_rc_readiness.py
+- scripts/build_phases_ac_store_rc.py
+- unit_tests/ac_store/_rule_check_fixtures.py
+- unit_tests/ac_store/test_acd_2500a_2_iv.py
+- templates/agents/test-designer.md
+- scripts/ac_store/_rc_protected_fields.py
+file_findings:
+- file: scripts/ac_store/_rc_report.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the family-name constants and the report contract the new family must register its
+    name and detail in.
+  decision: null
+- file: scripts/ac_store/requirement_rule_check.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the FAMILIES registry, the stage list and the repair orchestration whose pending repairs
+    the family must read.
+  decision: null
+- file: scripts/build_phases_ac_store_rc.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds RULE_CHECK_DEPLOY_MAP, where the new family module must be added so the installed check
+    carries it.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/_rc_report.py
+- scripts/ac_store/requirement_rule_check.py
+- scripts/build_phases_ac_store_rc.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

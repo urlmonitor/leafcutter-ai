@@ -50,6 +50,9 @@ it_requirements:
 - Build after GE-113c-4, and stage all six diagrams with their parents in one commit so the working check
   proves the fix.
 - 'No change to a diagram''s file name, tier, picture or body below its Parent: line.'
+- 'Once the parent-link hook works, a diagram with a mermaid block and no parent is refused (ARCH-PARENT-MISSING)
+  unless it is a root: c1-001-command-map.md and c2-006-feature-to-merged-pr.md both gain root: true,
+  and c1-001-command-map.md gains a children: list naming every diagram that now declares it as parent.'
 declared_files:
 - path: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
   state: existing
@@ -69,6 +72,60 @@ delivers_to: null
 expects_from: null
 test_required: false
 test_rationale: "Frontmatter and prose-link edits to six existing diagrams and their parent; verified by the parent-link check of GE-113c-4 at commit time, not by a new unit test."
+file_findings:
+- file: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 9) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 9) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 8) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-004-build-ac-flow.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 8) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It declares the bare parent agent_delivery_workflows.md and its Parent: line (lines 9 and 102)
+    that the criteria correct.'
+  decision: null
+- file: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It is the L1-Context diagram whose parent declaration the criteria remove; it has no root:
+    true, so the working check will ask for one.'
+  decision: null
+- file: docs/architecture/diagrams/c1-001-command-map.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It is the suggested L1 parent and has no children list yet; it also has a mermaid block and
+    no root: true, so staging it needs root: true to pass.'
+  decision: null
+file_findings_opened_files:
+- docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+- docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+- docs/architecture/diagrams/c2-003-ac-readiness-states.md
+- docs/architecture/diagrams/c2-004-build-ac-flow.md
+- docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+- docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+- docs/architecture/diagrams/c1-001-command-map.md
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

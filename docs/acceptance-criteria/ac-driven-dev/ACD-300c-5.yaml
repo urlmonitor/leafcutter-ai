@@ -70,6 +70,73 @@ test_intent:
 - clause: the workflow body's measured length after the change is no greater than before it
   needs_test: false
   reason: The commit-time file-size growth ratchet enforces this and refuses a body that grew.
+test_spec:
+- name: test_final_gate_heading_names_the_test_design_stage
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: plan-feature.js under run_workflow_under_e2 (technical route) runs to the final-gate pause;
+    the persisted question prompt and the no-answer gate-failure message name the test-design stage and
+    not IT PO v3.
+  proves_clause: the final gate's heading names the test-design stage as the stage it follows
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_cancel_names_the_test_design_gate
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Resumed with a person's cancel at final-gate, the returned message contains final gate
+    (test design) and contains neither IT-PO nor IT PO v3.
+  proves_clause: the cancel message names the final gate as the test-design gate, as in "final gate (test
+    design)", and does not contain "IT-PO" or "IT PO v3"
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the cancel label stays final gate (IT-PO)
+  - only the label changes while the message still names IT PO v3 elsewhere
+- name: test_final_commit_failure_names_the_test_design_stage
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Resumed with approve while the second commit-stage-output reply is a hook failure: the
+    error message reads Commit of test-design AC output failed and does not contain it-po.'
+  proves_clause: the commit-failure message names the stage "test-design", not "it-po"
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - formatCommitError at the final commit is still passed it-po
+  - the stage name comes from the last authoring agent instead of the final stage
+- name: test_other_gate_messages_are_unchanged
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Pins the other gates character for character: a cancel at gate-po and at gate-ba gives
+    Pipeline cancelled at gate after product-owner and after business-analyst, and an itpo-stage commit
+    failure still reads Commit of it-po AC output failed.'
+  proves_clause: the messages for the product owner, business analyst and technical planner gates are
+    unchanged, character for character
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - buildCancelMessage or formatCommitError is changed globally, so every gate names test design
+  - the itpo stage's own commit failure is relabelled test-design
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+file_findings:
+- file: templates/workflows-js/plan-feature.js
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the final-gate heading comment and gate-failure text, the final gate (IT-PO) cancel
+    label and the formatCommitError it-po call that the criteria rename.
+  decision: null
+file_findings_opened_files:
+- templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

@@ -44,6 +44,15 @@ expects_from: null
 test_required: false
 test_rationale: Prompt-only change to guidance text in templates/agents/llm-expert.md; there is no executable
   behaviour for a test to exercise.
+file_findings:
+- file: templates/agents/llm-expert.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its section P1 signal table maps role planning to analysis, the guidance the criteria change.
+  decision: null
+file_findings_opened_files:
+- templates/agents/llm-expert.md
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

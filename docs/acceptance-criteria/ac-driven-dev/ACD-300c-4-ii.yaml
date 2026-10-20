@@ -66,6 +66,81 @@ test_intent:
 - clause: no commit is made that records the batch as approved
   needs_test: true
   reason: Committing a batch as approved after a failed write would put a broken record on the branch.
+test_spec:
+- name: test_failed_approval_is_reported_failed_naming_record_file_and_reason
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: plan-feature.js under run_workflow_under_e2, resumed with approve; the approval-step reply
+    has exit_code 1 and stderr naming ACD-9990a-2, its file and that the write did not re-parse. The run
+    returns a non-ok status whose message names ACD-9990a-2, the file and the reason.
+  proves_clause: the run is reported failed, not complete, and the failure names ACD-9990a-2, its file
+    and the reason it could not be read back
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_unreadable_write_restores_the_file_and_exits_nonzero
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: 'In-process main(argv) of approve_acs.py with --ids ACD-9990a-1,ACD-9990a-2 --priority
+    high, with the write for ACD-9990a-2 forced to produce invalid YAML: the file on disk is read back
+    byte-identical to before, ACD-9990a-1 stays approved, the exit code is non-zero and stderr names the
+    file and reason.'
+  proves_clause: ACD-9990a-2's file is left as it was before the approval was attempted
+  code_file: scripts/ac_store/approve_acs.py
+- name: test_failed_approval_summary_does_not_claim_the_record
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same failed run: the message never states ACD-9990a-2 approved and the result has no acs_approved
+    list containing it.'
+  proves_clause: the closing summary does not state that ACD-9990a-2 was approved
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the workflow ignores the step's exit code and reports every id it passed as approved
+  - the summary lists the ids sent to the step rather than the step's report
+- name: test_failed_approval_makes_no_commit_or_delivery
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same failed run: no commit-stage-output dispatch and no deliver-authoring-branch dispatch
+    happen after the approval step.'
+  proves_clause: no commit is made that records the batch as approved
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the final commit runs before the approval step's result is checked
+  - the run commits and only flags the failure in its message afterwards
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
+- unit_tests/ac_store/test_acd_2500b_2_holds.py
+- unit_tests/ac_store/_acd_2500b_approval_fixtures.py
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
+file_findings:
+- file: scripts/ac_store/approve_acs.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its promote path already re-reads each written file and restores the original bytes on a parse
+    failure, the behaviour the criteria build on.
+  decision: null
+- file: templates/workflows-js/plan-feature.js
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its final-gate approve branch ignores the apply-approval result and commits and reports success,
+    which is the behaviour the criteria change.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/approve_acs.py
+- templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

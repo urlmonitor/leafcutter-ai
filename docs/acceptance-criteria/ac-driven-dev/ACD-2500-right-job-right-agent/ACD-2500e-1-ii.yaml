@@ -58,6 +58,23 @@ delivers_to: null
 expects_from: null
 test_required: false
 test_rationale: "Moves comment text between two files with no code change; the existing profile-consistency and agent-validation tests are the regression proof, and no new behaviour exists to test."
+file_findings:
+- file: scripts/build_phases_profile_consistency.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its module docstring holds the carried-over decision-history entries of validate_agent_self_description
+    that must move out.
+  decision: null
+- file: scripts/build_phases_agent_validation.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It defines validate_agent_self_description, whose decision history must receive the moved entries.
+  decision: null
+file_findings_opened_files:
+- scripts/build_phases_profile_consistency.py
+- scripts/build_phases_agent_validation.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

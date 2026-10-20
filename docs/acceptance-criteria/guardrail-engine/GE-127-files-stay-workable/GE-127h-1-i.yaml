@@ -65,6 +65,95 @@ test_intent:
     empty or unreadable file
   needs_test: true
   reason: A zero-length file must not trip the empty-file refusal.
+test_spec:
+- name: test_ge_127h_1_i_a_mention_comment_and_a_label_line_are_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The record's fixture (mention comment, LABEL line, 6-line block, x = 1) measures 3, and
+    both the comment and the LABEL line are among the counted lines.
+  proves_clause: the comment line and the LABEL line are counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - any line containing 'DECISION HISTORY' starts a block, so the mention comment is dropped
+  - a code line containing the words is treated as a block heading
+- name: test_ge_127h_1_i_the_six_block_lines_are_not_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: In the same fixture none of the six block lines is counted (the measured total is 3, not
+    9).
+  proves_clause: the 6 block lines are not counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_1_i_code_after_the_block_is_counted
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: x = 1 directly after the last entry line is counted; a variant with a blank line and more
+    code after the block counts every line after it.
+  proves_clause: x = 1 is counted, because the block ends at the first line that is not a comment line
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - the block runs to the end of the file, so x = 1 is dropped
+  - the block ends only at a blank line, so code directly after the last entry is dropped
+- name: test_ge_127h_1_i_only_a_whole_text_heading_starts_a_block
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: '''# DECISION HISTORY notes are below'' followed by three comment lines: all four are counted.'
+  proves_clause: only a comment whose whole text is "DECISION HISTORY" starts a block, so the comment
+    "# DECISION HISTORY notes are below" starts none and it and the comments after it are counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a startswith or substring match on DECISION HISTORY instead of the whole comment text
+- name: test_ge_127h_1_i_a_rule_line_belongs_to_the_block_only_when_directly_above
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A '=' rule line directly above the heading is not counted; a rule line separated from the
+    heading by one blank or code line is counted.
+  proves_clause: a rule line of "=" characters directly above the heading belongs to the block and is
+    not counted, while one separated from the heading by any other line is counted
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - any rule line within a few lines above the heading is swallowed
+  - the rule line is never attached, so a ruled block measures one line too many
+- name: test_ge_127h_1_i_a_file_that_is_only_a_history_block_measures_zero_and_is_not_refused
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: measure_current_length gives 0 for a file that is one history block, and staging that file
+    and running the fixture copy of check_file_size.py as a subprocess exits 0, not the INDETERMINATE
+    exit 2. Uses _ge_127d_2_fixture.build_fixture_tree (a copy of the production modules in a temporary
+    git repository, no build.py, no POSIX flock).
+  proves_clause: a file whose whole content is one decision-history block measures 0, and is not refused
+    as an empty or unreadable file
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/config.py
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+file_findings:
+- file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds count_content_lines, where the block boundary rules must live with the GE-127h-1 exclusion.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

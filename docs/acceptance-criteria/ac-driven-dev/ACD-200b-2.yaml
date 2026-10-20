@@ -54,8 +54,9 @@ it_requirements:
 - The parity test runs in the normal test suite and fails naming the trigger and the side (list or map)
   it is missing from.
 - The commit hook (templates/scripts/commit_guardian/check_ac_schema.py) and the agent-side validator
-  give the same verdict on the same record; if the hook holds its own copy of the names it reads the one
-  list instead.
+  give the same verdict on the same record. The hook's validate_manually fallback in templates/scripts/commit_guardian/_ac_schema_validators.py
+  carries its own copy of the trigger names today; it reads the one list instead, and check_ac_schema.py
+  is the entry point the reachability test drives.
 - Every documentation_triggers value accepted today is still accepted; no record in the store changes
   verdict.
 declared_files:
@@ -64,6 +65,10 @@ declared_files:
 - path: scripts/ac_store/validate_ac_schema.py
   state: existing
 - path: scripts/ac_store/_rc_doc_triggers.py
+  state: existing
+- path: templates/scripts/commit_guardian/check_ac_schema.py
+  state: existing
+- path: templates/scripts/commit_guardian/_ac_schema_validators.py
   state: existing
 delivers_to: null
 expects_from: null
@@ -94,6 +99,115 @@ test_intent:
   needs_test: true
   reason: The parity test is the guard against future drift, and it must name the trigger and the missing
     side.
+test_spec:
+- name: test_record_check_rejects_unknown_trigger_and_accepts_reference_doc
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Runs validate_ac_schema.py as a subprocess on an L1 record with documentation_triggers
+    [reference-doc, api-guide] in a tmp repo: non-zero exit naming api-guide; with [reference-doc] alone
+    it exits 0.'
+  proves_clause: the store's schema check, the commit-time record check and the requirement rule check
+    each reject "api-guide" as an unknown trigger name and accept "reference-doc"
+  code_file: scripts/ac_store/validate_ac_schema.py
+- name: test_commit_hook_rejects_unknown_trigger_and_accepts_reference_doc
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Runs check_ac_schema.py as a subprocess with HOOK_ROOT set to the tmp repo and the record
+    named in HOOK_TEST_STAGED_FILES: non-zero exit naming api-guide; the reference-doc-only record passes.'
+  proves_clause: the store's schema check, the commit-time record check and the requirement rule check
+    each reject "api-guide" as an unknown trigger name and accept "reference-doc"
+  code_file: templates/scripts/commit_guardian/check_ac_schema.py
+- name: test_rule_check_reports_unknown_trigger_and_accepts_reference_doc
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: The requirement rule check (run as in test_acd_2500a_2_v) reports api-guide on the L1 as
+    a failed finding and raises no unknown-trigger finding for reference-doc.
+  proves_clause: the store's schema check, the commit-time record check and the requirement rule check
+    each reject "api-guide" as an unknown trigger name and accept "reference-doc"
+  code_file: scripts/ac_store/_rc_doc_triggers.py
+- name: test_trigger_names_live_in_one_list
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With a tmp repo whose schema enum drops how-to, validate_ac_schema.py rejects how-to (it
+    reads the list), validate_ac_schema has no trigger-name collection of its own, and TRIGGER_SPECIALISTS
+    has exactly one key per enum name in the shipped schema.
+  proves_clause: the trigger names are declared in exactly one list, which the schema check and the record
+    check both read, and the rule check's single trigger-to-specialist map has exactly one entry for each
+    name in that list
+  code_file: scripts/ac_store/validate_ac_schema.py
+  must_catch:
+  - validate_ac_schema keeps _DOC_TRIGGER_VALUES as a second list that is used when no schema is passed
+  - the map is compared only by count, so a misspelled key with the same count passes
+- name: test_sixth_name_is_accepted_after_one_list_edit
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'A tmp repo whose schema enum adds api-guide, plus api-guide added to TRIGGER_SPECIALISTS:
+    validate_ac_schema.py, check_ac_schema.py and the rule check''s evaluate_record all accept api-guide.'
+  proves_clause: all three checks accept "api-guide"
+  code_file: scripts/ac_store/validate_ac_schema.py
+  must_catch:
+  - the record check falls back to a hard-coded list and still rejects api-guide
+  - the commit hook validates against a copy of the names instead of the schema file under HOOK_ROOT
+- name: test_list_and_map_parity_names_trigger_and_side
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The parity check (run in the normal suite) passes on the shipped schema and map; fed a
+    list with an extra api-guide it fails naming api-guide and the map side, and fed a map with an extra
+    key it fails naming that key and the list side.
+  proves_clause: a test fails naming that trigger name and the side it is missing from
+  code_file: scripts/ac_store/_rc_doc_triggers.py
+  must_catch:
+  - the parity check compares only the counts
+  - the parity check checks one direction only, list to map
+  - the failure message omits which side the name is missing from
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- config/ac_store_schema.json
+- scripts/ac_store/validate_ac_schema.py
+- scripts/ac_store/_rc_doc_triggers.py
+- templates/scripts/commit_guardian/check_ac_schema.py
+- unit_tests/ac_store/test_acs_200e_validator_schema_parity.py
+- unit_tests/ac_store/test_acd_2500a_2_v.py
+file_findings:
+- file: config/ac_store_schema.json
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its documentation_triggers property holds the enum of the five trigger names that the criteria
+    make the one list.
+  decision: null
+- file: scripts/ac_store/validate_ac_schema.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the hard-coded _DOC_TRIGGER_VALUES copy of the names and the documentation_triggers
+    check that the criteria change to read the one list.
+  decision: null
+- file: scripts/ac_store/_rc_doc_triggers.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds TRIGGER_SPECIALISTS, the rule check's single trigger-to-specialist map that the criteria
+    keep in code and pin to the list.
+  decision: null
+file_findings_opened_files:
+- config/ac_store_schema.json
+- scripts/ac_store/validate_ac_schema.py
+- scripts/ac_store/_rc_doc_triggers.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

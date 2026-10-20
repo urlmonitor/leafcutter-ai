@@ -51,6 +51,15 @@ delivers_to: null
 expects_from: null
 test_required: false
 test_rationale: "Documentation-only update; link, frontmatter and length rules are enforced by the project's documentation checks at commit time."
+file_findings:
+- file: docs/reference/requirement-rule-check.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the family list, the CLI stage list and the before-state sentence the update changes.
+  decision: null
+file_findings_opened_files:
+- docs/reference/requirement-rule-check.md
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []
