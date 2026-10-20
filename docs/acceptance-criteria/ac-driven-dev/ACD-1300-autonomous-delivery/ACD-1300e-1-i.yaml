@@ -1,0 +1,105 @@
+id: ACD-1300e-1-i
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A run's own criteria are recognised after a crash that left no pause record"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R committed three criteria in its behavioral stage and then the process was
+    killed before any pause record was written (no waiting record for R exists on disk),
+  And the store also holds one older criterion, authored by a different run, that covers
+    part of the same request,
+  When the route is started again for run R with the same request,
+  Then run R's three committed criteria are recognised as R's own from what the store
+    and its history record about them, without relying on a pause record,
+  And those three are not presented as existing coverage,
+  And the older criterion from the other run IS presented as existing coverage, so the
+    covered-route decision lists exactly that one criterion and none of R's three,
+  And when the store holds no criterion from another run that covers the request, no
+    covered-route decision is raised at all.
+depends_on: [ACD-1300e-1]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-1
+  contract: "Run-ownership read stdout {run_id: string, own_ac_ids: string[] (sorted, unique), evidence: 'commit-trailer'} derived from plan-feature(<STAGE>) commit trailers on origin/main..HEAD, readable with no pause record on disk; non-zero exit / unparseable = ownership unknown."
+it_requirements:
+  - "Ownership recognition must not read, require, or create a pause record; with .leafcutter/paused_runs/<R>.json absent the outcome is identical to the paused case."
+  - "The covered-route gate's listed criteria (prompt text and the pause-record context.existing_acs) are exactly the filtered set: the foreign criterion and none of R's ids, in the order triage returned them."
+  - "When the filtered set is empty the covered-route gate is neither dispatched nor persisted as a pause record."
+  - "Implemented inside ACD-1300e-1's change; adds no second ownership mechanism."
+test_intent:
+  - clause: "Then run R's three committed criteria are recognised as R's own from what the store and its history record about them, without relying on a pause record,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_ownership_recognised_with_no_pause_record_on_disk (criterion)."
+  - clause: "And those three are not presented as existing coverage,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_own_three_not_presented_as_coverage_after_crash (criterion)."
+  - clause: "And the older criterion from the other run IS presented as existing coverage, so the covered-route decision lists exactly that one criterion and none of R's three,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_covered_gate_lists_exactly_the_foreign_criterion (discrimination)."
+  - clause: "And when the store holds no criterion from another run that covers the request, no covered-route decision is raised at all."
+    needs_test: true
+    reason: "Observable outcome; proved by test_no_foreign_coverage_no_covered_gate_raised (boundary)."
+test_spec:
+  - name: test_ownership_recognised_with_no_pause_record_on_disk
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With R's three ids committed under R's run-id trailer and no pause record, they are recognised as R's own."
+    proves_clause: "Then run R's three committed criteria are recognised as R's own from what the store and its history record about them, without relying on a pause record,"
+  - name: test_own_three_not_presented_as_coverage_after_crash
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "None of R's three ids appears in the covered-route gate's listed criteria."
+    proves_clause: "And those three are not presented as existing coverage,"
+  - name: test_covered_gate_lists_exactly_the_foreign_criterion
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "The covered-route gate lists exactly the one older criterion from the other run and none of R's three."
+    proves_clause: "And the older criterion from the other run IS presented as existing coverage, so the covered-route decision lists exactly that one criterion and none of R's three,"
+    must_catch:
+      - "ownership read from the pause record, so a crash with no record counts R's three as coverage"
+      - "drops every existing_acs entry when any owned id is present"
+  - name: test_no_foreign_coverage_no_covered_gate_raised
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "When every covering id is R's own, no covered-route dispatch or pause record is produced."
+    proves_clause: "And when the store holds no criterion from another run that covers the request, no covered-route decision is raised at all."
+test_rationale: "Crash-without-record is exactly the case a pause-record-based ownership check gets wrong, so the scenario must assert the empty pause store explicitly."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary

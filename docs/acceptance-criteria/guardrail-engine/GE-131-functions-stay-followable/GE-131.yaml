@@ -25,7 +25,7 @@ criteria: |
   being stopped tells you which function, by how much, and where to get help.
 depends_on: []
 doc_links:
-  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-20260909-gate-complexity.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-blocker-ki-cg-20260909-gate-complexity.md
     relationship: context
     status: exists
     relevance: >-
