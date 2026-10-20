@@ -579,10 +579,10 @@ notes: |
         (embedded SQL, prompts, templates) is code and counts. Trigger: the IT PO measured
         that docstring-position-only would push 6 files over their limit purely through a
         trailing DECISION HISTORY string and charge every doc-enforcer history entry as
-        added lines in the two-for-one repayment. BA interpretation, flagged for
-        confirmation: a standalone f-string counts as code, because evaluating it runs the
-        expressions in its replacement fields (not inert); a standalone bytes or raw string
-        is inert. The measure still decides by syntactic role only, never by the string's
+        added lines in the two-for-one repayment. A standalone f-string counts as code,
+        because evaluating it runs the expressions in its replacement fields (not inert) —
+        proposed by the BA and CONFIRMED by BrainCandy's coordinator 2026-10-20; a
+        standalone bytes or raw string is inert. The measure still decides by syntactic role only, never by the string's
         name or content.
         Superseded wording kept for the record: (2026-10-16) "only a string literal that is
         the first statement of a module, class or function is uncounted; any other

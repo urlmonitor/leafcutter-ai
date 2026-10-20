@@ -21,7 +21,7 @@ criteria: |
     from 700 to 712,
   And the outcome states that this combination is refused for a file already
     over its limit, and that a reduction in counted lines and an addition of
-    uncounted lines (comments, docstrings) are accepted when made in separate
+    uncounted lines (comments and standalone strings) are accepted when made in separate
     commits,
   And this refusal is distinguishable in the outcome from a refusal for crossing
     the limit, for growth, or for an unpaid two-for-one repayment,
@@ -264,6 +264,14 @@ amended_by:
     sub-package because check_file_size.py is itself over-limit under the new rule; frozen
     signatures and the consumer audit incl. the parity gate's _classify_file probe). Added
     merge and both-refusals descriptors.
+- reason: standalone-string-rule-wording
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria wording only: "uncounted lines (comments, docstrings)" becomes "uncounted lines
+    (comments and standalone strings)", to match BrainCandy's 2026-10-20 rule in GE-127d-3
+    (a Python string standing alone as a statement, docstring or bare, is uncounted). No
+    behaviour change to this record. Title, depends_on and req_status unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []

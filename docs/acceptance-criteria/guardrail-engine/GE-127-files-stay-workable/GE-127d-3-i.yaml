@@ -282,6 +282,12 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
-  Expected effect, recorded so nobody reads it as a regression: measured lengths of the 16
-  files the 2026-10-09 KI lists rise, and test_native_decision.py starts reading as over its
-  400 limit. GE-127d-3-iii is what keeps that rise from refusing an unrelated commit.
+  Expected effect, recorded so nobody reads it as a regression: measured lengths of the files
+  the 2026-10-09 KI lists rise where a false span had swallowed code lines (corrected
+  2026-10-20: tests/knowledge/test_native_decision.py rises from 332 to 399 and stays under
+  its 400 limit, because its comments stop counting at the same time — the earlier
+  prediction that it would go over was made under the 2026-10-16 rule and is withdrawn).
+  Some files DO cross under the 2026-10-20 rule — the IT PO's measured list in GE-127d-3's
+  population item, e.g. unit_tests/test_final_gate_and_commit_message.py 399 -> 559, whose
+  used multi-line strings now count. GE-127d-3-iii is what keeps such a rise from refusing an
+  unrelated commit.

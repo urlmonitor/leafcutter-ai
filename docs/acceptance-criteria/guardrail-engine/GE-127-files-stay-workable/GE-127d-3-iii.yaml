@@ -145,6 +145,9 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
-  Files the new rule pushes over their limit (the 2026-10-09 KI names
-  test_native_decision.py) are grandfathered by the ratchet from the first commit under the
-  new rule, exactly as GE-127b grandfathered the original over-limit population.
+  Files the new rule pushes over their limit (measured by the IT PO under the 2026-10-20 rule
+  and listed in GE-127d-3's population item, e.g. unit_tests/test_final_gate_and_commit_message.py
+  399 -> 559) are grandfathered by the ratchet from the first commit under the new rule,
+  exactly as GE-127b grandfathered the original over-limit population. (Corrected 2026-10-20:
+  the earlier example, tests/knowledge/test_native_decision.py, measures 399 under the new
+  rule and does not cross.)
