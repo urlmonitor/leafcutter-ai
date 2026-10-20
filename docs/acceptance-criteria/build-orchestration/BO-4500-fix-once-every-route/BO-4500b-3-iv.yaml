@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: code
@@ -45,11 +45,45 @@ doc_links:
     status: exists
     relevance: "The published reason-code enumeration and answer_version."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    A family is decided only by membership in config/commit_step.json reason_codes
+    (policy, step, check, nothing). The pairing of a family with a commit_answer status is the
+    one BO-4500a-4 publishes (a refused status carries a policy_ or step_ code), not one the
+    block invents. A code missing from every family, a null code on a refused status, or a code
+    whose family does not pair with the status is a contract violation.
+  - >-
+    answer_version is compared with the configured answer_version (1 as shipped). Any other value
+    is report, even when the status is committed.
+  - >-
+    Adding a code to a family in the configuration and reinstalling changes the decision with no
+    edit to the block source. The tests use a fixture configuration and never edit the real
+    config/commit_step.json.
+  - >-
+    The report states that the reply breaks the commit answer contract and names the offending
+    field and its value, so a route never mistakes a contract break for a policy stop.
 delivers_to: null
 expects_from:
-  ac_id: BO-4500b-3
-  contract: "COMMIT-ANSWER decision."
+  - ac_id: BO-4500b-3
+    contract: >-
+      The COMMIT-ANSWER decision function returning a report decision that carries the offending
+      field and value.
+  - ac_id: BO-4500b-1
+    contract: >-
+      Install-time placeholder resolution inside filled block text, which carries the
+      reason-code enumeration and answer_version from config/commit_step.json.
+test_intent:
+  - clause: every one of them is report, and none is continue, retry, stop-as-policy or engage
+    needs_test: true
+    reason: Deciding by prefix would retry step_disk_full and stop on policy_made_up, and only these unlisted codes expose it.
+  - clause: each report states that the reply breaks the commit answer contract and names the offending value
+    needs_test: true
+    reason: A contract break must be distinguishable from an ordinary refusal in what the route reports.
+  - clause: it is retry
+    needs_test: true
+    reason: The reason-code list must reach the block from configuration, which a list typed into the block would fail.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

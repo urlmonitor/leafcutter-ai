@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: code
@@ -68,8 +68,55 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "C2: five reply-reading styles, fallbacks that read an unreadable reply as ok -- the hand-copy failure this block ends for commits."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: constrains
+    status: exists
+    relevance: "Route bodies read no files at run time, so the configured ceiling and reason-code families reach the block at install."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - >-
+    DECISION SEPARATE FROM DISPATCH. The block's decision is a pure function of (reply, attempt
+    history, installed configuration values) that returns one decision. It calls no engine
+    primitive (agent, parallel, log, workflow) and reads no file, so it can be evaluated with no
+    route and no engine. The route-side dispatch around it (calling the commit agent, engaging the
+    specialist) is adopted by BO-4500a-5-i..iv and the /commit route record and is not built here.
+  - >-
+    MEMBERSHIP, NOT PREFIX. reason_code families are decided by membership in the published
+    enumeration in config/commit_step.json (reason_codes.policy, .step, .check, .nothing), never by
+    a code's prefix or by reading reason text (BO-4500a-4). The enumeration, answer_version and
+    max_transient_retries reach the block through the install (BO-4500b-1 placeholder
+    resolution). The block source holds no copy of any code, family or number.
+  - >-
+    IDENTICAL RE-OFFER. The path list and message file offered on a retry or after an engagement
+    are the ones captured from the FIRST attempt of this commit and carried in the attempt
+    history. They are never re-derived from git state, from a later reply or from a specialist's
+    report.
+  - >-
+    FAIL-CLOSED. Any reply that does not match an explicit continue, stop, retry or engage row is
+    report. Malformed input never raises out of the decision. It becomes report.
+  - >-
+    PROVENANCE, THE BO-4500 STANDING RULE. Before taking a part, the coder confirms against
+    current code which existing copy is the most hardened: the /commit route's (commit.js)
+    engage-then-re-offer loop, and fast-lane-ship.js's halt-on-any-non-ok reading of replies. The
+    change names, per part, the copy it came from and the known issues that copy was fixed for.
+    Those known issues' regression tests are re-pointed at the block's decision, not left on the
+    route copies.
+  - >-
+    The proof exercises the block's own text, as the install renders it, not a parallel
+    re-implementation of the predicate in another language. A mirror that passes while the
+    shipped block is wrong must be impossible.
+  - >-
+    Until the first route adopts it, COMMIT-ANSWER is declared awaiting adoption by
+    BO-4500a-5-i..iv and the /commit route's migration record (BO-4500b-1-ii). build-feature and
+    build-ticket never take the block (BO-3800a-1).
+  - >-
+    Workflow-block code is python-coder work in this repo (precedent BO-4300c-3, BO-4500a-5),
+    because it is proved through the Python-side harness and the build phase.
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -80,12 +127,53 @@ delivers_to:
       reason_code, reason, hook_name, failing_files, and the path list and message file to re-offer
       for retry and engage. The decision itself dispatches nothing, so it can be proven with no route
       and no engine; the route-side dispatch around it is what BO-4500a-5-i..iv and the /commit route
-      record adopt.
+      record adopt. Technical shape (field names provisional, decision set fixed): {decision:
+      "continue"|"stop"|"retry"|"engage"|"report", specialist: string|null (engage only, verbatim
+      from the handoff), paths: string[]|null and message_file: string|null (retry and engage,
+      verbatim from the first attempt), status, reason_code, reason, hook_name: string|null,
+      failing_files: string[] (stop and report, copied unchanged from commit_answer), answers:
+      object[] (report: every commit_answer of this commit in arrival order), received: string|null
+      (report on an unreadable reply, at most 2 KB)}. Attempt history: {first_paths: string[],
+      first_message_file: string|null, answers: object[], transient_retries_used: int,
+      specialist_engaged: boolean}.
+  - agent: documentation-expert
+    contract: >-
+      For the reference page (BO-4500b-4): the reply keys the block reads, the five decisions with
+      the condition for each, where the ceiling and the reason-code families are configured
+      (config/commit_step.json), and that a specialist is engaged at most once per commit.
 expects_from:
   - ac_id: BO-4500a-5-v
     contract: "Commit agent reply envelope {status: ok | handoff | blocker, commit_answer, earlier_answers, handoff keys}."
   - ac_id: BO-4500a-4
     contract: "One-answer contract and reason_code enumeration with its family partition."
+test_intent:
+  - clause: (a) is continue
+    needs_test: true
+    reason: Continue on committed is the only path that lets a route proceed and must be proven on the block itself.
+  - clause: (b) is stop, with no further attempt
+    needs_test: true
+    reason: Retrying a policy refusal would loop on a refusal that can never succeed.
+  - clause: (c) is retry, offering the identical path list and message file again
+    needs_test: true
+    reason: A transient failure must be retried with the same commit, and a re-derived list would widen it.
+  - clause: (d) is engage code-refactoring-specialist, then re-offer the identical path list and message file
+    needs_test: true
+    reason: The engage-then-re-offer loop is the part every depth-0 route shares and was hand-copied before.
+  - clause: (e) and (f) are report
+    needs_test: true
+    reason: Continue only on committed means a check failure without a handoff and nothing_to_commit must not continue.
+  - clause: every stop and report decision carries the reply's status, reason_code, reason, hook_name and failing_files unchanged
+    needs_test: true
+    reason: A route reporting a rewritten or partial answer loses the diagnosis the commit step produced.
+  - clause: the change names, for each part, the existing copy it was taken from (the /commit route's engage-then-re-offer loop, the fast lane's halt-on-any-non-ok reading of replies) and the known issues that copy was fixed for
+    needs_test: false
+    reason: This is a statement in the change description, checked at review, with no executable behaviour.
+  - clause: no part was taken from a copy that a sibling copy had already fixed and it had not
+    needs_test: false
+    reason: Choosing the hardened copy is a review judgement over existing code, not runtime behaviour.
+  - clause: the regression test of every such known issue exercises the block's decision itself
+    needs_test: true
+    reason: A known issue's regression test left on a retired route copy would pass while the shared block regressed.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

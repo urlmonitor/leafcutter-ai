@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -44,11 +44,61 @@ doc_links:
     status: exists
     relevance: "The route migrations BO-4500a-5-i..iv and the /commit route record are the adopters COMMIT-ANSWER will name while it awaits adoption."
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The awaiting-adoption declaration is tracked DATA inside the package, kept with the block
+    sources and never in install code. Both the install and the identity check
+    (BO-4500b-2-ii) read it from that one place, and neither keeps its own copy.
+  - >-
+    A declaration names at least one adopting record id. A declaration with an empty adopter
+    list counts as no declaration, so an unused block cannot be waved through without saying
+    who will adopt it.
+  - >-
+    Every install that completes with a declared block reports it, naming each adopter verbatim
+    and in declared order, on the install's normal output (not only a log file). The report
+    repeats on every install, not only the first.
+  - >-
+    The declaration is stale as soon as any route template marks the block, however many
+    adopters are still listed. That is the rule the third scenario fixes and the how-to
+    (BO-4500b-4-i) must teach. See the IT PO caveat on BO-4500b-4-i.
+  - >-
+    Unused-source and stale-declaration failures are found in BO-4500b-1's validation pass,
+    before any installed route is written.
+  - >-
+    COMMIT-ANSWER lands declared as awaiting adoption by BO-4500a-5-i, BO-4500a-5-ii,
+    BO-4500a-5-iii, BO-4500a-5-iv and the /commit route's migration record, so the change that
+    adds the block passes its own install.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Awaiting-adoption declaration: tracked package data kept with the block sources, mapping a
+      block name (string) to a non-empty ordered list of adopting record ids (strings, AC ids).
+      Read by the fill (BO-4500b-1, unused-source and stale checks) and by the identity check
+      (BO-4500b-2-ii, which lists a declared block as not inspected). Stale as soon as any route
+      template marks the declared block.
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention and install-time filling."
+  contract: >-
+    BO-4500b-1's derived block set and derived consumer set (every route template scanned for
+    marker pairs) and its validate-all-then-write fill.
+test_intent:
+  - clause: the install fails with a message naming BETA-ANSWER as a block no route uses
+    needs_test: true
+    reason: An unused source is dead shared code, and an install that ignores it would let a block drift unobserved.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failing scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install completes
+    needs_test: true
+    reason: The declaration is the only exemption, and an install that still failed would block the change that lands COMMIT-ANSWER.
+  - clause: its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2
+    needs_test: true
+    reason: The exemption must stay visible on every install, and a silent pass would let the declaration rot.
+  - clause: the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as stale because route B uses the block
+    needs_test: true
+    reason: Self-expiry is what keeps the declaration from outliving its purpose, and only a test with an adopting route exercises it.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

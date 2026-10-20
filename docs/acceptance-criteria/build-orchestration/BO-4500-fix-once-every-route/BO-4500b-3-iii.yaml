@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: code
@@ -55,11 +55,51 @@ doc_links:
     status: exists
     relevance: "Its test_lane_engages_specialist_once_and_reoffers_identical_commit must_catch ('re-derive the file list on the re-offer', 'loop on repeated handoffs') is what this record proves once, for every route."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The path list and message file are captured from the first attempt. Files a specialist
+    reports having changed appear in any eventual report, but are never added to the re-offer.
+    Whether to widen a commit belongs to BO-3800, not to this block.
+  - >-
+    The specialist engaged is the one the handoff names, taken verbatim and never inferred from
+    prose (BO-3000a). Engagement is recorded in the attempt history and happens at most once per
+    commit, whatever the configured retry values are (BO-4500a-4).
+  - >-
+    A specialist reply that declines or cannot be read gives report, quoting at most 2 KB with
+    the same bound as BO-4500b-3-i, and no re-offer.
+  - >-
+    A transient answer after the re-offer is retried against the same per-commit ceiling
+    (BO-4500b-3-ii) with no further engagement.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-3
-  contract: "COMMIT-ANSWER decision."
+  contract: >-
+    The COMMIT-ANSWER decision function whose attempt history carries first_paths,
+    first_message_file, answers, transient_retries_used and specialist_engaged.
+test_intent:
+  - clause: the first decision is engage code-refactoring-specialist
+    needs_test: true
+    reason: A handoff must engage exactly the named specialist rather than report or retry.
+  - clause: the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt, and not scripts/x_helpers.py
+    needs_test: true
+    reason: Re-deriving the list from what changed would silently widen the commit, and the extra file is the discriminator.
+  - clause: it is report, naming both hook_failed answers in order
+    needs_test: true
+    reason: A repeated handoff must end rather than loop.
+  - clause: no second engagement of any specialist is decided for that commit
+    needs_test: true
+    reason: At most one engagement per commit is the bound that stops a handoff loop.
+  - clause: it is report, naming the specialist and quoting its reply bounded to 2 KB
+    needs_test: true
+    reason: A failed specialist must surface its own reply so the outcome can be diagnosed.
+  - clause: no re-offer is decided
+    needs_test: true
+    reason: Re-offering after a specialist declined would retry a change nobody fixed.
+  - clause: it is retry with the identical path list and message file, counted against the same transient-retry ceiling, with no further engagement
+    needs_test: true
+    reason: Mixing engagement and transient retries is where a fresh counter or a second engagement would creep in.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: code
@@ -40,11 +40,42 @@ doc_links:
     status: exists
     relevance: "Same fail-closed shape for WORKSPACE-ANSWER: anything but a readable ready answer ends the run, quoting what was received (bounded to 2 KB)."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    A reply is readable only as one structured envelope whose commit_answer is an object.
+    Prose, an empty reply, a missing commit_answer, or a commit_answer of any other type is
+    report. Nothing is ever inferred from prose (BO-3000a no-inference).
+  - >-
+    The envelope and commit_answer must agree under the derivation BO-4500a-5-v defines: envelope
+    ok if and only if commit_answer.status is committed, handoff when hook_failed carries a
+    handoff, blocker otherwise. The block does not invent its own table. Any disagreement is
+    report, naming both statuses.
+  - >-
+    The quote of what was received is at most 2 KB (2048 bytes), with the truncation marked. That
+    is the same bound WORKSPACE-ANSWER uses (BO-4300c-3), so every route reports hostile answers
+    the same way.
+  - >-
+    No hostile reply makes the decision raise or end the route without a report. Every one of
+    the six inputs yields a report decision that carries the quote.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-3
-  contract: "COMMIT-ANSWER decision."
+  contract: >-
+    The COMMIT-ANSWER decision function (reply, attempt history) returning one decision object,
+    whose report form carries received (at most 2 KB) and the envelope and commit_answer
+    statuses.
+test_intent:
+  - clause: every one of them is report, and none is continue, retry or engage
+    needs_test: true
+    reason: Fallbacks that read an unreadable or self-contradicting reply as ok are the hand-copy failure this block ends.
+  - clause: the report quotes what was received, bounded to 2 KB
+    needs_test: true
+    reason: Without the quote the route's failure cannot be diagnosed, and without the bound a huge reply floods the report.
+  - clause: for (e) and (f) the report names both the envelope status and the commit_answer status
+    needs_test: true
+    reason: A block that trusts only one of the two statuses would pass one of these cases, so both must be asserted.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -28,11 +28,32 @@ doc_links:
     relationship: parent
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    The comparison is made on raw bytes, with no stripping, line-ending conversion or
+    trailing-newline tolerance. A trailing space, LF changed to CRLF, and a removed blank line
+    are each drift.
+  - >-
+    Line reporting must not hide line-ending drift: a copy whose only change is CRLF still
+    reports a first differing line.
+  - >-
+    Reading the installed copies and the source must not itself normalise line endings or
+    encoding before the comparison, on any platform the suite runs on.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-2
-  contract: "Identity check over installed copies."
+  contract: >-
+    The identity check over installed copies: byte comparison with the rendered source, every
+    differing copy named in one run as {route, block, first_differing_line}.
+test_intent:
+  - clause: the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first line that differs
+    needs_test: true
+    reason: A compare-after-strip implementation passes all three copies, so only these fixtures catch it.
+  - clause: no copy is reported as a match after its whitespace or line endings were normalised
+    needs_test: true
+    reason: Byte identity is the stated contract, and a normalising check would report false matches.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

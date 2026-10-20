@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -37,11 +37,35 @@ doc_links:
     status: exists
     relevance: "Its 'a template whose marker pair already holds text fails the build' rule, generalised."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Emptiness is judged on the template text alone, never by comparing it with any source.
+    Content equal to the source is refused exactly as other content is. There is no "matches
+    the source, so allow it" path.
+  - >-
+    Content made only of whitespace between template markers counts as text and is refused, so
+    "empty" has one reading, and the reference page (BO-4500b-4) states it.
+  - >-
+    The check covers every marker pair of every route template and runs in BO-4500b-1's
+    validation pass, before any installed route is written.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention and install-time filling."
+  contract: >-
+    BO-4500b-1's marker grammar, its derived consumer set (every route template scanned for
+    marker pairs), and the validate-all-then-write fill.
+test_intent:
+  - clause: the install fails with a message naming route A and the block ALPHA-ANSWER and stating that the marker pair in a route template must be empty
+    needs_test: true
+    reason: A hand-filled pair in a template is how hand copies come back, and the install must refuse it.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failing scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install fails with the same message naming route A and ALPHA-ANSWER
+    needs_test: true
+    reason: The likely wrong version refuses only text that differs from the source, and only this case tells the two apart.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

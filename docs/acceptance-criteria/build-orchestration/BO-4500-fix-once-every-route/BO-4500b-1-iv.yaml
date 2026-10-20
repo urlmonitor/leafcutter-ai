@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -34,11 +34,35 @@ doc_links:
     relationship: parent
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Nesting and overlap are detected from the order of markers within one route template, for
+    any pair of distinct block names. The check is not limited to the block names in the
+    fixture.
+  - >-
+    Two separate, non-overlapping places for the SAME block in one route stay allowed
+    (BO-4500b-1). The check must not refuse them.
+  - >-
+    The message names both blocks and the 1-based line of each start marker, and the check runs
+    in BO-4500b-1's validation pass, before any installed route is written.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention and install-time filling."
+  contract: >-
+    BO-4500b-1's marker grammar (start/end lines carrying a block name) and the
+    validate-all-then-write fill.
+test_intent:
+  - clause: the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that BETA-ANSWER is marked inside ALPHA-ANSWER
+    needs_test: true
+    reason: A nested block makes the outer copy depend on two sources, and a fill that accepts it ships text the identity check can never match.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failing scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that the two blocks overlap
+    needs_test: true
+    reason: Overlap is a distinct ordering from nesting, and a check that handles only nesting would let it through.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

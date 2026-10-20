@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: docs
@@ -39,11 +39,30 @@ doc_links:
     status: exists
     relevance: "documentation_triggers: how-to -- how an author adds a new shared block and a new consumer."
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+  - >-
+    Put the how-to under docs/how-to/ with the repo's doc frontmatter, register it in
+    docs/INDEX.md, and link to the reference page's anchor (BO-4500b-4) for every failure message
+    instead of restating it.
+  - >-
+    Before publishing, walk both procedures on a scratch copy of the package, with a fixture
+    block DEMO-ANSWER and one fixture route. Confirm the install succeeds and the identity check
+    reports DEMO-ANSWER with one inspected copy, and record the commands and their output in the
+    sign-off. This walk-through is the verification for the first scenario.
+  - >-
+    The adoption procedure must teach the stale-declaration rule exactly as BO-4500b-1-ii builds
+    it: a declaration is stale as soon as any route marks the block, so the whole declaration is
+    removed in the change that lands the first adopting route. See the IT PO caveat. The wording
+    "when it is the last one" in this record's criteria conflicts with that rule while more than
+    one adopter is listed.
 delivers_to: null
 expects_from:
-  ac_id: BO-4500b-1
-  contract: "Marker convention and awaiting-adoption declaration (BO-4500b-1-ii)."
+  - ac_id: BO-4500b-1
+    contract: "Marker convention and awaiting-adoption declaration (BO-4500b-1-ii)."
+  - ac_id: BO-4500b-4
+    contract: "Reference page anchors, one per install failure, linked instead of restated."
+test_required: false
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

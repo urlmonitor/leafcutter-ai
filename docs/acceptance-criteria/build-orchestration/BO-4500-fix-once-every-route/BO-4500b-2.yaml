@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -51,8 +51,48 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "Where installed routes are written (the deployed workflow directory and any shipped mirror), which is what the check reads."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The deployed angle: the check judges the installed layout, not templates."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The check reads INSTALLED routes under a location it is given (the deployed layout root),
+    never templates. It inspects every deployed location of a route: the deployed workflow
+    directory and any shipped mirror.
+  - >-
+    REFERENCE TEXT = THE SOURCE AS THE INSTALL RENDERS IT. Installed copies carry resolved config
+    values (BO-4500b-1, third scenario; BO-4500b-3-ii and -iv), so a copy is compared with its
+    block source after the install's own placeholder resolution. A correctly installed copy then
+    matches, and a hand edit of a resolved value is drift. The check reuses the install's
+    resolution code path; it never re-implements it. See the IT PO caveat on the wording "its
+    source".
+  - >-
+    The check uses the same single marker grammar as the fill (BO-4500b-1). Consumers are found
+    from installed text (every installed route carrying a marker pair), never from a list of
+    routes kept in the check.
+  - >-
+    The comparison is byte-exact, with no normalisation of whitespace, line endings, trailing
+    newline or encoding (BO-4500b-2-i). Every differing copy is named in one run, never only the
+    first. The first differing line is reported as a 1-based line number in the installed route
+    file.
+  - >-
+    A pass reports, per block, how many installed copies were inspected and which routes carry
+    it. Zero copies inspected overall is a failure (BO-4500b-2-ii).
+  - >-
+    The check runs in the test suite against the shared deployed layout (marker
+    shared_layout_reader). It never spawns its own build.py (repo CLAUDE.md TQ-600a). The drift
+    scenarios edit a private copy of the installed routes, never the shared layout.
+  - >-
+    The COMMIT-ANSWER parity test reserved by BO-4500a-5 and the WORKSPACE-ANSWER parity test of
+    BO-4300c-3 are this check applied to their blocks. No second implementation may exist.
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -61,10 +101,42 @@ delivers_to:
       every differing route with block name and first differing line, reports per block the count of
       copies inspected and the routes carrying it, and fails when zero copies were inspected.
       Consumed by BO-4500b-2-i, BO-4500b-2-ii, and the COMMIT-ANSWER / WORKSPACE-ANSWER parity
-      tests of BO-4500a-5 and BO-4300c-3.
+      tests of BO-4500a-5 and BO-4300c-3. Technical shape: input = a deployed layout root (absolute
+      path); per differing copy = {route: repo-root-relative installed path, block: string,
+      first_differing_line: int, 1-based in the installed file}; per block on pass =
+      {block: string, inspected: int, routes: [string]}; expected text = the block source as the
+      install renders it.
+  - agent: documentation-expert
+    contract: >-
+      For the reference page (BO-4500b-4): what the check inspects (installed routes in every
+      deployed location), that it compares with the rendered source byte for byte, and that a run
+      that inspected nothing fails, with the exact failure and pass report wording.
+  - agent: architecture-diagram-author
+    contract: >-
+      For the component diagram (BO-4500b-5): the identity check is a test-suite component that
+      reads the installed routes and the block sources, separate from the install step.
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention: an installed route carries a named block between a start/end marker pair."
+  contract: >-
+    Marker convention: an installed route carries a named block between a start/end marker pair.
+    The grammar is defined once by BO-4500b-1 and shared, and the install's placeholder
+    resolution can be reused to render a block source as installed.
+test_intent:
+  - clause: the check fails, naming route B, the block ALPHA-ANSWER and the first line that differs from the source
+    needs_test: true
+    reason: Catching a post-install hand edit is the drift promise, and the message must locate it.
+  - clause: route A is not named
+    needs_test: true
+    reason: A check that names every consumer on any drift would be noise that hides the real offender.
+  - clause: the check fails naming route D, Because the routes checked are every installed route found carrying a marker pair, never a list of routes kept in the check
+    needs_test: true
+    reason: A hard-coded consumer list would miss a newly added route, and only a fixture route proves discovery.
+  - clause: it passes
+    needs_test: true
+    reason: A check that cannot pass on a correct install, for example because it ignores rendered placeholders, is as broken as one that never fails.
+  - clause: its report states, for each block, how many installed copies were inspected and names the routes that carry it
+    needs_test: true
+    reason: The per-block count is what distinguishes a real pass from a pass on nothing.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -29,11 +29,36 @@ doc_links:
     relationship: parent
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Validation collects every malformed marker across every route template before failing, so
+    one install reports them all. Messages appear in a deterministic order (by route path, then
+    line).
+  - >-
+    A start marker without its end is never filled to the end of the file, and a malformed route
+    is never skipped silently. Either would ship a route the identity check (BO-4500b-2) cannot
+    find a block in.
+  - >-
+    The install exits non-zero once, after it has reported everything, and writes no installed
+    route.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention and install-time filling."
+  contract: >-
+    BO-4500b-1's marker grammar (start/end lines carrying a block name) and the
+    validate-all-then-write fill that collects every failure before exiting.
+test_intent:
+  - clause: the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched
+    needs_test: true
+    reason: Unpaired and mismatched markers are the case most likely to be handled by filling to end of file or skipping the route.
+  - clause: all three routes are named in that one failed install, not only the first one found
+    needs_test: true
+    reason: A stop-at-first validator passes a single-route fixture, so only a multi-route fixture catches it.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: A failing install must leave the installed set untouched, which a write-as-you-go fill would break.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

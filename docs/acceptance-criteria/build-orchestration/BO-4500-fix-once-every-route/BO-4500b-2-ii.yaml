@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -40,11 +40,44 @@ doc_links:
     status: exists
     relevance: "Defines the awaiting-adoption declaration this check honours."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Zero copies inspected is a failure, never a pass or a skip. The message names the absolute
+    location that was searched.
+  - >-
+    Whether a block awaits adoption is read from the same declaration the install reads
+    (BO-4500b-1-ii). A declared block with no installed copy is listed separately as not inspected
+    because it awaits adoption, and is never counted among the blocks whose copies matched.
+  - >-
+    A block with a source, no declaration and no installed copy fails, naming the block. That
+    holds even when the install-time unused-source check passed against a different layout.
+  - >-
+    These fixtures build their own small installed tree and source set, and spawn no real build.
 delivers_to: null
 expects_from:
-  ac_id: BO-4500b-2
-  contract: "Identity check over installed copies."
+  - ac_id: BO-4500b-2
+    contract: >-
+      The identity check over installed copies, with its per-block report {block, inspected,
+      routes} and its location input.
+  - ac_id: BO-4500b-1-ii
+    contract: >-
+      The awaiting-adoption declaration: package data kept with the block sources, mapping a
+      block name to a non-empty ordered list of adopting record ids.
+test_intent:
+  - clause: it fails with a message stating that zero installed copies were inspected and naming the location it looked in
+    needs_test: true
+    reason: A parity check pointed at the wrong location must not report clean, the no-op failure this repo has hit three times.
+  - clause: its report lists BETA-ANSWER as not inspected because it awaits adoption
+    needs_test: true
+    reason: A declared block must stay visible in the report rather than vanish from it.
+  - clause: BETA-ANSWER is not listed among the blocks whose copies matched
+    needs_test: true
+    reason: Counting an uninspected block as matched would be a pass on nothing for that block.
+  - clause: it fails naming ALPHA-ANSWER as a block with no installed copy
+    needs_test: true
+    reason: A source whose consumers were all removed must be caught by the check even when the install-time check ran elsewhere.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

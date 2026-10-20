@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -39,11 +39,41 @@ doc_links:
     status: exists
     relevance: "Its 'a source block that is missing fails the build' rule, generalised."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    The unknown-name check compares against the DERIVED block set (BO-4500b-1), never a list kept
+    in code. The message lists every known block name in a stable sorted order, so the same
+    package always produces the same text.
+  - >-
+    A source is empty when it holds nothing but whitespace (spaces, tabs, CR, LF). Any other
+    character makes it non-empty.
+  - >-
+    Every route that needs an empty block is named, not only the first one found.
+  - >-
+    Both conditions are found in BO-4500b-1's validation pass, before any installed route is
+    written, so a failing install leaves the installed set untouched in every deployed location.
 delivers_to: null
 expects_from:
   ac_id: BO-4500b-1
-  contract: "Marker convention and install-time filling."
+  contract: >-
+    BO-4500b-1's marker grammar, the derived block set (block name = the identifier of its single
+    source in the one sources location), and the validate-all-then-write fill that reports
+    failures on stderr with route path and 1-based marker line.
+test_intent:
+  - clause: the install fails with a message naming route A, the line of the start marker, the unknown name ALPHA-ANSWR, and the known block names ALPHA-ANSWER and BETA-ANSWER
+    needs_test: true
+    reason: An unknown name must fail with a self-diagnosing message, and a fill that skipped the marker would pass silently.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failure scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install fails with a message naming the block ALPHA-ANSWER as having an empty source and naming route A as a route that needs it
+    needs_test: true
+    reason: A whitespace-only source would otherwise ship a route with no block body at all.
+  - clause: no installed route carries an empty ALPHA-ANSWER marker pair
+    needs_test: true
+    reason: The observable harm of an empty source is an empty installed pair, which must be asserted on the installed text.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

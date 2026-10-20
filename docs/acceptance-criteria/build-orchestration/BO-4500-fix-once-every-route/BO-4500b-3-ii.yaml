@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: code
@@ -52,11 +52,58 @@ doc_links:
     status: exists
     relevance: "Final-gate decision 2026-10-14: retry ceilings are configured, default 3; vocabulary lives in config, not code; a missing config is never replaced by a built-in value."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The ceiling comes only from max_transient_retries in config/commit_step.json and is delivered
+    at install. Neither the block source nor the install code holds a default. A missing value,
+    or one that is not a non-negative integer, fails the install, naming the key and the file.
+    That failure goes through BO-4500b-1's validate-all-then-write, so no installed route is
+    rewritten.
+  - >-
+    A ceiling of N means N retries, then report on the next transient answer. The count is per
+    commit, taken from the attempt history, and shared with retries that follow an engagement
+    (BO-4500b-3-iii, fourth scenario).
+  - >-
+    Changing the configuration and reinstalling changes behaviour with no edit to the block
+    source. The tests prove this with a fixture configuration, never by editing the real
+    config/commit_step.json.
+  - >-
+    Retries are fresh calls the route makes. The commit step itself never retries
+    (BO-4500a-4).
 delivers_to: null
 expects_from:
-  ac_id: BO-4500b-3
-  contract: "COMMIT-ANSWER decision."
+  - ac_id: BO-4500b-3
+    contract: >-
+      The COMMIT-ANSWER decision function with attempt history {first_paths, first_message_file,
+      answers, transient_retries_used, specialist_engaged}.
+  - ac_id: BO-4500b-1
+    contract: >-
+      Install-time placeholder resolution inside filled block text, failing the install on an
+      unresolvable value with no installed route rewritten.
+test_intent:
+  - clause: the decisions are retry, retry, retry, report, in that order
+    needs_test: true
+    reason: An off-by-one or unbounded retry loop is the likely defect, and only the exact sequence catches it.
+  - clause: every retry offers the same path list and message file as the first attempt
+    needs_test: true
+    reason: A retry that re-derives the commit could widen or change what is committed.
+  - clause: the report names all four answers in the order they arrived
+    needs_test: true
+    reason: Reporting only the last answer hides the retry history a person needs to diagnose the failure.
+  - clause: the decisions are retry, retry, continue
+    needs_test: true
+    reason: A success after transient failures must continue, which a sticky failure state would miss.
+  - clause: the decisions are retry, report
+    needs_test: true
+    reason: The ceiling must come from configuration, and a block with a typed-in 3 passes every test except this one.
+  - clause: the install fails with a message naming the missing setting
+    needs_test: true
+    reason: A missing ceiling must never be replaced by a silent built-in value (BO-4500a-4).
+  - clause: no installed route carries a ceiling the configuration did not supply
+    needs_test: true
+    reason: The failing install must leave no route holding a default or a raw placeholder.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

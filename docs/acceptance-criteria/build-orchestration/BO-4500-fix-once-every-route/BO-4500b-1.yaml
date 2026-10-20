@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 change_target: pipeline
@@ -69,8 +69,76 @@ doc_links:
   - path: docs/architecture/components/build-orchestration.md
     relationship: describes
     status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build phases. The shared-block fill runs inside the workflow build phase, before config-placeholder injection."
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: "Config-placeholder resolution in deployed text; the same resolution must apply to text filled from a block source."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: constrains
+    status: exists
+    relevance: "Templates are the source; installed copies are produced only by the build and never edited by hand."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - >-
+    ONE MECHANISM IN THE PACKAGE. The fill lives in the workflow build phase (the phase BO-4300c-3
+    names, scripts/build_phases_workflows.py) and is the only shared-block inliner the package
+    has. WORKSPACE-ANSWER (BO-4300c-3) and COMMIT-ANSWER (BO-4500b-3) are instances of it; no
+    block-specific inliner, branch or special case may exist for either.
+  - >-
+    BOTH SETS ARE DERIVED. The set of blocks is derived from the sources present in ONE tracked
+    sources location outside the deployed route set (for example templates/workflows-js/_shared/,
+    name provisional; that location must not itself be deployed as a route). The set of consumers
+    is derived by scanning every route template for marker pairs. Neither set is a list kept in
+    code or config, so a new block or consumer needs no edit to the install (the GAMMA scenario).
+  - >-
+    ONE MARKER GRAMMAR. The start/end marker form and the block-name rule are defined once and read
+    by both the fill and the identity check (BO-4500b-2); neither keeps its own pattern. The
+    grammar is a line-comment convention a route in any language can carry, and names no engine.
+  - >-
+    VALIDATE ALL, THEN WRITE. Every route template and every block source is validated, and every
+    failure collected, before any installed route is written. A failing install writes no
+    installed route at all (the shared property of BO-4500b-1-i..v). This covers every deployed
+    location of a route (the deployed workflow directory and any shipped mirror of it), not one.
+  - >-
+    ORDER. The fill happens before config-placeholder injection, so placeholders inside a block
+    are resolved by the same code path, with the same failure behaviour, as the route's own. A
+    placeholder that cannot be resolved inside block text fails the install rather than shipping
+    the raw token.
+  - >-
+    NO-OP FOR A ROUTE WITHOUT MARKERS. For a route template carrying no marker pair, the installed
+    text is exactly what the install produced before this mechanism existed (route C). If the
+    workflow build phase applies other transforms, route C's expected text is that phase's output
+    without the fill, not the raw template.
+  - >-
+    IDEMPOTENT. Keeps the phase's compare-before-write behaviour: an install with no input change
+    rewrites no installed route (byte-stable, and no write at all).
+  - >-
+    TEMPLATES ARE READ-ONLY. The fill reads templates and writes only installed copies; a
+    template's marker pair is still empty after any install.
+  - >-
+    ENGINE-FREE (framework neutrality, BO-4500b PO challenge 5). The fill and the identity check
+    work on text alone. No workflow engine, Node runtime or E2 primitive is needed to run or to
+    judge them, and nothing in the fill names an engine.
+  - >-
+    LOUD FAILURES. Every install failure goes to stderr, makes the install exit non-zero, and
+    names the route template (repo-root-relative path), the 1-based line of the offending marker,
+    the block name and the fix. No route is silently skipped. Follows the project error-handling
+    policy.
+  - >-
+    TEST SURFACE. Failure and fixture paths (ALPHA, BETA, GAMMA) run the workflow build phase
+    against a temporary package tree: a mutating test that never runs the package's own build.py
+    as a per-test subprocess. Read-only assertions on the real package's installed routes reuse
+    the shared deployed layout (marker shared_layout_reader, repo CLAUDE.md TQ-600a).
+  - >-
+    OUT OF SCOPE, recorded as follow-ups and not absorbed: the BO-3900-PATH-HELPERS blocks (already
+    drifted between build-feature.js and plan-feature.js), the resolveGate / pauseAtGate gate
+    block, and BP-1000e's file-to-mirror parity.
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -78,8 +146,52 @@ delivers_to:
       marks an EMPTY start/end marker pair carrying a block name; the install fills it with that
       block's single source text verbatim; a block is added by adding a source and a marker pair,
       never by editing the install. Consumed by the route migrations BO-4500a-5-i..iv and the
-      /commit route record (COMMIT-ANSWER) and by BO-4300c-3 (WORKSPACE-ANSWER).
+      /commit route record (COMMIT-ANSWER) and by BO-4300c-3 (WORKSPACE-ANSWER). Technical shape:
+      block name = the identifier of its single source in the one sources location; marker
+      grammar defined once and shared with the identity check (BO-4500b-2); filled text = source
+      text with config placeholders resolved by the install's own resolution; validation of the
+      whole route set precedes any write; fill runs before config-placeholder injection.
+  - agent: documentation-expert
+    contract: >-
+      For the reference page and how-to (BO-4500b-4, BO-4500b-4-i): the marker grammar (start and
+      end form, block-name rule, empty-pair rule), the sources location, the awaiting-adoption
+      declaration (BO-4500b-1-ii), and the exact stderr text of each install failure
+      (BO-4500b-1-i..v), quoted from the built install.
+  - agent: architecture-diagram-author
+    contract: >-
+      For the component diagram (BO-4500b-5): block sources and route templates feed the workflow
+      build phase's fill step, which reads the commit step's configuration through placeholder
+      resolution and writes the installed routes; WORKSPACE-ANSWER and COMMIT-ANSWER are two
+      blocks on the same step.
 expects_from: null
+test_intent:
+  - clause: installed routes A and B carry, between each marker pair, exactly the text of the named block's source, byte for byte
+    needs_test: true
+    reason: Byte-exact filling per named block is the core behaviour and a wrong-block or whitespace-altering fill would pass a looser check.
+  - clause: installed route C differs from its template only by the configuration values every route receives at install
+    needs_test: true
+    reason: A fill that touches routes without markers would alter unrelated routes, and only a comparison against the marker-free install output catches it.
+  - clause: the route templates in the package still hold empty marker pairs after the install
+    needs_test: true
+    reason: A fill that writes back into templates would turn every later install into a hand-filled-pair failure.
+  - clause: installed routes A and B both carry the changed text, and no installed route carries the earlier text
+    needs_test: true
+    reason: Propagation of a source change to every consumer is the fix-once promise and a stale-cache or compare-before-write bug would leave old text.
+  - clause: a further install with nothing changed leaves every installed route byte for byte as the previous install left it
+    needs_test: true
+    reason: Idempotency is a stated property of the build phase and a fill that rewrites on every run breaks it silently.
+  - clause: every installed copy of ALPHA-ANSWER carries the configured value in place of the placeholder, exactly as the route's own placeholders are resolved
+    needs_test: true
+    reason: Filling after placeholder injection would ship raw tokens, which only an ordering test exposes.
+  - clause: installed route C carries GAMMA-ANSWER's text
+    needs_test: true
+    reason: A new block reaching a new consumer proves the block and consumer sets are derived.
+  - clause: nothing about how the package is installed had to change for GAMMA-ANSWER to be filled
+    needs_test: true
+    reason: A hard-coded block list in the install would fail this fixture-only addition.
+  - clause: both give the same result they give in a full install, judged on the installed text alone
+    needs_test: true
+    reason: Engine-free operation is the framework-neutrality claim and a fill or check that needs the engine would fail in the harness.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []
