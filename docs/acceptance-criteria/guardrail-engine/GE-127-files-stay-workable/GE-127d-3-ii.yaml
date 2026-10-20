@@ -121,8 +121,9 @@ it_requirements:
     list never names it.
   - >-
     ONLY TOKENIZATION FAILURE IS COULD-NOT-MEASURE. A Python file that tokenizes but does not
-    parse (a syntax error a linter would reject) is measured, not INDETERMINATE: its docstring
-    positions come from the token stream. A SQL dollar-quoted body that closes but cannot be
+    parse (a syntax error a linter would reject) is measured, not INDETERMINATE: which of its
+    strings are standalone (uncounted) and which are used (counted) is read from the token
+    stream, per GE-127d-3's 2026-10-20 rule, so no parse is needed. A SQL dollar-quoted body that closes but cannot be
     lexed as SQL is a closed string literal and is measured (GE-127d-3-i).
   - >-
     SECONDARY CALLERS MUST NOT TURN A TOKENIZER FAILURE INTO A CRASH OR A VERDICT CHANGE.
@@ -212,6 +213,13 @@ amended_by:
     Secondary callers (_file_description segments, the parity gate's probe) must not crash or
     move a verdict. Complexity S -> M for the third carrier and the description seam. Added a
     seam descriptor.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. The tokenizable-but-unparseable item now says standalone versus used
+    strings are classified from the token stream (GE-127d-3's 2026-10-20 rule), replacing
+    "docstring positions".
 superseded_by: null
 covered_by: []
 implemented_by: []

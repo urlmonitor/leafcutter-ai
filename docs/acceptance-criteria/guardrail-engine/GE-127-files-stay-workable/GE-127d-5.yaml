@@ -141,8 +141,12 @@ it_requirements:
     THE GENERATED STATEMENT IS PROBED PER LANGUAGE (IT PO). The probe set GE-127d-2 built
     (triple-quoted, block comment, hash comment — language-blind) is replaced by probes run
     through the shared measure for EVERY extension in file_size.checked_extensions: each line
-    and block comment form the language's lexer declares, a Python docstring, a Python
-    non-docstring triple-quoted string, and a blank line outside comments. The statement is
+    and block comment form the language's lexer declares, and for Python (2026-10-20 rule) a
+    docstring, a BARE standalone string statement away from docstring position (mid-module,
+    and a trailing module-level block), a string ASSIGNED to a name, a string passed as an
+    argument, and a standalone f-string — plus a blank line outside comments. The generated
+    statement must say standalone strings are uncounted and used strings (and f-strings) are
+    counted only because those probes measured that way. The statement is
     built from what the measure actually did with each probe, never from a table of what it
     is supposed to do, so a change that made any one style counted again changes the
     statement in the same call (GE-127d-2's seam). The per-file Measures line may use the
@@ -172,7 +176,7 @@ it_requirements:
     THE ADVICE IS REPLACED, NOT APPENDED TO. _HELPS_MARKER, _NO_HELP_MARKER and
     _print_asymmetry_advice's two sentences go; the replacement is shared by both refusal
     printers (FILE TOO LARGE and FILE GREW) as today, states the rule from the generated
-    statement, says restyling comments, deleting comments or docstrings and joining lines are
+    statement, says restyling comments, deleting comments or standalone strings and joining lines are
     not remedies, names no comment style as counted or free, does not recommend deleting blank
     lines, and stays consistent with GE-127d-4's separate-commits remedy. Update every test
     and fixture that references the removed markers (_ge_127d_2_fixture.py) in the same change.
@@ -202,10 +206,11 @@ test_spec:
     description: >-
       Run the hook in a temporary git repository on an over-limit .py file and an
       over-limit .js file, through both refusal paths (crossing and growth), and read the
-      advice from the hook's own output: it states that every comment style and docstrings
-      are uncounted and blank lines counted, and it contains no statement that one style
-      counts or that removing comments reduces the length. Then verify the advice by
-      behaviour: deleting every comment from the refused file leaves the quoted length
+      advice from the hook's own output: it states that every comment style and standalone
+      Python strings (docstrings and bare strings) are uncounted, that used strings count, and
+      that blank lines count, and it contains no statement that one style counts or that
+      removing comments reduces the length. Then verify the advice by behaviour: deleting
+      every comment and every standalone string from the refused file leaves the quoted length
       unchanged on the next run.
     must_catch:
       - "the incumbent advice: '#' comments count and removing them WILL reduce it"
@@ -301,6 +306,15 @@ amended_by:
     and req_status unchanged. The it_requirements probe list (a Python docstring and a
     non-docstring triple-quoted string) is left for the IT PO; it needs a bare-string probe
     and an assigned-string probe to generate the new statement.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. The generated-statement probe list now covers, for Python, a
+    docstring, a bare standalone string mid-module and as a trailing block, an assigned
+    string, a string passed as an argument and a standalone f-string. The advice
+    it_requirement and the advice test description now say standalone strings instead of
+    docstrings.
 superseded_by: null
 covered_by: []
 implemented_by: []

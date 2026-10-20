@@ -131,10 +131,12 @@ it_requirements:
     several on one line, `<<<` excluded) is a literal: every body line counts, including lines
     beginning with `#` and blank lines.
   - >-
-    TEST ORACLES MUST SHARE NO CODE WITH THE MEASURE. For Python the oracle derives docstring
-    positions from `ast` (first-statement Expr nodes, lineno to end_lineno) and comments from
-    tokenize COMMENT tokens — the measure itself reads docstring position from the token
-    stream, so the two disagree whenever either docstring logic is wrong. For JS/MJS/TS/TSX the
+    TEST ORACLES MUST SHARE NO CODE WITH THE MEASURE. For Python the oracle takes EVERY
+    standalone string from `ast` (2026-10-20 rule): every ast.Expr statement, at any depth and
+    in any position, whose value is an ast.Constant of type str or bytes — an f-string is an
+    ast.JoinedStr and is therefore excluded and counted — spanning lineno to end_lineno; and
+    comments from tokenize COMMENT tokens. The measure itself detects standalone strings from
+    the token stream, so the two disagree whenever either classification is wrong. For JS/MJS/TS/TSX the
     oracle is the TypeScript compiler from leafcutter-web's installed dependencies (parse with
     the file's script kind, collect comment ranges from leading/trailing trivia). In CI that
     oracle test must FAIL, not skip, when Node or typescript is absent — the precedent the
@@ -265,6 +267,15 @@ amended_by:
     description now derives every standalone string from `ast` (any position), not only
     docstring positions. Title, depends_on and req_status unchanged. The it_requirements
     oracle paragraph still says "docstring positions" and is left for the IT PO.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. The Python oracle it_requirement now takes every standalone string
+    Expr node from ast (str or bytes Constant, any position; f-strings excluded as JoinedStr).
+    Re-measured 2026-10-20: tests/knowledge/test_native_decision.py measures 399 under the new
+    rule (332 before), so the note below that it starts reading as over its 400 limit no
+    longer holds; the note is the BA's and is left as written.
 superseded_by: null
 covered_by: []
 implemented_by: []

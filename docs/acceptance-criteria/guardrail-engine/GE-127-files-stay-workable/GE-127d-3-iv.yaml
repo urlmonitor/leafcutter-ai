@@ -87,10 +87,13 @@ it_requirements:
     The language for both sides comes from the staged file's own extension. A rename that
     changes the extension is out of scope for this record; do not special-case it.
   - >-
-    The Python arm uses docstring POSITION: a `#` run can only become an uncounted docstring
-    where a docstring can stand (first statement of the module, a class or a function). Tests
-    must place the run there; elsewhere the same triple-quoted text is code (GE-127d-3) and
-    the restyle would legitimately add lines.
+    The Python arm follows the 2026-10-20 standalone-versus-used rule (GE-127d-3), not
+    position: a `#` run rewritten as a string literal standing alone as a statement —
+    docstring, bare string between functions, or trailing DECISION HISTORY string — adds 0
+    lines in either direction, wherever it stands. The same text turned into a USED string
+    (assigned, passed, returned, part of a larger expression) or into a standalone f-string is
+    code, and such a rewrite legitimately adds its lines; tests must not present that as a
+    restyle. Appending entries inside an existing trailing DECISION HISTORY string adds 0.
 test_spec:
   - name: test_ge_127d_3_iv_restyling_comments_either_way_adds_zero_lines
     target_dir: unit_tests/commit_guardian/
@@ -179,6 +182,14 @@ amended_by:
     appending entries inside a trailing DECISION HISTORY string adds 0 lines. Title,
     depends_on and req_status unchanged. The it_requirements item "The Python arm uses
     docstring POSITION" now contradicts the criteria and is left for the IT PO.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. Replaced the docstring-position it_requirement with the 2026-10-20
+    standalone-versus-used rule: a `#` run restyled as any standalone string adds 0 wherever
+    it stands, appending inside a trailing DECISION HISTORY string adds 0, and a rewrite into
+    a used string or a standalone f-string is code and legitimately adds lines.
 superseded_by: null
 covered_by: []
 implemented_by: []

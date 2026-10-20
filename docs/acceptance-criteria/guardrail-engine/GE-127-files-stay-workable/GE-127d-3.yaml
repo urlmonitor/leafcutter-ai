@@ -150,10 +150,14 @@ it_requirements:
     ONE MEASURE, PER-LANGUAGE TOKENIZER, NO DELIMITER REGEX. Uncounted content is
     exactly: comments of every style the language has (Python `#`; shell `#`; JS/MJS/
     TS/TSX `//` and `/* */`, including a JSX `{/* ... */}` container standing alone on
-    its line; SQL `--` and `/* */`) and Python docstrings (a string literal that is
-    the first statement of a module, class or function). Blank lines outside those
-    stay counted. Decided by BrainCandy 2026-10-16: "NO comment counts toward a
-    file's length, in any style."
+    its line; SQL `--` and `/* */`) and every Python STANDALONE string statement — a
+    statement made of nothing but non-f string literals, in ANY position: docstrings,
+    bare strings mid-module or mid-function, and a trailing DECISION HISTORY block alike
+    (bytes and raw literals included). A string that is assigned, passed, returned or part
+    of a larger expression is code, and a standalone f-string is code. Blank lines outside
+    comments and standalone strings stay counted. Decided by BrainCandy 2026-10-16 ("NO
+    comment counts toward a file's length, in any style") and 2026-10-20 (standalone
+    strings uncounted like comments, superseding "docstring position only").
   - >-
     The language is chosen from the file's covered extension. A covered extension
     with no tokenizer is a defect in this change, not a raw-count fallback: GE-127d-3-ii
@@ -162,23 +166,31 @@ it_requirements:
   - >-
     THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16). A physical line
     counts when it carries at least one token that is neither a comment nor part of a
-    docstring, OR when it is whitespace-only and lies outside every comment and docstring.
-    Every physical line spanned by a multi-line string value (a non-docstring triple-quoted
-    string, a JS template literal, a quoted shell string, a shell here-document body, a SQL
-    string) counts, blank or not. Every physical line wholly inside a comment or docstring is
-    uncounted, blank or not. LF and CRLF content measure identically (the 2026-09-23 CRLF
+    standalone Python string statement, OR when it is whitespace-only and lies outside every
+    comment and standalone string. Every physical line spanned by a USED multi-line string
+    value (a Python string that is assigned, passed, returned or part of a larger expression,
+    a Python f-string, a JS template literal, a quoted shell string, a shell here-document
+    body, a SQL string) counts, blank or not. Every physical line wholly inside a comment or a
+    standalone Python string is uncounted, blank or not; a physical line shared between a
+    standalone string and code (e.g. `"""end"""; x = 1`) counts once. LF and CRLF content measure identically (the 2026-09-23 CRLF
     phantom-line defect in this module's own history must not return), as does a file with
     no trailing newline. "Total line count" wherever a sibling record compares against it
     (GE-127d-4) uses the SAME physical-line split as this measure.
   - >-
     TOKENIZER DECISIONS, PINNED BY THE IT PO SO THE CODER DOES NOT RE-DECIDE THEM.
     PYTHON — the standard library tokenizer on the RUNNING interpreter; no second lexer and
-    no fallback. Docstring = exactly the set Python's own ast.get_docstring recognises (a
-    plain or r/u-prefixed string literal, adjacent-literal concatenation included, as the
-    first statement of a module, class or function body; an f-string or bytes literal in that
-    position is code). Docstring position is read from the token stream, so a file that
-    tokenizes but does not parse is still measured (only a tokenization failure is
-    GE-127d-3-ii's could-not-measure). A shebang and an encoding line are `#` comments and
+    no fallback. STANDALONE-STRING DETECTION FROM THE TOKEN STREAM (2026-10-20 rule): split the
+    stream into statements at NEWLINE tokens and at top-level `;`; a statement is standalone
+    when, ignoring COMMENT / NL / INDENT / DEDENT, it consists only of STRING tokens whose
+    prefix has no `f` (u, r, b, rb/br and no prefix all qualify, so a standalone bytes literal
+    is uncounted), optionally wrapped in balanced parentheses. Implicit concatenation of
+    adjacent plain literals (`"a" "b"`, across lines or inside parentheses) is one standalone
+    statement; if ANY piece is an f-string (on 3.12+ an FSTRING_START token, before 3.12 a
+    STRING token with an `f` prefix) the whole statement is code, matching ast, where it
+    becomes a JoinedStr. Any other token in the statement (a name, `=`, `+`, `return`, a call
+    paren after a name, a comma making a tuple) makes it used, hence code. Position does not
+    matter. Because no parse is needed, a file that tokenizes but does not parse is still
+    measured (only a tokenization failure is GE-127d-3-ii's could-not-measure). A shebang and an encoding line are `#` comments and
     uncounted. JS/MJS/TS/TSX — no stdlib tokenizer exists: a small hand-written lexer
     (states: code, line comment, block comment, single- and double-quoted string with
     escapes and line continuations, template literal with a `${}` nesting stack, regex
@@ -225,25 +237,34 @@ it_requirements:
     (15). No `.py` file in the sub-package may contain a contiguous `{{config.` literal
     (inject_config rewrites it at deploy time); build such a corpus string by concatenation.
   - >-
-    THIS CHANGE MUST PASS THE FILE-SIZE GATE UNDER THE RULE IT INTRODUCES. Measured by the IT
-    PO on 2026-10-16 with an approximate token-stream classifier over the worktree (not a
-    gate run): _file_size_ratchet.py moves 335 -> 498 and check_file_size.py 312 -> 561 under
-    the new rule, almost entirely because each ends in a module-level DECISION HISTORY
-    triple-quoted string, which the criteria make code. Rebuild the deployed layout
-    (`python scripts/build.py --target-dir .`) before committing so the hook judges the change
-    with the new rule, and do not grow either file under it: move the probe/statement
-    machinery out to the sub-package rather than adding to them. Converting a file's
-    DECISION HISTORY string to the `#` form doc-enforcer §8 already prescribes for new files
-    is a legitimate measured reduction, not gaming. The measure must NOT special-case DECISION
-    HISTORY (or any string) by name or content — exemptions derive from token position only.
+    THIS CHANGE MUST PASS THE FILE-SIZE GATE UNDER THE RULE IT INTRODUCES. Re-measured by the IT
+    PO on 2026-10-20 at 7897ca013 with an approximate token-stream classifier implementing the
+    2026-10-20 rule (not a gate run): _file_size_ratchet.py 335 -> 302, check_file_size.py
+    312 -> 293, check_file_size_rule_parity.py 239 -> 198, _file_description.py 199 -> 188 —
+    every file this tree of records edits stays under its 400 limit, with roughly 100 lines of
+    headroom on the two largest. The constraint is therefore ordinary: rebuild the deployed
+    layout (`python scripts/build.py --target-dir .`) before committing so the hook judges the
+    change with the new rule, and keep each edited file at or under 400 measured lines; new
+    lexer code goes in the sub-package, not into _file_size_ratchet.py or check_file_size.py.
+    The measure must NOT special-case DECISION HISTORY (or any string) by name or content —
+    a string is uncounted only by its syntactic role (a standalone statement).
   - >-
     POPULATION CHANGE, MEASURED — RE-MEASURE BEFORE BUILDING AND RECORD IT IN THE TICKET.
-    IT PO approximation at 259540316 over 2853 tracked .py files, all of which tokenize on
-    3.12: over 400 under the pre-2026-10-16 rule 193, under the new rule 164 (line comments
-    stop counting outweighs the strings that start counting); 14 files cross from at-or-under
-    to over, 6 of them only because of a trailing DECISION HISTORY string (with those strings
-    uncounted the new-rule figure would be 156). .js/.mjs/.ts/.tsx/.sql/.sh were not measured
-    here. GE-127d-3-iii keeps the switch from refusing an unchanged file; record the
+    IT PO approximation at 7897ca013 over 2853 tracked .py files, all of which tokenize on
+    3.12, applying the 2026-10-20 rule: over 400 under the pre-2026-10-16 rule 193, under the
+    new rule 156. 45 files drop to at-or-under (line comments stop counting); 8 cross from
+    at-or-under to over, every one a test file whose USED multi-line strings (fixtures,
+    expected output) now count and whose old measure discarded them:
+    unit_tests/test_final_gate_and_commit_message.py 399 -> 559,
+    unit_tests/workflows/test_acd_2100a_1.py 326 -> 481, test_acd_2100c_2.py 391 -> 469,
+    test_acd_2100a_3.py 325 -> 413, unit_tests/prompt_assembly/test_test_requirements_guard.py
+    375 -> 438, unit_tests/commit_guardian/test_ge_127f_2_i.py 399 -> 438,
+    test_ge_119_contract_shrinking_rename_aware.py 252 -> 418,
+    test_ge_118c_doc_types_deployed_resolution.py 335 -> 401. No trailing DECISION HISTORY
+    string pushes any file over. tests/knowledge/test_native_decision.py measures 399 (332
+    before), so it does NOT cross 400 as GE-127d-3-i's notes expected. The superseded
+    2026-10-16 figures (164 over, 14 newly over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
+    were not measured here. GE-127d-3-iii keeps the switch from refusing an unchanged file; record the
     implementer's own before/after figures per extension in the ticket.
   - >-
     SIGNATURE EXTENSION — CALL-SITE AUDIT (CLAUDE.md). The shared measure gains the file's
@@ -268,9 +289,10 @@ it_requirements:
     GE-127d-2's asymmetry and seam descriptors (see the two test_spec entries covering
     GE-127d-2). Also run the whole unit_tests/commit_guardian/ suite plus
     tests/knowledge/test_native_decision.py's measurement and list every other failure whose
-    expectation encodes the pre-2026-10-16 rule (a `#` line counted, a non-docstring
-    triple-quoted string or a false /* span discarded) in the ticket, rewritten to the new
-    rule; an expectation that fails for any other reason is a regression, not a rewrite.
+    expectation encodes the pre-2026-10-16 rule (a `#` line counted, a USED triple-quoted
+    string — assigned, passed, returned or part of a larger expression — discarded, or a false
+    /* span discarded) in the ticket, rewritten to the new rule; an expectation that a
+    standalone string is discarded is still correct under the 2026-10-20 rule and is kept; an expectation that fails for any other reason is a regression, not a rewrite.
   - >-
     Must stay linear in file size (no rescanning from the start per line, no catastrophic
     regex backtracking); measuring a generated 10,000-line file of any covered language must
@@ -508,6 +530,20 @@ amended_by:
     expression, standalone f-string all count); the part-breakdown seam names both kinds.
     Title, depends_on and req_status unchanged. it_requirements left for the IT PO; the
     items that now contradict the criteria are listed in the BA's 2026-10-20 report.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. it_requirements brought in line with the 2026-10-20 rule: uncounted
+    Python content is every standalone non-f string statement in any position; the line rule
+    counts USED multi-line strings and uncounts standalone ones; standalone detection is read
+    from the token stream (statements split at NEWLINE and top-level `;`, only non-f STRING
+    tokens plus optional parentheses; implicit concatenation is one statement; any f-string
+    piece makes it code; standalone bytes uncounted). Re-measured at 7897ca013: .py over 400
+    193 -> 156, 45 drop under, 8 cross over (all test files with used fixture strings);
+    _file_size_ratchet.py 302 and check_file_size.py 293, so the landing commit has headroom.
+    The old-rule test rewrite list narrowed to used strings. Removed this record's 2026-10-16
+    DECISION HISTORY follow-up recommendation from the notes; the rule resolved it.
 superseded_by: null
 covered_by:
   - GE-127d-3-i
@@ -561,16 +597,3 @@ notes: |
 
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.
-
-  [RESOLVED 2026-10-20 by decision (1) above — trailing DECISION HISTORY strings are now
-  uncounted; the migration follow-up below is no longer needed for measurement reasons.]
-  IT PO, 2026-10-16 — A CONSEQUENCE OF DECISION (1) TO PUT BEFORE BRAINCANDY, NOT A CRITERIA
-  CHANGE. Most Python files in this repository (about 250 under templates/ and scripts/ alone)
-  end in a module-level `"""DECISION HISTORY ..."""` string. Under decision (1) that string is
-  code: it counts toward the file's length, and every new entry doc-enforcer requires an
-  author to append is charged as added measured lines (two-for-one on an over-limit file,
-  GE-127f). doc-enforcer §8 already prescribes the `#`-comment form for new files, which this
-  rule leaves uncounted. Recommended follow-up, outside this record: a separate AC owned by
-  the doc-enforcer / transform_decision_history owner to migrate trailing DECISION HISTORY
-  strings to the `#` form. Special-casing the string by name in the measure is ruled out
-  (it_requirements).
