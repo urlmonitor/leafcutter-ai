@@ -1568,6 +1568,18 @@
                     "skill_id": "signoff",
                     "mode": "conditional",
                     "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
+                },
+                {
+                    "skill_id": "postgres",
+                    "mode": "conditional",
+                    "condition": "For every new SQL file or non-trivial edit (Step 2), apply the postgres skill before declaring the SQL ready.",
+                    "provided_by": "project"
+                },
+                {
+                    "skill_id": "sql-test",
+                    "mode": "conditional",
+                    "condition": "After the local-DB deploy succeeds (Step 4), run the sql-test skill to run the SQL test suite.",
+                    "provided_by": "project"
                 }
             ],
             "knowledge_channels": [

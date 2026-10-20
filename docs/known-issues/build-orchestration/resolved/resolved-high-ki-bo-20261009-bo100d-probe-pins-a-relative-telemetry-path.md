@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-16'
 components:
   - build_orchestration
   - agent_telemetry
@@ -25,10 +25,8 @@ related_docs:
   then on the pre-drive gate passes against a worktree-local file while the stream the drive
   actually writes to may be unwritable. That is a false green on a gate whose only job is to
   prevent silent telemetry loss.
-- **Status:** open. Needs a criteria change on the ten ACs by the build-orchestration owner. This
-  entry does not edit them, and no implementer may silently re-point their probe (INF-500d-4
-  it_requirements, "BO-100d RECONCILIATION"). The order in which BO-100d-1a and INF-500d-4 land is
-  undecided, and stays a hazard until it is decided.
+- **Status:** **RESOLVED** 2026-10-16 by PR #1262, which changed the criteria. The probe itself
+  is not built yet. See the Resolution section at the end.
 - **Occurrences:** 1 (2026-10-09, found during INF-500d-4's IT PO enrichment, PR #1107). Found by
   review, not by a failing drive.
 - **First seen:** 2026-10-09 · **Last seen:** 2026-10-09
@@ -114,3 +112,26 @@ this entry.
 **Pattern:** a reachability gate specified by the path string it probes rather than by the
 location the writers resolve. It stays correct only while every writer happens to resolve the same
 string the same way. When one of them moves, the gate keeps passing and stops testing anything.
+
+---
+
+## Resolution — 2026-10-16
+
+**Fixed by** PR #1262 (merge `abb48c74b`, 2026-10-16). This entry's defect was the criteria, and
+its own Status asked for a criteria change by the build-orchestration owner. That change is made.
+
+- **What the criteria say now.** The live probe ACs (`BO-100d-1a`, `BO-100d-1b`, `BO-100d-2a`,
+  `BO-100d-2b` and their L3s) probe the absolute path printed by the install's telemetry location
+  query: `sink_resolution.py --print-location telemetry` (INF-500d-4-iii).
+- **No fallback.** An empty, missing or stale answer blocks the drive with "rebuild". Nothing falls
+  back to the relative path.
+- **Landing order.** The hazard in Fix direction no longer applies. A probe built to the current
+  criteria reads the declared location, so it keeps working whichever of BO-100d-1a and
+  INF-500d-4-iv lands first.
+- **Where the rule is stated.** The "Feedback sink reachable" section of the repository
+  `CLAUDE.md` describes the read-only location check.
+
+**Not done here.** The probe is not built. `BO-100d-1a`, `-1b`, `-2a` and `-2b` are still
+unimplemented, and PR #1262 lowered their `readiness` to `draft`, so each needs IT PO review and
+re-approval before a build. Until a probe exists, no pre-drive gate enforces the location check.
+If the built probe does not use the location query, file a new entry. Do not reopen this one.

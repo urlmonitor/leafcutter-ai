@@ -1,7 +1,7 @@
 id: BO-100d-1b
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "build-feature.md prose hard-blocks the drive before dispatch when the telemetry sink is unreachable"
 component: build-orchestration
@@ -54,6 +54,7 @@ it_requirements:
   - "The abort branch must print an operator message naming the absolute path the telemetry location query printed (or, when no usable declaration exists, stating that and naming 'rebuild' as the remediation) and the concrete remediation, then exit without dispatching any supervisor (mirror the existing Step A worktree-guard abort prose). The prose must not name the workspace-relative debugging/logs/agent_telemetry.jsonl as the probe target."
   - "Deployed/template parity (ADR-001 self-hosting): build-feature.md is a package source compiled by build.py; edit the package source and verify the deployed slash-command copy via the build.py round-trip — never edit only one side."
   - "Apply the Prompt-Quality Checklist: keep bash probe snippets single-command per the shell convention; do not introduce inline implementation work that the inline_work_guard.py lock would block."
+  - "The prose must obtain the probe target by running the install's telemetry location query (sink_resolution.py --print-location telemetry) and must treat a non-zero exit, empty stdout, or a stale enduring root as a hard stop with remediation 'rebuild'; it must not instruct the agent to create any file or directory on that path."
 delivers_to: null
 expects_from:
   ac_id: BO-100d-1a
@@ -64,6 +65,12 @@ amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, and a second scenario added for a missing, empty or stale declaration (blocks with 'rebuild', no relative-path fallback), mirroring BO-100d-1a for dual-surface parity (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The abort-message it_requirement and the expects_from contract were updated to match. depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review of the re-pointed criteria. This is a prompt AC (change_target: prompt, assigned_agent: llm-expert, not a coder), so set test_required: false with a test_rationale: command prose cannot be executed by a unit test, and the probe behaviour it invokes is proven behaviorally under BO-100d-1a and its L3s through the shared helper. Added one it_requirement: the prose resolves the target through the location query and stops with 'rebuild' on an unusable declaration, creating nothing. assigned_agent, estimated_complexity S and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -78,3 +85,15 @@ notes: |
   insufficient; this raises the prose gate to a hard block.
 change_target: prompt
 risk_surface: internal
+test_required: false
+test_rationale: >-
+  The deliverable is command prose in templates/workflows/build-feature.md, read by
+  an agent; no unit test can execute it, and a test that checks the prose for the
+  probe step would be the grep-only form the repo CLAUDE.md forbids for gates. The
+  executable behaviour the prose invokes (location resolved through the query, no
+  relative fallback, nothing created on refusal, typed block with sink_path and
+  remediation) lives in the shared probe helper and is proven behaviorally by
+  BO-100d-1a, BO-100d-1a-i and BO-100d-1a-ii. The prose path is to be checked at
+  drive time by a behavioral spot-check: run /build-feature against an install
+  whose declared stream is unwritable and confirm no ticket-supervisor is
+  dispatched.

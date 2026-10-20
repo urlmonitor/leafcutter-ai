@@ -49,6 +49,22 @@ DECISION HISTORY
   refuses. A package where nothing is permitted anywhere has nothing to compare
   and is skipped (the verdict function itself still raises on it), so
   skills-only packages keep building. (#AR-300c-5-ii, #AR-300c-5-iii)
+- 2026-10-16 [python-coder/AR-400d-3 project root]: The gate no longer assumes the
+  project is ``package_root.parent``. The build passes its TARGET dir
+  (``refuse_on_ability_findings(..., project_root=)``), so the gate, the compile and the
+  deploy read the one area ``<target>/<output_root>/skills`` (``project_ability_slots.
+  project_skills_dir``); before, a self-host or ``--target-dir`` build looked in the wrong
+  place and reported a supplied ability "not found" while the compile delivered it. The
+  registry-validator CLI and the commit hook have no target dir: they call
+  ``ability_errors`` / ``split_ability_findings`` with no ``project_root``, which is DEFINED
+  as the package's parent directory (the consumer layout, where the package is cloned into
+  the project). In a self-host layout those doors therefore read ``<parent>/.leafcutter/
+  skills``; they only see informational findings, which never fail them. (#AR-400d-3)
+- 2026-10-16 [python-coder/AR-400d-2]: A third finding kind, informational: a
+  grant marked ``provided_by: project`` that the project does not supply (or
+  supplies in place of a packaged id) is printed once through
+  ``build_colors.info`` -- never a warning or an error, never the exit code.
+  (#AR-400d-2)
 """
 
 from __future__ import annotations
@@ -60,6 +76,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_ability_verdict import (
+    INFORMATIONAL_KINDS,
     REPORT_ONLY_KINDS,
     EmptyPopulationError,
     describe_finding,
@@ -69,6 +86,7 @@ from agent_ability_verdict import (
 )
 from agent_declaration_shape import skills_problems, spawn_problems
 from build_colors import error as _error
+from build_colors import info as _info
 from build_colors import warn as _warn
 from template_compiler import parse_frontmatter
 
@@ -147,7 +165,7 @@ def _malformed_findings(
 
 def _spawn_findings(
     package_root: Path, declarations: dict[str, list[Any]], registry_agents: list[dict[str, Any]],
-    config: dict[str, Any] | None,
+    config: dict[str, Any] | None, project_root: Path,
 ) -> list[dict[str, Any]]:
     """Return the sub-agent findings (comparison and resolution); none when nothing is permitted anywhere.
 
@@ -157,7 +175,6 @@ def _spawn_findings(
     """
     if not declarations and not any(a.get("spawn_allowlist") for a in registry_agents):
         return []
-    project_root = package_root.parent
     return verify_spawn_allowlists(
         declarations, registry_agents, packaged_agents_root=package_root / "templates" / "agents",
         project_root=project_root, output_root_name=_output_root_name(config, project_root))["findings"]
@@ -165,14 +182,13 @@ def _spawn_findings(
 
 def _skill_findings(
     package_root: Path, declarations: dict[str, list[Any]], registry_agents: list[dict[str, Any]],
-    config: dict[str, Any] | None,
+    config: dict[str, Any] | None, project_root: Path,
 ) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     """Return ``(findings, cannot_verify, notes)`` for the skills side.
 
     Nothing declared anywhere is SKIPPED with a stated note (like the sub-agent
     side); an empty agent population is still a refusing ``cannot_verify``.
     """
-    project_root = package_root.parent
     try:
         verdict = verify_abilities(
             declarations,
@@ -189,7 +205,7 @@ def _skill_findings(
 
 
 def _verdict_findings(
-    package_root: Path, config: dict[str, Any] | None
+    package_root: Path, config: dict[str, Any] | None, project_root: Path
 ) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     """Return ``(findings, cannot_verify, notes)`` for the package at ``package_root``.
 
@@ -207,17 +223,26 @@ def _verdict_findings(
     registry_agents = _read_json(registry_path).get("agents") or []
     bad_skills, skills = _malformed_findings(_read_declarations(agents_dir, registry_agents), skills_problems)
     bad_spawn, spawn = _malformed_findings(_read_spawn_declarations(agents_dir, registry_agents), spawn_problems)
-    found, cannot_verify, notes = _skill_findings(package_root, skills, registry_agents, config)
-    return (bad_skills + bad_spawn + found + _spawn_findings(package_root, spawn, registry_agents, config),
-            cannot_verify, notes)
+    found, cannot_verify, notes = _skill_findings(package_root, skills, registry_agents, config, project_root)
+    spawn_found = _spawn_findings(package_root, spawn, registry_agents, config, project_root)
+    return bad_skills + bad_spawn + found + spawn_found, cannot_verify, notes
 
 
-def _split(package_root: Path, config: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
-    """Return ``(reported, refusing, notes)`` message lists for the package."""
-    findings, cannot_verify, notes = _verdict_findings(package_root, config)
-    reported = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] in REPORT_ONLY_KINDS]
-    refusing = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] not in REPORT_ONLY_KINDS]
-    return reported, refusing + cannot_verify, notes
+def _split(
+    package_root: Path, config: dict[str, Any] | None, project_root: Path | None = None
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    """Return ``(reported, refusing, notes, informational)`` message lists for the package.
+
+    ``project_root`` is the project whose abilities area is read: the build's target dir
+    (the one ``project_ability_slots`` and the compile/deploy side use); None means the
+    package's parent directory (the consumer layout, see the module DECISION HISTORY).
+    """
+    findings, cannot_verify, notes = _verdict_findings(package_root, config, project_root or package_root.parent)
+    lines: dict[str, list[str]] = {"report": [], "refuse": [], "info": []}
+    for f in findings:
+        group = "info" if f["kind"] in INFORMATIONAL_KINDS else "report" if f["kind"] in REPORT_ONLY_KINDS else "refuse"
+        lines[group].append(f"[abilities] {describe_finding(f)}")
+    return lines["report"], lines["refuse"] + cannot_verify, notes, lines["info"]
 
 
 def split_ability_findings(package_root: Path, config: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:
@@ -228,7 +253,7 @@ def split_ability_findings(package_root: Path, config: dict[str, Any] | None = N
     other finding -- a malformed declaration, an unresolvable declared ability,
     or an empty agent population -- which makes the build exit non-zero.
     """
-    reported, refusing, _notes = _split(package_root, config)
+    reported, refusing, _notes, _info = _split(package_root, config)
     return reported, refusing
 
 
@@ -247,26 +272,36 @@ def ability_errors(package_root: Path, config: dict[str, Any] | None = None) -> 
     return reported + refusing
 
 
-def refuse_on_ability_findings(package_root: Path, config: dict[str, Any], dry_run: bool) -> int:
+def refuse_on_ability_findings(
+    package_root: Path, config: dict[str, Any], dry_run: bool, project_root: Path | None = None
+) -> int:
     """Report registry-copy disagreements, print refusing findings as errors, return the exit code.
 
     A registry copy that disagrees with the declarations is REPORTED (a warning
     naming the agent and both ability sets) and never refuses; the build
     compiles from the declarations either way and never writes the package
-    source tree. Any other finding refuses.
+    source tree. Any other finding refuses. A statement about a project-supplied
+    ability (not found / used in place of the packaged one / packaged copy used) is
+    printed ONCE at informational severity: no warning or error marker, and it
+    never sets the exit code (AR-400d-2).
 
     Args:
         package_root: The leafcutter package root.
         config: Merged build config.
         dry_run: When True, refusing findings are printed but non-fatal (mirrors
             the registry-error handling in ``build._handle_registry_errors``).
+        project_root: The build's target directory, whose ``<output_root>/skills`` is the
+            project's abilities area (the path the compile and deploy side read through
+            ``project_ability_slots``); None falls back to the package's parent directory.
 
     Returns:
         1 when the build must refuse, 0 to continue.
     """
-    reported, refusing, notes = _split(package_root, config)
+    reported, refusing, notes, informational = _split(package_root, config, project_root)
     for line in notes + reported:
         _warn(line)
+    for line in informational:
+        _info(line)
     for err in refusing:
         _error(err)
     return 1 if refusing and not dry_run else 0

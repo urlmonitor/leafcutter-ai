@@ -1,0 +1,180 @@
+id: ACD-1300e-1
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A resumed run does not mistake the criteria it committed itself for existing coverage"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run with run id R that has committed the criteria it authored in an
+    earlier stage (for example two L2 criteria under one L1, committed by run R before it
+    stopped at its final decision point),
+  And run R has stopped -- either paused at that decision point or ended by a crash --
+    and the process is no longer running,
+  When the route is started again for run R with the same request,
+  Then the duplicate-coverage check does not count any criterion committed by run R as
+    existing coverage of that request,
+  And the run is not routed as "covered" on the basis of run R's own criteria,
+  And the covered-route decision is not raised for run R's own criteria,
+  And the run reaches the decision point it had stopped at, carrying run R's committed
+    criteria forward unchanged,
+  And a criterion in the store that was NOT authored by run R and does cover the request
+    is still reported as existing coverage exactly as it is for a new run,
+  And the bug symptom ("on run structural-parent-covered-by every crash-resume re-triaged
+    the request as covered because the run's own committed criteria now existed, so the
+    resume stopped at the covered-route decision first, the answer supplied for the final
+    decision was refused as naming a different decision, and the final decision had to be
+    applied by hand") must not occur.
+depends_on: [ACD-1300e]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300a-3.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/plan-feature-workflow-rationale-gates.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Run-ownership read for run R, available on every start of R whether or not a pause record exists. Produced by one command step (command-step-runner) over the authoring branch history origin/main..HEAD; stdout is one JSON object {run_id: string (== R), own_ac_ids: string[] (sorted, unique; [] when R committed nothing), evidence: 'commit-trailer'}. Ownership = an AC id listed in the 'AC IDs:' trailer of a plan-feature(<STAGE>) commit whose 'run-id:' trailer equals R exactly. Non-zero exit or unparseable stdout means 'ownership unknown', never 'owns nothing'. Consumed by ACD-1300e-1-i (crash, no pause record) and ACD-1300e-2 (resume reaches the named decision)."
+expects_from: null
+it_requirements:
+  - "Run ownership must be derived from durable evidence the run leaves in git history when it commits (the 'run-id:' and 'AC IDs:' trailers already written on every plan-feature(<STAGE>) commit), never from the pause record, so it survives a crash that wrote no record (ACD-1300e-1-i)."
+  - "The run-id match is exact string equality on the trailer value; a criterion committed by a different run id, or present on origin/main, is never treated as run R's own."
+  - "The exclusion is enforced on the gate that actually runs: run R's own ids are removed from the triage result's existing_acs deterministically in the workflow body before the covered-route decision is evaluated, AND passed to ac-triage as ids to disregard, so a triage reply that ignores the instruction still cannot raise the covered-route gate on R's own criteria."
+  - "When removing R's own ids leaves no covering criterion, the route is not 'covered' and no covered-route gate is raised; the run continues on the route it would take for that request without those criteria."
+  - "When the ownership read fails (decline, non-zero exit, unparseable stdout), the run must not silently fall back to counting its own criteria as coverage: it logs a [plan-feature][WARNING] naming the run id and returns a distinct, non-success status telling the operator the resume could not establish which criteria are its own, rather than raising the covered-route decision on unverified grounds."
+  - "Detection of coverage by OTHER runs (ACD-300a-3) is unchanged: same triage agent, same prompt contract {route, existing_acs, parent_l1_id, rationale}, same covered-route options (cancel/amend/force)."
+  - "The ownership read is one command dispatch per run start (reuse the history read scanCommittedStages already performs where possible rather than adding a second git-log dispatch); it adds no dispatch to a first (non-resume) run when the branch has no plan-feature commits."
+  - "The E2 workflow body has no filesystem access (ADR-030, ADR-024): every disk or git read/write it needs is a single command dispatched to command-step-runner (registry: permits_shell true, charter 'run exactly one given command in one named workspace'), never to status-checker or worktree-agent; the caller parses the command's stdout itself from command-step-runner's {command, workspace, exit_status, stdout, stderr} result, and treats a reply with no exit_status key as a decline."
+  - "File-size ratchet: templates/workflows-js/plan-feature.js measures 2646 lines under scripts/commit_guardian/_file_size_ratchet.count_content_lines against a 1000-line .js limit, so check-file-size requires at least 2 measured lines removed for every measured line added (JSDoc/block comments are not counted, so deleting them earns nothing). The change must land with the measured length of plan-feature.js not increased beyond what the ratchet permits; new logic belongs in a Python script under scripts/ (deployed to .leafcutter/scripts/ by build.py, each new file under the 400-line .py limit) invoked as a command step, or is paid for by consolidating existing duplicated dispatch code."
+  - "templates/workflows-js/plan-feature.js is the source; .claude/workflows/plan-feature.js is rebuilt by python scripts/build.py in the same change and the two are byte-identical afterwards (never hand-edit the deployed copy)."
+  - "Errors handled per the CLAUDE.md error-handling policy: no silent fallback; every degraded path logs a [plan-feature][WARNING] line naming the run id, the gate id and the failing step."
+test_intent:
+  - clause: "Then the duplicate-coverage check does not count any criterion committed by run R as existing coverage of that request,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_own_committed_criteria_not_counted_as_coverage (criterion)."
+  - clause: "And the run is not routed as \"covered\" on the basis of run R's own criteria,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resumed_run_not_routed_covered_on_own_criteria (criterion)."
+  - clause: "And the covered-route decision is not raised for run R's own criteria,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_covered_route_gate_not_raised_for_own_criteria (criterion)."
+  - clause: "And the run reaches the decision point it had stopped at, carrying run R's committed criteria forward unchanged,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_restart_reaches_stopped_decision_with_committed_criteria_unchanged (criterion)."
+  - clause: "And a criterion in the store that was NOT authored by run R and does cover the request is still reported as existing coverage exactly as it is for a new run,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_foreign_covering_criterion_still_reported (discrimination)."
+  - clause: "And the bug symptom (\"on run structural-parent-covered-by every crash-resume re-triaged the request as covered because the run's own committed criteria now existed, so the resume stopped at the covered-route decision first, the answer supplied for the final decision was refused as naming a different decision, and the final decision had to be applied by hand\") must not occur."
+    needs_test: true
+    reason: "Observable outcome; proved by test_structural_parent_covered_by_replay_final_answer_applied (discrimination)."
+test_spec:
+  - name: test_own_committed_criteria_not_counted_as_coverage
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Triage stub returns route covered with existing_acs = R's two committed ids; on restart of R the coverage set evaluated by the workflow excludes both."
+    proves_clause: "Then the duplicate-coverage check does not count any criterion committed by run R as existing coverage of that request,"
+  - name: test_resumed_run_not_routed_covered_on_own_criteria
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With only R's own ids returned as coverage, the effective route is not 'covered'."
+    proves_clause: "And the run is not routed as \"covered\" on the basis of run R's own criteria,"
+  - name: test_covered_route_gate_not_raised_for_own_criteria
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "No dispatch labelled covered-route-gate and no pause record naming covered-route-gate is produced on R's restart."
+    proves_clause: "And the covered-route decision is not raised for run R's own criteria,"
+  - name: test_restart_reaches_stopped_decision_with_committed_criteria_unchanged
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Restart of R paused at final-gate reaches final-gate; R's committed AC files are byte-identical before and after."
+    proves_clause: "And the run reaches the decision point it had stopped at, carrying run R's committed criteria forward unchanged,"
+  - name: test_foreign_covering_criterion_still_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "A covering id committed under a different run-id trailer is still listed by the covered-route gate exactly as for a new run."
+    proves_clause: "And a criterion in the store that was NOT authored by run R and does cover the request is still reported as existing coverage exactly as it is for a new run,"
+    must_catch:
+      - "excludes every criterion committed on the authoring branch regardless of its run-id trailer"
+      - "skips the covered-route check entirely whenever a resume_answer is supplied"
+      - "matches the run id as a prefix or substring instead of exact equality"
+  - name: test_structural_parent_covered_by_replay_final_answer_applied
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Replay of the structural-parent-covered-by run: crash-resume with a person-attributed final-gate answer applies it at final-gate; it is not refused as naming a different decision and no manual application is needed."
+    proves_clause: "And the bug symptom (\"on run structural-parent-covered-by every crash-resume re-triaged the request as covered because the run's own committed criteria now existed, so the resume stopped at the covered-route decision first, the answer supplied for the final decision was refused as naming a different decision, and the final decision had to be applied by hand\") must not occur."
+    must_catch:
+      - "own-criteria exclusion applied only to the triage prompt, not to the returned existing_acs"
+  - name: test_ownership_read_cli_reads_run_id_trailers_from_real_git_history
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Against a scratch git repo with plan-feature commits from two run ids, the ownership command prints only run R's AC ids in the documented JSON shape."
+  - name: test_ownership_read_failure_is_not_treated_as_owns_nothing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A declined or non-zero ownership read yields the distinct non-success status and a WARNING, never a covered-route gate over R's own ids."
+  - name: test_deployed_workflow_restart_skips_own_coverage
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The deployed .claude/workflows/plan-feature.js, run via the E2 harness with run_id R and a resume answer, reaches R's paused gate without a covered-route dispatch."
+    surface_invoked: ".claude/workflows/plan-feature.js (deployed build output), driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_rationale: "The defect lives in the workflow body's routing, so the proof must drive the real (deployed) workflow through the E2 harness with stubbed agents; a direct unit test of an ownership helper alone would stay green while the body still raised the covered-route gate. Discrimination entries pin the two plausible over-corrections (exclude everything on resume; exclude by prefix)."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
+superseded_by: null
+covered_by: [ACD-1300e-1-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Bound to ACD-300a-3 (triage detects already-covered requests): this narrows "existing
+  ACs" to exclude the resuming run's own output; it does not change how coverage by other
+  runs is detected. Sibling of ACD-2100c-3-iii, which made the leftover-recovery scan
+  exclude a run's own UNCOMMITTED drafts; this is the same defect for COMMITTED criteria
+  at the triage step. Run-ownership evidence must survive a crash that left no pause
+  record -- see ACD-1300e-1-i.

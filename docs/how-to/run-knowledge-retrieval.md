@@ -282,7 +282,7 @@ The command refuses an incomplete bound before connecting to Neo4j, with a nonze
 
 Neither case falls back to a built-in value. `cleanup` follows the same rule: it now requires `--retention-seconds` and raises a refusal naming the unset value rather than assuming 3600.
 
-What this does not establish: the `retention` command takes its bound from its two flags only. In the code reviewed, it does not read the `knowledge` section of kernel configuration, and nothing in that code path schedules or performs reclamation. Declaring the values in kernel configuration records them but does not make this command use them. The safe count and age for a given Neo4j instance are not established here.
+The `retention` command only reports; it takes its bound from its two flags, not from kernel configuration. `sync` acts: given the same two flags it reclaims what the bound permits after a successful publication ([reclamation reference](../reference/knowledge-publication-reclamation.md)), and given `--capacity-max-nodes`, `--capacity-max-relationships`, `--capacity-refuse-percent` and `--capacity-warn-percent` (all four or none) it measures database usage first, warns above the warning percent, and refuses a snapshot that would exceed the refuse percent before writing anything. Without them, headroom is reported as `unknown`, never as fitting ([capacity reference](../reference/knowledge-publication-capacity.md)).
 
 ## Verification
 

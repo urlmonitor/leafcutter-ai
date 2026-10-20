@@ -6,7 +6,7 @@ priority: high
 title: "Only a genuine write failure after remediation hard-blocks the drive"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: active
 work_status: todo
 criteria: |
@@ -46,7 +46,11 @@ amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints; the operator message now names that absolute path (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The operator-message it_requirement was updated to match. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
-superseded_by: null
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Retired: status superseded_by, superseded_by [BO-100d-1a-ii]. This record's id-derived parent BO-100d-1 is retired, so done-proof skipped this subtree and its work never counted toward BO-100d. The replacement BO-100d-1a-ii sits under the live L2 BO-100d-1a (this record's depends_on) and carries this record's criteria, it_requirements, contracts and doc_links verbatim. This record stays in BO-100d-1's covered_by for the audit trail. work_status unchanged."
+superseded_by:
+  - BO-100d-1a-ii
 covered_by: []
 implemented_by: []
 change_target: pipeline

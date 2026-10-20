@@ -588,8 +588,10 @@ older than INF-500d-4-iii has no `--print-location` and prints nothing.
   refuse as stale and create nothing. Fix: rebuild at the install's current location.
 - **A permissions issue on WSL2 NTFS mounts.** Remount, or use a native Linux path.
 
-The BO-100d probe ACs still describe an appending probe pinned to the relative path. Their
-owner has to change them (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path).
+Since PR #1262, the BO-100d probe ACs probe the location printed by the location query
+above, not a relative path. They are not built yet, so no pre-drive gate runs this check today
+(resolved
+[KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path](docs/known-issues/build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md)).
 
 **Why this matters:** During a past epic drive, the sink was unreachable for the entire
 run. 23 `submit-failed` events occurred without detection — the drive completed but zero

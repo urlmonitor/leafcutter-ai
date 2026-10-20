@@ -1,0 +1,599 @@
+id: GE-127d-3
+title: "No comment of any style counts toward a file's length, so rewriting a comment in another style can never move the measured length"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a covered file holding 2 lines of code with 4 lines of explanatory text
+    between them, the 4 lines marked as line comments in the file's own language
+    (`#` in Python and shell, `//` in JavaScript and TypeScript, `--` in SQL),
+  When its length is measured,
+  Then the measured length is 2,
+  And given the same 2 lines of code with the same 4 lines of text carried
+    instead as one block comment (`/* ... */` in JavaScript, TypeScript and SQL),
+    or in Python as a string literal standing alone as a statement — the
+    docstring of the module, class or function, or a bare string anywhere else in
+    the file, including a trailing block such as a DECISION HISTORY string at the
+    end of the module,
+  When its length is measured,
+  Then the measured length is again 2 — no comment of any style, and no string
+    literal that stands alone as a statement, counts toward a file's length, and
+    the style a comment is carried in never changes the number,
+  And a line holding code followed by a comment on the same line counts as one
+    line,
+  And a line holding only whitespace, outside any comment or standalone string,
+    counts as one line, exactly as under the rule published before this change,
+    while every line inside a block comment or standalone string is uncounted
+    whether or not it is blank,
+  And a Python string that is used — assigned to a name, passed as an argument,
+    returned, or part of any larger expression, as embedded SQL, prompts and
+    templates are — is a string value and each of its lines counts like any other
+    code, and an f-string counts as code wherever it stands, because evaluating it
+    runs the expressions inside it,
+  And given a staged change to a covered file whose only effect is rewriting
+    existing comments from one style to another with their text unchanged,
+  When the author performs an ordinary commit,
+  Then the length quoted for the file before the change and after it is the same
+    number.
+depends_on:
+  - GE-127d
+  - GE-127d-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE RECORD WHOSE RULE DECISION THIS ONE REVERSES, AND WHOSE CRITERIA IT DOES NOT
+      TOUCH. GE-127d-2's criteria are rule-agnostic (publish whatever rule is in force,
+      quote numbers reproducible from it) and keep holding. Its it_requirements took
+      "keep the rule, publish it" — hash and slash-slash comments counted, every
+      triple-quoted string and every /* */ span discarded — and its asymmetry test
+      descriptor asserts that deleting hash comments moves the number. Both are
+      superseded by BrainCandy's 2026-10-16 decision recorded here; GE-127d-2 carries
+      an amended_by entry saying so. That descriptor must be rewritten, not defended,
+      when this record is built.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+    relationship: context
+    status: exists
+    relevance: >-
+      THE DEFECT THIS RECORD CLOSES. Restyling `//` runs into /* */ blocks cleared
+      the ratchet on five workflow templates while every one grew raw
+      (build-feature.js raw 3652 -> 3667, measured 2548 -> 2529). Its first fix
+      direction — strip every comment form with a tokenizer per language — is the
+      one BrainCandy chose.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
+    relationship: context
+    status: exists
+    relevance: >-
+      THE SAME MEASURE, WRONG THE OTHER WAY, AND THE REASON IT MUST BE A TOKENIZER.
+      Fixed together with the above; its own string-literal behaviour is GE-127d-3-i.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the one shared measurement every caller uses (crossing refusal, growth
+      ratchet, added-lines count). Replace the measure there; do not add a second.
+  - path: templates/scripts/commit_guardian/_file_description.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. extract_python_parts and extract_sql_parts measure each
+      refused file's parts by calling count_content_lines on a SEGMENT of the file. They
+      are callers of the shared measure and must measure with the file's own language
+      under the new rule, or a refusal's part breakdown stops adding up to its quoted
+      length.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      file_size.checked_extensions is the covered set: .py .sql .js .mjs .ts .tsx .sh
+      (read 2026-10-16). Every one of them needs a lexer here; none may fall back to
+      the delimiter regex.
+  - path: scripts/build_phases_lifecycle.py
+    relationship: related
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. build_commit_guardian deploys templates/scripts/commit_guardian/
+      by rglob("*") — every file at every depth, .py with config injection — so new modules
+      or a new sub-package inside that directory are deployed with no deploy-map entry.
+      A module placed OUTSIDE that directory would need one (CLAUDE.md "New Hook / Gate
+      Dependencies Must Be in the Build Deploy-Manifest").
+  - path: unit_tests/commit_guardian/test_ge_127d_2_real_artifact_and_seam.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Carries the two GE-127d-2 descriptors this rule change breaks by design: the
+      asymmetry descriptor (asserts deleting hash comments moves the number) and the seam
+      descriptor (mutates the rule to ALSO discard hash comments, which is a no-op once
+      hash comments are already discarded). Both are rewritten in this change; see the
+      two test_spec entries covering GE-127d-2.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    state: existing
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_description.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/__init__.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/python_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/c_family_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/sql_lines.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/_file_size_measure/shell_lines.py
+    state: to_be_created
+  - path: unit_tests/commit_guardian/test_ge_127d_2_real_artifact_and_seam.py
+    state: existing
+  - path: unit_tests/commit_guardian/_ge_127d_2_fixture.py
+    state: existing
+it_requirements:
+  - >-
+    ONE MEASURE, PER-LANGUAGE TOKENIZER, NO DELIMITER REGEX. Uncounted content is
+    exactly: comments of every style the language has (Python `#`; shell `#`; JS/MJS/
+    TS/TSX `//` and `/* */`, including a JSX `{/* ... */}` container standing alone on
+    its line; SQL `--` and `/* */`) and every Python STANDALONE string statement — a
+    statement made of nothing but non-f string literals, in ANY position: docstrings,
+    bare strings mid-module or mid-function, and a trailing DECISION HISTORY block alike
+    (bytes and raw literals included). A string that is assigned, passed, returned or part
+    of a larger expression is code, and a standalone f-string is code. Blank lines outside
+    comments and standalone strings stay counted. Decided by BrainCandy 2026-10-16 ("NO
+    comment counts toward a file's length, in any style") and 2026-10-20 (standalone
+    strings uncounted like comments, superseding "docstring position only").
+  - >-
+    The language is chosen from the file's covered extension. A covered extension
+    with no tokenizer is a defect in this change, not a raw-count fallback: GE-127d-3-ii
+    owns the could-not-measure outcome, and the deployed-copy descriptor below fails
+    if any checked extension is unmapped.
+  - >-
+    THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16). A physical line
+    counts when it carries at least one token that is neither a comment nor part of a
+    standalone Python string statement, OR when it is whitespace-only and lies outside every
+    comment and standalone string. Every physical line spanned by a USED multi-line string
+    value (a Python string that is assigned, passed, returned or part of a larger expression,
+    a Python f-string, a JS template literal, a quoted shell string, a shell here-document
+    body, a SQL string) counts, blank or not. Every physical line wholly inside a comment or a
+    standalone Python string is uncounted, blank or not; a physical line shared between a
+    standalone string and code (e.g. `"""end"""; x = 1`) counts once. LF and CRLF content measure identically (the 2026-09-23 CRLF
+    phantom-line defect in this module's own history must not return), as does a file with
+    no trailing newline. "Total line count" wherever a sibling record compares against it
+    (GE-127d-4) uses the SAME physical-line split as this measure.
+  - >-
+    TOKENIZER DECISIONS, PINNED BY THE IT PO SO THE CODER DOES NOT RE-DECIDE THEM.
+    PYTHON — the standard library tokenizer on the RUNNING interpreter; no second lexer and
+    no fallback. STANDALONE-STRING DETECTION FROM THE TOKEN STREAM (2026-10-20 rule): split the
+    stream into statements at NEWLINE tokens and at top-level `;`; a statement is standalone
+    when, ignoring COMMENT / NL / INDENT / DEDENT, it consists only of STRING tokens whose
+    prefix has no `f` (u, r, b, rb/br and no prefix all qualify, so a standalone bytes literal
+    is uncounted), optionally wrapped in balanced parentheses. Implicit concatenation of
+    adjacent plain literals (`"a" "b"`, across lines or inside parentheses) is one standalone
+    statement; if ANY piece is an f-string (on 3.12+ an FSTRING_START token, before 3.12 a
+    STRING token with an `f` prefix) the whole statement is code, matching ast, where it
+    becomes a JoinedStr. Any other token in the statement (a name, `=`, `+`, `return`, a call
+    paren after a name, a comma making a tuple) makes it used, hence code. Position does not
+    matter. Because no parse is needed, a file that tokenizes but does not parse is still
+    measured (only a tokenization failure is GE-127d-3-ii's could-not-measure). A shebang and an encoding line are `#` comments and
+    uncounted. JS/MJS/TS/TSX — no stdlib tokenizer exists: a small hand-written lexer
+    (states: code, line comment, block comment, single- and double-quoted string with
+    escapes and line continuations, template literal with a `${}` nesting stack, regex
+    literal with character classes and flags, JSX element/attribute/text/expression-container
+    states). A leading `#!` hashbang is a comment; `#` elsewhere is code (private names). JSX
+    recognition is on for .js, .mjs and .tsx (`<` at an expression-start position followed by
+    a name or `>`), and OFF for .ts, where `<T>expr` is a type assertion. SQL — `--` line
+    comments and NESTED `/* */` block comments (PostgreSQL / T-SQL / SQL-standard behaviour),
+    '...' with '' doubling, E'...' with backslash escapes, "..." identifiers, and dollar
+    quotes `$tag$...$tag$` (tag empty or an identifier not starting with a digit, so `$1` is a
+    parameter); `#` is not a SQL comment. SHELL (.sh) — `#` starts a comment only at the start
+    of a word (line start or after unquoted whitespace, `;`, `&`, `|`, `(`, `)`), never inside
+    '...', "...", $'...', backticks, $(...), here-document bodies, or mid-word (`a#b`, `$#`,
+    `${#x}`, `16#ff`); here-documents `<<WORD`, `<<-WORD`, quoted or backslashed WORD, several
+    per line, `<<<` here-strings excluded; there are no block comments and no triple quotes.
+    The marker-inside-literal behaviour of every lexer, and the dollar-quote and `${}`
+    recursion, are GE-127d-3-i's acceptance; this record owns the dispatch, the line rule
+    and the comment forms.
+  - >-
+    PYTHON INTERPRETER POSITION (the question GE-127d-3-ii put to the IT PO). CI runs every
+    pytest shard on Python 3.13 (.github/workflows/ci.yml, all setup-python steps; ruff
+    target-version py313); this host runs 3.12.3; a consumer install runs the hook under
+    whatever `python` its PATH provides, and no minimum version is declared anywhere in the
+    package (the gate's own modules already need 3.10 at runtime for `X | None`
+    annotations). Nested same-quote f-strings (PEP 701) tokenize only from 3.12. DECISION:
+    content the running interpreter's tokenizer rejects is GE-127d-3-ii's INDETERMINATE, with
+    the reason naming the running interpreter's major.minor version so the author can see
+    why; there is NO fallback measure, because a fallback is a second rule with its own
+    comment behaviour. Constructs every supported interpreter tokenizes the same way (a `#`
+    inside an f-string's quoted text or replacement-field string) are measured on all of them.
+    The lexer modules must import cleanly on 3.10 or later: no unguarded reference to token
+    types that only exist from 3.12 (e.g. the FSTRING_* token constants).
+  - >-
+    HOST, SIZE AND THE DEPLOY. Put the lexers in a NEW sub-package inside
+    templates/scripts/commit_guardian/ (declared_files: _file_size_measure/ with one module per
+    language family), not in _file_size_ratchet.py and not as more flat siblings:
+    templates/scripts/commit_guardian/ already holds far more than file_size's 15-file density
+    limit (pre-existing density only warns, but the gate exists to push new modules into
+    sub-folders). build_commit_guardian deploys that directory by rglob, so no
+    scripts/build_phases.py deploy-map entry is needed; the deployed-copy descriptor below,
+    run in a cold process from the shared layout, is the proof — a source-tree test cannot
+    see a missing deploy. Every new module must stand at or under 400 measured lines under the
+    rule it introduces and every function at or under the configured complexity max_score
+    (15). No `.py` file in the sub-package may contain a contiguous `{{config.` literal
+    (inject_config rewrites it at deploy time); build such a corpus string by concatenation.
+  - >-
+    THIS CHANGE MUST PASS THE FILE-SIZE GATE UNDER THE RULE IT INTRODUCES. Re-measured by the IT
+    PO on 2026-10-20 at 7897ca013 with an approximate token-stream classifier implementing the
+    2026-10-20 rule (not a gate run): _file_size_ratchet.py 335 -> 302, check_file_size.py
+    312 -> 293, check_file_size_rule_parity.py 239 -> 198, _file_description.py 199 -> 188 —
+    every file this tree of records edits stays under its 400 limit, with roughly 100 lines of
+    headroom on the two largest. The constraint is therefore ordinary: rebuild the deployed
+    layout (`python scripts/build.py --target-dir .`) before committing so the hook judges the
+    change with the new rule, and keep each edited file at or under 400 measured lines; new
+    lexer code goes in the sub-package, not into _file_size_ratchet.py or check_file_size.py.
+    The measure must NOT special-case DECISION HISTORY (or any string) by name or content —
+    a string is uncounted only by its syntactic role (a standalone statement).
+  - >-
+    POPULATION CHANGE, MEASURED — RE-MEASURE BEFORE BUILDING AND RECORD IT IN THE TICKET.
+    IT PO approximation at 7897ca013 over 2853 tracked .py files, all of which tokenize on
+    3.12, applying the 2026-10-20 rule: over 400 under the pre-2026-10-16 rule 193, under the
+    new rule 156. 45 files drop to at-or-under (line comments stop counting); 8 cross from
+    at-or-under to over, every one a test file whose USED multi-line strings (fixtures,
+    expected output) now count and whose old measure discarded them:
+    unit_tests/test_final_gate_and_commit_message.py 399 -> 559,
+    unit_tests/workflows/test_acd_2100a_1.py 326 -> 481, test_acd_2100c_2.py 391 -> 469,
+    test_acd_2100a_3.py 325 -> 413, unit_tests/prompt_assembly/test_test_requirements_guard.py
+    375 -> 438, unit_tests/commit_guardian/test_ge_127f_2_i.py 399 -> 438,
+    test_ge_119_contract_shrinking_rename_aware.py 252 -> 418,
+    test_ge_118c_doc_types_deployed_resolution.py 335 -> 401. No trailing DECISION HISTORY
+    string pushes any file over. tests/knowledge/test_native_decision.py measures 399 (332
+    before), so it does NOT cross 400 as GE-127d-3-i's notes expected. The superseded
+    2026-10-16 figures (164 over, 14 newly over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
+    were not measured here. GE-127d-3-iii keeps the switch from refusing an unchanged file; record the
+    implementer's own before/after figures per extension in the ticket.
+  - >-
+    SIGNATURE EXTENSION — CALL-SITE AUDIT (CLAUDE.md). The shared measure gains the file's
+    language/extension. Audit and update every caller in the same change:
+    measure_current_length, get_previous_length and resolve_previous_lengths (their DEFAULT
+    measure becomes the path-aware code measure), count_added_measured_lines and
+    resolve_added_measured_lines (GE-127d-3-iv), describe_measurement_rule and its probes
+    (GE-127d-5), and _file_description.extract_python_parts / extract_sql_parts (segment
+    measurement with the refused file's own language; a segment that cannot be tokenized
+    yields DESCRIPTION UNAVAILABLE per GE-127e-3-i, never a crash and never a changed verdict).
+    A caller that passes its OWN measure (check_doc_length via _doc_length_ratchet's
+    resolve_previous_lengths(..., measure_doc_lines)) keeps its exact signature and behaviour.
+  - >-
+    SHARED PLUMBING MUST NOT CHANGE BEHAVIOUR. check_complexity.py imports
+    resolve_parent_revisions and PreviousLengthSourceError; _complexity_ratchet.py calls
+    get_previous_content; _ac_governance_baseline.py calls resolve_parent_revisions;
+    _doc_length_ratchet.py calls resolve_head_matching_paths, resolve_parent_revisions and
+    resolve_previous_lengths with its own measure. Their suites must stay green with no edit
+    to their tests, and none of those functions' signatures or return shapes may change.
+  - >-
+    EXISTING TESTS THAT ENCODE THE OLD RULE ARE REWRITTEN, NOT DEFENDED, IN THIS CHANGE. Named:
+    GE-127d-2's asymmetry and seam descriptors (see the two test_spec entries covering
+    GE-127d-2). Also run the whole unit_tests/commit_guardian/ suite plus
+    tests/knowledge/test_native_decision.py's measurement and list every other failure whose
+    expectation encodes the pre-2026-10-16 rule (a `#` line counted, a USED triple-quoted
+    string — assigned, passed, returned or part of a larger expression — discarded, or a false
+    /* span discarded) in the ticket, rewritten to the new rule; an expectation that a
+    standalone string is discarded is still correct under the 2026-10-20 rule and is kept; an expectation that fails for any other reason is a regression, not a rewrite.
+  - >-
+    Must stay linear in file size (no rescanning from the start per line, no catastrophic
+    regex backtracking); measuring a generated 10,000-line file of any covered language must
+    complete in under 2 seconds.
+  - >-
+    Must follow the repo error-handling policy: specific exceptions around file I/O and
+    tokenization, log at WARNING or re-raise; a tokenizer failure takes GE-127d-3-ii's
+    path, never a quoted length of zero or the raw count.
+  - >-
+    CLOSE THE TWO KIs IN THE SAME CHANGE. KI-CG-20261013 (comment style games the measure) and
+    KI-CG-20261009 (/* inside a string opens a false block comment) are resolved through the
+    component's known-issues register flow once GE-127d-3 and GE-127d-3-i are green.
+test_spec:
+  - name: test_ge_127d_3_the_same_comment_text_measures_identically_in_every_style_and_language
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For every covered extension, generate real files on disk holding N code lines
+      and K comment lines, with K carried in each comment style the language has (and
+      as a module, class and function docstring for .py, and as a standalone JSX
+      `{/* */}` container for .tsx), N and K varied across runs (e.g. N in {2, 37}, K in
+      {1, 4, 40}). Pass each file through the shared measure the hook calls and require
+      the measured length to equal N for every style, so the number moves with the code and
+      never with the comment style. Never assert a hard-coded total.
+    must_catch:
+      - "the pre-2026-10-16 rule: strip /* */ and triple-quoted strings, count # and // lines"
+      - "strip # and // but not SQL -- comments"
+      - "strip comments for .py only and count raw for every other extension"
+  - name: test_ge_127d_3_blank_lines_count_outside_comments_and_not_inside_them
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A file with B blank lines between code lines and C blank lines inside a block
+      comment or docstring measures N + B, with B and C varied independently; a line of
+      code with a trailing comment counts once; the same content with CRLF line endings
+      and with no trailing newline measures the same number.
+    must_catch:
+      - "blank lines dropped everywhere (raw non-blank measure)"
+      - "blank lines inside a block comment counted"
+      - "a CRLF file's uncounted region leaves a phantom line behind"
+  - name: test_ge_127d_3_a_standalone_python_string_is_uncounted_wherever_it_stands
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      REPLACES the earlier docstring-position-only descriptor (BrainCandy 2026-10-20). An
+      S-line triple-quoted string standing alone as a statement adds 0 to the measured
+      length in every position: as the module's, a class's or a function's docstring; as a
+      bare string mid-module between two functions; as a bare string after the first
+      statement of a function; and as a trailing module-level DECISION HISTORY string at the
+      END of the file — each written to disk and measured by the shared measure against
+      the same file without the string. S varied.
+    must_catch:
+      - "docstring position only: a bare or trailing string counted as code"
+      - "a trailing DECISION HISTORY string counted as code"
+  - name: test_ge_127d_3_the_same_python_string_counts_once_it_is_used
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The same S-line text from the standalone descriptor, now assigned to a variable,
+      passed as an argument to a function call, returned from a function, and joined into a
+      larger expression (`PREFIX + """..."""`), each measures S lines more than the file
+      without it (plus the lines the surrounding statement occupies, derived at run time);
+      an S-line f-string standing alone also adds its lines. S varied.
+    must_catch:
+      - "every triple-quoted string discarded regardless of use (the pre-2026-10-16 rule)"
+      - "a string passed as an argument treated as standalone"
+      - "a standalone f-string treated as inert"
+  - name: test_ge_127d_3_restyling_a_real_workflow_template_leaves_its_quoted_length_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Take the repository's real templates/workflows-js/build-feature.js, rewrite every
+      run of `//` lines into one /* */ block (the exact conversion the 2026-10-13 KI
+      records), and stage the original and the rewrite in a temporary git repository.
+      The hook's quoted length for both versions is the same number, read from the
+      hook's own output.
+  - name: test_ge_127d_3_the_hook_quotes_the_same_length_before_and_after_a_restyle_only_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      Through the registered hook entry point, in a temporary git repository, a staged
+      restyle-only change to an over-limit .js file and to an over-limit .py file
+      (line comments to a block or docstring) completes, and the quoted previous and
+      current lengths in the hook output are equal.
+  - name: test_ge_127d_3_the_deployed_measure_has_a_tokenizer_for_every_checked_extension
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Using the shared deployed layout (shared_layout_reader marker), read
+      file_size.checked_extensions from the deployed configuration and, for each extension,
+      measure a generated file with one comment in every style of that language in a cold
+      subprocess that imports only from the deployed .leafcutter/scripts/commit_guardian/;
+      every extension returns a number equal to its code-line count and none falls back to
+      a raw count or raises ModuleNotFoundError (the new sub-package reached the deploy).
+  - name: test_ge_127d_3_the_refusal_part_breakdown_is_measured_by_the_same_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Through the hook, refuse an over-limit .py file whose top-level functions carry `#`
+      comment runs, bare standalone strings and assigned triple-quoted strings (counts
+      varied). Each part the
+      refusal lists has a portion equal to the shared measure applied, at run time, to that
+      part's own line range of the file; moving a comment run from one function to another
+      leaves every listed portion unchanged.
+    must_catch:
+      - "_file_description still measuring segments with the old regex rule"
+  - name: test_ge_127d_2_the_asymmetry_between_removable_and_non_removable_content_is_legible_from_the_outcome
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    covers:
+      - GE-127d-2
+    description: >-
+      REWRITE IN PLACE, SAME NAME (GE-127d-2's descriptor, superseded rule). Take one refused
+      .py file and produce three variants — blank lines outside comments removed, every `#`
+      comment removed, every docstring removed. The quoted length moves for the first only;
+      the second and third leave it unchanged; the outcome's Measures line lets an author
+      predict exactly that. The old assertion (deleting `#` comments moves the number) is
+      deleted, not kept alongside.
+  - name: test_ge_127d_2_changing_the_rule_in_force_changes_both_what_is_published_and_what_is_quoted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    covers:
+      - GE-127d-2
+    description: >-
+      REWRITE IN PLACE, SAME NAME. The current mutation (also discard hash comments) is a
+      no-op under the new rule, so the descriptor would pass vacuously. Replace it with a
+      mutation that still changes one file's length under the new rule — e.g. make the
+      in-force measure count `#` comment lines again, or stop counting blank lines — and
+      require both the published statement and the quoted length to move with it,
+      re-derived independently at run time.
+    must_catch:
+      - "a mutation that leaves the new-rule length unchanged, so the descriptor passes vacuously"
+test_rationale: |
+  Every descriptor runs real files through the real measure or the real hook; none greps
+  the source. The style-equivalence test is generated across all covered extensions with
+  code and comment counts varied, so the only way to pass is a measure in which comment
+  style has no effect. The must_catch entries name the incumbent rule first, because the
+  incumbent rule is the wrong version most likely to survive a partial fix. The
+  build-feature.js descriptor replays the exact restyle that cleared the ratchet on
+  2026-10-13 over the real file. The part-breakdown seam exists because _file_description
+  is a second caller of the measure that the criteria never name and that silently keeps
+  the old rule if the call-site audit misses it. The two GE-127d-2 entries are rewrites
+  of existing descriptors whose expectations this decision reverses: one would go red, the
+  other would pass vacuously, and both are fixed in this change rather than left behind.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127d-3-i
+    contract: >-
+      The per-language lexer modules under templates/scripts/commit_guardian/_file_size_measure/,
+      reached only through the shared measure, whose string, template, regex, JSX, heredoc and
+      dollar-quote states GE-127d-3-i's acceptance exercises.
+  - agent: python-coder
+    ac_id: GE-127d-3-ii
+    contract: >-
+      A distinct failure signal from the shared measure for content that cannot be tokenized,
+      carrying the file's language name and a reason string (and, for Python, the running
+      interpreter's major.minor) — never a count of 0 and never the raw line count.
+  - agent: python-coder
+    ac_id: GE-127d-3-iv
+    contract: >-
+      For a file's content and extension, the ordered list of its COUNTED lines, each keyed by
+      its non-comment text with trailing whitespace stripped, produced by the same tokenizer
+      pass that produces the length (len(list) == measured length), for the added-lines diff.
+  - agent: python-coder
+    ac_id: GE-127d-4
+    contract: >-
+      The shared measure (content, extension) -> int and the same physical-line split, so the
+      backstop's total line count and measured length come from one definition of a line.
+  - agent: python-coder
+    ac_id: GE-127d-5
+    contract: >-
+      The single shared measure with the new rule, whose generated description of what
+      a quoted length measures becomes the rule the published surfaces and the refusal
+      advice must state.
+expects_from:
+  ac_id: GE-127d-2
+  contract: >-
+    The one measurement function every caller shares and the published-rule
+    derivation built on it; this record replaces the rule inside that function and adds
+    no second measure.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Code read at 259540316. Pinned the tokenizer per language (Python
+    stdlib tokenize on the running interpreter, docstring = ast.get_docstring's set read from
+    the token stream; hand-written JS/TS lexer with JSX states on for .js/.mjs/.tsx and off for
+    .ts; SQL with nested block comments and dollar quotes; shell with word-start `#` and
+    here-documents), the single line rule incl. CRLF, the Python interpreter position (CI
+    3.13, no fallback, INDETERMINATE names the interpreter), the host (new sub-package
+    _file_size_measure/, rglob-deployed, no deploy-map entry), the call-site audit incl.
+    _file_description's segment measurement, the shared-plumbing invariants for
+    check_complexity / _complexity_ratchet / _ac_governance_baseline / _doc_length_ratchet,
+    and a measured .py population (193 -> 164 over 400; 14 newly over, 6 only from trailing
+    DECISION HISTORY strings). Added declared_files, a part-breakdown seam descriptor, and
+    the two GE-127d-2 descriptor rewrites as test_spec entries covering GE-127d-2.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-20 decision, superseding the 2026-10-16
+    "docstring position only" confirmation: a Python string literal standing alone as a
+    statement (docstrings and bare strings, including a trailing DECISION HISTORY block) is
+    uncounted; a string that is assigned, passed, returned or part of a larger expression
+    counts; a standalone f-string counts (BA interpretation, flagged). test_spec: the
+    docstring-position-only boundary descriptor is replaced by a standalone-string descriptor
+    (docstrings, bare mid-module, bare in a function, trailing DECISION HISTORY all add 0)
+    and a used-string discrimination descriptor (assigned, argument, returned, larger
+    expression, standalone f-string all count); the part-breakdown seam names both kinds.
+    Title, depends_on and req_status unchanged. it_requirements left for the IT PO; the
+    items that now contradict the criteria are listed in the BA's 2026-10-20 report.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. it_requirements brought in line with the 2026-10-20 rule: uncounted
+    Python content is every standalone non-f string statement in any position; the line rule
+    counts USED multi-line strings and uncounts standalone ones; standalone detection is read
+    from the token stream (statements split at NEWLINE and top-level `;`, only non-f STRING
+    tokens plus optional parentheses; implicit concatenation is one statement; any f-string
+    piece makes it code; standalone bytes uncounted). Re-measured at 7897ca013: .py over 400
+    193 -> 156, 45 drop under, 8 cross over (all test files with used fixture strings);
+    _file_size_ratchet.py 302 and check_file_size.py 293, so the landing commit has headroom.
+    The old-rule test rewrite list narrowed to used strings. Removed this record's 2026-10-16
+    DECISION HISTORY follow-up recommendation from the notes; the rule resolved it.
+superseded_by: null
+covered_by:
+  - GE-127d-3-i
+  - GE-127d-3-ii
+  - GE-127d-3-iii
+  - GE-127d-3-iv
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DECISION RECORDED (BrainCandy, 2026-10-16): no comment counts toward a file's length, in
+  any style. `#`, `//`, `--` and `/* */` are stripped alike, docstrings stay uncounted as
+  GE-127d-2 published, and stripping is lexically correct (a per-language tokenizer, not a
+  regex). Blank lines keep today's treatment: the rule published by GE-127d-2 and carried in
+  commit_guardian.json file_size._comment counts "every remaining line -- including blank
+  lines", so blank lines outside comments stay counted.
+
+  WHY AN L2 UNDER GE-127d AND NOT A NEW L1. GE-127 holds 7 of 7 L1s with no
+  child_limit_override, so no eighth L1 is possible without a split. The subject is
+  GE-127d's own promise — the number you are quoted is one you can reproduce and that a
+  formatting choice cannot move — so GE-127d is the right parent on the merits. GE-127d had
+  2 of 5 L2s; this run takes it to 5 of 5 (d-3, d-4, d-5). GE-127d was work_status done and
+  is reopened to todo in the same commit, with an amended_by entry, so the ACD-400a
+  falsely-done-composite shape is not staged.
+
+  TWO FURTHER DECISIONS:
+    (1) A STANDALONE STRING IS INERT LIKE A COMMENT — BRAINCANDY 2026-10-20, SUPERSEDING
+        THE 2026-10-16 "DOCSTRING POSITION ONLY" CONFIRMATION. A Python string literal that
+        is an expression statement on its own — not assigned, passed, returned or otherwise
+        used — is uncounted wherever it stands: docstrings AND bare strings, including the
+        trailing `"""DECISION HISTORY ..."""` block about 250 Python files end in. A string
+        that is assigned, passed as an argument, returned, or part of any larger expression
+        (embedded SQL, prompts, templates) is code and counts. Trigger: the IT PO measured
+        that docstring-position-only would push 6 files over their limit purely through a
+        trailing DECISION HISTORY string and charge every doc-enforcer history entry as
+        added lines in the two-for-one repayment. A standalone f-string counts as code,
+        because evaluating it runs the expressions in its replacement fields (not inert) —
+        proposed by the BA and CONFIRMED by BrainCandy's coordinator 2026-10-20; a
+        standalone bytes or raw string is inert. The measure still decides by syntactic role only, never by the string's
+        name or content.
+        Superseded wording kept for the record: (2026-10-16) "only a string literal that is
+        the first statement of a module, class or function is uncounted; any other
+        triple-quoted string, assigned or bare, counts as code."
+    (2) A BLANK LINE BETWEEN TWO LINE COMMENTS IS A BLANK LINE. With blank lines counted,
+        `# a / (blank) / # b` measures 1 while the same text as one block comment with a
+        blank line inside measures 0. The restyle invariant in the criteria is therefore
+        stated for comment text whose every line carries the marker, which is how `//`, `#`
+        and `--` runs are normally written. Removing this residue needs blank lines to stop
+        counting, which the decision kept. Kept as written (BrainCandy did not reverse
+        it): accept a one-line-per-gap difference.
+
+  LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
+  and a Python encoding line ARE `#` comments lexically and are uncounted.

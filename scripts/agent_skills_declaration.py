@@ -24,6 +24,12 @@ DECISION HISTORY
   growth; the compiler gains a one-line call. Conditional grants show their
   ``condition`` text only when the declaration carries one — writing the
   conditions themselves belongs to AR-300a. (#AR-300c-1)
+- 2026-10-16 [python-coder/AR-400d-1]: ``build_declared_skills_table`` takes the
+  project's abilities area and the marked ids: a project-supplied row reads the
+  project's copy and says so, a project-supplied ability installed nowhere gets
+  no row and a "not installed in this project" line. The area comes from
+  ``project_ability_slots`` (set once per build) because the compiler's call
+  chain cannot grow. (#AR-400d-1, #AR-400d-2)
 - 2026-10-09 [python-coder/AR-300b-2]: ``append_declared_skills`` takes an optional
   ``agent`` and, when given, computes the table through
   ``agent_preparation_delivery.compute_preparation`` and registers it, so the
@@ -39,6 +45,7 @@ from typing import Any
 from agent_ability_verdict import normalize_entries
 from agent_preparation_delivery import compute_preparation, register_preparation
 from injection_builders import _parse_frontmatter_description
+from project_ability_slots import project_ids, project_skills_root, supplied_by_project
 
 _log = logging.getLogger(__name__)
 # The registry name of this preparation (AR-300b-2; the gate derives the set, it does not list it).
@@ -61,25 +68,64 @@ def _skill_description(skill_id: str, skills_root: Path | None) -> str:
     return " ".join(raw.replace("|", "\\|").split())
 
 
-def build_declared_skills_table(entries: list[dict[str, str]], skills_root: Path | None) -> str:
+def _row_description(
+    entry: dict[str, str], skills_root: Path | None, project_root: Path | None, project_ids: frozenset[str]
+) -> str | None:
+    """Return the description cell for one grant, or None when the ability is not installed.
+
+    A grant marked ``provided_by: project`` -- or an unmarked grant of an id some agent marks
+    (one directory per id, so the project's copy applies project-wide) -- reads the project's
+    copy and says so; when the project lacks it the packaged copy is used if the package ships
+    one, otherwise the row is withheld (AR-400d-1, AR-400d-2).
+    """
+    sid = entry["skill_id"]
+    if not entry.get("provided_by") and sid not in project_ids:
+        return _skill_description(sid, skills_root)
+    if supplied_by_project(project_root, sid):
+        return f"{_skill_description(sid, project_root)} (supplied by the project)".strip()
+    if skills_root is not None and (skills_root / sid / "SKILL.md").is_file():
+        return _skill_description(sid, skills_root)
+    return None
+
+
+def build_declared_skills_table(
+    entries: list[dict[str, str]],
+    skills_root: Path | None,
+    project_root: Path | None = None,
+    project_ids: frozenset[str] = frozenset(),
+) -> str:
     """Render the skills table for a non-empty list of normalised declaration entries.
 
     Args:
-        entries: Output of ``normalize_entries`` (``skill_id``, ``mode``, optional ``condition``).
+        entries: Output of ``normalize_entries`` (``skill_id``, ``mode``, optional
+            ``condition`` and ``provided_by``).
         skills_root: Optional ``templates/skills`` directory for descriptions.
+        project_root: The project's own abilities area (``<output root>/skills``), or None.
+        project_ids: Every id any agent marks ``provided_by: project``.
 
     Returns:
         Markdown ``## Your Available Skills`` heading plus table, or ``""`` when
-        ``entries`` is empty.
+        ``entries`` is empty. A project-supplied ability that is installed nowhere gets
+        no row; a line below the table states it is not installed in this project.
     """
     if not entries:
         return ""
-    lines = ["## Your Available Skills", "", "| Skill | Mode | Description |", "|---|---|---|"]
+    rows: list[str] = []
+    notes: list[str] = []
     for entry in entries:
         mode = entry["mode"]
         if entry.get("condition"):
             mode = f"{mode}: {entry['condition']}".replace("|", "\\|")
-        lines.append(f"| {entry['skill_id']} | {mode} | {_skill_description(entry['skill_id'], skills_root)} |")
+        description = _row_description(entry, skills_root, project_root, project_ids)
+        if description is None:
+            notes.append(f"The project-supplied ability `{entry['skill_id']}` is not installed in this project.")
+            continue
+        rows.append(f"| {entry['skill_id']} | {mode} | {description} |")
+    lines = ["## Your Available Skills", ""]
+    if rows:
+        lines += ["| Skill | Mode | Description |", "|---|---|---|", *rows]
+    if notes:
+        lines += ["", *notes] if rows else notes
     return "\n".join(lines)
 
 
@@ -103,10 +149,12 @@ def append_declared_skills(
     entries = normalize_entries(fm.get("skills"))
     if not entries:
         return body
+    def render() -> str:
+        return build_declared_skills_table(entries, skills_root, project_skills_root(), project_ids())
+
     if agent is None:
-        table = build_declared_skills_table(entries, skills_root)
+        table = render()
     else:
-        table = compute_preparation(
-            PREPARATION_NAME, agent, lambda: build_declared_skills_table(entries, skills_root))
+        table = compute_preparation(PREPARATION_NAME, agent, render)
         register_preparation(PREPARATION_NAME, agent, table, True)
     return body.rstrip("\n") + "\n\n" + table + "\n"
