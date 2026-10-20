@@ -1,0 +1,57 @@
+id: BO-4500b-5
+title: "A component diagram shows the install-time step that fills shared blocks into routes, and the check that keeps them identical"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given the shared-block mechanism and the COMMIT-ANSWER block are built,
+  When a reader opens the component diagram for shared blocks,
+  Then it shows, as separate components, the block sources, the route templates with their empty
+    marker pairs, the install step that fills them, the commit step's configuration feeding the
+    install, the installed routes, and the identity check reading the installed routes,
+  And it shows COMMIT-ANSWER's consuming routes (fast-lane-ship, plan-feature, quick-fix,
+    finalize-feature and the /commit route) and shows build-feature and build-ticket outside that
+    set,
+  And it shows WORKSPACE-ANSWER as a second block on the same install step, not a second step,
+  And it states, in its legend or notes, how this differs from the comparison of a workflow file
+    with its shipped mirror (BP-1000e).
+depends_on: [BO-4500b, BO-4500b-1, BO-4500b-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: component-diagram -- a new install-time step that fills shared blocks into routes."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-ix.yaml
+    relationship: related
+    status: exists
+    relevance: "The commit step's diagram already plans to show the shared COMMIT-ANSWER caller block; this diagram owns the mechanism, that one links to it."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4500b's component-diagram trigger. Diagram id must be allocated at publish time with
+  the allocator, not taken from this record (repo CLAUDE.md "sequential resource paths go stale").

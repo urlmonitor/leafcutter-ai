@@ -1,0 +1,61 @@
+id: BO-4500b-1-i
+title: "A marker naming no known block, or a block whose source is empty, fails the install and leaves installed routes untouched"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given route A's template marks an empty place for a block named ALPHA-ANSWR,
+  And the package holds block sources only for ALPHA-ANSWER and BETA-ANSWER,
+  When the package is installed,
+  Then the install fails with a message naming route A, the line of the start marker, the
+    unknown name ALPHA-ANSWR, and the known block names ALPHA-ANSWER and BETA-ANSWER,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given route A's template marks an empty place for ALPHA-ANSWER,
+  And the ALPHA-ANSWER source exists but holds no text other than whitespace,
+  When the package is installed,
+  Then the install fails with a message naming the block ALPHA-ANSWER as having an empty source
+    and naming route A as a route that needs it,
+  And no installed route carries an empty ALPHA-ANSWER marker pair,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its 'a source block that is missing fails the build' rule, generalised."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  PO challenge 3 listed "a consumer with markers but no matching source" and "an unknown block name"
+  as two cases. With blocks identified by name against the set of sources, those are ONE observable
+  condition, so they are one scenario here (the first). The second scenario is the distinct case the
+  pair was reaching for: a source that EXISTS but would fill the route with nothing -- installing an
+  empty block would ship a route with no predicate at all, silently. The genuinely separate
+  malformed-marker case (start without end, mismatched names) is BO-4500b-1-v.
+
+  Listing the known names makes a typo self-diagnosing.

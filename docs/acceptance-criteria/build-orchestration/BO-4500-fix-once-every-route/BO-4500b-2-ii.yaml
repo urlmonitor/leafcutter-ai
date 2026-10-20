@@ -1,0 +1,60 @@
+id: BO-4500b-2-ii
+title: "An identity check that inspected no copy fails; it never reports a pass on nothing"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml"
+criteria: |
+  Given the identity check is pointed at a location holding no installed routes,
+  When it runs,
+  Then it fails with a message stating that zero installed copies were inspected and naming the
+    location it looked in.
+
+  Given installed routes exist, the package holds a source for BETA-ANSWER declared as awaiting
+    adoption, and no installed route carries BETA-ANSWER,
+  When the identity check runs,
+  Then its report lists BETA-ANSWER as not inspected because it awaits adoption,
+  And BETA-ANSWER is not listed among the blocks whose copies matched.
+
+  Given installed routes exist, the package holds a source for ALPHA-ANSWER that is not declared as
+    awaiting adoption, and no installed route carries ALPHA-ANSWER,
+  When the identity check runs,
+  Then it fails naming ALPHA-ANSWER as a block with no installed copy.
+depends_on: [BO-4500b-2, BO-4500b-1-ii]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the awaiting-adoption declaration this check honours."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-2
+  contract: "Identity check over installed copies."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Repo CLAUDE.md records three defences that turned out to be no-ops because they examined nothing
+  and reported clean (feedback_categories.yaml path, the bare-directory AC validator, the stale-ref
+  merge audit): "a check that examined nothing must not look like a check that found nothing". A
+  parity test run against the wrong install location is exactly that shape. The third scenario
+  catches a source whose consumers were all removed after BO-4500b-1-ii's install-time check ran
+  against a different layout.

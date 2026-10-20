@@ -1,0 +1,81 @@
+id: BO-4500b-2
+title: "Every installed copy of a shared block is checked against its source, and any copy that differs is named"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given installed routes A and B each carry ALPHA-ANSWER,
+  And after the install one character inside route B's installed ALPHA-ANSWER text is changed,
+  When the identity check runs over the installed routes as part of the test suite,
+  Then the check fails, naming route B, the block ALPHA-ANSWER and the first line that differs
+    from the source,
+  And route A is not named.
+
+  Given a new route D whose template marks an empty place for ALPHA-ANSWER is added and the package
+    installed,
+  And route D's installed ALPHA-ANSWER text is then changed,
+  When the identity check runs, with no change made to the check itself,
+  Then the check fails naming route D,
+  Because the routes checked are every installed route found carrying a marker pair, never a list
+    of routes kept in the check.
+
+  Given every installed copy of every block equals its source byte for byte,
+  When the identity check runs,
+  Then it passes,
+  And its report states, for each block, how many installed copies were inspected and names the
+    routes that carry it.
+depends_on: [BO-4500b, BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Its test_spec reserves test_commit_answer_block_is_byte_identical_in_every_deployed_consumer; that test is this check applied to COMMIT-ANSWER."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its WORKSPACE-ANSWER parity test becomes this check applied to WORKSPACE-ANSWER."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Identity check over installed copies: discovers every installed route carrying a named
+      start/end marker pair, compares each copy byte for byte with its block's single source, names
+      every differing route with block name and first differing line, reports per block the count of
+      copies inspected and the routes carrying it, and fails when zero copies were inspected.
+      Consumed by BO-4500b-2-i, BO-4500b-2-ii, and the COMMIT-ANSWER / WORKSPACE-ANSWER parity
+      tests of BO-4500a-5 and BO-4300c-3.
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention: an installed route carries a named block between a start/end marker pair."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-2-i, BO-4500b-2-ii]
+implemented_by: []
+notes: |
+  "Drift is caught" (L1 criteria) is a separate promise from "filled identically" (BO-4500b-1):
+  filling covers what the install produced; this check covers what is in the installed routes NOW,
+  including a hand edit made after the install. It reads INSTALLED routes, never templates, because
+  the installed text is the shared artefact (repo CLAUDE.md "verify against the deployed layout").
+
+  The BO-4500a-5 and BO-4300c-3 parity tests are instances of this one check, not two more
+  implementations of it -- recorded so neither record builds its own.

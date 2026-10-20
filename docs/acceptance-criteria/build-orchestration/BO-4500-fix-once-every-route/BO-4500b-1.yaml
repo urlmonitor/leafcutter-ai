@@ -1,0 +1,116 @@
+id: BO-4500b-1
+title: "A block written once is filled into every route that marks a place for it, byte for byte, each time the package is installed"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given a package whose shared-block sources hold two blocks named ALPHA-ANSWER and BETA-ANSWER,
+  And three route templates: route A marks one empty place for ALPHA-ANSWER; route B marks one
+    empty place for ALPHA-ANSWER and one for BETA-ANSWER; route C marks no place at all,
+  When the package is installed,
+  Then installed routes A and B carry, between each marker pair, exactly the text of the named
+    block's source, byte for byte,
+  And installed route C differs from its template only by the configuration values every route
+    receives at install,
+  And the route templates in the package still hold empty marker pairs after the install.
+
+  Given that package already installed,
+  When one line of the ALPHA-ANSWER source is changed and the package is installed again,
+  Then installed routes A and B both carry the changed text, and no installed route carries the
+    earlier text,
+  And a further install with nothing changed leaves every installed route byte for byte as the
+    previous install left it.
+
+  Given the ALPHA-ANSWER source contains a configuration placeholder of the kind the package
+    resolves in route text,
+  When the package is installed,
+  Then every installed copy of ALPHA-ANSWER carries the configured value in place of the
+    placeholder, exactly as the route's own placeholders are resolved.
+
+  Given a third block, GAMMA-ANSWER, is introduced only by adding its source and marking one
+    empty place for it in route C,
+  When the package is installed,
+  Then installed route C carries GAMMA-ANSWER's text,
+  And nothing about how the package is installed had to change for GAMMA-ANSWER to be filled.
+
+  Given the filling and the check that every copy matches its source are run by a harness that
+    starts no workflow engine,
+  When the harness inspects the installed routes,
+  Then both give the same result they give in a full install, judged on the installed text alone.
+depends_on: [BO-4500b]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+    relevance: "Carried request: one source per block, filled between start/end markers, compare-before-write, before config-placeholder injection, consumer set derived."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Origin of the marker-block idea (WORKSPACE-ANSWER). This record is the general mechanism that block becomes one more instance of (PO challenge 1)."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: constrains
+    status: exists
+    relevance: "Workflow bodies have no require/import; sharing has to happen at install time."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: constrains
+    status: exists
+    relevance: "Edge 5: a workflow cannot call another workflow, so a shared workflow is not an alternative."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      The marker convention and install-time filling every consumer relies on: a route template
+      marks an EMPTY start/end marker pair carrying a block name; the install fills it with that
+      block's single source text verbatim; a block is added by adding a source and a marker pair,
+      never by editing the install. Consumed by the route migrations BO-4500a-5-i..iv and the
+      /commit route record (COMMIT-ANSWER) and by BO-4300c-3 (WORKSPACE-ANSWER).
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-1-i, BO-4500b-1-ii, BO-4500b-1-iii, BO-4500b-1-iv, BO-4500b-1-v]
+implemented_by: []
+notes: |
+  THE MECHANISM. ALPHA/BETA/GAMMA-ANSWER are fixture names, so the record proves the mechanism is
+  general and not COMMIT-ANSWER-shaped. The GAMMA scenario is the generality claim: a new block
+  needs a source and a marker pair, nothing else.
+
+  PO CHALLENGE 1 (overlap with BO-4300c-3) -- RESOLVED HERE. This record owns the one filling
+  mechanism. WORKSPACE-ANSWER becomes one more block on it when BO-4300c-3 is driven; whichever is
+  driven first builds THIS general mechanism, never a workspace-only one. BO-4300c-3 needs an
+  amended_by entry pointing its inliner / parity / hand-filled-pair it_requirements at BO-4500b-1,
+  BO-4500b-2 and BO-4500b-1-iii. The BA does not edit another run's L2 -- flagged for the gate.
+
+  PO CHALLENGE 5 (framework neutrality) -- RESOLVED AS: sharing is a property of the INSTALLED
+  TEXT. The filling and the identity check are judged on installed files, need no workflow engine
+  (last scenario), and nothing in the criteria names today's engine. A route moved to LangGraph or
+  the Claude Agent SDK keeps the promise as long as its installed text carries a marker pair.
+
+  ERROR CASES (PO challenge 3) are the five L3s below. All of them share one property, stated in
+  each: a failing install leaves every installed route exactly as it was before that install began
+  -- the whole route set is validated before any route is replaced. That is a deliberate choice: a
+  half-replaced set would mix old and new block text, the drift this L1 exists to prevent.
+
+  OUT OF SCOPE (PO challenge 4), recorded as follow-ups, not absorbed:
+    - BO-3900-PATH-HELPERS blocks already differ between build-feature.js and plan-feature.js
+      (BO-4300c-3 it_requirements, verified 2026-09-25). Natural third consumer; needs its own record.
+    - The duplication analysis C3 proposes a further inlined human-approval gate block
+      (resolveGate / pauseAtGate). Same mechanism, separate record.
+  BOUNDARY vs BP-1000e (build-pipeline): BP-1000e compares a workflow FILE with its shipped mirror;
+  this record makes one BLOCK identical across MANY routes. Different axis; neither replaces the other.

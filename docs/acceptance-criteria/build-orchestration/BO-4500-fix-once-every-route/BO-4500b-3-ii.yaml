@@ -1,0 +1,70 @@
+id: BO-4500b-3-ii
+title: "Transient failures are retried up to the configured ceiling and then reported, and the ceiling comes from configuration alone"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given the commit step's configuration sets the transient-retry ceiling to 3 and the package is
+    installed,
+  And four consecutive commit agent replies for the same commit each carry commit_answer.status
+    refused with reason_code step_index_locked,
+  When the COMMIT-ANSWER block's decision is taken after each reply,
+  Then the decisions are retry, retry, retry, report, in that order,
+  And every retry offers the same path list and message file as the first attempt,
+  And the report names all four answers in the order they arrived.
+
+  Given the same ceiling of 3,
+  And the first two replies carry reason_code step_vcs_error and the third carries status committed,
+  When the decision is taken after each reply,
+  Then the decisions are retry, retry, continue.
+
+  Given the commit step's configuration is changed to set the ceiling to 1 and the package is
+    installed again, with no change to the block's source,
+  When two consecutive replies each carry reason_code step_index_locked,
+  Then the decisions are retry, report.
+
+  Given the commit step's configuration does not set a transient-retry ceiling,
+  When the package is installed,
+  Then the install fails with a message naming the missing setting,
+  And no installed route carries a ceiling the configuration did not supply.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: config/commit_step.json
+    relationship: related
+    status: exists
+    relevance: "max_transient_retries (3 as shipped)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml
+    relationship: describes
+    status: exists
+    relevance: "Final-gate decision 2026-10-14: retry ceilings are configured, default 3; vocabulary lives in config, not code; a missing config is never replaced by a built-in value."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-3
+  contract: "COMMIT-ANSWER decision."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The route body cannot read files at run time (ADR-030), so the configured ceiling has to reach the
+  block at install -- the same path BO-4500b-1's third scenario establishes for placeholders. The
+  fourth scenario mirrors BO-4500a-4's step_config_unreadable rule on the caller side: no silent
+  built-in 3. Retries are fresh calls the route makes; the step itself never retries (BO-4500a-4).

@@ -1,0 +1,60 @@
+id: BO-4500b-3-i
+title: "A reply the block cannot read, or whose envelope disagrees with its commit answer, is reported and never continued"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given the COMMIT-ANSWER block's decision is given, in turn, each of these commit agent replies:
+    (a) the paragraph "Committed successfully, all good." and nothing else;
+    (b) an object {status: ok} with no commit_answer key;
+    (c) an object whose commit_answer is the string "committed";
+    (d) an empty reply;
+    (e) an envelope with status ok whose commit_answer.status is hook_failed;
+    (f) an envelope with status blocker whose commit_answer.status is committed,
+  When the decision is taken for each,
+  Then every one of them is report, and none is continue, retry or engage,
+  And the report quotes what was received, bounded to 2 KB,
+  And for (e) and (f) the report names both the envelope status and the commit_answer status.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-v.yaml
+    relationship: describes
+    status: exists
+    relevance: "Envelope status is derived from commit_answer (ok iff committed); a disagreement means the agent broke its contract."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Same fail-closed shape for WORKSPACE-ANSWER: anything but a readable ready answer ends the run, quoting what was received (bounded to 2 KB)."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-3
+  contract: "COMMIT-ANSWER decision."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Report everything else" (the request) made concrete. C2 of the duplication analysis found
+  fallbacks that read an unreadable reply as ok; (a) is that reply. (e) is the discriminator for a
+  block that trusts the envelope's status; (f) is the discriminator for a block that trusts
+  commit_answer alone and ignores that the agent contradicted itself. The BA chose fail-closed on
+  any disagreement; BO-4500a-5-v's "callers decide on commit_answer, never on the envelope's prose"
+  is honoured because the block never continues on the envelope.

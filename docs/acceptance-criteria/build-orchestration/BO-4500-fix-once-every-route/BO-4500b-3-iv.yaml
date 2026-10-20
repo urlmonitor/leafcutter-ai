@@ -1,0 +1,64 @@
+id: BO-4500b-3-iv
+title: "A reason code outside its family, unknown to the published list, or an unknown answer version is reported as a contract violation and never retried"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given the COMMIT-ANSWER block's decision is given, in turn, replies whose commit_answer is:
+    (a) status refused with reason_code check_failed;
+    (b) status refused with reason_code null;
+    (c) status refused with reason_code step_disk_full, a code absent from the published
+        reason-code list;
+    (d) status refused with reason_code policy_made_up, a code absent from the published list;
+    (e) status committed with answer_version 2,
+  When the decision is taken for each,
+  Then every one of them is report, and none is continue, retry, stop-as-policy or engage,
+  And each report states that the reply breaks the commit answer contract and names the offending
+    value.
+
+  Given step_disk_full is added to the step_ family in the commit step's configuration and the
+    package is installed again, with no change to the block's source,
+  When the decision is taken on reply (c),
+  Then it is retry.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml
+    relationship: describes
+    status: exists
+    relevance: "Families are decided by MEMBERSHIP in one published enumeration, never by reading reason text; a refused code outside policy_/step_ is a contract violation; renaming or moving a code needs answer_version to change."
+  - path: config/commit_step.json
+    relationship: related
+    status: exists
+    relevance: "The published reason-code enumeration and answer_version."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-3
+  contract: "COMMIT-ANSWER decision."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  (c) and (d) are the discriminators for the plausible wrong version "decide by the code's prefix":
+  it would retry step_disk_full and stop on policy_made_up. BO-4500a-4 requires membership in the
+  published list. The second scenario proves the list reaches the block from configuration (the
+  BrainCandy final-gate rule "not part of the code but some config file"), not from a copy typed into
+  the block. (e) is fail-closed on a contract the block was not written for, even on a success.

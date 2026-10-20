@@ -1,0 +1,54 @@
+id: BO-4500b-1-iii
+title: "A route template holding any text between its markers fails the install, even text identical to the source"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given route A's template holds the line "return { action: 'continue' };" between its
+    ALPHA-ANSWER start and end markers,
+  When the package is installed,
+  Then the install fails with a message naming route A and the block ALPHA-ANSWER and stating that
+    the marker pair in a route template must be empty,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given route A's template holds, between its ALPHA-ANSWER markers, text byte for byte equal to
+    the current ALPHA-ANSWER source,
+  When the package is installed,
+  Then the install fails with the same message naming route A and ALPHA-ANSWER,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its 'a template whose marker pair already holds text fails the build' rule, generalised."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The second scenario is the discriminator. The cheapest wrong version refuses only text that
+  DIFFERS from the source; a hand copy that happens to match today passes and becomes drift the day
+  the source changes. A template's marker pair is either empty or the install refuses it.

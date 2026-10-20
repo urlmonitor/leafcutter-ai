@@ -1,0 +1,52 @@
+id: BO-4500b-1-iv
+title: "Blocks marked one inside another, or overlapping, fail the install naming both blocks"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given route B's template, in this order, marks ALPHA-ANSWER start, BETA-ANSWER start,
+    BETA-ANSWER end, ALPHA-ANSWER end,
+  When the package is installed,
+  Then the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER,
+    the line of each start marker, and stating that BETA-ANSWER is marked inside ALPHA-ANSWER,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given route B's template, in this order, marks ALPHA-ANSWER start, BETA-ANSWER start,
+    ALPHA-ANSWER end, BETA-ANSWER end,
+  When the package is installed,
+  Then the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER,
+    the line of each start marker, and stating that the two blocks overlap,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Nesting is refused rather than supported: a block whose text is filled inside another block's
+  place would make the outer block's installed text depend on two sources, so its identity check
+  against its own source could never pass. Two separate, non-overlapping places for the SAME block
+  in one route are not covered here and are allowed by BO-4500b-1.

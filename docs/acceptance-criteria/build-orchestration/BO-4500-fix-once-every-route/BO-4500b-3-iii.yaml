@@ -1,0 +1,74 @@
+id: BO-4500b-3-iii
+title: "A specialist is engaged at most once per commit, and the re-offer carries the identical path list and message file"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given a first commit attempt offering the paths scripts/x.py and unit_tests/test_x.py with the
+    message file .pending/commit-msg.txt,
+  And its reply carries commit_answer.status hook_failed with a handoff naming
+    code-refactoring-specialist,
+  And the specialist then reports that it also changed scripts/x_helpers.py,
+  When the COMMIT-ANSWER block's decision is taken on the first reply and again after the
+    specialist reports,
+  Then the first decision is engage code-refactoring-specialist,
+  And the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with
+    .pending/commit-msg.txt, and not scripts/x_helpers.py.
+
+  Given that re-offer's reply again carries hook_failed with a handoff naming
+    code-refactoring-specialist,
+  When the decision is taken,
+  Then it is report, naming both hook_failed answers in order,
+  And no second engagement of any specialist is decided for that commit.
+
+  Given the specialist, once engaged, declines or returns a reply that cannot be read,
+  When the decision is taken,
+  Then it is report, naming the specialist and quoting its reply bounded to 2 KB,
+  And no re-offer is decided.
+
+  Given the re-offer's reply carries reason_code step_index_locked,
+  When the decision is taken,
+  Then it is retry with the identical path list and message file, counted against the same
+    transient-retry ceiling, with no further engagement.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-v.yaml
+    relationship: describes
+    status: exists
+    relevance: "The re-offer must pass the IDENTICAL path list and message file captured from the first commit_answer, never re-derived."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Its test_lane_engages_specialist_once_and_reoffers_identical_commit must_catch ('re-derive the file list on the re-offer', 'loop on repeated handoffs') is what this record proves once, for every route."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-3
+  contract: "COMMIT-ANSWER decision."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The first scenario's x_helpers.py is the discriminator for "re-derive the list from what changed":
+  a specialist that moved code into a new file has NOT been authorised to widen the commit. Whether a
+  specialist's new file should join the commit is a separate decision this record does not make;
+  reporting it is enough (BO-3800 owns the handoff semantics). "At most once" is per commit, per
+  BO-3800a and BO-4500a-4 ("a specialist is engaged at most once, whatever these values are").

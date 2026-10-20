@@ -1,0 +1,69 @@
+id: BO-4500b-1-ii
+title: "A block source no route uses fails the install, unless it is openly declared as awaiting named adopters"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given the package holds a source for BETA-ANSWER,
+  And no route template marks a place for BETA-ANSWER,
+  And BETA-ANSWER is not declared as awaiting adoption,
+  When the package is installed,
+  Then the install fails with a message naming BETA-ANSWER as a block no route uses,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given the same package, with BETA-ANSWER declared as awaiting adoption by the records
+    BO-9999a-1 and BO-9999a-2,
+  When the package is installed,
+  Then the install completes,
+  And its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2.
+
+  Given BETA-ANSWER is still declared as awaiting adoption,
+  And route B's template now marks a place for BETA-ANSWER,
+  When the package is installed,
+  Then the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as
+    stale because route B uses the block,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The route migrations BO-4500a-5-i..iv and the /commit route record are the adopters COMMIT-ANSWER will name while it awaits adoption."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CONFLICT RESOLVED BETWEEN PO CHALLENGES 2 AND 3. Challenge 3 says an unused source fails the
+  install. Challenge 2 says this L1 ships the COMMIT-ANSWER source while adoption stays in
+  BO-4500a-5-i..iv. Applied literally, the change that lands this L1 would fail its own install,
+  because COMMIT-ANSWER has no consumer until the first route migration lands. The resolution is an
+  explicit, reported, self-expiring declaration: a block may await adoption only by NAMING the
+  records that will adopt it, the install reports it every time, and the declaration fails the
+  install the moment a route adopts the block (third scenario), so it cannot rot in place.
+  Alternative the user may prefer at the gate: drop the declaration and land the mechanism together
+  with the first route migration. That would merge challenge 2's split back together.
+
+  BO-9999a-1/-2 are placeholder ids for the test fixture.

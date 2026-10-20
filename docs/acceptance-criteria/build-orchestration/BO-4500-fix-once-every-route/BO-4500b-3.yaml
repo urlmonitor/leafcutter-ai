@@ -1,0 +1,113 @@
+id: BO-4500b-3
+title: "The COMMIT-ANSWER block turns every commit reply into exactly one decision, proven on its own without any route"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given the COMMIT-ANSWER block's decision is taken with no route and no workflow engine running,
+    on a first attempt, with the shipped transient-retry ceiling of 3,
+  And it is given, in turn, a commit agent reply whose commit_answer is:
+    (a) status committed;
+    (b) status refused with reason_code policy_protected_branch;
+    (c) status refused with reason_code step_index_locked;
+    (d) status hook_failed carrying a handoff that names code-refactoring-specialist;
+    (e) status hook_failed with no handoff, reason_code check_failed;
+    (f) status nothing_to_commit with reason_code nothing_changed,
+  When the decision is taken for each reply,
+  Then (a) is continue,
+  And (b) is stop, with no further attempt,
+  And (c) is retry, offering the identical path list and message file again,
+  And (d) is engage code-refactoring-specialist, then re-offer the identical path list and message
+    file,
+  And (e) and (f) are report,
+  And every stop and report decision carries the reply's status, reason_code, reason, hook_name and
+    failing_files unchanged.
+
+  Given the COMMIT-ANSWER block's source as the change that adds it is reviewed,
+  When each part of it -- reading the reply, the stop and retry rules, and the engage-then-re-offer
+    loop -- is traced to where it came from,
+  Then the change names, for each part, the existing copy it was taken from (the /commit route's
+    engage-then-re-offer loop, the fast lane's halt-on-any-non-ok reading of replies) and the known
+    issues that copy was fixed for,
+  And no part was taken from a copy that a sibling copy had already fixed and it had not,
+  And the regression test of every such known issue exercises the block's decision itself.
+depends_on: [BO-4500b, BO-4500b-1, BO-4500a-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+    relevance: "The COMMIT-ANSWER predicate as carried from the request."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml
+    relationship: describes
+    status: exists
+    relevance: "The one-answer contract and the reason_code family partition (policy_, step_, check_, nothing_changed) the decision reads by membership."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-v.yaml
+    relationship: describes
+    status: exists
+    relevance: "The commit agent reply envelope {status, commit_answer, earlier_answers, handoff keys} the block reads."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500.yaml
+    relationship: constrains
+    status: exists
+    relevance: "STANDING RULE (1) hardened copy first, (2) replaced KIs' regression tests run against the shared version -- the second scenario."
+  - path: config/commit_step.json
+    relationship: related
+    status: exists
+    relevance: "Holds max_transient_retries (3) and the reason_code enumeration; vocabulary lives in config, not code."
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C2: five reply-reading styles, fallbacks that read an unreadable reply as ok -- the hand-copy failure this block ends for commits."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      COMMIT-ANSWER block (single source, filled by BO-4500b-1). Input: the commit agent reply
+      envelope (BO-4500a-5-v) plus the attempt history of this commit (prior answers, whether a
+      specialist was already engaged). Output: exactly one decision -- continue | stop | retry |
+      engage (with the named specialist) | report -- plus, for stop and report, the reply's status,
+      reason_code, reason, hook_name, failing_files, and the path list and message file to re-offer
+      for retry and engage. The decision itself dispatches nothing, so it can be proven with no route
+      and no engine; the route-side dispatch around it is what BO-4500a-5-i..iv and the /commit route
+      record adopt.
+expects_from:
+  - ac_id: BO-4500a-5-v
+    contract: "Commit agent reply envelope {status: ok | handoff | blocker, commit_answer, earlier_answers, handoff keys}."
+  - ac_id: BO-4500a-4
+    contract: "One-answer contract and reason_code enumeration with its family partition."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-3-i, BO-4500b-3-ii, BO-4500b-3-iii, BO-4500b-3-iv]
+implemented_by: []
+notes: |
+  PO CHALLENGE 2 (scope) -- RESOLVED HERE. This record delivers the COMMIT-ANSWER single source and
+  the proof of its predicate ON ITS OWN: the decision is taken from a reply with no route and no
+  engine (first scenario). Placing the block into fast-lane-ship, plan-feature, quick-fix,
+  finalize-feature and the /commit route is the job of BO-4500a-5-i..iv and the /commit route's
+  migration record; build-feature and build-ticket keep BO-3000a routing (BO-3800a-1) and do not
+  take the block. Until the first route adopts it, COMMIT-ANSWER is declared awaiting adoption by
+  those records (BO-4500b-1-ii).
+
+  PO CHALLENGE 5 (framework neutrality) for the block: the DECISION is separated from the DISPATCH.
+  The decision reads a reply and an attempt history and returns a decision; it names no engine call.
+  A LangGraph node or an Agent SDK tool can take the same decision from the same reply.
+
+  The (f) row follows the request as written: continue ONLY on committed, so nothing_to_commit is
+  reported, not continued. Flagged to the user (question Q2): a re-run after a partly successful
+  route can legitimately find nothing to commit, and some routes may expect to carry on.
+
+  STANDING RULE (BO-4500) is the second scenario, as an explicit criterion per the L0's demand that
+  it survive decomposition to L2/L3.

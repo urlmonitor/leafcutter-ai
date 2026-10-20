@@ -1,0 +1,45 @@
+id: BO-4500b-2-i
+title: "A copy that differs only by whitespace or line endings is drift, not a match"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml"
+criteria: |
+  Given three installed routes carrying ALPHA-ANSWER, where after the install route A's copy gains
+    one trailing space on its second line, route B's copy has its line endings changed from LF to
+    CRLF, and route C's copy has one blank line removed,
+  When the identity check runs,
+  Then the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first
+    line that differs,
+  And no copy is reported as a match after its whitespace or line endings were normalised.
+depends_on: [BO-4500b-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-2
+  contract: "Identity check over installed copies."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Discriminator for the plausible wrong version "compare after stripping whitespace": it would pass
+  every case here. The request says byte identity; this record makes that falsifiable. All three
+  routes must be named in one run (no stop-at-first).

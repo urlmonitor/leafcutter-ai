@@ -1,0 +1,47 @@
+id: BO-4500b-1-v
+title: "A start marker without its end, an end without its start, or a pair whose names disagree, fails the install"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given three route templates: route A marks an ALPHA-ANSWER start with no ALPHA-ANSWER end after
+    it; route B marks an ALPHA-ANSWER end with no ALPHA-ANSWER start before it; route C marks an
+    ALPHA-ANSWER start followed by a BETA-ANSWER end and no other marker,
+  When the package is installed,
+  Then the install fails with one message per route, each naming the route, the line of the
+    offending marker and what is missing or mismatched,
+  And all three routes are named in that one failed install, not only the first one found,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: "Marker convention and install-time filling."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not in the PO's list; added by the BA. Without it, a start marker with no end is the case most
+  likely to be "handled" by filling to end of file or by skipping the route silently -- either ships
+  a route that the identity check (BO-4500b-2) cannot even locate a block in. Reporting every
+  malformed route in one run avoids a fix-one-rerun-find-the-next loop.

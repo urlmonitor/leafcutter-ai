@@ -1,0 +1,71 @@
+id: BO-4500b-4
+title: "A reference page states the shared-block marker convention, every install failure, and the COMMIT-ANSWER contract every depth-0 route relies on"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given the shared-block mechanism (BO-4500b-1, BO-4500b-2) and the COMMIT-ANSWER block (BO-4500b-3)
+    are built,
+  When a route author opens the reference page for shared blocks,
+  Then it states the marker convention: the start and end marker form, how a block is named, that a
+    route template's marker pair is always empty, and that the install fills it,
+  And it lists each install failure -- unknown block name, empty source, unused source, stale
+    awaiting-adoption declaration, text between markers in a template, nested or overlapping
+    blocks, and unpaired or mismatched markers -- each with the message a reader sees and the fix,
+  And it states what the identity check inspects, that it reads installed routes, and that a check
+    which inspected nothing fails,
+  And it states the COMMIT-ANSWER contract: the reply keys the block reads, the five decisions with
+    the condition for each, where the transient-retry ceiling and the reason-code families are
+    configured, and that a specialist is engaged at most once per commit,
+  And it names the routes that take the COMMIT-ANSWER block and states that build-feature and
+    build-ticket do not, because they keep their phase-loop handoff routing.
+
+  Given the reason-code families and the retry ceiling in the commit step's configuration,
+  When the page's statement of them is compared with that configuration by a test,
+  Then they agree, and a code added to the configuration but missing from the page fails the test.
+depends_on: [BO-4500b, BO-4500b-1, BO-4500b-2, BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: reference-doc -- the marker convention and the COMMIT-ANSWER contract."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "The commit step's own reference page (one-answer contract). Link to it; do not restate the step's contract here -- this page covers the CALLER side."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "Where route authors already look; cross-link the new page from it."
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: BO-4500b-1
+    contract: "Marker convention and the install failure messages (BO-4500b-1-i..v)."
+  - ac_id: BO-4500b-3
+    contract: "COMMIT-ANSWER decision contract."
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-4-i]
+implemented_by: []
+notes: |
+  Satisfies BO-4500b's reference-doc trigger. The how-to trigger is BO-4500b-4-i (an L3 under this
+  record, not a sixth L2: BO-4500b is at the five-child L1 cap with b-1..b-5). The component-diagram
+  trigger is BO-4500b-5.
+
+  The second scenario keeps the page from becoming a hand copy of the configuration -- the same
+  rule BO-4500a-4 applies to the step's reference page.
