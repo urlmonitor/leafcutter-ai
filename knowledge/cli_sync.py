@@ -5,6 +5,7 @@ ARCHITECTURE: CLI composition loads optional adapters only for database commands
 
 DECISION HISTORY
 ========================================
+- 2026-10-20 23:00 [python-coder]: Extend status with retained generations and capacity usage and add a sweep reclaim command that requires the declared bound. (#KM-400f-4)
 - 2026-10-20 18:00 [python-coder]: Run the read-only preflight before setup so a latched store reports the capacity condition, not a raw rejection. (#KM-400f-3/02)
 - 2026-10-20 14:00 [python-coder]: Declare the capacity ceiling by four all-or-none flags, refuse a partial declaration before any network access, and report the measured headroom. (#KM-400f-3)
 - 2026-10-15 04:00 [python-coder]: Carry the operator-declared retention bound into publication and report the reclamation result. (#KM-400f-2)
@@ -34,6 +35,11 @@ _CAPACITY_FLAGS = (
     "--capacity-warn-percent",
 )
 _CAPACITY_SOURCE = "command line (" + ", ".join(_CAPACITY_FLAGS) + ")"
+_RECLAIM_NEEDS_BOUND = (
+    "reclaim requires the retention bound: declare --retention-max-generations "
+    "and --retention-min-age-seconds"
+)
+_DECLARING = ("sync", "status", "reclaim")  # commands that accept the declared bound and ceiling
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -42,7 +48,7 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     Args:
         subparsers: Argument-parser collection receiving sync subcommands.
     """
-    for name in ("validate", "plan", "sync", "status", "rollback", "cleanup"):
+    for name in ("validate", "plan", "sync", "status", "reclaim", "rollback", "cleanup"):
         parser = subparsers.add_parser(name)
         parser.add_argument("--root", required=True)
         parser.add_argument("--repository-id", default="leafcutter")
@@ -52,7 +58,7 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         parser.add_argument(
             "--surfaces", nargs="+", choices=sorted(SUPPORTED_SURFACES), default=None
         )
-        if name == "sync":
+        if name in _DECLARING:
             # Declared by the operator, both together; no built-in bound, no reclamation without one.
             parser.add_argument("--retention-max-generations", type=int, default=None)
             parser.add_argument("--retention-min-age-seconds", type=int, default=None)
@@ -215,7 +221,11 @@ def _declared_bound(args: argparse.Namespace) -> RetentionBound | None:
     """
     count = getattr(args, "retention_max_generations", None)
     age = getattr(args, "retention_min_age_seconds", None)
-    if args.command != "sync" or (count is None and age is None):
+    if args.command not in _DECLARING:
+        return None
+    if count is None and age is None:
+        if args.command == "reclaim":
+            raise ValueError(_RECLAIM_NEEDS_BOUND)
         return None
     from knowledge.config import KnowledgeConfig, resolve_retention_bound
 
@@ -235,7 +245,7 @@ def _declared_capacity(args: argparse.Namespace) -> CapacityCeiling | None:
     Raises:
         ValueError: When only some of the four settings were declared, or one is out of range.
     """
-    if args.command != "sync":
+    if args.command not in _DECLARING:
         return None
     from knowledge.adapters.retention.capacity import resolve_capacity
 
@@ -270,9 +280,17 @@ async def run(args: argparse.Namespace) -> dict:
             return await sync(
                 args.root, args.repository_id, args.revision, backend, args.surfaces, bound, capacity
             )
+        if args.command == "reclaim":
+            from knowledge.cli_generations import reclaim_generations
+
+            if bound is None:  # already refused by _declared_bound; restated for the type checker
+                raise ValueError(_RECLAIM_NEEDS_BOUND)
+
+            return await reclaim_generations(backend, args.repository_id, bound, capacity)
         active = await backend.active(args.repository_id)
         if args.command == "status":
             from knowledge.adapters.git_source import resolve_revision
+            from knowledge.cli_generations import manifest_of, status_report
 
             requested = await asyncio.to_thread(resolve_revision, Path(args.root), args.revision)
             published = active.source_sha if active else None
@@ -281,7 +299,8 @@ async def run(args: argparse.Namespace) -> dict:
                 "requested_sha": requested,
                 "published_sha": published,
                 "lagging": published != requested,
-                "manifest": active.model_dump(mode="json") if active else None,
+                "manifest": manifest_of(active),
+                **await status_report(backend, args.repository_id, bound, capacity),
             }
         if args.command == "rollback":
             changed = await backend.rollback(

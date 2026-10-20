@@ -20,6 +20,8 @@ related_docs:
 
 Names, types, result shapes, reason values and refusal messages for the declared retention bound that decides which retained knowledge-graph generations may be reclaimed (AC `KM-400f-1`).
 
+History: before the bound existed nothing reclaimed generations, and two Aura instances latched read-only within four days when their relationship count reached the Aura Free cap of 400,000 (measured 399,773 on 2026-10-12; an earlier reading of 251,326 was taken before the last publications finished writing). A hidden `retention_seconds = 3600` adapter default was removed. The operator surfaces are `status` (lists generations and verdicts) and `reclaim` (sweep); see [Operator status and sweep reclamation](knowledge-publication-capacity.md#operator-status-and-sweep-reclamation).
+
 The evaluation changes nothing. It reclaims no generation, moves no active pointer and expires no continuation. Reclamation is a separate step (AC `KM-400f-2`) that acts on the evaluation's verdicts inside a successful publication; see [Publication reclamation](#publication-reclamation).
 
 The detail sections of the evaluation result (active generation, reclaimable bases, entity-node reconciliation, assessment outcome, read-only condition) are in [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md).
