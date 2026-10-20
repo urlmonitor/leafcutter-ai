@@ -1,0 +1,202 @@
+id: GE-127d-3-iv
+title: "Rewriting comments from one style to another adds no lines for the two-for-one repayment, in either direction"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked JavaScript file measured at 1200 lines against a permitted length
+    of 1000, whose previous version carries a run of 4 `//` comment lines,
+  And a staged change whose only effect is replacing those 4 lines with one
+    `/* ... */` block carrying the same text,
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome states that the change added 0 lines,
+    and the file is quoted at 1200 both before and after,
+  And given the previous version instead carries that block and the staged change
+    only restores the 4 `//` lines,
+  When the author performs an ordinary commit,
+  Then the commit completes and the outcome states that the change added 0 lines,
+  And given a staged change to the same file that makes the same restyle and also
+    puts 5 new lines of code into it, taking nothing out,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states that the change added
+    5 lines and that the file is required to stand at 1195 or below,
+  And the same three outcomes hold for a Python file over its limit when `#` lines
+    are rewritten as a string literal standing alone as a statement and back —
+    whether that string is a docstring, a bare string between two functions, or a
+    trailing DECISION HISTORY string at the end of the module.
+depends_on:
+  - GE-127d-3
+  - GE-127f-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the two-for-one repayment: lines added are read from what the change put into
+      the file, and content the rule does not measure adds nothing. This record does not
+      change that rule; it pins its consequence under the new measure for the restyle case.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The second effect: with the restyle in HEAD, restoring the `//` lines was charged as
+      growth and as added lines, raising the bar by 37 lines on build-feature.js and 30 on
+      plan-feature.js for honest work. The second criterion forbids that.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. count_added_measured_lines strips both sides with
+      _strip_unmeasured_regions and diffs the remaining WHOLE lines with
+      difflib.SequenceMatcher(autojunk=False), summing insert/replace targets;
+      resolve_added_measured_lines takes the minimum across merge parents and returns 0 for a
+      staged deletion. Both keep their shape; only what is diffed changes.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    state: existing
+it_requirements:
+  - >-
+    ADDED LINES ARE DIFFED OVER COUNTED LINES, KEYED BY THEIR NON-COMMENT TEXT. Both sides are
+    reduced, by the same tokenizer pass that produces the measured length, to the ordered list
+    of their counted lines, each keyed by the line's text with every comment removed and
+    trailing whitespace stripped; that list's length equals the measured length by
+    construction. Keying by the whole physical line would charge 1 added line for restyling a
+    trailing `// note` to `/* note */` on a code line, which is a comment rewrite with the code
+    unchanged. A blank line outside comments is a counted line keyed as empty.
+  - >-
+    GROSS, NEVER NET, AND THE MERGE AND DELETION RULES ARE UNCHANGED. Still the sum of
+    inserted/replacing lines from a SequenceMatcher with autojunk off, never current minus
+    previous; still the minimum across merge parents; still 0 for a staged deletion; still
+    AddedLineCountUnavailableError (INDETERMINATE) when it cannot be established — which now
+    includes either side failing to tokenize (GE-127d-3-ii).
+  - >-
+    The language for both sides comes from the staged file's own extension. A rename that
+    changes the extension is out of scope for this record; do not special-case it.
+  - >-
+    The Python arm follows the 2026-10-20 standalone-versus-used rule (GE-127d-3), not
+    position: a `#` run rewritten as a string literal standing alone as a statement —
+    docstring, bare string between functions, or trailing DECISION HISTORY string — adds 0
+    lines in either direction, wherever it stands. The same text turned into a USED string
+    (assigned, passed, returned, part of a larger expression) or into a standalone f-string is
+    code, and such a rewrite legitimately adds its lines; tests must not present that as a
+    restyle. Appending entries inside an existing trailing DECISION HISTORY string adds 0.
+test_spec:
+  - name: test_ge_127d_3_iv_restyling_comments_either_way_adds_zero_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      In a temporary git repository with an over-limit .js file and an over-limit .py
+      file, stage a restyle-only change in each direction and run the hook: each completes
+      and states 0 lines added; the quoted lengths are equal before and after. The .py run
+      is repeated at the module docstring position, at a function docstring position, as a
+      bare string between two functions, and as a trailing module-level DECISION HISTORY
+      string converted to and from the `#`-comment form (BrainCandy 2026-10-20).
+    must_catch:
+      - "the pre-2026-10-16 rule, under which restoring // lines counts 4 added"
+      - "added lines counted from the raw diff rather than from measured content"
+      - "docstring position only, so a bare or trailing standalone string is charged as added lines"
+  - name: test_ge_127d_3_iv_appending_to_a_trailing_decision_history_string_adds_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Copy a real tracked over-limit .py file that ends in a module-level DECISION HISTORY
+      string into a temporary git repository, stage a change that appends E new entry lines
+      inside that string (E varied), and run the hook: it completes, states 0 lines added,
+      and quotes the same length before and after.
+    must_catch:
+      - "a trailing DECISION HISTORY string counted as code"
+  - name: test_ge_127d_3_iv_a_restyle_does_not_hide_code_added_in_the_same_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The restyle plus K new code lines (K varied) states K added and requires the file
+      to stand at its previous length minus K or below (or at the limit, whichever is less
+      demanding), and is refused when it does not.
+  - name: test_ge_127d_3_iv_restyling_a_trailing_comment_on_a_code_line_adds_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      On an over-limit .js and .sql file, rewriting T trailing comments on code lines from the
+      line form to the block form (`x(); // n` -> `x(); /* n */`, `-- n` -> `/* n */`), T
+      varied, states 0 lines added and passes; changing the code on one of those lines in the
+      same change states exactly 1 added.
+    must_catch:
+      - "added lines diffed over whole physical lines, so a trailing-comment restyle costs one line each"
+test_rationale: |
+  Both directions of the restyle are run through the real hook, because the KI's second
+  effect appeared only in the restore direction. The mixed descriptor proves that zero-cost
+  restyling cannot be used as cover for added code. The trailing-comment descriptor pins the
+  one place a correct length measure can still charge a restyle: diffing whole lines instead
+  of their non-comment content.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-3
+  contract: >-
+    For a file's content and extension, the ordered list of counted lines keyed by their
+    non-comment text with trailing whitespace stripped, produced by the same pass as the
+    measured length (len(list) == measured length); and the distinct tokenizer-failure signal.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Added it_requirements (none before): the added-lines diff runs over
+    counted lines keyed by their non-comment text, so a trailing-comment restyle on a code
+    line costs nothing while a code change on that line still costs one; gross / minimum
+    across parents / deletion-is-zero / INDETERMINATE are unchanged; the Python arm uses
+    docstring position. expects_from re-pointed from GE-127f-2 (done, and unchanged) to
+    GE-127d-3, which supplies the new counted-line list. Added a trailing-comment descriptor.
+- reason: standalone-string-rule
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-20 decision (GE-127d-3): the Python arm now
+    covers `#` lines rewritten as any string literal standing alone as a statement —
+    docstring, bare string between functions, or trailing DECISION HISTORY string — not only
+    a docstring. test_spec: the restyle descriptor repeats the .py run in those positions
+    and gains a docstring-position-only must_catch; a real-artifact descriptor proves that
+    appending entries inside a trailing DECISION HISTORY string adds 0 lines. Title,
+    depends_on and req_status unchanged. The it_requirements item "The Python arm uses
+    docstring POSITION" now contradicts the criteria and is left for the IT PO.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. Replaced the docstring-position it_requirement with the 2026-10-20
+    standalone-versus-used rule: a `#` run restyled as any standalone string adds 0 wherever
+    it stands, appending inside a trailing DECISION HISTORY string adds 0, and a rewrite into
+    a used string or a standalone f-string is code and legitimately adds lines.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-127f-2 is work_status done and its criteria already hold that unmeasured content adds
+  nothing. Under the old rule `//` lines were measured, which is why restoring them cost
+  lines. No amendment to GE-127f-2 is needed; this record exists so the restyle case has
+  its own executing test.

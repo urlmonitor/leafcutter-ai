@@ -390,6 +390,24 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-14'
+- reason: rule-decision-superseded
+  by: business-analyst
+  at: '2026-10-16'
+  note: >-
+    Criteria, title, req_status, depends_on and work_status untouched: the criteria
+    are rule-agnostic and keep holding. SUPERSEDED: the it_requirements decision
+    "keep the rule, publish it" (hash comments counted, every triple-quoted string
+    and every /* */ span discarded) is replaced by BrainCandy's 2026-10-16 decision
+    recorded in GE-127d-3 — no comment counts in any style, Python strings standing
+    alone as statements uncounted (BrainCandy 2026-10-20: docstrings AND bare strings
+    such as a trailing DECISION HISTORY block; a string that is assigned, passed,
+    returned or part of a larger expression counts — this supersedes the 2026-10-16
+    "docstring position only" confirmation), blank lines counted, per-language
+    tokenizer. The test
+    descriptor test_ge_127d_2_the_asymmetry_between_removable_and_non_removable_content_is_legible_from_the_outcome
+    asserts that deleting hash comments moves the quoted length; it will go red when
+    GE-127d-3 lands and must be rewritten to the new rule in that change, not
+    defended.
 superseded_by: null
 covered_by:
 - unit_tests/commit_guardian/test_ge_127d_2.py
