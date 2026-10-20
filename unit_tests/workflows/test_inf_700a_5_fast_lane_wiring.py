@@ -35,6 +35,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 import workflows.test_inf_700a_1 as _base  # noqa: E402
+from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
 
 _WORKFLOW = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _MANIFEST = ["memory/project_learning.md", "docs/reference/some-surface.md"]
@@ -72,6 +73,7 @@ class _FastLaneCase(unittest.TestCase):
 
     def run_lane(self, observe: Any = None, commit_ok: bool = True, staged: Any = _STAGED):
         responses = _base._full_success_responses(self.worktree, ["INF-9150a"])
+        responses.update(wrong_version_passing())
         responses["knowledge-routing-step"] = staged
         if observe is not None:
             responses["knowledge-routing-observe"] = observe

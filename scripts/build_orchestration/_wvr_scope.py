@@ -29,9 +29,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 
-from _fl_common import _load_ac_by_id, _nodeid_function_name, _scan_test_root_for_covers_tags
-from _fl_red_baseline_support import _load_declared_test_names
+from _fl_common import _nodeid_function_name
 from _wvr_pytest import NodeSpec
+from _wvr_records import covers_tags, declared_names, load_records
 
 _LOG = logging.getLogger("wrong_version_runner")
 UNDONE_NAME = "the fix undone"
@@ -95,24 +95,22 @@ def _chains(file: Path, function: str) -> list[tuple[str, ...]]:
     return found
 
 
-def _must_catch_by_name(ac_ids: list[str], ac_root: Path) -> dict[str, list[str]]:
+def _must_catch_by_name(records: dict[str, dict | None]) -> dict[str, list[str]]:
     """Collect the declared ``must_catch`` strings per test_spec entry name."""
     out: dict[str, list[str]] = {}
-    for ac_id in ac_ids:
-        record = _load_ac_by_id(ac_root, ac_id) or {}
-        for entry in record.get("test_spec") or []:
+    for record in records.values():
+        for entry in (record or {}).get("test_spec") or []:
             if isinstance(entry, dict) and entry.get("name"):
                 names = [m for m in (entry.get("must_catch") or []) if isinstance(m, str) and m.strip()]
                 out.setdefault(entry["name"], []).extend(names)
     return out
 
 
-def _in_scope_by_name(ac_ids: list[str], ac_root: Path) -> dict[str, list[str]]:
+def _in_scope_by_name(records: dict[str, dict | None]) -> dict[str, list[str]]:
     """Collect the declared ``in_scope_files`` (TQ-500g-1-ix) per test_spec entry name."""
     out: dict[str, list[str]] = {}
-    for ac_id in ac_ids:
-        record = _load_ac_by_id(ac_root, ac_id) or {}
-        for entry in record.get("test_spec") or []:
+    for record in records.values():
+        for entry in (record or {}).get("test_spec") or []:
             if isinstance(entry, dict) and entry.get("name"):
                 files = [f for f in (entry.get("in_scope_files") or []) if isinstance(f, str) and f.strip()]
                 bucket = out.setdefault(entry["name"], [])
@@ -146,14 +144,15 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
     Returns:
         The :class:`Scope`; ``problem`` is set when a declared AC record is unavailable.
     """
-    declared, unavailable = _load_declared_test_names(ac_ids, ac_root)
+    records = load_records(ac_ids, ac_root)  # one pass over the store (TQ-500g-1-v)
+    declared, unavailable = declared_names(records)
     if unavailable:
         return Scope(problem=f"declared_ac_record_unavailable: {', '.join(unavailable)}")
     wanted = set(ac_ids)
-    must_catch = _must_catch_by_name(ac_ids, ac_root)
-    in_scope = _in_scope_by_name(ac_ids, ac_root)
+    must_catch = _must_catch_by_name(records)
+    in_scope = _in_scope_by_name(records)
     scope, seen, found = Scope(), set(), set()
-    for tag in _scan_test_root_for_covers_tags(test_root):
+    for tag in covers_tags(test_root, ac_ids):
         if tag["ac_id"] not in wanted or not tag.get("function") or Path(tag["file"]).suffix != ".py":
             continue
         key = (Path(tag["file"]).resolve(), tag["function"])
