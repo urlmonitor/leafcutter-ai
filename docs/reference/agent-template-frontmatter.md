@@ -246,16 +246,12 @@ Agents without a priority run last, in YAML declaration order.
 
 ### Template Frontmatter with All Fields
 
-Required runtime keys are `name`, `description`, `model` and `tools`; every
-other key is optional (omit `memory` and `inject_registry` when false). A
-full-featured phase agent:
+Required runtime keys are `name`, `description`, `model` and `tools`; every other key
+is optional (omit `memory` and `inject_registry` when false). A full phase agent:
 
 ```yaml
 ---
-description: |
-  Full prose description. Mention what the agent does, when it is triggered,
-  and any Stop-and-Ask rules. Include "(internal — invoked by X only)" when the
-  agent is not user-facing.
+description: "What the agent does, when it is triggered, its Stop-and-Ask rules; add (internal — invoked by X only) if not user-facing."
 model: sonnet
 name: my-phase-agent
 tools: Bash, Read, Edit, Write, Agent, Skill
@@ -269,8 +265,8 @@ config_keys:
   myagent.context_path:
     required: false
     description: "Path to the project context file this agent reads at startup."
-adopter_notes: |
-  Phase agent. Invoked by ticket-supervisor. Needs my-skill installed first.requires_verification: true
+adopter_notes: "Phase agent. Invoked by ticket-supervisor. Needs my-skill installed first."
+requires_verification: true
 spawn_allowlist:
   - research-agent
 ---
@@ -280,13 +276,17 @@ spawn_allowlist:
 
 ## Relationship Between Frontmatter and Registry
 
-`name` must equal the registry `id`; `model` and `portable` mirror the registry;
-`skills` and `spawn_allowlist` derive the registry's `skills_invoked` and
-`spawn_allowlist` (see [Granting Skills and Sub-Agents](#granting-skills-and-sub-agents));
-the other registry fields are authored there. `build.py` compiles the frontmatter
-to `.claude/agents/`; `registry_validator.py` cross-checks template paths and tool
-pairing on every build. When the two diverge, run
-`python scripts/build.py --validate` to surface errors.
+```
+name: my-agent           ←── must match ──→  "id": "my-agent"
+spawn_allowlist: [...]   ── derives ──→  "spawn_allowlist": [...]
+skills: [...]            ── derives ──→  "skills_invoked"
+```
+
+`model` and `portable` mirror the registry; the other registry fields are authored
+there (see [Granting Skills and Sub-Agents](#granting-skills-and-sub-agents)).
+`build.py` compiles the frontmatter to `.claude/agents/`; `registry_validator.py`
+cross-checks template paths and tool pairing on every build. When the two diverge,
+run `python scripts/build.py --validate` to surface errors.
 
 ---
 
