@@ -34,6 +34,17 @@ _HARVESTER_REQUIRED_SIBLINGS: tuple[str, ...] = (
     "record_identity.py",
 )
 
+# INF-700b-1: the four surfaces now run emit_knowledge.py (no --sink), and
+# check_sink_parity.py resolves them by running the DEPLOYED
+# `emit_knowledge.py --print-sink` for real. That script imports
+# sink_resolution (already above) and entry_kind_vocabulary at load time, so a
+# deploy that omits them crashes with ImportError before printing anything.
+_EMIT_HELPER_SRC_NAME = "emit_knowledge.py"
+_EMIT_HELPER_REQUIRED_SIBLINGS: tuple[str, ...] = (
+    "sink_resolution.py",
+    "entry_kind_vocabulary.py",
+)
+
 _REAL_SURFACES: tuple[tuple[str, Path, tuple[str, ...]], ...] = (
     ("signoff", _REPO_ROOT / "templates" / "skills" / "signoff" / "SKILL.md",
      ("skills", "signoff", "SKILL.md")),
@@ -68,7 +79,8 @@ _TIMEOUT_SECONDS = 30
 
 
 def _deploy_harvester(deployed_root: Path) -> Path:
-    """Deploy harvest_learnings.py AND its required sibling modules.
+    """Deploy harvest_learnings.py AND its required sibling modules, plus
+    emit_knowledge.py and the modules it imports (INF-700b-1).
 
     Mirrors what a real ``build.py`` run actually deploys
     (``build_knowledge_scripts`` in ``scripts/build_phases_knowledge.py``) --
@@ -80,7 +92,11 @@ def _deploy_harvester(deployed_root: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     dest = output_dir / "harvest_learnings.py"
     shutil.copy2(_HARVESTER_SRC, dest)
-    for sibling_name in _HARVESTER_REQUIRED_SIBLINGS:
+    for sibling_name in (
+        *_HARVESTER_REQUIRED_SIBLINGS,
+        _EMIT_HELPER_SRC_NAME,
+        *_EMIT_HELPER_REQUIRED_SIBLINGS,
+    ):
         shutil.copy2(_KNOWLEDGE_SRC_DIR / sibling_name, output_dir / sibling_name)
     return dest
 

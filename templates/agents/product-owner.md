@@ -467,17 +467,27 @@ best-effort handling (log a warning and proceed if any step fails):
    `.claude/skills/signoff/SKILL.md` §7 step 2) — the required field set below
    must match that definition exactly; this agent has no `ticket_path` in
    hand, so the optional `ticket` field defined there is omitted here. Per
-   ADR-034 (Knowledge Write Ownership), this append is this agent's entire
-   obligation — it does not classify the learning or write to any knowledge
-   surface itself. Do NOT load `route-learning` or `capture-learning`;
-   ADR-034 §2 item 3 retired both names and neither has ever existed under
-   `templates/skills/` or `.claude/skills/`. Obtain the sink by running
-   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
-   from the project root — it prints the absolute path this install declared
-   for knowledge emissions, the same path regardless of your current working
-   directory. Append the event there (create the file if it does not exist
-   yet; skip gracefully if the declaration is missing or the file is not
-   writable):
+   ADR-034 (Knowledge Write Ownership), running the helper below is this
+   agent's entire obligation — it does not classify the learning or write to
+   any knowledge surface itself. Do NOT load `route-learning` or
+   `capture-learning`; ADR-034 §2 item 3 retired both names and neither has
+   ever existed under `templates/skills/` or `.claude/skills/`. Run the emit
+   helper as ONE command, with the learning as `--text`, filling in the
+   angle-bracket values (do not add `--sink`, and do not compose or write the
+   event yourself):
+   ```bash
+   python3 {{config.output_root}}/scripts/knowledge/emit_knowledge.py --agent product-owner --component <component> --destination <destination> --entry-kind <kind> --text '<learning>'
+   ```
+   Quoting rule: the learning goes inside single quotes, which stop the shell
+   from expanding backticks, `$(...)` and `$VAR`. Any single quote inside the
+   learning is written as `'\''` (close quote, escaped quote, reopen). For
+   example, the learning `don't panic` is written `'don'\''t panic'`.
+   If you cannot
+   classify the learning, pass `--entry-kind unclassified --destination
+   "(unrouted)"` (ADR-034 Amendment 1 A1.3). **Fail open:** if the helper
+   prints a warning or exits non-zero, do not retry or work around it — finish
+   your sign-off anyway. The JSON below documents the record the helper
+   writes; you do not produce it by hand:
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "product-owner", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```

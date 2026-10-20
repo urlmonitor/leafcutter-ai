@@ -1030,3 +1030,9 @@ ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2.py:*
 ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2_v.py:*
 ENTROPY_HIGH:templates/scripts/commit_guardian/_lint_scope.py:*
 ENTROPY_HIGH:tests/knowledge/test_km_400f_1_vi.py:*
+# INF-700b-1: DECISION HISTORY lines end with the mandated doc-enforcer tail tag
+# (#EPIC-ALearningAnAgentHasTodayActuallyGets/01). That token scores 4.52 against the 4.5
+# entropy threshold; it is an epic name, not a secret.
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:334
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:335
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:336
