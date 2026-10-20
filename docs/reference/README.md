@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-10-14
+last_updated: 2026-10-20
 components:
   - documentation_system
 related_docs:
@@ -77,6 +77,7 @@ below by hand.
 | Doc | What it's for |
 |---|---|
 | [agent-template-frontmatter.md](agent-template-frontmatter.md) | Every YAML frontmatter field an agent template under `templates/agents/` can carry, split into runtime keys (survive compilation) and build directives (stripped by `build.py`). |
+| [specialist-ability-references.md](specialist-ability-references.md) | How the build treats an instruction to use an ability in a specialist definition or guide: what counts, what does not, the four fault kinds and their fixes, the own-grant comparison, and the `provided_by: project` marking. |
 | [skill-frontmatter.md](skill-frontmatter.md) | Every YAML frontmatter field a `SKILL.md` file can carry, and how each one affects skill loading, deployment, and the build pipeline. |
 | [claude-code-hooks.md](claude-code-hooks.md) | Catalogue of every Claude Code PreToolUse/PostToolUse hook deployed to `.claude/hooks/`, its event type, matcher, and what it enforces. |
 | [agent-teams-constraints.md](agent-teams-constraints.md) | Version requirement, one-team-per-session limit, and the no-nested-teams rule for Claude Code's experimental Agent Teams feature. |

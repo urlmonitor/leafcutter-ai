@@ -27,6 +27,10 @@ ARCHITECTURE: ``verify_grants_delivered(declarations, compiled_roots, *,
 DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300a-1]: Created. The account definition is shared
   with the in-place detector via ``agent_ability_accounts``. (#AR-300a-1)
+- 2026-10-16 [python-coder/AR-400d-2]: A granted id the compiler deliberately gave no row
+  (``project_ability_slots.is_not_installed``: project-supplied, shipped by no package, absent from
+  the project) is withheld from the expected set, so the build that states "not installed" does not
+  refuse itself as ``short-section`` / ``undelivered``. (#AR-400d-2)
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ from typing import Any
 
 from agent_ability_accounts import find_accounts
 from agent_ability_verdict import normalize_entries
+from project_ability_slots import is_not_installed
 from template_compiler import parse_frontmatter
 
 _log = logging.getLogger(__name__)
@@ -61,12 +66,20 @@ def _read_prompts(root: Path) -> list[tuple[str, str]]:
     return prompts
 
 
-def _classify(stem: str, root: str, text: str, want: set[str], known: set[str]) -> list[dict[str, Any]]:
-    """Return the per-prompt findings for one compiled prompt (empty list = complete / section-free)."""
+def _classify(
+    stem: str, root: str, text: str, want: set[str], known: set[str], withheld: frozenset[str] = frozenset()
+) -> list[dict[str, Any]]:
+    """Return the per-prompt findings for one compiled prompt (empty list = complete / section-free).
+
+    ``withheld`` holds granted ids deliberately given no row (a project-supplied ability installed
+    nowhere, AR-400d-2): an agent holding only those still carries the delivered section.
+    """
     base = {"agent": stem, "platform_root": root}
     accounts = find_accounts(text, known)
     if not want:
         named_ids = sorted({i for account in accounts for i in account["ids"]})
+        if withheld:
+            return [] if accounts else [{**base, "kind": "undelivered", "missing": sorted(withheld)}]
         return [{**base, "kind": "unexpected-section", "accounts": len(accounts), "named": named_ids}] if accounts else []
     if not accounts:
         return [{**base, "kind": "undelivered", "missing": sorted(want)}]
@@ -79,6 +92,13 @@ def _classify(stem: str, root: str, text: str, want: set[str], known: set[str]) 
     if len(accounts) > 1:
         findings.append({**base, "kind": "second-account", "accounts": len(accounts)})
     return findings
+
+
+def _expected(entries: list[dict[str, str]], installed: set[str]) -> tuple[set[str], frozenset[str]]:
+    """Split one agent's grant into ``(ids its table must name, ids deliberately given no row)``."""
+    withheld = frozenset(e["skill_id"] for e in entries
+                         if is_not_installed(e["skill_id"], bool(e.get("provided_by")), installed))
+    return {e["skill_id"] for e in entries} - withheld, withheld
 
 
 def verify_grants_delivered(
@@ -104,6 +124,7 @@ def verify_grants_delivered(
     entries = {stem: normalize_entries(raw) for stem, raw in declarations.items()}
     granted = {stem: e for stem, e in entries.items() if e}
     known = set(known_skill_ids) | {i["skill_id"] for e in granted.values() for i in e}
+    expected = {stem: _expected(e, set(known_skill_ids)) for stem, e in granted.items()}
     roots = [Path(r) for r in compiled_roots]
     findings: list[dict[str, Any]] = []
     inspected = complete = no_section = 0
@@ -113,11 +134,11 @@ def verify_grants_delivered(
             continue
         for stem, text in _read_prompts(root):
             inspected += 1
-            want = {i["skill_id"] for i in granted.get(stem, [])}
-            found = _classify(stem, str(root), text, want, known)
+            want, withheld = expected.get(stem, (set(), frozenset()))
+            found = _classify(stem, str(root), text, want, known, withheld)
             findings.extend(found)
             if not found:
-                complete, no_section = complete + bool(want), no_section + (not want)
+                complete, no_section = complete + bool(want | withheld), no_section + (not (want | withheld))
     sides = [side for side, empty in (("compiled_prompts", inspected == 0), ("declarations", not granted)) if empty]
     findings.extend({"kind": "empty-population", "side": side} for side in sides)
     if inspected < expected_prompt_count:

@@ -156,5 +156,10 @@ def test_migrated_declarations_and_regenerated_registry_agree_on_day_one(tmp_pat
     # (an unresolvable declared id still refuses the build -- unchanged).
     unresolved = [f for f in verdict["findings"] if f["kind"] == "unresolved"]
     assert unresolved == [], unresolved
-    assert verdict["resolved_count"] == verdict["abilities_examined"] > 0
-    assert verdict["findings"] == [] and verdict["ok"] is True
+    # AR-400d-2 retarget: sql-coder's two grants marked ``provided_by: project`` are not installed in
+    # this (empty) project -- a statement at informational severity, never a refusal. Everything
+    # else resolves, so the only findings are exactly those two.
+    absent = [f for f in verdict["findings"] if f["kind"] == "project-ability-absent"]
+    assert sorted((f["agent"], f["ability"]) for f in absent) == [("sql-coder", "postgres"), ("sql-coder", "sql-test")]
+    assert verdict["resolved_count"] + len(absent) == verdict["abilities_examined"] > 0
+    assert verdict["findings"] == absent and verdict["ok"] is True

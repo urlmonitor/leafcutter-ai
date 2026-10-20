@@ -68,36 +68,46 @@ def test_unresolvable_ability_is_reported_naming_agent_and_ability(tmp_path):
 def test_report_distinguishes_not_packaged_from_not_project_local(tmp_path):
     # covers: AR-300c-3-i
     # angle: criterion
-    """AR-300c-3-i: the finding records BOTH lookups separately, each with its
-    own path (packaged under the package skills root; project-local under the
-    declared output root), so the reader knows which surface to add to."""
+    """AR-300c-3-i, retargeted by AR-400d-1 (the any-grant project-local fallback is superseded):
+    an UNMARKED grant is looked up in the packaged skills only, so its finding records that one
+    lookup; a grant MARKED ``provided_by: project`` is looked up in the project's own area only
+    (under the declared output root), and its informational finding records that path and the
+    packaged one separately -- so the reader knows which surface to add to."""
     packaged = make_skills(tmp_path / "pk", ["signoff"])
     project = tmp_path / "proj"
     verdict = _verify({"a1": _decl("ghost")}, [], packaged, project)
     (finding,) = _unresolved(verdict)
-    by_surface = {e["surface"]: e for e in finding["looked_in"]}
-    assert set(by_surface) == {"packaged", "project_local"}
-    assert str(packaged) in by_surface["packaged"]["path"]
-    assert str(project / ".leafcutter" / "skills") in by_surface["project_local"]["path"]
-    assert by_surface["packaged"]["found"] is False and by_surface["project_local"]["found"] is False
+    (looked,) = finding["looked_in"]
+    assert looked["surface"] == "packaged" and looked["found"] is False
+    assert str(packaged) in looked["path"]
+
+    marked = _verify({"a1": [{"skill_id": "ghost", "mode": _ALWAYS, "provided_by": "project"}]}, [], packaged, project)
+    assert _unresolved(marked) == []
+    (absent,) = [f for f in marked["findings"] if f["kind"] == "project-ability-absent"]
+    assert str(project / ".leafcutter" / "skills") in absent["project_path"]
+    assert str(packaged) in absent["packaged_path"]
 
 
 def test_project_local_ability_resolves_through_the_declared_output_root(tmp_path):
     # covers: AR-300c-3-i
     # angle: deployed
-    """AR-300c-3-i: a project-local skill under a NON-default declared output
-    root resolves while no ``.claude/skills`` exists anywhere (fresh-worktree
-    shape); the same skill under a different root does not. Wrong version
-    caught: hard-coded .claude/skills (or hard-coded .leafcutter)."""
+    """AR-300c-3-i, retargeted by AR-400d-1 to a MARKED grant (an unmarked grant no longer
+    resolves project-locally): a project-supplied skill (``provided_by: project``) under a
+    NON-default declared output root resolves while no ``.claude/skills`` exists anywhere
+    (fresh-worktree shape); the same grant under a different root is not found there (an
+    informational finding, never a refusal). Wrong version caught: hard-coded .claude/skills
+    (or hard-coded .leafcutter)."""
     packaged = make_skills(tmp_path / "pk", ["signoff"])
     project = tmp_path / "proj"
     make_skills(project / "custom-out" / "skills", ["my-local-skill"])
     assert not (project / ".claude").exists()
-    ok = _verify({"a1": _decl("signoff", "my-local-skill")}, [], packaged, project, "custom-out")
-    assert _unresolved(ok) == [] and ok["ok"] is True
+    local = [{"skill_id": "my-local-skill", "mode": _ALWAYS, "provided_by": "project"}]
+    ok = _verify({"a1": _decl("signoff") + local}, [], packaged, project, "custom-out")
+    assert _unresolved(ok) == [] and ok["findings"] == [] and ok["ok"] is True
 
-    wrong_root = _verify({"a1": _decl("my-local-skill")}, [], packaged, project, ".leafcutter")
-    assert [f["ability"] for f in _unresolved(wrong_root)] == ["my-local-skill"]
+    wrong_root = _verify({"a1": local}, [], packaged, project, ".leafcutter")
+    assert _unresolved(wrong_root) == []
+    assert [(f["kind"], f["ability"]) for f in wrong_root["findings"]] == [("project-ability-absent", "my-local-skill")]
 
 
 def test_every_declared_ability_is_resolved_and_the_count_reported(tmp_path):
@@ -117,13 +127,14 @@ def test_every_declared_ability_is_resolved_and_the_count_reported(tmp_path):
 def test_resolvable_ability_is_not_reported(tmp_path):
     # covers: AR-300c-3-i
     # angle: failure
-    """AR-300c-3-i control: a packaged and a project-local ability both resolve
-    cleanly -> no finding, ok, resolved_count == 2 (so the clean result is not
-    'nothing was looked at')."""
+    """AR-300c-3-i control (retargeted by AR-400d-1: the project-local ability is a MARKED
+    grant): a packaged and a project-supplied ability both resolve cleanly -> no finding, ok,
+    resolved_count == 2 (so the clean result is not 'nothing was looked at')."""
     packaged = make_skills(tmp_path / "pk", ["signoff"])
     project = tmp_path / "proj"
     make_skills(project / ".leafcutter" / "skills", ["local-one"])
-    verdict = _verify({"a1": _decl("signoff"), "a2": _decl("local-one")}, [], packaged, project)
+    marked = [{"skill_id": "local-one", "mode": _ALWAYS, "provided_by": "project"}]
+    verdict = _verify({"a1": _decl("signoff"), "a2": marked}, [], packaged, project)
     assert verdict["findings"] == []
     assert verdict["resolved_count"] == 2
     assert verdict["ok"] is True

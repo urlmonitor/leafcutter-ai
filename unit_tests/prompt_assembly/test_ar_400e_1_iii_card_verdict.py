@@ -81,7 +81,12 @@ class TestVerdictAndPlantedOlderField(unittest.TestCase):
         regen = H.regenerated_root(self.base)
         _view, result = H.view_verdict(regen, self.base)
         self.assertEqual(result["abilities_examined"], total)
-        self.assertEqual(result["findings"], [], "verdict over exactly the declared abilities must be clean")
+        # AR-400d-2 retarget: sql-coder's project-supplied grants are not installed in the (empty)
+        # scratch project -- a statement at informational severity, never a finding that blocks.
+        absent = {(f["agent"], f["ability"]) for f in result["findings"] if f["kind"] == "project-ability-absent"}
+        self.assertEqual(absent, {(a, i) for a, ids in H.project_supplied_unshipped(regen).items() for i in ids})
+        blocking = [f for f in result["findings"] if f["kind"] != "project-ability-absent"]
+        self.assertEqual(blocking, [], "verdict over exactly the declared abilities must be clean")
         self.assertTrue(result["ok"])
 
     def _fixture(self, name: str, *, invoked: list, used: list) -> Path:
