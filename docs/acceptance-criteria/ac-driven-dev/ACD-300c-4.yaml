@@ -195,14 +195,21 @@ test_spec:
   framework: pytest
   type: unit
   angle: deployed
-  description: 'In-process, no build.py: approve_acs.py and every module in its import closure (_approval_holds
-    and its imports) are entries of the ac_store deploy map, so the .leafcutter/scripts/ac_store/approve_acs.py
-    path the workflow runs exists in a consumer. A run from the deployed layout (shared_reference_layout)
-    needs POSIX flock and runs only on CI.'
+  description: 'In-process, no build.py: RULE_CHECK_DEPLOY_MAP in scripts/build_phases_ac_store_rc.py
+    holds (''scripts/ac_store/approve_acs.py'', ''approve_acs.py''), and every module in approve_acs.py''s
+    import closure (_approval_holds and every module it imports) is an entry of the ac_store deploy map,
+    so the .leafcutter/scripts/ac_store/approve_acs.py path the workflow runs exists in a consumer; the
+    existing deploy-map parity checks (test_acd_2500a_1_deploy_declaration.py) stay green. A run from
+    the deployed layout (shared_reference_layout) needs POSIX flock and runs only on CI.'
   proves_clause: the approval is made by the store's one approval step -- the same step a person runs
     by hand to approve records -- given exactly the ids ACD-9990a-1, ACD-9990a-2 and ACD-9990a-4, as a
     deterministic workflow step, so no agent edits any record's readiness or priority during approval
-  code_file: scripts/ac_store/approve_acs.py
+  code_file: scripts/build_phases_ac_store_rc.py
+  must_catch:
+  - approve_acs.py deployed but the workflow still invoking scripts/ac_store/approve_acs.py from the source
+    path
+  - approve_acs added to the map while a module it imports is left out, so the deployed copy fails on
+    import
 - name: test_closing_summary_states_three_approved_one_held
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
@@ -215,7 +222,7 @@ test_spec:
   code_file: templates/workflows-js/plan-feature.js
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - scripts/ac_store/approve_acs.py
 - scripts/ac_store/_approval_holds.py
@@ -226,6 +233,7 @@ test_design_opened_files:
 - unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
 - unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
 - unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1_deploy_declaration.py
+- scripts/build_phases_ac_store_rc.py
 file_findings:
 - file: scripts/ac_store/approve_acs.py
   verdict: consistent
@@ -252,10 +260,18 @@ file_findings:
     reason: The page is declared because this work adds the approve_acs.py CLI section to it (an it_requirement),
       so it is documentation the same coder updates, not code that belongs to another agent.
     by: it-po
+- file: scripts/build_phases_ac_store_rc.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds RULE_CHECK_DEPLOY_MAP, which already deploys _approval_holds and its imports but not
+    approve_acs, the entry the criteria's deterministic approval step needs.
+  decision: null
 file_findings_opened_files:
 - scripts/ac_store/approve_acs.py
 - templates/workflows-js/plan-feature.js
 - docs/reference/ac-readiness-and-assignment-gates.md
+- scripts/build_phases_ac_store_rc.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

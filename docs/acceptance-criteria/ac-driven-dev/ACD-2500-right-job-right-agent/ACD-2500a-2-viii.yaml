@@ -141,15 +141,19 @@ test_spec:
   target_dir: unit_tests/ac_store/
   framework: pytest
   type: unit
-  angle: criterion
-  description: Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
+  angle: discrimination
+  description: 'Folder of 3 records at readiness approved / work_status done plus ACD-9990a-4 whose parent
     ACD-9990a lacks the back-link; argv built by hand (not cli_argv, which adds a --before-snapshot) with
-    neither --before-ref nor --before-snapshot. The JSON stdout carries an additive key stating that no
-    before-state was given and nothing was repaired, and it appears in the raw stdout before the 'findings'
-    key (dump_report sorts keys, so the key name must sort first); stdout stays one JSON document.
+    neither --before-ref nor --before-snapshot. The JSON stdout''s top-level key before_state is exactly
+    {given: false, repairs_applied: false}, and in the raw stdout it comes before family_counts and findings
+    (dump_report sorts keys); stdout stays one JSON document. Control: the --before-ref HEAD run reports
+    before_state.given true.'
   proves_clause: the report states, before any finding, that no before-state was given and that the run
     therefore repaired nothing
   code_file: scripts/ac_store/_rc_report.py
+  must_catch:
+  - a key name that sorts after findings, so the statement comes after the findings
+  - before_state given as a prose string instead of the {given, repairs_applied} object
 - name: test_before_ref_run_repairs_backlink_and_keeps_approved
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -188,7 +192,7 @@ test_spec:
   - dropping the back-link finding instead of reporting it as needs a decision
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - scripts/ac_store/requirement_rule_check.py
 - scripts/ac_store/_rc_report.py

@@ -171,8 +171,10 @@ test_spec:
   framework: pytest
   type: unit
   angle: criterion
-  description: 'Real CLI, --stage itpo-handback --before-ref HEAD on a tmp git store where only assigned_agent
-    and the finding decision changed: verdict passed, exit 0, records_checked > 0.'
+  description: 'Real CLI, --stage itpo-handback --before-ref HEAD on a tmp git store. Case A, per the
+    criteria: only assigned_agent and the finding decision changed. Case B, the widened owner map the
+    expects_from contract names: also a declared_files entry and an it_requirements entry added and the
+    delivers_to and expects_from texts changed. Both: verdict passed, exit 0, records_checked > 0.'
   proves_clause: the same check runs for the hand-back stage and passes
   code_file: scripts/ac_store/requirement_rule_check.py
 - name: test_passing_handback_check_reaches_final_gate
@@ -189,7 +191,7 @@ test_spec:
   code_file: templates/workflows-js/plan-feature.js
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/workflows-js/plan-feature.js
 - unit_tests/ac_driven_dev/file_findings/_handback_support.py

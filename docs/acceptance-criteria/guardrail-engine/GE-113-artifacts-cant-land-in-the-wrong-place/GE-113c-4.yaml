@@ -172,9 +172,10 @@ test_spec:
   framework: pytest
   type: integration
   angle: discrimination
-  description: Stage c2-901-example.md, then remove its working-tree copy without staging the deletion;
+  description: 'Stage c2-901-example.md, then remove its working-tree copy without staging the deletion;
     the installed copy does not exit 0 and states that it inspected nothing, naming the unread path (the
-    GE-120a-4 outcome).
+    GE-120a-4 outcome): its stdout carries the line ''RESULT: could_not_check'', printed through check_outcome.emit_result(OUTCOME_COULD_NOT_CHECK),
+    and never ''RESULT: ok''. The installed layout also copies check_outcome.py, which the hook imports.'
   proves_clause: a run that was offered staged architecture documents and could read none of them does
     not report a pass (the outcome GE-120a-4 defines)
   code_file: templates/scripts/commit_guardian/check_mermaid_parent_link.py
@@ -182,13 +183,15 @@ test_spec:
   - 'the existing ''if not abs_path.exists(): return []'' early return kept, so an unread staged document
     counts as a pass'
   - a warning printed but exit 0 returned
+  - a private 'could not check' message minted in the hook instead of check_outcome.OUTCOME_COULD_NOT_CHECK
 - name: test_ge_113c_4_nothing_staged_still_passes
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: criterion
   description: 'With no architecture document staged (empty scope), the installed copy exits 0: the GE-120a-4
-    rule fires on offered-but-unread documents, never on an empty scope.'
+    rule fires on offered-but-unread documents, never on an empty scope, and its stdout carries no ''RESULT:
+    could_not_check'' line.'
   proves_clause: a run that was offered staged architecture documents and could read none of them does
     not report a pass (the outcome GE-120a-4 defines)
   code_file: templates/scripts/commit_guardian/check_mermaid_parent_link.py
@@ -207,12 +210,13 @@ test_spec:
   code_file: templates/scripts/commit_guardian/check_mermaid_parent_link.py
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/scripts/commit_guardian/check_mermaid_parent_link.py
 - unit_tests/commit_guardian/test_ge_113c_1_vi_layouts.py
 - unit_tests/commit_guardian/_ge_113c_1_vi_fixtures.py
 - unit_tests/commit_guardian/test_ge_118a_1_check_secrets_layout.py
+- templates/scripts/commit_guardian/check_outcome.py
 file_findings:
 - file: templates/scripts/commit_guardian/check_mermaid_parent_link.py
   verdict: consistent

@@ -55,8 +55,9 @@ it_requirements:
   it is missing from.
 - The commit hook (templates/scripts/commit_guardian/check_ac_schema.py) and the agent-side validator
   give the same verdict on the same record. The hook's validate_manually fallback in templates/scripts/commit_guardian/_ac_schema_validators.py
-  carries its own copy of the trigger names today; it reads the one list instead, and check_ac_schema.py
-  is the entry point the reachability test drives.
+  has no documentation_triggers check today, so without jsonschema the hook accepts an unknown trigger;
+  the fallback must also check documentation_triggers against the one list, and check_ac_schema.py is
+  the entry point the reachability test drives.
 - Every documentation_triggers value accepted today is still accepted; no record in the store changes
   verdict.
 declared_files:
@@ -121,6 +122,23 @@ test_spec:
   proves_clause: the store's schema check, the commit-time record check and the requirement rule check
     each reject "api-guide" as an unknown trigger name and accept "reference-doc"
   code_file: templates/scripts/commit_guardian/check_ac_schema.py
+- name: test_commit_hook_fallback_without_jsonschema_rejects_unknown_trigger
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'check_ac_schema._validate_file with validate_with_jsonschema made to raise ImportError
+    (jsonschema absent, so validate_manually runs): the L1 with [reference-doc, api-guide] gets an error
+    naming api-guide, and [reference-doc] alone gets none. The fallback takes the names from the loaded
+    schema''s documentation_triggers enum, so a tmp schema whose enum adds api-guide makes the fallback
+    accept it.'
+  proves_clause: the store's schema check, the commit-time record check and the requirement rule check
+    each reject "api-guide" as an unknown trigger name and accept "reference-doc"
+  code_file: templates/scripts/commit_guardian/_ac_schema_validators.py
+  must_catch:
+  - validate_manually keeps not checking documentation_triggers, so without jsonschema the hook accepts
+    api-guide
+  - validate_manually checks against a hard-coded copy of the five names instead of the schema's enum
 - name: test_rule_check_reports_unknown_trigger_and_accepts_reference_doc
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -174,7 +192,7 @@ test_spec:
   - the failure message omits which side the name is missing from
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - config/ac_store_schema.json
 - scripts/ac_store/validate_ac_schema.py
@@ -182,6 +200,7 @@ test_design_opened_files:
 - templates/scripts/commit_guardian/check_ac_schema.py
 - unit_tests/ac_store/test_acs_200e_validator_schema_parity.py
 - unit_tests/ac_store/test_acd_2500a_2_v.py
+- templates/scripts/commit_guardian/_ac_schema_validators.py
 file_findings:
 - file: config/ac_store_schema.json
   verdict: consistent
@@ -204,10 +223,27 @@ file_findings:
   reason: It holds TRIGGER_SPECIALISTS, the rule check's single trigger-to-specialist map that the criteria
     keep in code and pin to the list.
   decision: null
+- file: templates/scripts/commit_guardian/check_ac_schema.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It is the commit hook''s entry point: _load_schema reads config/ac_store_schema.json and _validate_file
+    runs the jsonschema check that enforces the trigger enum, falling back to validate_manually only when
+    jsonschema did not run.'
+  decision: null
+- file: templates/scripts/commit_guardian/_ac_schema_validators.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its validate_manually is the hook's no-jsonschema fallback that the criteria make read the one
+    list; today it holds no copy of the trigger names and does not check documentation_triggers at all.
+  decision: null
 file_findings_opened_files:
 - config/ac_store_schema.json
 - scripts/ac_store/validate_ac_schema.py
 - scripts/ac_store/_rc_doc_triggers.py
+- templates/scripts/commit_guardian/check_ac_schema.py
+- templates/scripts/commit_guardian/_ac_schema_validators.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

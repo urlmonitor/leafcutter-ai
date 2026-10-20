@@ -51,61 +51,56 @@ test_spec:
   target_dir: unit_tests/workflows/
   framework: pytest
   type: unit
-  angle: criterion
-  description: 'Reads plan-feature.js: for each rationale pointer that read Why why (including those at
-    about L1660, L1694 and L1721), the line now reads // Why followed by the same rest of the text, character
-    for character.'
-  proves_clause: it reads "Why" once, with the rest of the message unchanged character for character
+  angle: discrimination
+  description: 'Pins the 15 rationale pointer lines that read ''// Why why'' at commit c73ebddc1 (L1660,
+    1694, 1721, 1734, 1806, 2299, 2344, 2365, 2370, 2401, 2581, 2912, 2957, 3079, 3189) with their full
+    text: in plan-feature.js each of those lines now equals the pinned line with ''// Why why '' replaced
+    by ''// Why '', character for character (indentation and the rationale doc path included), and the
+    file''s line count is unchanged.'
+  proves_clause: every rationale pointer comment reads "Why" once, with the rest of its line unchanged
+    character for character
   code_file: templates/workflows-js/plan-feature.js
-- name: test_no_producible_text_says_why_why
-  target_dir: unit_tests/workflows/
-  framework: pytest
-  type: unit
-  angle: reachability
-  description: Runs plan-feature.js under run_workflow_under_e2 to the final gate and through a cancel;
-    no returned message, agent prompt or logged line matches why why in any letter case.
-  proves_clause: no message the workflow can produce contains the words "Why why" in any letter case
-  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the doubled word removed by deleting 'Why ' so the comment reads '// why ...'
+  - a pointer line whose rationale doc path or ticket id changes while the word is fixed
+  - a line added or removed, which shifts the pinned sites
 - name: test_workflow_source_has_no_why_why
   target_dir: unit_tests/workflows/
   framework: pytest
   type: unit
   angle: discrimination
-  description: A case-insensitive scan of the whole plan-feature.js source finds no why why.
-  proves_clause: no message the workflow can produce contains the words "Why why" in any letter case
+  description: A case-insensitive scan of every line of plan-feature.js finds no 'why why'.
+  proves_clause: no line of the workflow source contains "Why why" in any letter case
   code_file: templates/workflows-js/plan-feature.js
   must_catch:
-  - only the three named lines are fixed while the other Why why lines stay
-  - the check is case-sensitive, so a WHY why or why Why survives
+  - only the three lines named in the old criteria (L1660, L1694, L1721) fixed while the other twelve
+    stay
+  - the check is case-sensitive, so a 'WHY why' or 'why Why' survives
+- name: test_corrected_workflow_still_runs_to_the_final_gate
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: the real plan-feature.js under run_workflow_under_e2 (the harness of _design_stage_support.py)
+    runs to the final gate and through a cancel, so the comment-only edit leaves the workflow loading
+    and running; the source text the harness loaded contains no ''why why'' in any letter case.'
+  proves_clause: no line of the workflow source contains "Why why" in any letter case
+  code_file: templates/workflows-js/plan-feature.js
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/workflows-js/plan-feature.js
-- unit_tests/test_final_gate_and_commit_message.py
 - unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
 file_findings:
 - file: templates/workflows-js/plan-feature.js
   verdict: consistent
   line_range: null
   found_in: null
-  reason: It holds the Why why text, as code comments that point to the rationale docs, at the named lines
-    and at about ten more.
+  reason: It holds the 15 '// Why why' rationale pointer comments the criteria correct (L1660 to L3189).
   decision: null
-- file: unit_tests/test_final_gate_and_commit_message.py
-  verdict: describes, does not implement
-  line_range: 470-515
-  found_in: null
-  reason: It holds no Why why expectation at all; its line 508 asserts the final commit subject plan-feature(TEST-DESIGN,
-    final).
-  decision:
-    choice: assignment stands
-    reason: The finding shows the test file needs no change, not that another agent owns the work; the comment
-      fix stays with python-coder and the wrong premise in the criteria goes to the BA.
-    by: it-po
 file_findings_opened_files:
 - templates/workflows-js/plan-feature.js
-- unit_tests/test_final_gate_and_commit_message.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:

@@ -135,16 +135,25 @@ test_spec:
   target_dir: unit_tests/ac_store/
   framework: pytest
   type: unit
-  angle: criterion
+  angle: discrimination
   description: 'Tmp git repo via init_git_repo/commit_all from _rule_check_fixtures: the before-state
     records are committed, the stage''s edits are written uncommitted, and the check runs with --before-ref
-    HEAD. Stage itpo-handback. ACD-9990a-2''s assigned_agent python-coder -> sql-coder and its one finding''s
-    decision none -> {choice: reassign, by: it-po}: no ''protected fields'' finding names assigned_agent
-    or the decision. Control in the same run: ACD-9990a-1''s criteria change is reported.'
-  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+    HEAD. Stage itpo-handback. ACD-9990a-2''s assigned_agent python-coder -> sql-coder, its one finding''s
+    decision none -> {choice: reassign, by: it-po}, its declared_files gains {path: scripts/example_writer.py,
+    state: existing}, its it_requirements gains ''Writes through the shared writer'', and its delivers_to
+    and expects_from contract texts change: no ''protected fields'' finding names assigned_agent, the
+    decision, declared_files, it_requirements, delivers_to or expects_from. Control in the same run: ACD-9990a-1''s
+    criteria change is reported.'
+  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent, the finding's decision, declared_files,
+    it_requirements, delivers_to or expects_from
   code_file: scripts/ac_store/_rc_protected_fields.py
   to_be_created: true
   convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+  must_catch:
+  - an owner map that still allows only assigned_agent and the decision, so the newly declared file fails
+    the stage
+  - it_requirements allowed as a whole for itpo-handback but compared per key, so a new list entry is
+    still reported
 - name: test_handback_reports_criteria_and_finding_verdict
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -156,6 +165,30 @@ test_spec:
   proves_clause: 'exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and ACD-9990a-2
     file-finding verdict, each naming the hand-back pass as the stage'
   code_file: scripts/ac_store/_rc_protected_fields.py
+  to_be_created: true
+  convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_handback_test_intent_only_run_raises_exactly_one_finding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Tmp git repo via init_git_repo/commit_all from _rule_check_fixtures: the before-state
+    records are committed, the stage''s edits are written uncommitted, and the check runs with --before-ref
+    HEAD. A separate store, stage itpo-handback, whose only change is to ACD-9990a-1''s test_intent (one
+    clause''s needs_test flipped): exactly one ''protected fields'' finding, (ACD-9990a-1, test_intent),
+    ''needs a decision'', naming stage itpo-handback. Parametrized with one more lone change each: a test_spec
+    entry''s description, a file finding''s reason, and test_design_authorship.date; each gives exactly
+    one finding naming that field.'
+  proves_clause: in a separate hand-back run whose only change is to ACD-9990a-1's test_intent, exactly
+    one "protected fields" finding is raised, naming test_intent and the hand-back pass; the hand-back
+    pass may never change criteria, test_intent, test_spec, a file finding's fields other than its decision,
+    or a test_design_* mark
+  code_file: scripts/ac_store/_rc_protected_fields.py
+  must_catch:
+  - test_intent allowed for itpo-handback because the planner authored it
+  - the test designer's outputs left out of the itpo-handback protected set, so a test_spec or test_design_*
+    edit passes
+  - a file finding compared only on its decision, so a changed reason is not reported
   to_be_created: true
   convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
 - name: test_same_assignment_change_reported_at_test_design_stage
@@ -210,12 +243,14 @@ test_spec:
   angle: reachability
   description: 'Entry point: requirement_rule_check.py as a subprocess with --stage itpo-handback --before-ref
     HEAD on the tmp git repo: the stage is accepted (no ''unrecognised --stage'' finding), exit 0 when
-    only assigned_agent and the decision changed. Control: an unknown stage still fails.'
-  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+    only the six allowed fields (assigned_agent, the decision, declared_files, it_requirements, delivers_to,
+    expects_from) changed. Control: an unknown stage still fails.'
+  proves_clause: no finding is raised for ACD-9990a-2's assigned_agent, the finding's decision, declared_files,
+    it_requirements, delivers_to or expects_from
   code_file: scripts/ac_store/requirement_rule_check.py
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - scripts/ac_store/requirement_rule_check.py
 - scripts/ac_store/_rc_report.py

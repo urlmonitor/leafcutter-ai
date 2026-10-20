@@ -157,32 +157,37 @@ test_spec:
   framework: pytest
   type: integration
   angle: discrimination
-  description: Stage ADR-901-example.md, then remove its working-tree copy without staging the deletion;
+  description: 'Stage ADR-901-example.md, then remove its working-tree copy without staging the deletion;
     the installed copy does not report a pass and states that it inspected nothing, naming the unread
-    path (the GE-120a-4 outcome).
+    path (the GE-120a-4 outcome): its stdout carries the line ''RESULT: could_not_check'', printed through
+    check_outcome.emit_result(OUTCOME_COULD_NOT_CHECK), and never ''RESULT: ok''. The installed layout
+    also copies check_outcome.py, which the hook imports.'
   proves_clause: a run that was offered staged documents and could read none of them does not report a
     pass (the outcome GE-120a-4 defines)
   code_file: templates/scripts/commit_guardian/check_adr_cross_reference.py
   must_catch:
   - _extract_frontmatter's OSError -> {} kept, so check_adr returns no finding and the run exits 0
   - the unread file reported only as a warning in the default (non-strict) mode with exit 0
+  - a private 'could not check' message minted in the hook instead of check_outcome.OUTCOME_COULD_NOT_CHECK
 - name: test_ge_113c_5_nothing_staged_still_passes
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: criterion
-  description: With no ADR or docs/ file staged (empty scope), the installed copy exits 0.
+  description: 'With no ADR or docs/ file staged (empty scope), the installed copy exits 0, and its stdout
+    carries no ''RESULT: could_not_check'' line.'
   proves_clause: a run that was offered staged documents and could read none of them does not report a
     pass (the outcome GE-120a-4 defines)
   code_file: templates/scripts/commit_guardian/check_adr_cross_reference.py
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/scripts/commit_guardian/check_adr_cross_reference.py
 - unit_tests/commit_guardian/test_ge_113c_1_vi_layouts.py
 - unit_tests/commit_guardian/_ge_113c_1_vi_fixtures.py
 - unit_tests/commit_guardian/test_ge_118a_1_check_secrets_layout.py
+- templates/scripts/commit_guardian/check_outcome.py
 file_findings:
 - file: templates/scripts/commit_guardian/check_adr_cross_reference.py
   verdict: consistent

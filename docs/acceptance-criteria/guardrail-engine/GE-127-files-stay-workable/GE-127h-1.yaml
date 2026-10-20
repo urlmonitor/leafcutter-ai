@@ -119,15 +119,20 @@ test_spec:
   framework: pytest
   type: unit
   angle: discrimination
-  description: 'Parametrised over every language the standard''s per-language comment syntax covers (at
-    least Python ''#'', JavaScript ''//'', SQL ''--'' and shell ''#''): a file of N measured lines plus
-    a line-comment history block measures N.'
+  description: 'Parametrised over every extension in the shipped file_size.checked_extensions, each with
+    its line-comment prefix from the one prefix constant in _file_size_ratchet.py (''#'' for .py and .sh,
+    ''//'' for .js, .mjs, .ts and .tsx, ''--'' for .sql): a file of N measured lines plus a history block
+    whose heading is ''<prefix> DECISION HISTORY'' measures N. The constant is exactly (''#'', ''//'',
+    ''--''). A ''#'' heading followed by ''//'' lines ends the block at the first ''//'' line, which is
+    counted.'
   proves_clause: the same holds for the line-comment form of every other language the standard covers
     (for example "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell)
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
   must_catch:
   - only the '#' form recognised, so '-- DECISION HISTORY' in a .sql file is still counted
-  - a hard-coded language list that leaves out a language the standard covers
+  - a per-extension prefix mapping that leaves out a checked extension such as .mjs
+  - the block continued over lines with any comment prefix instead of its heading's prefix
+  - a second copy of the prefixes kept beside the constant (for example in the published rule text)
 - name: test_ge_127h_1_lines_outside_the_block_measure_as_before
   target_dir: unit_tests/commit_guardian/
   framework: pytest
@@ -165,7 +170,7 @@ test_spec:
   - '''# DECISION HISTORY'' text inside a docstring treated as a line-comment block'
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
 - templates/scripts/commit_guardian/check_file_size.py

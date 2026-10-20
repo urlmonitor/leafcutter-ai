@@ -171,6 +171,23 @@ test_spec:
   code_file: scripts/ac_store/_rc_protected_fields.py
   to_be_created: true
   convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_before_state_carries_committed_field_values
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Tmp git repo via init_git_repo/commit_all from _rule_check_fixtures: the before-state
+    records are committed, the stage''s edits are written uncommitted, and the check runs with --before-ref
+    HEAD. BeforeState with ref HEAD, after one prefetch, gives for ACD-9990a-2 the committed values of
+    assigned_agent (python-coder), expects_from (the committed mapping) and it_requirements, read from
+    the one git cat-file --batch call, while the working tree holds llm-expert; the existing (existed,
+    readiness) lookup that the readiness family reads is unchanged.'
+  proves_clause: the finding for assigned_agent states the value before ("python-coder") and after ("llm-expert")
+  code_file: scripts/ac_store/_rc_records.py
+  must_catch:
+  - the before-state keeps only readiness, so the family reads the before value from the working tree
+    and reports no change
+  - a second git call per record instead of the one batch read
 - name: test_stage_owned_fields_raise_no_finding
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -219,6 +236,16 @@ test_spec:
   code_file: scripts/ac_store/_rc_protected_fields.py
   to_be_created: true
   convention_test_file: unit_tests/ac_store/test_acd_2500a_2_iv.py
+- name: test_readiness_only_snapshot_lists_records_not_evaluated
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'The same stage edits checked with a readiness-only --before-snapshot {id: readiness} instead
+    of --before-ref: the ''protected fields'' family lists every record ''not evaluated'' and raises no
+    ''needs a decision'' finding, never a pass; the readiness family still judges readiness from the snapshot.'
+  proves_clause: 'ACD-9990a-3 is listed as "not evaluated: new record" for this family'
+  code_file: scripts/ac_store/_rc_records.py
 - name: test_protected_field_list_matches_test_designer_template
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -283,7 +310,7 @@ test_spec:
   code_file: scripts/build_phases_ac_store_rc.py
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - scripts/ac_store/requirement_rule_check.py
 - scripts/ac_store/_rc_report.py
@@ -317,10 +344,19 @@ file_findings:
   reason: It holds RULE_CHECK_DEPLOY_MAP, where the new family module must be added so the installed check
     carries it.
   decision: null
+- file: scripts/ac_store/_rc_records.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds BeforeState, which already reads each committed record blob in one git cat-file batch
+    but keeps only its readiness (_readiness_of), the loader the criteria need extended to every protected
+    field's committed value.
+  decision: null
 file_findings_opened_files:
 - scripts/ac_store/_rc_report.py
 - scripts/ac_store/requirement_rule_check.py
 - scripts/build_phases_ac_store_rc.py
+- scripts/ac_store/_rc_records.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

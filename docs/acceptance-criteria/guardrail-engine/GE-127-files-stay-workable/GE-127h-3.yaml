@@ -36,9 +36,13 @@ it_requirements:
 - The stated rule is produced from the rule in force (GE-127d-2), and every published place that the rule-agreement
   check (GE-127d-1) compares is updated in the same change as GE-127h-1.
 - describe_measurement_rule probes the rule in force, so it gains a 'decision history' probe category,
-  and the GE-127d-2 test fixture's parse_discard_categories gains the same category. The published rule
-  surfaces listed in file_size.published_rule_surfaces (templates/scripts/commit_guardian/README.md and
-  commit_guardian.json) change in the same change, or GE-127d-1's agreement check fails.
+  and the GE-127d-2 test fixture's parse_discard_categories gains the same category. GE-127d-1's agreement
+  check compares the covered file kinds, not the measurement rule, so it does not require the published
+  surfaces to change. The only stale copy of the rule is the prose in commit_guardian.json's file_size._comment,
+  which is corrected in the same change so it no longer says every hash comment line is counted.
+  templates/scripts/commit_guardian/README.md needs no change (it points to describe_measurement_rule
+  and states no rule); it stays declared as a published rule surface that must stay free of a restated
+  rule.
 declared_files:
 - path: templates/scripts/commit_guardian/_file_size_ratchet.py
   state: existing
@@ -102,6 +106,16 @@ test_spec:
     (a copy of the production modules in a temporary git repository, no build.py, no POSIX flock).'
   proves_clause: it says that a decision-history block is not counted
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_127h_3_published_config_rule_states_the_history_exclusion
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Reads the shipped commit_guardian.json: the MEASUREMENT RULE sentence of file_size._comment
+    (a published_rule_surfaces entry) says a decision-history block is not counted and no longer says
+    every hash comment line is counted without exception.'
+  proves_clause: it says that a decision-history block is not counted
+  code_file: templates/scripts/commit_guardian/commit_guardian.json
 - name: test_ge_127h_3_stated_rule_names_where_the_block_starts_and_ends
   target_dir: unit_tests/commit_guardian/
   framework: pytest
@@ -135,7 +149,7 @@ test_spec:
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-20'
 test_design_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
 - templates/scripts/commit_guardian/check_file_size.py
@@ -143,6 +157,8 @@ test_design_opened_files:
 - unit_tests/commit_guardian/_ge_127d_2_fixture.py
 - unit_tests/commit_guardian/test_ge_127d_2.py
 - unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- templates/scripts/commit_guardian/README.md
 file_findings:
 - file: templates/scripts/commit_guardian/_file_size_ratchet.py
   verdict: consistent
@@ -151,8 +167,40 @@ file_findings:
   reason: It holds describe_measurement_rule and its category probes, which generate the stated rule the
     criteria change.
   decision: null
+- file: templates/scripts/commit_guardian/README.md
+  verdict: describes, does not implement
+  line_range: 40-41
+  found_in: null
+  reason: Its check-file-size row points to describe_measurement_rule and restates no measurement rule,
+    so it holds no sentence that names the history exclusion.
+  decision:
+    choice: assignment stands
+    reason: The README needs no edit because it only points to the generated rule, so the work and its
+      agent stay as they are.
+    by: it-po
+- file: templates/scripts/commit_guardian/commit_guardian.json
+  verdict: describes, does not implement
+  line_range: 13-14
+  found_in: null
+  reason: Its file_size._comment states the measurement rule in prose (every hash comment line is counted)
+    but implements none of it.
+  decision:
+    choice: assignment stands
+    reason: Correcting the stale prose comment is a small config text edit in the same change, which python-coder
+      already owns.
+    by: it-po
+- file: unit_tests/commit_guardian/_ge_127d_2_fixture.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds parse_discard_categories and independent_count_content_lines, the independent reader
+    of the stated rule that the it_requirements extend with a decision-history category.
+  decision: null
 file_findings_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/README.md
+- templates/scripts/commit_guardian/commit_guardian.json
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []
