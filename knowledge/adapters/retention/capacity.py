@@ -5,6 +5,7 @@ ARCHITECTURE: Reads whole-database usage through db._run, compares usage plus sn
 
 DECISION HISTORY
 ========================================
+- 2026-10-20 23:00 [python-coder]: Expose the whole-database measurement so the status operation reports the same counts. (#KM-400f-4)
 - 2026-10-20 18:00 [python-coder]: Preflight a read-only store before setup's schema writes, classify a read-only setup rejection, and count an already-stored generation as adding 0. (#KM-400f-3/02)
 - 2026-10-20 14:00 [python-coder]: Measure whole-database usage before the first write, refuse above the declared threshold on either axis, report an undeclared ceiling as unknown, and classify a read-only latch as a capacity condition. (#KM-400f-3)
 - 2026-10-20 12:00 [main-loop]: Contract stub declaring CapacityCeiling only, so the red-baseline tests reach the publication path instead of failing on import. (#KM-400f-3)
@@ -256,6 +257,18 @@ async def _measure(db: Neo4jBackend) -> tuple[int, int]:
     nodes = await db._run(_NODE_COUNT, {})
     links = await db._run(_RELATIONSHIP_COUNT, {})
     return nodes[0]["count"], links[0]["count"]
+
+
+async def measure_usage(db: Neo4jBackend) -> tuple[int, int]:
+    """Read whole-database (nodes, relationships) for an operator report; read-only.
+
+    Args:
+        db: Scoped Neo4j adapter.
+
+    Returns:
+        Measured whole-database node and relationship counts.
+    """
+    return await _measure(db)
 
 
 def _read_only_report(usage: tuple[int, int], ceiling: CapacityCeiling | None) -> dict:

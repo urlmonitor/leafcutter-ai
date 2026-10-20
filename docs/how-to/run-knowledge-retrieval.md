@@ -140,9 +140,7 @@ python -m knowledge rollback --root REPOSITORY --repository-id leafcutter --gene
 python -m knowledge cleanup --root REPOSITORY --repository-id leafcutter --generation-id EXPIRED_GENERATION --retention-seconds SECONDS
 ```
 
-Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. `--retention-seconds` is required and has no built-in value: omitting it is refused rather than defaulted, so the minimum retirement age a deletion is judged against is always one you stated. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters.
-
-Restore connectivity then replay a failed revision. Repair canonical reference errors in source before replay. Continue explicit graph requests during vector outage; never interpret unavailable semantic retrieval as no match. Inspect published SHA/status for lag and telemetry-loss diagnostics when trace export fails. Actual external merge execution, production memory mapping and real-model usefulness remain separately identified verification limits.
+Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. `--retention-seconds` is required and has no built-in value: omitting it is refused rather than defaulted, so the minimum retirement age a deletion is judged against is always one you stated. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters. Restore connectivity then replay a failed revision. Repair canonical reference errors in source before replay. Continue explicit graph requests during vector outage; never interpret unavailable semantic retrieval as no match. Inspect published SHA/status for lag and telemetry-loss diagnostics when trace export fails. Actual external merge execution, production memory mapping and real-model usefulness remain separately identified verification limits.
 
 #### Aura environment compatibility
 
@@ -245,7 +243,7 @@ Inspect `observation.state`: `disabled` means no attempt; `unavailable` means in
 
 ### Step 12 - Declare and evaluate the generation retention bound
 
-Every sync publishes a generation. Before this bound existed, nothing reclaimed them. Generations accumulated until the backing store latched read-only, and because reclaiming needs writes, the instance could not be recovered: it was destroyed and recreated. This happened to two instances in four days. Both latches occurred while the store was **under** its documented node and relationship caps, so those published limits do not tell you the real ceiling. Previously the only retention window was a hidden `retention_seconds = 3600` default in the adapter, visible and settable nowhere. That default is removed.
+Every sync publishes a generation, and unreclaimed generations latched two stores read-only at the 400,000-relationship cap (history: [retention bound reference](../reference/knowledge-retention-bound.md)). The hidden `retention_seconds = 3600` default is removed.
 
 A retention bound has two parts, and you must declare both:
 
@@ -262,9 +260,7 @@ Run the evaluation, supplying the bound on the command line:
 python -m knowledge retention --backend neo4j --repository-id leafcutter --retention-max-generations 5 --retention-min-age-seconds 86400
 ```
 
-The values `5` and `86400` are placeholders; choose your own. The command reads Neo4j with serving credentials and requires `--backend neo4j`.
-
-**The evaluation reports and changes nothing.** It does not reclaim, retire or re-point any generation. The `reclaimable` list it returns is a verdict, not an action taken. A generation is only deleted by a separate `cleanup` command (Step 6).
+The values `5` and `86400` are placeholders; choose your own. The command reads Neo4j with serving credentials, requires `--backend neo4j`, and **reports and changes nothing**: its `reclaimable` list is a verdict, not an action. Deletion is `cleanup` (Step 6) or `reclaim` (Step 13).
 
 The response carries the `bound` with its configuration source, a `generations` list, and a `reclaimable` list of generation IDs. Each generation has a `reason`, decided in this order:
 
@@ -274,15 +270,18 @@ The response carries the `bound` with its configuration source, a `generations` 
 - `pinned_continuation_unexpired`: a continuation pinned to it has not yet expired. **This reason does not currently fire against a real store.** It reads `pinned_until` on the `Snapshot` node, and nothing writes that property yet — continuation pinning lives in the retrieval path instead. So a generation holding a live continuation is reported reclaimable today. That is safe while this command only reports; it would not be safe for anything that deletes what it names. See [the retention bound reference](../reference/knowledge-retention-bound.md) for the full caveat.
 - `reclaimable`: none of the above applies. It also names why in `reclaimable_bases`: `outside_count_bound` (routine retention) or `publication_failed` (an accumulated failed publication), or both. The response's `reclaimable_by_basis` counts each basis separately and always states both, including a `0`. A generation holding both bases is counted under each, so the counts may overlap and are not a total; use the length of `reclaimable` for the total. A rising `publication_failed` count calls for a different response (find why publications fail) than a rising `outside_count_bound` count. See [the retention bound reference](../reference/knowledge-retention-evaluation-details.md#reclaimable-bases).
 
-The command refuses an incomplete bound before connecting to Neo4j, with a nonzero exit and a JSON error on stderr:
-
-- Neither flag given: the error names `retention_max_generations` as unset.
-- Count given without an age: the error names `retention_min_age_seconds` as unset.
-- A count below 1 or a negative age is refused naming the setting.
-
-Neither case falls back to a built-in value. `cleanup` follows the same rule: it now requires `--retention-seconds` and raises a refusal naming the unset value rather than assuming 3600.
+An incomplete bound (no flags, a count without an age, a count below 1, a negative age) is refused before connecting to Neo4j, with a nonzero exit and a JSON error on stderr naming the unset setting; no built-in value is applied. `cleanup` likewise requires `--retention-seconds`.
 
 The `retention` command only reports; it takes its bound from its two flags, not from kernel configuration. `sync` acts: given the same two flags it reclaims what the bound permits after a successful publication ([reclamation reference](../reference/knowledge-publication-reclamation.md)), and given `--capacity-max-nodes`, `--capacity-max-relationships`, `--capacity-refuse-percent` and `--capacity-warn-percent` (all four or none) it measures database usage first, warns above the warning percent, and refuses a snapshot that would exceed the refuse percent before writing anything. Without them, headroom is reported as `unknown`, never as fitting ([capacity reference](../reference/knowledge-publication-capacity.md)).
+
+### Step 13 - Read capacity and retention, then reclaim without naming a generation
+
+`status` lists every retained generation (identifier, `source_sha`, `retired_at`, `reclaimable` and its `reason`), the declared `retention_bound`, `retained_count`, `exceeding_bound_count`, and node/relationship usage for the repository and the whole backend against the ceiling (`unknown` when none is declared; remaining headroom is `backend.*.remaining`). `reclaim` removes every reclaimable generation in one operation and names what it reclaimed and kept; zero reclaimable is `ok` with `reclaimed: 0`. Configure the bound with `--retention-max-generations` and `--retention-min-age-seconds` (required by `reclaim`) and the headroom thresholds with `--capacity-max-nodes`, `--capacity-max-relationships`, `--capacity-refuse-percent`, `--capacity-warn-percent` (all four or none). Without a bound `status` states reclaimability as `undetermined`. `status` writes nothing ([field reference](../reference/knowledge-publication-capacity.md)).
+
+```sh
+python -m knowledge status --root REPOSITORY --repository-id leafcutter --retention-max-generations 5 --retention-min-age-seconds 86400 --capacity-max-nodes 200000 --capacity-max-relationships 400000 --capacity-refuse-percent 90 --capacity-warn-percent 75
+python -m knowledge reclaim --root REPOSITORY --repository-id leafcutter --retention-max-generations 5 --retention-min-age-seconds 86400
+```
 
 ## Verification
 
