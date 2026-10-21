@@ -39,12 +39,12 @@
       "step_index_locked",
       "step_vcs_error",
       "step_config_unreadable",
-      "step_parent_resolver_unavailable"
+      "step_parent_resolver_unavailable",
+      "step_timed_out"
     ],
     "check": [
       "check_failed",
-      "check_unsettled",
-      "check_awaited_input"
+      "check_unsettled"
     ],
     "nothing": [
       "nothing_changed"
@@ -52,5 +52,5 @@
   },
   "max_automated_fix_retries": 3,
   "max_transient_retries": 3,
-  "input_wait_limit_seconds": 60
+  "commit_time_limit_seconds": 1800
 }

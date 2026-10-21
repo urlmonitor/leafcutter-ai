@@ -61,15 +61,15 @@ from commit_step_base import answer as _answer
 from commit_step_base import ceiling as _ceiling
 from commit_step_base import git as _git
 from commit_step_base import git_out as _git_out
-from commit_step_base import awaiting_check, require_attribution, run_without_input, wait_limit
+from commit_step_base import require_attribution, run_without_input, time_limit
 from commit_step_base import load_contract, lock_refusal, refuse_protected_branch
 from commit_step_parents import parent_candidates
 
 _USAGE = (
     "usage: commit_changes.py --message-file FILE [--supervised (--run ID | --ac-id ID)] PATH [PATH ...]\n"
     "  --message-file FILE   file holding the commit message (required)\n"
-    "  --supervised          no person present: checks get no terminal input and a silent\n"
-    "                        check is ended after input_wait_limit_seconds (config)\n"
+    "  --supervised          no person present: checks get no terminal input and the commit\n"
+    "                        is ended after commit_time_limit_seconds (config)\n"
     "  --run ID, --ac-id ID  the run or criterion a supervised call commits for (one required)\n"
     "  PATH                  explicit repo file to commit; at least one is required.\n"
     "                        Directories, globs and 'all' requests are refused.\n"
@@ -207,15 +207,15 @@ def _sync_shared_index(root: Path, paths: list[str]) -> None:
         print(f"[commit_changes] warning: index sync failed: {proc.stderr.strip()}", file=sys.stderr)
 
 
-def _run_commit(root: Path, env: dict, msg_file: str, limit: float | None = None) -> tuple[subprocess.CompletedProcess, bool]:
+def _run_commit(root: Path, env: dict, msg_file: str, limit: float | None = None) -> subprocess.CompletedProcess:
     """Run the real `git commit` (hooks active) against the private index.
 
-    Returns (result, awaited_input). With a *limit* (supervised call) the checks get
-    no terminal input and a run silent for *limit* seconds is ended (BO-4500a-4-iv).
+    With a *limit* (supervised call) the checks get no terminal input and a commit
+    still running after *limit* seconds is ended as step_timed_out (BO-4500a-4-vii).
     """
     args = ["commit", "-q", "--cleanup=verbatim", "-F", msg_file]
     if limit is None:
-        return _git(args, root, env), False
+        return _git(args, root, env)
     return run_without_input(["git", *args], root, env, limit)
 
 
@@ -320,13 +320,6 @@ def _handoff(root: Path, check: str | None, output: str) -> dict | None:
         return None
 
 
-def _awaited_input(output: str, limit: float) -> dict:
-    """The hook_failed answer for a check ended after *limit* seconds without output."""
-    check = awaiting_check(output)
-    reason = f"check {check or '(unnamed)'} was waiting for input and was ended after {limit:g}s with none supplied"
-    return _answer("hook_failed", hook_name=check, reason_code="check_awaited_input", reason=reason, hook_output=output)
-
-
 def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[str], limit: float | None = None) -> tuple[dict | None, list[dict]]:
     """Run the checks through `git commit`; return (failure answer or None, autofixed).
 
@@ -339,10 +332,8 @@ def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[s
     before = _content_ids(root, carried)
     retries = 0
     while True:
-        proc, awaited = _run_commit(root, env, msg_file, limit)
+        proc = _run_commit(root, env, msg_file, limit)
         output = proc.stdout + proc.stderr
-        if awaited:
-            return _awaited_input(output, limit), fixed
         if proc.returncode == 0:
             return None, fixed
         locked = lock_refusal(output)
@@ -410,7 +401,7 @@ def _checked_run(request: Request) -> dict:
     """Validate the request, then commit; refusals propagate as StepRefusal."""
     message_file, entries = request.message_file, request.entries
     _check_message_file(message_file)
-    limit = wait_limit() if request.supervised else None
+    limit = time_limit() if request.supervised else None
     cwd = Path.cwd()
     root = Path(_git_out(["rev-parse", "--show-toplevel"], cwd).strip())
     refuse_protected_branch(root)

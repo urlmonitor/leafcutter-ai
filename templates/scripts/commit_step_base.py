@@ -156,17 +156,18 @@ def ceiling() -> int:
     return config["max_automated_fix_retries"]
 
 
-# --- Supervised mode (BO-4500a-4-iv) -------------------------------------------------
+# --- Supervised mode (BO-4500a-4-iv, amended by BO-4500a-4-vii) ---------------------
 # A supervised call is made on behalf of a run with no person present, so it must stay
-# attributable (a run id or an AC id) and must never block on a check that wants
-# keyboard input. Supervised mode is an explicit input, never inferred from the
-# environment. A check is "waiting for input" when the commit it runs under has produced
-# no output for the whole input_wait_limit_seconds; it is then killed with its process
-# group and reported, and nothing is committed. Run and AC ids are free text.
+# attributable (a run id or an AC id) and must never block on keyboard input. The
+# commit's stdin is /dev/null and its environment closes the other interactive paths
+# (GIT_TERMINAL_PROMPT=0, GIT_EDITOR=':'), so silence never means "waiting for input":
+# pre-commit buffers a hook's output until it ends, so a slow hook is silent. A genuinely
+# hung commit is ended by an overall wall-clock backstop (commit_time_limit_seconds) and
+# reported as step_timed_out; nothing is committed. Run and AC ids are free text.
 
-_HOOK_ID = re.compile(r"^- hook id:\s*(.+?)\s*$", re.MULTILINE)
-_RUNNING = re.compile(r"^(.+?)\.{3,}\s*Running\s*$", re.MULTILINE)
 _POLL_SECONDS = 0.05
+_DEFAULT_TIME_LIMIT = 1800
+_NO_PROMPT_ENV = {"GIT_TERMINAL_PROMPT": "0", "GIT_EDITOR": ":"}
 
 
 def require_attribution(supervised: bool, run: str | None, ac_id: str | None) -> None:
@@ -178,22 +179,13 @@ def require_attribution(supervised: bool, run: str | None, ac_id: str | None) ->
         )
 
 
-def wait_limit() -> float:
-    """The input-wait limit in seconds from the loaded config; absent or invalid is a refusal."""
+def time_limit() -> float:
+    """The wall-clock backstop in seconds (commit_time_limit_seconds); 1800 when unset."""
     config = loaded()
-    value = None if config is None else config.get("input_wait_limit_seconds")
+    value = None if config is None else config.get("commit_time_limit_seconds", _DEFAULT_TIME_LIMIT)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
-        raise StepRefusal("step_config_unreadable", "config/commit_step.json needs input_wait_limit_seconds above 0 for a supervised call")
+        raise StepRefusal("step_config_unreadable", "config/commit_step.json commit_time_limit_seconds must be above 0")
     return float(value)
-
-
-def awaiting_check(output: str) -> str | None:
-    """Name the check that was running when the output stopped, else None."""
-    ids = _HOOK_ID.findall(output)
-    if ids:
-        return ids[-1]
-    running = _RUNNING.findall(output)
-    return running[-1].strip() if running else None
 
 
 def _kill_group(proc: subprocess.Popen) -> None:
@@ -204,37 +196,40 @@ def _kill_group(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
-def run_without_input(args: list[str], cwd: Path, env: dict | None, limit: float) -> tuple[subprocess.CompletedProcess, bool]:
-    """Run *args* with no terminal input; return (result, ended_for_silence).
+def run_without_input(args: list[str], cwd: Path, env: dict | None, limit: float) -> subprocess.CompletedProcess:
+    """Run *args* with no terminal input and return the result.
 
-    Standard output and error are merged into result.stdout. The run is ended when
-    it produces no output for *limit* seconds.
+    Standard output and error are merged into result.stdout. The commit's environment
+    closes the interactive paths. A run still going after *limit* seconds is ended with
+    its process group and refused as step_timed_out; silence alone ends nothing.
     """
+    child_env = {**(os.environ if env is None else env), **_NO_PROMPT_ENV}
     try:
         proc = subprocess.Popen(
-            args, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            args, cwd=cwd, env=child_env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, start_new_session=True,
         )
     except OSError as exc:
         raise StepRefusal("step_vcs_error", f"cannot run git: {exc}") from exc
     chunks: list[bytes] = []
-    last = [time.monotonic()]
 
     def _drain() -> None:
         for chunk in iter(lambda: proc.stdout.read1(65536), b""):
             chunks.append(chunk)
-            last[0] = time.monotonic()
 
     reader = threading.Thread(target=_drain, daemon=True)
     reader.start()
-    silent = False
+    deadline = time.monotonic() + limit
+    timed_out = False
     while proc.poll() is None:
-        if time.monotonic() - last[0] > limit:
-            silent = True
+        if time.monotonic() > deadline:
+            timed_out = True
             _kill_group(proc)
             break
         time.sleep(_POLL_SECONDS)
     proc.wait()
     reader.join(timeout=5)
+    if timed_out:
+        raise StepRefusal("step_timed_out", f"the commit was still running after {limit:g}s (commit_time_limit_seconds) and was ended; nothing was committed")
     output = b"".join(chunks).decode("utf-8", errors="replace")
-    return subprocess.CompletedProcess(args, proc.returncode, output, ""), silent
+    return subprocess.CompletedProcess(args, proc.returncode, output, "")

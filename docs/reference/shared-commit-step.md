@@ -43,7 +43,7 @@ python <scripts>/commit_changes.py --message-file FILE [--supervised (--run ID |
 |---|---|---|---|
 | `PATH` (one or more) | repo file | Yes | An explicit file to commit, relative to the working directory or absolute. Only explicit files are accepted: a directory, a glob (`*`, `?`, `[`), a pathspec starting with `:`, or an `all` request is refused (`policy_path_not_a_file`). A path outside the workspace is refused (`policy_path_outside_workspace`); a path that neither exists nor is tracked is refused (`policy_path_not_found`). One bad entry refuses the whole call before anything is staged. A deleted tracked file may be named so the deletion is committed. |
 | `--message-file FILE` | file path | Yes | File holding the commit message. Also accepted as `--message-file=FILE`. A missing option, a missing file, an unreadable file or a whitespace-only file is refused. |
-| `--supervised` | flag | No | Marks a call made on behalf of a run with no person present. Checks get no terminal input, and a check silent for `input_wait_limit_seconds` is ended. Never inferred from the environment. |
+| `--supervised` | flag | No | Marks a call made on behalf of a run with no person present. Checks get no terminal input, and the commit is ended after `commit_time_limit_seconds`. Never inferred from the environment. |
 | `--run ID` | free text | One of `--run` / `--ac-id` when supervised | The run the call commits for. Echoed unchanged in the answer's `run`. |
 | `--ac-id ID` | free text | One of `--run` / `--ac-id` when supervised | The acceptance criterion the call commits for. Echoed unchanged in the answer's `ac_id`. |
 | `--` | marker | No | Everything after it is a `PATH`, even when it starts with `-`. |
@@ -124,6 +124,7 @@ Caller rule: the step could not finish. The caller may retry the identical call 
 | `step_vcs_error` | A git operation failed, git could not run, or the step hit an unexpected error. |
 | `step_config_unreadable` | `config/commit_step.json` is missing or invalid. There is no fallback vocabulary; the step refuses. |
 | `step_parent_resolver_unavailable` | AC records were named but the resolver that finds their parents is not deployed beside the script. |
+| `step_timed_out` | A supervised commit was still running after `commit_time_limit_seconds` and was ended; nothing was committed. |
 
 ### check (status `hook_failed`)
 
@@ -133,7 +134,6 @@ Caller rule: act on `remedy.disposition` when `remedy` is non-null; when `remedy
 |---|---|
 | `check_failed` | A check that judges rather than fixes failed. Reported at once with the check's output verbatim; never retried. |
 | `check_unsettled` | A fixing check was still rewriting files on the last allowed run (`max_automated_fix_retries`). |
-| `check_awaited_input` | A supervised call's check was silent for `input_wait_limit_seconds` and was ended. `hook_name` names the check when the output identified it. |
 
 ### nothing (status `nothing_to_commit`)
 
@@ -150,7 +150,7 @@ The vocabulary is config-driven. Adding a code or an answer key is a config edit
 | `answer_version` | `1` | Version of the answer contract. |
 | `max_automated_fix_retries` | `3` | Re-runs of the checks after a fixing check's rewrite. |
 | `max_transient_retries` | `3` | Retries a caller may make of a `step_*` refusal. |
-| `input_wait_limit_seconds` | `60` | Silence after which a supervised check is ended. |
+| `commit_time_limit_seconds` | `1800` | Wall-clock seconds after which a supervised commit is ended. |
 
 ---
 
@@ -168,7 +168,7 @@ The vocabulary is config-driven. Adding a code or an answer key is a config edit
 | Protected branches | `main`, `master`, the default branch origin's locally recorded `HEAD` names, and a detached checkout are refused (`policy_protected_branch`, `policy_detached_head`). The comparison is by whole branch name and reads no network state. |
 | Config required | Missing or invalid config is `refused` / `step_config_unreadable`; there is no built-in fallback. |
 | Index lock | A held shared index lock is `refused` / `step_index_locked`. |
-| Supervised | Checks receive no terminal input. A check producing no output for `input_wait_limit_seconds` is ended with its process group, nothing is committed, and the answer is `hook_failed` / `check_awaited_input`. |
+| Supervised | Checks receive no terminal input. Silence never ends a commit. One still running after `commit_time_limit_seconds` is ended with its process group, nothing is committed, and the answer is `refused` / `step_timed_out`. |
 | Refusals are answers | Every refusal, and any unexpected failure, is one JSON answer with exit `1`; no traceback or partial JSON reaches standard output. |
 
 ---
