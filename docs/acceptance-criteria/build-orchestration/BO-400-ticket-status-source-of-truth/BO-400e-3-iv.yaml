@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -129,8 +129,12 @@ origin_agent: BrainCandy
 created: 2026-10-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_iv_close.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_close.py
+  - templates/workflows-js/finalize-feature.js
 notes: |
   Requested by BrainCandy 2026-10-15 (KI-BO-20260930). Found while confirming causes (1)-(3):
   not on the caller's list, but it is the same defect shape -- a record outside the "actually
