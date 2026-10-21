@@ -58,7 +58,7 @@ from typing import Any
 from agent_ability_verdict import normalize_entries
 from agent_declaration_shape import MalformedDeclarationError
 from agent_skill_ref_grants import reference_findings
-from agent_spawn_declaration import declared_spawn, resolve_spawn_ids
+from agent_spawn_declaration import declared_spawn, redundancy_findings, resolve_spawn_ids
 from skill_ref_recognition import recognise
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -146,6 +146,7 @@ def _own_declarations(
     ``grants`` is None when the declaration is malformed (the comparison is skipped,
     and that is stated in ``errors``, never computed against an empty set).
     ``project_supplied`` holds the grants marked ``provided_by: project`` (AR-400d-3).
+    ``errors`` also carries the hand-off redundancy/repeat findings read from the RAW list (AR-400f-1).
     """
     try:
         # Lazy: template_compiler hard-imports yaml, and registry_validator must stay importable without it.
@@ -165,7 +166,9 @@ def _own_declarations(
         errors.append(f"{rel}: skills declaration of {subject} is malformed ({exc}); "
                       f"the ability grant comparison is skipped for {subject}")
     try:
-        hand_off = resolve_spawn_ids(declared_spawn(front), phase_ids)
+        declared = declared_spawn(front)  # RAW list: repeats kept (AR-400f-1)
+        hand_off = resolve_spawn_ids(declared, phase_ids)
+        errors.extend(redundancy_findings(subject, rel, declared, phase_ids))
     except MalformedDeclarationError as exc:
         hand_off = []
         errors.append(f"{rel}: spawn_allowlist of {subject} is malformed ({exc}); its hand-off list is read as empty")
