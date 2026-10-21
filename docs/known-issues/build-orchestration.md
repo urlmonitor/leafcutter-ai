@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-14'
+last_updated: '2026-10-21'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 71** (6 blocker, 40 high, 25 low) · **Resolved: 27** (recounted from the directory 2026-10-14; KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path moved to resolved 2026-10-16)
+**Open: 70** (4 blocker, 40 high, 26 low) · **Resolved: 28** (recounted from the directory 2026-10-21, after KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide moved to resolved)
 
 ## Open
 
@@ -76,7 +76,6 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 |---|---|---|
 | `blocker` | KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards | [open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md](build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md) |
 | `blocker` | KI-BO-20260925-1309 — A phase agent wraps its whole reply in one `input` string, and the schema's misleading error sends every retry after the wrong field, so the drive halts with the work already done | [open-blocker-ki-bo-20260925-1309.md](build-orchestration/open-blocker-ki-bo-20260925-1309.md) |
-| `blocker` | KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide — /finalize-feature Step 3.5 walks the whole inbox and flips every ticket and AC to `done`, not just the finalizing branch's, so unbuilt work is marked complete and unblocks dependents | [open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md](build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md) |
 | `blocker` | KI-BO-20260925-finalize-gate-accepts-agent-answers — finalize-feature's copy of the human-gate code still asks an agent to answer live and never checks the answer came from the person, so the merge-to-main gate can be passed by an agent reply | [open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md](build-orchestration/open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md) |
 | `blocker` | KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver — /build-feature runs documentation-expert as a flat depth-1 phase, where the one route its template allows to a written doc (dispatching a specialist through the Agent tool) does not exist, so a doc-bearing ticket either halts or passes by breaking the template | [open-blocker-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md](build-orchestration/open-blocker-ki-bo-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
@@ -174,6 +173,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20260923-0700 — the docs-only guard discards out_of_scope, so a documentation ticket on a multi-ticket branch can never be marked done | [resolved-high-ki-bo-20260923-0700.md](build-orchestration/resolved/resolved-high-ki-bo-20260923-0700.md) |
 | `medium` | KI-BO-20260915-completed-sibling-in-a-halted-batch-is-reported-not-built — a ticket written `status: done` in the same batch as a refused sibling was never added to the run's own completed-work list | [resolved-medium-ki-bo-20260915-completed-sibling.md](build-orchestration/resolved/resolved-medium-ki-bo-20260915-completed-sibling.md) |
 | `high` | KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path — ten approved BO-100d ACs pinned the pre-drive sink probe to the relative `debugging/logs/agent_telemetry.jsonl` (fixed in the criteria by PR #1262; the probe itself is not built yet) | [resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md](build-orchestration/resolved/resolved-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md) |
+| `blocker` | KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide — /finalize-feature Step 3.5 walked the whole inbox and flipped every ticket and AC to `done` (fixed by PR #1292: the closable set is now computed from the branch's own commits since the merge base, shown to a person, and digest-bound) | [resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md](build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md) |
 | `high` | KI-BO-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists — `/build-feature` runs `documentation-expert` as a depth-1 phase agent with no Agent tool, so it cannot dispatch the leaf author, the verifier fails on the missing doc and commit refuses | [open-high-ki-bo-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists.md](build-orchestration/open-high-ki-bo-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists.md) |
 | `low` | KI-BO-20261012-red-baseline-gate-measures-after-llm-expert-coder — the red-baseline gate fires only before a `python-coder` / `sql-coder` / `frontend-coder` dispatch, so when `llm-expert` is the coder it measures after the work is done and halts a real red baseline as `green_at_baseline`; graded medium | [open-low-ki-bo-20261012-red-baseline-gate-measures-after-llm-expert-coder.md](build-orchestration/open-low-ki-bo-20261012-red-baseline-gate-measures-after-llm-expert-coder.md) |
 
