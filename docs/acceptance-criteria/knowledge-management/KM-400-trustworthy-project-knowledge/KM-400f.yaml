@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 criteria: |
   Keep only what you said to keep, and be told before there is no room left.
 
@@ -66,12 +66,21 @@ amended_by:
     generation is reclaimable, and the retention report must account for it rather than
     filtering it out of view. Until that exists, do not describe this L1 as closing the
     capacity incident."
+  - "2026-10-21: status audit. All four children KM-400f-1 through KM-400f-4 are done.
+    KM-400f-1 closed in the same change once its six L3 children (KM-400f-1-i to -vi) were
+    confirmed done; KM-400f-1-i (every generation is assessed, including failed or
+    incomplete publications) and KM-400f-1-iv (reclaimable-because-failed reported apart
+    from reclaimable-because-outside-the-bound) are the criteria the scope-gap entry above
+    asked for. Covers-tagged tests for KM-400f-1 and its children, KM-400f-2, KM-400f-3 and
+    KM-400f-4 under tests/knowledge/ pass under AC_ENFORCE_STRICT=1; the live checks were
+    not run. work_status moved from todo to done. covered_by unchanged."
 superseded_by: null
 covered_by:
   - KM-400f-1
   - KM-400f-2
   - KM-400f-3
   - KM-400f-4
+  - KM-400f-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -87,6 +87,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPT_SRC = _REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
 
+_OCCUPANCY_SRC = _REPO_ROOT / "scripts" / "build_orchestration" / "_setup_ticket_fastlane_occupancy.py"
 _SUBPROCESS_TIMEOUT_SECONDS = 30
 
 
@@ -108,7 +109,7 @@ def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
     )
 
 
-def _init_repo_with_origin(repo_dir: Path, origin_parent: Path) -> Path:
+def _init_repo_with_origin(repo_dir: Path, origin_parent: Path, with_occupancy: bool = True) -> Path:
     """Create *repo_dir* as a real clone of a fresh, real "origin" repository.
 
     Both ``cmd_create_ac_worktree`` and ``cmd_create_fastlane_worktree`` root
@@ -130,6 +131,9 @@ def _init_repo_with_origin(repo_dir: Path, origin_parent: Path) -> Path:
     _run_git(["config", "user.name", "Test User"], origin_dir)
     (origin_dir / ".pre-commit-config.yaml").write_text("repos: []\n", encoding="utf-8")
     (origin_dir / "README.md").write_text("fixture repo\n", encoding="utf-8")
+    if with_occupancy:  # a real consumer install has the sibling under <repo>/scripts/build_orchestration
+        (origin_dir / "scripts" / "build_orchestration").mkdir(parents=True)
+        shutil.copy(_OCCUPANCY_SRC, origin_dir / "scripts" / "build_orchestration" / _OCCUPANCY_SRC.name)
     _run_git(["add", "-A"], origin_dir)
     _run_git(["commit", "-q", "-m", "initial commit", "--no-gpg-sign"], origin_dir)
 
