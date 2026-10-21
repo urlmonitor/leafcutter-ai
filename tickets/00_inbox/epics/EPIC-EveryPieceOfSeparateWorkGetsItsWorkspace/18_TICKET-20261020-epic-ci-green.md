@@ -25,7 +25,7 @@ agents:
   python-coder: not_needed
   test-runner: not_needed
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
 ---
 
 # 18: The epic's PR runs green on CI
@@ -117,7 +117,7 @@ The fixes were made by bug-resolving agents that the coordinator dispatched dire
 
 ## Sign-offs
 - [x] pr-reviewer — 2026-10-21 09:25
-- [ ] commit
+- [x] commit — 2026-10-21 10:04
 
 ## Comments
 
@@ -131,3 +131,8 @@ Reviewed the 57-file staged diff. No high-confidence findings. Three medium find
 - M-2 BO-1500b-1-i: the new test proves the block/run/negative-control clauses, but not that the config is absent before the maker runs, nor the copy fallback; the AC's test_spec names (4) no longer match the 2 tests.
 - M-3 The fail-closed halt of resolveRepoAnchoredMakerPath (no repo found) has no test.
 Re-entrant guard is safe: the marker matches only the exact lock path, is consulted only after the lock is found taken, and is inherited only by the holder's children. 18 targeted tests passed locally; the one error was the session-wide guard flagging local remote-ref drift, not the diff.
+
+### 2026-10-21 10:04 — commit (status: ok)
+feedback-id: fb_2026-10-21_e366533b
+
+Committed in two parts: part 1 (tests) = 1eccb75c3, part 2 (production half, 21 paths) = 0a5f57ade. All pre-commit hooks passed on the first attempt; no autofix or drift repair was needed.
