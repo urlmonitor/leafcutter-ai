@@ -165,13 +165,17 @@ it_requirements:
   scope included. A list exit 1 for a base ref whose changed files cannot be worked out is a
   fail-closed halt like any other list failure.
 - >-
-  List speed (user decision 2026-10-15). The writer's list step took 82 s for one requirement id on
-  this repository, against TQ-500g-1-ix's budget of at most 2 s for up to 50 ids. The list must meet
-  that budget on this repository (real AC store, real test root), proven by a timing test, not only
-  on a small fixture. Find and remove the cause before wiring the route; a full test-root scan per
-  call or per id is the likely one. The fix lives in the one shared reader that list, write and
-  runner all use (_wvr_scope / _wvw_list); no second, faster reader is added, and the list's names,
-  files and order stay identical to the runner's and the write step's for the same inputs.
+  List speed (user decisions 2026-10-15 and 2026-10-21). The writer's list step took 82 s for one
+  requirement id on this repository. Find and remove the cause before wiring the route; a full
+  test-root scan per call or per id is the likely one. The fix lives in the one shared reader that
+  list, write and runner all use (_wvr_scope / _wvw_list); no second, faster reader is added, and the
+  list's names, files and order stay identical to the runner's and the write step's for the same
+  inputs. The gated check runs on this repository (real AC store, real test root), not only on a
+  small fixture, and is relative to the machine it runs on: the 50-id run takes at most 2.0 x the
+  1-id run's time + 1.0 s (so a per-id rescan fails on any machine speed), and each run stays under
+  an absolute ceiling of 15 s (so the original 82 s defect fails). TQ-500g-1-ix's figure of at most
+  2 s for 50 ids remains a target measured on a developer machine; it is not a CI gate, because an
+  absolute wall-clock budget failed on CI's Proof-of-done runner while passing everywhere else.
 - >-
   Reply transport (IT-PO decision 2026-10-14): stdin. The workflow body cannot write files, so a
   shell executor would have to persist the reply in an extra step. Instead the finish command the
@@ -478,12 +482,15 @@ test_spec:
   description: >-
     Runs the list step as a subprocess against this repository's real AC store and real test root
     with --base-ref HEAD, once for 1 requirement id and once for 50 ids drawn from the store (ids
-    with must_catch entries included). Each run finishes within 2 seconds, prints the list shape and
-    exits 0. For the same ids, the owed names and files equal what the write step and the runner
-    derive through the shared reader.
+    with must_catch entries included). Each run prints the list shape and exits 0. The gated timing
+    assertion is relative: the 50-id run takes at most 2.0 x the 1-id run's time + 1.0 s, and both
+    runs finish under an absolute ceiling of 15 s. The 2 s figure from TQ-500g-1-ix is a developer-
+    machine target, not asserted here. For the same ids, the owed names and files equal what the
+    write step and the runner derive through the shared reader.
   must_catch:
   - list rescans the whole test root per id
   - a second reader added for list that disagrees with the runner's
+  - list cost grows with the number of ids
   in_scope_files:
   - scripts/build_orchestration/_wvr_scope.py
   - scripts/build_orchestration/_wvw_list.py
@@ -511,6 +518,10 @@ amended_by:
   directed_by: user
 - reason: "Technical amendment after TQ-500g-1-x merged: --base-ref on all three steps (list, the writer's write step via finish, and the runner); owed items carry the additive scope key and reach test-breaker unchanged; expects_from gains TQ-500g-1-x. List-speed fix (user decision 2026-10-15): new it_requirement and timing test against the real repo (82 s for one id vs. the 2 s / 50 ids budget of TQ-500g-1-ix), fixed in the one shared reader. Every must_catch entry now names the files this AC touches. Criteria unchanged."
   date: '2026-10-15'
+  by: it-po
+  directed_by: user
+- reason: "List-speed gate changed after CI evidence (user decision 2026-10-21): the absolute 2 s budget passed in every CI test shard, on Windows and in a Linux replica, but failed 3 times running in CI's Proof-of-done job. The gated assertion is now scaling (50 ids <= 2.0 x the 1-id time + 1.0 s) plus an absolute 15 s ceiling per run; the 2 s figure stays a developer-machine target. it_requirement and test_spec entry test_writer_list_meets_time_budget_on_real_repo rewritten; must_catch gains 'list cost grows with the number of ids'. Criteria unchanged."
+  date: '2026-10-21'
   by: it-po
   directed_by: user
 superseded_by: null
@@ -591,3 +602,11 @@ notes: |
   in_scope_files on every must_catch entry now name the files this AC touches
   (fast-lane-ship.js, fast_lane.py, wrong_version_gate.py); the timing test
   names the reader modules (_wvr_scope.py, _wvw_list.py).
+
+  IT-PO AMENDMENT (2026-10-21): LIST-SPEED GATE IS SCALING PLUS A CEILING
+  The absolute 2 s budget failed 3 times in a row in CI's Proof-of-done job
+  (its own runner) while passing in every test shard, on Windows and in a
+  Linux replica. User decision: gate on scaling (50 ids <= 2.0 x 1-id time
+  + 1.0 s, catches a per-id rescan at any machine speed) plus a 15 s ceiling
+  per run (catches the original 82 s defect). The 2 s figure stays a target
+  measured on a developer machine, not a CI gate.
