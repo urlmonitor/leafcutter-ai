@@ -65,6 +65,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_ensure_state.py",
     "worktree_remove.py",
     "worktree_migrate.py",
+    "worktree_ticket_record.py",
 )
 
 
@@ -112,6 +113,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry, BO-4300f-3): the ``migrate-legacy`` cut-over verb.
     - ``templates/scripts/worktree_ensure_state.py`` → ``scripts/worktree_ensure_state.py``
       (NAMED entry): the lock, set-aside and half-made handling (BO-4300d-1, d-2).
+    - ``templates/scripts/worktree_ticket_record.py`` → ``scripts/worktree_ticket_record.py``
+      (NAMED entry): the built-for-ticket record of a ticket workspace (BO-400e-3-ix).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -159,6 +162,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   Added worktree_ensure_state.py as a NAMED entry (BO-4300d-1, d-2). (ADR-018)
     #   Added worktree_remove.py as a NAMED entry (BO-4300e). (ADR-018)
     #   Added worktree_migrate.py as a NAMED entry (BO-4300f-3). (ADR-018)
+    # - 2026-10-21 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20)
+    #   Added worktree_ticket_record.py as a NAMED entry (BO-400e-3-ix). (ADR-018)
     """
     import build_phases as _bp
 

@@ -4,7 +4,7 @@ description: "Every field, status, exit code and outcome code of the answer the 
 type: reference
 status: active
 created: 2026-10-13
-last_updated: 2026-10-13
+last_updated: 2026-10-21
 components:
   - worktree_manager
   - build_orchestration
@@ -82,6 +82,7 @@ and absent on every non-ok answer.
 | `ON_PROTECTED_BRANCH` | refused | The workspace is on a protected branch. |
 | `TICKET_NOT_ON_BASE` | refused | The named ticket file is not on the shared project's base. |
 | `AMBIGUOUS_LINE` | refused | More than one line of work exists on the shared project for this work; the answer lists the `lines`. Name one. |
+| `BUILT_FOR_OTHER_TICKET` | refused | The ticket workspace's line is already recorded as built for a different ticket; the answer names `branch` and `recorded_ticket`. Nothing was changed; ask with a different slug. |
 | `USAGE` | error | The arguments were unusable (exit 64). |
 | `INTERNAL_ERROR` | error | The maker failed unexpectedly; never an ok answer. |
 | `REFUSED` | refused | Legacy generic refusal of a dirty or unpushed remove. |
@@ -90,7 +91,7 @@ and absent on every non-ok answer.
 
 | Verb | Extra fields on ok |
 |---|---|
-| `ensure` | `workspace_action` (`created`, `re-readied`, ...), `kind`, `slug`, `branch`, `line_of_work`, `hub`, `base_commit`, `bootstrap`, `hooks_stages_declared`, `checks`, `repo_root`, `layout`; with `--ticket`, `ticket_path_in_worktree` |
+| `ensure` | `workspace_action` (`created`, `re-readied`, ...), `kind`, `slug`, `branch`, `line_of_work`, `hub`, `base_commit`, `bootstrap`, `hooks_stages_declared`, `checks`, `repo_root`, `layout`; with `--ticket`, `ticket_path_in_worktree`; for `--kind ticket --ticket`, the workspace's config also records the ticket as `branch.<branch>.leafcutterTicket` (its project-relative path), which finalization reads |
 | `locate` | `marker` (kind, slug, branch, state, base_commit, checks, ...) |
 | `list` | `landing_place`, `workspaces` (each with its `workspace_path` and `marker`) |
 | `remove` | what was cleared and, if authorised, the discarded set |

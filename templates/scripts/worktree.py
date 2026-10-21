@@ -33,6 +33,8 @@ ARCHITECTURE: Stdlib-only CLI (argparse, json, subprocess, shutil, sys,
     answered as ``{"status": "error", "code": "INTERNAL_ERROR", ...}`` on
     stdout -- never a raw traceback, never an "ok" answer for a request that
     did not actually succeed.
+    A ``--kind ticket --ticket`` workspace records its ticket against its
+    branch in its own git config (``worktree_ticket_record``, BO-400e-3-ix).
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ import worktree_migrate
 import worktree_paths as wp
 import worktree_readiness as wr
 import worktree_remove
+import worktree_ticket_record as wtr
 
 _log = logging.getLogger(__name__)
 
@@ -190,7 +193,7 @@ def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_p
         "hooks_stages_declared": proof["hooks_stages_declared"],
         "checks": checks,
     }
-    return wi.attach_ticket(answer, ticket, workspace_path) or answer
+    return wtr.finish(answer, ident.kind, ticket, workspace_path)
 
 
 def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
@@ -213,7 +216,7 @@ def _resume_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
                       args: argparse.Namespace, ticket: wi.TicketRequest | None,
                       marker: dict[str, Any]) -> dict[str, Any]:
     """Re-ready a ready workspace, or complete a half-made one, in place (the folder is never deleted)."""
-    at_risk = wes.rescue_refusal(workspace_path)
+    at_risk = wes.rescue_refusal(workspace_path) or wtr.conflict_refusal(workspace_path, ident.kind, ticket)
     if at_risk is not None:
         return at_risk
     state = marker.get("state")
@@ -468,4 +471,7 @@ if __name__ == "__main__":
 # - 2026-10-12 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12]:
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
 #   BO-4300f-3: wired the migrate-legacy verb (worktree_migrate.py). (ADR-018)
+# - 2026-10-21 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20) BO-400e-3-ix: a ticket workspace records
+#   its ticket and refuses a different one first (worktree_ticket_record). (ADR-018)
 # ===========================================================================

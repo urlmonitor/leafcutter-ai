@@ -40,14 +40,15 @@ ALL_CODES: frozenset[str] = frozenset({
     "GIT_FAILED", "NO_CONFIG", "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED",
     "WORK_AT_RISK", "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK",
     "PROCESS_HOLDS_FILES", "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE",
-    "AMBIGUOUS_LINE", "USAGE", "INTERNAL_ERROR", "REFUSED",
+    "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "USAGE", "INTERNAL_ERROR", "REFUSED",
 })
 REFUSED_CODES: frozenset[str] = frozenset({
     "NOT_FOUND", "INCOMPLETE", "OCCUPIED", "OCCUPIED_LEGACY_WORKTREE",
     "IN_PROGRESS", "AMBIGUOUS_REPO", "NO_HUB", "FETCH_FAILED", "NO_CONFIG",
     "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED", "WORK_AT_RISK",
     "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK", "PROCESS_HOLDS_FILES",
-    "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE", "AMBIGUOUS_LINE", "REFUSED",
+    "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE", "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET",
+    "REFUSED",
 })
 EXIT_USAGE = 64
 
@@ -137,4 +138,8 @@ def forward_git_output(args: list[str], proc: subprocess.CompletedProcess) -> No
 #   worktree_git.py and declared the complete BO-4300c-2 code enum (incl.
 #   AMBIGUOUS_LINE, Q4) so tickets 04-08 and 12 never edit the table. An ok
 #   answer now always carries code OK. (ADR-018)
+# - 2026-10-21 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20)
+#   Added BUILT_FOR_OTHER_TICKET (refused): a ticket workspace already
+#   recorded for a different ticket (BO-400e-3-ix). (ADR-018)
 # ===========================================================================

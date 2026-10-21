@@ -94,6 +94,7 @@ re-verified, never applied wholesale.
 | 17 | [17_TICKET-20261016-maker-inherits-durable-log-root.md](./17_TICKET-20261016-maker-inherits-durable-log-root.md) | The maker builds every workspace pointing at the project's durable log root (INF-500d-4-iii), and main's tests reach the maker (found at the main merge 83db3c9ba, 2026-10-16) | -- | 14 | `[x]` |
 | 18 | [18_TICKET-20261020-epic-ci-green.md](./18_TICKET-20261020-epic-ci-green.md) | The epic's PR runs green on CI: 99 Linux test regressions, lint, AC store checks (found on PR #1274, 2026-10-20) | -- | 17 | `[ ]` |
 | 19 | [19_TICKET-20261021-done-proof-runs-linked-manual-tests.md](./19_TICKET-20261021-done-proof-runs-linked-manual-tests.md) | The done-proof check runs an AC's linked _MANUAL tests (KI-ACS-20261013; found on PR #1274, 2026-10-21) | -- | 18 | `[ ]` |
+| 20 | [20_TICKET-20261021-maker-records-built-for-ticket.md](./20_TICKET-20261021-maker-records-built-for-ticket.md) | The maker records which ticket a single-ticket workspace's branch is built for (BO-400e-3-ix; found at the main merge b5b958875, 2026-10-21) | -- | 19 | `[ ]` |
 
 AC ids above omit the `BO-4300` prefix. 58 ACs across tickets 02-14 plus BO-4300a-1 in ticket 01 = 59; BO-4300c-6 (ticket 15, added 2026-10-10) = 60.
 
