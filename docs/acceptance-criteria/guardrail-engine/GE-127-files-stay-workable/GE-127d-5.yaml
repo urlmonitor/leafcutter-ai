@@ -16,14 +16,15 @@ criteria: |
   Then the advice in the outcome states that comments of every style, and Python
     strings standing alone as statements (docstrings and bare strings alike), do
     not count toward the length, that a string which is used (assigned, passed,
-    returned or part of a larger expression) does, and that blank lines outside
-    comments do,
+    returned or part of a larger expression) does, and that blank lines do not
+    count anywhere,
   And the advice does not state that comments of any one style count, does not
-    state that removing comments reduces the length, and does not name any
-    comment style or form whose content is uncounted while another is counted,
+    state that removing comments or blank lines reduces the length, and does not
+    name any comment style or form whose content is uncounted while another is
+    counted,
   And the advice states that rewriting comments in another style, deleting
-    comments or standalone strings, and joining lines are not ways to bring the file
-    within its limit,
+    comments, standalone strings or blank lines, and joining lines are not ways to
+    bring the file within its limit,
   And the outcome's statement of what the quoted length measures states the same
     rule,
   And given every published place that states the size rule,
@@ -31,12 +32,13 @@ criteria: |
     published places and the rule in force,
   Then each published place states that line comments, block comments and Python
     strings standing alone as statements are all uncounted, that used strings
-    count, and that blank lines outside them are counted,
+    count, and that blank lines are not counted anywhere,
     and the comparison reports zero disagreements and a count of places compared
     greater than zero,
-  And given one published place is left stating the earlier rule — that `#` or
-    `//` comment lines count, or that only block comments and triple-quoted
-    strings are discarded — while every other place states the rule in force,
+  And given one published place is left stating an earlier rule — that `#` or
+    `//` comment lines count, that blank lines count, or that only block comments
+    and triple-quoted strings are discarded — while every other place states the
+    rule in force,
   When the author performs an ordinary commit,
   Then the comparison names that place, and the commit does not complete.
 depends_on:
@@ -208,13 +210,14 @@ test_spec:
       over-limit .js file, through both refusal paths (crossing and growth), and read the
       advice from the hook's own output: it states that every comment style and standalone
       Python strings (docstrings and bare strings) are uncounted, that used strings count, and
-      that blank lines count, and it contains no statement that one style counts or that
-      removing comments reduces the length. Then verify the advice by behaviour: deleting
-      every comment and every standalone string from the refused file leaves the quoted length
-      unchanged on the next run.
+      that blank lines are not counted anywhere, and it contains no statement that one style
+      counts or that removing comments or blank lines reduces the length. Then verify the
+      advice by behaviour: deleting every comment, every standalone string and every blank
+      line from the refused file leaves the quoted length unchanged on the next run.
     must_catch:
       - "the incumbent advice: '#' comments count and removing them WILL reduce it"
       - "advice says block comments do not count but is silent on line comments"
+      - "advice still says blank lines count (the 2026-10-16 rule)"
   - name: test_ge_127d_5_the_real_published_surfaces_agree_with_the_rule_in_force
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -315,6 +318,21 @@ amended_by:
     string, a string passed as an argument and a standalone f-string. The advice
     it_requirement and the advice test description now say standalone strings instead of
     docstrings.
+- reason: blank-lines-never-count
+  by: business-analyst
+  at: '2026-10-21'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-21 decision (GE-127d-3: blank lines never count,
+    anywhere). The advice now says blank lines do not count anywhere, never says removing
+    them reduces the length, and lists deleting blank lines among the non-remedies; every
+    published place states blank lines are not counted; a surface still saying blank lines
+    count is a stale earlier rule the comparison names. The advice test checks the new
+    wording and that deleting every blank line leaves the quoted length unchanged, with a
+    must_catch for the old blank-line wording. Notes: the blank-line lever is marked
+    resolved. work_status reset done -> todo. Title, depends_on and req_status unchanged.
+    it_requirements left for the IT PO: "It must not recommend deleting blank lines, even
+    though blank lines count" and the probe list's "plus a blank line outside comments"
+    assume the superseded rule.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -330,5 +348,8 @@ notes: |
   machine-compared. delivers_to hands the wording to documentation-expert for
   docs/pre-commit-hooks.md if it states the rule.
 
-  BLANK LINES REMAIN A FORMATTING-ONLY LEVER. Blank lines still count (kept by decision), so
-  squeezing them out still lowers the number. Out of scope here; raise separately if wanted.
+  BLANK LINES — RESOLVED 2026-10-21. The earlier note here ("blank lines remain a
+  formatting-only lever") is closed by BrainCandy's 2026-10-21 decision recorded in
+  GE-127d-3: blank lines never count, anywhere, so the advice and every published place say
+  so and removing them cannot lower the number. The one formatting route still open —
+  joining code statements onto fewer lines — is recorded in GE-127d-3's notes for a future AC.

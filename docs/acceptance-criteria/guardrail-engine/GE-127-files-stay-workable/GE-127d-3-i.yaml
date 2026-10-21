@@ -212,8 +212,9 @@ test_spec:
       from `ast` (every Expr statement whose value is a non-f-string Constant str or bytes,
       lineno to end_lineno, in any position — docstrings, bare mid-module and trailing
       DECISION HISTORY strings alike, per BrainCandy 2026-10-20), comments from tokenize
-      COMMENT tokens (lines carrying any token outside those, plus blank lines outside
-      them) — computed at run time, never a literal.
+      COMMENT tokens (lines carrying any non-whitespace text of a token outside those; no
+      whitespace-only line is counted, per BrainCandy 2026-10-21) — computed at run time,
+      never a literal.
   - name: test_ge_127d_3_i_every_tracked_js_and_ts_file_measures_what_the_typescript_compiler_says
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -223,7 +224,8 @@ test_spec:
       For every tracked .js, .mjs, .ts and .tsx file in the repository (templates/workflows-js,
       tests/*.js, the .mjs harness and leafcutter-web), the shared measure's length equals the
       count derived from the TypeScript compiler's own comment ranges (lines carrying any
-      non-comment token, plus blank lines outside comments), computed at run time in a Node
+      non-whitespace text outside a comment; no whitespace-only line is counted, per
+      BrainCandy 2026-10-21), computed at run time in a Node
       subprocess using leafcutter-web's installed typescript. Fails rather than skips in CI
       when Node or typescript is missing.
 test_rationale: |
@@ -276,6 +278,17 @@ amended_by:
     Re-measured 2026-10-20: tests/knowledge/test_native_decision.py measures 399 under the new
     rule (332 before), so the note below that it starts reading as over its 400 limit no
     longer holds; the note is the BA's and is left as written.
+- reason: blank-lines-never-count
+  by: business-analyst
+  at: '2026-10-21'
+  note: >-
+    Criteria untouched. test_spec only: the Python (ast + tokenize) and JS/TS (TypeScript
+    compiler) oracle descriptions no longer count blank lines outside comments, following
+    BrainCandy's 2026-10-21 decision in GE-127d-3 (blank lines never count, anywhere).
+    work_status reset done -> todo, because the oracle tests must be re-run against the
+    changed rule. The it_requirement saying every here-document body line counts
+    "including ... blank lines" is left for the IT PO. Note: test_native_decision.py's
+    measured figure (399 under the 2026-10-20 rule) will change again under this rule.
 superseded_by: null
 covered_by: []
 implemented_by: []

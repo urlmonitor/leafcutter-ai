@@ -30,7 +30,18 @@ criteria: |
   And the same three outcomes hold for a Python file over its limit when `#` lines
     are rewritten as a string literal standing alone as a statement and back —
     whether that string is a docstring, a bare string between two functions, or a
-    trailing DECISION HISTORY string at the end of the module.
+    trailing DECISION HISTORY string at the end of the module,
+  And given the same over-limit file and a staged change that rewrites two `//`
+    comment paragraphs separated by a blank line as one `/* ... */` block with a
+    blank line inside it, and changes nothing else,
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome states that the change added 0 lines,
+    and the quoted length is the same before and after,
+  And given the same over-limit file and a staged change that only adds blank
+    lines or only removes blank lines, anywhere in the file,
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome states that the change added 0 lines,
+    and the quoted length is the same before and after.
 depends_on:
   - GE-127d-3
   - GE-127f-2
@@ -123,6 +134,22 @@ test_spec:
       and quotes the same length before and after.
     must_catch:
       - "a trailing DECISION HISTORY string counted as code"
+  - name: test_ge_127d_3_iv_paragraph_to_block_restyles_and_blank_line_only_changes_add_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      BrainCandy 2026-10-21. In a temporary git repository with an over-limit .js file and an
+      over-limit .py file, stage (a) the pr-reviewer's paragraph restyles — `// a`, blank,
+      `// b` rewritten as `/* a`, blank, ` b */`, and `# a`, blank, `# b` rewritten as a
+      standalone `"""a`, blank, `b"""` — and the reverse of each; (b) a change that only
+      removes B blank lines; (c) a change that only adds B blank lines (B varied). Each run
+      through the hook completes, states 0 lines added, and quotes equal lengths before and
+      after; the previous and current lengths are re-derived at run time.
+    must_catch:
+      - "a blank line between two line comments counted as a measured line"
+      - "a blank line outside comments counted, so adding blank lines is charged as added lines"
   - name: test_ge_127d_3_iv_a_restyle_does_not_hide_code_added_in_the_same_change
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -190,6 +217,18 @@ amended_by:
     standalone-versus-used rule: a `#` run restyled as any standalone string adds 0 wherever
     it stands, appending inside a trailing DECISION HISTORY string adds 0, and a rewrite into
     a used string or a standalone f-string is code and legitimately adds lines.
+- reason: blank-lines-never-count
+  by: business-analyst
+  at: '2026-10-21'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-21 decision (GE-127d-3: blank lines never count,
+    anywhere). Added two arms: a paragraph-to-block restyle (blank-separated `//` paragraphs
+    rewritten as one block with a blank inside) adds 0, and a blank-line-only change (adding
+    or removing) adds 0. Added a discrimination descriptor carrying the pr-reviewer's
+    repros in both directions plus blank-line-only changes. work_status reset done -> todo:
+    the new arms are unproven. Title, depends_on and req_status unchanged. The it_requirement
+    "A blank line outside comments is a counted line keyed as empty" now contradicts the
+    criteria and is left for the IT PO.
 superseded_by: null
 covered_by: []
 implemented_by: []
