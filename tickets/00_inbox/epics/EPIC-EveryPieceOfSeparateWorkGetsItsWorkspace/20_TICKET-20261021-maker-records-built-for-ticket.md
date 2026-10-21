@@ -3,7 +3,7 @@ title: "The workspace maker records which ticket a single-ticket workspace's bra
 ac_traceability:
   id: BO-400e-3-ix
   path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-3-ix.yaml
-status: todo
+status: done
 components:
   - worktree_manager
   - build_orchestration
@@ -25,7 +25,7 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
 ---
 
 # 20: The workspace maker records which ticket a single-ticket workspace's branch is built for
@@ -81,7 +81,7 @@ tests:
 - [x] test-writer — 2026-10-21 14:00
 - [x] python-coder — 2026-10-21 16:30
 - [x] pr-reviewer — 2026-10-21 17:10
-- [ ] commit
+- [x] commit — 2026-10-21 19:49
 
 ## Comments
 
@@ -143,3 +143,15 @@ No high-confidence findings. Checked against the staged diff and origin/main:
 - Occupancy deletion: no remaining user; OCCUPIED / OCCUPIED_LEGACY_WORKTREE tests (4300c_2, 4300d_3, 4300d_3_i) cover target occupied, branch elsewhere, refused before write, discriminated payload.
 [medium, noted] BO-2400f-13-i/-ii own-prior-attempt facts (uncommitted/pushed state, destructive option flags) have no maker equivalent; the ticket already records this for the AC owner.
 [low, noted] A ticket outside the project is now a USAGE refusal instead of main's warning and no record; stricter and consistent with `resolve_ticket`.
+
+### 2026-10-21 19:49 — commit (status: ok)
+feedback-id: fb_2026-10-21_05195deb
+
+Committed part 2 as b6ee21ab0 (10 paths, no test paths); part 1 = 889c376fe holds the test. All pre-commit hooks passed on the first run, with no autofix and no bypass.
+
+```yaml
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+```
