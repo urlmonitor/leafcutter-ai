@@ -2,7 +2,7 @@ id: INF-100c-5-i
 components:
   - feedback_collector
   - build_pipeline
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A feedback writer that names no registered agent is reported by the build"
 component: infrastructure
@@ -31,12 +31,37 @@ doc_links:
   - path: config/feedback_categories.yaml
     relationship: describes
     status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The registered-agent set is the agent ids in config/agent_registry.json, as the criteria state, read at check time and never copied into the check."
+  - "Each unknown writer is reported once, naming every category it appears in, in sorted order, so a renamed agent's leftover name is one entry and not one per category."
+  - "The report must appear in the build output at WARNING severity or higher on every build where it applies, and must not depend on a verbose or debug flag."
+  - "Whether an unknown writer also fails the build is not decided (caveat logged). Until it is decided, the report must not by itself fail the build; INF-100c-5's missing-writer failure is unaffected."
+  - "Sentinel writers are excluded by the same rule submission applies (INF-100c-5-ii); this record adds no exclusion list of its own."
+test_intent:
+  - clause: the build output reports "ac-validater" as a writer that names no registered agent
+    needs_test: true
+    reason: Detecting the unknown name is a set difference between two files, and a wrong source set would miss it.
+  - clause: the report names the category it appears in ("blocker")
+    needs_test: true
+    reason: The category is looked up per writer, so a report without it would leave the stale entry unfindable.
+  - clause: a writer that appears in three categories is reported once, naming all three categories
+    needs_test: true
+    reason: Grouping by writer is computed, and the naive loop reports the same writer three times.
+  - clause: writers that do name a registered agent (for example sql-coder and epic-supervisor) are not reported
+    needs_test: true
+    reason: A false positive on real agents would make the report noise that everyone learns to ignore.
 delivers_to: null
 expects_from:
   ac_id: INF-100c-5
-  contract: "The build-time consistency check that already loads both the agent list and every category's allowed_writers"
+  contract: "The build-time consistency check from INF-100c-5, which loads the agent definitions and every category's allowed_writers in one pass and returns unknown_writers as a sorted list of {writer: str, categories: list[str]}; this record fixes what goes into that list and how it is reported."
 origin_agent: business-analyst
 created: 2026-10-21
 amended_by: []

@@ -1,7 +1,7 @@
 id: INF-100c-5-iv
 components:
   - feedback_collector
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Every agent that signs off today, including both AC-coverage gates, is a registered feedback writer"
 component: infrastructure
@@ -34,14 +34,42 @@ doc_links:
   - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
     relationship: describes
     status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Both copies (config/feedback_categories.yaml and templates/config/feedback_categories.yaml) change identically, and the build-deployed copy matches them after a build round-trip (ADR-001)."
+  - "Additions only: no existing allowed_writers entry is removed or reordered (INF-100c-3 backward compatibility)."
+  - "quality-concern, subagent-quality and process-finding gain none of the four agents; their writer sets stay role-restricted."
+  - "The ac-validator and ac-fulfillment-gate entries already on main (c3a469610) are kept as they are, not added a second time."
+  - "The file's decision history records the restructuring-specialist and change-scope-reviewer additions, as it does for earlier additions."
+test_intent:
+  - clause: the check reports zero agents that sign off but can write to no category
+    needs_test: true
+    reason: The shipped roster is the real input, and today's two unregistered agents show it drifts without a test.
+  - clause: zero writers that name no registered agent
+    needs_test: true
+    reason: A stale or misspelt writer in the shipped file would only surface through the check run against that file.
+  - clause: ac-validator and ac-fulfillment-gate are each listed in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern
+    needs_test: true
+    reason: No existing test asserts either gate's membership, so a later edit could drop them unnoticed.
+  - clause: restructuring-specialist and change-scope-reviewer are each listed in the allowed_writers of the same six categories
+    needs_test: true
+    reason: These two are new registrations, and the six-category set is exact, so a missing category would go unnoticed.
+  - clause: the source copy and the template copy of the feedback categories file list the same allowed_writers for every category
+    needs_test: true
+    reason: The two copies are edited by hand, and drift between them ships a fix that installed projects never receive.
 delivers_to:
   agent: python-coder
   contract: "To INF-100c-5-v: feedback categories file (source and template copies) listing ac-validator, ac-fulfillment-gate, restructuring-specialist and change-scope-reviewer in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern, so the build deploys it to installed projects"
 expects_from:
   ac_id: INF-100c-5
-  contract: "The build-time consistency check, run against the shipped files"
+  contract: "The build-time consistency check from INF-100c-5, run against the shipped agent definitions and the deployed feedback categories file, returning missing_writers (list[str]) and unknown_writers (list of {writer: str, categories: list[str]}); this record makes both empty."
 origin_agent: business-analyst
 created: 2026-10-21
 amended_by: []

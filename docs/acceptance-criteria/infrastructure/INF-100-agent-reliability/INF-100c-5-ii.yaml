@@ -2,7 +2,7 @@ id: INF-100c-5-ii
 components:
   - feedback_collector
   - build_pipeline
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Writer-list sentinels are neither reported as unknown nor counted for agents they do not resolve to"
 component: infrastructure
@@ -35,12 +35,32 @@ doc_links:
   - path: docs/architecture/feedback-lifecycle.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Sentinel names and their resolution are taken from where submission defines them. The check keeps no list of sentinel names and no resolution of all_agents of its own, so a change to submission's rule reaches the check with no edit."
+  - "all_agents resolves to the agents marked is_ticket_phase in config/agent_registry.json, the same set submission admits, and never to every agent."
+  - "A sentinel resolves to nobody for the required-writer check (as hook does) unless submission would accept a named agent through it; the check may never credit an agent that submission would reject."
+test_intent:
+  - clause: '"hook" is not reported as a writer that names no registered agent'
+    needs_test: true
+    reason: The shipped process-finding list is exactly [hook], so a wrong sentinel rule flags it on every build.
+  - clause: '"all_agents" is not reported as a writer that names no registered agent'
+    needs_test: true
+    reason: Treating the sentinel as an agent name is the first wrong version the record names.
+  - clause: the build fails naming restructuring-specialist, because all_agents does not resolve to it
+    needs_test: true
+    reason: Resolving all_agents to every agent would silently pass an agent that submission rejects.
+  - clause: python-coder (marked as a ticket phase, listed nowhere else) is treated as registered through all_agents and is not named
+    needs_test: true
+    reason: The positive side of the resolution is computed from the registry's ticket-phase flags and can be wrong in the other direction.
 delivers_to: null
 expects_from:
   ac_id: INF-100c-5
-  contract: "The build-time consistency check, which this record constrains to apply the same sentinel resolution that feedback submission applies"
+  contract: "The build-time consistency check from INF-100c-5 (missing_writers: list[str]; unknown_writers: list of {writer: str, categories: list[str]}), which this record constrains to resolve sentinels exactly as submit_feedback.py does: hook and all_agents never appear in unknown_writers, and all_agents admits only is_ticket_phase agents when computing missing_writers."
 origin_agent: business-analyst
 created: 2026-10-21
 amended_by: []

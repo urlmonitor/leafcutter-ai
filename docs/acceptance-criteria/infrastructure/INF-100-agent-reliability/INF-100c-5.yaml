@@ -2,7 +2,7 @@ id: INF-100c-5
 components:
   - feedback_collector
   - build_pipeline
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The build fails when an agent that signs off is in no feedback category's writer list"
 component: infrastructure
@@ -42,11 +42,47 @@ doc_links:
   - path: templates/agents/ac-validator.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "THE CHECK GATES THE PATH EVERY PACKAGE BUILD TAKES. It must run inside build.py (including --validate-only) and fail it before success is reported. A check that runs only as an optional standalone command or only as a commit hook does not satisfy the criteria; if it is also wired into a commit-time gate, the build stays the load-bearing enforcement point."
+  - "BOTH LISTS ARE READ FROM THEIR SOURCES, NEVER RESTATED. The signing-off set comes from the signoff field in each agent definition's frontmatter (templates/agents/*.md), not from config/agent_registry.json, which carries no signoff flags. The writer lists come from the feedback categories file the build deploys. No agent name, category name or count (24 agents, nine categories) is hard-coded, so a new agent or category is checked with no edit to the check."
+  - "WRITER RESOLUTION AGREES WITH SUBMISSION. A category counts for an agent only if submit_feedback.py would accept that agent for that category, sentinels included (INF-100c-5-ii). There must be one resolution rule shared by submission and the check; a second copy that can drift from submission is a defect."
+  - "ALL VIOLATIONS IN ONE RUN. The failure names every signing-off agent with no category, in a stable sorted order, in one message, and never stops at the first."
+  - "The check is read-only and deterministic: it writes no file, and two runs on the same inputs give byte-identical output."
+  - "An unreadable or malformed agent definition or categories file must fail the build with a message naming the file, per the project error handling policy. It must never be skipped silently, which would let the check pass having checked nothing."
+  - "Every module the check imports must be in the build deploy manifest, so the check works in a deployed layout (CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Must add under 1 second to the build for the shipped roster."
+  - "Deployed/template parity (ADR-001): edit templates/ and verify the deployed copies through the build round-trip."
+  - "This record and INF-100c-5-iv must land in the same change set. restructuring-specialist and change-scope-reviewer are unregistered today, so the check alone turns every package build red until -iv's registrations land."
+test_intent:
+  - clause: the build fails before it reports success
+    needs_test: true
+    reason: Failing the build is the whole enforcement, and a check that only logs would let the two lists disagree silently again.
+  - clause: the failure message names restructuring-specialist as an agent that signs off but can write to no feedback category
+    needs_test: true
+    reason: The named agent is computed from two files, so a wrong join would name the wrong agent or none.
+  - clause: when two such agents are missing (restructuring-specialist and change-scope-reviewer) the one failure message names both, not only the first found
+    needs_test: true
+    reason: Stopping at the first violation is the easy wrong implementation and would hide every later omission.
+  - clause: after restructuring-specialist and change-scope-reviewer are added to the complete category's allowed_writers, the same build passes this check
+    needs_test: true
+    reason: A check that cannot pass once the omission is fixed would block every build, so the passing direction needs its own proof.
 delivers_to:
   agent: python-coder
-  contract: "A build-time consistency check that reads every agent definition's signoff flag and every category's allowed_writers, and fails the build listing every signing-off agent absent from all categories"
+  contract: "A build-time consistency check, run by every package build, computing two result sets in one pass from the deployed feedback categories file and the agent definitions: missing_writers (list[str], sorted: agent ids whose definition has signoff: true and that no category's resolved allowed_writers admits; non-empty fails the build with one message naming all of them) and unknown_writers (list of {writer: str, categories: list[str]}, sorted by writer: writer entries that are neither a submission sentinel nor a registered agent). INF-100c-5-i, -ii and -iii constrain this check; INF-100c-5-iv runs it against the shipped files."
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-21

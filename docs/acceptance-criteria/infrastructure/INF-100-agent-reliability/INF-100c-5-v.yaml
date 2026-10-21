@@ -1,7 +1,7 @@
 id: INF-100c-5-v
 components:
   - feedback_collector
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "ac-validator and ac-fulfillment-gate feedback reaches the feedback log from an installed project"
 component: infrastructure
@@ -38,12 +38,40 @@ doc_links:
   - path: docs/architecture/feedback-lifecycle.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The proof drives the deployed submit_feedback.py of a built install as a subprocess, not the source-tree module, because the KI symptom is what the installed copy accepts."
+  - "Every write goes to an isolated sink the proof owns. It must never append to the developer's feedback log or to a log another test reads."
+  - "Must follow the repository's shared-deployed-layout rule for tests (CLAUDE.md, TQ-600a) and spawn no build.py of its own unless it must change the install before building."
+  - "A rejected submission leaves the feedback log byte-identical to its state before the attempt."
+  - "Rejection wording is owned by INF-100c-3-i; this record neither restates nor changes it."
+test_intent:
+  - clause: the submission is accepted and returns a feedback id
+    needs_test: true
+    reason: Acceptance by the installed copy is the KI symptom itself, and it can fail while the source copy passes.
+  - clause: a feedback record naming agent ac-validator and category knowledge-gap is written to the feedback log
+    needs_test: true
+    reason: A returned id without a written record would be the same silent loss one step later.
+  - clause: the agent records that feedback id at sign-off, not "(submit-failed)"
+    needs_test: false
+    reason: Recording the id is the signoff skill's prompt behaviour, which falls back to (submit-failed) only when submission fails, so the accepted-submission clause proves the code side.
+  - clause: a feedback record naming agent ac-fulfillment-gate and category blocker is written to the feedback log
+    needs_test: true
+    reason: The second gate was registered separately and could be missing from the installed copy while the first is present.
+  - clause: the submission is rejected with a message naming ac-validator and quality-concern
+    needs_test: true
+    reason: Registering the gates must not open the reviewer-only category, and only a rejection test shows the fix stayed narrow.
+  - clause: no feedback record is written to the feedback log
+    needs_test: true
+    reason: A rejection that still appends a record would corrupt the corpus the fix exists to repair.
 delivers_to: null
 expects_from:
   ac_id: INF-100c-5-iv
-  contract: "Feedback categories file listing ac-validator and ac-fulfillment-gate as writers, as deployed by the build"
+  contract: "templates/config/feedback_categories.yaml, deployed by the build to <output_root>/config/feedback_categories.yaml, listing ac-validator and ac-fulfillment-gate in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern, and in no other category."
 origin_agent: business-analyst
 created: 2026-10-21
 amended_by: []

@@ -2,7 +2,7 @@ id: INF-100c-5-iii
 components:
   - feedback_collector
   - build_pipeline
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Agents that do not sign off are not required to be feedback writers"
 component: infrastructure
@@ -30,12 +30,28 @@ doc_links:
   - path: config/feedback_categories.yaml
     relationship: describes
     status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The required-writer set is exactly the agents whose definition frontmatter sets signoff: true. An absent field and signoff: false both mean not required, and no other field (tier, is_ticket_phase, tools) widens the set."
+  - "A signoff value that is neither true nor false must be reported naming the agent definition file, and never guessed as either."
+test_intent:
+  - clause: the build does not fail on account of research-agent
+    needs_test: true
+    reason: Requiring every agent to be a writer is the easy wrong implementation and would fail the build on research-agent.
+  - clause: neither research-agent, epic-supervisor nor sql-coder is named as a missing writer
+    needs_test: true
+    reason: The absent-field and explicit-false cases are parsed separately and either could be read as true.
+  - clause: epic-supervisor and sql-coder, which are listed as writers, are not reported as writers that name no registered agent
+    needs_test: true
+    reason: A non-signing agent that is listed must still count as a known agent, and tying the known set to signoff would wrongly flag it.
 delivers_to: null
 expects_from:
   ac_id: INF-100c-5
-  contract: "The build-time consistency check, whose required-writer set this record bounds to agents with signoff: true"
+  contract: "The build-time consistency check from INF-100c-5, whose missing_writers (list[str]) this record bounds to agent ids whose definition sets signoff: true, and whose unknown_writers is computed against all registered agents regardless of signoff."
 origin_agent: business-analyst
 created: 2026-10-21
 amended_by: []
