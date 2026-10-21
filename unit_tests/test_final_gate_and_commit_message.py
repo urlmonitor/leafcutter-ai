@@ -178,24 +178,19 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         deliberately never invoked. The ONLY channel that can still resolve
         the gate is a genuine, person-attributed args.resume_answer.
 
-        "edit" is one of resolveGate()'s valid enum options (verified
-        empirically: unlike an out-of-enum action, it passes
-        validateAnswerShape and is genuinely applied) AND resolveGate()
-        deliberately does NOT clear the durable pause record for an "edit"
-        decision (see resolveGate()'s own comment: "'edit' does NOT move
-        past the gate -- it re-dispatches the step with feedback"). So a
-        SINGLE supplied args.resume_answer of "edit" is reapplied by
-        resolveGate() on EACH pass through the pipeline's own
-        `while (!approved)` loop within this one process invocation: pass 1
-        increments editRetries and `continue`s; pass 2 re-presents
-        final-gate, resolveGate() reapplies the SAME "edit" answer again,
-        and the pipeline's own exhausted-retries branch (editRetries >=
-        MAX_EDIT_RETRIES) now genuinely fires — no second process/resume
-        round-trip needed.
+        BO-2300d-1-iii: a person's resume answer now applies at most once per
+        run, so one "edit" answer can no longer be replayed until the retry
+        limit (that replay was the defect). The exhausted-retries branch is
+        still reached the legitimate way: the person approves, but the
+        stage's check keeps failing (the mocked design pre-pass never gives
+        a readable report), so every pass is
+        forced to an edit -- pass 1 increments editRetries and `continue`s,
+        pass 2 re-presents final-gate, the forced edit recurs, and
+        editRetries >= MAX_EDIT_RETRIES fires.
 
         Returns (run_result, side_channel).
         """
-        resume_answer = _final_gate_resume_answer("edit")
+        resume_answer = _final_gate_resume_answer("approve")
         mock_js = textwrap.dedent("""
             async function mockAgent(call) {
                 const agentType = call.agentType || '';
@@ -225,6 +220,12 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
                 // BOTH passes through the while(!approved) loop.
                 if (label === 'read-pause-record') {
                     return { exists: true, stale: false };
+                }
+                // The test-design stage's check fails on every pass (its
+                // pre-pass gives no readable report), so each approval is
+                // forced to an edit until retries run out.
+                if (label === 'design-prepass') {
+                    return { output: '', exit_code: 1, stderr: 'pre-pass failed' };
                 }
 
                 return { status: 'ok' };
