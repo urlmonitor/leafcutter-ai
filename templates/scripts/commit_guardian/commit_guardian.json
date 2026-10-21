@@ -1086,7 +1086,7 @@
         "name": "Check Workflow Meta Pure-Literal Contract",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_workflow_meta.py",
         "language": "system",
-        "files": "^templates/workflows-js/.*\\.js$",
+        "files": "^templates/workflows-js/[^/]+\\.js$",
         "stages": [
           "pre-commit"
         ],
