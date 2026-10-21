@@ -147,6 +147,11 @@ def _load_relocated_copy(real_source: Path, dest_dir: Path):
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / "setup_ticket_worktree.py"
     shutil.copy2(real_source, dest_path)
+    # The script imports its sibling _setup_ticket_*.py modules from build_orchestration/ beside it.
+    sibling_dir = dest_dir / "build_orchestration"
+    sibling_dir.mkdir(parents=True, exist_ok=True)
+    for sibling in sorted((_REPO_ROOT / "scripts" / "build_orchestration").glob("_setup_ticket_*.py")):
+        shutil.copy2(sibling, sibling_dir / sibling.name)
     module_name = f"_bo4100d4_copy_{uuid.uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, dest_path)
     module = importlib.util.module_from_spec(spec)
