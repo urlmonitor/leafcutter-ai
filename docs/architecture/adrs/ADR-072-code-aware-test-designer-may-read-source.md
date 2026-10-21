@@ -4,7 +4,7 @@ description: "One pre-approval agent, test-designer (Sonnet), may open source an
 type: "adr"
 status: "active"
 created: "2026-10-14"
-last_updated: "2026-10-14"
+last_updated: "2026-10-21"
 deciders:
   - BrainCandy
   - adr-author
@@ -17,6 +17,7 @@ related_docs:
   - docs/architecture/adrs/ADR-071-test-intent-is-not-a-test-contract.md
   - docs/architecture/adrs/ADR-033-agent-model-tiers.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - docs/architecture/adrs/ADR-075-requirement-rule-check.md
   - docs/architecture/components/ac-driven-dev.md
   - docs/reference/ac-readiness-and-assignment-gates.md
   - docs/reference/plan-feature-workflow-rationale.md
@@ -32,6 +33,8 @@ related_code:
   - scripts/ac_store/_approval_holds.py
   - scripts/ac_store/_impl_readiness_gate.py
   - scripts/ac_store/requirement_rule_check.py
+  - scripts/ac_store/_rc_protected_fields.py
+  - scripts/ac_store/approve_acs.py
   - scripts/build_phases_ac_store_rc.py
 ---
 
@@ -108,9 +111,10 @@ A run that produces only one group MUST leave the other group's fields untouched
 write MUST be a field-targeted edit of the AC YAML. The agent MUST NOT rewrite a whole
 record. It MUST NOT touch `criteria`, `test_intent`, `assigned_agent`, `implements_pattern`,
 `pattern_bindings`, `declared_files`, `covered_by`, `delivers_to`, `expects_from` or any
-other `it_requirements` key. The rule check, run with `--before-ref HEAD` against the
-committed planner output, is the deterministic backstop. Each opened-files list MUST name
-the files the agent actually opened. Only "present and non-empty" is checked mechanically.
+other `it_requirements` key. The rule check's `protected fields` rule family
+(ACD-2500a-2-vi, [ADR-075](ADR-075-requirement-rule-check.md); named here 2026-10-21), run
+with `--before-ref HEAD` against the committed planner output, is the deterministic
+backstop. Each opened-files list MUST name the files the agent actually opened. Only "present and non-empty" is checked mechanically.
 
 ### 3. Deterministic pre-pass for file facts, agent judgment for the rest
 
@@ -155,6 +159,10 @@ order is:
 
 An `edit` retry re-dispatches `test-designer`, never `it-po`. After round 2, any finding
 still undecided is shown as held and is never approved.
+
+*Amended 2026-10-21 (ACD-2500a-2-ix):* /plan-feature commits the test-design output
+(label `test-design-handback`) before the IT PO's first hand-back round, so the hand-back
+rule check's before-state is the post-design batch.
 
 ### 5. Success is judged from disk and fails closed
 
@@ -228,12 +236,18 @@ misses mutants and an amendment that takes the ADR-033 §2.3 route.
   this change cannot be resumed and MUST be re-run. The final gate id stays `final-gate`
   but now belongs to `test-design`. The final commit subject becomes
   `plan-feature(TEST-DESIGN, final)`.
-- **The M-5 bypass stays open.** /plan-feature approves through an agent edit
+- *Amended 2026-10-21: closed by ACD-300c-4. /plan-feature now approves through
+  `approve_acs.py` in id-list mode (`--ids`), for exactly the ids its `--dry-run` hold
+  report releases.* Original text:
+  **The M-5 bypass stays open.** /plan-feature approves through an agent edit
   (`apply-approval`: a `status-checker` edits `readiness`), not through `approve_acs.py`.
   This change filters that edit's id list through the same hold predicates that
   `approve_acs.py` uses. It does not route approval through the tool. Closing the bypass is
   a separate follow-up.
-- Byte-identity of fields the agent does not own is enforced by the prompt and the
+- *Amended 2026-10-21: closed by ACD-2500a-2-vi. The `protected fields` rule family
+  ([ADR-075](ADR-075-requirement-rule-check.md)) fails the stage when a field it does not
+  own differs from the committed value.* Original text:
+  Byte-identity of fields the agent does not own is enforced by the prompt and the
   committed `HEAD` before-state, not by a dedicated rule family.
 
 ### Operational
@@ -279,3 +293,4 @@ misses mutants and an amendment that takes the ADR-033 §2.3 route.
 - [ADR-009](ADR-009-itpo-no-source-code-access.md): the IT PO has no source-code access (in force, not amended).
 - [ADR-071](ADR-071-test-intent-is-not-a-test-contract.md): test intent versus test design, and the closed hold-reason list (adopted, not amended).
 - [ADR-033](ADR-033-agent-model-tiers.md): model tiers and tool floors.
+- [ADR-075](ADR-075-requirement-rule-check.md): the requirement rule check, including the `protected fields` family.

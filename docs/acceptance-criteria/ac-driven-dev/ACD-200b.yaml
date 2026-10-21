@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the IT PO is enriching a batch of ACs with technical fields,
     and a feature in the batch declares documentation triggers because it introduces new

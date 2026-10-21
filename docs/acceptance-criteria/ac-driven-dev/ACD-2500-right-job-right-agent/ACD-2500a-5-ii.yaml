@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given ADR-072 section 2 names "the rule check, run with --before-ref HEAD" as the
@@ -27,7 +27,7 @@ criteria: |
     test-design output before the IT PO's hand-back round, so the hand-back rule check's
     before-state is the post-design batch (ACD-2500a-2-ix), with section 4's original text
     unchanged,
-  And ADR-072's status and its decisions are otherwise unchanged, and it links ADR-073.
+  And ADR-072's status and its decisions are otherwise unchanged, and it links ADR-075.
 depends_on:
   - ACD-2500a-5
   - ACD-2500a-5-i
@@ -66,6 +66,10 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:
+- reason: "ADR number pinned at 073 is renumbered to ADR-075: check-decision-number-uniqueness refused 073 as claimed by the in-flight BO-4300 branch (which also holds 074). Only the number changes."
+  date: '2026-10-21'
+  by: main-session
+  directed_by: user
 - reason: 'criteria: new clause for the dated ADR-072 section 4 sentence (test-design
     output committed before the IT PO''s hand-back round, so the hand-back check''s
     before-state is the post-design batch, ACD-2500a-2-ix); depends_on gains ACD-2500a-2-ix.

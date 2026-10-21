@@ -30,7 +30,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts" / "ac_store"))
 
+from _approval_holds import build_report  # noqa: E402
 from _design_stage_support import (  # noqa: E402
     GATE, IDS, NO_RECORD, PAUSE, PENDING, calls, check_reply, designer_reply, gate_context,
     gate_record, holds_reply, labels, names, position, prepass_paths, prepass_reply, resume_args,
@@ -134,23 +136,38 @@ def test_undesignable_record_shown_pending_not_offered(prepass):
     assert PENDING in json.dumps(gate_record(result))
 
 
+def _step_reply(approved: list[str], held: dict[str, str]) -> dict:
+    """An approve_acs.py --ids ... --json reply (its real shape): approved, held entries, already_approved."""
+    entries = [{"id": rid, "file": f"docs/acceptance-criteria/x/{rid}.yaml", "reason": why} for rid, why in held.items()]
+    report = {**build_report(approved, entries), "already_approved": []}
+    return {"output": json.dumps(report), "exit_code": 0, "stderr": ""}
+
+
 def test_resumed_approval_applies_only_to_approvable_records(prepass):
     # covers: ACD-2500c-2
     # angle: failure
-    """AC-3 (not offered for approval): a resumed `approve` runs the hold report right before the approval
-    write and sets readiness only on the three approvable records; held TDG-3 is never named in the approval
-    prompt and is not reported approved, yet the final commit still stages all four ids. Wrong versions
-    caught: approve-all (the pre-G4 behaviour) and a final commit that stages only approved ids."""
-    labs = labels(prepass, holds_reply({"TDG-3": PENDING}), designer=designer_reply(pending=("TDG-3",)))
+    """AC-3 (not offered for approval): a resumed `approve` takes the hold report from the approval step's
+    dry run (ACD-300c-4) right before the approval write, then runs that step with the three approvable ids
+    only; held TDG-3 is never named in the approval command and is not reported approved, yet the final
+    commit still stages all four ids. Wrong versions caught: approve-all (the pre-G4 behaviour), the old
+    status-checker apply-approval agent edit, and a final commit that stages only approved ids."""
+    ok = ["TDG-1", "TDG-2", "TDG-4"]
+    labs = labels(
+        prepass, holds_reply({"TDG-3": PENDING}), designer=designer_reply(pending=("TDG-3",)),
+        **{"approval-holds": _step_reply(ok, {"TDG-3": PENDING}), "approval-apply": _step_reply(ok, {})},
+    )
     result = run(labs, resume_args())
 
-    holds_at = position(result, "approval-holds")
-    apply_calls = calls(result, "apply-approval")
-    assert len(apply_calls) == 1 and position(result, "apply-approval") > holds_at, names(result)
-    for rid in ("TDG-1", "TDG-2", "TDG-4"):
+    dry_at = position(result, "approval-holds")
+    assert "approve_acs.py" in result.agent_calls[dry_at].prompt and "--dry-run" in result.agent_calls[dry_at].prompt
+    apply_calls = calls(result, "approval-apply")
+    assert len(apply_calls) == 1 and position(result, "approval-apply") > dry_at, names(result)
+    assert calls(result, "apply-approval") == [], f"an agent edited readiness: {names(result)}"
+    assert "approve_acs.py" in apply_calls[0].prompt and "--dry-run" not in apply_calls[0].prompt, apply_calls[0].prompt
+    for rid in ok:
         assert rid in apply_calls[0].prompt, apply_calls[0].prompt
     assert "TDG-3" not in apply_calls[0].prompt, apply_calls[0].prompt
-    assert sorted((result.result or {}).get("acs_approved", [])) == ["TDG-1", "TDG-2", "TDG-4"], result.result
+    assert sorted((result.result or {}).get("acs_approved", [])) == ok, result.result
     final_commit = calls(result, "commit-stage-output")[-1].prompt
     assert all(rid in final_commit for rid in IDS), f"the final commit must stage all four ids:\n{final_commit[:900]}"
 

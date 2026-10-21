@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-16'
-last_updated: '2026-10-16'
+last_updated: '2026-10-21'
 components:
   - documentation_system
 related_docs:
@@ -39,3 +39,12 @@ related_docs:
 At its next merge of main, the BO-4300 epic renumbers its two diagrams to the next free numbers
 (c3-034 and c3-035 were free on 2026-10-16) and updates the references above. That branch also
 carries an `ADR-070-…`. Check the ADR number against main at the same time.
+
+## ADR numbers (added 2026-10-21)
+
+The BO-4300 branch also holds `ADR-073-workflow-shell-steps-reach-only-shell-permitted-agents.md` (2026-10-16)
+and `ADR-074-legacy-workspace-cutover-lossless-or-untouched.md`. EPIC-RightJobRightAgentFollowUps first
+wrote its requirement-rule-check ADR as ADR-073. check-decision-number-uniqueness refused that number
+as claimed by the in-flight branch, so it was renumbered to
+`docs/architecture/adrs/ADR-075-requirement-rule-check.md` before landing. No ADR clash remains, so
+the BO-4300 branch keeps 073 and 074.

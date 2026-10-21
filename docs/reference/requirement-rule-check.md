@@ -1,10 +1,10 @@
 ---
 title: "Reference: Requirement Rule Check"
-description: "Lookup reference for the requirement rule check CLI, its JSON report, dispositions, rule families, fail-closed paths, /plan-feature use and family registration."
+description: "Lookup reference for the requirement rule check CLI, its JSON report, dispositions, rule families (including the protected-fields family and its per-stage owner map), the before-state a repairing run needs, fail-closed paths, /plan-feature use and family registration."
 type: reference
 status: active
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 components:
   - ac_store
   - ac_driven_dev
@@ -35,8 +35,8 @@ The check reads a set of requirement records, repairs three one-right-answer vio
 | Script | `scripts/ac_store/requirement_rule_check.py` (deployed to `<root>/scripts/ac_store/`, with the `_rc_*.py` modules, flat) |
 | Output | One JSON document on stdout; logging goes to stderr |
 | Exit codes | `0` passed, `1` failed, `2` usage error |
-| Rule families | 9 rule families plus the pass-through `record schema` and `record readable` |
-| Writer | `_rc_edit.py` only; it may write `covered_by`, `components` and `readiness` |
+| Rule families | 11 rule families plus the pass-through `record schema` and `record readable` |
+| Writer | `_rc_edit.py` only; it may write `covered_by`, `components` and `readiness`, and only when the run has a before-state |
 
 ---
 
@@ -45,7 +45,8 @@ The check reads a set of requirement records, repairs three one-right-answer vio
 ```bash
 python scripts/ac_store/requirement_rule_check.py --stage ba --changed-since HEAD --before-ref HEAD
 python scripts/ac_store/requirement_rule_check.py --stage itpo --location docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent --before-snapshot before.json
-python scripts/ac_store/requirement_rule_check.py --stage approval --for-ids ACD-2500a-1,ACD-2500a-2
+python scripts/ac_store/requirement_rule_check.py --stage itpo-handback --changed-since HEAD --before-ref HEAD
+python scripts/ac_store/requirement_rule_check.py --stage approval --for-ids ACD-2500a-1,ACD-2500a-2 --before-ref HEAD
 ```
 
 One of `--changed-since`, `--location` or `--for-ids` is needed; with none the script prints a usage line and exits `2`.
@@ -55,9 +56,9 @@ One of `--changed-since`, `--location` or `--for-ids` is needed; with none the s
 | `--changed-since` | git REV | Check every record file under the store that is modified, added or untracked against REV. The mode `/plan-feature` uses. Adds `records_to_commit` to the report. |
 | `--location` | folder | Check every record file under that folder (absolute, or repo-root relative). |
 | `--for-ids` | `ID,ID,...` | Check the deepest common folder of those records. An id absent from the store, or outside that folder, is a `failed` finding. |
-| `--stage` | `po`, `ba`, `itpo`, `test-design`, `approval` | The authoring stage that just ended. An unknown or missing stage is a `failed` finding, not a usage error. |
-| `--before-ref` | git REV | Revision that holds each record's readiness before the stage. |
-| `--before-snapshot` | JSON file | `{id: readiness or null}`; the before-state without git. Wins over `--before-ref`. |
+| `--stage` | `po`, `ba`, `itpo`, `test-design`, `itpo-handback`, `approval` | The stage that just ended. `itpo-handback` is the technical planner's hand-back pass after the test designer (an authoring stage). An unknown or missing stage is a `failed` finding, not a usage error. |
+| `--before-ref` | git REV | Revision that holds each record before the stage: its readiness, and for the `protected fields` family its committed field values. |
+| `--before-snapshot` | JSON file | `{id: readiness or null}`; the before-state without git (readiness only, so `protected fields` cannot judge). Wins over `--before-ref`. |
 | `--store-root` | folder | Default `<repo-root>/docs/acceptance-criteria`. |
 | `--repo-root` | folder | Default: nearest ancestor of the location that holds `docs/acceptance-criteria`. |
 | `--schema` | file | Override `config/ac_store_schema.json`. |
@@ -65,7 +66,15 @@ One of `--changed-since`, `--location` or `--for-ids` is needed; with none the s
 | `--surface-map` | file | Override `config/surface_craft_map.yaml`. |
 | `--migration-map` | JSON or YAML file | Override the namespace-to-graph-component-ids map used by `non-empty graph component list`. |
 
-Every stage except `approval` needs a before-state (`--before-ref` or `--before-snapshot`); without one the run is `failed`.
+### Before-state
+
+A run repairs a record only when it has a usable before-state, so every example command above that can repair passes one. There are two ways to give one: `--before-ref REV` or `--before-snapshot FILE`. **Not usable** means none given, a ref that does not resolve, or a snapshot that cannot be read. Without a usable before-state, whatever the stage:
+
+- nothing is written: no record file is changed;
+- every repair becomes `needs a decision`, and its `detail` holds the `field` and the value it would have set or appended, so a person can make the change by hand;
+- the `protected fields` family reports `not evaluated: no before-state`, and an authoring stage also gets a `failed` finding (`before-state unavailable`), so it never passes without one.
+
+The report's `before_state` says which case applied.
 
 ---
 
@@ -73,6 +82,7 @@ Every stage except `approval` needs a before-state (`--before-ref` or `--before-
 
 ```json
 {
+  "before_state": {"given": true, "repairs_applied": false},
   "verdict": "failed",
   "location": "docs/acceptance-criteria/x/y",
   "records_checked": 3,
@@ -98,6 +108,7 @@ Every stage except `approval` needs a before-state (`--before-ref` or `--before-
 | `location` | string | The location as given, repo-root-relative POSIX; the comma-joined ids for `--for-ids`; the REV for `--changed-since`. |
 | `records_checked` | int | Record files seen, readable or not. |
 | `findings` | list | See the finding format below. |
+| `before_state` | object | Additive. `{given, repairs_applied}`, both booleans: `given` is true when the run had a usable before-state; `repairs_applied` is true when at least one record file was written. A run with `given: false` always has `repairs_applied: false`. |
 | `family_counts` | object | Additive. Per family name: `{evaluated, not_evaluated}`, the records given to the family and the records it declined to judge. |
 | `records_to_commit` | list of strings | Additive; only with `--changed-since`. Sorted repo-relative POSIX paths of every record file changed against REV after the run, repaired parents included. `[]` on a git failure. |
 
@@ -134,7 +145,7 @@ Findings are sorted by file, rule family, subject, record id, message. There is 
 
 ## Rule families
 
-Ten rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
+Eleven rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair, and only with a before-state. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
 
 | # | Family name (exact string) | Dispositions it produces | Repairable field |
 |---|---|---|---|
@@ -148,6 +159,7 @@ Ten rule families, evaluated in the order listed after `record schema`. Only fam
 | 8 | `test intent coverage` | `needs a decision` | none |
 | 9 | `test design grounding` | `needs a decision`, `not evaluated` | none |
 | 10 | `file findings consistency` | `needs a decision` | none |
+| 11 | `protected fields` | `needs a decision`, `not evaluated` | none |
 | - | `record schema` (pass-through) | `needs a decision`, `failed` | none |
 | - | `record readable` (pass-through) | `failed` | none |
 
@@ -182,7 +194,7 @@ A record that ends the stage `approved` but was not `approved` in the before-sta
 
 ### 5. documentation trigger to documentation requirement mapping
 
-Applies to `L1` records whose `documentation_triggers` is a list. The trigger-to-specialist map lives in `_rc_doc_triggers.py`:
+Applies to `L1` records whose `documentation_triggers` is a list. The trigger names are declared once, in the `documentation_triggers` enum of `config/ac_store_schema.json`, which the schema check, the commit-time record check and this check all read. The trigger-to-specialist map lives in `_rc_doc_triggers.py` with exactly one entry per name, and a test fails naming a trigger missing from either side. To add a trigger, add the name to the enum and a specialist to the map:
 
 | Trigger | Specialist |
 |---|---|
@@ -223,6 +235,20 @@ Judges a code-aware design: a record with a non-empty `test_spec` and the author
 
 Judges a record whose `file_findings` is a list (an absent field means the file-aware step has not run). Each finding is `needs a decision` with `detail {kind, path}`: `missing` (a declared file has no finding; a declared `to_be_created` file not yet in the tree is exempt), `undeclared` (a finding for a file that is neither declared nor the record's `it_requirements.reference_file_path`), `tree-absent` / `tree-present` (the verdict contradicts the tree for a declared file), `line_range` / `found_in` / `found_in_null` (a verdict missing its companion field, or `found_in` set on another verdict) and `unopened` (a verdict on an existing file not in `file_findings_opened_files`). An undecided finding is NOT reported: it is the approval hold `file finding undecided` (`_file_findings.undecided_findings`).
 
+### 11. protected fields
+
+Judges a record that already existed when the stage started: a field the running stage does not own, whose value now differs from the committed one, is `needs a decision`. It never repairs; the stage fails until a person decides. One finding per (record, field), with `detail {field, stage, before, after}`.
+
+The compared fields are a fixed list of eleven, `criteria`, `test_intent`, `assigned_agent`, `implements_pattern`, `pattern_bindings`, `declared_files`, `covered_by`, `delivers_to`, `expects_from`, `test_required` and `it_requirements`, plus the test designer's own outputs. A stage may change only the fields it owns:
+
+| `--stage` | Fields the stage may change |
+|---|---|
+| `test-design` | Its own outputs: `test_spec`, `test_design_authorship`, `test_design_opened_files`, `file_findings`, `file_findings_opened_files`. |
+| `itpo-handback` | `assigned_agent`, `file_findings[].decision`, `it_requirements`, `declared_files`, `delivers_to`, `expects_from`. So the planner's hand-back pass may change the assignment and a file finding's decision, but not a finding's other sub-fields. |
+| any other (`po`, `ba`, `itpo`, `approval`) | Not in the map: `not evaluated`, never `failed`. |
+
+Also `not evaluated`, reason in the message: no before-state, a readiness-only before-state (`--before-snapshot`), and a record created during the stage. `it_requirements` as a mapping is compared key by key, never `reference_file_path`; a `covered_by` entry the check's own back-link repair appended is not the stage's change. The field list lives in `_rc_protected_fields.py` and equals the one in `templates/agents/test-designer.md`.
+
 ### Pass-through families
 
 | Family | Behaviour |
@@ -238,7 +264,7 @@ Judges a record whose `file_findings` is a list (an absent field means the file-
 | Parent back-link | `check_ac_parent_covered_by` (commit hook). Family 1 applies the same rule earlier and also repairs it. |
 | Surface-to-craft map | `assignment_quality.resolve_craft_in`; family 6 reads it, with no second file-type table. |
 | Declared files | `declared_files.get_declared_files`; families 6 and 7 read it. |
-| Protected fields (`criteria`, `title`, `req_status`, `depends_on`) | `check_ac_governance`; this check's writer cannot reach them. |
+| Governed fields (`criteria`, `title`, `req_status`, `depends_on`) | `check_ac_governance`; this check's writer cannot reach them. Not the `protected fields` family above, which compares stage ownership. |
 | Families 3, 4, 5 and 7 | This check alone; no existing store check enforces them. |
 
 ---
@@ -253,7 +279,7 @@ Every inconclusive path is a `failed` finding and so verdict `failed`; none is a
 | Unreadable record (YAML error, bad encoding, no top-level `id`) | `record readable` | Names the file and, for YAML errors, the line. The file still counts in `records_checked`. |
 | A rule family raises, or returns a non-`Finding` | the family's name | Scoped to that record and family; the run continues. |
 | Unreadable schema, registry, surface map or migration map | `record schema` (family 6 for the surface map) | `rule source unreadable: ...`. |
-| Missing before-state on an authoring stage, or unknown `--stage` | `readiness never raised to approved by an authoring agent` | |
+| Missing or unusable before-state on an authoring stage, or unknown `--stage` | `readiness never raised to approved by an authoring agent` | Nothing is written; repairs report `needs a decision` (see [Before-state](#before-state)). |
 | Git failure listing changed files, nothing changed, or ids absent or outside the folder | `record readable` | |
 | A repair refused by `_rc_edit`, unprovable, or still violated after the second pass | the repairing family | `repair of ... was not applied` or `still violated after the repair pass`. |
 | A repaired record that no longer reads | `record readable` | |
@@ -268,7 +294,7 @@ Every inconclusive path is a `failed` finding and so verdict `failed`; none is a
 python .leafcutter/scripts/ac_store/requirement_rule_check.py --stage <stage> --changed-since HEAD --store-root <ac-store> --repo-root <worktree> --before-ref HEAD
 ```
 
-1. **Stage-end check.** It runs through a shell-permitted agent under the label `rule-check-<stage>`, after the stage agent finishes and before the user gate. The stages are `po`, `ba`, `itpo` and `test-design`.
+1. **Stage-end check.** It runs through a shell-permitted agent under the label `rule-check-<stage>`, after the stage agent finishes and before the user gate. The stages it passes are `po`, `ba`, `itpo` and `test-design`, always with `--before-ref HEAD`.
 2. **Fail-closed reading.** The check passes only if the exit code is `0`, `verdict` is `passed` and `records_checked` is above 0. A dispatch error, an unreadable reply, or an exit code and verdict that disagree is a failed check.
 3. **Gate behaviour on failure.** The summary (each finding's file, family and message) goes into the gate prompt. If the user chose `approve`, the action becomes `edit` and the findings are fed back to the stage agent as feedback; `cancel` still cancels. After the edit-retry limit the pipeline returns `status: "error"` with the failed report in `failed_check`.
 4. **Committing records.** On approval the stage commit stages `records_to_commit` in addition to the stage's own ACs, so a parent repaired by the check is committed.

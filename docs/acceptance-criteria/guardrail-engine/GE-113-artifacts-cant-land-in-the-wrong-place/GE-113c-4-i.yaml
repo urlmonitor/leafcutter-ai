@@ -9,7 +9,7 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given docs/architecture/diagrams/c2-001-ac-driven-pipeline.md, c2-002-ac-authoring-pipeline.md,

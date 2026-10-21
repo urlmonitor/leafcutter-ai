@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 criteria: |
   A focused technical planner whose declared role matches what it really does.
 

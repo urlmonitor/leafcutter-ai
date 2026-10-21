@@ -31,6 +31,8 @@ TECHNICAL_ROUTE_LABELS = {
     "peek-pause-record", "read-pause-record", "pause-persist-verify",
     "clear-pause-record", "clear-pause-record-verify",
     "design-prepass", "stage-test-design-author", "rule-check-test-design", "approval-holds",
+    # approval-apply joined the table with ACD-300c-4 (the deterministic approval step).
+    "approval-apply",
 }
 
 
@@ -55,7 +57,7 @@ def test_design_stage_support_has_no_type_checker_finding(tmp_path):
 def test_design_stage_label_table_keeps_its_entries():
     # covers: ACD-2500c-2-ii
     # angle: criterion
-    """labels(prepass, holds) with sentinel objects returns a dict with exactly the 13 labels the
+    """labels(prepass, holds) with sentinel objects returns a dict with exactly the 14 labels the
     technical route dispatches; design-prepass and approval-holds are the passed objects;
     stage-test-design-author equals designer_reply() and rule-check-test-design equals
     check_reply() when none are given; given designer and check replies are used as passed; a
@@ -69,7 +71,7 @@ def test_design_stage_label_table_keeps_its_entries():
     prepass, holds = object(), object()
     table = support.labels(prepass, holds)
     assert isinstance(table, dict)
-    assert set(table) == TECHNICAL_ROUTE_LABELS and len(table) == 13, sorted(table)
+    assert set(table) == TECHNICAL_ROUTE_LABELS and len(table) == 14, sorted(table)
     assert table["design-prepass"] is prepass and table["approval-holds"] is holds
     assert table["stage-test-design-author"] == support.designer_reply()
     assert table["rule-check-test-design"] == support.check_reply()
@@ -81,4 +83,4 @@ def test_design_stage_label_table_keeps_its_entries():
     marker = object()
     overridden = support.labels(prepass, holds, **{"branch-check": marker, "extra-label": marker})
     assert overridden["branch-check"] is marker and overridden["extra-label"] is marker
-    assert len(overridden) == 14
+    assert len(overridden) == 15

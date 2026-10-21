@@ -1657,7 +1657,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       // Wrong/malformed shape or action not in valid options: stay paused.
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
-    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md
+    // Why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md
     if (args.resume_answer.channel !== "person") {
       return {
         status: "paused_awaiting_input",
@@ -1691,7 +1691,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       decision._resumedContext = _pausedRecord.context;
     }
 
-    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md
+    // Why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md
     if (decision.action !== "edit") {
       const _clearPrompt =
         "This paused run has been resumed and is moving past the decision point " +
@@ -1718,7 +1718,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       }
 
       if (!_clearVerified) {
-        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md
+        // Why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md
         log(
           "[plan-feature][WARNING] Could not verify the durable pause record for run '" +
           runId + "' (gate '" + gateId + "') was cleared after resume. A stale record " +
@@ -1731,7 +1731,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     return decision;
   }
 
-  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md
+  // Why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md
   void liveGateFn;
   return pauseAtGate(gateId, runId, context, descriptor);
 }
@@ -1803,7 +1803,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     };
   }
 
-  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md
+  // Why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId, question: question };
 }
 
@@ -1962,20 +1962,7 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
     "done | sort -u | head -n1); " +
     "fi; " +
     "if [ -z \"$REPO_ROOT\" ]; then " +
-    // Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
-    // own REGISTRYREADFAIL tags below), using an errno-style CODE rather than
-    // an English phrase. This command's own literal source text is dispatched
-    // as part of the agent() prompt on EVERY run regardless of which branch
-    // actually executes, so an English reason word here (e.g. "found",
-    // "missing", "denied") would leak into the observable report of every
-    // OTHER branch's run too. A code with zero lexical overlap with either
-    // the "not found" or "permission refused" vocabulary (ACD-2100b-1), NOR
-    // with the word "unreadable" itself, is what keeps those two reports —
-    // and this run's own report, whatever outcome it turns out to be —
-    // genuinely distinguishable (ACD-2100b-2: this same static command text
-    // is also dispatched, unconditionally, on the uninterpretable-registry
-    // outcome, so a tag containing "unreadable" would leak that word into
-    // every uninterpretable-registry report too).
+    // Why the structured ENOREPO marker is an errno-style code (ACD-2100b-1, ACD-2100b-2): docs/reference/plan-feature-workflow-rationale-helpers.md
     "echo \"REGISTRYREADFAIL reason=ENOREPO location=" + targetDescription + "\" >&2; " +
     "exit 1; " +
     "fi; "
@@ -2101,12 +2088,12 @@ async function runRuleCheck(stage, acStoreDir, worktreePath, agentType) {
 }
 
 // ACD-2500c-2: one deterministic ac_store CLI via the shell agent; ok only on exit 0 with JSON stdout (fail closed, like runRuleCheck).
-async function runStageScript(label, script, ids, acStoreDir, worktreePath, agentType) {
+async function runStageScript(label, script, ids, acStoreDir, worktreePath, agentType, tail) {
   const target = ".leafcutter/scripts/ac_store/" + script;
   const bad = ids.filter((id) => !/^[A-Za-z0-9._-]+$/.test(id));
   if (bad.length > 0) { return { ok: false, why: label + " refused unsafe ids " + bad.join(",") }; }
   const cmd = _buildRepoRootResolutionSnippet(target) + "python \"$REPO_ROOT/" + target + "\" --ids " + ids.join(",") +
-    " --store-root \"" + acStoreDir + "\" --repo-root \"" + worktreePath + "\"";
+    (tail || " --store-root \"" + acStoreDir + "\" --repo-root \"" + worktreePath + "\"");
   try {
     const raw = await agent(
       "Run the following command and return ONLY the raw stdout output:\n" + cmd + "\n" +
@@ -2114,7 +2101,7 @@ async function runStageScript(label, script, ids, acStoreDir, worktreePath, agen
       { agentType: agentType, label: label }
     );
     const reply = parseAgentJson(raw, { stage: label, agent: agentType });
-    if (reply.exit_code !== 0) { return { ok: false, why: label + " exited " + reply.exit_code + " " + (reply.stderr || "") }; }
+    if (reply.exit_code !== 0) { let partial = null; try { partial = JSON.parse(reply.output); } catch (_) { partial = null; } return { ok: false, report: partial, why: label + " exited " + reply.exit_code + " " + (reply.stderr || "") }; }
     return { ok: true, report: JSON.parse(reply.output) };
   } catch (err) {
     return { ok: false, why: label + " produced no readable report (" + (err && err.message ? err.message : String(err)) + ")" };
@@ -2151,10 +2138,24 @@ async function approvalHolds(ids, acStoreDir, worktreePath, shellAgent) {
   return out.ok && Array.isArray(out.report.held) && Array.isArray(out.report.approved) ? [...out.report.held, ...ids.filter((id) => !out.report.approved.includes(id) && !out.report.held.some((h) => h.id === id)).map((id) => ({ id: id, reason: "not in the hold report" }))] : ids.map((id) => ({ id: id, reason: "unreadable" }));
 }
 
-// ACD-2500d-3-i: hand undecided file findings back to it-po (max 2 rounds, docs/reference/code-aware-step.md); what stays undecided is shown held.
-async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent) {
+// ACD-300c-4: approve through the store's one approval step (approve_acs.py, deployed copy; why: docs/reference/plan-feature-workflow-rationale-gates.md): its --dry-run reports the holds, the apply gets only the released ids; ok:false on any failure (fail closed).
+async function approveBatch(ids, priority, acStoreDir, worktreePath, shellAgent) {
+  const json = " --json --ac-root \"" + acStoreDir + "\"";
+  const dry = await runStageScript("approval-holds", "approve_acs.py", ids, acStoreDir, worktreePath, shellAgent, " --dry-run" + json);
+  if (!dry.ok) { return dry; }
+  const released = [...(dry.report.approved || []), ...(dry.report.already_approved || [])];
+  const done = released.length === 0 ? { ok: true, report: {} } : await runStageScript("approval-apply", "approve_acs.py", released, acStoreDir, worktreePath, shellAgent, " --priority " + priority + json);
+  const part = done.report || {}, got = [...(part.approved || []), ...(part.already_approved || [])], failed = part.failed || [];
+  const held = [...(dry.report.held || []), ...(part.held || []).filter((h) => !(dry.report.held || []).some((d) => d.id === h.id))];
+  return done.ok ? { ok: true, held: held, approved: got, already: part.already_approved || [] } : { ...done, held: held, approved: got, failed: failed, untouched: released.filter((id) => !got.includes(id) && !failed.includes(id)) };
+}
+
+// ACD-2500d-3-i / ACD-2500a-2-ix: hand undecided file findings back to it-po (max 2 rounds, docs/reference/code-aware-step.md); what stays undecided is shown held. Round 1 first commits the test-design output as test-design-handback (the check's before-state; why that label: docs/reference/plan-feature-workflow-rationale-gates.md); each round is checked as itpo-handback and a failure is `stopped`.
+async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent, commitDesign) {
   const undecided = (list) => list.filter((h) => h.reason === "file finding undecided").map((h) => h.id);
+  let stopped = null;
   for (let round = 1; round <= 2 && ruleCheck.passed && undecided(held).length > 0; round++) {
+    if (round === 1) { const done = await commitDesign(ruleCheck); if (done.status === "error") { stopped = formatCommitError("test-design", "test-design", done, allAcs); break; } }
     try {
       const raw = await agent(
         "You are the technical planner (it-po). These requirements carry file findings with no recorded decision: " + undecided(held).join(", ") + ".\n" +
@@ -2167,10 +2168,11 @@ async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePat
       log("[plan-feature] findings hand-back round " + round + " failed: " + (err && err.message ? err.message : String(err)));
       break;
     }
-    ruleCheck = await runRuleCheck("test-design", acStoreDir, worktreePath, shellAgent);
+    ruleCheck = await runRuleCheck("itpo-handback", acStoreDir, worktreePath, shellAgent);
+    if (!ruleCheck.passed) { stopped = "The hand-back stage (itpo-handback) is not complete, so the run stops before the final gate.\n" + ruleCheck.summary; }
     held = await approvalHolds(allAcs, acStoreDir, worktreePath, shellAgent);
   }
-  return { held: held, ruleCheck: ruleCheck };
+  return { held: held, ruleCheck: ruleCheck, stopped: stopped };
 }
 
 /**
@@ -2296,7 +2298,7 @@ const sessionSlug = component
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
-// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
+// Why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
 if (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object") {
   const missingPreflightMessage =
     "No workspace-setup permission pre-flight verdict was supplied in args " +
@@ -2341,7 +2343,7 @@ if (workspaceSetupPermission.permits !== true) {
       "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
       "not a list of agent entries. Halting before any authoring agent is dispatched. Fix " +
       "config/agent_registry.json so that 'agents' is a list of agent entries.",
-    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md
     permission_denied:
       "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
       workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
@@ -2362,12 +2364,12 @@ if (workspaceSetupPermission.permits !== true) {
 let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
-// Why why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md
+// Why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md
 const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
   "scripts/setup_ticket_worktree.py", workspaceSetupAgentId, "resolve-worktree-setup-script-path"
 );
 
-// Why why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md
+// Why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md
 const worktreeSetupCommand = worktreeScriptResolution.ok
   ? "python \"" + worktreeScriptResolution.path + "\" create-ac-worktree" +
     (sessionSlug ? ` "${sessionSlug}"` : "")
@@ -2398,7 +2400,7 @@ try {
   wtParsed = null;
 }
 
-// Why why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md
+// Why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md
 if (wtParsed === null) {
   const _rawText = (typeof worktreeSetupResult === "string") ? worktreeSetupResult : "";
   // Reuses isAgentRefusal()'s AGENT_REFUSAL_MARKERS scan, never a second
@@ -2578,7 +2580,7 @@ if (route === "covered" && !force) {
   if (_covGateResult && TERMINAL_GATE_STATUSES.includes(_covGateResult.status)) {
     return _covGateResult;
   }
-  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md
+  // Why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md
   if (!_covGateResult) {
     return {
       status: "undetermined",
@@ -2877,7 +2879,7 @@ for (const step of pipeline) {
         const logBody = resumeLogParsed.output || "";
         // Why how AC ids are recovered from commit bodies: docs/reference/plan-feature-workflow-rationale-gates.md
         const stageSubjectRe = new RegExp(
-          `^plan-feature\\(${stageDisplayLabel}(?:[^)]*)?\\):`,
+          `^plan-feature\\(${stageDisplayLabel}(?:,[^)]*)?\\):`,
           "i"
         );
         const anyStageSubjectRe = /^plan-feature\([^)]*\):/i;
@@ -2909,7 +2911,7 @@ for (const step of pipeline) {
     // Also add to committedAcs so cancel messages distinguish prior commits.
     committedAcs.push(...resumedAcIds);
 
-    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md
     if (step.stage === "ba" && ptFlowProduced) {
       await emitPtTelemetry(
         "pt_reconciliation_skipped_on_resume",
@@ -2954,7 +2956,7 @@ for (const step of pipeline) {
   let reapprove = false; // approval was consumed, then the check forced a re-author: a rewrite that passes needs a NEW pause (never the old answer); one that still fails skips the gate and retries
 
   while (!approved) {
-    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
     let written;
     if (skipAuthorOnResume) {
       written = [];
@@ -3076,7 +3078,7 @@ for (const step of pipeline) {
       if (action === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel).
         const cancelLabel = `gate after ${step.agent}`;
-        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md
+        // Why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md
         return {
           status: "cancelled",
           cancelled_at: `gate-${step.stage}`,
@@ -3133,7 +3135,7 @@ for (const step of pipeline) {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
       // ADR-024: resolveGate checks args.resume_answer before the live agent call.
       let heldPre = skipAuthorOnResume ? [] : await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
-      if (!skipAuthorOnResume) { ({ held: heldPre, ruleCheck } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId)); written = [...new Set(allAcsWritten)]; }
+      if (!skipAuthorOnResume) { let stopped; ({ held: heldPre, ruleCheck, stopped } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId, (rc) => commitStageOutput(allAcsWritten, "test-design-handback", component, false, runId, acStoreDir, authoringWorktreePath, rc.toCommit))); written = [...new Set(allAcsWritten)]; if (stopped) { return { status: "error", message: stopped, stage: "itpo-handback", committed_acs: committedAcs, acs_as_drafts: written }; } }
       const approvablePre = allAcsWritten.filter((id) => !heldPre.some((h) => h.id === id));
       const _finalGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         "final-gate",
@@ -3158,7 +3160,7 @@ for (const step of pipeline) {
         },
         reapprove ? { ...args, resume_answer: null } : args,
         { stage: "final", acs: written, all_acs: allAcsWritten, rule_check: ruleCheck && ruleCheck.summary, held: heldPre, approvable: approvablePre },
-        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Show each approvable requirement criteria next to its test_spec; list held requirements separately with no approve option." },
+        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Final gate (test design). Show each approvable requirement: its criteria next to its test_spec, with its assigned_agent, estimated_complexity, delivers_to and expects_from; list held requirements separately with no approve option. Ask for one batch priority (critical / high / medium / low), then approve | edit | defer | cancel." },
         args.run_id || "default-run"
       );
       // Non-proceed outcomes: exit immediately.
@@ -3170,7 +3172,7 @@ for (const step of pipeline) {
         return {
           status: "undetermined",
           message:
-            "The final gate (IT PO v3 review) returned no usable answer, so " +
+            "The final gate (test-design stage) returned no usable answer, so " +
             "no decision was recorded. This is a gate failure, NOT a user " +
             "cancellation. Committed ACs are preserved and drafted ACs are " +
             "left on disk -- re-run /plan-feature and answer the gate.",
@@ -3186,7 +3188,7 @@ for (const step of pipeline) {
         if (Array.isArray(finalDecision._resumedContext.acs)) {
           written = finalDecision._resumedContext.acs;
         }
-        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md
+        // Why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md
         if (Array.isArray(finalDecision._resumedContext.all_acs)) {
           for (const _resumedAcId of finalDecision._resumedContext.all_acs) {
             if (!allAcsWritten.includes(_resumedAcId)) {
@@ -3209,12 +3211,13 @@ for (const step of pipeline) {
           status: "cancelled",
           cancelled_at: "final-gate",
           cancelled_by: "person",
-          message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)", acStoreDir, authoringWorktreePath),
+          message: buildCancelMessage(committedAcs, written, "final gate (test design)", acStoreDir, authoringWorktreePath),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
       } else if (finalAction === "edit" && editRetries < MAX_EDIT_RETRIES) {
         editRetries++;
+        if (typeof finalDecision.feedback === "string" && finalDecision.feedback.trim()) { acFeedback = finalDecision.feedback.trim() + (ruleCheck.passed ? "" : "\n" + ruleCheck.summary); }
         continue;
       } else if (finalAction === "edit" && editRetries >= MAX_EDIT_RETRIES) {
         return {
@@ -3233,22 +3236,24 @@ for (const step of pipeline) {
           acs_as_reviewed: allAcsWritten,
         };
       } else if (finalAction === "approve") {
-        // Write readiness: approved + priority to all ACs in batch.
-        const heldNow = await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
-        const approvable = allAcsWritten.filter((id) => !heldNow.some((h) => h.id === id));
-        const approvalResult = (approvable.length === 0 && heldNow.length > 0) ? null : await agent(
-          `For each of the following ACs: ${approvable.join(", ")}, ` +
-          `update their YAML files to set readiness: approved and priority: ${priority}. ` +
-          "Use Edit tool on each file. Confirm by returning { \"status\": \"ok\", \"updated\": [<ac_ids>] }.",
-          { agentType: "status-checker", label: "apply-approval" }
-        );
+        // Why a failed step stops before the commit (ACD-300c-4-ii): docs/reference/plan-feature-workflow-rationale-gates.md
+        const approval = await approveBatch(allAcsWritten, priority, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+        if (!approval.ok) {
+          const gotIds = approval.approved || [], failedIds = approval.failed || [], untouchedIds = approval.untouched || allAcsWritten;
+          return {
+            status: "error", route: effectiveRoute, acs_approved: gotIds, acs_failed: failedIds, acs_untouched: untouchedIds,
+            acs_as_reviewed: allAcsWritten.filter((id) => !gotIds.includes(id)),
+            message: "Approval failed and nothing was committed.\nApproved before the failure (still approved on disk): " + (gotIds.join(", ") || "none") +
+              "\nFailed: " + (failedIds.join(", ") || "none") + "\nUntouched: " + (untouchedIds.join(", ") || "none") + "\n" + approval.why,
+          };
+        }
 
         // Commit the final IT PO enriched AC output before reporting success.
         const finalCommitOutcome = await commitStageOutput(written, step.stage, component, true, runId, acStoreDir, authoringWorktreePath, ruleCheck.toCommit);
         if (finalCommitOutcome.status === "error") {
           return {
             status: "error",
-            message: formatCommitError("it-po", step.stage, finalCommitOutcome, allAcsWritten),
+            message: formatCommitError("test-design", step.stage, finalCommitOutcome, allAcsWritten),
             acs_updated: allAcsWritten,
             priority,
             route: effectiveRoute,
@@ -3286,9 +3291,9 @@ for (const step of pipeline) {
         return {
           status: "ok",
           message:
-            `/plan-feature complete. ${approvable.length} AC(s) approved with priority: ${priority}; ${heldNow.length} held.\n` +
-            prSummary,
-          acs_approved: approvable,
+            `/plan-feature complete. ${approval.approved.length} approved, ${approval.held.length} held (priority: ${priority})` +
+            (approval.already.length ? `; ${approval.already.length} already approved` : "") + approval.held.map((h) => `\nHeld ${h.id}: ${h.reason}`).join("") + "\n" + prSummary,
+          acs_approved: approval.approved, held: approval.held,
           priority,
           route: effectiveRoute,
           authoring_branch: authoringBranch,

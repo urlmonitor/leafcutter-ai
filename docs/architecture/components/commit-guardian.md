@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-10-12
+last_updated: 2026-10-21
 components:
   - commit_guardian
   - git_vcs_operations
@@ -19,6 +19,7 @@ related_docs:
   - docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md
   - docs/how-to/managing-pre-commit-hooks.md
   - docs/reference/commit-guardian-negative-control-liveness.md
+  - docs/reference/source-file-length-measurement.md
 related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
@@ -173,7 +174,7 @@ reports present, if any, in place of its old single-ref check.
 
 `_operation_record.py` is split out as a sibling leaf module (rather than
 grown inside `_authored_change.py`) to keep `_authored_change.py` under this
-project's 400-line file-size limit; it imports nothing beyond the standard
+project's [400-line file-size limit](../../reference/source-file-length-measurement.md); it imports nothing beyond the standard
 library and is imported only by `_authored_change.py`, following the same
 small-leaf-module shape as `_resolve_root.py`. See AC `GE-120e-4` under
 `docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for

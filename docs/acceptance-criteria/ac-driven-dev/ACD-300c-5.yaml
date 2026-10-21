@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given the final gate of a /plan-feature run now follows the test-design stage, not the

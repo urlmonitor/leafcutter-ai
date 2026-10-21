@@ -8,17 +8,26 @@ BUSINESS CONTEXT: AC ACD-1200b-5 (and ACD-1200b-5-ii / KI-ACS-017 hardening).
     append-only (exactly one amended_by entry is added per leaf) and
     idempotent: leaves already at readiness: approved are not written at all,
     ensuring byte-stability on re-run.
-ARCHITECTURE: Standalone CLI script. Two modes:
+ARCHITECTURE: Standalone CLI script. Three modes:
     --goal <GOAL_AC_ID>: find goal AC by id, promote all reviewed leaf children.
     --ac <AC_ID>: directly promote a single AC to approved.
+    --ids A,B [--priority P]: approve exactly those records, each under its own id
+    (an L1 included, never expanded to its children); the hold check, idempotency and
+    the read-back check are the shared _promote_leaf's (ACD-300c-4). Any readiness is
+    approved unless held (draft, or no readiness line); a missing priority line is inserted;
+    a failed write is restored, listed in report["failed"], and the run goes on and exits 1. One write sets
+    readiness, priority and appends exactly one amended_by entry. --json prints
+    {approved, held, already_approved}; with --dry-run, "approved" lists what would be
+    approved and nothing is written. The /plan-feature workflow runs the deployed copy
+    (RULE_CHECK_DEPLOY_MAP) as a dry run for the holds, then for the released ids.
     Uses targeted string replacement (not full yaml.dump round-trip of the
     whole document) to preserve field order and comments outside the
-    amended_by field. Follows the same store-mutation convention as the
+    amended_by field. Files are read and written as bytes, so their own
+    line endings are kept (no CRLF rewrite on Windows). Follows the same store-mutation convention as the
     sibling scripts/ac_store/mark_ac_done.py.
 
-    The amended_by block itself IS re-rendered via yaml.dump (a full
-    round-trip of just that field's parsed value plus the new entry) rather
-    than re-emitting the prior entries' original bytes — the block's span in
+    The amended_by block keeps every prior line as written (ACD-300c-4): only
+    the new entry is appended, in the block's own indentation — the block's span in
     the raw text is located by _find_amended_by_block, which walks forward
     from the amended_by: key line to the next TOP-LEVEL key (a line starting
     with an identifier character in column 0) or end of document. Blank
@@ -32,7 +41,8 @@ ARCHITECTURE: Standalone CLI script. Two modes:
 
     _promote_leaf re-reads and re-parses the file immediately after writing
     it, before printing any success line or returning 0. If the write does
-    not parse back as YAML, the original bytes are restored exactly and the
+    not parse back as YAML, or does not read back approved with the earlier
+    amended_by entries intact, the original bytes are restored exactly and the
     run reports a failure and returns non-zero — a writer that cannot verify
     its own output must never report success for it.
 
@@ -52,6 +62,7 @@ from typing import Optional
 import yaml
 
 from _approval_holds import approval_hold_reason, build_report
+from _approve_support import ID_RE, id_matches, read_back_problem, restore, set_top_level
 
 
 # Matches the amended_by key line itself, including any inline value such as
@@ -140,34 +151,39 @@ def _find_amended_by_block(text: str) -> Optional[tuple[int, int]]:
     return key_match.start(), block_end
 
 
-def _build_amended_by_block(existing: list, new_entry: dict) -> str:
-    """Render the YAML block for amended_by with new_entry appended.
+def _build_amended_by_block(block: str, new_entry: dict) -> str:
+    """Return *block* (the on-disk ``amended_by:`` block) with *new_entry* appended as its last entry.
 
-    Re-serializes the full amended_by value (prior entries plus new_entry)
-    via yaml.dump rather than re-emitting the prior entries' original bytes.
-    This is safe for the guarantees this module must preserve: a
-    dump-then-load round trip is a semantics-preserving identity for the
-    parsed value (every prior entry's text, including embedded blank lines,
-    reads back identical), even though the exact byte rendering of an
-    already-existing multi-line scalar may differ from how it was written
-    before. The span this block replaces is located by
-    _find_amended_by_block, not by this function.
+    Byte-preserving (ACD-300c-4): every prior line of the block is kept as written, including
+    folded multi-line notes; only the new entry's lines are added, after the last non-blank line,
+    in the indentation and line ending the block already uses. An empty inline value (``[]``,
+    ``null``) is replaced by the block-sequence key line; an absent field is passed in as the bare
+    key line ``amended_by:`` plus the file's line ending.
 
     Args:
-        existing: Current list of amended_by entries (may be empty).
+        block: The block's text as it stands on disk (the key line through the line before the
+            next top-level key), or the bare key line when the field is absent.
         new_entry: New entry dict to append (keys: action, agent, date).
 
     Returns:
-        YAML text for the complete ``amended_by:`` key-value block,
-        including the trailing newline produced by yaml.dump.
+        The complete replacement text of the block.
+
+    Raises:
+        ValueError: The key line carries a non-empty inline value, which cannot be appended to.
     """
-    new_list = list(existing) + [new_entry]
-    return yaml.dump(
-        {"amended_by": new_list},
-        default_flow_style=False,
-        allow_unicode=True,
-        sort_keys=False,
-    )
+    eol = "\r\n" if "\r\n" in block else "\n"
+    head, *body = block.splitlines(keepends=True)
+    inline = head.partition(":")[2].strip()
+    if inline not in ("", "[]", "null", "~"):
+        message = f"amended_by holds an inline value {inline!r}; it cannot be appended to in place"
+        raise ValueError(message)
+    indent = next((m.group(1) for m in (re.match(r"(\s*)- ", line) for line in body) if m), "")
+    last = max((i for i, line in enumerate(body) if line.strip()), default=-1) + 1
+    kept = "".join(body[:last])
+    kept += "" if kept.endswith("\n") or not kept else eol
+    entry = yaml.dump([new_entry], default_flow_style=False, allow_unicode=True, sort_keys=False)
+    entry_text = "".join(indent + line + eol for line in entry.splitlines())
+    return "amended_by:" + eol + kept + entry_text + "".join(body[last:])
 
 
 def _repo_relative(ac_file: Path) -> str:
@@ -192,54 +208,114 @@ def _hold_leaf(ac_file: Path, ac_id: str, hold: str, report: Optional[dict]) -> 
         report["held"].append({"id": ac_id, "file": _repo_relative(ac_file), "reason": hold})
 
 
-def _promote_leaf(ac_file: Path, dry_run: bool = False, report: Optional[dict] = None) -> int:
-    """Promote a single leaf AC from readiness: reviewed to readiness: approved.
+def _render_approved(raw_text: str, priority: Optional[str], new_entry: dict) -> str:
+    """Return *raw_text* with only readiness (and priority) changed and *new_entry* appended.
 
-    Performs two targeted in-place mutations: replaces the ``readiness`` field
-    value and appends one entry to ``amended_by``. If readiness is already
-    ``approved``, the file is not written at all (byte-stable idempotency).
+    A field-targeted edit (ACD-300c-4): the top-level ``readiness`` line is the one set (never the
+    same words inside a ``notes`` value; inserted when the record has none), ``priority`` is set the
+    same way when given, and the ``amended_by`` block gains *new_entry* at its end with every earlier
+    byte kept (``_build_amended_by_block``).
 
-    After writing, re-reads and re-parses the file before reporting success
-    (KI-ACS-017): if the write does not parse back as YAML, the original
-    bytes are restored exactly and a failure is reported instead — no
-    "promoted" line is ever printed for a record left unparseable.
+    Raises:
+        ValueError: ``amended_by`` cannot be appended to.
+    """
+    eol = "\r\n" if "\r\n" in raw_text else "\n"
+    updated = set_top_level(raw_text, "readiness", "approved", eol)
+    if priority is not None:
+        updated = set_top_level(updated, "priority", priority, eol)
+    span = _find_amended_by_block(updated)
+    if span is None:
+        updated += "" if updated.endswith("\n") or not updated else eol
+        span = (len(updated), len(updated))
+    block = updated[span[0]:span[1]] or "amended_by:" + eol
+    return updated[: span[0]] + _build_amended_by_block(block, new_entry) + updated[span[1]:]
+
+
+def _read_record(ac_file: Path) -> Optional[tuple[bytes, str, dict]]:
+    """Return (raw bytes, text, parsed dict) of *ac_file*, or None after printing why it cannot be read."""
+    try:
+        raw_bytes = ac_file.read_bytes()
+        raw_text = raw_bytes.decode("utf-8")
+        data = yaml.load(raw_text, Loader=yaml.SafeLoader)
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        print(f"ERROR: Cannot read AC file {ac_file}: {exc}", file=sys.stderr)
+        return None
+    if not isinstance(data, dict):
+        print(f"ERROR: AC file {ac_file} did not parse to a dict", file=sys.stderr)
+        return None
+    return raw_bytes, raw_text, data
+
+
+def _write_approved(ac_file: Path, raw_bytes: bytes, raw_text: str, data: dict, priority: Optional[str]) -> int:
+    """Write the approval into *ac_file*, read it back, and restore the original bytes if it does not read back.
+
+    Returns:
+        0 when the write read back, 1 on a write error or a failed read-back (file restored).
+    """
+    prior = data.get("amended_by") if isinstance(data.get("amended_by"), list) else []
+    new_entry = {"action": "approved", "agent": "approve_acs", "date": date.today().isoformat()}
+    try:
+        ac_file.write_bytes(_render_approved(raw_text, priority, new_entry).encode("utf-8"))
+    except ValueError as exc:
+        print(f"ERROR: {ac_file} cannot be approved in place: {exc}", file=sys.stderr)
+        return 1
+    except OSError as exc:
+        print(f"ERROR: Cannot write AC file {ac_file}: {exc}", file=sys.stderr)
+        return 1
+    problem = read_back_problem(ac_file, prior, priority, new_entry)
+    return 0 if problem is None else restore(ac_file, raw_bytes, problem)
+
+
+def _promote_leaf(
+    ac_file: Path, dry_run: bool = False, report: Optional[dict] = None, priority: Optional[str] = None,
+    any_readiness: bool = False,
+) -> int:
+    """Promote a single AC from readiness: reviewed to readiness: approved (and set its priority).
+
+    Performs field-targeted in-place mutations (``_render_approved``): the ``readiness`` value,
+    the ``priority`` value when *priority* is given, and one appended ``amended_by`` entry. If
+    readiness is already ``approved``, the file is not written at all (byte-stable idempotency)
+    and the id is listed in ``report["already_approved"]`` when the report carries that list.
+    The file is read and written as bytes, so its own line endings are kept.
+
+    After writing, re-reads the file before reporting success (KI-ACS-017, ACD-300c-4-ii): if the
+    write does not parse back as YAML, or does not read back approved with the earlier
+    ``amended_by`` entries intact, the original bytes are restored exactly and a failure naming
+    the file is reported — no "promoted" line is ever printed for such a record.
 
     Args:
-        ac_file: Path to the leaf AC YAML file.
-        dry_run: When True, log what would happen but do not write files.
+        ac_file: Path to the AC YAML file.
+        dry_run: When True, log what would happen but do not write files; the ids that would be
+            approved are listed in ``report["approved"]``.
         report: The ``--json`` report to fill instead of printing text lines to
             stdout, or None for text mode.
+        priority: The priority to write alongside the approval, or None to leave it as is.
+        any_readiness: True for ``--ids`` mode: a record not held is approved whatever its readiness
+            (draft, or no readiness line at all), as the old final-gate flow did; otherwise only
+            ``reviewed`` records are promoted and any other value exits 2.
 
     A record held by ``approval_hold_reason`` is never written: it is reported
     (``held <id>: <reason>``, or an entry of ``report["held"]``) and counts as 0.
 
     Returns:
         0 on success, no-op or hold, 1 on read/write error or on a write that
-        fails self-validation (post-write re-parse), 2 on unexpected
-        readiness.
+        fails self-validation (post-write re-read), 2 on unexpected readiness.
     """
-    try:
-        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
-        # measured benefit (criterion 1); single AC file read.
-        raw_text = ac_file.read_text(encoding="utf-8")
-        data = yaml.load(raw_text, Loader=yaml.SafeLoader)
-    except (OSError, yaml.YAMLError) as exc:
-        print(f"ERROR: Cannot read AC file {ac_file}: {exc}", file=sys.stderr)
+    loaded = _read_record(ac_file)
+    if loaded is None:
         return 1
-
-    if not isinstance(data, dict):
-        print(f"ERROR: AC file {ac_file} did not parse to a dict", file=sys.stderr)
-        return 1
-
+    raw_bytes, raw_text, data = loaded
     ac_id = data.get("id", ac_file.name)
     readiness = data.get("readiness", "")
 
     # Already approved — skip without touching the file (byte-stable idempotency)
     if readiness == "approved":
         _say(report, f"no-op {ac_id}: readiness already approved")
+        if report is not None and "already_approved" in report:
+            report["already_approved"].append(ac_id)
         return 0
 
-    if readiness != "reviewed":
+    if readiness != "reviewed" and not any_readiness:
         print(
             f"SKIP: {ac_id} has readiness={readiness!r} (not reviewed) — skipping",
             file=sys.stderr,
@@ -252,81 +328,16 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False, report: Optional[dict] =
         return 0
 
     if dry_run:
-        _say(report, f"[dry-run] would promote {ac_id} readiness reviewed -> approved")
+        _say(report, f"[dry-run] would promote {ac_id} readiness {readiness or 'unset'} -> approved")
+        if report is not None:
+            report["approved"].append(ac_id)
         return 0
 
-    # --- Targeted replacement 1: readiness field ---
-    # Use simple string replacement when the exact literal is present; fall back
-    # to regex for edge cases where extra whitespace exists around the value.
-    if "readiness: reviewed" in raw_text:
-        updated = raw_text.replace("readiness: reviewed", "readiness: approved", 1)
-    else:
-        updated = re.sub(
-            r"^(readiness:\s*)reviewed$",
-            r"\g<1>approved",
-            raw_text,
-            count=1,
-            flags=re.MULTILINE,
-        )
+    status = _write_approved(ac_file, raw_bytes, raw_text, data, priority)
+    if status != 0:
+        return status
 
-    # --- Targeted replacement 2: amended_by field ---
-    existing_amended_by = data.get("amended_by") or []
-    if not isinstance(existing_amended_by, list):
-        existing_amended_by = []
-
-    today_str = date.today().isoformat()
-    new_entry = {"action": "approved", "agent": "approve_acs", "date": today_str}
-    new_block = _build_amended_by_block(existing_amended_by, new_entry)
-
-    block_span = _find_amended_by_block(updated)
-    if block_span is not None:
-        block_start, block_end = block_span
-        updated = updated[:block_start] + new_block + updated[block_end:]
-    else:
-        # amended_by field absent — append at end of file
-        updated = updated.rstrip("\n") + "\n" + new_block
-
-    try:
-        ac_file.write_text(updated, encoding="utf-8")
-    except OSError as exc:
-        print(f"ERROR: Cannot write AC file {ac_file}: {exc}", file=sys.stderr)
-        return 1
-
-    # Self-validation (KI-ACS-017 part 2): re-read and re-parse the file we
-    # just wrote BEFORE reporting success. A writer that cannot tell whether
-    # its own output is valid must not report success for it.
-    try:
-        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this is a
-        # self-validation re-parse gating whether a write is reported as
-        # successful (criterion 4 -- a decision point, even though it is
-        # this script's own output rather than hand-typed input). The hooks
-        # that will later re-read this same file are themselves now back on
-        # yaml.SafeLoader after this audit's revert pass, so using the same
-        # parser here keeps the self-check honest about what those hooks
-        # will actually see (criterion 3 -- equivalence with the rest of
-        # the system, not just with the historical yaml.safe_load entry
-        # point).
-        written_text = ac_file.read_text(encoding="utf-8")
-        yaml.load(written_text, Loader=yaml.SafeLoader)
-    except (OSError, yaml.YAMLError) as exc:
-        try:
-            ac_file.write_text(raw_text, encoding="utf-8")
-        except OSError as restore_exc:
-            print(
-                f"ERROR: {ac_file} failed self-validation ({exc}) AND the "
-                f"restore of its original content also failed: {restore_exc}. "
-                "The file on disk may be corrupted — restore it from git.",
-                file=sys.stderr,
-            )
-            return 1
-        print(
-            f"ERROR: {ac_file} write did not re-parse as YAML after "
-            f"promotion; original content restored, promotion aborted: {exc}",
-            file=sys.stderr,
-        )
-        return 1
-
-    _say(report, f"promoted {ac_id} readiness reviewed -> approved")
+    _say(report, f"promoted {ac_id} readiness {readiness or 'unset'} -> approved")
     if report is not None:
         report["approved"].append(ac_id)
     return 0
@@ -453,6 +464,16 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="AC_ID",
         help="Directly promote a single AC to approved.",
     )
+    mode.add_argument(
+        "--ids",
+        metavar="ID,ID",
+        help="Approve exactly these records, each under its own id (holds are checked here).",
+    )
+    parser.add_argument(
+        "--priority",
+        choices=("critical", "high", "medium", "low"),
+        help="Priority written with the approval (required with --ids unless --dry-run).",
+    )
     parser.add_argument(
         "--ac-root",
         metavar="DIR",
@@ -487,26 +508,59 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.ids and not args.dry_run and not args.priority:
+        parser.error("--ids needs --priority unless --dry-run")
+    if args.goal and args.priority:
+        parser.error("--priority is only valid with --ids or --ac")
     ac_root = Path(args.ac_root)
 
     report = build_report([], []) if args.json else None
+    if report is not None and args.ids:
+        report["already_approved"], report["failed"] = [], []
     code = _run_mode(args, ac_root, report)
-    if report is not None and code in (0, 2):
+    if report is not None and (code in (0, 2) or args.ids):
         print(json.dumps(report))
     return code
 
 
+def _run_ids(args: argparse.Namespace, ac_root: Path, report: Optional[dict]) -> int:
+    """Approve exactly the ``--ids`` records, each under its own id (ACD-300c-4).
+
+    Every id must be a plain id and exist (its file's ``id:`` equal to it) before anything is
+    written. The hold check, idempotency and the write-then-read-back check are ``_promote_leaf``'s,
+    with any readiness accepted. A record whose write fails read-back is restored and listed in
+    ``report["failed"]``; the run goes on through the remaining ids and exits 1, so nothing is
+    left unprocessed without a report, and records already approved stay approved.
+    """
+    ids = list(dict.fromkeys(i.strip() for i in args.ids.split(",") if i.strip()))
+    bad = [i for i in ids if not ID_RE.match(i)]
+    files = {i: next((p for p in ac_root.rglob(f"{i}.yaml") if id_matches(p, i)), None) or _find_ac_file(ac_root, i) for i in ids if i not in bad}
+    missing = bad + [i for i, found in files.items() if found is None]
+    if missing or not ids:
+        print(f"ERROR: AC(s) {missing or 'none named'} not found (or not a plain id) in {ac_root}", file=sys.stderr)
+        return 1
+    code = 0
+    for ac_id in ids:
+        result = _promote_leaf(files[ac_id], dry_run=args.dry_run, report=report, priority=args.priority, any_readiness=True)
+        if result == 1 and report is not None:
+            report["failed"].append(ac_id)
+        code = code or result
+    return code
+
+
 def _run_mode(args: argparse.Namespace, ac_root: Path, report: Optional[dict]) -> int:
-    """Run the ``--goal`` or ``--ac`` mode, filling *report* in ``--json`` mode."""
+    """Run the ``--goal``, ``--ids`` or ``--ac`` mode, filling *report* in ``--json`` mode."""
     if args.goal:
         return _do_approve_goal(args.goal, ac_root, dry_run=args.dry_run, report=report)
+    if args.ids:
+        return _run_ids(args, ac_root, report)
 
     # --ac mode: directly promote a single AC
     ac_file = _find_ac_file(ac_root, args.ac)
     if ac_file is None:
         print(f"ERROR: AC {args.ac} not found in {ac_root}", file=sys.stderr)
         return 1
-    return _promote_leaf(ac_file, dry_run=args.dry_run, report=report)
+    return _promote_leaf(ac_file, dry_run=args.dry_run, report=report, priority=args.priority)
 
 
 if __name__ == "__main__":
@@ -540,4 +594,18 @@ if __name__ == "__main__":
 #   bytes) was already in place and is unchanged; it is documented in its
 #   own docstring as an intentional semantics-preserving (not byte-
 #   preserving) round trip.
+# - 2026-10-21 [python-coder/ACD-300c-4, -4-i, -4-ii, -4-iii]: Added the --ids /
+#   --priority mode (_run_ids). _build_amended_by_block no longer re-renders the
+#   prior entries: it appends one entry to the on-disk block text (the 2026-09-14
+#   round trip reflowed folded notes). The readiness line is replaced at its
+#   top-level key (the first text "readiness: reviewed" was once a notes value).
+#   Files are read and written as bytes (no CRLF on Windows). The read-back check
+#   also demands readiness approved, the new priority and the prior entries; the
+#   already-approved list is reported (--ids --json) and a repeat writes nothing.
+# - 2026-10-21 [python-coder/ACD-300c-4 review]: --ids accepts any readiness (a draft PO/BA
+#   record is approved like a reviewed one, as the old final gate did; holds are checked first),
+#   inserts a missing readiness/priority line, refuses glob characters and a filename whose id:
+#   differs, goes on after a failed record (report["failed"]) instead of stopping, and refuses
+#   --priority with --goal. Read-back helpers moved to _approve_support.py (size limit); the read-back
+#   also demands the new entry to be last.
 # ====================================================================

@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given the final-gate batch holds the feature record ACD-9990a (level L1) and its two

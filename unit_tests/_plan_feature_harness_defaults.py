@@ -182,6 +182,32 @@ def design_stage_default_responses() -> dict[str, Any]:
     }
 
 
+def approval_step_replies(ids: tuple[str, ...] = ("ACD-X",)) -> dict[str, Any]:
+    """Replies of the final-gate approval step (ACD-300c-4), for tests whose advance marker is `approval-apply`.
+
+    The approve branch runs approve_acs.py twice: `approval-holds` (--dry-run) releases `ids`, then
+    `approval-apply` approves them. Shaped like approve_acs.py --json stdout. Not merged by default: the
+    pre-gate `approval-holds` default above must keep reporting nothing approved.
+    """
+    report = json.dumps({"approved": list(ids), "held": [], "already_approved": []})
+    reply = {"output": report, "exit_code": 0, "stderr": ""}
+    return {"approval-holds": dict(reply), "approval-apply": dict(reply)}
+
+
+def approval_apply_reply(holds: Any) -> dict[str, Any]:
+    """The `approval-apply` reply that approves exactly what a test's `approval-holds` reply releases.
+
+    The approve branch passes the dry run's released ids to the apply run, so its report approves those
+    ids. A holds reply with no readable `approved` list (a sequence, an unreadable report) gives approved [].
+    """
+    try:
+        approved = list(json.loads(holds["output"])["approved"])
+    except (KeyError, TypeError, ValueError):
+        approved = []
+    report = json.dumps({"approved": approved, "held": [], "already_approved": []})
+    return {"output": report, "exit_code": 0, "stderr": ""}
+
+
 def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:
     """Return the plan-feature.js-specific default label_responses for
     `script_path`, or `{}` if it is not plan-feature.js (see

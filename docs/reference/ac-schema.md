@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-15
+last_updated: 2026-10-21
 components:
   - build_pipeline
 related_docs:
@@ -69,7 +69,7 @@ Each AC file is a single YAML document with the following fields.
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
 | `pattern_slots` | list of strings or null | no | List of `{word}` placeholder strings that this pattern AC exposes as bindable slots. Only meaningful on pattern ACs — ACs that other ACs reference via `implements_pattern`. Each entry is a placeholder matching a named placeholder in the `criteria` field (e.g. `"{columns}"`, `"{default_sort}"`). Consuming ACs must supply a value for every slot via `pattern_bindings`. The `check_ac_schema.py` hook derives required slots from this list (falling back to scanning `criteria` for `{word}` placeholders when `pattern_slots` is absent). |
-| `documentation_triggers` | list of enums or null | no | Documentation types required for this feature. Valid on L1 ACs only. Values: `how-to`, `sequence-diagram`, `state-diagram`, `component-diagram`, `reference-doc`. Empty array = no docs needed (provide `documentation_rationale`). |
+| `documentation_triggers` | list of enums or null | no | Documentation types required for this feature. Valid on L1 ACs only. Values: `how-to`, `sequence-diagram`, `state-diagram`, `component-diagram`, `reference-doc`; this enum in `config/ac_store_schema.json` is the one list of trigger names, read by the schema check, the commit-time record check and the requirement rule check ([requirement-rule-check.md](requirement-rule-check.md) family 5 keeps one specialist per name). Empty array = no docs needed (provide `documentation_rationale`). |
 | `documentation_rationale` | string or null | no | Explains why no documentation is needed when `documentation_triggers` is empty on an L1 AC. |
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline (`_build_agents_map`) to look up mandatory guardrail agents. Accepts a single value OR a list when the AC spans multiple targets. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs that predate the computed-gates pipeline (ticket 10 will backfill). |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure of this AC (ADR-017 blast-radius vocabulary). Combined with `change_target` to select mandatory guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
