@@ -410,8 +410,7 @@ _BASE_RESPONSES: dict = {
         "status": "ok",
         "pr_url": "https://github.com/example/example/pull/1",
         "message": "PR opened",
-    },
-}
+    }, **_claim_fx.wrong_version_passing()}
 
 
 def _run(label_responses: dict):

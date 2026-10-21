@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-20'
-last_updated: '2026-10-20'
+last_updated: '2026-10-21'
 components:
   - security_scanner
   - commit_guardian
@@ -23,8 +23,8 @@ related_docs:
 
 - **Severity:** low. The refusal is loud and has a workaround, but it will recur on every long-named epic.
 - **Status:** open — no AC.
-- **Occurrences:** 3 findings in one commit attempt (2026-10-20, `scripts/knowledge/emit_knowledge.py` lines 334-336)
-- **First seen:** 2026-10-20 · **Last seen:** 2026-10-20
+- **Occurrences:** 2 commit attempts: 3 findings on 2026-10-20 (`scripts/knowledge/emit_knowledge.py` lines 334-336) and 5 findings on 2026-10-21 (the same file, lines 415-419)
+- **First seen:** 2026-10-20 · **Last seen:** 2026-10-21
 - **Where:** `templates/skills/security-scanner/scripts/scan_secrets.py`: `_TOKEN_RE` = `[A-Za-z0-9+/=_\-]{20,}`, `_ENTROPY_THRESHOLD = 4.5`, `_ENTROPY_MIN_LEN = 20`. The colliding convention is the tail-tag format in `templates/skills/doc-enforcer/SKILL.md` section 4.1.
 
 ## Symptom
@@ -49,6 +49,8 @@ Two mandated conventions collide. doc-enforcer requires the tail tag on every ne
 ## Workaround used
 
 Three per-line `ENTROPY_HIGH` suppressions, one per flagged line, added to both `.security-allowlist` copies (workspace-root and worktree) and committed on branch `feat/inf-700b-capture-learnings`. Per-line entries break when lines shift. A whole-file glob on production code would suppress real secrets, so it was not used.
+
+**The predicted breakage happened on the next ticket (2026-10-21).** Ticket 02 of the same epic added two DECISION HISTORY entries and code above them, so the three suppressed lines moved from 334-336 to 417-419 and two new tagged lines appeared at 415-416. The commit was refused again with 5 findings, and the per-line entries were rewritten to 415-419 in both copies. Every further ticket that edits this file will repeat the rewrite until the owner picks a fix direction below.
 
 ## Fix directions (owner to choose)
 

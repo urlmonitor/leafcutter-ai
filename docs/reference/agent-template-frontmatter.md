@@ -3,7 +3,7 @@ title: 'Reference: Agent Template Frontmatter Fields'
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 components:
 - build_pipeline
 - config_loader
@@ -25,21 +25,17 @@ Every agent in the leafcutter ecosystem is defined by a Markdown template file
 under `templates/agents/`. The file begins with a YAML frontmatter block
 (`---` … `---`) that controls two distinct concerns:
 
-- **Runtime keys** — consumed by Claude Code at agent-invocation time. These
-  keys survive `build.py` compilation and appear verbatim in the deployed
-  `.claude/agents/<name>.md` file.
-- **Build directives** — consumed by `build.py` and `template_compiler.py`
-  during compilation. These keys are stripped from the output and never reach
-  the running agent.
+- **Runtime keys** — consumed by Claude Code at agent-invocation time. These keys survive `build.py`
+  compilation and appear verbatim in the deployed `.claude/agents/<name>.md` file.
+- **Build directives** — consumed by `build.py` and `template_compiler.py` during compilation. These
+  keys are stripped from the output and never reach the running agent.
 
-**Source of truth for this reference**: `templates/agents/` (concrete
-examples), `scripts/template_compiler.py` (key processing logic), and
-`config/agent_registry.json` (registry-side complement). When a field is
-present in both the frontmatter and the registry, the registry is authoritative
-for deploy decisions; the frontmatter copy governs agent-runtime behaviour. The
-exceptions are `skills` and `spawn_allowlist`: the frontmatter is the only place
-they are authored and the registry holds a derived copy (see
-[Granting Skills and Sub-Agents](#granting-skills-and-sub-agents)).
+**Source of truth for this reference**: `templates/agents/` (concrete examples),
+`scripts/template_compiler.py` (key processing logic), and `config/agent_registry.json`
+(registry-side complement). When a field is present in both, the registry is authoritative for
+deploy decisions; the frontmatter copy governs agent-runtime behaviour. The exceptions are `skills`
+and `spawn_allowlist`: the frontmatter is the only place they are authored and the registry holds a
+derived copy (see [Granting Skills and Sub-Agents](#granting-skills-and-sub-agents)).
 
 ---
 
@@ -86,9 +82,8 @@ known tool names in the current template corpus:
 
 ## Build Directives
 
-Build directives are read by `build.py` and `template_compiler.py` during
-template compilation. They are **stripped from the compiled output** and do not
-appear in the deployed `.claude/agents/<name>.md` file.
+Build directives are read by `build.py` and `template_compiler.py` during template compilation.
+They are **stripped from the compiled output** and do not appear in the deployed file.
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -118,10 +113,9 @@ Most agents use `config_keys: {}` and rely on globally-injected config.
 
 ### Granting Skills and Sub-Agents
 
-An agent's skills and its permitted sub-agents are each declared in ONE place:
-the template frontmatter, beside `tools:`. Nothing beyond the declaration is
-needed for either to reach the agent: no registry edit, no body marker, no
-hand-written table.
+An agent's skills and its permitted sub-agents are each declared in ONE place: the template
+frontmatter, beside `tools:`. Nothing beyond the declaration is needed: no registry edit, no body
+marker, no hand-written table.
 
 ```yaml
 tools: Bash, Read, Edit, Write, Agent, Skill
@@ -145,44 +139,55 @@ spawn_allowlist:
 | `skills` | `skill_id` (string, required); `mode`: `always` (default) or `conditional`; `condition` (string); `provided_by` (only accepted value: `project`) | A bare string is an `always` grant. A `conditional` entry with no `condition` text refuses the build (`missing-condition`). `provided_by: project` marks an ability the project, not the package, supplies; absent means the package supplies it. Any other value is refused as malformed. Lookup, override and fallback rules: [Project-supplied abilities](specialist-ability-references.md#project-supplied-abilities-provided_by). |
 | `spawn_allowlist` | agent id (string), or the literal `__ticket_phase_agents__` | The macro stays one entry and resolves on every build to each registry agent whose `is_ticket_phase` is `true` (that flag is still authored in the registry). A macro that resolves to no agent refuses the build. |
 
-**What the build does.** Each non-empty declaration makes the build append one
-generated section to the compiled prompt: `## Your Available Skills` (table of
-skill, mode or condition, description) and `## Your Available Sub-Agents`
-(table of agent, role, tier). An empty or absent declaration appends nothing.
+**What the build does.** Each non-empty declaration appends one generated section to the compiled
+prompt: `## Your Available Skills` (skill, mode or condition, description) and
+`## Your Available Sub-Agents` (agent, role, tier). An empty or absent declaration appends nothing.
 
-**Tool pairing.** A non-empty `skills` list requires `Skill` in `tools:`; a
-non-empty `spawn_allowlist` (macro included) requires `Agent`. The registry
-validator reports `skill-tool-grant` / `spawn-tool-grant` and the build fails.
-The fix is to add the tool, not to drop the declaration.
+**Tool pairing.** A non-empty `skills` list requires `Skill` in `tools:`; a non-empty
+`spawn_allowlist` (macro included) requires `Agent`. The registry validator reports
+`skill-tool-grant` / `spawn-tool-grant` and the build fails. Add the tool; do not drop the declaration.
 
-**Resolution.** A declared skill must exist as `templates/skills/<id>/SKILL.md`
-(an unmarked grant) or, when marked `provided_by: project`, in the project's
-`<output_root>/skills/<id>/SKILL.md`; otherwise the build refuses. A declared
-sub-agent must have a packaged `templates/agents/<id>.md`. Project-local agent
-definitions are not yet looked up (KI-AR-005,
-`docs/known-issues/agent-registry/open-low-ki-ar-005.md`), and a registry row or
-an earlier compiled prompt does not count.
+**Resolution.** A declared skill must exist as `templates/skills/<id>/SKILL.md` (an unmarked grant)
+or, when marked `provided_by: project`, in the project's `<output_root>/skills/<id>/SKILL.md`;
+otherwise the build refuses. A declared sub-agent must have a packaged `templates/agents/<id>.md`.
+Project-local agent definitions are not yet looked up (KI-AR-005,
+`docs/known-issues/agent-registry/open-low-ki-ar-005.md`), and a registry row or an earlier
+compiled prompt does not count.
 
-**The registry copy is derived.** `skills_invoked` and `spawn_allowlist` in
-`config/agent_registry.json` are regenerated from the declarations by the
-`transform-agent-registry` pre-commit hook, which re-stages the registry when it
-changes. `skills_used` is retired; the validator and the build refuse any entry
-that carries it, even `[]`. Do not edit the derived fields by hand: if the copy
-disagrees with a declaration, the build reports it (`divergent`,
-`declaration-only` or `record-only`), the declaration wins, and the next hook
-run overwrites the hand edit. `spawned_by` and `is_ticket_phase` stay
-hand-authored.
+**The registry copy is derived.** `skills_invoked` and `spawn_allowlist` in `config/agent_registry.json`
+are regenerated from the declarations by the `transform-agent-registry` pre-commit hook, which
+re-stages the registry when it changes. `skills_used` is retired; the validator and the build refuse
+any entry that carries it, even `[]`. Do not edit the derived fields by hand: if the copy disagrees
+with a declaration, the build reports it (`divergent`, `declaration-only` or `record-only`), the
+declaration wins, and the next hook run overwrites the hand edit. `spawned_by` and `is_ticket_phase`
+stay hand-authored.
 
 **Retired routes.** None of these grants anything: the `{{my_skills_used}}` and
-`{{my_spawn_allowlist}}` body markers (stripped with a warning), a registry-only
-grant, a template-level `skills_used` or `skills_invoked` key, and a hand-written
-skills or sub-agent table in the body (warned `duplicate` or `contradiction`).
+`{{my_spawn_allowlist}}` body markers (stripped with a warning), a registry-only grant, a
+template-level `skills_used` or `skills_invoked` key, and a hand-written skills or sub-agent table
+in the body (warned `duplicate` or `contradiction`).
+
+### Redundant hand-off entries
+
+`__ticket_phase_agents__` already covers every ticket-phase agent, so an explicit `spawn_allowlist`
+entry for one of them stops the build ("redundant hand-off entry"), as does an entry listed twice
+("listed twice"). The line printed (no `ERROR:` prefix) for a fixture declaring the macro,
+`brainstorm-lead` and `llm-expert`:
+
+```text
+templates/agents/probe-supervisor.md: probe-supervisor.spawn_allowlist has a redundant hand-off entry 'llm-expert': __ticket_phase_agents__ already covers it (it is a ticket-phase agent); remove 'llm-expert'
+```
+
+The entry is redundant because the macro already covers it on each build. Remove the explicit
+entry, or drop the macro if you want an explicit list. Redundancy is judged against current
+ticket-phase membership on every build: if a specialist later becomes ticket-phase, an existing
+explicit entry for it becomes redundant on the next build. Delivery names each agent once.
 
 ### Ability-reference check
 
-The build stops on a body instruction naming an ability that does not exist, or
-that exists but is not in the specialist's own `skills:`. One line per fault
-(without the `ERROR:` prefix; ids and line numbers are from a fixture):
+The build stops on a body instruction naming an ability that does not exist, or that exists but is
+not in the specialist's own `skills:`. One line per fault (without the `ERROR:` prefix; ids and line
+numbers are from a fixture):
 
 ```text
 probe-nx: ability does not exist: 'ghost-ability' referenced at templates/agents/probe-nx.md:40 (no skill directory templates/skills/ghost-ability/)
@@ -191,19 +196,17 @@ probe-author: ability name differs only in case: 'Write-C4-Diagram' referenced a
 probe-coder: names an agent, not an ability: 'sql-query' referenced at templates/agents/probe-coder.md:40 ('sql-query' is a specialist probe-coder may hand work to)
 ```
 
-The fix each line asks for, what counts as an instruction (and what does not),
-and worked fixes: [Specialist ability references](specialist-ability-references.md).
-Shared guides receive the existence check only.
+The fix each line asks for, what counts as an instruction, and worked fixes:
+[Specialist ability references](specialist-ability-references.md). Shared guides get the existence check only.
 
 ---
 
 ## Agent Registry Cross-Reference
 
-`config/agent_registry.json` is the single source of truth for agent
-registration. It complements the template frontmatter: where frontmatter
-describes how an agent behaves at runtime, the registry describes where it fits
-in the ecosystem. Each entry in the `agents` array describes one agent; the
-fields below are **registry fields**, not frontmatter fields.
+`config/agent_registry.json` is the single source of truth for agent registration. Where frontmatter
+describes how an agent behaves at runtime, the registry describes where it fits in the ecosystem.
+Each entry in the `agents` array describes one agent; the fields below are **registry fields**,
+not frontmatter fields.
 
 | Registry Field | Type | Required | Description |
 |---|---|---|---|
@@ -246,8 +249,8 @@ Agents without a priority run last, in YAML declaration order.
 
 ### Template Frontmatter with All Fields
 
-Required runtime keys are `name`, `description`, `model` and `tools`; every other key
-is optional (omit `memory` and `inject_registry` when false). A full phase agent:
+Required runtime keys are `name`, `description`, `model` and `tools`; every other key is optional
+(omit `memory` and `inject_registry` when false). A full phase agent:
 
 ```yaml
 ---
@@ -282,18 +285,16 @@ spawn_allowlist: [...]   ── derives ──→  "spawn_allowlist": [...]
 skills: [...]            ── derives ──→  "skills_invoked"
 ```
 
-`model` and `portable` mirror the registry; the other registry fields are authored
-there (see [Granting Skills and Sub-Agents](#granting-skills-and-sub-agents)).
-`build.py` compiles the frontmatter to `.claude/agents/`; `registry_validator.py`
-cross-checks template paths and tool pairing on every build. When the two diverge,
-run `python scripts/build.py --validate` to surface errors.
+`model` and `portable` mirror the registry; the other registry fields are authored there (see
+[Granting Skills and Sub-Agents](#granting-skills-and-sub-agents)). `build.py` compiles the
+frontmatter to `.claude/agents/`; `registry_validator.py` cross-checks template paths and tool
+pairing on every build. When the two diverge, run `python scripts/build.py --validate`.
 
 ---
 
 ## See Also
 
-- `docs/reference/skill-frontmatter.md` — equivalent reference for SKILL.md frontmatter fields.
-- `docs/reference/skills-config-fields.md` — reference for `skills_config.json` keys.
+- `docs/reference/skill-frontmatter.md` — SKILL.md frontmatter fields; `docs/reference/skills-config-fields.md` — `skills_config.json` keys.
 - `docs/agent-registry.md` — overview of the agent registry and its role in the build pipeline.
 - `scripts/registry_validator.py` — validation logic that enforces registry-frontmatter consistency.
 - `docs/how-to/creating-an-agent-template.md` — task guide for writing a new agent template.

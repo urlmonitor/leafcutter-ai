@@ -50,9 +50,16 @@ _TEST_ROOTS = [
 # /tmp/count_untagged_done_acs.py reports 248 because it does not strip
 # quotes from `id: "GE-114-1"`-style YAML values, so 4 quoted ids are
 # spuriously treated as distinct from their bare-token `# covers:` tags.
-HIGH_WATER_MARK = 244
+# Re-measured on origin/main on 2026-10-21 (77354d6e9): 243 untagged under
+# the old rule, 240 once a superseded AC (status: superseded or
+# superseded_by, see _STATUS_SUPERSEDED_RE below) stops counting, because
+# 3 untagged done ACs are superseded. The mark drops to 240.
+HIGH_WATER_MARK = 240
 
 _WORK_STATUS_DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
+# A superseded AC (status superseded_by / superseded) has no current behaviour
+# left to test, so it is not part of the untagged-done backlog.
+_STATUS_SUPERSEDED_RE = re.compile(r"^status:\s*superseded(_by)?\s*$", re.M)
 _ID_LINE_RE = re.compile(r"^id:\s*(\S+)\s*$", re.M)
 _COVERS_RE = re.compile(r"covers:\s*([A-Za-z0-9\-_,\s\"']+)")
 
@@ -160,7 +167,7 @@ def _collect_done_ac_ids() -> set[str]:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if not _WORK_STATUS_DONE_RE.search(text):
+        if not _WORK_STATUS_DONE_RE.search(text) or _STATUS_SUPERSEDED_RE.search(text):
             continue
         match = _ID_LINE_RE.search(text)
         if match:

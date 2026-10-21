@@ -1505,8 +1505,9 @@ function validateAnswerShape(answer, expectedType, validOptions) {
     }
     return { valid: true };
   }
-  if (expectedType === "priority_choice") {
-    return (answer.priority != null) ? { valid: true } : { valid: false };
+  if (expectedType === "priority_choice") { // BO-2300d-1-iii: the answer's own action is honoured; only approve needs a priority
+    const act = typeof answer.action === "string" ? answer.action : "approve";
+    return ((Array.isArray(validOptions) && validOptions.length > 0 && !validOptions.includes(act)) || (act === "approve" && answer.priority == null)) ? { valid: false } : { valid: true };
   }
   if (expectedType === "free_text") {
     return (typeof answer.text === "string") ? { valid: true } : { valid: false };
@@ -1521,7 +1522,7 @@ function validateAnswerShape(answer, expectedType, validOptions) {
  * @returns {object} Gate decision e.g. { action: "approve" }.
  */
 function applyAnswerByType(answer, type) {
-  if (type === "priority_choice") { return { action: "approve", priority: answer.priority }; }
+  if (type === "priority_choice") { return { action: typeof answer.action === "string" ? answer.action : "approve", priority: answer.priority, feedback: answer.feedback }; } // BO-2300d-1-iii: never coerce edit/defer/cancel to approve
   if (type === "free_text") { return { action: "approve", text: answer.text }; }
   const decision = { action: answer.action || answer.choice };
   // Why carrying feedback on resume: docs/reference/plan-feature-workflow-rationale-helpers.md
@@ -1636,7 +1637,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
   const _shellPermittedAgentId = "worktree-agent";
 
   // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
-  if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
+  if (args && args.resume_answer && !args.resume_answer._appliedThisRun && args.resume_answer.gate_id === gateId) { // BO-2300d-1-iii: applied at most once per run
     const incomingType = args.resume_answer.type || answerType;
     const validation = validateAnswerShape(args.resume_answer, incomingType, validOptions);
     if (!validation.valid) {
@@ -1669,14 +1670,12 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     if (recCheck.stale === true) {
       return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
     }
-    const decision = applyAnswerByType(args.resume_answer, incomingType);
-
+    const decision = applyAnswerByType(args.resume_answer, incomingType); args.resume_answer._appliedThisRun = true;
     // Why the pause record context hand-back (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale.md
     const _pausedRecord = (recCheck && recCheck.record) || null;
     if (_pausedRecord && _pausedRecord.context && typeof _pausedRecord.context === "object") {
       decision._resumedContext = _pausedRecord.context;
     }
-
     // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md
     if (decision.action !== "edit") {
       const _clearPrompt =
@@ -1686,7 +1685,6 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         "  " + buildPauseStoreCommand("clear --run-id " + runId) + "\n" +
         "Return EXACTLY the command's JSON stdout.";
       const _clearRaw = await agent(_clearPrompt, { agentType: _shellPermittedAgentId, label: "clear-pause-record" });
-
       let _clearParsed = null;
       try {
         _clearParsed = (typeof _clearRaw === "string")
@@ -1696,7 +1694,6 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         _clearParsed = null;
       }
       let _clearVerified = !!(_clearParsed && _clearParsed.ok === true);
-
       if (_clearVerified) {
         const _clearVerifyParsed = await readPauseRecordWithRetry(runId, "clear-pause-record-verify",
           "Confirm the pause record was cleared.");
@@ -1713,10 +1710,8 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         decision._clearVerifyFailed = true;
       }
     }
-
     return decision;
   }
-
   // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md
   void liveGateFn;
   return pauseAtGate(gateId, runId, context, descriptor);
@@ -1769,12 +1764,10 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     "  " + buildPauseStoreCommand("write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'") + "\n" +
     "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: _shellPermittedAgentId, label: "pause-persist" });
-
   // Why verifying the persist: docs/reference/plan-feature-workflow-rationale-helpers.md
   const _verified = await readPauseRecordWithRetry(runId, "pause-persist-verify",
     "Confirm a pause record was persisted.");
   const _persistVerified = !!(_verified && _verified.exists === true);
-
   if (!_persistVerified) {
     // Fail loudly rather than advertising a resumable pause that does not exist.
     return {
@@ -1789,7 +1782,6 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
         "Re-run /plan-feature interactively, or drive the remaining authoring agents directly.",
     };
   }
-
   // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId, question: question };
 }
@@ -2941,7 +2933,7 @@ for (const step of pipeline) {
     if (_actualPausedGateId && typeof _actualPausedGateId === "object") { return _actualPausedGateId; }
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
-  let skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
+  let skipAuthorOnResume = isPausedAtThisStep; // BO-2300d-1-iii: an edit resume also skips the pre-gate author run; the edit re-authors once
   let reapprove = false; // approval was consumed, then the check forced a re-author: a rewrite that passes needs a NEW pause (never the old answer); one that still fails skips the gate and retries
 
   while (!approved) {
@@ -3053,7 +3045,6 @@ for (const step of pipeline) {
         };
       }
       const gateDecision = _midGateResult;
-
       // Why recovering AC ids at the mid gate (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
       if (skipAuthorOnResume && gateDecision._resumedContext && Array.isArray(gateDecision._resumedContext.acs)) {
         written = gateDecision._resumedContext.acs;
@@ -3079,7 +3070,7 @@ for (const step of pipeline) {
       } else if (action === "edit" && editRetries < MAX_EDIT_RETRIES) {
         editRetries++;
         // Thread the user's edit feedback into the re-dispatched author prompt (m4).
-        acFeedback = (gateDecision && typeof gateDecision.feedback === "string") ? gateDecision.feedback.trim() : "";
+        acFeedback = (gateDecision && typeof gateDecision.feedback === "string") ? gateDecision.feedback.trim() : ""; skipAuthorOnResume = false;
         continue;
       } else if (action === "edit" && editRetries >= MAX_EDIT_RETRIES) {
         // Max retries exhausted — abort without committing the draft.
@@ -3171,7 +3162,6 @@ for (const step of pipeline) {
         };
       }
       const finalDecision = _finalGateResult;
-
       // Why recovering AC ids at the final gate (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
       if (skipAuthorOnResume && finalDecision._resumedContext) {
         if (Array.isArray(finalDecision._resumedContext.acs)) {
@@ -3206,6 +3196,7 @@ for (const step of pipeline) {
         };
       } else if (finalAction === "edit" && editRetries < MAX_EDIT_RETRIES) {
         editRetries++;
+        acFeedback = [typeof finalDecision.feedback === "string" ? finalDecision.feedback.trim() : "", ruleCheck.passed ? "" : acFeedback].filter((s) => s).join("\n"); skipAuthorOnResume = false; // BO-2300d-1-iii: the person's feedback first
         continue;
       } else if (finalAction === "edit" && editRetries >= MAX_EDIT_RETRIES) {
         return {

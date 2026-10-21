@@ -27,6 +27,10 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+import json
+import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -309,6 +313,85 @@ class TestHookScriptExists(unittest.TestCase):
             _HOOK_SCRIPT.is_file(),
             msg=f"Hook script not found at {_HOOK_SCRIPT}",
         )
+
+
+# BO-4300 ticket 16 -- scope: direct children of templates/workflows-js/ only
+
+_HOOK_REGISTRY = (
+    _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
+)
+_NO_META_MSG = "no `export const meta` block found"
+_GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _git(repo: Path, *args: str) -> None:
+    """Run git with cwd=repo (never ``git -C``) and isolated config."""
+    subprocess.run(
+        ["git", *args], cwd=repo, env=_GIT_ENV, check=True, capture_output=True, text=True
+    )
+
+
+def _run_hook_on_staged(rel_path: str) -> subprocess.CompletedProcess:
+    """Stage a meta-less *rel_path* in a temp git repo; run a copy of the hook there.
+
+    The hook derives its repo root from its own location, hence the copy.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        hook = repo / "templates/scripts/commit_guardian/check_workflow_meta.py"
+        hook.parent.mkdir(parents=True)
+        shutil.copyfile(_HOOK_SCRIPT, hook)
+        target = repo / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("export function run() { return 1; }", encoding="utf-8")
+        _git(repo, "init", "-q"), _git(repo, "add", rel_path)
+        return subprocess.run(
+            [sys.executable, str(hook)],
+            cwd=repo, env=_GIT_ENV, capture_output=True, text=True, encoding="utf-8",
+        )
+
+
+def _registered_files_pattern() -> re.Pattern:
+    """Read the check-workflow-meta ``files:`` regex from the registry."""
+    found: list[str] = []
+    def walk(node) -> None:
+        items = node.values() if isinstance(node, dict) else node
+        if isinstance(node, dict) and node.get("id") == "check-workflow-meta":
+            found.extend([node["files"]] if "files" in node else [])
+        if isinstance(node, (dict, list)):
+            for v in items:
+                walk(v)
+
+    walk(json.loads(_HOOK_REGISTRY.read_text(encoding="utf-8")))
+    assert found, "check-workflow-meta files: pattern not registered"
+    return re.compile(found[0])
+
+
+class TestSharedModulesOutOfScope(unittest.TestCase):
+    """Only direct children of templates/workflows-js/ are workflows."""
+
+    def test_staged_shared_module_without_meta_is_not_checked(self) -> None:
+        """A staged _shared/<x>.js with no meta exits 0 and is not reported."""
+        result = _run_hook_on_staged("templates/workflows-js/_shared/x.js")
+        combined = result.stdout + result.stderr
+        self.assertNotIn(_NO_META_MSG, combined, msg=combined)
+        self.assertEqual(result.returncode, 0, msg=combined)
+
+    def test_staged_top_level_workflow_without_meta_is_refused(self) -> None:
+        """A staged top-level workflow with no meta is still refused (guard)."""
+        result = _run_hook_on_staged("templates/workflows-js/y.js")
+        combined = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1, msg=combined)
+        self.assertIn(_NO_META_MSG, combined)
+
+    def test_registered_files_pattern_excludes_shared_includes_top_level(self) -> None:
+        """The registered files: regex skips _shared/ and matches a top-level .js."""
+        pattern = _registered_files_pattern()
+        self.assertIsNone(
+            pattern.search("templates/workflows-js/_shared/workspace-answer.js"),
+            msg=f"pattern {pattern.pattern!r} must not match a _shared/ module",
+        )
+        self.assertIsNotNone(pattern.search("templates/workflows-js/build-feature.js"))
 
 
 if __name__ == "__main__":
