@@ -2,8 +2,8 @@ id: ACD-200b-2
 components:
   - ac_driven_dev
   - ac_store
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The documentation-trigger names are declared in one list that the schema, the record check and the rule check all read"
 component: ac-driven-dev
 level: L2
@@ -246,7 +246,10 @@ file_findings_opened_files:
 - templates/scripts/commit_guardian/_ac_schema_validators.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

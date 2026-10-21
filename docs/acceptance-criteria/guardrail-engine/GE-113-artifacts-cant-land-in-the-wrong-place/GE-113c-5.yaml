@@ -2,8 +2,8 @@ id: GE-113c-5
 components:
   - commit_guardian
   - precommit_hooks
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The decision-record cross-reference check inspects the staged records in every layout it ships in"
 component: guardrail-engine
 level: L2
@@ -200,7 +200,10 @@ file_findings_opened_files:
 - templates/scripts/commit_guardian/check_adr_cross_reference.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

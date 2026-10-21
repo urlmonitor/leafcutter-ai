@@ -1,8 +1,8 @@
 id: GE-127h-1-i
 components:
   - commit_guardian
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Only a real decision-history block is left out: a mention of the words, or code after the block, still counts"
 component: guardrail-engine
 level: L3
@@ -156,7 +156,10 @@ file_findings_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

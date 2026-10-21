@@ -1,8 +1,8 @@
 id: GE-127h-2
 components:
   - commit_guardian
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Adding decision-history entries never pushes a file over its limit or blocks a change to an oversized file"
 component: guardrail-engine
 level: L2
@@ -137,7 +137,10 @@ file_findings_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -2,8 +2,8 @@ id: ACD-2500f-1-i
 components:
   - ac_driven_dev
   - agent_registry
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "An agent that changes the requirement store but says it produces something else is flagged"
 component: ac-driven-dev
 level: L3
@@ -147,7 +147,10 @@ file_findings_opened_files:
 - scripts/build_phases_profile_consistency.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

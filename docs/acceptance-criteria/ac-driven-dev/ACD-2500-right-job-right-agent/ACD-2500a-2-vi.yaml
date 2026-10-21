@@ -2,7 +2,7 @@ id: ACD-2500a-2-vi
 components:
   - ac_driven_dev
   - ac_store
-readiness: reviewed
+readiness: approved
 priority: high
 title: "A field the test-design stage does not own, changed on a record that already existed, is reported and fails the stage"
 component: ac-driven-dev
@@ -359,7 +359,10 @@ file_findings_opened_files:
 - scripts/ac_store/_rc_records.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

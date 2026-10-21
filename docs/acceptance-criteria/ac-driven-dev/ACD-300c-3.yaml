@@ -1,8 +1,8 @@
 id: ACD-300c-3
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Final gate after the test-design stage allows the user to set priority and promote to approved"
 component: ac-driven-dev
 level: L2
@@ -183,13 +183,23 @@ file_findings_opened_files:
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by:
-  - reason: "amend: the final gate now follows the test-design stage (ADR-072), not IT PO v3; title and criteria say so. 'approve' now defers to ACD-300c-4 (approval through the store's one approval step, only for ids the approval-hold report releases; held ACs stay reviewed) instead of the workflow writing readiness and priority to every AC itself; 'edit' re-invokes the test-design stage; the closing report gives approved and held counts. Follow-up epic for EPIC-RightJobRightAgent, item 8(a) note. work_status unchanged (todo)."
-    date: '2026-10-16'
-    by: business-analyst
-  - reason: 'it-po: technical enrichment after the 2026-10-16 criteria amendment (it_requirements, declared_files,
-      expects_from ACD-300c-4, test_intent). Criteria and readiness unchanged.'
-    date: '2026-10-16'
-    by: it-po
+- reason: 'amend: the final gate now follows the test-design stage (ADR-072), not
+    IT PO v3; title and criteria say so. ''approve'' now defers to ACD-300c-4 (approval
+    through the store''s one approval step, only for ids the approval-hold report
+    releases; held ACs stay reviewed) instead of the workflow writing readiness and
+    priority to every AC itself; ''edit'' re-invokes the test-design stage; the closing
+    report gives approved and held counts. Follow-up epic for EPIC-RightJobRightAgent,
+    item 8(a) note. work_status unchanged (todo).'
+  date: '2026-10-16'
+  by: business-analyst
+- reason: 'it-po: technical enrichment after the 2026-10-16 criteria amendment (it_requirements,
+    declared_files, expects_from ACD-300c-4, test_intent). Criteria and readiness
+    unchanged.'
+  date: '2026-10-16'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

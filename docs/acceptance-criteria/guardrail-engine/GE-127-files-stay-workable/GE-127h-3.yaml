@@ -1,8 +1,8 @@
 id: GE-127h-3
 components:
   - commit_guardian
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The published measurement rule says the decision-history block is left out and how its start and end are found"
 component: guardrail-engine
 level: L2
@@ -203,7 +203,10 @@ file_findings_opened_files:
 - unit_tests/commit_guardian/_ge_127d_2_fixture.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

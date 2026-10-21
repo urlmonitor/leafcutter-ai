@@ -1,8 +1,8 @@
 id: ACD-300c-5-i
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "No /plan-feature rationale pointer comment says \"Why why\""
 component: ac-driven-dev
 level: L3
@@ -104,10 +104,18 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:
-- reason: "criteria and title: premise corrected. Every 'Why why' in plan-feature.js is a code comment pointing to the rationale docs (15 sites by grep on 2026-10-20), not a message the workflow can produce, and unit_tests/test_final_gate_and_commit_message.py holds no 'Why why'. Criteria now require each rationale pointer comment to read 'Why' once and no source line to contain 'Why why'; the producible-message clause and the test-file clause are dropped."
+- reason: 'criteria and title: premise corrected. Every ''Why why'' in plan-feature.js
+    is a code comment pointing to the rationale docs (15 sites by grep on 2026-10-20),
+    not a message the workflow can produce, and unit_tests/test_final_gate_and_commit_message.py
+    holds no ''Why why''. Criteria now require each rationale pointer comment to read
+    ''Why'' once and no source line to contain ''Why why''; the producible-message
+    clause and the test-file clause are dropped.'
   date: '2026-10-20'
   by: business-analyst
   directed_by: user
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

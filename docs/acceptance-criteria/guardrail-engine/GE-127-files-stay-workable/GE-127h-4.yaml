@@ -2,8 +2,8 @@ id: GE-127h-4
 components:
   - commit_guardian
   - documentation_system
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Reference doc: how a source file's length is measured, including the decision-history exclusion"
 component: guardrail-engine
 level: L2
@@ -49,7 +49,10 @@ test_required: false
 test_rationale: "Documentation-only deliverable; agreement between the published rule and this doc is enforced by GE-127d-1's check, and links and frontmatter by the documentation checks at commit time."
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

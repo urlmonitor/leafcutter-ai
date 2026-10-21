@@ -3,7 +3,7 @@ components:
   - ac_driven_dev
   - ac_store
   - documentation_system
-readiness: reviewed
+readiness: approved
 priority: high
 title: "The rule check's reference doc covers the protected-field family and says a repairing run needs a before-state"
 component: ac-driven-dev
@@ -62,7 +62,10 @@ file_findings_opened_files:
 - docs/reference/requirement-rule-check.md
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

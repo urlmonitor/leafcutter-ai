@@ -2,8 +2,8 @@ id: ACD-2500f-2
 components:
   - ac_driven_dev
   - llm_authoring
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Guidance for choosing an agent's produces value no longer maps requirement-writing roles to analysis"
 component: ac-driven-dev
 level: L2
@@ -55,7 +55,10 @@ file_findings_opened_files:
 - templates/agents/llm-expert.md
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

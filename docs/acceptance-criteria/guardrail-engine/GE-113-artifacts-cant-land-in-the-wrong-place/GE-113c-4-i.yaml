@@ -2,8 +2,8 @@ id: GE-113c-4-i
 components:
   - commit_guardian
   - documentation_system
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The six pipeline diagrams that name a parent which does not list them get a parent of the right tier, linked both ways"
 component: guardrail-engine
 level: L3
@@ -128,7 +128,10 @@ file_findings_opened_files:
 - docs/architecture/diagrams/c1-001-command-map.md
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

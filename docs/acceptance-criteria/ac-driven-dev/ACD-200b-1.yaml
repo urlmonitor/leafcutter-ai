@@ -1,8 +1,8 @@
 id: ACD-200b-1
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "IT PO template acts on the rule check's documentation-coverage finding instead of carrying its own gate"
 component: ac-driven-dev
 level: L2
@@ -63,18 +63,34 @@ file_findings_opened_files:
 origin_agent: BrainCandy
 created: 2026-06-05
 amended_by:
-  - reason: "amend: the documentation-coverage CHECK moves from the IT PO template (S7b) to the requirement rule check ACD-2500a-2-v; the template keeps only the authoring duty (add the missing doc AC on a finding) and the reviewed-barrier sentence; trigger table is the five-entry one incl. reference-doc, read from config, not copied. Template path corrected it-po-v3.md -> it-po.md. Criteria and title edited in place by it-po under explicit user direction."
-    date: '2026-09-25'
-    by: it-po
-    directed_by: user
-  - reason: "amend (user decision D2, 2026-10-16): one criteria clause reworded -- the five-entry trigger-to-specialist mapping is 'held in the rule check's single map (the map ACD-2500a-2-v's check reads)', replacing 'read from the single config source named in ACD-2500a-2'. As built, that map lives in code (the rule check's documentation-trigger family), not in a config file; D2 keeps it there. The five entries, every other clause, title, readiness and work_status are unchanged. The duplicated trigger NAMES are folded into one list by the new sibling ACD-200b-2. it_requirements line 2 still says 'single config source named in ACD-2500a-2' and is the IT PO's to align."
-    date: '2026-10-16'
-    by: business-analyst
-  - reason: 'it-po: it_requirements line 2 aligned with user decision D2 (the mapping is the rule check''s
-      single map, kept in code, not a config source); declared_files added. Criteria, test_required and
-      readiness unchanged.'
-    date: '2026-10-16'
-    by: it-po
+- reason: 'amend: the documentation-coverage CHECK moves from the IT PO template (S7b)
+    to the requirement rule check ACD-2500a-2-v; the template keeps only the authoring
+    duty (add the missing doc AC on a finding) and the reviewed-barrier sentence;
+    trigger table is the five-entry one incl. reference-doc, read from config, not
+    copied. Template path corrected it-po-v3.md -> it-po.md. Criteria and title edited
+    in place by it-po under explicit user direction.'
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
+- reason: 'amend (user decision D2, 2026-10-16): one criteria clause reworded -- the
+    five-entry trigger-to-specialist mapping is ''held in the rule check''s single
+    map (the map ACD-2500a-2-v''s check reads)'', replacing ''read from the single
+    config source named in ACD-2500a-2''. As built, that map lives in code (the rule
+    check''s documentation-trigger family), not in a config file; D2 keeps it there.
+    The five entries, every other clause, title, readiness and work_status are unchanged.
+    The duplicated trigger NAMES are folded into one list by the new sibling ACD-200b-2.
+    it_requirements line 2 still says ''single config source named in ACD-2500a-2''
+    and is the IT PO''s to align.'
+  date: '2026-10-16'
+  by: business-analyst
+- reason: 'it-po: it_requirements line 2 aligned with user decision D2 (the mapping
+    is the rule check''s single map, kept in code, not a config source); declared_files
+    added. Criteria, test_required and readiness unchanged.'
+  date: '2026-10-16'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -2,7 +2,7 @@ id: ACD-2500a-5-ii
 components:
   - ac_driven_dev
   - documentation_system
-readiness: reviewed
+readiness: approved
 priority: high
 title: "ADR-072 stops describing a backstop and an approval follow-up as missing once they exist"
 component: ac-driven-dev
@@ -66,9 +66,15 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:
-- reason: "criteria: new clause for the dated ADR-072 section 4 sentence (test-design output committed before the IT PO's hand-back round, so the hand-back check's before-state is the post-design batch, ACD-2500a-2-ix); depends_on gains ACD-2500a-2-ix. Original clauses unchanged."
+- reason: 'criteria: new clause for the dated ADR-072 section 4 sentence (test-design
+    output committed before the IT PO''s hand-back round, so the hand-back check''s
+    before-state is the post-design batch, ACD-2500a-2-ix); depends_on gains ACD-2500a-2-ix.
+    Original clauses unchanged.'
   date: '2026-10-20'
   by: business-analyst
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

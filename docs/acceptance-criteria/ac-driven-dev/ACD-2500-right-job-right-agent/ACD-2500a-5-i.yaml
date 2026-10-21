@@ -3,7 +3,7 @@ components:
   - ac_driven_dev
   - ac_store
   - documentation_system
-readiness: reviewed
+readiness: approved
 priority: high
 title: "ADR-073 records why mechanical requirement rules are checked by one fail-closed rule check"
 component: ac-driven-dev
@@ -79,7 +79,10 @@ file_findings_opened_files:
 - docs/architecture/adrs/README.md
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

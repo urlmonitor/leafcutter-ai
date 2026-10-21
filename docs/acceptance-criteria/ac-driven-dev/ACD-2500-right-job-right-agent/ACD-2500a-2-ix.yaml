@@ -2,7 +2,7 @@ id: ACD-2500a-2-ix
 components:
   - ac_driven_dev
   - ac_store
-readiness: reviewed
+readiness: approved
 priority: high
 title: "/plan-feature runs the rule check after the planner's hand-back pass, and a disallowed edit stops the run before the final gate"
 component: ac-driven-dev
@@ -209,7 +209,10 @@ file_findings_opened_files:
 - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []

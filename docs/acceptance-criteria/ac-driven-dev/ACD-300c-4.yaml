@@ -2,8 +2,8 @@ id: ACD-300c-4
 components:
   - ac_driven_dev
   - ac_store
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Final-gate approval is applied by the store's one approval step, to exactly the records the hold report releases"
 component: ac-driven-dev
 level: L2
@@ -274,7 +274,10 @@ file_findings_opened_files:
 - scripts/build_phases_ac_store_rc.py
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by:
   - ACD-300c-4-i

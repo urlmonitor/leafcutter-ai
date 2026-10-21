@@ -1,8 +1,8 @@
 id: ACD-300c-5
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Every final-gate message names the test-design stage that now owns the final gate"
 component: ac-driven-dev
 level: L2
@@ -139,7 +139,10 @@ file_findings_opened_files:
 - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by:
   - ACD-300c-5-i

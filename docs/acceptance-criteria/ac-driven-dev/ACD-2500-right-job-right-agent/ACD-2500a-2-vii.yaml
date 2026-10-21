@@ -2,7 +2,7 @@ id: ACD-2500a-2-vii
 components:
   - ac_driven_dev
   - ac_store
-readiness: reviewed
+readiness: approved
 priority: high
 title: "Which protected fields a stage may change comes from one per-stage owner map; the planner's hand-back may change the assignment, the finding decision and its own enrichment fields"
 component: ac-driven-dev
@@ -271,10 +271,19 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:
-- reason: "criteria and title: the hand-back pass may also change the planner's own enrichment fields it_requirements, declared_files, delivers_to and expects_from (example extended; allowed edits pass); it never changes criteria, test_intent, test_spec, file findings other than decision, or test_design_* marks (new separate-run test_intent clause). Reason: in this run the hand-back had to declare 7 files the designer's findings revealed, and the old owner map would have stopped the run."
+- reason: 'criteria and title: the hand-back pass may also change the planner''s own
+    enrichment fields it_requirements, declared_files, delivers_to and expects_from
+    (example extended; allowed edits pass); it never changes criteria, test_intent,
+    test_spec, file findings other than decision, or test_design_* marks (new separate-run
+    test_intent clause). Reason: in this run the hand-back had to declare 7 files
+    the designer''s findings revealed, and the old owner map would have stopped the
+    run.'
   date: '2026-10-20'
   by: business-analyst
   directed_by: user
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []
