@@ -1,88 +1,68 @@
 #!/usr/bin/env python3
 """
-check_skill_refs.py — build guard for skill references written in template prose.
+check_skill_refs.py — build guard for ability (skill) references written in template prose.
 
-Every ``(.claude|templates)/skills/<name>`` path an agent or skill is told to
-load must resolve to a real directory in ``templates/skills/``. This guard
-exists because the build's only existing skill-reference check
-(``build_phases.py`` ``skills_invoked`` resolution) reads the ``skills_invoked``
-field of ``config/agent_registry.json`` — a machine-maintained declaration that
-is rarely wrong. The form that actually rots is the hand-typed path inside a
-Markdown template body, which no validator read until this one.
+An instruction in an agent definition or a shared guide that tells the reader to use an
+ability must name one that really exists in ``templates/skills/`` — and, for a
+specialist's own definition, one that specialist is granted. This guard exists because
+the build's older checks read machine-maintained declarations (``skills_invoked`` in
+``config/agent_registry.json``), which are rarely wrong. The form that actually rots is
+the hand-typed instruction inside a Markdown template body, which no validator read
+until this one (KI-BP-007).
 
-Six dangling references accumulated in that blind spot across at least three
-epics (KI-BP-007): ``route-learning`` and ``capture-learning`` (loaded by the
-``signoff`` §7 knowledge-capture step and by PO/BA/IT-PO v3),
-``agent-telemetry`` (eight ``emit_event.py`` invocations in the ``building-epics``
-runbook), and ``import-scanner`` / ``find-context-candle`` / ``trade-analysis``
-(routing rows inherited when ``research-agent`` was copied in from a
-trading-system project). None was ever committed. Every call site treats
-"skill not found" as a pass, so all six were silent runtime no-ops.
+Six dangling references accumulated in that blind spot across at least three epics:
+``route-learning`` and ``capture-learning`` (loaded by the ``signoff`` §7
+knowledge-capture step and by PO/BA/IT-PO v3), ``agent-telemetry`` (eight
+``emit_event.py`` invocations in the ``building-epics`` runbook), and ``import-scanner``
+/ ``find-context-candle`` / ``trade-analysis`` (routing rows inherited when
+``research-agent`` was copied in from a trading-system project). None was ever
+committed. Every call site treated "skill not found" as a pass, so all six were silent
+runtime no-ops.
 
-Two reference classes, deliberately scored differently:
-  - IMPERATIVE — the reference sits on a line that tells someone to act on it
-    (``Load ...``, ``python .../script.py``, "invoke via Bash", "Read ...").
-    A dangling imperative reference is a FAILURE: an agent will follow it.
-  - MENTION — the path appears in descriptive prose. Reported under --verbose,
-    never failed on.
+What counts as an instruction is decided in ONE place, ``skill_ref_recognition.recognise``
+(AR-400b-2): the path form, the "<verb> the <id> skill" phrasing, a written-out
+``Skill: <id>`` and a heading all count; a negation, a sentence about another
+specialist, a citation of an ability's file and an installer file operation do not
+count as instructions to use it. DECISION HISTORY blocks (``<!-- ... -->``) are blanked
+before scanning: they legitimately name deleted skills (``plan-feature/SKILL.md``
+records the ``create-ac`` migration long after ``create-ac/`` was correctly removed).
 
-DECISION HISTORY blocks (``<!-- ... -->``) are stripped before scanning. They
-are the repo's convention for recording what a file used to do, so they
-legitimately name deleted skills — e.g. ``plan-feature/SKILL.md`` records the
-``create-ac`` migration (#184) long after ``create-ac/`` was correctly removed.
-Scanning them would fail the build on accurate history.
-
-The same scan also backs the registry validator's existence gate (AR-400a-1/-2):
-``ability_reference_verdict`` returns the definitions/guides examined counts and one
-error per dangling imperative reference, and treats zero examined as an error. The
-CLI ``main`` below keeps its original report format and exit codes.
+``ability_reference_verdict`` is the registry validator's gate (AR-400a-1/-2,
+AR-400b-1/-2/-4): it returns the definitions/guides examined counts and one finding per
+faulty reference (does not exist / exists but is not granted / differs only in case /
+names an agent, not an ability), and treats zero examined as an error. The grant side
+is the specialist's OWN ``skills:`` frontmatter, never the derived registry copy; a grant it
+marks ``provided_by: project`` satisfies both the existence and the grant check for that
+definition (AR-400d-3: the project, not the package, supplies it). The CLI
+``main`` below checks existence only (the grant comparison needs a registry) and keeps
+its original report format and exit codes.
 
 Usage:
     python3 scripts/check_skill_refs.py [--repo-root <path>] [--verbose]
 
 Exit codes:
-    0 - every imperative skill reference resolves (or nothing to check)
-    1 - one or more dangling imperative references (details printed to stderr)
+    0 - every recognised ability reference resolves (or nothing to check)
+    1 - one or more dangling references (details printed to stderr)
     2 - the skills directory could not be read (hard error)
 """
 
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
+
+from agent_ability_verdict import normalize_entries
+from agent_declaration_shape import MalformedDeclarationError
+from agent_skill_ref_grants import reference_findings
+from agent_spawn_declaration import declared_spawn, redundancy_findings, resolve_spawn_ids
+from skill_ref_recognition import recognise
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
-
-# A skill path as written in prose: .claude/skills/<name> or templates/skills/<name>,
-# plus any path INSIDE the bundle (group 2), e.g. /SKILL.md or /scripts/emit_event.py.
-#
-# The bundled-file half matters as much as the directory half. Skill bundles ship
-# executables — `python .claude/skills/agent-telemetry/scripts/emit_event.py` — and a
-# check that stopped at the directory would pass a bundle whose script was never
-# written. That is the exact shape of the defect this guard exists for, one level in.
-#
-# These paths are deliberately OUT OF SCOPE for build_referential_integrity.py, which
-# resolves `scripts/...` deploy-namespace keys against the deploy manifest. A
-# skill-bundled script is deployed by build_skills as part of its bundle, not by the
-# scripts/ manifest, so normalising it into a `scripts/...` key would demand a manifest
-# entry for a file that is already correctly deployed — the false-positive class
-# EPIC-BuildGuardFalsePositive had to fix once. Two reference classes, two guards.
-_SKILL_REF_RE = re.compile(
-    r"(?:\.claude|templates)/skills/([a-z0-9][a-z0-9._-]*)((?:/[\w.\-]+)*)"
-)
-
-# HTML comment blocks — DECISION HISTORY and friends. Stripped before scanning.
-_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-
-# Markers that make a reference an instruction rather than a description.
-_IMPERATIVE_RE = re.compile(
-    r"\b(load|read|invoke|run|execute|executes|python|python3|apply|bash|source)\b",
-    re.IGNORECASE,
-)
 
 
 def load_skill_names(templates_dir: Path) -> set[str] | None:
@@ -95,65 +75,43 @@ def load_skill_names(templates_dir: Path) -> set[str] | None:
         return None
 
 
-def _scan_text(text: str) -> list[tuple[int, str, str, bool, str]]:
-    """Return (lineno, skill_name, inner_path, is_imperative, line) per reference.
-
-    ``inner_path`` is the path inside the bundle ("scripts/emit_event.py"), or ""
-    when the reference names only the skill directory.
-
-    HTML comment blocks are blanked (newlines preserved, so line numbers in the
-    report still match the file on disk).
-    """
-    def _blank(match: re.Match[str]) -> str:
-        return re.sub(r"[^\n]", " ", match.group(0))
-
-    scrubbed = _COMMENT_RE.sub(_blank, text)
-
-    hits: list[tuple[int, str, str, bool, str]] = []
-    for lineno, line in enumerate(scrubbed.splitlines(), start=1):
-        imperative = bool(_IMPERATIVE_RE.search(line))
-        # One line often names both forms of the same path ("`.claude/skills/x`
-        # (or `templates/skills/x`)"). That is one reference, not two.
-        seen: dict[tuple[str, str], None] = {}
-        for m in _SKILL_REF_RE.finditer(line):
-            seen.setdefault((m.group(1), m.group(2).lstrip("/")), None)
-        for name, inner in seen:
-            hits.append((lineno, name, inner, imperative, line.strip()))
-    return hits
+def _bundle_gap(skills_dir: Path) -> Callable[[str, str], str | None]:
+    """A probe: ``(skill, inner)`` -> why the bundled file ``inner`` is missing, else None."""
+    def gap(skill: str, inner: str) -> str | None:
+        if inner and not (skills_dir / skill / inner).is_file():
+            return f"skill '{skill}' exists but has no {inner}"
+        return None
+    return gap
 
 
-def _missing_target(skills_dir: Path, name: str, inner: str, known: set[str]) -> str | None:
-    """Return a description of what is missing, or None when the reference resolves.
-
-    Checks the skill directory first, then — when the reference names a file inside
-    the bundle — that the file itself is there.
-    """
-    if name not in known:
-        return f"no skill directory templates/skills/{name}/"
-    if inner and not (skills_dir / name / inner).is_file():
-        return f"skill '{name}' exists but has no {inner}"
-    return None
+def _missing_target(skills_dir: Path, ref: dict[str, Any]) -> str | None:
+    """Return what is missing for one recognised reference, or None when it resolves."""
+    if ref["canonical_id"] is None:
+        return f"no skill directory templates/skills/{ref['ability_text']}/"
+    return _bundle_gap(skills_dir)(ref["canonical_id"], ref["inner"])
 
 
 def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
-    """Scan every template .md file. Return (dangling_imperative, dangling_mentions)."""
+    """Scan every template .md file. Return (dangling references, descriptive mentions).
+
+    Descriptive mentions are no longer collected: a sentence that is not an instruction
+    is not recognised at all, so the second list is always empty (kept for callers).
+    """
     skills_dir = templates_dir / "skills"
     bad: list[dict] = []
-    mentions: list[dict] = []
     for path in sorted(templates_dir.rglob("*.md")):
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
             print(f"WARNING: cannot read {path}: {exc}", file=sys.stderr)
             continue
-        for lineno, name, inner, imperative, line in _scan_text(text):
-            reason = _missing_target(skills_dir, name, inner, known)
-            if reason is None:
-                continue
-            record = {"path": path, "line": lineno, "skill": name,
-                      "reason": reason, "text": line}
-            (bad if imperative else mentions).append(record)
-    return bad, mentions
+        lines = text.splitlines()
+        for ref in recognise(text, known, set()):
+            reason = _missing_target(skills_dir, ref)
+            if reason is not None:
+                bad.append({"path": path, "line": ref["line"], "skill": ref["ability_text"],
+                            "reason": reason, "text": lines[ref["line"] - 1].strip()})
+    return bad, []
 
 
 def _definition_paths(agents: list[dict], package_root: Path) -> dict[Path, str]:
@@ -169,12 +127,6 @@ def _definition_paths(agents: list[dict], package_root: Path) -> dict[Path, str]
     return found
 
 
-def _finding(subject: str, rel: Path, hit: tuple, reason: str) -> str:
-    """One returned error for a nonexistent ability referenced at ``rel``:line."""
-    return (f"{subject}: ability does not exist: '{hit[1]}' referenced at "
-            f"{rel.as_posix()}:{hit[0]} ({reason})")
-
-
 def _population_errors(defs: int, guides: int, templates_dir: Path) -> list[str]:
     """Zero examined in either population is an error, never a pass."""
     errors: list[str] = []
@@ -186,15 +138,74 @@ def _population_errors(defs: int, guides: int, templates_dir: Path) -> list[str]
     return errors
 
 
+def _own_declarations(
+    text: str, phase_ids: list[str], rel: str, subject: str
+) -> tuple[list[str] | None, set[str], list[str], list[str]]:
+    """Return (grants, project_supplied, hand_off, errors) read from the definition's OWN frontmatter.
+
+    ``grants`` is None when the declaration is malformed (the comparison is skipped,
+    and that is stated in ``errors``, never computed against an empty set).
+    ``project_supplied`` holds the grants marked ``provided_by: project`` (AR-400d-3).
+    ``errors`` also carries the hand-off redundancy/repeat findings read from the RAW list (AR-400f-1).
+    """
+    try:
+        # Lazy: template_compiler hard-imports yaml, and registry_validator must stay importable without it.
+        from template_compiler import parse_frontmatter
+    except ModuleNotFoundError as exc:
+        return None, set(), [], [f"{rel}: cannot read the grant declaration of {subject}: template_compiler failed "
+                                 f"to import (missing module '{exc.name}'); install the missing dependency"]
+    front = parse_frontmatter(text)[0]
+    errors: list[str] = []
+    project_supplied: set[str] = set()
+    try:
+        entries = normalize_entries(front.get("skills"))
+        grants: list[str] | None = [e["skill_id"] for e in entries]
+        project_supplied = {e["skill_id"] for e in entries if e.get("provided_by")}
+    except MalformedDeclarationError as exc:
+        grants = None
+        errors.append(f"{rel}: skills declaration of {subject} is malformed ({exc}); "
+                      f"the ability grant comparison is skipped for {subject}")
+    try:
+        declared = declared_spawn(front)  # RAW list: repeats kept (AR-400f-1)
+        hand_off = resolve_spawn_ids(declared, phase_ids)
+        errors.extend(redundancy_findings(subject, rel, declared, phase_ids))
+    except MalformedDeclarationError as exc:
+        hand_off = []
+        errors.append(f"{rel}: spawn_allowlist of {subject} is malformed ({exc}); its hand-off list is read as empty")
+    return grants, project_supplied, hand_off, errors
+
+
+def _document_findings(text: str, rel: Path, subject: str | None, ctx: dict[str, Any]) -> list[str]:
+    """The findings for one document (a definition when ``subject`` is set, else a guide).
+
+    A grant the definition marks ``provided_by: project`` satisfies both the existence check and
+    the grant check for that definition (AR-400d-3): the project, not the package, supplies it.
+    """
+    if subject is None:
+        refs = recognise(text, ctx["known"], ctx["agents"], None)
+        return reference_findings(refs, subject=rel.as_posix(), rel=rel.as_posix(), grants=None,
+                                  hand_off=None, bundle_gap=ctx["gap"])
+    grants, supplied, hand_off, errors = _own_declarations(text, ctx["phase_ids"], rel.as_posix(), subject)
+    refs = recognise(text, ctx["known"] | supplied, ctx["agents"], subject)
+
+    def gap(skill: str, inner: str) -> str | None:
+        return None if skill in supplied else ctx["gap"](skill, inner)
+
+    return errors + reference_findings(refs, subject=subject, rel=rel.as_posix(), grants=grants,
+                                       hand_off=hand_off, bundle_gap=gap)
+
+
 def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[int, int, list[str]]:
     """Return (definitions_examined, guides_examined, errors) for ability references.
 
     Definitions are registry agents whose template is a file in ``templates/agents/``;
-    guides are every other ``.md`` under ``templates/``. Each imperative reference to
-    an ability (or bundled file) the package does not ship is one error naming the
-    subject (agent id, or the guide's repo-relative path), the ability, the file and
-    the 1-based line. HTML comments (DECISION HISTORY) are excluded by position. An
-    unreadable file is an error, not a skipped warning.
+    guides are every other ``.md`` under ``templates/``. Each recognised reference that
+    names an ability the package does not ship, a specialist's ungranted ability (the
+    grant side is the definition's OWN ``skills:`` declaration), a wrong-letter-case
+    spelling, or a specialist instead of an ability is one error naming the subject
+    (agent id, or the guide's repo-relative path), the ability, the file and the 1-based
+    line. HTML comments (DECISION HISTORY) are excluded by position. An unreadable file
+    is an error, not a skipped warning.
     """
     templates_dir = package_root / "templates"
     skills_dir = templates_dir / "skills"
@@ -203,6 +214,8 @@ def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[i
     except OSError as exc:
         return 0, 0, [f"cannot read ability directory {skills_dir}: {exc}"]
     defs = _definition_paths(agents, package_root)
+    ctx = {"known": known, "agents": {str(a.get("id")) for a in agents}, "gap": _bundle_gap(skills_dir),
+           "phase_ids": [str(a["id"]) for a in agents if a.get("is_ticket_phase")]}
     errors: list[str] = []
     counts = {"definitions": 0, "guides": 0}
     for path in sorted(templates_dir.rglob("*.md")):
@@ -214,22 +227,19 @@ def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[i
         except OSError as exc:
             errors.append(f"{rel.as_posix()}: cannot read file to check ability references: {exc}")
             continue
-        for hit in _scan_text(text):
-            reason = _missing_target(skills_dir, hit[1], hit[2], known)
-            if reason is not None and hit[3]:
-                errors.append(_finding(subject or rel.as_posix(), rel, hit, reason))
+        errors.extend(_document_findings(text, rel, subject, ctx))
     errors.extend(_population_errors(counts["definitions"], counts["guides"], templates_dir))
     return counts["definitions"], counts["guides"], errors
 
 
 def _report(bad: list[dict], repo_root: Path) -> None:
-    """Print dangling imperative references grouped by skill name."""
+    """Print dangling references grouped by skill name."""
     by_skill: dict[str, list[dict]] = defaultdict(list)
     for rec in bad:
         by_skill[rec["skill"]].append(rec)
 
     print(
-        f"FAIL: {len(bad)} imperative reference(s) to {len(by_skill)} skill target(s) "
+        f"FAIL: {len(bad)} reference(s) to {len(by_skill)} skill target(s) "
         f"that do not exist under templates/skills/.",
         file=sys.stderr,
     )
@@ -254,12 +264,12 @@ def _report(bad: list[dict], repo_root: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point. 0 = clean, 1 = dangling imperative refs, 2 = unreadable skills dir."""
+    """Entry point. 0 = clean, 1 = dangling refs, 2 = unreadable skills dir."""
     parser = argparse.ArgumentParser(description="Validate skill references in template prose.")
     parser.add_argument("--repo-root", default=str(_REPO_ROOT),
                         help=f"Repo root. Default: {_REPO_ROOT}")
     parser.add_argument("--verbose", action="store_true",
-                        help="Also list non-imperative mentions of unknown skills.")
+                        help="Accepted for compatibility; descriptive mentions are no longer collected.")
     args = parser.parse_args(argv)
 
     repo_root = Path(args.repo_root)
@@ -269,16 +279,10 @@ def main(argv: list[str] | None = None) -> int:
     if known is None:
         return 2
 
-    bad, mentions = scan(templates_dir, known)
-
-    if args.verbose and mentions:
-        print(f"NOTE: {len(mentions)} descriptive mention(s) of unknown skills "
-              f"(not failed on):")
-        for rec in mentions:
-            print(f"  {rec['path'].relative_to(repo_root)}:{rec['line']}  '{rec['skill']}'")
+    bad, _mentions = scan(templates_dir, known)
 
     if not bad:
-        print(f"OK: every imperative skill reference resolves ({len(known)} skills known).")
+        print(f"OK: every recognised skill reference resolves ({len(known)} skills known).")
         return 0
 
     _report(bad, repo_root)

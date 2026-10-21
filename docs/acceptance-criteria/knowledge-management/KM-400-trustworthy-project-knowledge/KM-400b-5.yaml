@@ -48,6 +48,10 @@ superseded_by: null
 covered_by:
 - KM-400b-5-i
 - KM-400b-5-ii
+- KM-400b-5-iii
+- KM-400b-5-iv
+- KM-400b-5-v
+- KM-400b-5-vi
 - tests/knowledge_live/neo4j_checks.py::test_live_idempotence_scope_metadata_and_rebuild
 - tests/knowledge_live/neo4j_checks.py::test_live_retention_starts_when_generation_is_retired
 implemented_by:

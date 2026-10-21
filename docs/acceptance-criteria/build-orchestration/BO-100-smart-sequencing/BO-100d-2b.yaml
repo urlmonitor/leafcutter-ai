@@ -1,7 +1,7 @@
 id: BO-100d-2b
 components:
   - build_orchestration
-readiness: draft
+readiness: approved
 priority: high
 title: "build-feature.md prose lets the drive proceed when the telemetry sink is reachable"
 component: build-orchestration
@@ -35,6 +35,7 @@ it_requirements:
   - "The prose must invoke the SAME shared probe semantics from BO-100d-1a so the success path matches the build-epic.js success path (dual-surface parity, the KI-3 lesson)."
   - "Deployed/template parity (ADR-001 self-hosting): edit the build-feature.md package source and verify the deployed slash-command copy via the build.py round-trip — never edit only one side."
   - "Apply the Prompt-Quality Checklist: keep any bash probe snippet single-command per the shell convention; do not introduce inline implementation work blocked by inline_work_guard.py."
+  - "The prose must name the absolute path printed by the telemetry location query as the only probe target and must not name the workspace-relative debugging/logs/agent_telemetry.jsonl as a target or a fallback."
 delivers_to: null
 expects_from:
   ac_id: BO-100d-1a
@@ -45,6 +46,12 @@ amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, mirroring BO-100d-2a for dual-surface parity, including the clause that the probe touches no worktree-relative file (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review of the re-pointed criteria. This is a prompt AC (change_target: prompt, assigned_agent: llm-expert, not a coder), so set test_required: false with a test_rationale: command prose cannot be executed by a unit test, and the success behaviour it invokes is proven behaviorally under BO-100d-2a and BO-100d-2a-i through the shared helper. Added one it_requirement: the printed absolute path is the only probe target and the relative path is never named. assigned_agent, estimated_complexity S and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -55,3 +62,14 @@ notes: |
   Lineage: TICKET-20260527-FeedbackSinkPreDriveCheck.
 change_target: prompt
 risk_surface: internal
+test_required: false
+test_rationale: >-
+  The deliverable is command prose in templates/workflows/build-feature.md, read by
+  an agent; no unit test can execute it, and checking the prose for the step would
+  be the grep-only form the repo CLAUDE.md forbids for gates. The executable
+  success behaviour the prose relies on (proceed on a pass, exactly one probe line
+  at the printed absolute path, no worktree-relative file) lives in the shared
+  probe helper and is proven behaviorally by BO-100d-2a and BO-100d-2a-i. The prose
+  path is to be checked at drive time by a behavioral spot-check: run
+  /build-feature against an install with a writable external stream and confirm
+  dispatch proceeds and no worktree debugging/logs file appears.

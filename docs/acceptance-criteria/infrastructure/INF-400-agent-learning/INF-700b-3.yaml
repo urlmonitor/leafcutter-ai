@@ -119,7 +119,8 @@ amended_by:
     at: 2026-08-26
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/06_TICKET-20261016-INF-700b-3.md
 notes: |
   Scope boundary against INF-700a. INF-700a asks for the count of learnings
   that have been captured but not yet routed to a surface — a backlog on the
@@ -134,3 +135,4 @@ notes: |
   later.
 change_target: pipeline
 risk_surface: contract_boundary
+target_epic: EPIC-ALearningAnAgentHasTodayActuallyGets

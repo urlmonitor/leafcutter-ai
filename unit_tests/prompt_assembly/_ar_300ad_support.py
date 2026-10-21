@@ -482,12 +482,24 @@ def source_templates() -> list[Path]:
             if not t.name.startswith("_") and is_agent_file(t)]
 
 
+def _project_supplied_not_shipped(entry, installed: set[str]) -> bool:
+    """True for a grant marked ``provided_by: project`` whose ability the package does not ship."""
+    return isinstance(entry, dict) and entry.get("provided_by") == "project" and entry["skill_id"] not in installed
+
+
 def real_declarations() -> dict[str, list]:
     """{template stem: raw ``skills`` entries} for every real template that
-    declares a non-empty grant (derived by parsing, never enumerated)."""
+    declares a non-empty grant (derived by parsing, never enumerated).
+
+    AR-400d-2 retarget: a grant marked ``provided_by: project`` for an ability the package does
+    not ship (sql-coder's postgres / sql-test) is NOT delivered as a table row in the real tree --
+    the compiled prompt states it is not installed instead (asserted by test_ar_400d_*) -- so it
+    is not part of the population these 'every grant arrives as a row' checks measure."""
+    installed = installed_skill_ids(REPO_ROOT)
     out = {}
     for tpl in source_templates():
-        entries = template_frontmatter(tpl).get(GRANT_KEY) or []
+        entries = [e for e in template_frontmatter(tpl).get(GRANT_KEY) or []
+                   if not _project_supplied_not_shipped(e, installed)]
         if entries:
             out[tpl.stem] = entries
     return out

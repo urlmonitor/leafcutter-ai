@@ -215,8 +215,7 @@ _GREEN_LABELS: dict = {
         "status": "ok",
         "pr_url": "https://github.com/example/repo/pull/1",
         "message": "PR opened",
-    },
-}
+    }, **_claim_fx.wrong_version_passing()}
 
 _HIGH_FINDING_VERDICT = {
     "verdict_obtained": True,

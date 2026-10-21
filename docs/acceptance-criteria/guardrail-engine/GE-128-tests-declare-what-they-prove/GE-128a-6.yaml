@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -36,18 +36,40 @@ doc_links:
     relationship: related
     status: exists
 assigned_agent: documentation-expert
-estimated_complexity: null
-it_requirements: []
+estimated_complexity: S
+it_requirements:
+  - "Write a reference (lookup) entry, not a tutorial or how-to, under docs/reference/, following the README conventions there; pass the repository's documentation gates (frontmatter, document-length standard) and register it in docs/INDEX.md."
+  - "Name TQ-100b-5 as the owner of what counts as a declaration and GE-128b as the owner of the no-previous-version row; link to them and restate neither rule."
+  - "The configuration file, key name, allowed values and the reported source wording must be copied from the shipped configuration and a real run of the built hook (the GE-128a-4 delivery), not from the criteria text."
+  - "Link to the how-to produced by GE-128a-5 and update docs/pre-commit-hooks.md's entry for the check to point at this reference."
+  - "Route the publication through route-knowledge before dispatch, per the repository CLAUDE.md Knowledge & Memory Capture rule."
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-128a-4
+  contract: "The configuration file and key that hold the test-declaration check's mode, its two allowed values (warning, error), and the exact source wording the check prints for explicitly configured, environment override (if kept) and not chosen."
 origin_agent: BrainCandy
 created: 2026-10-16
 amended_by:
   - by: business-analyst
     at: "2026-10-16"
     reason: "Authored for GE-128a's documentation_triggers 'reference-doc' while giving the L1 live children (its only child GE-128a-1 is retired). origin_agent BrainCandy per the requesting user's instruction."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO enrichment. Doc-only AC (change_target: docs), routed to documentation-expert (kept). Set estimated_complexity S; added five it_requirements (reference form under docs/reference/ with doc gates and INDEX.md registration; TQ-100b-5 and GE-128b named, not restated; config key, values and source wording taken from the shipped config and a real hook run; link to the GE-128a-5 how-to and from docs/pre-commit-hooks.md; route-knowledge pre-flight); added expects_from GE-128a-4, matching that record's new delivers_to. Set test_required: false with a test_rationale. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+test_required: false
+test_rationale: >-
+  The deliverable is a reference entry with no executable behaviour, so there is
+  nothing for test-writer to drive red and then green. Its claim that every
+  verdict-table row matches GE-128a-2, GE-128a-3 and GE-128a-4 is checked by the
+  documentation gates and documentation-verifier against the behaviour those
+  records' behavioral tests prove; the it_requirements require the key, values
+  and reported wording to be copied from the shipped configuration and a real
+  hook run so the table cannot drift from what the code does.

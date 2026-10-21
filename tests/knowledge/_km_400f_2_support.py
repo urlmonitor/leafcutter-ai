@@ -147,7 +147,7 @@ class ReclaimDouble(StoreDouble):
         self.log.append((statement, write))
         return self._delete(statement, params) if "DELETE" in statement else None
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         handled = self._dispatch(statement, params or {}, write)
         return handled if handled is not None else await super()._run(statement, params, write)
 

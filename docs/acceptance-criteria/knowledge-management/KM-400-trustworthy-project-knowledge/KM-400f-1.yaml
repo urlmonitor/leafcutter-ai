@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: in_progress
+work_status: done
 parent: KM-400f
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
@@ -103,6 +103,12 @@ amended_by:
     L1's last free slot is preserved. Every child's test_rationale records that this AC's
     own 32-generation fixture of completed and retired generations is the fixture bias
     that hid the defect, and requires fixtures reproducing the real observed shape."
+  - "2026-10-21: status audit. All six children KM-400f-1-i through KM-400f-1-vi are done,
+    and their covers-tagged tests (tests/knowledge/test_km_400f_1_i.py through
+    test_km_400f_1_vi.py) and this record's own deterministic tests
+    (tests/knowledge/test_km_400f_1.py) pass under AC_ENFORCE_STRICT=1. work_status moved
+    from in_progress to done. Criteria, covered_by and tests unchanged; the live checks
+    under tests/knowledge_live/ were not run."
 superseded_by: null
 covered_by:
 - KM-400f-1-i

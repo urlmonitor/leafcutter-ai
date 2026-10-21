@@ -182,6 +182,16 @@ amended_by:
     every deployed consumer, a missing-block test and a build-inliner test. Recorded that the
     BO-3900-PATH-HELPERS precedent has no inliner and no parity test today (its two copies differ).
     components gains build_pipeline. readiness reset to reviewed.
+- reason: shared-block-mechanism-generalised
+  by: BrainCandy
+  at: 2026-10-20
+  note: >-
+    Criteria unchanged. The inliner, the parity test and the hand-filled-marker-pair rule named in
+    this record's it_requirements are no longer WORKSPACE-ANSWER-specific: they are built once as the
+    general shared-block mechanism in BO-4500b-1 (filling), BO-4500b-2 (identity check) and
+    BO-4500b-1-iii (filled marker pair fails). WORKSPACE-ANSWER becomes one more block on that
+    mechanism; whichever record is driven first builds the general mechanism, never a
+    workspace-only one.
 superseded_by: null
 covered_by: [BO-4300c-3-i, BO-4300c-3-ii]
 implemented_by:

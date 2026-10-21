@@ -357,7 +357,8 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     if (recCheck.stale === true) {
       return { status: "unresumable_stale", run_id: runId, gate_id: gateId };
     }
-    return applyAnswerByType(args.resume_answer, incomingType);
+    // record_context lets a caller bind the answer to what the question was about (BO-400e-3-vii).
+    return { ...applyAnswerByType(args.resume_answer, incomingType), record_context: (recCheck.record && recCheck.record.context) || null };
   }
 
   // No matching resume_answer: call the live gate.
@@ -475,6 +476,7 @@ let triageReport = null; // from step 3; null means tests passed
 let ticketsClosedPreMerge = 0; // closure counts from step 3.5
 let acsClosed = 0;
 let acsSkipped = 0;
+let closureReport = []; // one line per closed/refused/left-open record from step 3.5
 
 // Baseline state from step 0, forwarded to step 3 triage. null means the baseline run did
 // not complete, so triage treats every failure as a regression.
@@ -1125,9 +1127,12 @@ phase('Step 3.5')
 
 narrate("Step 3.5 of 9", 'Closing in-scope tickets and source ACs on the feature branch before merge...')
 
-// Probe: check whether a closure commit already exists on the branch.
+// Probe: check whether a closure commit already exists on the branch. Scoped to the branch's OWN
+// commits (origin/main..HEAD, the same base ref the derive step measures from): an unscoped search
+// finds main's earlier closure commits and would skip this step for every branch.
 const closureProbeResult = await agent(
-  `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1\n` +
+  `Run: git -C "${WORKTREE_ROOT}" log --oneline --grep 'chore(tickets): close tickets and source ACs' -1 origin/main..HEAD\n` +
+  "Only the command's standard output counts; if the command itself fails, treat the output as empty.\n" +
   "If the output is non-empty (a closure commit already exists on this branch):\n" +
   "  Return: { \"already_committed\": true }\n" +
   "Otherwise:\n" +
@@ -1138,6 +1143,7 @@ const closureProbeResult = await agent(
 const closureAlreadyCommitted = parsedOr(() => parseAgentJson(closureProbeResult, { stage: "step-3.5-closure-probe", agent: "status-checker" }),
   {}, "assuming not already committed (will re-attempt closure)").already_committed === true;
 
+let step35Outcome = null; // set only on the two executed paths; the skip paths record their own outcome
 if (closureAlreadyCommitted) {
   log("Step 3.5 of 9: [skipped] Closure commit already present on this branch — skipping pre-merge closure");
   outcome(`Step 3.5 of ${STEP_COUNT}`, 'skipped: pre-merge closure commit already present on branch');
@@ -1166,162 +1172,124 @@ if (closureAlreadyCommitted) {
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
     });
   } else {
-    // Sub-step A: Reset the Step 2 test-merge.
-    const resetMergeResult = await agent(
-      "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
-      `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
-      "\n" +
-      "1. Check if a merge is in progress:\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD 2>/dev/null\n` +
-      "   Capture the exit code.\n" +
-      "\n" +
-      "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
-      `   Then run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
-      "   Log: 'Step 2 test-merge aborted and reset to feature-branch HEAD.'\n" +
-      "   Return: { \"status\": \"aborted\" }\n" +
-      "\n" +
-      "3. If exit code is non-zero (no merge in progress):\n" +
-      `   Run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
-      "   Log: 'No merge in progress — reset to feature-branch HEAD.'\n" +
-      "   Return: { \"status\": \"reset\" }",
+    const halt35 = async (reason, message, extra) => {
+      await cleanupBaselineWorktree();
+      outcome(`Step 3.5 of ${STEP_COUNT}`, `halted: ${reason}`);
+      return { status: "halted", halted_at_step: "3.5", reason: reason, message: `${message} The PR has NOT been merged.`, ...extra, ...haltRefs(), step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n') };
+    };
+
+    // Sub-step A: abort a Step 2 test-merge still in progress (never touches uncommitted edits).
+    // The abort is re-checked: a merge that survives it would make the derivation read a half-merged tree.
+    const resetReply = await agent(
+      "If a merge is in progress in the worktree, abort it; otherwise change nothing.\n" +
+      `  Run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD\n` +
+      `  If (and only if) that succeeds, run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
+      `  Then check again, run: git -C "${WORKTREE_ROOT}" rev-parse --verify MERGE_HEAD\n` +
+      "Return: { \"status\": \"aborted\"|\"no_merge\"|\"still_merging\" } — still_merging when that second check still succeeds.",
       { agentType: "status-checker", label: "step-3.5-reset-merge", phase: "Step 3.5" }
     )
+    const resetStatus = parsedOr(() => parseAgentJson(resetReply, { stage: "step-3.5-reset-merge", agent: "status-checker" }), {}, "reset-merge reply unreadable").status;
+    if (resetStatus !== "aborted" && resetStatus !== "no_merge") {
+      const stillMerging = resetStatus === "still_merging";
+      return await halt35(stillMerging ? "merge_still_in_progress" : "merge_state_unknown", stillMerging
+        ? "A merge is still in progress in the worktree after the abort, so the closable set cannot be worked out from a clean branch state. Nothing was closed. Resolve or abort the merge by hand and re-run /finalize-feature."
+        : "Could not confirm that no merge is in progress in the worktree (the reset reply was unreadable or unrecognised). Nothing was closed. Check `git status`, then re-run /finalize-feature.", {});
+    }
 
-    // Derive the epic scope prefix from the branch name.
-    // For EPIC-* branches the closure is restricted to that epic's own ticket folder.
-    // For single-ticket branches (no EPIC- prefix) SCOPE_PREFIX is empty — git diff
-    // already limits discovery to files the branch changed, so no folder filter is needed.
-    const SCOPE_PREFIX = BRANCH.startsWith("EPIC-")
-      ? `tickets/00_inbox/epics/${BRANCH}/`
-      : "";
-
-    // Sub-step B + C + D + E: find in-scope tickets, close them, close ACs, commit.
-    const closureResult = await agent(
-      "Close in-scope tickets and their source ACs on the feature branch.\n" +
-      "\n" +
-      "=== CONTEXT ===\n" +
-      `Feature branch: ${BRANCH}\n` +
-      `Worktree root: ${WORKTREE_ROOT}\n` +
-      `SCOPE_PREFIX: '${SCOPE_PREFIX}'\n` +
-      "(SCOPE_PREFIX is non-empty for EPIC-* branches — only paths under it are eligible.)\n" +
-      "\n" +
-      "=== SUB-STEP B: FIND IN-SCOPE TICKETS ===\n" +
-      "CRITICAL: Only close tickets that this branch explicitly changed via git.\n" +
-      "DO NOT walk the whole ticket store — that causes cross-epic contamination.\n" +
-      "\n" +
-      "B1. List ticket files changed by this branch (git-only — no worktree walk):\n" +
-      `  Run: git -C ${WORKTREE_ROOT} diff --name-only origin/main HEAD -- 'tickets/**/*.md'\n` +
-      `  Run: git -C ${WORKTREE_ROOT} log --oneline origin/main..${BRANCH} --name-only --diff-filter=A -- 'tickets/**/*.md'\n` +
-      "  Combine both lists; deduplicate. Exclude Master_Plan.md.\n" +
-      `  If SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty: discard every path that does NOT start with SCOPE_PREFIX.\n` +
-      "  Log: 'SCOPE_PREFIX=<value>; in-scope ticket candidates from git diff: <count>'\n" +
-      "\n" +
-      "B2. For each remaining file, read its frontmatter `status:` field.\n" +
-      "  Collect only files where status != 'done' (skip already-done tickets — idempotency).\n" +
-      "  Call this list OPEN_TICKETS.\n" +
-      "  If OPEN_TICKETS is empty: log 'No open tickets to close.' and skip to REPORTING.\n" +
-      "\n" +
-      "=== SUB-STEP C: SET status: done ===\n" +
-      "For each ticket in OPEN_TICKETS:\n" +
-      `  Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/set_ticket_status.py --ticket <ticket_path> --status done\n` +
-      "  NEVER write that value yourself and NEVER add --force: this script is the single writer of the finished state (ADR-047), and the override switches off the parity check that makes it the only one.\n" +
-      "  If exit code is 0: log 'Set status: done on <ticket_path>' and increment tickets_closed.\n" +
-      "  If exit code is non-zero: the ticket is NOT closed. Log 'REFUSED: <ticket_path> left open — <script stderr>' and increment tickets_refused. Do NOT close it by any other route and do NOT retry with --force; leaving it open is the correct outcome, and the archive check at step 5 surfaces it.\n" +
-      "\n" +
-      "=== SUB-STEP D: CLOSE SOURCE ACs ===\n" +
-      "For each ticket in OPEN_TICKETS:\n" +
-      "  Read the ticket frontmatter and look for a `source_ac:` field.\n" +
-      "  If `source_ac` is absent or empty: log 'No source_ac on <ticket_path> — skipping AC closure.' and skip (AC-3 no-op).\n" +
-      "  If `source_ac` is present:\n" +
-      `    Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/ac_store/mark_ac_done.py --ticket <ticket_path> --ac-root ${WORKTREE_ROOT}/docs/acceptance-criteria/\n` +
-      "    Capture the exit code.\n" +
-      "    If exit code is 0: increment acs_closed counter.\n" +
-      "    If exit code is non-zero: log 'WARNING: mark_ac_done.py exited <code> for <ticket_path> — skipping AC closure (non-fatal).' and increment acs_skipped counter. DO NOT fail finalize. (AC-4 non-fatal)\n" +
-      "\n" +
-      "=== SUB-STEP E: COMMIT ON FEATURE BRANCH ===\n" +
-      "If OPEN_TICKETS was non-empty (any edits were made):\n" +
-      `  Run: git -C ${WORKTREE_ROOT} add tickets/\n` +
-      `  Run: git -C ${WORKTREE_ROOT} add docs/acceptance-criteria/ 2>/dev/null || true\n` +
-      `  Run: git -C ${WORKTREE_ROOT} diff --cached --name-only\n` +
-      "  Capture the list as STAGED_PATHS.\n" +
-      "\n" +
-      "  SCOPE GUARD — verify every staged path is within the epic scope:\n" +
-      "  A path is allowed when ANY of these hold:\n" +
-      "    - It starts with 'docs/acceptance-criteria/' (AC closure files).\n" +
-      `    - SCOPE_PREFIX ('${SCOPE_PREFIX}') is non-empty AND the path starts with SCOPE_PREFIX.\n` +
-      "    - SCOPE_PREFIX is empty AND the path is in the OPEN_TICKETS list.\n" +
-      "  Any path that does not satisfy one of these conditions is a SCOPE VIOLATION.\n" +
-      "\n" +
-      "  If any SCOPE VIOLATION is found:\n" +
-      `    Run: git -C ${WORKTREE_ROOT} reset HEAD\n` +
-      "    Log: 'ABORT: closure commit aborted — staged paths fall outside epic scope.'\n" +
-      "    For each violating path log: 'OUT-OF-SCOPE: <path>'\n" +
-      "    Return:\n" +
-      "    {\n" +
-      '      "tickets_closed": [],\n' +
-      '      "acs_closed": 0,\n' +
-      '      "acs_skipped": 0,\n' +
-      '      "commit_made": false,\n' +
-      '      "scope_violation": true,\n' +
-      '      "out_of_scope_paths": ["<violating path 1>", ...]\n' +
-      "    }\n" +
-      "\n" +
-      "  If all staged paths pass the scope guard:\n" +
-      "    If staged files exist:\n" +
-      `      From ${WORKTREE_ROOT} run: COMMIT_AGENT_MODE=1 git commit -m 'chore(tickets): close tickets and source ACs'\n` +
-      "      Log: 'Closure commit created on feature branch.'\n" +
-      "    Else:\n" +
-      "      Log: 'Nothing staged after edits — all tickets were already done.'\n" +
-      "\n" +
-      "=== REPORTING ===\n" +
-      "Return a JSON object:\n" +
-      "{\n" +
-      '  "tickets_closed": ["<path1>", ...],\n' +
-      '  "acs_closed": <integer>,\n' +
-      '  "acs_skipped": <integer>,\n' +
-      '  "commit_made": true|false,\n' +
-      '  "scope_violation": false,\n' +
-      '  "out_of_scope_paths": []\n' +
-      "}",
-      { agentType: "status-checker", label: "step-3.5-closure", phase: "Step 3.5" }
-    )
-
-    const closureInfo = parsedOr(() => parseAgentJson(closureResult, { stage: "step-3.5-closure", agent: "status-checker" }),
-      { tickets_closed: [], acs_closed: 0, acs_skipped: 0, commit_made: false, scope_violation: false, out_of_scope_paths: [] },
-      "assuming zero tickets/ACs closed");
-
-    // Surface any scope violation clearly so the operator can investigate.
-    // A scope violation means the agent staged paths outside the epic's own folder
-    // and the guard correctly aborted the commit (no closure commit was made).
-    if (closureInfo.scope_violation) {
-      const offendingPaths = Array.isArray(closureInfo.out_of_scope_paths)
-        ? closureInfo.out_of_scope_paths
-        : [];
-      log(
-        "[finalize-feature] step 3.5 SCOPE VIOLATION: closure commit aborted — " +
-        "staged paths fall outside epic scope (" + (SCOPE_PREFIX || "branch-diff-derived") + ").\n" +
-        "Offending paths:\n" +
-        offendingPaths.map(p => `  - ${p}`).join("\n")
+    // BO-400e-3-ii..-viii: the closable set is COMPUTED by finalize_closable_set.py, never selected
+    // by prose handed to an agent. This step dispatches the script and reads its reply. The script
+    // closes a ticket only through set_ticket_status.py --status done (the one writer of the finished
+    // state, ADR-047) and its source AC only through mark_ac_done.py; a non-zero exit is REFUSED, the
+    // ticket is not closed and its AC is left open.
+    const CLOSER_CLI = `python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/build_orchestration/finalize_closable_set.py`;
+    const runCloser = async (label, subcommand) => {
+      const raw = await agent(
+        JSON.stringify({ step: label, command: `${CLOSER_CLI} ${subcommand}`, target: { workspace: WORKTREE_ROOT, branch: BRANCH, ac_id: "none" } }),
+        { agentType: "command-step-runner", label, phase: "Step 3.5" }
       );
+      const ctx = { stage: label, agent: "command-step-runner" };
+      const reply = parsedOr(() => parseAgentJson(raw, ctx), null, `${label} reply unreadable`);
+      // Only a runner reply that exited 0 with a string stdout is read; never the raw reply object
+      // itself (a failed or shapeless run must not be parsed as the closer's answer).
+      if (!reply || typeof reply !== "object" || reply.exit_status !== 0 || typeof reply.stdout !== "string") return null;
+      const body = parsedOr(() => parseAgentJson(reply.stdout, ctx), null, `${label} output unreadable`);
+      return body && typeof body === "object" ? body : null;
+    };
+
+    const derived = await runCloser("step-3.5-derive-set", `derive --worktree ${WORKTREE_ROOT} --branch ${BRANCH} --base-ref origin/main`);
+    if (!derived || !["closable", "nothing_to_close", "undeterminable"].includes(derived.outcome)) {
+      return await halt35("closable_set_unreadable", "Could not work out which tickets and acceptance criteria this branch may close (the derivation reply was unreadable). Nothing was closed. Re-run /finalize-feature.", {});
+    }
+    if (derived.outcome === "undeterminable") {
+      const undeterminableMessages = {
+        built_for_unknown: `Finalization could not establish which ticket branch ${BRANCH} was built for, so nothing was closed. Record it with: git config branch.${BRANCH}.leafcutterTicket <ticket path>, then re-run /finalize-feature.`,
+        uncommitted_record_changes: `Finalization found uncommitted edits to records it would close (${derived.detail || "no detail"}), most likely left by an earlier halted run, so it cannot tell what is still open. Commit or discard those record edits, then re-run /finalize-feature.`,
+        ambiguous_ticket_record: `Branch ${BRANCH} carries more than one built-for-ticket record (${derived.detail || "no detail"}), so nothing was closed. Leave exactly one with: git config --replace-all branch.${BRANCH}.leafcutterTicket <ticket path>, then re-run /finalize-feature.`,
+        diff_failed: `Finalization could not list what ${BRANCH} changed because a git call failed (${derived.detail || "no detail"}), so nothing was closed. Fix the repository state and re-run /finalize-feature.`,
+      };
+      return await halt35(derived.reason_code || "undeterminable", undeterminableMessages[derived.reason_code]
+        || `Finalization could not establish where ${BRANCH} left ${derived.base_ref} (no merge base), so nothing was closed. Fix the base ref and re-run /finalize-feature.`, { closure_report: [] });
+    }
+    if (derived.outcome === "nothing_to_close") {
+      completedSteps.push("3.5");
+      step35Outcome = (`Nothing to close (${derived.reason_code}): compared against merge base ${derived.merge_base}, no ticket or acceptance criterion of this branch was left open`);
+    } else {
+      // Person-only gate: only a resume answer from channel "person" is a yes; a live agent reply is never read.
+      const gate = await resolveGate("step-3.5-closure-gate", async () => null, args, { branch: BRANCH, set_digest: derived.set_digest },
+        { type: "single_choice", options: ["confirm", "decline"], prompt: `Close exactly these records on ${BRANCH} and commit them? (confirm / decline)\n${derived.listing_text}` },
+        (args && typeof args === "object" && args.run_id) || `finalize-${BRANCH.replace(/\//g, "-")}`);
+      if (gate && gate.status === "paused_awaiting_input") { await cleanupBaselineWorktree(); return gate; }
+      // The answer belongs to the set that was shown when the question was asked: a resumed answer is
+      // applied only when the re-derived set has the digest stored in the pause record.
+      if (gate && gate.action && "record_context" in gate && (gate.record_context || {}).set_digest !== derived.set_digest) {
+        return await halt35("closure_set_changed", "The set of records to close changed since the question was asked, so the answer was treated as unanswered and nothing was closed or committed. Re-run /finalize-feature to see the current list.",
+          { closure_report: derived.records.map(r => `${r.kind === "ac" ? r.id : r.path} left open`) });
+      }
+      const byPerson = !!(args && args.resume_answer && args.resume_answer.channel === "person");
+      if (!gate || gate.action !== "confirm" || !byPerson) {
+        const declined = !!gate && gate.action === "decline" && byPerson;
+        return await halt35(declined ? "closure_declined" : "closure_unanswered", declined
+          ? "Closure declined by the person: nothing was closed or committed. Re-running /finalize-feature shows the list again."
+          : "The closure confirmation was unanswered by a person, so nothing was closed or committed. Re-run /finalize-feature to see the list again.",
+          { closure_report: derived.records.map(r => `${r.kind === "ac" ? r.id : r.path} left open`) });
+      }
+      const closed = await runCloser("step-3.5-close-set", `close --worktree ${WORKTREE_ROOT} --set-file ${derived.set_file}`);
+      if (!closed || !Array.isArray(closed.results) || closed.set_digest !== derived.set_digest) {
+        return await halt35("closure_not_confirmed", "The closure did not complete: the closer's reply was unreadable or answered for a different set. Nothing was committed, but if the closer ran, some closed records may have been left modified and uncommitted in the worktree: check `git status`, and commit or discard them before re-running /finalize-feature.", {});
+      }
+      const changes = Array.isArray(closed.outside_set_changes) ? closed.outside_set_changes : [];
+      const stray = (Array.isArray(closed.out_of_set_paths) ? closed.out_of_set_paths : []).filter(p => !changes.some(c => c.path === p));
+      closureReport = closed.results.map(r => `${r.kind === "ac" ? r.id : r.path} ${r.result}${r.reason ? ` — ${r.reason}` : ""}`);
+      if (changes.length > 0 || stray.length > 0) {
+        return await halt35("closed_outside_set", "A record outside the shown list was changed during the closure; nothing was committed. The closed records were left modified and uncommitted in the worktree: commit or discard them before re-running /finalize-feature.", {
+          closure_report: [...closureReport, ...changes.map(c => `${c.path} closed outside its set, outside the shown list: ${c.before} -> ${c.after}`), ...stray.map(p => `${p} changed outside its set, outside the shown list`)],
+        });
+      }
+      const closedTickets = closed.results.filter(r => r.kind === "ticket" && r.result === "closed").map(r => r.path);
+      ticketsClosed.push(...closedTickets);
+      ticketsClosedPreMerge = closedTickets.length;
+      acsClosed = closed.results.filter(r => r.kind === "ac" && r.result === "closed").length;
+      acsSkipped = closed.results.filter(r => r.kind === "ac" && r.result !== "closed").length;
+      const commitPaths = Array.isArray(closed.commit_paths) ? closed.commit_paths : [];
+      let answer = null;
+      for (let attempt = 0; commitPaths.length > 0 && attempt < 3; attempt++) {
+        const commitReply = await agent(
+          "Commit the closed records through the shared commit step, once, in supervised mode. Use no other way of committing.\n" +
+          "1. Write this single line to a new temporary message file: chore(tickets): close tickets and source ACs\n" +
+          `2. With the working directory set to ${WORKTREE_ROOT}, run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/commit_changes.py --message-file <that file> --supervised --run ${(args && typeof args === "object" && args.run_id) || BRANCH} ${commitPaths.join(" ")}\n` +
+          "3. Return { \"status\": \"<the answer's status>\", \"commit_answer\": <the step's JSON answer exactly as printed> }",
+          { agentType: "commit", label: "step-3.5-closure-commit", phase: "Step 3.5" }
+        );
+        answer = (parsedOr(() => parseAgentJson(commitReply, { stage: "step-3.5-closure-commit", agent: "commit" }), {}, "commit answer unreadable") || {}).commit_answer || null;
+        if (!answer || answer.status === "committed" || !String(answer.reason_code || "").startsWith("step_")) break;
+      }
+      if (commitPaths.length > 0 && (!answer || answer.status !== "committed")) {
+        return await halt35("closure_commit_not_committed", `The closing commit was not made (status ${answer ? answer.status : "unreadable"}, reason_code ${answer ? answer.reason_code : "none"}: ${answer ? answer.reason : "no commit answer"}). The closed records were left modified and uncommitted in the worktree: commit or discard them before re-running /finalize-feature.`, { closure_report: closureReport, commit_answer: answer });
+      }
+      completedSteps.push("3.5");
+      step35Outcome = `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch; ${acsSkipped} AC(s) left open`;
     }
 
-    // Accumulate counts into workflow-level variables.
-    if (Array.isArray(closureInfo.tickets_closed)) {
-      ticketsClosedPreMerge = closureInfo.tickets_closed.length;
-      // Merge into the broader ticketsClosed list for the final summary.
-      ticketsClosed.push(...closureInfo.tickets_closed);
-    }
-    acsClosed = typeof closureInfo.acs_closed === "number" ? closureInfo.acs_closed : 0;
-    acsSkipped = typeof closureInfo.acs_skipped === "number" ? closureInfo.acs_skipped : 0;
-
-    completedSteps.push("3.5");
-
-    log(
-      `[finalize-feature] step 3.5 closure: tickets_closed=${ticketsClosedPreMerge} ` +
-        `acs_closed=${acsClosed} acs_skipped=${acsSkipped} ` +
-        `commit_made=${closureInfo.commit_made}`
-    );
   }
 }
 
@@ -1528,13 +1496,10 @@ if (syncStatus === "pushed") {
   log(`[finalize-feature] pre-step-4 sync-check: up-to-date and SHA-verified (sha=${localSha.slice(0, 8)}). No push needed.`);
 }
 
-// Only record the executed-path outcome when step 3.5 was NOT skipped; the two
-// skip branches above already recorded their own 'skipped' outcome, so guarding
-// here prevents a duplicate stepOutcomes[] entry for the same step (BO-1000b-1-i AC-2).
-if (!skippedSteps.some(s => String(s.step) === "3.5")) {
-  outcome('Step 3.5 of 9', ticketsClosedPreMerge > 0
-    ? `Closed ${ticketsClosedPreMerge} ticket(s) and ${acsClosed} source AC(s) on the feature branch`
-    : 'Pre-merge AC closure completed (no open in-scope tickets on this branch)');
+// Record the executed-path outcome once, after the step's last dispatch; the skip branches
+// and halt35 record their own, so step35Outcome is only set when neither fired (BO-1000b-1-i AC-2).
+if (step35Outcome !== null) {
+  outcome('Step 3.5 of 9', step35Outcome);
 }
 
 // Step 4 — Merge PR to main (destructive — confirmation gate required)
@@ -1770,8 +1735,7 @@ const closeResult = await agent(
 const closeInfo = parsedOr(() => parseAgentJson(closeResult, { stage: "step-6-scope-detect", agent: "status-checker" }),
   { tickets_in_scope: [], tickets_done: [], tickets_not_done: [], skipped: false }, "no tickets reported in summary");
 
-// Step 6b is informational only — no ticket files were moved or written.
-if (Array.isArray(closeInfo.tickets_done)) ticketsClosed.push(...closeInfo.tickets_done);
+// Step 6b is informational only: it never adds to the closed list (BO-400e-3-vi).
 
 if (closeInfo.skipped) {
   outcome(`Step 6 of ${STEP_COUNT}`, 'skipped: scope detection — no in-scope tickets found');
@@ -1857,6 +1821,7 @@ return {
   tickets_closed_pre_merge: ticketsClosedPreMerge,
   acs_closed: acsClosed,
   acs_skipped: acsSkipped,
+  closure_report: closureReport,
   // Pre-existing/flaky failures with no tracking ticket (auto-ticketing is disabled).
   untracked_failures: untrackedFailures,
   unpublished_learnings: unpublishedLearnings, // INF-700a-5-i: announced before the removal

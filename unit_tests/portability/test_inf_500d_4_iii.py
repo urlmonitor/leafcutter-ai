@@ -380,6 +380,9 @@ def test_sink_parity_check_rejects_a_split_or_relative_log_root(tmp_path, case):
             shutil.copytree(origin, deployed.joinpath(*rel), dirs_exist_ok=True,
                             ignore=shutil.ignore_patterns("__pycache__"))
     root = tmp_path / "enduring" / "logs"
+    # A correct declaration models a freshly built install: the enduring root exists, the log
+    # directory under it may not yet (ADR-069). Without this the emit surfaces refuse as stale.
+    root.parent.mkdir(parents=True, exist_ok=True)
     good = _full_declaration(root)
     variants = {
         "split": ({**good, "feedback_sink": str(tmp_path / "elsewhere" / "feedback.jsonl")}, "feedback_sink"),
@@ -396,4 +399,14 @@ def test_sink_parity_check_rejects_a_split_or_relative_log_root(tmp_path, case):
     proc = subprocess.run([sys.executable, str(_PARITY_CHECK), "--target-dir", str(target)],
                           capture_output=True, text=True, timeout=_QUERY_TIMEOUT, check=False)
     assert proc.returncode == 1, f"{case}: expected failure, rc={proc.returncode}\n{proc.stdout}"
-    assert key in proc.stdout + proc.stderr, f"{case}: output must name {key}"
+    output = proc.stdout + proc.stderr
+    assert key in output, f"{case}: output must name {key}"
+    # Each row must fail for its OWN reason, not on an unrelated refusal (e.g. a stale root).
+    reasons = {
+        "split": "does not sit directly under operational_log_root",
+        "relative_root": "operational_log_root='debugging/logs' is missing or not an absolute path",
+        "missing_root": "operational_log_root=None is missing or not an absolute path",
+        "duplicate_stream": "equals operational_telemetry_stream",
+    }
+    assert reasons[case] in output, f"{case}: expected reason {reasons[case]!r}, got:\n{output}"
+    assert "stale" not in output.lower(), f"{case}: must not fail as a stale install:\n{output}"

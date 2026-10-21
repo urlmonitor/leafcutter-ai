@@ -60,6 +60,7 @@ from _workflow_engine_harness import (  # noqa: E402
 )
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _TIMEOUT = 30
@@ -86,7 +87,7 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
     changelogRequired resolves False and the changelog phase is skipped,
     keeping this fixture minimal.
     """
-    return {
+    responses: dict[str, Any] = {
         "workspace-ensure": workspace_ensure_from_opened(_worktree_label_response(worktree_root)),
         "resolve-connected": resolve_connected_reply({"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"}),
         "claim-connected": _claim_fx.claim_ran(
@@ -126,6 +127,8 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
             "message": "PR opened",
         },
     }
+    responses.update(wrong_version_passing())
+    return responses
 
 
 def _calls_with_label(result: HarnessResult, label: str) -> list:
@@ -254,6 +257,7 @@ class TestReportedResultCarriesRoutingFigures(unittest.TestCase):
             "object consuming the routing step's figures. Got terminal "
             f"payload: {payload!r}",
         )
+        assert knowledge_routing is not None  # narrowed for the type checker; the isinstance check above fails first
         self.assertEqual(
             knowledge_routing.get("read"),
             3,

@@ -1,0 +1,232 @@
+id: GE-127d-3-ii
+title: "A file that cannot be read as its own language is reported as could-not-measure and refused, never measured raw or as zero"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a staged covered file whose content cannot be split into the tokens of its
+    language — a JavaScript file ending inside an unclosed `/*`, a Python file
+    ending inside an unclosed triple-quoted string, a SQL file ending inside an
+    unclosed dollar-quoted body, or a shell file ending inside an unclosed quote,
+  When the author performs an ordinary commit,
+  Then the outcome carries an INDETERMINATE line naming the file and stating that
+    its content could not be read as that language, the run exits with status 2,
+    and the commit does not complete,
+  And no length is stated for that file, it is not listed among files within
+    their permitted length, and it is not measured by counting every line or by
+    counting none,
+  And the outcome is distinguishable from the refusal of a file measured and found
+    over its limit,
+  And given the previous version of a covered file cannot be read as its
+    language while the staged version can,
+  When the author performs an ordinary commit,
+  Then the previous length is reported as unresolvable in the same vocabulary used
+    when no previous length can be established, and the commit does not complete,
+  And given the same file is corrected so its content can be read as its language,
+  When the author performs an ordinary commit,
+  Then the file is measured and judged by the ordinary rules,
+  And given a covered file written in syntax its language accepts — a JavaScript
+    template literal nesting another template literal inside `${ }`, optional
+    chaining, a regular-expression literal containing `/*`, or a Python f-string
+    holding `#` inside a replacement field,
+  When its length is measured,
+  Then a length is stated and no INDETERMINATE line is produced.
+depends_on:
+  - GE-127d-3
+  - GE-127a-1-i
+  - GE-127b-1-i
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO REUSE. A file whose length cannot be established is refused and
+      named, never reported within its limit; INDETERMINATE and exit 2 alongside exit 0
+      clean and exit 1 finding. This record adds a third cause (cannot be tokenized) to the
+      two that record names (unreadable encoding, cannot open). Do not mint a new verdict.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The previous-length arm reuses that record's unresolvable-previous outcome rather
+      than inventing one.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. main() already funnels every exit-2 site through the shared
+      _report_indeterminate printer (stderr, "INDETERMINATE: reason=<text>") and returns
+      before printing any PASSED list; the classification loop catches
+      CurrentLengthUnmeasurableError and AddedLineCountUnavailableError, and
+      _resolve_ratchet_or_indeterminate catches PreviousLengthSourceError. The tokenizer
+      failure joins those paths; it adds no printer and no token.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      CurrentLengthUnmeasurableError (current content) and PreviousLengthSourceError ("could
+      not be interpreted", previous blob) are the two existing carriers whose reason text the
+      new cause reuses.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_description.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/__init__.py
+    state: to_be_created
+it_requirements:
+  - >-
+    Exercise the failure by feeding genuinely untokenizable content, never by asserting
+    that an error branch exists in the source (BP-1600a-2-ii's standing constraint, as
+    GE-127a-1-i applies it).
+  - >-
+    The accepted-syntax arm guards the opposite failure: a strict lexer turning valid
+    code into a refused commit. Python f-string tokenization depends on the interpreter
+    running the hook (nested same-quote f-strings are valid only from 3.12); the IT PO
+    pins whether an f-string the running interpreter cannot tokenize is INDETERMINATE or
+    measured with a fallback that still never counts a comment.
+  - >-
+    PINNED (IT PO, 2026-10-16, answering the requirement above): INDETERMINATE, no fallback.
+    Content the running interpreter's tokenizer rejects is this record's could-not-measure
+    outcome, and for Python the reason names the running interpreter's major.minor version
+    so an author on 3.11 holding a PEP 701 f-string can see the cause. A fallback measure
+    would be a second rule. CI runs 3.13, where every accepted construct the criteria list
+    tokenizes; the accepted-syntax descriptor runs on whatever interpreter the suite runs on
+    and needs no version skip. A `#` inside an f-string's text or a replacement field's string
+    tokenizes on every supported interpreter.
+  - >-
+    ONE VOCABULARY, THREE CARRIERS, NO NEW TOKEN. Current content that cannot be tokenized
+    joins GE-127a-1-i's current-content refusal; a previous version that cannot be tokenized
+    joins GE-127b-1-i's "could not be interpreted" previous-length refusal; either side failing
+    while establishing the measured lines a change added (GE-127f-2) joins the existing
+    added-lines INDETERMINATE. The reason text names the file path and the language by name
+    (Python, JavaScript, TypeScript, SQL, shell) and states that the content could not be read
+    as that language. Exit status 2; nothing printed for that file on stdout; the run's PASSED
+    list never names it.
+  - >-
+    ONLY TOKENIZATION FAILURE IS COULD-NOT-MEASURE. A Python file that tokenizes but does not
+    parse (a syntax error a linter would reject) is measured, not INDETERMINATE: which of its
+    strings are standalone (uncounted) and which are used (counted) is read from the token
+    stream, per GE-127d-3's 2026-10-20 rule, so no parse is needed. A SQL dollar-quoted body that closes but cannot be
+    lexed as SQL is a closed string literal and is measured (GE-127d-3-i).
+  - >-
+    SECONDARY CALLERS MUST NOT TURN A TOKENIZER FAILURE INTO A CRASH OR A VERDICT CHANGE.
+    _file_description's per-part segment measurement, reached only for a file already refused
+    by length, maps a segment the tokenizer rejects to GE-127e-3-i's DESCRIPTION UNAVAILABLE
+    line inside the same exit-1 refusal. check_file_size_rule_parity's
+    _enforced_applies_to_modified_files probe (it calls check_file_size._classify_file on a
+    throwaway file) must keep using tokenizable probe content.
+  - >-
+    The component's fail-open convention for bugs in the gate itself (internal error warns and
+    exits 0) is NOT the path for untokenizable content: the tokenizer failure is caught by
+    specific type and routed to INDETERMINATE; a blind catch that would also swallow a lexer
+    bug is not permitted (Ruff BLE001).
+test_spec:
+  - name: test_ge_127d_3_ii_untokenizable_content_is_indeterminate_exit_2_with_no_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Through the hook in a temporary git repository, each of the four untokenizable
+      files the criteria name produces an INDETERMINATE line naming the file and its language,
+      exit 2, no stated length and no within-limit listing; the Python case's reason names the
+      running interpreter's major.minor (read from sys.version_info at run time, not a
+      literal). The corrected file is then measured and judged normally. The INDETERMINATE
+      outcome is distinguishable from an over-limit refusal of a measured file (different
+      token, different exit status).
+    must_catch:
+      - "tokenizer error caught and the raw line count used instead"
+      - "tokenizer error caught and the length reported as 0"
+      - "tokenizer error routed to the fail-open internal-error path (warn, exit 0)"
+  - name: test_ge_127d_3_ii_an_untokenizable_previous_version_is_reported_unresolvable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      With HEAD holding an unclosed block comment and the staged version valid, the hook
+      reports the previous length unresolvable in GE-127b-1-i's vocabulary and refuses.
+  - name: test_ge_127d_3_ii_valid_modern_syntax_is_always_measured
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Files carrying the accepted constructs the criteria list are measured with a
+      stated length and no INDETERMINATE line: a template literal nested inside `${}` of
+      another, optional chaining (`a?.b`, `a?.[k]`, `a?.()`), a regex literal containing
+      `/*`, and a Python f-string holding `#` inside a replacement field's string. A .py file
+      that tokenizes but does not parse is also measured.
+    must_catch:
+      - "template literal nesting inside ${} rejected as unterminated"
+      - "a Python syntax error treated as could-not-measure"
+  - name: test_ge_127d_3_ii_a_refused_file_whose_part_cannot_be_tokenized_says_description_unavailable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      An over-limit .sql file whose CREATE-split segment cannot be lexed on its own is refused
+      at exit 1 with the ordinary over-limit block and a DESCRIPTION UNAVAILABLE line naming
+      the cause; the hook does not crash and does not exit 2.
+test_rationale: |
+  Both failure descriptors break the read for real by staging untokenizable content and
+  observe the hook's output and exit status. The boundary descriptor exists because a
+  tokenizer that refuses valid code converts this record's safety property into a commit
+  blocker on correct files. The seam descriptor covers the one secondary caller of the
+  measure that runs after a verdict is already decided, where a tokenizer failure must be
+  reported without moving that verdict.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-3
+  contract: >-
+    A distinct failure signal from the shared measure for content that cannot be tokenized,
+    carrying the language name and a reason string (and for Python the running interpreter's
+    major.minor) — never a count.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Pinned the open f-string question: INDETERMINATE naming the running
+    interpreter, no fallback (CI is 3.13). Three existing carriers reused (current content,
+    previous blob, added lines), no new token. A tokenizable-but-unparseable .py is measured.
+    Secondary callers (_file_description segments, the parity gate's probe) must not crash or
+    move a verdict. Complexity S -> M for the third carrier and the description seam. Added a
+    seam descriptor.
+- reason: technical-enrichment-standalone-string-rule
+  by: it-po
+  at: '2026-10-20'
+  note: >-
+    criteria untouched. The tokenizable-but-unparseable item now says standalone versus used
+    strings are classified from the token stream (GE-127d-3's 2026-10-20 rule), replacing
+    "docstring positions".
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Inherited and not repealed: the component's fail-open convention (an internal error in
+  the script itself warns and exits 0) still applies to bugs in the gate. Content that
+  cannot be tokenized is not a bug in the gate; it is a measurement that did not happen,
+  and GE-120's line holds: reporting success for a check that never ran is not permitted.

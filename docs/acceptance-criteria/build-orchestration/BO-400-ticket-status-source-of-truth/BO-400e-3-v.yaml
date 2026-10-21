@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -156,8 +156,13 @@ amended_by:
     by: it-po
     reason: "depends_on += BO-4500a-5-iv — closure commit builds on its shared commit step; approved by BrainCandy 2026-10-15"
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_v_closure_commit.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+  - unit_tests/workflows/test_finalize_step35_reset_after_abort.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_close.py
+  - templates/workflows-js/finalize-feature.js
 notes: |
   Requested by BrainCandy 2026-10-15 (KI-BO-20260930). Cause (3) of the KI as triaged on
   2026-10-12, confirmed: :1384-1385 stage by directory, and the guard's first allowance
