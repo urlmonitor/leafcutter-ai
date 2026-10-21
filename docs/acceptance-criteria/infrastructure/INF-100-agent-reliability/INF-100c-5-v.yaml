@@ -1,0 +1,61 @@
+id: INF-100c-5-v
+components:
+  - feedback_collector
+readiness: draft
+priority: medium
+title: "ac-validator and ac-fulfillment-gate feedback reaches the feedback log from an installed project"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given a freshly built installed project whose feedback sink is writable,
+  When ac-validator submits feedback in the knowledge-gap category for AC GE-122e-2,
+  Then the submission is accepted and returns a feedback id,
+  And a feedback record naming agent ac-validator and category knowledge-gap is written
+    to the feedback log,
+  And the agent records that feedback id at sign-off, not "(submit-failed)".
+
+  Given the same installed project,
+  When ac-fulfillment-gate submits feedback in the blocker category,
+  Then the submission is accepted and returns a feedback id,
+  And a feedback record naming agent ac-fulfillment-gate and category blocker is written
+    to the feedback log.
+
+  Given the same installed project,
+  When ac-validator submits feedback in the quality-concern category (reviewer-only),
+  Then the submission is rejected with a message naming ac-validator and quality-concern,
+  And no feedback record is written to the feedback log.
+depends_on:
+  - INF-100c-5
+  - INF-100c-5-iv
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5-iv
+  contract: "Feedback categories file listing ac-validator and ac-fulfillment-gate as writers, as deployed by the build"
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: true
+notes: |
+  The KI symptom is end-to-end: the agent ran, the submit was refused, the fallback hid it.
+  A config-membership assertion alone (INF-100c-5-iv) can pass while the installed copy is
+  stale, so this record proves acceptance through the real submission path in a built
+  install. The third scenario keeps the fix narrow: registering the gates must not open
+  the reviewer-only category to them. Rejection wording is owned by INF-100c-3-i.

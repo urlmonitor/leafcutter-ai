@@ -1,0 +1,53 @@
+id: INF-100c-5-i
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: draft
+priority: medium
+title: "A feedback writer that names no registered agent is reported by the build"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the feedback categories file lists "ac-validater" (a misspelling) in the
+    allowed_writers of the blocker category,
+  And no agent named "ac-validater" exists in the agent registry,
+  When the package build runs,
+  Then the build output reports "ac-validater" as a writer that names no registered agent,
+  And the report names the category it appears in ("blocker"),
+  And a writer that appears in three categories is reported once, naming all three
+    categories,
+  And writers that do name a registered agent (for example sql-coder and epic-supervisor)
+    are not reported.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
+    relationship: describes
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check that already loads both the agent list and every category's allowed_writers"
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Requested direction 2 of KI-FC-003 (stale or misspelt writer). A renamed agent leaves its
+  old name behind as exactly this kind of writer. Whether the report also fails the build
+  is an open question carried to the IT PO / user: the request says "reported", so this
+  record asserts the report, not a build failure. A misspelt writer loses no feedback by
+  itself; the agent it was meant to name is caught by INF-100c-5 when that agent signs off.

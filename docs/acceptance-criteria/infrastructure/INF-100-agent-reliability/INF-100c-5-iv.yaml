@@ -1,0 +1,64 @@
+id: INF-100c-5-iv
+components:
+  - feedback_collector
+readiness: draft
+priority: medium
+title: "Every agent that signs off today, including both AC-coverage gates, is a registered feedback writer"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the package as shipped, with its 24 agent definitions that carry signoff: true,
+  When the package build runs the consistency check,
+  Then the check reports zero agents that sign off but can write to no category,
+  And zero writers that name no registered agent,
+  And ac-validator and ac-fulfillment-gate are each listed in the allowed_writers of
+    complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and
+    success-pattern,
+  And restructuring-specialist and change-scope-reviewer are each listed in the
+    allowed_writers of the same six categories,
+  And the source copy and the template copy of the feedback categories file list the
+    same allowed_writers for every category.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: config/feedback_categories.yaml
+    relationship: modifies
+    status: exists
+  - path: templates/config/feedback_categories.yaml
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "To INF-100c-5-v: feedback categories file (source and template copies) listing ac-validator, ac-fulfillment-gate, restructuring-specialist and change-scope-reviewer in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern, so the build deploys it to installed projects"
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check, run against the shipped files"
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: internal
+notes: |
+  The ac-validator / ac-fulfillment-gate half of the request is ALREADY on main: commit
+  c3a469610 (2026-09-28, "let ac-validator and ac-fulfillment-gate record feedback")
+  added both to the six categories above in both copies of the file. KI-FC-003 still reads
+  "open" and "grep -c ac-validator -> 0"; it is stale. No test asserts either gate's
+  membership (none of the feedback unit tests mention ac-fulfillment-gate), so this record
+  pins the fix rather than re-doing it.
+  The six-category set matches every other phase agent: quality-concern is reviewer-only
+  (pr-reviewer, architect-review), subagent-quality is supervisor-only, process-finding is
+  hook-only.
+  restructuring-specialist and change-scope-reviewer were found missing while authoring
+  (measured 2026-10-21): the same omission, two more instances, never observed in a drive.

@@ -1,0 +1,57 @@
+id: INF-100c-5-ii
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: draft
+priority: medium
+title: "Writer-list sentinels are neither reported as unknown nor counted for agents they do not resolve to"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the process-finding category's allowed_writers is [hook],
+  When the package build runs the consistency check,
+  Then "hook" is not reported as a writer that names no registered agent.
+
+  Given a category's allowed_writers is [all_agents],
+  And all_agents resolves to the agents marked as ticket phases,
+  And restructuring-specialist signs off but is not marked as a ticket phase,
+  And no other category lists restructuring-specialist,
+  When the package build runs the consistency check,
+  Then "all_agents" is not reported as a writer that names no registered agent,
+  And the build fails naming restructuring-specialist, because all_agents does not
+    resolve to it,
+  And python-coder (marked as a ticket phase, listed nowhere else) is treated as
+    registered through all_agents and is not named.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check, which this record constrains to apply the same sentinel resolution that feedback submission applies"
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Two wrong versions this record exists to catch: (1) treating every sentinel as an
+  unknown agent, which makes the build fail on the shipped [hook] list on day one;
+  (2) treating all_agents as "every agent", which silently passes an agent that
+  submission would actually reject. The check must agree with what submission accepts,
+  or the two lists can disagree again behind a green check.

@@ -1,0 +1,51 @@
+id: INF-100c-5-iii
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: draft
+priority: medium
+title: "Agents that do not sign off are not required to be feedback writers"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: todo
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the agent definition for research-agent carries no signoff: true,
+  And the agent definition for epic-supervisor carries signoff: false,
+  And the agent definition for sql-coder has no signoff field at all,
+  And research-agent appears in no category's allowed_writers,
+  When the package build runs the consistency check,
+  Then the build does not fail on account of research-agent,
+  And neither research-agent, epic-supervisor nor sql-coder is named as a missing writer,
+  And epic-supervisor and sql-coder, which are listed as writers, are not reported as
+    writers that name no registered agent.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: templates/agents/epic-supervisor.md
+    relationship: describes
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check, whose required-writer set this record bounds to agents with signoff: true"
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Boundary record (not asked for): without it the check is satisfiable by requiring EVERY
+  registered agent to be a writer, which would force feedback permissions onto agents the
+  signoff protocol never tells to submit. Only signoff: true is the trigger; an absent
+  field and an explicit false both mean "not required".
