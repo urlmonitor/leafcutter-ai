@@ -123,7 +123,10 @@ class TestBO4300b5BothShells(unittest.TestCase):
                 self.assertEqual(proc.returncode, 0, proc.stderr)
 
     def test_real_wsl_arm_when_available(self):
-        # covers: BO-4300b-5
+        # manual-evidence = recorded proof CI cannot run (needs wsl.exe with git in the
+        # default distro); not a covers tag, so done-proof never reads its skip as
+        # "not run" (KI-ACS-20261013; user decision 2026-10-21 "Re-mark non-CI tests").
+        # manual-evidence: BO-4300b-5
         # angle: reachability
         """Where wsl.exe exists, a Linux-shell git command at the posix alias succeeds; else reported not run."""
         if shutil.which("wsl.exe") is None:

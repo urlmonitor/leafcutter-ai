@@ -150,7 +150,10 @@ class TestNoLinks(MakerTestCase):
         self.assertEqual(_tree(Path(location(denied["answer"]))), _tree(Path(location(permitted["answer"]))))
 
     def test_windows_arm_no_injection(self):
-        # covers: BO-4300b-4
+        # manual-evidence = recorded proof CI cannot run (needs a real Windows runner
+        # without Developer Mode); not a covers tag, so done-proof never reads its skip
+        # as "not run" (KI-ACS-20261013; user decision 2026-10-21 "Re-mark non-CI tests").
+        # manual-evidence: BO-4300b-4
         # angle: criterion
         """Arm 1: on a real Windows runner without Developer Mode, ensure is ready with no injection."""
         if sys.platform != "win32":

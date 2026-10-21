@@ -622,6 +622,32 @@ def _maybe_reachability_verdict(
     return reachability_verdict
 
 
+def _manual_opt_in_args(linked_functions: tuple[str, ...]) -> list[str]:
+    """Return the pytest selection args that opt an AC's linked ``_MANUAL`` tests in.
+
+    KI-ACS-20261013 / ticket 19: a repo's pytest.ini may deselect every
+    ``*_MANUAL`` test by default (``-m "not manual"`` in addopts, the
+    ``pytest_manual_deselect`` plugin, TQ-600a-13). Run with that default,
+    a linked ``_MANUAL`` test never reports and is refused as "not run".
+    When any linked function is ``_MANUAL``, this returns a later ``-m``
+    (the last ``-m`` wins over addopts) that admits manual tests, plus a
+    ``-k`` naming exactly the linked functions, so only the AC's linked
+    node ids run -- an unlinked manual sibling in the same file stays out.
+    A linked manual test that fails or skips still reports that outcome.
+    With no ``_MANUAL`` link the selection is untouched (empty list).
+
+    Args:
+        linked_functions: Bare function names of the AC's linked Python tests.
+
+    Returns:
+        Extra pytest argv entries, or ``[]`` when no linked test is manual.
+    """
+    names = sorted(set(linked_functions))
+    if not any(name.endswith("_MANUAL") for name in names):
+        return []
+    return ["-m", "manual or not manual", "-k", " or ".join(names)]
+
+
 def _run_python_test_phase(
     ac_id: str, py_linked: list[dict]
 ) -> tuple[list[str], list[str], dict[str, str], str | None]:
@@ -654,7 +680,7 @@ def _run_python_test_phase(
     if not py_linked:
         return [], [], {}, None
     py_files = list({t["file"] for t in py_linked})
-    pytest_results = _run_pytest_and_parse(py_files)
+    pytest_results = _run_pytest_and_parse(py_files, tuple(t["function"] for t in py_linked))
     incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
     if incomplete_reason is not None:
         return [], [], pytest_results, incomplete_reason
@@ -788,4 +814,7 @@ def _build_failure_reason(
 #   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. Root cause: the 2026-09-25 fix above anchored the pytest subprocess's cwd to *test_files*' own common ancestor unconditionally, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement, several directories ABOVE unit_tests/ac_store) then becomes unimportable from that cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed by adding _directory_declares_pytest_rootdir() and _pytest_ini_section_present(): _resolve_pytest_run_cwd now walks UPWARD from the common ancestor through each parent, returning the first one that declares itself a pytest rootdir (pytest.ini on sight; pyproject.toml/tox.ini/setup.cfg only when they carry the section pytest itself reads from that file kind), falling back to the plain common ancestor -- preserving the original OS-temp-dir fixture motivation -- only when no ancestor qualifies. Single call site confirmed unchanged (done_proof._run_pytest_and_parse); return contract (str | None) unchanged, so no consumer updates needed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # - 2026-09-28 01:05 [python-coder/BO-2900a-3 rework 2]: pr-reviewer (00:57 blocker) verified against pytest 9.1.1's own _pytest/config/findpaths.py::load_config_dict_from_file that _PYTEST_ROOTDIR_TOML_MARKERS paired ("setup.cfg", "[pytest]") -- but real pytest reads setup.cfg ONLY via a "[tool:pytest]" section (a bare "[pytest]" section there is an explicit, rejected error, issue #3086); the wrong pairing silently never recognised a genuine setup.cfg rootdir, reintroducing the exact PR #925 addopts-plugin failure for any consumer repo configured via setup.cfg. Fixed the pairing to ("setup.cfg", ("[tool:pytest]",)); also added the pytest-9-supported "[tool.pytest]" native-TOML table as a second accepted pyproject.toml header alongside the existing "[tool.pytest.ini_options]", per findpaths.py's own toml_config/ini_config branch. Additionally hardened _pytest_ini_section_present from a plain substring search to a whole-line regex match (each candidate header must appear as its own line, optionally whitespace-padded) so a header string can never be satisfied by a comment, quoted value, or another header's character-prefix. test-writer (01:01) added test_setup_cfg_addopts_plugin_is_unimportable_because_the_rootdir_marker_checks_the_wrong_section_name (RED before this fix, GREEN after) plus a pyproject.toml "[tool.pytest.ini_options]" guard test; both, plus every pre-existing test in this file, verified green after this change. Single call site unchanged. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-10-21 [python-coder/ticket 19]: Added _manual_opt_in_args() (KI-ACS-20261013): done-proof ran an AC's
+#   linked tests under the default -m "not manual", so linked _MANUAL tests were refused as "not run". Now
+#   -m "manual or not manual" plus -k <linked names> runs only the linked ids. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/19)
 # ================================================================================
