@@ -1,0 +1,137 @@
+id: KM-400b-5-v
+title: "A write batch that hits the writer's time limit is retried a bounded number of times before the publication fails, and only time-limit failures are retried"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+parent: KM-400b-5
+criteria: |
+  Given the writer declares at most 3 attempts per write batch
+  And a publication of generation G33 for repository R1 has written node batches 1 to 33 of 46
+  When batch 34 (label AcceptanceCriterion, 250 rows) exceeds the writer's time limit on its first attempt and succeeds on its second
+  Then the publication continues with batch 35 and does not rewrite batches 1 to 33
+  And each of the 250 rows of batch 34 exists exactly once in G33 after the retry
+  And the generation's count check expects and keeps 11,307 nodes, the same figures as a publication with no retry
+  And the publication succeeds
+  And the publication result states that batch 34 of label AcceptanceCriterion was retried once, with its rows and payload bytes
+
+  Given batch 34 exceeds the writer's time limit on all 3 attempts
+  When the third attempt fails
+  Then no fourth attempt is made
+  And the publication fails, and the removal of G33 required for a failure after storing takes place
+  And the result states that the cause is the writer's time limit, after 3 attempts
+
+  Given batch 34 fails on its first attempt because the store refuses the write as read-only
+  When the failure is observed
+  Then the batch is not retried
+  And the publication fails at once with the read-only refusal as its cause
+
+  Given batch 34 fails on its first attempt because a uniqueness rule is violated
+  When the failure is observed
+  Then the batch is not retried
+  And the publication fails at once with the violation as its cause
+
+  Given batches 12 and 34 each exceed the time limit once and then succeed
+  When the publication completes
+  Then the result reports 2 retried batches, naming each, and the publication succeeds
+depends_on: [KM-400b-5, KM-400b-5-i, KM-400b-5-iii]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-iii.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the batch identity (label, ordinal, rows, payload bytes) a retry repeats and reports.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml
+    relationship: context
+    status: exists
+    relevance: When retries are exhausted the publication fails after storing, and its generation must be removed.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+    relationship: context
+    status: exists
+    relevance: Retrying inside one publication must not make a partial generation visible to readers.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Currently tells the operator to retry by hand after a transaction timeout; must describe the automatic bounded retry.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: Component architecture for the projection writer and its transaction handling.
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: One validated generation is published atomically; a retry inside a publication must not expose or activate a partial generation.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Per batch that needed more than one attempt or failed, a retry record {batch: the KM-400b-5-iii batch descriptor, attempts: int (>= 1), attempt_causes: list of str (one cause class per failed attempt, e.g. time limit, read-only, rule violation), max_attempts: int}; the publication result carries retried_batches: list of those records (empty list when none). KM-400b-5-vi reports the final record when the publication fails."
+expects_from:
+  ac_id: KM-400b-5-iii
+  contract: "Deterministic bounded write batches, each with the KM-400b-5-iii batch descriptor {phase: str, label_or_kind: str, ordinal: int, total: int, rows: int, payload_bytes: int}, written by key so a repeated batch does not duplicate records."
+origin_agent: BrainCandy
+created: '2026-10-21'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The attempt limit and any wait between attempts must come from the declared writer configuration with documented defaults; the limit must be a finite integer of at least 1, and the worst-case total wait it adds to one publication must be stated in docs/how-to/run-knowledge-retrieval.md."
+  - "Retry eligibility must be decided from the store's structured error classification for a client-configured transaction timeout, never from matching free-text message content."
+  - "Each attempt must run in its own transaction, so an abandoned attempt leaves nothing committed that a later attempt depends on."
+  - "Retrying must not make a partial generation visible to readers (KM-400b-3) and must not activate the generation before every batch has succeeded."
+  - "Each failed attempt that will be retried must be logged at WARNING with the batch descriptor, attempt number and cause class; exhausted retries must be logged at ERROR."
+  - "Must handle store errors per the project error handling policy; a non-retryable error must propagate at once with its original cause."
+test_intent:
+  - clause: "the publication continues with batch 35 and does not rewrite batches 1 to 33"
+    needs_test: true
+    reason: A retry implemented at publication level instead of batch level would rewrite completed batches.
+  - clause: "each of the 250 rows of batch 34 exists exactly once in G33 after the retry"
+    needs_test: true
+    reason: A retry that is not idempotent would duplicate records while the publication still reports success.
+  - clause: "the generation's count check expects and keeps 11,307 nodes, the same figures as a publication with no retry"
+    needs_test: true
+    reason: Double-counting the retried batch in the expected figures would hide a duplication or fail a correct publication.
+  - clause: "the publication succeeds"
+    needs_test: true
+    reason: The retry path must actually recover, which a retry that re-raises the first error would not.
+  - clause: "the publication result states that batch 34 of label AcceptanceCriterion was retried once, with its rows and payload bytes"
+    needs_test: true
+    reason: The retry report is computed output that could omit the batch or misstate the attempt count.
+  - clause: "no fourth attempt is made"
+    needs_test: true
+    reason: An off-by-one in the attempt loop would exceed the declared bound.
+  - clause: "the publication fails, and the removal of G33 required for a failure after storing takes place"
+    needs_test: true
+    reason: Exhausted retries must reach the existing failure path, or the generation is stranded.
+  - clause: "the result states that the cause is the writer's time limit, after 3 attempts"
+    needs_test: true
+    reason: The final cause and attempt count are computed output that the last attempt's handling could overwrite.
+  - clause: "the batch is not retried"
+    needs_test: true
+    reason: A broad retry condition would repeat a read-only refusal or a uniqueness violation that fails identically on every attempt, so both non-retryable cases need proof.
+  - clause: "the publication fails at once with the read-only refusal as its cause"
+    needs_test: true
+    reason: The original read-only cause could be replaced by a generic error if classification is wrong.
+  - clause: "the publication fails at once with the violation as its cause"
+    needs_test: true
+    reason: The violation cause could be lost or replaced if the error is wrapped incorrectly.
+  - clause: "the result reports 2 retried batches, naming each, and the publication succeeds"
+    needs_test: true
+    reason: A retry record held in a single slot would report only the last retried batch.
+notes: |
+  Authored 2026-10-21. Records are written by key, so repeating a batch whose transaction
+  was abandoned at the time limit cannot duplicate anything; the user asked for a bounded
+  retry on that basis. "Exactly once after the retry" and the unchanged count check are
+  in the criteria so that a retry which did duplicate records goes red.
+
+  Retry is limited to time-limit failures. A read-only refusal (the latched hosted state
+  in KM-400b-5-ii) or a rule violation will fail the same way on every attempt; retrying
+  them only delays the failure and its cleanup. The attempt limit of 3 is an illustrative
+  test value; IT PO sets the real limit and whether attempts wait between them.

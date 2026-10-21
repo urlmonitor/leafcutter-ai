@@ -1,0 +1,122 @@
+id: KM-400b-5-vi
+title: "A publication that fails on the writer's time limit names the phase and the slow batch - label, rows and payload bytes - so the operator can act"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+parent: KM-400b-5
+criteria: |
+  Given a publication of generation G33 for repository R1 into an empty store
+  And node batch 34 of 46 (label AcceptanceCriterion, 250 rows, 3,100,000 bytes of payload) exceeds the writer's 30-second time limit on all 3 of its attempts
+  When the publication fails
+  Then the result states that the cause is the writer's time limit, and states that limit as 30 seconds
+  And the result names the phase as writing nodes
+  And the result names the slow batch: label AcceptanceCriterion, batch 34 of 46, 250 rows, 3,100,000 bytes
+  And the result states that 3 attempts were made
+  And the result states the progress reached: 8,250 of 11,307 nodes and 0 of 28,814 relationships written
+  And the result still reports the removal outcome for G33 as required for a failure after storing
+  And the result is distinguishable from a failure caused by the store being unavailable or read-only
+
+  Given relationship batch 80 of 116 (relationship kind COVERED_BY, 250 rows, 400,000 bytes) exceeds the time limit on all attempts
+  When the publication fails
+  Then the result names the phase as writing relationships and names that batch with its kind, ordinal, rows and bytes
+
+  Given every write batch succeeds and the step that makes G33 the active generation exceeds the time limit on all attempts
+  When the publication fails
+  Then the result names the phase as activation
+  And the result states that no write batch was involved, rather than naming a batch or reporting a label, row count or byte count of 0
+
+  Given the time-limit error from the store does not say which statement was slow
+  When the publication fails on it
+  Then the phase and batch named in the result are those the publication was executing when the error was received
+depends_on: [KM-400b-5, KM-400b-5-i, KM-400b-5-iii, KM-400b-5-v]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-v.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the attempt count reported when retries are exhausted.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-ii.yaml
+    relationship: context
+    status: exists
+    relevance: Same reporting rule - the original cause and the cleanup outcome are separate values in one result.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: A figure that does not apply is stated as not applicable, never as 0.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: States that a transaction-timeout error alone does not identify the slow statement; must describe how to read the phase and batch in the failure result.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: Component architecture for the projection writer and its publication result.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400b-5-v
+  contract: "The KM-400b-5-v retry record for the batch in flight when the publication failed {batch: the KM-400b-5-iii batch descriptor {phase: str, label_or_kind: str, ordinal: int, total: int, rows: int, payload_bytes: int}, attempts: int, attempt_causes: list of str, max_attempts: int}."
+origin_agent: BrainCandy
+created: '2026-10-21'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The failure result must expose cause class, time limit in seconds, phase, batch descriptor, attempts made and progress as discrete machine-readable fields, not only inside a message string."
+  - "The reported time limit must be read from the effective writer configuration, never from a literal."
+  - "A figure that does not apply must be reported as not applicable, never as 0 (ACS-1100)."
+  - "Tracking the current phase and batch must add no store round-trips to the publication."
+  - "The failure result and its log entry must contain no payload content and no credentials."
+  - "The new fields must be added without removing or renaming the existing failure fields that carry the original cause and the removal outcome (KM-400b-5-ii)."
+test_intent:
+  - clause: "the result states that the cause is the writer's time limit, and states that limit as 30 seconds"
+    needs_test: true
+    reason: The limit must come from the effective configuration, which a hard-coded value would misreport.
+  - clause: "the result names the phase as writing nodes"
+    needs_test: true
+    reason: The phase is tracked state that could be stale or unset when the error arrives.
+  - clause: "the result names the slow batch: label AcceptanceCriterion, batch 34 of 46, 250 rows, 3,100,000 bytes"
+    needs_test: true
+    reason: The batch identity is computed output that could name the previous or next batch.
+  - clause: "the result states that 3 attempts were made"
+    needs_test: true
+    reason: The attempt count is carried from the retry step and could be lost when the failure is wrapped.
+  - clause: "the result states the progress reached: 8,250 of 11,307 nodes and 0 of 28,814 relationships written"
+    needs_test: true
+    reason: Progress counts only completed batches, and counting the failed batch would overstate it.
+  - clause: "the result still reports the removal outcome for G33 as required for a failure after storing"
+    needs_test: true
+    reason: Adding the new fields could replace the existing removal outcome in the result.
+  - clause: "the result is distinguishable from a failure caused by the store being unavailable or read-only"
+    needs_test: true
+    reason: Cause classification is logic that could map a timeout to a generic store failure.
+  - clause: "the result names the phase as writing relationships and names that batch with its kind, ordinal, rows and bytes"
+    needs_test: true
+    reason: Relationship phase tracking is a separate path that could keep reporting the node phase.
+  - clause: "the result names the phase as activation"
+    needs_test: true
+    reason: The activation step is outside the batch loop, so phase tracking could still name the last write batch.
+  - clause: "the result states that no write batch was involved, rather than naming a batch or reporting a label, row count or byte count of 0"
+    needs_test: true
+    reason: A default-initialised batch descriptor would report zeros, which this clause forbids.
+  - clause: "the phase and batch named in the result are those the publication was executing when the error was received"
+    needs_test: true
+    reason: Attribution relies on publication-side state rather than the error text, which a parser of the message would get wrong.
+notes: |
+  Authored 2026-10-21. The observed failure reported only the store's timeout error, which
+  names neither the statement nor the batch; the operator's guide says so outright. The
+  operator could not tell whether to raise a limit, shrink batches or look for one
+  oversized record. Naming the phase, the batch and its size answers that.
+
+  Progress figures in the first scenario count only batches that completed (33 x 250 =
+  8,250), which may differ from what an earlier partial attempt left in the store before
+  cleanup; the observed run reported 8,237 nodes in the store at abort.

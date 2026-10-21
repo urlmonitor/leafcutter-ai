@@ -1,0 +1,132 @@
+id: KM-400b-5-iii
+title: "Publication write batches are bounded by payload size as well as by row count, so one batch of large records cannot outrun the writer's time limit"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: todo
+parent: KM-400b-5
+criteria: |
+  Given the writer declares a per-batch row cap of 250 and a per-batch payload budget of 2,000,000 bytes
+  And a snapshot of 11,307 nodes in which 11,000 nodes carry a payload of about 1,000 bytes each
+  And 300 nodes of one label carry a payload of about 200,000 bytes each
+  And 7 nodes carry a payload of 2,500,000 bytes each
+  When the snapshot is published into an empty store
+  Then no write batch holds more than 250 rows
+  And no write batch holds more than 2,000,000 bytes of payload, except a batch holding exactly one record
+  And the 300 nodes of about 200,000 bytes are written in batches of at most 10 rows each
+  And batches of the 11,000 small nodes still hold up to 250 rows each, so they are not split further than the row cap requires
+  And each of the 7 nodes larger than the budget is written alone in a batch of one row, and is neither dropped nor rejected
+  And the publication result names each of those 7 nodes as larger than the payload budget, with its identity, label and size in bytes
+  And every one of the 11,307 nodes is written exactly once, so the sum of rows across all node batches is 11,307
+  And the publication result states the row cap and the payload budget that were in force
+
+  Given the same snapshot holds 28,814 relationships, 40 of which carry a property payload of about 150,000 bytes each
+  When the relationships are written
+  Then no relationship batch holds more than 250 rows or more than 2,000,000 bytes of payload, except a batch holding exactly one record
+  And every one of the 28,814 relationships is written exactly once
+
+  Given a snapshot whose nodes all carry a payload of about 1,000 bytes
+  When it is published
+  Then the batches are the same as with a row cap alone: full batches of 250 rows and one final partial batch
+depends_on: [KM-400b-5]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. An empty store must rebuild to the baseline; a rebuild that aborts on a slow batch breaks that promise.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: States today's fixed 250-row batches and 30-second writer transaction limit; must be updated to describe the payload budget.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-ii.yaml
+    relationship: context
+    status: exists
+    relevance: The count check is unchanged by batching; the expected counts must still equal what is kept.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: Component architecture for the Git-to-Neo4j projection and its writer.
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Immutable generations published atomically; failed builds leave the active generation untouched. Batching must not weaken either rule.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Per write batch, a deterministic batch descriptor {phase: 'nodes' | 'relationships' (str), label_or_kind: str, ordinal: int (1-based within the phase), total: int (batches in the phase), rows: int, payload_bytes: int}; and in the publication result {row_cap: int, payload_budget_bytes: int, oversized_records: list of {id: str, label: str, payload_bytes: int} (empty list when none)}. KM-400b-5-iv verifies per descriptor, KM-400b-5-v retries by descriptor, KM-400b-5-vi reports the descriptor of the slow batch."
+expects_from:
+  ac_id: KM-400b-5
+  contract: The owned-generation publication path that writes a snapshot into the store.
+origin_agent: BrainCandy
+created: '2026-10-21'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The row cap and the payload budget must both come from one declared writer configuration source with documented defaults; no second hard-coded copy of the 250-row figure may remain in the batching path."
+  - "Payload size must be measured in bytes of the serialized form actually sent to the store, not estimated from an in-memory object."
+  - "The default payload budget must let a full-budget batch finish well inside the writer's 30-second transaction limit on the slowest supported deployment (Aura Free); the figure and the measurement it rests on must be recorded in docs/how-to/run-knowledge-retrieval.md."
+  - "The writer's 30-second transaction timeout cap must not be raised as a way of satisfying this record."
+  - "Batch partitioning must be deterministic: the same snapshot and configuration always yield the same batches in the same order, so a retried batch (KM-400b-5-v) has a stable identity."
+  - "Partitioning must be exercisable without a live store and must run in time linear in the number of records."
+  - "Each record larger than the payload budget must be logged at WARNING with its identity, label and size; no payload content may be logged."
+  - "Must not change the generation count check (KM-400b-2-ii), the atomic activation of the generation, or canonical identities and projection keys (ADR-062)."
+test_intent:
+  - clause: "no write batch holds more than 250 rows"
+    needs_test: true
+    reason: The row cap is enforced by partitioning logic that a wrong closing condition would silently exceed.
+  - clause: "no write batch holds more than 2,000,000 bytes of payload, except a batch holding exactly one record"
+    needs_test: true
+    reason: The byte bound is the new behaviour that prevents the observed timeout, and an off-by-one in the closing check would let a batch overrun it.
+  - clause: "the 300 nodes of about 200,000 bytes are written in batches of at most 10 rows each"
+    needs_test: true
+    reason: The batch size for large records is computed from the budget, so a wrong size measurement would change it.
+  - clause: "batches of the 11,000 small nodes still hold up to 250 rows each, so they are not split further than the row cap requires"
+    needs_test: true
+    reason: An over-eager byte bound would fragment small-record batching and slow every publication.
+  - clause: "each of the 7 nodes larger than the budget is written alone in a batch of one row, and is neither dropped nor rejected"
+    needs_test: true
+    reason: An oversized record is the edge case most likely to be dropped or to loop forever in a naive partitioner.
+  - clause: "the publication result names each of those 7 nodes as larger than the payload budget, with its identity, label and size in bytes"
+    needs_test: true
+    reason: The oversized-record report is computed output the operator relies on and could silently omit records.
+  - clause: "every one of the 11,307 nodes is written exactly once, so the sum of rows across all node batches is 11,307"
+    needs_test: true
+    reason: A partitioning boundary bug would duplicate or lose records while still passing per-batch bounds.
+  - clause: "the publication result states the row cap and the payload budget that were in force"
+    needs_test: true
+    reason: The stated values must reflect the effective configuration, which a stale literal would misreport.
+  - clause: "no relationship batch holds more than 250 rows or more than 2,000,000 bytes of payload, except a batch holding exactly one record"
+    needs_test: true
+    reason: Relationship batching is a separate write path that could keep the old row-only rule.
+  - clause: "every one of the 28,814 relationships is written exactly once"
+    needs_test: true
+    reason: A boundary bug in relationship partitioning would duplicate or lose relationships.
+  - clause: "the batches are the same as with a row cap alone: full batches of 250 rows and one final partial batch"
+    needs_test: true
+    reason: This guards against the byte bound changing behaviour for the common small-record case.
+notes: |
+  Authored 2026-10-21 from an observed failure. On a fresh hosted (Aura Free) instance the
+  first knowledge sync aborted with a client-configured transaction timeout after writing
+  8,237 of 11,307 nodes. Nodes are written in fixed batches of 250 rows regardless of how
+  large each row's payload is, and the writer's transaction limit is capped at 30 seconds.
+  The failed-generation cleanup (KM-400b-5-i) worked and the retry passed, so the outcome
+  depended on timing rather than on design.
+
+  The figures here (250 rows, 2,000,000 bytes) are illustrative test values. The real
+  budget is a technical constraint for IT PO to set; the behaviour required is that a
+  batch is closed when EITHER bound would be exceeded, that a record larger than the
+  budget is still written (alone), and that small-record batching is not made worse.
+
+  Not a duplicate of KM-400b-3 (readers never see a partial generation) or KM-400b-5-i
+  (a failed publication removes its own generation): both act after a failure; this
+  record makes the failure less likely in the first place.
