@@ -12,6 +12,7 @@
     "research-agent": ["knowledge-query"],
     "python-coder": ["complexity-reduction"],
     "retrospective-agent": ["route-knowledge"],
-    "sql-coder": ["postgres", "sql-test"]
+    "sql-coder": ["postgres", "sql-test"],
+    "architecture-diagram-author": ["signoff"]
   }
 }
