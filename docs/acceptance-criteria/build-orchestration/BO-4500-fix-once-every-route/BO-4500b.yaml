@@ -1,0 +1,133 @@
+id: BO-4500b
+title: "Logic that several routes share is written once, and every route carries the identical copy"
+component: build-orchestration
+components:
+  - build_orchestration
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: [pipeline, code]
+risk_surface: safety
+criteria: |
+  Write shared route logic once -- every route gets the same copy, and drift is caught.
+
+  When several routes need the same piece of logic, it is written in one place and every
+  route that uses it receives exactly that text. A fix to it reaches every route the next
+  time the package is installed, no route can quietly keep an older or edited copy, and the
+  first such piece is the one that decides what a route does with the answer it gets back
+  after asking for its work to be saved.
+depends_on: [BO-4500]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      This is the reserved "shared-code mechanism" sibling named in BO-4500's SCOPE OF THIS RUN
+      and IT PO 2026-10-14 notes. The standing rule (hardened copy first; replaced KIs' tests run
+      against the shared version) applies to every child of this L1.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Its it_requirements name this L1 as a DEPENDENCY: route migrations BO-4500a-5-i..iv (and the
+      /commit route) must not land the commit-answer loop as hand copies. Its test_spec already
+      reserves test_commit_answer_block_is_byte_identical_in_every_deployed_consumer.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Origin of the marker-block idea (WORKSPACE-ANSWER, single source, build fills the marker
+      pair, byte-identity parity test). Still work_status todo on origin/main 496bfece -- the
+      mechanism being generalised has not been built yet. See notes OVERLAP.
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: constrains
+    status: exists
+    relevance: "Workflow bodies have no require/import and cannot call each other; sharing must happen at build time."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: constrains
+    status: exists
+    relevance: "Edge 5: workflow() throws in E2, so no route can call a shared workflow instead."
+  - path: config/commit_step.json
+    relationship: related
+    status: exists
+    relevance: "Holds max_transient_retries (3) the commit-answer block reads; vocabulary lives in config, not code (BO-4500a final-gate decision)."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-1, BO-4500b-2, BO-4500b-3, BO-4500b-4, BO-4500b-5]
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+  - how-to
+  - reference-doc
+notes: |
+  ORIGIN. BrainCandy, 2026-10-16, answering "Should I start the /plan-feature run for the
+  shared-code inliner?" with "yes". Unblocks BO-4500a-5-i..iv.
+
+  PLACEMENT. An L1 under BO-4500, not a new L0: BO-4500's notes reserve exactly this slot ("the
+  shared-code mechanism that lets a workflow body reuse logic at all"), and its promise -- fix
+  once, every route gets it -- is this L1's user value. BO-4500 has one L1 (BO-4500a); this is
+  the second. The other two reserved slots (delivering work for review; catching up with the
+  shared line) remain unauthored.
+
+  CARRIED FROM THE REQUEST FOR THE BA AND IT PO (the PO does not decompose it):
+    - Generalise BO-4300c-3's build-inlined WORKSPACE-ANSWER marker block into a reusable
+      mechanism for sharing any block of caller-side code across many E2 workflows, which
+      cannot import or call each other.
+    - One single source per block; build.py inlines it into every deployed consumer between
+      start/end markers; a byte-identity parity test over every DEPLOYED consumer fails on
+      drift. (BO-4300c-3's rules carry over: a hand-filled marker pair or a missing source
+      fails the build; compare-before-write idempotency; runs before config-placeholder
+      injection; consumer set derived, never a hard-coded list.)
+    - FIRST CONSUMER: a COMMIT-ANSWER block used by every depth-0 route (fast-lane-ship,
+      plan-feature, quick-fix, finalize-feature, commit.js) to read the commit agent's reply
+      envelope {status, commit_answer, earlier_answers, handoff keys} with ONE acceptance
+      predicate: continue only on commit_answer.status committed; stop without retry on a
+      policy_ reason code; retry up to max_transient_retries (config/commit_step.json) on a
+      step_ code; on handoff engage the named specialist at most once and re-offer the
+      identical path list and message file; report everything else.
+    - build-feature and build-ticket keep their BO-3000a phase-loop routing (BO-3800a-1) and
+      do NOT take the block.
+
+  PO CHALLENGES RAISED ON THIS RUN -- for the BA to resolve at L2, user to confirm at the gate:
+    1. OVERLAP WITH BO-4300c-3. BO-4300c-3 (approved, todo) already specifies an inliner and a
+       parity test, but only for WORKSPACE-ANSWER. Building both would create two inliners --
+       the duplication BO-4500 exists to stop. Recommendation: THIS L1 owns the general
+       mechanism; WORKSPACE-ANSWER becomes one more block on it, and BO-4300c-3 gets an
+       amended_by entry pointing its inliner/parity it_requirements here. Whichever is driven
+       first builds the general mechanism, not a workspace-only one.
+    2. SCOPE SPLIT -- MECHANISM AND BLOCK HERE, ADOPTION IN THE ROUTES. This L1 delivers the
+       mechanism, the COMMIT-ANSWER single source, and proof of the block's predicate on its
+       own. Placing the block into each route is the job of the existing migration records
+       (BO-4500a-5-i..iv and the /commit route's record), so the same site is not decomposed
+       twice. This follows BO-4500a's "new path first, rewire only when it works" rule.
+    3. ERRORS, NOT ONLY THE HAPPY PATH. The request covers drift; the BA must also cover: a
+       consumer with markers but no matching source, a source no consumer uses, a consumer
+       that edits text between markers in the template, two blocks nested or overlapping, and
+       an unknown block name -- each fails the install loudly rather than deploying.
+    4. EXISTING DRIFTED PRECEDENT. The BO-3900-PATH-HELPERS blocks already differ between
+       build-feature.js and plan-feature.js (BO-4300c-3 it_requirements, verified 2026-09-25).
+       Moving them onto this mechanism is a natural third consumer but is OUT OF SCOPE here;
+       record it as a follow-up, do not silently absorb it.
+    5. FRAMEWORK NEUTRALITY (BO-4500). Sharing is a property of the installed result, not of
+       today's engine: the promise must still hold if routes move to LangGraph or the Claude
+       Agent SDK. Children must not specify the mechanism so only the E2 engine can host it.
+
+  STATE VERIFIED 2026-10-16 against origin/main 496bfece (not the stale authoring branch):
+  templates/workflows-js/commit.js and config/commit_step.json (max_transient_retries: 3) exist;
+  templates/workflows-js/_shared/ does not; scripts/build_phases_workflows.py carries no
+  WORKSPACE-ANSWER or shared-block handling. The mechanism is net-new.
+
+  DOCUMENTATION TRIGGERS. component-diagram: a new install-time step that fills shared blocks
+  into routes. how-to: how an author adds a new shared block and a new consumer. reference-doc:
+  the marker convention and the COMMIT-ANSWER block's contract every depth-0 route relies on.

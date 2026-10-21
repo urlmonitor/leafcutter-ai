@@ -1,0 +1,132 @@
+id: BO-4500b-1-iii
+title: "A route template holding any text between its markers fails the install, even text identical to the source"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given route A's template holds the line "return { action: 'continue' };" between its
+    ALPHA-ANSWER start and end markers,
+  When the package is installed,
+  Then the install fails with a message naming route A and the block ALPHA-ANSWER and stating that
+    the marker pair in a route template must be empty,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given route A's template holds, between its ALPHA-ANSWER markers, text byte for byte equal to
+    the current ALPHA-ANSWER source,
+  When the package is installed,
+  Then the install fails with the same message naming route A and ALPHA-ANSWER,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its 'a template whose marker pair already holds text fails the build' rule, generalised."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
+it_requirements:
+  - >-
+    Emptiness is judged on the template text alone, never by comparing it with any source.
+    Content equal to the source is refused exactly as other content is. There is no "matches
+    the source, so allow it" path.
+  - >-
+    Content made only of whitespace between template markers counts as text and is refused, so
+    "empty" has one reading, and the reference page (BO-4500b-4) states it.
+  - >-
+    The check covers every marker pair of every route template and runs in BO-4500b-1's
+    validation pass, before any installed route is written.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: >-
+    BO-4500b-1's marker grammar, its derived consumer set (every route template scanned for
+    marker pairs), and the validate-all-then-write fill.
+test_intent:
+  - clause: the install fails with a message naming route A and the block ALPHA-ANSWER and stating that the marker pair in a route template must be empty
+    needs_test: true
+    reason: A hand-filled pair in a template is how hand copies come back, and the install must refuse it.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failing scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install fails with the same message naming route A and ALPHA-ANSWER
+    needs_test: true
+    reason: The likely wrong version refuses only text that differs from the source, and only this case tells the two apart.
+test_spec:
+  - name: test_text_between_template_markers_fails_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Route A template holds a line between its markers (and, as a separate case, only whitespace); the install fails naming route A, ALPHA-ANSWER and that the pair must be empty."
+    proves_clause: "the install fails with a message naming route A and the block ALPHA-ANSWER and stating that the marker pair in a route template must be empty"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_hand_filled_template_failure_leaves_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after each failed install; byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_template_text_equal_to_source_is_still_refused
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Route A template between markers holds exactly the current ALPHA source; the install still fails with the same message naming route A and ALPHA-ANSWER."
+    proves_clause: "the install fails with the same message naming route A and ALPHA-ANSWER"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "refuse only template text that differs from the source"
+      - "allow a pair whose content matches the source"
+  - name: test_hand_filled_template_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the hand-filled fixture and assert the failure surfaces from it."
+    proves_clause: "the install fails with a message naming route A and the block ALPHA-ANSWER and stating that the marker pair in a route template must be empty"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the empty-marker-pair check on route templates belongs
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The second scenario is the discriminator. The cheapest wrong version refuses only text that
+  DIFFERS from the source; a hand copy that happens to match today passes and becomes drift the day
+  the source changes. A template's marker pair is either empty or the install refuses it.
