@@ -114,12 +114,17 @@ def _marker_project(folder: Path, marker: Any) -> Path | None:
 
 
 def _candidate_project(child: Path) -> Path | None:
-    """Return the project *child* stands for: its recorded project if a workspace, itself if a repo."""
+    """Return the project *child* stands for: its recorded project if a workspace, else its main checkout.
+
+    A repository top level counts as the project that owns its git common
+    dir, so a plain linked checkout (``git worktree``) and its main checkout
+    are one candidate, not two.
+    """
     found = _read_marker(child)
     if found is not None:
         return _marker_project(child, found[1])
     if (child / ".git").exists() and _is_repo_top(child):
-        return child.resolve()
+        return _project_above(child) or child.resolve()
     return None
 
 
@@ -213,4 +218,10 @@ def resolve(cwd: str, repo_root: str | None = None) -> dict[str, Any]:
 #   duplicated, AMBIGUOUS_REPO listing every candidate), then NO_REPO naming
 #   searched_from. No __file__ anchor, no cache, no upward ".git/CLAUDE.md"
 #   walk. (ADR-018)
+# - 2026-10-20 [smart-bug-resolver/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18)
+#   A child/sibling candidate that is a repository top level now stands for
+#   the project owning its git common dir, so a marker-less linked checkout
+#   de-duplicates into its main checkout instead of making the search
+#   AMBIGUOUS_REPO. (ADR-018)
 # ===========================================================================

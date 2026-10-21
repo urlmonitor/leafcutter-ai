@@ -143,7 +143,7 @@ function workspaceSamePath(a, b) {
 
 // The verify request for a handed-in location, derived from the run's own ensure command (same script).
 function workspaceVerifyCommand(ensureCommand, location) {
-  const m = /^(.*?worktree\.py)(?:"|')?\s+ensure\b/.exec(String(ensureCommand));
+  const m = /^(.*?worktree\.py(?:"|')?)\s+ensure\b/.exec(String(ensureCommand));
   return (m ? m[1] : "python3 worktree.py") + ' verify --path "' + location + '"';
 }
 

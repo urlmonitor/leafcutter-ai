@@ -1956,47 +1956,6 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
 }
 
 /**
- * Build the single-line POSIX-sh resolution command dispatched to a
- * status-checker agent to find the ABSOLUTE, repository-anchored location of
- * a support file installed under `.leafcutter/<relPath>`, via
- * _buildRepoRootResolutionSnippet() above.
- *
- * Prints the resolved absolute `.leafcutter/<relPath>` on success. If no
- * repository resolves, OR the resolved path does not exist on disk, prints a
- * diagnostic naming the location that could not be found to stderr and exits
- * non-zero — NEVER falls back to printing a cwd-relative path that could
- * silently select the wrong physical copy.
- *
- * Shared mechanism: every `{{config.output_root}}`-relative dispatch site in
- * this workflow is meant to resolve through this same function (or
- * buildRepoAnchoredReadCommand() below, for sites that need the file's
- * contents rather than its path) — this file's worktree-setup step consumes
- * it directly below, and the Pre-Stage-0 registry-permission read
- * (ACD-2100a-3) consumes buildRepoAnchoredReadCommand(). ACD-2100a-4's
- * pause-store reads/writes reuse this SAME _buildRepoRootResolutionSnippet()
- * fragment via the sibling buildPauseStoreCommand() below, rather than this
- * function directly, because each pause-store dispatch must resolve the
- * script's location AND run it (plus an explicit --store-dir) in one
- * combined shell invocation.
- *
- * @param {string} relPath - Path under the repo's `.leafcutter/` support
- *                            directory, e.g. "scripts/worktree.py".
- * @returns {string} A single-line POSIX shell command.
- */
-function buildRepoAnchoredResolutionCommand(relPath) {
-  const target = ".leafcutter/" + relPath;
-  return (
-    _buildRepoRootResolutionSnippet(target) +
-    "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
-    "if [ ! -f \"$SCRIPT\" ]; then " +
-    "echo \"Could not resolve a repository-anchored " + target + " (looked for: $SCRIPT)\" >&2; " +
-    "exit 1; " +
-    "fi; " +
-    "echo \"$SCRIPT\""
-  );
-}
-
-/**
  * Build the single-line POSIX-sh command that resolves BOTH the
  * `pause_store.py` script's repository-anchored location AND the
  * repository-anchored `paused_runs` store directory it must read/write, then
@@ -2148,65 +2107,24 @@ async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePat
 }
 
 /**
- * Dispatch buildRepoAnchoredResolutionCommand()'s command to `agentType` and
- * return either `{ ok: true, path: <absolute path string> }` or
- * `{ ok: false, message: <diagnostic naming the unresolved location> }`.
- *
- * Fails closed: any dispatch error, non-zero exit, or empty/unparseable
- * output is treated as "could not resolve" and surfaced to the caller —
- * never silently substituted with a cwd-relative fallback. This is external
- * I/O (a shell dispatch), so per the repository error-handling policy a
- * failure to resolve must be reported (returned here for the caller to
- * report), never swallowed.
- *
- * @param {string} relPath   - See buildRepoAnchoredResolutionCommand().
- * @param {string} agentType - Agent to dispatch the resolution shell command to.
- * @param {string} label     - agent() call label (for test/observability hooks).
- * @returns {Promise<{ok: boolean, path?: string, message?: string}>}
+ * ACD-2100a-1: the workspace maker's ABSOLUTE in-repository path. The repository is found the repo-anchored way
+ * (the parent of git-common-dir run here, else a child folder holding .git), one single plain shell-runner
+ * command per probe. Sibling folders are not probed: that glob would also match a working folder holding an
+ * empty .git (the dev layout's untracked parent), i.e. the very copy this must never run. A decline or prose
+ * reply, no repository found, or several child repositories (the maker's AMBIGUOUS_REPO; never a pick) is
+ * returned for the caller to halt on, quoting what was received or the candidates.
  */
-async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
-  const cmd = buildRepoAnchoredResolutionCommand(relPath);
-  let raw;
-  try {
-    raw = await agent(
-      "Run the following command and return ONLY the raw stdout output:\n" +
-      cmd + "\n" +
-      "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-      { agentType: agentType, label: label }
-    );
-  } catch (dispatchErr) {
-    return {
-      ok: false,
-      message:
-        "Failed to dispatch repository-anchored resolution for .leafcutter/" +
-        relPath + ": " + (dispatchErr && dispatchErr.message ? dispatchErr.message : String(dispatchErr)),
-    };
+const MAKER_PROBES = ["git rev-parse --path-format=absolute --git-common-dir", "realpath -- */.git"];
+async function resolveRepoAnchoredMakerPath(phaseName) {
+  const replies = [];
+  for (const probe of MAKER_PROBES) {
+    const reply = shellStepReply(await shellStepDispatch(probe, "resolve-maker-path", phaseName), "resolve-maker-path");
+    if (!reply.ok) return reply;
+    const gitDirs = [...new Set(reply.stdout.split(/\r?\n/).map((s) => s.trim()).filter((s) => /^(\/|[A-Za-z]:).*[\\/]\.git$/.test(s)))];
+    if (gitDirs.length) return gitDirs.length > 1 ? { ok: false, reason: "more than one child repository was found, so which one the workspace maker belongs to is ambiguous (AMBIGUOUS_REPO)", received: workspaceQuote(gitDirs) } : { ok: true, path: gitDirs[0].replace(/[\\/]\.git$/, "/.leafcutter/scripts/worktree.py") };
+    replies.push(reply.reply);
   }
-
-  let parsed;
-  try {
-    parsed = parseAgentJson(raw, { stage: label, agent: agentType });
-  } catch (_parseErr) {
-    parsed = null;
-  }
-
-  const absPath = (parsed && typeof parsed.output === "string") ? parsed.output.trim() : "";
-
-  if (!parsed || !absPath || (parsed.exit_code != null && parsed.exit_code !== 0)) {
-    const diag =
-      (parsed && parsed.stderr && parsed.stderr.trim()) ||
-      (parsed && parsed.output && parsed.output.trim()) ||
-      "(no diagnostic captured)";
-    return {
-      ok: false,
-      message:
-        "Could not resolve an absolute, repository-anchored location for .leafcutter/" +
-        relPath + " -- refusing to fall back to a location relative to the caller's " +
-        "working directory. " + diag,
-    };
-  }
-
-  return { ok: true, path: absPath };
+  return { ok: false, reason: "the workspace maker's in-repository location could not be resolved (no repository here or in a child folder)", received: workspaceQuote(replies) };
 }
 
 // E2 top-level body — executed directly by the E2 engine
@@ -2280,6 +2198,10 @@ const sessionSlug = component
 // The workspace-setup step runs repository-mutating commands and goes only to an agent whose charter permits shell; the verdict
 // arrives as `args.workspace_setup_permission` (the pre-flight check runs outside this body) and a missing verdict fails closed.
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-runner";
+// Stage-end script steps (rule-check, test design, approval holds, hand-back findings) send compound commands the
+// one-command shell-runner declines, so they stay on worktree-agent until the follow-up ticket
+// tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md rewrites them for shell-runner (ADR-070).
+const scriptStepAgentId = "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
 // Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
@@ -2347,8 +2269,11 @@ if (workspaceSetupPermission.permits !== true) {
 
 // The authoring workspace: the maker's answer (args.workspace) or exactly one verbatim dispatch of the maker
 // command. Anything but an accepted answer ends the run here, quoting what was received (BO-4300c-3).
+// ACD-2100a-1: that dispatch names the maker copy inside the repository by its absolute path, never a cwd-relative one.
+const makerPath = args && args.workspace != null ? { ok: true, path: "" } : await resolveRepoAnchoredMakerPath("Stage 0");
+if (!makerPath.ok) return workspaceFailure(makerPath);
 const authoringWorkspace = await workspaceObtain(
-  "python3 {{config.output_root}}/scripts/worktree.py ensure --kind ac --slug " + (sessionSlug || "ac-authoring"), "Stage 0");
+  "python3 \"" + makerPath.path + "\" ensure --kind ac --slug " + (sessionSlug || "ac-authoring"), "Stage 0");
 if (!authoringWorkspace.accepted) return workspaceFailure(authoringWorkspace);
 
 const authoringWorktreePath = authoringWorkspace.workspace_path;
@@ -2866,7 +2791,7 @@ for (const step of pipeline) {
       written = [];
     } else if (step.stage === "test-design") {
       written = [...allAcsWritten];
-      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, scriptStepAgentId);
     } else {
       // Dispatch the authoring agent, directing AC writes to the dedicated
       // authoring worktree's AC store path (AC BO-1500a-1).
@@ -2924,7 +2849,7 @@ for (const step of pipeline) {
     }
 
     // ACD-2500a-1: rule check at stage end (resume path: run after the gate).
-    let ruleCheck = skipAuthorOnResume ? null : ((designOutcome && designOutcome.ruleCheck) || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId));
+    let ruleCheck = skipAuthorOnResume ? null : ((designOutcome && designOutcome.ruleCheck) || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, scriptStepAgentId));
     // Present gate to the user. ADR-024: resolveGate checks args.resume_answer first.
     if (step.gate !== "final") {
       const _midGateResult = (step.gate === "auto" || (reapprove && !ruleCheck.passed)) ? { action: "approve" } : await resolveGate(
@@ -2976,7 +2901,7 @@ for (const step of pipeline) {
         allAcsWritten.push(...written);
       }
 
-      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, scriptStepAgentId);
       let action = gateDecision.action.toLowerCase();
       if (!ruleCheck.passed && action !== "cancel") { gateDecision.feedback = (action === "edit" && gateDecision.feedback ? gateDecision.feedback + "\n" : "") + ruleCheck.summary; if (action !== "edit") reapprove = true; action = "edit"; skipAuthorOnResume = false; }
 
@@ -3039,8 +2964,8 @@ for (const step of pipeline) {
     } else {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
       // ADR-024: resolveGate checks args.resume_answer before the live agent call.
-      let heldPre = skipAuthorOnResume ? [] : await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
-      if (!skipAuthorOnResume) { ({ held: heldPre, ruleCheck } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId)); written = [...new Set(allAcsWritten)]; }
+      let heldPre = skipAuthorOnResume ? [] : await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId);
+      if (!skipAuthorOnResume) { ({ held: heldPre, ruleCheck } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId)); written = [...new Set(allAcsWritten)]; }
       const approvablePre = allAcsWritten.filter((id) => !heldPre.some((h) => h.id === id));
       const _finalGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         "final-gate",
@@ -3103,7 +3028,7 @@ for (const step of pipeline) {
         }
       }
 
-      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, scriptStepAgentId);
       let finalAction = finalDecision.action.toLowerCase();
       if (!ruleCheck.passed && finalAction !== "cancel") { acFeedback = ruleCheck.summary; if (finalAction !== "edit") reapprove = true; finalAction = "edit"; skipAuthorOnResume = false; }
       const priority = VALID_PRIORITIES.includes(finalDecision.priority)
@@ -3141,7 +3066,7 @@ for (const step of pipeline) {
         };
       } else if (finalAction === "approve") {
         // Write readiness: approved + priority to all ACs in batch.
-        const heldNow = await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+        const heldNow = await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId);
         const approvable = allAcsWritten.filter((id) => !heldNow.some((h) => h.id === id));
         const approvalResult = (approvable.length === 0 && heldNow.length > 0) ? null : await agent(
           `For each of the following ACs: ${approvable.join(", ")}, ` +

@@ -5,6 +5,7 @@ components:
   - worktree_manager
   - build_orchestration
 level: L1
+child_limit_override: 6
 status: active
 req_status: draft
 work_status: todo
@@ -31,7 +32,15 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: child-limit-override
+  by: human:user
+  at: 2026-10-10
+  note: >-
+    child_limit_override 6 raises the L1 child cap from 5 to 6 for one extra child, BO-4300c-6.
+    The user placed BO-4300c-6 as a direct sibling of BO-4300c-1 (decision dec-0ed3e2e3a1cd8340,
+    2026-10-10, recorded in BO-4300c-6's notes and amended_by), so that BO-4300c-1 and its done
+    children are not reopened. Remove the override when BO-4300c is next split or reorganised.
 superseded_by: null
 covered_by: [BO-4300c-1, BO-4300c-2, BO-4300c-3, BO-4300c-4, BO-4300c-5, BO-4300c-6]
 implemented_by: []

@@ -7,9 +7,9 @@ priority: high
 title: "Every worktree-creating subcommand uses the same repository resolution, not just create-only"
 component: ac-driven-dev
 level: L3
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 roadmap_phase: phase_1
 criteria: |
   Given a copy of the worktree setup step placed in a directory that is not inside
@@ -145,11 +145,21 @@ expects_from:
     contract: "The ordered repository resolver _resolve_repository_with_search_fallback() -- anchor first, then a bounded search of the immediate subdirectories of cwd, announcing a search-based hit on stderr at WARNING and raising on zero-or-multiple candidates -- already present in templates/scripts/setup_ticket_worktree.py and already wired into cmd_create_only()."
 origin_agent: BrainCandy
 created: 2026-09-30
-amended_by: []
-superseded_by: null
-covered_by:
-  - unit_tests/ac_driven_dev/test_acd_2100a_2_ii.py
-  - unit_tests/ac_driven_dev/test_acd_2100a_2_ii_more.py
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). Its subject -- the
+    create-ac-worktree and create-fastlane-worktree subcommands of setup_ticket_worktree.py --
+    was removed by BO-4300f-2, together with test_acd_2100a_2_ii.py; test_acd_2100a_2_ii_more.py,
+    which imported it and drove the retired subcommands, was deleted with this retirement. AC
+    authoring and the fast lane now get their workspace from the one workspace maker
+    (BO-4300a-1), which resolves the project one way for every route.
+superseded_by:
+- BO-4300a-1
+- BO-4300f-2
+covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

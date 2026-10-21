@@ -551,10 +551,10 @@ function haltRefs() {
 }
 
 /** A step_refused halt: the shell-runner's answer was no usable result, so whether the step ran is unknown. */
-async function refusedHalt(step, what, message) {
+async function refusedHalt(step, what, remedy) {
   await cleanupBaselineWorktree();
   outcome(`Step ${step} of ${STEP_COUNT}`, `halted: ${what}`);
-  return { status: "halted", halted_at_step: step, reason: "step_refused", message, ...haltRefs(),
+  return { status: "halted", halted_at_step: step, reason: "step_refused", message: remedy, ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n') };
 }
 
@@ -664,11 +664,7 @@ if (isRefusalStatus(baselineStatus)) {
       "Without a baseline the post-merge regression check has nothing to compare against, " +
       "so continuing would either halt on every pre-existing failure or merge unchecked. " +
       "Received: " + baselineInfo.detail,
-    branch: BRANCH,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
-    step_outcomes: stepOutcomes,
-    scratch_clearing: scratchClearing,
+    ...haltRefs(),
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }

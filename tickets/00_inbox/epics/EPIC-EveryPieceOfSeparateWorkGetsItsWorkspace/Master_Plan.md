@@ -92,6 +92,7 @@ re-verified, never applied wholesale.
 | 15 | [15_TICKET-20261010-BO-4300c-6-canary-robustness.md](./15_TICKET-20261010-BO-4300c-6-canary-robustness.md) | Stage canaries never read a git failure as a pass and never block ordinary work (added 2026-10-10, decision dec-0ed3e2e3a1cd8340) | c-6 | 05 | `[x]` |
 | 16 | [16_TICKET-20261012-workflow-meta-skips-shared-modules.md](./16_TICKET-20261012-workflow-meta-skips-shared-modules.md) | check-workflow-meta checks only top-level workflows, not _shared/ modules (found at ticket 10's commit, 2026-10-12) | -- | -- | `[x]` |
 | 17 | [17_TICKET-20261016-maker-inherits-durable-log-root.md](./17_TICKET-20261016-maker-inherits-durable-log-root.md) | The maker builds every workspace pointing at the project's durable log root (INF-500d-4-iii), and main's tests reach the maker (found at the main merge 83db3c9ba, 2026-10-16) | -- | 14 | `[x]` |
+| 18 | [18_TICKET-20261020-epic-ci-green.md](./18_TICKET-20261020-epic-ci-green.md) | The epic's PR runs green on CI: 99 Linux test regressions, lint, AC store checks (found on PR #1274, 2026-10-20) | -- | 17 | `[ ]` |
 
 AC ids above omit the `BO-4300` prefix. 58 ACs across tickets 02-14 plus BO-4300a-1 in ticket 01 = 59; BO-4300c-6 (ticket 15, added 2026-10-10) = 60.
 

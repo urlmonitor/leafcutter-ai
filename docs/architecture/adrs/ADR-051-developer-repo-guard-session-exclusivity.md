@@ -4,7 +4,7 @@ description: "The workspace proof suite's developer-repo guard takes an advisory
 type: "adr"
 status: "active"
 created: "2026-09-28"
-last_updated: "2026-09-28"
+last_updated: "2026-10-21"
 deciders:
   - adr-author
   - architect-review
@@ -21,6 +21,7 @@ related_code:
   - unit_tests/build_orchestration/conftest.py
   - unit_tests/build_orchestration/_workspace_maker_fixtures.py
   - unit_tests/build_orchestration/test_bo_4300f_4_i.py
+  - unit_tests/build_orchestration/test_bo_4300f_4_i_reentrant_guard.py
 ---
 
 # ADR-051: The Developer-Repo Guard Holds a Session-Exclusive Lock Instead of Narrowing Its Diff
@@ -111,6 +112,18 @@ the choice binds the whole proof family, not one test file.
    `scripts/` or `templates/scripts/`. In the first attempt, an untracked guard under
    `scripts/` tripped the tracked-source guard in `scripts/build.py` for every other ticket's
    proof run.
+
+8. **The guard MUST be re-entrant for the sessions it starts itself** (added 2026-10-21,
+   approved by the user as "Approve re-entrant guard"). A test that runs a nested
+   `python -m pytest` on files in this directory deadlocked on the lock its own parent held:
+   `test_bo4500a_5_v` waited 600 s and then hit its 540 s subprocess timeout. The holder
+   now names its lock file in the `BO4300_GUARD_HELD_LOCK` environment variable, which its
+   child processes inherit. A session that finds the lock already taken, and whose inherited
+   marker names that same lock file, skips the lock and its own snapshot, because the
+   holder's before and after snapshots bracket the whole nested run. Decision 5 therefore
+   still holds: a change made by the nested run fails the outer session. A marker that names
+   a different lock file never matches. A stale marker, whose lock is free, is ignored,
+   because the marker is consulted only after the lock is found taken.
 
 ## Consequences
 

@@ -370,7 +370,7 @@ log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`
 
 // BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
 // dispatches get scratchEnvNote and the mutation-proof/PR-body files live in scratchDir. Fail-open: /tmp, no note.
-const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
+const scratchItem = ((await agent(`From the working copy ${worktreeRoot}, run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { agentType: 'status-checker', label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
 const scratchDir = typeof scratchItem === 'string' && scratchItem ? scratchItem : '/tmp'
 const scratchEnvNote = scratchDir === '/tmp' ? '' : `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchDir}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.`
 
