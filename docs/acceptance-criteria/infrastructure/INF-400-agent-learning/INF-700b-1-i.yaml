@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-1.yaml"
@@ -87,10 +87,22 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Named the attempt-ledger requirement that makes INF-700b-3's three-way distinction derivable — the criteria forbid a knowledge record on the no-learning path but say nothing about the heartbeat that proves the path was taken, and without it a quiet week and a dead dispatcher produce identical evidence. Added the outcome enum as an explicit delivers_to contract so INF-700b-3 reads a closed set rather than free text."
     by: it-po
     at: 2026-08-26
+  - reason: "AC-1 to AC-3 are proven by this ticket; AC-4's reader half is unproven until INF-700b-3 (ticket 06, scripts/knowledge/capture_health_report.py) lands; re-validate AC-4 then, and only then flip to done."
+    by: ac-fulfillment-gate
+    at: 2026-10-21
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_inf_700b_1_i.py
+- unit_tests/test_emit_event.py
+- unit_tests/test_inf_700b_1_i.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/02_TICKET-20261016-INF-700b-1-i.md
+- templates/skills/agent-telemetry/scripts/emit_event.py
+- scripts/knowledge/emit_knowledge.py
+- templates/skills/agent-telemetry/SKILL.md
+- templates/skills/signoff/SKILL.md
+- templates/agents/product-owner.md
+- templates/agents/business-analyst.md
+- templates/agents/it-po.md
 notes: |
   This is the capture-side half of the invariant INF-700c-1 enforces on the
   write side: a contentless record must not be created here, and must not be

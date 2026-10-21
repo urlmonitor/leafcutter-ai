@@ -897,7 +897,19 @@ your output from reaching the caller.
 > during this run that future agents working in this component would benefit from
 > knowing?"
 
-**On "no":** Proceed — nothing to persist.
+**On "no":** run this ONE command, then proceed — nothing to persist
+(ADR-034 Amendment 2 A2.3). Do not add a `--log` or `--sink` argument:
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent business-analyst --event capture_attempt --phase knowledge-capture --outcome nothing-to-record || true
+```
+
+This records that you ran the capture step and had nothing to record. It
+writes a capture attempt to telemetry, not to the knowledge record, so no
+learning is created. **Fail open:** if the command prints a warning or exits
+non-zero, do not retry or work around it — proceed anyway. You do NOT write a
+`recorded` attempt yourself: the helper in the "yes" steps below does that
+after a successful capture (A2.4).
 
 **On "yes":** Execute the following steps in order. Wrap the entire block in
 best-effort handling (log a warning and proceed if any step fails):
