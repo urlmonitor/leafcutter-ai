@@ -27,6 +27,8 @@ _SURFACES = {
     "business-analyst": "agents/business-analyst.md",
     "it-po": "agents/it-po.md",
 }
+# The heading in agent-telemetry SKILL.md that holds the one nothing-to-record command; signoff §7 names it.
+_TELEMETRY_HEADING = "Nothing-to-record capture attempt"
 _NO_BRANCH = re.compile(
     r"(?:\*\*No path\*\*|\*\*On [\"“']no[\"”']:\*\*)(?P<body>.*?)"
     r"(?=\*\*Yes path\*\*|\*\*On [\"“']yes[\"”']:\*\*)",
@@ -46,15 +48,25 @@ _SYNTHESIS = (
 def _surface_text(layout: Path, name: str) -> str:
     root = Path(layout) / ".leafcutter"
     assert root.is_dir(), f"the shared layout has no deployed .leafcutter at {root}"
-    if _SURFACES[name] is None:
+    rel = _SURFACES[name]
+    if rel is None:
         text = (root / "skills" / "signoff" / "SKILL.md").read_text(encoding="utf-8")
         start = text.index("## §7 Knowledge Capture Step")
         return text[start : text.index("## §8", start)]
-    text = (root / _SURFACES[name]).read_text(encoding="utf-8")
+    text = (root / rel).read_text(encoding="utf-8")
     match = re.search(r"^## (?:S|§)\d+ Knowledge Loop — Emission.*?(?=^## |\Z)", text,
                       re.MULTILINE | re.DOTALL)
-    assert match, f"deployed {_SURFACES[name]} has no 'Knowledge Loop — Emission' block"
+    assert match, f"deployed {rel} has no 'Knowledge Loop — Emission' block"
     return match.group(0)
+
+
+def _telemetry_section(layout: Path) -> str:
+    """The deployed agent-telemetry SKILL.md section that carries the one nothing-to-record command."""
+    text = (Path(layout) / ".leafcutter" / "skills" / "agent-telemetry" / "SKILL.md").read_text(encoding="utf-8")
+    match = re.search(rf"^## {re.escape(_TELEMETRY_HEADING)}\s*$(.*?)(?=^## |\Z)", text,
+                      re.MULTILINE | re.DOTALL)
+    assert match, f"deployed agent-telemetry SKILL.md has no '## {_TELEMETRY_HEADING}' section"
+    return match.group(1)
 
 
 @pytest.mark.shared_layout_reader
@@ -76,7 +88,17 @@ def test_capture_step_declares_no_placeholder_text_fallback(shared_reference_lay
     assert branch, f"{surface}: could not find the no-learning branch (No path / On \"no\") before the yes branch"
     body = branch.group("body")
     problems: list[str] = []
-    if not all(token in body for token in ("emit_event.py", "capture_attempt", "nothing-to-record")):
+    if _SURFACES[surface] is None:
+        # signoff section 7 points at agent-telemetry instead of carrying the command (|| true vs BO-210c-1-iii)
+        if "emit_event.py" in body:
+            problems.append("signoff section 7's no-learning branch still carries an inline emit_event.py command")
+        if "agent-telemetry" not in body or _TELEMETRY_HEADING not in body:
+            problems.append(f"signoff section 7's no-learning branch does not name the agent-telemetry skill "
+                            f"and its '{_TELEMETRY_HEADING}' section")
+        section = _telemetry_section(shared_reference_layout)
+        if not all(token in section for token in ("emit_event.py", "capture_attempt", "nothing-to-record")):
+            problems.append("the agent-telemetry section carries no nothing-to-record command")
+    elif not all(token in body for token in ("emit_event.py", "capture_attempt", "nothing-to-record")):
         problems.append("the no-learning branch names no `emit_event.py --event capture_attempt "
                         "--outcome nothing-to-record` command")
     for forbidden in ("emit_knowledge.py", "--text"):

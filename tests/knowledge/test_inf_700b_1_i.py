@@ -61,8 +61,40 @@ _EMIT_ARGS = ("--agent", "test-writer", "--component", "knowledge_system", "--de
 # helpers: surfaces, command extraction, private project, reading the ledger
 # ---------------------------------------------------------------------------
 
+# Signoff section 7 no longer carries the command inline (BO-210c-1-iii forbids `||` in signoff bash
+# blocks; INF-500d-4-vi requires it on every emit_event command). It points at this heading in the
+# agent-telemetry skill, which holds the one command.
+_TELEMETRY_HEADING = "Nothing-to-record capture attempt"
+
+
+def _telemetry_section(layout: Path) -> str:
+    """The DEPLOYED agent-telemetry SKILL.md section that carries the nothing-to-record command."""
+    text = (Path(layout) / ".leafcutter" / "skills" / "agent-telemetry" / "SKILL.md").read_text(encoding="utf-8")
+    match = re.search(rf"^## {re.escape(_TELEMETRY_HEADING)}\s*$(.*?)(?=^## |\Z)", text,
+                      re.MULTILINE | re.DOTALL)
+    assert match, f"deployed agent-telemetry SKILL.md has no '## {_TELEMETRY_HEADING}' section"
+    return match.group(1)
+
+
+def _section_seven_pointer_problems(layout: Path) -> list[str]:
+    """Section 7's no-learning branch must hold NO inline emit_event command and must name the anchor."""
+    body = _section_seven(layout)
+    start = body.index("**No path**")
+    branch = body[start: body.index("**Yes path**", start)]
+    problems = []
+    if "emit_event.py" in branch:
+        problems.append("signoff section 7's no-learning branch still carries an inline emit_event.py command")
+    if "agent-telemetry" not in branch or _TELEMETRY_HEADING not in branch:
+        problems.append(f"signoff section 7's no-learning branch does not name the agent-telemetry skill "
+                        f"and its '{_TELEMETRY_HEADING}' section")
+    return problems
+
+
 def _surface(layout: Path, name: str) -> str:
-    return _section_seven(layout) if name == "signoff section 7" else _emission_block(layout, _AGENT_SURFACES[name])
+    """Where the surface's no-learning COMMAND lives: telemetry skill for section 7, the agent block for S9."""
+    if name == "signoff section 7":
+        return _telemetry_section(layout)
+    return _emission_block(layout, _AGENT_SURFACES[name])
 
 
 def _event_line(text: str) -> str | None:
@@ -170,10 +202,14 @@ def test_no_learning_branch_emits_no_knowledge_record(shared_reference_layout, t
     the count is zero recorded, zero failed, one nothing-to-record), the knowledge sink byte-identical,
     no output at all, exit 0 (the agent's primary output and sign-off are unchanged).
     """
+    if surface == "signoff section 7":
+        pointer = _section_seven_pointer_problems(shared_reference_layout)
+        assert not pointer, "; ".join(pointer)
     line = _event_line(_surface(shared_reference_layout, surface))
     assert line is not None, (
         f"{surface}: deployed text names no `emit_event.py --event capture_attempt ... "
         "--outcome nothing-to-record` command for the no-learning branch")
+    assert line.endswith("|| true"), f"{surface}: the command must end in `|| true` (INF-500d-4-vi): {line!r}"
     proj = _project(tmp_path, shared_reference_layout, "live")
     seeded = _seed_sink(proj)
     before = _snapshot(proj["world"])
@@ -327,11 +363,14 @@ def test_four_surfaces_carry_identical_no_learning_command(shared_reference_layo
     """Read from the deployed bytes: the four commands are identical apart from --agent and --ticket."""
     shapes: dict[str, list[str]] = {}
     problems: list[str] = []
+    problems.extend(_section_seven_pointer_problems(shared_reference_layout))
     for name in _SURFACE_NAMES:
         line = _event_line(_surface(shared_reference_layout, name))
         if line is None:
             problems.append(f"{name}: names no `emit_event.py --event capture_attempt ... nothing-to-record` command")
             continue
+        if not line.endswith("|| true"):
+            problems.append(f"{name}: the command must end in `|| true` (INF-500d-4-vi): {line!r}")
         tokens = shlex.split(line)
         for flag in ("--log", "--sink"):
             if flag in tokens:

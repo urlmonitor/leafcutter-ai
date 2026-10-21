@@ -57,6 +57,18 @@ Amendment 2): one record per run that reached the knowledge-capture step, with
 outcome `recorded` (written by `emit_knowledge.py` itself after a successful
 append), `nothing-to-record`, or `failed` (with `missing_target`).
 
+## Nothing-to-record capture attempt
+
+An agent runs this when its knowledge-capture step found no learning to record.
+Agents never write a `recorded` attempt themselves; the emit helper does that
+after a successful capture (ADR-034 Amendment 2).
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent <agent> --event capture_attempt --phase knowledge-capture --outcome nothing-to-record --ticket <ticket> || true
+```
+
+Fill the angle-bracket values, and do not add `--log` or `--sink`.
+
 ## Emission is best-effort
 
 A sink that cannot be written produces a stderr warning and **exit 0**. This is
