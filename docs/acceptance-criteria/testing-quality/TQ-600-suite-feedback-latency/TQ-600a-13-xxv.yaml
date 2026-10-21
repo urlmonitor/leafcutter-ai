@@ -1,0 +1,185 @@
+id: TQ-600a-13-xxv
+components:
+  - testing_quality
+  - knowledge_management
+title: "A pull request declaring a fix for a red live-database lane proves it against a started database, and a skip there is not proof"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that a red or did-not-complete post-merge run holds every pull request (TQ-600a-13-vi),
+    and that once TQ-600a-13-xxi lands the run can be red because of the live-database lane,
+  And that the only exemption from the hold is a declared fix whose proof run executes the
+    current red run's failing tests against the pull request's head and passes
+    (TQ-600a-13-viii, TQ-600a-13-xvi),
+  And that a live-database test executed without a database skips, so a proof run that starts
+    no database would "pass" every failing live-database test by skipping it and release the
+    hold with nothing proven,
+  When a pull request declares a fix for a post-merge run whose failing tests include one or
+    more live-database tests, or whose live-database lane did not complete,
+  Then the proof run starts the same disposable database instances as the live-database lane
+    and executes those failing live-database tests against the pull request's head, with the
+    same selection, build and strictness as the post-merge run,
+  And for a run whose live-database lane did not complete, the proof run executes the whole
+    live-database lane against the head and passes only if that lane is green by
+    TQ-600a-13-xxi's, -xxii's and -xxiii's rules,
+  And a live-database test that skips in the proof run, for any reason, is not a pass, and the
+    proof does not pass while any such test skipped,
+  And a proof run whose database never became healthy is reported as not proven, never as
+    passed, and the hold stays,
+  And a declared fix for a run whose failing tests are all correctness-lane tests starts no
+    database, as before this change,
+  And each of these is demonstrated by executing the proof's selection and judgement against
+    a synthetic project in which a failing live-database test is made to pass, to fail and to
+    skip at the head, and one in which the database is not started, never by reading the
+    proof workflow for a service definition.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-xvi
+  - TQ-600a-13-xxi
+  - TQ-600a-13-xxiii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The proof run this record extends to live-database failures. Its trust rules (main's
+      harness judges, no write-scoped credential near pull-request code) apply unchanged.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The live-database lane whose failures a fix must prove against.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxiii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Skip is not pass — applied here to the proof run.
+  - path: scripts/ci/post_merge_fix_proof.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The proof's selection and judgement (TQ-600a-13-xvi), extended to live-database
+      failures.
+  - path: .github/workflows/post-merge-fix-proof.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The `pull_request_target` proof workflow (`Prepare fix proof`, `Post-merge fix proof`)
+      that must start the disposable databases when, and only when, live-database tests are
+      to be proven.
+  - path: .github/workflows/post-merge-suite.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The live-database lane whose database start-up the proof must reproduce.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The `done-proof` job's three neo4j:5.26-community instances, the reference both the
+      lane and the proof copy.
+declared_files:
+  - path: scripts/ci/post_merge_fix_proof.py
+    state: existing
+  - path: .github/workflows/post-merge-fix-proof.yml
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT CONFIRMED: python-coder (scripts/ci/ module plus workflow glue, as TQ-600a-13-xvi).
+  - >-
+    THE TRUST MODEL OF TQ-600a-13-xvi IS UNCHANGED. Workflow-level `permissions: {}`; the job
+    that runs pull-request code holds no permission and the workflow references no
+    `secrets.`; harness, pytest.ini and selection plugin come from the default branch;
+    `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`. Starting database service containers adds no
+    credential: the NEO4J_AUTH values are the same non-secret test literals ci.yml already
+    carries, and the instances are disposable and discarded with the job.
+  - >-
+    WHICH TESTS. The live-database ids come from the current red run's `post-merge-verdict`
+    artifact, object `live_database` (`failing`; or the whole lane when its `verdict` is
+    did_not_complete), as defined in TQ-600a-13-xxi's delivers_to — never from the notice
+    body and never from anything in the pull request. The correctness-lane ids keep coming
+    from the top-level `failing` list, unchanged.
+  - >-
+    SAME SELECTION, BUILD AND STRICTNESS AS THE LIVE LANE. The proof executes live-database
+    ids with the live lane's marker override (the whole-folder expression, not
+    `-m "manual and not timing_ratio"`), the same build and `AC_ENFORCE_STRICT=1`; a whole-
+    lane proof collects `tests/knowledge_live/` fresh. Re-running live ids under the default
+    addopts would deselect them and prove nothing.
+  - >-
+    THE SAME DATABASES, AND ONLY WHEN NEEDED. When live-database tests are to be proven, the
+    proof starts the same three instances as the live lane (same image, host ports,
+    credentials, memory settings), defined so it cannot drift from the lane's definition.
+    When the red run's failures are correctness-lane only, no database starts. How the
+    start is made conditional is the implementer's choice (GitHub service containers are
+    declared per job, so this likely means a separate job or an explicit start step).
+  - >-
+    ONE PROOF RESULT FOR THE HOLD. The hold (TQ-600a-13-viii) reads the conclusion of the
+    job named exactly `Post-merge fix proof`. If the live-database proof runs in a separate
+    job, either the `Post-merge fix proof` job's conclusion must be success only when every
+    required part proved, or the hold's reader is updated in the same change; a live part
+    that is skipped, not run, or failed must never leave the hold reading success.
+  - >-
+    SKIP IS NOT PROOF, BY THE SHARED RULE. Live-database results are judged by the
+    classification TQ-600a-13-xxiii delivers (any skip is never a pass; an unreachable skip
+    is did_not_complete), imported, not re-implemented. A database that never became
+    healthy, or refuses the first connection, ends the proof as not proven (job conclusion
+    not success).
+  - >-
+    TEST COST: under 1.2 s of the family's 15 s default-run budget, reusing -xvi's
+    two-job seam and synthetic project; producing an unreachable database needs only an
+    address that never answers. A real graph database is not started in the default run.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-xvi
+    contract: >-
+      The proof run's selection of the current red run's failing tests and its judgement.
+  - ac_id: TQ-600a-13-xxi
+    contract: >-
+      The verdict artifact naming failing tests as belonging to the live-database lane, and
+      the disposable database start-up to reuse.
+  - ac_id: TQ-600a-13-xxiii
+    contract: >-
+      The importable live-lane skip classification (passed / failed / unreachable_skips /
+      skipped-with-reason), under which any skip is never a pass and an unreachable skip is
+      did_not_complete.
+test_intent:
+  - clause: 'the proof run starts the same disposable database instances as the live-database lane and executes those failing live-database tests against the pull request''s head, with the same selection, build and strictness as the post-merge run'
+    needs_test: true
+    reason: A proof that drops the live marker override or reads ids from the wrong field executes nothing and could release the hold.
+  - clause: 'for a run whose live-database lane did not complete, the proof run executes the whole live-database lane against the head and passes only if that lane is green by TQ-600a-13-xxi''s, -xxii''s and -xxiii''s rules'
+    needs_test: true
+    reason: A did-not-complete run has no failing ids, so a proof keyed only on failing ids would select nothing and could pass.
+  - clause: 'a live-database test that skips in the proof run, for any reason, is not a pass, and the proof does not pass while any such test skipped'
+    needs_test: true
+    reason: A skip-blind judgement passes every live test run without a database, which is the hole this record closes.
+  - clause: 'a proof run whose database never became healthy is reported as not proven, never as passed, and the hold stays'
+    needs_test: true
+    reason: A proof job whose live part never ran could still conclude success and release the repository-wide hold.
+  - clause: 'a declared fix for a run whose failing tests are all correctness-lane tests starts no database, as before this change'
+    needs_test: true
+    reason: Starting databases unconditionally would change the cost and the job graph of every existing correctness-only proof.
+  - clause: 'each of these is demonstrated by executing the proof''s selection and judgement against a synthetic project in which a failing live-database test is made to pass, to fail and to skip at the head, and one in which the database is not started, never by reading the proof workflow for a service definition'
+    needs_test: false
+    reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  UNASKED-FOR, AND WHY IT IS NOT SCOPE CREEP. The request did not mention the fix-proof path.
+  But without this record, adding the live-database lane opens a hole in an existing gate:
+  the proof run of TQ-600a-13-xvi starts no database today, so every failing live-database
+  test would skip in it, and a skip-blind judgement would release the repository-wide hold on
+  a pull request that proved nothing. Keep this record when the family is scoped down.

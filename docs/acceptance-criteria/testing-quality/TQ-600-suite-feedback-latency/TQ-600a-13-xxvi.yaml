@@ -1,0 +1,156 @@
+id: TQ-600a-13-xxvi
+components:
+  - testing_quality
+title: "The testing guide and the suite-performance guide say which tests each run actually executes, including the post-merge live-database lane"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the two guides a contributor reads to learn which tests run where — the testing
+    guide and the suite-performance guide —
+  And the post-merge live-database lane of TQ-600a-13-xxi, which executes the whole
+    live-database test folder against disposable databases on every push to main and on
+    the heartbeat, alongside the pull request's Proof-of-done check, which still executes
+    only the live-database tests of the criteria that pull request changes,
+  And the outcome TQ-600a-13 settles for the expensive-test naming suffix: either the
+    suffixed tests are genuinely excluded from the default run and reachable through a
+    named opt-in, or the suffix is a naming convention with no collection effect,
+  When a reader looks up, in either guide, where the live-database tests run and where the
+    suffixed expensive tests run, after the change that lands TQ-600a-13-xxi has merged,
+  Then the testing guide states that the live-database tests run in three places with
+    three different meanings: skipped in the per-PR shards, which start no database; run
+    for the changed criteria only in the pull request's Proof-of-done check; and run in
+    full after every merge to main and on the 12-hour heartbeat in the post-merge run,
+  And it states that a live-database test failing twice in the post-merge run turns the
+    `Post-merge suite status` verdict red and so holds open pull requests, that a database
+    which never became healthy is reported as did-not-complete, and that a skip in that
+    lane is never counted as a pass,
+  And each guide's sentence about the suffixed expensive tests states the outcome
+    TQ-600a-13 settled — the named opt-in through which they run, or that the suffix has
+    no collection effect and how an expensive test is actually run or skipped — and no
+    sentence in either guide claims an exclusion the default collection does not perform,
+  And no sentence in either guide states that the live-database tests run only on the pull
+    request, or never run after merge,
+  And this is verified by reading each guide's statements against the runs they describe —
+    the post-merge run's lanes and triggers as TQ-600a-13-xxi defines them, and a default
+    collection as TQ-600a-13 compares it — never by searching the guides for a phrase.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-xxi
+doc_links:
+  - path: docs/testing/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The testing guide: gains the three-place account of the live-database tests and
+      carries the suffixed-test sentences TQ-600a-13 found false.
+  - path: scripts/suite_performance/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The suite-performance guide: carries the suffixed-test exclusion sentence
+      TQ-600a-13 found false, and names the post-merge lanes.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The live-database lane this record documents: triggers, retry, verdict and the
+      Proof-of-done boundary.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Settles the suffixed-test outcome whose prose correction this record carries,
+      per TQ-600a-13's documentation-expert contract.
+  - path: .github/workflows/post-merge-suite.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The run the guides describe: triggers (push to main, heartbeat cron `17 3,15 * * *`,
+      manual dispatch), the lanes, the retry job and the verdict steps.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The per-PR test shards (no database) and the `done-proof` job (three disposable
+      neo4j:5.26-community instances, changed criteria only) — two of the three places the
+      guides must name.
+declared_files:
+  - path: docs/testing/README.md
+    state: existing
+  - path: scripts/suite_performance/README.md
+    state: existing
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    AGENT CONFIRMED: documentation-expert. Both surfaces are contributor guides (Markdown);
+    no code, prompt or diagram changes.
+  - >-
+    WRITE FROM WHAT WAS BUILT, AFTER IT MERGED. The live-database sentences are written
+    against TQ-600a-13-xxi, -xxii, -xxiii and -xxv as implemented (job names, stage wording,
+    the verdict's live-lane naming), read from the merged workflow and the hold's own
+    message table, never from these records' indicative names. If the built wording differs
+    from a record, the guide follows the build and the difference is reported.
+  - >-
+    THE THREE PLACES, IN ONE PASSAGE. docs/testing/README.md's "Post-merge lanes" section
+    (today a two-row table: Correctness, Timing) gains the live-database lane and the
+    three-place account: skipped in the per-PR shards; changed criteria only in the
+    Proof-of-done check; the whole folder after every merge to main and on the 12-hour
+    heartbeat. The `Post-merge suite status` hold-message table gains the live-database
+    did-not-complete wording(s) exactly as built. The heartbeat period is stated as the
+    built cron and the `heartbeat_max_hours` tunable give it, not retyped from memory.
+  - >-
+    THE SUFFIX SENTENCES STATE THE SETTLED OUTCOME. TQ-600a-13 was resolved on its exclusion
+    branch (PR #1050, recorded in TQ-600a-13-ii): `_MANUAL`-suffixed tests are auto-marked
+    `manual` and deselected by pytest.ini's addopts, with `-m manual` as the named opt-in.
+    Re-confirm that against the default collection before writing. Known passages to
+    reconcile at enrichment: scripts/suite_performance/README.md's "Known, accepted gap"
+    bullet (says the excluded tests run nowhere in CI — false since the post-merge run
+    landed); docs/testing/README.md's `-k "_MANUAL"` opt-in mention and its line that
+    `_MANUAL` tests are excluded from both suites. Correct each to the true position rather
+    than deleting it.
+  - >-
+    NO CONTRADICTION ACROSS THE TWO GUIDES. Where both guides describe the same run, they
+    must agree on triggers, lanes and what holds a pull request; neither may say the
+    live-database tests run only on the pull request or never after merge.
+  - >-
+    DOCUMENTATION GATES APPLY. The edits pass the repository's documentation commit checks
+    (doc front-matter, doc-length growth ratchet); route through documentation-expert's
+    usual pre-flight, and do not grow either guide beyond what the three-place account and
+    the corrected sentences need.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-xxi
+    contract: >-
+      The live-database lane as built: its triggers, the whole-folder selection, the
+      retry-once and verdict, the did-not-complete and skip-is-not-pass endings, and the
+      unchanged Proof-of-done check, so the prose describes what runs.
+  - ac_id: TQ-600a-13
+    contract: >-
+      The settled outcome for the expensive-test suffix (real exclusion with a named
+      opt-in, or a convention with no collection effect), so the corrected sentences state
+      the true position rather than deleting the claim.
+test_required: false
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY ONE DOCUMENTATION RECORD CARRIES BOTH CONTRACTS. TQ-600a-13 and TQ-600a-13-xxi each
+  hand documentation-expert prose in the same two guides, in the same passages (which tests
+  each run executes). Two records editing the same sentences in sequence would race each
+  other; one record states the end state both need. Until this record, TQ-600a-13's
+  documentation-expert contract had no consuming record in the folder.
+
+  ORDERING. The suffixed-test clause can only be written once TQ-600a-13 has settled its
+  outcome; the live-database clauses once TQ-600a-13-xxi is built. depends_on carries both.

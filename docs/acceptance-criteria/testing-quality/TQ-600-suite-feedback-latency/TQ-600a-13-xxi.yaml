@@ -1,0 +1,338 @@
+id: TQ-600a-13-xxi
+components:
+  - testing_quality
+  - knowledge_management
+title: "The post-merge run executes every live-database test against a disposable database after every merge and heartbeat, and a twice-failing one makes the run red"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the live-database tests — the tests that exercise publication, reclamation and the
+    capacity gate against a real graph database and skip when none is reachable — which
+    today execute against a database in exactly one place: the pull request's Proof-of-done
+    check, and there only the subset covering the acceptance criteria that pull request
+    changes,
+  And that the per-PR test shards start no database, so those tests skip there, and the
+    post-merge run of TQ-600a-13-ii executes only the correctness lane and starts no
+    database either,
+  And therefore that once the pull request marking a live-database criterion done has
+    merged, no later run executes its test against a database, so a later change that
+    breaks publication, reclamation or the capacity gate against a real database merges
+    unnoticed,
+  When a commit lands on the main branch, or the post-merge heartbeat fires, or a person
+    starts the post-merge run by hand,
+  Then the same post-merge run, under the same triggers and the same coalescing as
+    TQ-600a-13-ii, also executes a live-database lane: it starts the same disposable
+    graph-database instances, of the same database version and on the same addresses, that
+    the Proof-of-done check starts, and executes every test in the live-database test
+    folder against them — the whole folder, not only the tests of recently changed
+    criteria, including any test in that folder the default run would otherwise deselect,
+  And when some live-database tests fail on the first execution, exactly those tests are
+    executed again — each once, and no test that passed — on a fresh machine that starts
+    its own fresh disposable database instances and receives nothing from the first
+    execution except the list of tests to re-execute,
+  And a live-database test that fails on both executions makes the post-merge run red, and
+    the run's result names that test by its full node id and as belonging to the
+    live-database lane,
+  And a live-database test that fails and then passes does not by itself make the run red,
+    and is named as passed-on-retry exactly as a correctness-lane test is, for
+    TQ-600a-13-xiii to track,
+  And the post-merge run is green only when both the correctness lane and the
+    live-database lane are green, so a red live-database lane holds pull requests through
+    the same `Post-merge suite status` verdict the correctness lane feeds, with no second
+    hold check,
+  And the live-database lane's population is collected afresh on every run from the
+    folder itself, never from a stored list, so a live-database test added to the folder
+    after this change is executed by the next post-merge run with no other edit,
+  And adding this lane changes neither the correctness lane's own selection nor the
+    timing lane's, and the partition of TQ-600a-13-xii — every test collected by exactly
+    one of the default run, the correctness lane and the timing lane — still holds with the
+    live-database lane not counted as a fourth member of it, because the live-database lane
+    re-executes default-run tests with a database present rather than taking them out of
+    the default run,
+  And each of these outcomes is demonstrated by executing the lane's selection, retry and
+    verdict behaviour against a synthetic population of live-database tests made to pass,
+    fail, or fail-then-pass against a real disposable database, with the first execution
+    and the retry run as two separate jobs that share only the handed-over list, never by
+    reading the workflow definition for a service, a trigger or a selection.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-v
+  - TQ-600a-13-xii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The post-merge run this lane joins: triggers, coalescing, the retry-once on a fresh
+      machine, and the verdict whose conclusion the hold reads. This record reuses all four
+      and redefines none.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines the exactly-one partition over default run, correctness lane and timing lane.
+      Read literally ("none by two"), adding a lane that re-executes default-run tests would
+      violate it; this record states the partition is over those three sets only. See
+      notes — TQ-600a-13-xii's wording may want an amendment by its owner.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xiii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The pass-on-retry tracking that live-database passed-on-retry results feed.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      One of the live-database criteria whose tests this lane re-executes after merge
+      (publication). KM-400f-2, -3 and -4 (reclamation, headroom gate, status/reclaim) are
+      the others named in the request.
+  - path: .github/workflows/post-merge-suite.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The post-merge run that gains the live-database lane.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the Proof-of-done check starts the disposable graph-database instances this
+      lane must match (version and addresses). Read, not edited, by this record — see
+      TQ-600a-13-xxiv.
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Describes the post-merge cadence and its lanes. Not edited by this record: the
+      prose that gains the live-database lane is documentation-expert's, in
+      TQ-600a-13-xxvi (see delivers_to).
+  - path: scripts/ci/post_merge_suite.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The run / retry / verdict module the workflow calls. The live-database lane's
+      execution, its retry hand-over and the combined verdict are decided here, never in
+      workflow YAML (TQ-600a-13-ii family architecture).
+  - path: tests/knowledge_live/
+    relationship: describes
+    status: exists
+    relevance: >-
+      The live-database test folder: the lane's whole population, collected from the folder
+      on every run (nine test modules at enrichment, six of them under publication/).
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Proof-of-done selector that today is the only place these tests meet a database.
+      Read, never edited, by this record (TQ-600a-13-xxiv keeps it unchanged).
+  - path: scripts/suite_performance/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Explains the `manual` / `timing_ratio` deselection in pytest.ini's addopts that the
+      lane's selection must override to execute the whole folder.
+declared_files:
+  - path: .github/workflows/post-merge-suite.yml
+    state: existing
+  - path: scripts/ci/post_merge_suite.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT CONFIRMED: python-coder. The surfaces are a scripts/ci/ module and the workflow
+    that calls it; no agent in config/agent_registry.json owns GitHub Actions YAML, and every
+    record of this family that edits a post-merge workflow assigns python-coder
+    (TQ-600a-13-ii). All decision logic — selection, retry list, per-lane verdict, combined
+    verdict — stays in scripts/ci/; workflow steps only prepare the environment and invoke
+    the module.
+  - >-
+    THE DATABASES MATCH PROOF-OF-DONE EXACTLY, AND MUST NOT DRIFT FROM IT. The Proof-of-done
+    job in .github/workflows/ci.yml (job id `done-proof`) starts three `neo4j:5.26-community`
+    service instances — knowledge-retrieval on host port 17687, knowledge-domain on 18087,
+    knowledge-native on 18088, each mapped to 7687, with its own NEO4J_AUTH test credential
+    and the same heap / page-cache settings — and sets no address variables, so the tests
+    reach them at their default addresses. The lane's first execution and its retry each
+    start the same three instances: same image tag, same host ports, same credentials, same
+    memory settings. Whether that is achieved by one shared definition or by two identical
+    copies is the implementer's choice, but a change to one that is not made to the other
+    is a defect; record the choice in notes. Do not edit the `done-proof` job as a side
+    effect (TQ-600a-13-xxiv).
+  - >-
+    THE CREDENTIALS STAY NON-SECRET LITERALS. The three NEO4J_AUTH values are disposable
+    test credentials already written in ci.yml. The lane must not introduce a `secrets.`
+    reference or a write-scoped token; every job of post-merge-suite.yml keeps the
+    `contents: read` (plus `actions: read` on the verdict job) permissions TQ-600a-13-ii
+    set.
+  - >-
+    THE POPULATION IS THE FOLDER, COLLECTED FRESH, AND THE DEFAULT DESELECTION IS
+    OVERRIDDEN. The lane collects `tests/knowledge_live/` (the folder path is the only
+    pinned input — never a hard-coded list of modules or node ids, never a stored list).
+    pytest.ini's addopts carries `-m "not manual and not timing_ratio"`, so the lane must
+    pass a command-line marker expression that selects every test in the folder (the
+    suite-performance guide documents `-m "manual or not manual"` as the collect-everything
+    form; a timing_ratio-marked test in the folder must be included too). The same marker
+    override must be carried by the retry: TQ-600a-13-ii measured that re-running node ids
+    without the opt-in marker reports "deselected" and executes nothing.
+  - >-
+    A LIVE-LANE TEST MISSING FROM THE RETRY REPORT IS FAILED ON BOTH EXECUTIONS. As for the
+    correctness lane, the retry outcome is read per node id from the retry's own per-test
+    report; an id absent from it is never passed-on-retry.
+  - >-
+    THE LIVE LANE IS ITS OWN JOBS, SEPARATE FROM THE CORRECTNESS LANE'S. The live first
+    execution and the live retry run as jobs of their own (job names indicative: `live run`,
+    `live retry`), each on a fresh runner with its own database start-up, its own checkout
+    and build, and the same strict run conditions as TQ-600a-13-ii (`AC_ENFORCE_STRICT=1`,
+    dev dependencies, `python scripts/build.py --target-dir .`). The live retry receives
+    only the list of live first-run failures as a named artifact. Separation is required so
+    that a database that fails to start cannot take the correctness lane's report down with
+    it, and so that the verdict job can attribute a failure to the right lane
+    (TQ-600a-13-xxii). The existing verdict job gains the live jobs as dependencies and
+    keeps running always.
+  - >-
+    ONE COMBINED VERDICT, ONE RUN CONCLUSION, NO SECOND HOLD CHECK. The run's verdict is
+    green only when both lanes are green; did_not_complete when either lane did not complete
+    (TQ-600a-13-v ordering: did-not-complete outranks red); otherwise red. The existing
+    `Verdict: red` / `Verdict: did not complete` steps and the run conclusion continue to
+    carry the combined verdict, so `Post-merge suite status` (TQ-600a-13-vi) needs no change
+    to hold on a red live lane.
+  - >-
+    THE VERDICT ARTIFACT KEEPS EVERY EXISTING FIELD'S MEANING. Existing consumers (notice
+    -iii, fix proof -xvi, pass-on-retry window -xiii, demotion counter -x) read top-level
+    `verdict`, `stage`, `failing`, `passed_on_retry`. Top-level `verdict` / `stage` become
+    the combined verdict; top-level `failing`, `first_run_failures`, `passed_on_retry` and
+    `collected_ids` stay CORRECTNESS-LANE ONLY, so the fix proof of -xvi, unchanged, never
+    executes a live-database test without a database (until TQ-600a-13-xxv lands, a fix for
+    a live-only red run selects nothing, which -xvi already judges as not proven — the
+    conservative direction). The live lane's results go in a new object (see delivers_to);
+    bump `schema_version` and update every reader in the same change.
+  - >-
+    PASS-ON-RETRY TRACKING COVERS THE LIVE LANE. The live lane's `passed_on_retry` ids feed
+    the same five-run window and escalation of TQ-600a-13-xiii as the correctness lane's,
+    computed in the same verdict job; a node id that appears in both lanes is tracked per
+    lane, never double-counted.
+  - >-
+    THE CORRECTNESS AND TIMING SELECTIONS ARE UNTOUCHED. The correctness lane's command
+    (`-m "manual and not timing_ratio" tests/ unit_tests/`) and post-merge-timing.yml are not
+    edited. The TQ-600a-13-xii partition check, if it enumerates lanes, must treat the live
+    lane as a re-execution of default-run tests and not as a fourth partition member.
+  - >-
+    BOUNDED TIME. Each live job carries an explicit `timeout-minutes` no greater than three
+    times its measured cost (TQ-600a-13-ii rule). Measure the live run job's wall clock
+    (database start-up plus the folder) from the first live run and record it in notes
+    with the timeout chosen.
+  - >-
+    THE DEFAULT-RUN TESTS OF THIS RECORD STAY INSIDE THE FAMILY BUDGET. The family's
+    default-run test budget is under 15 s total (TQ-600a-13-ii); this record's default-run
+    share must not exceed about 1.5 s and must start no build and call no GitHub. Any
+    execution against a real database cannot happen in the per-PR shards, which start no
+    database; where it does execute must be stated by the test design, and it must never
+    skip silently into a pass.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-xxii
+    contract: >-
+      The live-database lane's first execution, retry and verdict, onto which TQ-600a-13-xxii
+      adds the database-never-healthy ending.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xxiii
+    contract: >-
+      The live-database lane's per-test results, from which TQ-600a-13-xxiii refuses to read
+      a skip as a pass.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xxiv
+    contract: >-
+      A post-merge live-database lane whose three neo4j:5.26-community instances use the
+      same host ports (17687, 18087, 18088), credentials and memory settings as the
+      `done-proof` job of .github/workflows/ci.yml, delivered without any edit to what that
+      job selects, which services it starts, or how it judges.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xxv
+    contract: >-
+      The `post-merge-verdict` artifact (schema_version incremented from 2) carrying, beside
+      the unchanged correctness-lane fields, an object `live_database`: `verdict` ("green" |
+      "red" | "did_not_complete"); `stage` (null unless did_not_complete; values added by
+      TQ-600a-13-xxii and -xxiii); `collected` (int >= 0); `collected_ids`,
+      `first_run_failures`, `failing`, `passed_on_retry` (sorted lists of full node ids);
+      `skipped` (list of {`id`: str, `reason`: str}, other-reason skips per -xxiii);
+      `unreachable_skips` (sorted list of node ids that skipped for no reachable
+      database); `run_runner`, `retry_runner` (str | null). Top-level `verdict` and `stage`
+      are the combined verdict. Also the lane's database start-up (the three instances) for
+      the proof run to reuse, defined so the proof cannot drift from it.
+  - agent: documentation-expert
+    ac_id: TQ-600a-13-xxvi
+    contract: >-
+      In the same change that lands this lane, docs/testing/README.md and
+      scripts/suite_performance/README.md state that the live-database tests run after every
+      merge to main and on the heartbeat against disposable databases, that a red
+      live-database lane holds pull requests through `Post-merge suite status`, and that the
+      Proof-of-done check still runs the changed criteria's live tests on the pull request.
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The post-merge run, its coalescing, the separate retry job fed only a failure list,
+      and the verdict whose conclusion is the run history the hold reads.
+  - ac_id: TQ-600a-13-v
+    contract: >-
+      The rule that only a complete, non-empty, error-free execution can be green.
+test_intent:
+  - clause: 'the same post-merge run, under the same triggers and the same coalescing as TQ-600a-13-ii, also executes a live-database lane: it starts the same disposable graph-database instances, of the same database version and on the same addresses, that the Proof-of-done check starts, and executes every test in the live-database test folder against them — the whole folder, not only the tests of recently changed criteria, including any test in that folder the default run would otherwise deselect'
+    needs_test: true
+    reason: A selection that keeps pytest.ini's default deselection or narrows to changed criteria would silently drop live tests, so the executed population must be observed.
+  - clause: 'when some live-database tests fail on the first execution, exactly those tests are executed again — each once, and no test that passed — on a fresh machine that starts its own fresh disposable database instances and receives nothing from the first execution except the list of tests to re-execute'
+    needs_test: true
+    reason: A retry that drops the opt-in marker executes nothing, and TQ-600a-13-ii measured exactly that failure, so the re-executed set must be observed.
+  - clause: 'a live-database test that fails on both executions makes the post-merge run red, and the run''s result names that test by its full node id and as belonging to the live-database lane'
+    needs_test: true
+    reason: The red verdict and the lane attribution are computed by the verdict job, and a wrong merge of lanes would hide or misattribute the failure.
+  - clause: 'a live-database test that fails and then passes does not by itself make the run red, and is named as passed-on-retry exactly as a correctness-lane test is, for TQ-600a-13-xiii to track'
+    needs_test: true
+    reason: Classifying fail-then-pass is verdict logic that could wrongly turn the run red or drop the id from the pass-on-retry window.
+  - clause: 'the post-merge run is green only when both the correctness lane and the live-database lane are green, so a red live-database lane holds pull requests through the same `Post-merge suite status` verdict the correctness lane feeds, with no second hold check'
+    needs_test: true
+    reason: The combined verdict is the one input the hold reads, so a combination that ignores the live lane would release every held pull request.
+  - clause: 'the live-database lane''s population is collected afresh on every run from the folder itself, never from a stored list, so a live-database test added to the folder after this change is executed by the next post-merge run with no other edit'
+    needs_test: true
+    reason: A hard-coded or cached list would pass today and silently miss the next test added, which only a run with a newly added test reveals.
+  - clause: 'adding this lane changes neither the correctness lane''s own selection nor the timing lane''s, and the partition of TQ-600a-13-xii — every test collected by exactly one of the default run, the correctness lane and the timing lane — still holds with the live-database lane not counted as a fourth member of it, because the live-database lane re-executes default-run tests with a database present rather than taking them out of the default run'
+    needs_test: true
+    reason: A partition check that enumerates every post-merge lane would turn red on the overlap, and a changed correctness selection would shift tests between lanes unnoticed.
+  - clause: 'each of these outcomes is demonstrated by executing the lane''s selection, retry and verdict behaviour against a synthetic population of live-database tests made to pass, fail, or fail-then-pass against a real disposable database, with the first execution and the retry run as two separate jobs that share only the handed-over list, never by reading the workflow definition for a service, a trigger or a selection'
+    needs_test: false
+    reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE FOLDER. The request names it as tests/knowledge_live/ (nine test modules at authoring,
+  including the publication/ subfolder). The criteria say "the live-database test folder"
+  so the record survives a rename; the IT PO should pin the selection to the folder, never
+  to a hard-coded list.
+
+  WHY ONE VERDICT, AND THE CONSEQUENCE STATED PLAINLY. The request says the lane's failures
+  go "through the suite's existing retry-once and verdict mechanism". The existing verdict is
+  the one the per-PR `Post-merge suite status` hold reads (TQ-600a-13-vi). So a red
+  live-database lane holds every open pull request until it is fixed or a declared fix proves
+  itself (TQ-600a-13-viii, -xvi; see TQ-600a-13-xxv). That is the intended alarm, but it is a
+  wider blast radius than "report the failure", and the owner should confirm it before the
+  hold is made required (TQ-600a-13-x's rollout).
+
+  THE PARTITION CLAUSE. TQ-600a-13-xii says every test is collected by exactly one of three
+  sets, "none by two". The live-database lane collects default-run tests a second time. This
+  record does not edit -xii (a BA never modifies another run's record); it scopes the
+  partition explicitly and flags that -xii may want a one-line amendment.
+
+  RUNNER COST. The live-database lane adds a database start-up and nine modules to each
+  coalesced run. Measure it at sign-off and record it here; the job timeout follows
+  TQ-600a-13-ii's "no more than three times its measured cost" rule.

@@ -1,0 +1,194 @@
+id: TQ-600a-13-xxii
+components:
+  - testing_quality
+  - knowledge_management
+title: "A live-database lane whose database never became healthy is reported as did-not-complete, never as green and never as test failures"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the live-database lane of TQ-600a-13-xxi, which starts disposable graph-database
+    instances before it executes any test,
+  And the failure class TQ-600a-13-v already refuses for the correctness lane — a run that
+    broke before it tested anything being read as a run with no failures — which here takes
+    two further forms: a database that never starts reads as "nothing failed", or every
+    test erroring on connection reads as a list of genuine regressions,
+  When any of the disposable database instances does not report healthy within the lane's
+    start-up time limit — on the first execution or on the retry's fresh machine — or
+    reports healthy and then cannot be connected to by the first test,
+  Then the post-merge run is not green, and its verdict is did-not-complete with the stage
+    named as the live-database start-up, worded differently from both a test failure and
+    the correctness lane's own did-not-complete stages,
+  And no live-database test is reported as failing by node id for that run, so the notice,
+    the held pull request's comment and the hold's output say "the live-database tests
+    never ran" and never show a "failing tests" heading over connection errors,
+  And a database that fails to become healthy only on the retry's fresh machine makes the
+    run did-not-complete, never green and never "passed on retry",
+  And the notice lifecycle treats this ending as TQ-600a-13-v treats every did-not-complete
+    ending: it raises the notice when none is open, updates the open one otherwise, closes
+    no notice and lifts no hold,
+  And a correctness lane that was green in the same run does not turn the run green while
+    the live-database lane did not complete,
+  And each of these is demonstrated by producing the ending — a database instance that is
+    started and never answers, and one that answers its health probe and then refuses the
+    first connection — and observing the verdict, its stage and the notice write, never by
+    reading the workflow's health-check settings.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-v
+  - TQ-600a-13-xxi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-v.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The did-not-complete rules and stage vocabulary this record extends with one stage
+      for the live-database start-up. The distinct-wording contract carries over.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The lane whose database start-up this record judges.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The notice lifecycle that consumes the did-not-complete verdict and its stage.
+  - path: .github/workflows/post-merge-suite.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The live jobs whose database start-up (first execution and retry) can fail before any
+      test runs.
+  - path: scripts/ci/post_merge_suite.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The verdict classifier that gains the live-database start-up stage.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The `done-proof` job's service health checks (cypher-shell `RETURN 1`, 10 s interval,
+      12 retries) — the start-up the live lane copies, and so the limit a never-healthy
+      instance runs into.
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The `Post-merge suite status` hold-message table whose did-not-complete wording this
+      ending must stay distinct within.
+declared_files:
+  - path: scripts/ci/post_merge_suite.py
+    state: existing
+  - path: .github/workflows/post-merge-suite.yml
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    AGENT CONFIRMED: python-coder (scripts/ci/ module plus workflow glue, as TQ-600a-13-v).
+  - >-
+    ONE NEW STAGE VALUE, NAMED ONCE. Add one did_not_complete stage for the live-database
+    start-up (indicative `live_database_startup`) to the stage vocabulary of TQ-600a-13-v,
+    defined in the single place that vocabulary lives today and rendered by every reader of
+    it. It must not reuse `setup` or any other existing stage, and its human wording must
+    say the live-database tests never ran. Applies equally when the failure is on the live
+    first execution or on the live retry.
+  - >-
+    WHO OBSERVES THE ENDING. A service container that never reports healthy fails the job
+    during container initialisation, before any step runs, so no module in that job can
+    record anything: the verdict job must attribute the stage from the live job's result
+    plus the absence of its report, which is only possible because the live lane runs in
+    its own jobs (TQ-600a-13-xxi). That a failed service health check ends the job before
+    its first step is UNVERIFIED for this repository — record it once from a real run in
+    notes. "Healthy, then refuses the first connection" is observed inside the job: the lane
+    must establish that every instance accepts a connection before it executes any test,
+    and record a failed reachability result in its report so the verdict job reads
+    `live_database_startup` and not a list of connection errors.
+  - >-
+    NO NODE IDS FOR THIS ENDING. When the stage is the live-database start-up, the live
+    lane's `failing` list in the verdict artifact is empty and no consumer prints a
+    "failing tests" heading for that run, whatever the per-test report would otherwise
+    contain.
+  - >-
+    THE HOLD'S WORDING NEEDS THE STAGE WITHOUT THE NOTICE. Today the hold (TQ-600a-13-vi)
+    distinguishes red from did-not-complete from the verdict job's step names alone and does
+    not read the artifact. To say "the live-database tests never ran" in the hold's output
+    and its pull-request comment, the hold must learn this stage by a read that does not
+    depend on the notice write succeeding (TQ-600a-13-ii rule). The mechanism is the
+    implementer's choice; likely surfaces, to confirm against source: scripts/ci/
+    post_merge_hold.py and its wording helper, and scripts/ci/post_merge_notice.py's
+    renderer. Any file actually changed is added to declared_files.
+  - >-
+    NOTICE LIFECYCLE UNCHANGED. The new stage enters the notice through the existing
+    did-not-complete path: raise when none is open, update the open one, close nothing, lift
+    no hold. No new branch in the lifecycle.
+  - >-
+    "PRODUCED, NOT SIMULATED" — WHERE IT IS CHEAP AND WHERE IT IS NOT. A database address
+    that never answers and a listener that accepts the health probe then refuses the next
+    connection can both be produced locally without a real graph database. A service
+    container failing its health check during job initialisation is an event of the hosting
+    service and cannot be produced in the unit layer; there the honest form is to execute
+    the verdict job's real steps with the dependency results and missing report the runner
+    would give it, stated as a substitution.
+  - >-
+    TEST COST: under 0.5 s of the family's 15 s default-run budget; no build, no GitHub, no
+    real graph database in the default run.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-xxi
+    contract: >-
+      The live-database lane with its own database start-up on the first execution and on
+      the retry.
+  - ac_id: TQ-600a-13-v
+    contract: >-
+      The did-not-complete classifier and stage vocabulary.
+test_intent:
+  - clause: 'the post-merge run is not green, and its verdict is did-not-complete with the stage named as the live-database start-up, worded differently from both a test failure and the correctness lane''s own did-not-complete stages'
+    needs_test: true
+    reason: A start-up failure read as nothing failed would report green, so the verdict and its distinct stage must be observed for the produced ending.
+  - clause: 'no live-database test is reported as failing by node id for that run, so the notice, the held pull request''s comment and the hold''s output say "the live-database tests never ran" and never show a "failing tests" heading over connection errors'
+    needs_test: true
+    reason: Connection errors listed as regressions is the second misleading form this record exists to prevent, and only rendered output shows it.
+  - clause: 'a database that fails to become healthy only on the retry''s fresh machine makes the run did-not-complete, never green and never "passed on retry"'
+    needs_test: true
+    reason: A retry job that executed nothing could be read as zero remaining failures and so as passed on retry.
+  - clause: 'the notice lifecycle treats this ending as TQ-600a-13-v treats every did-not-complete ending: it raises the notice when none is open, updates the open one otherwise, closes no notice and lifts no hold'
+    needs_test: true
+    reason: A new stage value that the notice does not recognise could fall into a close or no-op branch, which only the notice write plan reveals.
+  - clause: 'a correctness lane that was green in the same run does not turn the run green while the live-database lane did not complete'
+    needs_test: true
+    reason: Combining lanes is verdict logic where a wrong precedence would let the green lane win.
+  - clause: 'each of these is demonstrated by producing the ending — a database instance that is started and never answers, and one that answers its health probe and then refuses the first connection — and observing the verdict, its stage and the notice write, never by reading the workflow''s health-check settings'
+    needs_test: false
+    reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY "HEALTHY, THEN REFUSES" IS ITS OWN CASE. A health probe that passes proves the probe
+  passed. A test session that cannot connect after a green probe (wrong port mapping, auth
+  mismatch, a container that restarted) would otherwise surface as N connection errors read
+  as N regressions — the opposite failure of "never started reads green", and equally
+  misleading. Both forms end as did-not-complete.
+
+  NO DELIVERS_TO, DELIBERATELY. The notice of TQ-600a-13-iii consumes this ending through
+  the did-not-complete verdict and stage vocabulary it already reads from TQ-600a-13-v; it
+  gains one stage value, not a new contract. This record therefore declares no delivers_to
+  (TQ-600a-13-iii, an approved record of an earlier run, does not and need not name this
+  one in its expects_from). The notice-side wording is stated in this record's own criteria.
+
+  "PRODUCED, NOT SIMULATED" — the IT PO should state, as TQ-600a-13-v does, which of these
+  endings can be produced in the unit layer (a database address that never answers is cheap)
+  and which only through served conclusions.

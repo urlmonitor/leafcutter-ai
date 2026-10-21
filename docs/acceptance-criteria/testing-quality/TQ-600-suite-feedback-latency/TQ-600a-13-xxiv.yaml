@@ -1,0 +1,153 @@
+id: TQ-600a-13-xxiv
+components:
+  - testing_quality
+  - knowledge_management
+title: "The pull request's Proof-of-done check still runs the live-database tests of the criteria that pull request changes, unchanged by the post-merge lane"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that today the pull request's Proof-of-done check starts disposable graph-database
+    instances and executes the live-database tests covering the acceptance criteria that
+    pull request changes, so a criterion cannot be merged as done until its live-database
+    test has passed against a real database,
+  And the owner's decision that this stays: the post-merge live-database lane of
+    TQ-600a-13-xxi is added on top of it, not instead of it, because moving the proof to
+    after merge would let a criterion merge as done with its live-database test never
+    having passed,
+  When a pull request changes a live-database criterion to done and the Proof-of-done check
+    runs on it, both before and after the live-database lane is added to the post-merge run,
+  Then the Proof-of-done check starts the same disposable database instances and executes
+    the same live-database tests — those covering the changed criteria, and no others — as
+    it did before the lane was added,
+  And its pass or fail outcome for that pull request is the same as before the lane was
+    added: a criterion whose live-database test fails still blocks the pull request,
+  And the Proof-of-done check never reads the post-merge lane's verdict, so a green
+    post-merge live-database lane cannot stand in for a criterion's own proof, and a red one
+    does not change the Proof-of-done outcome of an unrelated pull request (that is the
+    hold's job, through `Post-merge suite status`),
+  And a pull request that changes no live-database criterion starts no database in its
+    Proof-of-done check, as before,
+  And this is demonstrated by executing the Proof-of-done selection on two recorded pull
+    requests — one changing a live-database criterion to done, one changing none — and
+    comparing the tests selected and the outcome with the same pull requests judged before
+    the change, never by reading the workflow file for a service definition.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-xxi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The post-merge lane added on top of the Proof-of-done path this record keeps.
+  - path: .github/workflows/ci.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Proof-of-done job and its disposable database instances. This record forbids
+      changing what that job selects or how it judges as a side effect of adding the lane.
+  - path: scripts/commit_guardian/check_done_proof.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Proof-of-done selector and judge, run by the `done-proof` job as
+      `check_done_proof.py --mode ci-changed --base origin/<base> --test-root .`. Its
+      selection (covering tests of the changed criteria only) and its outcome are what this
+      record pins as unchanged.
+  - path: tests/knowledge_live/
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the live-database tests that cover live-database criteria live.
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      States where each kind of test runs; TQ-600a-13-xxvi adds that Proof-of-done keeps
+      running the changed criteria's live tests.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    AGENT CONFIRMED: python-coder. This is a regression guard on a Python selector
+    (scripts/commit_guardian/check_done_proof.py) and the CI job that calls it; nothing in
+    it is prompt or prose.
+  - >-
+    NO EDIT TO THE PROOF-OF-DONE PATH IS EXPECTED. The `done-proof` job in
+    .github/workflows/ci.yml and scripts/commit_guardian/check_done_proof.py stay byte-
+    identical unless the implementer of TQ-600a-13-xxi chooses a shared database definition;
+    if it does, the shared definition must reproduce today's three instances exactly
+    (neo4j:5.26-community; knowledge-retrieval 17687, knowledge-domain 18087,
+    knowledge-native 18088, each to 7687; the same NEO4J_AUTH credentials, heap and
+    page-cache settings and health checks) and this record's comparison must be re-run
+    against it. Proof-of-done is a required check (`Proof-of-done` in the main ruleset), so
+    any breakage blocks every merge.
+  - >-
+    THE COMPARISON IS AGAINST A RECORDED BASELINE, NOT AGAINST ITSELF. "As before" means
+    the selection and outcome produced by the selector at the commit before TQ-600a-13-xxi
+    lands, captured once for the two recorded pull requests and kept as fixed evidence. A
+    comparison of the post-change selector with itself proves nothing.
+  - >-
+    THE POST-MERGE VERDICT IS NOT AN INPUT. The Proof-of-done selector must not read the
+    `post-merge-verdict` artifact, the post-merge run history or the `Post-merge suite
+    status` check; any such read added by the lane work is a defect.
+  - >-
+    OPEN POINT — "STARTS NO DATABASE ... AS BEFORE" DOES NOT MATCH TODAY'S JOB. The
+    `done-proof` job declares its three database services at job level with no condition,
+    so today they start for EVERY pull request, including one that changes no live-database
+    criterion. Read literally, the clause would require changing the job, which the rest of
+    this record forbids. Until the owner settles it (see caveat raised at enrichment), the
+    implementer keeps today's behaviour — the databases start for every pull request — and
+    treats "as before" as the governing word; no change to service start-up is made under
+    this record.
+  - >-
+    TEST COST: the selection and judgement run in-process against two recorded pull-request
+    diffs; under 0.5 s in the default run, no build, no GitHub. The live-database test that
+    the changed criterion's proof executes needs a database and is not part of this
+    record's default-run cost.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-xxi
+    contract: >-
+      A post-merge live-database lane that shares the Proof-of-done check's database version
+      and addresses without changing the Proof-of-done check itself.
+test_intent:
+  - clause: 'the Proof-of-done check starts the same disposable database instances and executes the same live-database tests — those covering the changed criteria, and no others — as it did before the lane was added'
+    needs_test: true
+    reason: Lifting the database start-up or the selection into shared code is the cheapest way to change what Proof-of-done selects, and only a comparison with the recorded baseline shows it.
+  - clause: 'its pass or fail outcome for that pull request is the same as before the lane was added: a criterion whose live-database test fails still blocks the pull request'
+    needs_test: true
+    reason: A refactor that turns a failing live proof into a skip or a pass would let a criterion merge as done unproven.
+  - clause: 'the Proof-of-done check never reads the post-merge lane''s verdict, so a green post-merge live-database lane cannot stand in for a criterion''s own proof, and a red one does not change the Proof-of-done outcome of an unrelated pull request (that is the hold''s job, through `Post-merge suite status`)'
+    needs_test: true
+    reason: A selector that consults the post-merge verdict would change outcomes with no change to the pull request, which only varying that verdict reveals.
+  - clause: 'a pull request that changes no live-database criterion starts no database in its Proof-of-done check, as before'
+    needs_test: true
+    reason: Whether databases start for a pull request with no live criterion is observable job behaviour, though today they start unconditionally, so the clause awaits the owner's reading of as before.
+  - clause: 'this is demonstrated by executing the Proof-of-done selection on two recorded pull requests — one changing a live-database criterion to done, one changing none — and comparing the tests selected and the outcome with the same pull requests judged before the change, never by reading the workflow file for a service definition'
+    needs_test: false
+    reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY A REGRESSION RECORD AT ALL. The cheapest way to implement TQ-600a-13-xxi is to lift the
+  database start-up out of the Proof-of-done job into something shared — and the cheapest way
+  to break the Proof-of-done path is that same refactor. The user answered the question
+  explicitly ("If that's easily possible, yes" to keeping Proof-of-done's live run); this
+  record makes that answer checkable rather than a remembered intention.
+
+  If keeping the two database start-ups identical turns out to need a shared definition,
+  that is fine — the criterion is about what Proof-of-done selects and decides, not about
+  whether the start-up is duplicated.
