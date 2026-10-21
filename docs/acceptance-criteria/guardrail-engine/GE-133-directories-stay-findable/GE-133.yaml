@@ -62,7 +62,7 @@ doc_links:
     relevance: >-
       FENCED OFF. GE-120h-5 owns what a crowded-directory refusal names as help. No
       record under this goal takes a position on refusal wording.
-  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-20260909-gate-folder-density.md
     relationship: context
     status: exists
   - path: docs/pre-commit-hooks.md

@@ -6,7 +6,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -82,10 +82,28 @@ amended_by:
     more cautious outlier left behind by GE-127d-2's own gate, which declined to
     flip a composite parent as out of its own scope. Applying the same
     precedent here.
+- reason: add-children-measure-is-comment-blind
+  by: business-analyst
+  at: '2026-10-16'
+  note: >-
+    covered_by gained GE-127d-3, GE-127d-4 and GE-127d-5 (5 of 5 L2s; no headroom
+    remains under this L1), and work_status is reopened done -> todo in the same
+    commit so the falsely-done-composite shape (ACD-400a) is not staged. Title,
+    criteria, req_status and depends_on are unchanged. Cause: two open high KIs on
+    the shared length measure (KI-CG-20261013 comment style games the measure;
+    KI-CG-20261009 a /* inside a string opens a false block comment) showed the
+    quoted number is neither style-independent nor reproducible from the published
+    rule. BrainCandy decided 2026-10-16 that no comment counts toward a file's
+    length in any style, stripped by a per-language tokenizer, docstrings uncounted,
+    blank lines kept counted. Hosted here rather than as an eighth L1 because GE-127
+    is at its 7-L1 cap and this is GE-127d's own promise.
 superseded_by: null
 covered_by:
   - GE-127d-1
   - GE-127d-2
+  - GE-127d-3
+  - GE-127d-4
+  - GE-127d-5
 implemented_by: []
 change_target:
   - code

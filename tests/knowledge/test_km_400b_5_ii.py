@@ -47,7 +47,7 @@ class ReadOnlyDouble(FailureDouble):
         self.engaged = False
         self.refused = []
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         from knowledge.errors import BackendUnavailable
 
         if 'g.status="failed"' in statement:

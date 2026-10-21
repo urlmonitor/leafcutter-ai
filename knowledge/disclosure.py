@@ -96,7 +96,7 @@ def finalize(
                         "used_bytes": projected,
                         "used_candidates": candidates,
                         "spent_ms": spent,
-                        "expires": state.get("expires", time.time() + 3600),
+                        "expires": state.get("expires", time.time() + cursors.CONTINUATION_LIFETIME_SECONDS),
                     },
                     cursor_secret,
                 )
@@ -299,6 +299,7 @@ def _field_derivations(fields: list[str]) -> dict[str, str]:
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-16 09:00 [python-coder]: Read the continuation lifetime from cursors instead of a literal 3600 (behaviour unchanged). (#KM-400f-2/02)
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
 
 # - 2026-10-09 17:00 [python-coder]: Hydrate only requested additional fields at source disclosure without changing the summary allowlist. (#KM-500/KM-500e-1-i)

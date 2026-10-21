@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f
 criteria: |
   Given the backend reports a capacity ceiling of 200,000 nodes and 400,000 relationships
@@ -89,8 +89,16 @@ amended_by:
     still inherited from KM-400e even though this AC no longer sits under it. readiness
     moved to approved and priority to high at the user's approval gate."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_km_400f_3.py
+- tests/knowledge/test_km_400f_3_retry.py
+- tests/knowledge_live/publication/test_km_400f_3.py
+implemented_by:
+- knowledge/adapters/retention/capacity.py
+- knowledge/adapters/neo4j_projection.py
+- knowledge/adapters/neo4j_backend.py
+- knowledge/cli_sync.py
+- .github/workflows/knowledge-sync.yml
 change_target: code
 risk_surface: contract_boundary
 notes: |

@@ -1,0 +1,104 @@
+id: UXP-590-3-i
+title: "An AC linked from a step but carrying no step claim is reported as unchecked, not as an error"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a fixture flow "leafcutter/fixture-flow" has a step "classify" linking [UXP-531],
+  And UXP-531 names no step it specifies,
+  When the product-truth validator runs,
+  Then it reports no mislink error for UXP-531,
+  And it reports a warning naming UXP-531, the flow and the step as "linked but not checked:
+    no step claim",
+  And its summary states the count of step links that were checked and the count that were
+    not checked, as two separate numbers,
+  And an AC without a step claim is never counted as a checked, matching link.
+depends_on:
+  - UXP-590-3
+doc_links:
+- path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+- path: docs/product-truth/scripts/README.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- An AC is 'unclaimed' only when it carries no specifies_steps key (or an empty list); such a step link
+  is a warning, never an error, and never changes the validator's exit code
+- 'The warning text must contain the AC id, the flow id, the step id and the literal phrase ''linked but
+  not checked: no step claim''; exactly one warning per (flow, step, AC) link'
+- The validator summary must print the checked-link count and the unchecked-link count as two separate
+  numbers, and the same two figures must be available to programmatic callers through the run's check
+  bookkeeping (examined_by_check or an equivalent field of the outcome), not only in printed text
+- An unclaimed link must never be included in the checked count, whatever its outcome
+- Fixture flow 'leafcutter/fixture-flow' and AC UXP-531 exist only in the test's temporary store; the
+  test must not write into the live docs/product-truth or AC store
+delivers_to: null
+expects_from:
+  ac_id: UXP-590-3
+  contract: The step-claim check module and its specifies_steps reader; this AC adds the unclaimed-link
+    warning and the checked/unchecked counts to it
+notes: |
+  Roughly 167 ACs carry a step-level flow link today and none carry a step claim. Failing
+  on a missing claim would block the store on day one; staying silent would present an
+  unchecked link as a correct one. A visible unchecked count is the middle path. The flow
+  and AC ids in the Given are test fixtures, not a claim about the live store.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+- name: test_unclaimed_linked_ac_is_not_reported_as_a_mislink
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Fixture flow step ''classify'' links UXP-531, which has no specifies_steps: asserts no
+    step-claim error names UXP-531.'
+- name: test_unclaimed_linked_ac_warns_linked_but_not_checked
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Asserts exactly one warning naming UXP-531, ''leafcutter/fixture-flow'' and ''classify''
+    with the text ''linked but not checked: no step claim''.'
+- name: test_summary_states_checked_and_unchecked_link_counts_separately
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Fixture with one claimed and one unclaimed link: asserts the summary reports checked =
+    1 and unchecked = 1 as two separate figures.'
+- name: test_unclaimed_link_is_never_counted_as_checked
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: discrimination
+  description: 'Fixture with only unclaimed links: asserts the checked count is 0 and the unchecked count
+    equals the number of links.'
+  must_catch:
+  - count every step link as checked
+  - count an unclaimed link as checked because it produced no error
+- name: test_store_with_only_unclaimed_links_exits_zero
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: boundary
+  description: Runs the validator CLI over a fixture store whose only step-claim findings are unclaimed
+    links and asserts exit 0.

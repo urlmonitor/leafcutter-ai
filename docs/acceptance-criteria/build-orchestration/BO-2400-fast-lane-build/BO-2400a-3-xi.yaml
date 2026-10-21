@@ -1,0 +1,143 @@
+id: BO-2400a-3-xi
+components:
+  - build_orchestration
+  - testing_quality
+title: "A backfill whose tests survive every break, or that has nothing to break, stops the run with a named reason"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given UXP-511 is classified as a test backfill with newly-added tests T1, T2 and T3,
+  When the mutation proof finds T1 and T3 proven, but T2 still reported passed against
+    every broken version tried,
+  Then the run halts before the coder is dispatched and before anything is staged,
+    with reason tests_survive_mutation,
+  And the halt report names T2, UXP-511, and every broken version T2 survived,
+  And T1 and T3 being proven does not change that verdict.
+
+  Given a criterion classified as a test backfill whose newly-added tests exercise no
+    code that existed before this run, because they assert only on values the tests
+    build themselves or on code added during this run,
+  When the mutation proof runs,
+  Then the run halts with reason no_existing_implementation_to_mutate, naming the
+    criterion and its tests, because a test that is green with no implementation behind
+    it proves nothing.
+
+  Given a criterion classified as a test backfill where every broken version leaves
+    its newly-added tests inconclusive (skipped or errored),
+  When the mutation proof runs,
+  Then the run halts with reason mutation_inconclusive, naming each test with its raw
+    outcome under each broken version.
+
+  Given any of these three halts,
+  When the run ends,
+  Then the halt is a structured blocker result of the same shape as the red-baseline
+    halts of BO-2400a-3-i, and the criterion's work_status is unchanged.
+depends_on: [BO-2400a-3, BO-2400a-3-x, BO-2400a-3-i]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The failure angle: a check that can only report clean proves nothing."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mutation_halt_reasons:
+      type: object
+      description: "A mutation_proof halt is {status: 'halted', reason: 'tests_survive_mutation' | 'no_existing_implementation_to_mutate' | 'mutation_inconclusive' | 'mutation_restore_unconfirmed', ac_id: str, tests: [{nodeid: str, outcomes: {<mutation id>: <raw outcome>}}], mutations: [{id, file, line, col, operator, before, after}]}. It also carries every top-level key that a verify_red_baseline halt carries, read from the built gate at build time."
+  reference_file_path: "scripts/build_orchestration/_fl_cli.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "The reason names are a fixed vocabulary that callers and tests can branch on. They are not free text. Define them once as exported constants in scripts/build_orchestration/_fl_mutation_proof.py, and have tests and the workflow branch on those strings."
+    - "Each refusal case needs its own covering test with a real fixture: a vacuous test, a test with no implementation behind it, and a mutation that only breaks import. Together they show the proof can say no."
+    - "Precedence when several reasons apply: (1) mutation_restore_unconfirmed overrides everything. (2) no_existing_implementation_to_mutate is decided before any test runs, when _fl_mutation_gen returns an empty target set for the AC. (3) For each test: one that stayed green in at least one valid run and was never red is a survivor, and any survivor gives tests_survive_mutation. A test with no valid run (inconclusive under every mutant) gives mutation_inconclusive."
+    - "The verdict is per test. One survivor halts the run whatever the other tests show."
+    - "The run stops before the coder is dispatched and before anything is staged. The fast-lane-ship workflow enforces this by treating status 'halted' like the red-baseline halts, which includes the existing release-claims path (BO-2400a-3-xiv). No mark_done runs, so the AC's work_status is unchanged."
+    - "The halt is emitted on stdout as JSON, with the same exit-code convention the other fast_lane.py gate subcommands use for a blocking verdict."
+delivers_to:
+  agent: python-coder
+  contract: "Halt verdict on the mutation_proof stdout (shape as in config_schema_fragment), consumed by the fast-lane-ship workflow halt branch (BO-2400a-3-xiv) and quoted verbatim in the run's blocker result."
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "Per-test mutation outcomes for a backfill AC: tests[].outcomes keyed by mutation id, plus the mutations[] list and the empty-target signal from _fl_mutation_gen."
+test_spec:
+  - name: test_single_surviving_test_halts_tests_survive_mutation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "UXP-511 with T1 and T3 proven and T2 green under every mutant halts with reason tests_survive_mutation."
+    must_catch:
+      - "halt only when every test survives"
+  - name: test_survive_halt_names_test_ac_and_every_survived_mutant
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The halt names T2, UXP-511 and every mutation id T2 survived, each with its raw outcome PASSED."
+  - name: test_proven_siblings_do_not_rescue_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The verdict is the same halt whether T1 and T3 are proven or not. Proven siblings never turn the halt into a pass."
+  - name: test_vacuous_tests_halt_no_existing_implementation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Tests that assert only on values they build, and tests that exercise only code added in this run, halt with no_existing_implementation_to_mutate naming the AC and its tests, before any test run."
+  - name: test_all_inconclusive_halts_mutation_inconclusive_with_raw_outcomes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "When every mutant leaves the tests skipped or errored, the halt is mutation_inconclusive and lists each test's raw outcome under each mutant."
+  - name: test_mutation_halt_shape_matches_red_baseline_halt
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The top-level keys of a mutation halt are a superset of a real verify_red_baseline halt produced by the built gate."
+  - name: test_mutation_halt_leaves_work_status_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "After each of the three halts, the AC YAML file is byte-identical to its pre-run content."
+  - name: test_mutation_halt_via_cli_is_blocking
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Running fast_lane.py mutation_proof as a subprocess on a vacuous-test fixture prints a halted verdict and exits with the gate's blocking exit code."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The second case is the reason the old halt existed. When a test-writer writes tests that
+  pass against nothing, those tests are green at baseline just like real backfill tests.
+  Only the mutation proof tells the two apart, so it must refuse when there is nothing to
+  break and must not take that as a pass.

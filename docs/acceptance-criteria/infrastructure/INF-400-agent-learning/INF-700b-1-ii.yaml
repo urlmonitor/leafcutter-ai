@@ -108,7 +108,8 @@ amended_by:
     at: 2026-08-26
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/03_TICKET-20261016-INF-700b-1-ii.md
 notes: |
   This is the AC that closes the specific way this loop died: the step declares
   itself mandatory and then permits a warning as the exit, so eight weeks of
@@ -117,3 +118,4 @@ notes: |
   step — but fail-open silently is not.
 change_target: prompt
 risk_surface: contract_boundary
+target_epic: EPIC-ALearningAnAgentHasTodayActuallyGets

@@ -62,6 +62,30 @@ DECISION HISTORY:
     as the first two production overrides pending AC-UID-decoupling refactor.
     Schema updated (config/ac_store_schema.json) and reference doc updated
     (docs/reference/ac-schema.md).
+  - 2026-10-15 [python-coder/ACS-900d-4-ii]: The child cap no longer keeps its own
+    ``_SUPERSEDED_STATUSES`` set. A child is left out of the count only when the
+    shared retired-record predicate (scripts/ac_store/ac_retirement.py, reached
+    through _ac_supersession_validators.is_retired_record) says it is retired:
+    superseded status, existing successors, no self-reference. A bogus
+    supersession (missing successor, empty list, itself) is not retired, so it
+    no longer escapes the cap. (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
+  - 2026-10-15 [python-coder/ACS-900d-4-ii]: Two explanatory comments moved here
+    from the code to repay this file's size ratchet. (1) Loader: _load_yaml_data
+    uses the pure-Python yaml.SafeLoader (loader audit, TQ-600a-11 fix-pass,
+    2026-10-07): a parse failure excludes the node from the child-count and
+    tree-limit computation entirely, so a more permissive parser only narrows
+    this gate. This IS a whole-store rglob (_load_ac_store, not staged-only),
+    measured on the real 4766-file store at SafeLoader ~22-36s vs CSafeLoader
+    ~1.9-3.2s across two sittings, so the speed case is real, but it does not
+    change the verdict: criterion 2 (error-path dependence on a skip/accept
+    outcome) disqualifies the fast loader regardless of volume. (2) Id
+    derivation: the helpers mirror scripts/ac_store/ac_parent_id.py inline. A
+    direct import is avoided because the hook is a standalone file that runs
+    via run_hook.py with a sys.path that does not guarantee the scripts/
+    package is importable at hook runtime; replicating the two patterns keeps
+    it self-contained. The digit run is {3,} (not {3}) so four-digit-hundred
+    L0s like BO-1700 and their children (BO-1700a) derive correctly.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -72,6 +96,9 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling helpers, even when loaded by path
+from _ac_supersession_validators import is_retired_record  # noqa: E402  # ACS-900d-4-ii: shared predicate
 
 
 # ---------------------------------------------------------------------------
@@ -95,10 +122,6 @@ _MAX_CHILDREN = {
     "L1": _MAX_L2_PER_L1,
 }
 
-# ACS-100c-6: statuses that are excluded from the child-count cap.
-# Children with these statuses are retained on disk but do not consume cap slots.
-_SUPERSEDED_STATUSES: frozenset[str] = frozenset({"superseded_by", "superseded"})
-
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -119,9 +142,12 @@ class AcNode:
             to have any effect; if lower the default is preserved and a
             no-op warning is emitted. None means no override is set.
         status: Lifecycle status from the YAML ``status`` field. Defaults to
-            ``"active"`` when the field is absent. Children whose status is
-            ``"superseded_by"`` or the legacy ``"superseded"`` are excluded
-            from the child-count cap (ACS-100c-6).
+            ``"active"`` when the field is absent.
+        superseded_by: The raw ``superseded_by`` value (string, list or null).
+            With ``status`` it decides whether the node is RETIRED, and retired
+            children (status ``"superseded_by"`` or the legacy ``"superseded"``
+            naming existing successors) are excluded from the child-count cap
+            (ACS-100c-6, ACS-900d-4-ii).
     """
 
     ac_id: str
@@ -130,6 +156,7 @@ class AcNode:
     source_path: Path | None = None
     child_limit_override: int | None = None
     status: str = "active"
+    superseded_by: object = None
 
 
 @dataclass
@@ -172,15 +199,7 @@ def _load_yaml_data(path: Path) -> dict | None:
         import yaml  # type: ignore[import]
 
         try:
-            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
-            # fix-pass, 2026-10-07): a parse failure excludes the node from
-            # the child-count/tree-limit computation entirely, so a more
-            # permissive parser only narrows this gate. This IS a whole-store
-            # rglob (_load_ac_store, not staged-only) -- measured on the real
-            # 4766-file store: SafeLoader ~22-36s vs CSafeLoader ~1.9-3.2s
-            # across two sittings, so the speed case is real here. It does
-            # not change the verdict: criterion 2 (error-path dependence on
-            # a skip/accept outcome) disqualifies it regardless of volume.
+            # Pure-Python loader on purpose (TQ-600a-11 loader audit): see DECISION HISTORY.
             with path.open(encoding="utf-8") as fh:
                 data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (OSError, yaml.YAMLError) as exc:
@@ -339,6 +358,7 @@ def _load_ac_store(ac_store_dir: Path) -> list[AcNode]:
                 source_path=yaml_file,
                 child_limit_override=child_limit_override,
                 status=status,
+                superseded_by=data.get("superseded_by"),
             )
         )
     return nodes
@@ -452,13 +472,7 @@ def _get_staged_ac_paths() -> list[str]:
 # Tree analysis
 # ---------------------------------------------------------------------------
 
-# Inline id-derivation helpers (mirrors scripts/ac_store/ac_parent_id.py).
-# A direct import is avoided because the hook is a standalone file that runs
-# via run_hook.py with a sys.path that does not guarantee the scripts/ package
-# is importable at hook runtime.  Replicating the two patterns keeps the hook
-# self-contained without any fragile path manipulation.
-# Digit run is {3,} (not {3}) so four-digit-hundred L0s like BO-1700 and their
-# children (BO-1700a) derive correctly. Mirrors ac_parent_id.py.
+# Inline id-derivation helpers (mirrors ac_parent_id.py); see DECISION HISTORY.
 _ID_ROOT_PATTERN = re.compile(r"^([A-Z]{2,6})-([0-9]{3,})$")
 _ID_ALPHA_SUBLEVEL_PATTERN = re.compile(r"^([A-Z]{2,6}-[0-9]{3,})([a-z]+)$")
 
@@ -578,14 +592,15 @@ def _check_limits(
     violations: list[TreeViolation] = []
     advisories: list[TreeAdvisory] = []
 
+    store_ids = {n.ac_id for n in nodes}  # ACS-900d-4-ii: the whole-store id set, built once
     for node in nodes:
         if node.level not in _MAX_CHILDREN:
             continue  # Only L0 and L1 can be parents with hard caps
 
         children = children_map.get(node.ac_id, [])
-        # ACS-100c-6: exclude superseded_by (and legacy superseded) children
-        # from the count — they are kept on disk but do not consume cap slots.
-        active_children = [c for c in children if c.status not in _SUPERSEDED_STATUSES]
+        # ACS-100c-6: retired children (not bogus supersessions) consume no cap slot.
+        active_children = [c for c in children if not is_retired_record(
+            {"id": c.ac_id, "status": c.status, "superseded_by": c.superseded_by}, store_ids)]
         child_count = len(active_children)
         default_limit = _MAX_CHILDREN[node.level]
         child_level = _PARENT_CHILD[node.level]

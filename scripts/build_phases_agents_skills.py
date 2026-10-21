@@ -43,6 +43,14 @@ ARCHITECTURE: Two public phase functions, re-exported from build_phases.py so
     ships and resolves at import time exactly the way build_precommit.py and
     build_phases_knowledge.py already do, with no deploy-manifest entry
     required.
+
+    AR-400d-2-ii: both phases tell ``project_ability_slots`` the project's
+    abilities area and the ids any agent marks ``provided_by: project``.
+    ``_skill_deploy_files`` then returns nothing for such an id the project
+    supplies (the project's copy is never overwritten, and the build manifest
+    enumerates the same empty set), and ``build_skills`` marks the packaged copy
+    it deployed into an EMPTY project slot as a fallback so a later build can
+    tell it from a copy the project put there.
 """
 
 from __future__ import annotations
@@ -54,6 +62,7 @@ from typing import Any
 
 import agent_grant_delivery_gate as _grants
 import agent_preparation_delivery as _prep
+import project_ability_slots as _slots
 from build_capability_merge import (
     detect_skill_local_changes,
     propagate_capability_winner,
@@ -198,6 +207,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
     if not agents_template_dir.exists():
         return 0
     _grants.note_agents_source(agents_template_dir)  # AR-300a: the grant-delivery gate reads declarations from here
+    _slots.configure(target_root / "skills", agents_template_dir)  # AR-400d: the project's abilities area + marked ids
 
     # Load registry once for the whole phase (ticket 29)
     agents_list = _load_registry(_bp.REGISTRY_PATH)
@@ -331,9 +341,14 @@ def _skill_deploy_files(skill_dir: Path) -> list[Path]:
         skill_dir: Absolute path to a single skill's template directory
             (an immediate child of ``templates/skills/``).
 
+    A skill the project supplies itself and some agent marks ``provided_by: project``
+    deploys NOTHING (AR-400d-2-ii): the project's copy is never overwritten.
+
     Returns:
         Sorted list of absolute file paths under ``skill_dir``.
     """
+    if _slots.is_protected(skill_dir.name):
+        return []
     return sorted(
         f for f in skill_dir.rglob("*")
         if f.is_file() and "__pycache__" not in f.parts
@@ -371,6 +386,7 @@ def build_skills(target_root: Path, config: dict[str, Any],
     skills_template_dir = _bp.TEMPLATES_DIR / "skills"
     if not skills_template_dir.exists():
         return 0
+    _slots.configure(target_root / "skills", _bp.TEMPLATES_DIR / "agents")  # AR-400d: protected ids
 
     platforms = config.get("platforms", {
         "claude": True,
@@ -429,6 +445,7 @@ def build_skills(target_root: Path, config: dict[str, Any],
         if is_deprecated:
             continue
 
+        fallback = _slots.is_fallback_candidate(skill_dir.name)  # asked BEFORE the deploy (AR-400d-2-ii)
         deploy_files = _skill_deploy_files(skill_dir)
         rels = [f.relative_to(skills_template_dir) for f in deploy_files]
 
@@ -486,6 +503,8 @@ def build_skills(target_root: Path, config: dict[str, Any],
                         shutil.copy2(template_file, output_path)
                         print(f"  {output_subpath}/{rel}")
                         written += 1
+
+        _slots.write_fallback_marker(skill_dir.name, fallback, dry_run)
 
     if internal_skills and not dry_run:
         _bp._log.info(

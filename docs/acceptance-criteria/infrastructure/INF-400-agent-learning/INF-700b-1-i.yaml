@@ -89,7 +89,8 @@ amended_by:
     at: 2026-08-26
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/02_TICKET-20261016-INF-700b-1-i.md
 notes: |
   This is the capture-side half of the invariant INF-700c-1 enforces on the
   write side: a contentless record must not be created here, and must not be
@@ -97,3 +98,4 @@ notes: |
   governs the emitter, the other the writer, and each must hold on its own.
 change_target: prompt
 risk_surface: contract_boundary
+target_epic: EPIC-ALearningAnAgentHasTodayActuallyGets

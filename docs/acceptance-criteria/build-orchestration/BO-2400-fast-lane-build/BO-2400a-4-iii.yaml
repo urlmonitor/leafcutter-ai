@@ -1,0 +1,123 @@
+id: BO-2400a-4-iii
+components:
+  - build_orchestration
+  - testing_quality
+title: "A scoped test whose failure reaches the green gate masked as an expected failure is still counted red"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the green gate's scoped run for a batch reports outcome passed for 12 covering
+    tests and outcome xfailed for 1 covering test of BO-2600b-4,
+  And the run as a whole exits zero,
+  When the green gate produces its verdict,
+  Then the xfailed test counts as not passing and the green verdict is not green,
+  And the failing-test list names that test with BO-2600b-4 and its raw reported
+    outcome xfailed, so a reader can see the failure was masked rather than absent.
+
+  Given the green gate's scoped run reports a covering test with outcome xpassed,
+    skipped or errored, and every other covering test passed,
+  When the green gate produces its verdict,
+  Then the verdict is not green and that test is listed with its raw outcome — green
+    requires every scoped covering test to be reported passed, and the gate decides
+    from each test's own outcome, never from the run's exit status alone.
+
+  Given the green gate's scoped run executes no covering test at all for the batch,
+    because collection failed or the selection matched nothing,
+  When the green gate produces its verdict,
+  Then the verdict is not green and states that no covering test ran.
+depends_on: [BO-2400a-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 5, condition (a): only PASSED counts as passing."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_green_outcome_rule:
+      type: object
+      description: "Green is the conjunction over scoped covering tests of outcome == PASSED; XFAIL, XPASS, SKIPPED, ERROR and FAILED are each not-passing and listed with their raw outcome; zero executed covering tests is not green."
+  reference_file_path: "scripts/build_orchestration/_fl_coverage.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --validate-only"
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "This is the defence-in-depth half of the masked-failure fix. It must hold even if strict mode (BO-2400a-4-ii) fails to take effect, because a configuration override or a wrapper might drop the environment. The covering test runs the gate with strict mode absent and asserts the xfailed test still fails the gate."
+    - "An exit-code-only green decision is the defect class here, because pytest exits 0 when the only non-passing outcomes are xfail. The per-test outcome rule must decide the verdict."
+    - "A test the author explicitly marked expected-to-fail is also not passing at the green gate. An expected failure is not proof that a batch AC is met."
+    - "Module placement: the outcome rule goes in scripts/build_orchestration/_fl_coverage.py, the green gate's own module (59 measured lines, well under the 400 cap). Reuse done_proof._classify_outcomes, which already rejects XFAIL and SKIPPED (BO-2500a-2-i). Extend it only where it does not already cover XPASS, ERROR, an unknown outcome or zero executed tests. Do not write a second classifier."
+    - "Every failing_tests entry carries {nodeid, ac_id, outcome}, where outcome is the raw pytest outcome string as reported."
+    - "The outcome vocabulary is total. An outcome the parser does not recognise counts as not passing and is listed. It is never silently dropped."
+    - "Zero executed covering tests, from a collection failure or an empty selection, gives green false with the fixed reason no_covering_test_ran. This differs from uncovered_ac_ids: a tagged test that exists but was not collected counts here."
+delivers_to:
+  agent: python-coder
+  contract: "failing_tests entries {nodeid: str, ac_id: str, outcome: str raw outcome} for every non-passing scoped test, plus reason 'no_covering_test_ran' when nothing executed. Consumed by the fast-lane-ship workflow's green-gate step (BO-2400a-4-ii) and its contradiction record (BO-2400a-4-iv)."
+expects_from:
+  ac_id: BO-2400a-4
+  contract: "The green+coverage gate and the per-test outcomes of its scoped run."
+test_spec:
+  - name: test_xfailed_covering_test_fails_gate_despite_exit_zero
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "With strict mode deliberately absent, 12 PASSED and 1 plugin-downgraded XFAIL give a pytest exit code of 0, and green is still false."
+    must_catch:
+      - "green decided from the pytest exit code"
+  - name: test_failing_list_names_xfailed_test_with_ac_and_raw_outcome
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "failing_tests lists that test with ac_id BO-2600b-4 and outcome XFAIL."
+  - name: test_xpassed_skipped_errored_each_not_green
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "One covering test each with XPASS, SKIPPED or ERROR, all others PASSED, makes green false, and that test is listed with its raw outcome."
+  - name: test_author_marked_xfail_not_passing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A covering test carrying an explicit pytest.mark.xfail is listed as not passing, and green is false."
+  - name: test_zero_executed_covering_tests_not_green
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A collection failure, and separately an empty selection, each give green false with reason no_covering_test_ran."
+  - name: test_unknown_outcome_counts_not_passing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An unrecognised outcome string is listed in failing_tests and makes green false."
+  - name: test_green_gate_cli_reports_raw_outcomes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Running fast_lane.py verify_green_and_coverage as a subprocess on a temp repo with one xfail-marked covering test prints green false and the raw outcome."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

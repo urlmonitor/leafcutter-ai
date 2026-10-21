@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -57,6 +57,7 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by:
   - reason: "amend, 2026-08-17: 'confirms every newly added test for the batch fails' narrowed to 'confirms at least one newly added test for the batch is red', and the newly-added derivation pinned to git at test-function granularity. Change of intent authorised by BrainCandy after the gate halted two live fast-lane runs (BO-2400g-1, TKT-600a-1) on partially-implemented ACs whose covering tests were legitimately part-green. Decomposed into BO-2400a-3-ii (git-derived partition), -iii (function granularity), -iv (pre-existing excluded but reported), -v (new pass rule), -vi (outcome classification), -vii (fail closed without git), -viii (idempotency); BO-2400a-3-i amended for the halt path. Reset to work_status in_progress: the dispatch gating exists, the amended pass rule does not."
+  - reason: '2026-10-16: work_status done -> in_progress. New L3 children BO-2400a-3-ix..xiv (test-backfill mutation proof) were added by /plan-feature run fast-lane-test-gates; the composite is no longer fully done until they are built and proven (check-done-proof, BO-2500b).'
 superseded_by: null
 covered_by:
   - BO-2400a-3-i
@@ -67,6 +68,12 @@ covered_by:
   - BO-2400a-3-vi
   - BO-2400a-3-vii
   - BO-2400a-3-viii
+  - BO-2400a-3-ix
+  - BO-2400a-3-x
+  - BO-2400a-3-xi
+  - BO-2400a-3-xii
+  - BO-2400a-3-xiii
+  - BO-2400a-3-xiv
 implemented_by:
   - "scripts/build_orchestration/fast_lane.py"
   - "templates/workflows-js/fast-lane-ship.js"

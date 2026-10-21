@@ -101,6 +101,16 @@ DECISION HISTORY:
     stderr WARNING names the module and the skipped composite check, and
     fallbacks classify no AC as composite, so the hook degrades (check
     skipped, never silent) instead of dying at load and blocking commits.
+  - 2026-10-15 [python-coder/ACS-900d-4]: All three entry points now skip a
+    RETIRED record (ac_retirement.is_retired: superseded status, existing
+    successors, no self-reference) before applying their rule, through the
+    sibling _done_proof_gate_support.RetirementLookup, which builds the
+    whole-store id set at most once per run. The three identical
+    read-and-parse blocks moved to _done_proof_gate_support.read_ac_yaml to
+    repay this file's size ratchet (and the yaml import went with them). A
+    done composite whose children are ALL retired now falls through to the
+    leaf covers-tag rule instead of being refused as "unproven: <itself>".
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 from __future__ import annotations
 
@@ -110,8 +120,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import yaml
-
 # ---------------------------------------------------------------------------
 # Resolve ac_store so done_proof is importable from commit_guardian context.
 # BP-100n-4-ii-ii: resolution logic lives in sibling _ac_store_locator.py
@@ -120,6 +128,7 @@ import yaml
 # ---------------------------------------------------------------------------
 from _resolve_root import find_project_root  # noqa: E402
 from _ac_store_locator import ensure_ac_store_on_syspath  # noqa: E402
+from _done_proof_gate_support import RetirementLookup, read_ac_yaml  # noqa: E402  # ACS-900d-4
 from _staged_ac_yaml_paths import (  # noqa: E402
     _get_staged_ac_yaml_paths,
     _is_gated_ac_yaml,
@@ -418,21 +427,13 @@ def check_staged_done_proofs(
     """
     all_covered_ids = _collect_all_covered_ids(test_root)
     violations: list[dict] = []
+    lookup = RetirementLookup()
     for yaml_path in staged_yaml_paths:
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
+        data = read_ac_yaml(yaml_path)
         if data.get("work_status") != "done":
             continue
-        if _is_example_content(data):
+        ac_root = _find_ac_root(yaml_path)
+        if _is_example_content(data) or lookup.is_retired(data, ac_root):
             continue
         ac_id = data.get("id")
         if not ac_id:
@@ -440,9 +441,10 @@ def check_staged_done_proofs(
         ac_id_str = str(ac_id)
 
         if _composite_child_ids(data.get("covered_by")):
-            ac_root = _find_ac_root(yaml_path)
-            unproven = _unproven_composite_children(data, ac_root, all_covered_ids)
-            if unproven:
+            unproven = _unproven_composite_children(
+                data, ac_root, all_covered_ids, store_ids=lookup.store_ids(ac_root)
+            )
+            if unproven and unproven != [ac_id_str]:
                 violations.append(
                     {
                         "ac_id": ac_id_str,
@@ -452,7 +454,9 @@ def check_staged_done_proofs(
                         ),
                     }
                 )
-            continue
+            if unproven != [ac_id_str]:
+                continue
+            # ACS-900d-4-iv: every child is retired; the single-record rule below applies.
 
         if ac_id_str not in all_covered_ids:
             if is_covers_tag_waived(data):
@@ -516,21 +520,12 @@ def check_all_done_acs(
             file=sys.stderr,
         )
         return violations
+    lookup = RetirementLookup()
     for yaml_path in yaml_files:
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
+        data = read_ac_yaml(yaml_path)
         if data.get("work_status") != "done":
             continue
-        if _is_example_content(data):
+        if _is_example_content(data) or lookup.is_retired(data, ac_root):
             continue
         ac_id = data.get("id")
         if not ac_id:
@@ -591,21 +586,12 @@ def check_changed_done_acs(
         the changed done ACs.
     """
     violations: list[dict] = []
+    lookup = RetirementLookup()
     for yaml_path in changed_yaml_paths:
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: check_done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
+        data = read_ac_yaml(yaml_path)
         if data.get("work_status") != "done":
             continue
-        if _is_example_content(data):
+        if _is_example_content(data) or lookup.is_retired(data, ac_root):
             continue
         ac_id = data.get("id")
         if not ac_id:

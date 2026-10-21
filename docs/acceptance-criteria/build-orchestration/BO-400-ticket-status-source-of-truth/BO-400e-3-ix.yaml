@@ -1,0 +1,200 @@
+id: BO-400e-3-ix
+title: "Setting up a single-ticket worktree records, against the branch it creates, which ticket that branch is being built for -- so finalization reads it back instead of guessing it from the branch's name"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Background:
+    Given the ticket "tickets/00_inbox/TICKET-20261015-Close_X.md" exists on main
+
+  Scenario: Setting up a single-ticket worktree records the ticket against its branch
+    When a single-ticket worktree is set up for "TICKET-20261015-Close_X.md"
+    Then the branch it creates carries a record naming
+        "tickets/00_inbox/TICKET-20261015-Close_X.md" as the ticket it is being built for
+      And finalization of that branch takes the ticket it was built for from that record, not
+        from the branch's name
+      And making the record changes no file on the branch, so the branch has not changed the
+        ticket merely by being set up for it
+
+  Scenario: The record holds when the branch's name cannot be turned back into the ticket
+    Given the worktree for "TICKET-20261015-Close_X.md" was set up with its branch name
+        overridden to "feature/my-fix"
+    When finalization works out which ticket "feature/my-fix" was built for
+    Then it is "tickets/00_inbox/TICKET-20261015-Close_X.md"
+
+  Scenario: Two tickets whose names give the same branch are not confused
+    Given a worktree was set up for "TICKET-20261001-Close_X.md", creating the branch
+        "feature/close-x", and that branch still exists
+    When a single-ticket worktree is set up for "TICKET-20261015-Close_X.md", whose name gives
+        the same branch "feature/close-x"
+    Then the record on "feature/close-x" still names "TICKET-20261001-Close_X.md"
+      And the setup stops without reusing the worktree, and says that "feature/close-x" is
+        already being built for "TICKET-20261001-Close_X.md"
+
+  Scenario: Setting up the same ticket again leaves the record as it was
+    Given a worktree was already set up for "TICKET-20261015-Close_X.md"
+    When a single-ticket worktree is set up again for the same ticket
+    Then the record names "tickets/00_inbox/TICKET-20261015-Close_X.md", and only that ticket
+
+  Scenario: A worktree set up without a ticket records none
+    When a worktree is set up for a branch that has no ticket -- for a quick fix, a fast-lane
+        build, or acceptance-criteria authoring
+    Then no ticket is recorded against its branch
+
+  Scenario: A branch set up before tickets were recorded is not guessed at
+    Given a single-ticket branch whose worktree was set up before tickets were recorded against
+        branches, and which changed tickets since it left main
+    When finalization works out which ticket the branch was built for
+    Then it cannot identify one, closes nothing, and says so as described in BO-400e-3-viii
+      And it does not fall back to the branch's name or to searching the tickets for one that
+        mentions the branch
+  So finalization can tell which ticket a single-ticket branch was built to deliver from a fact
+    written when the branch was made, rather than from a branch name that drops the ticket's date,
+    folds its case and can be overridden -- and a branch that carries no such fact closes nothing
+    rather than being guessed at.
+depends_on:
+  - BO-400e-3
+doc_links:
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: implements
+    status: exists
+    relevance: "Build source. setup-ticket (cmd_setup_ticket) derives the branch from _derive_slug, which strips 'TICKET-YYYYMMDD-', lowercases and turns '_' into '-'. The --branch override replaces it. ticket_path_final is printed in the JSON payload and persisted nowhere. create-only and create-fastlane-worktree make branches with no ticket."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: implements
+    status: exists
+    relevance: "Build output of the template above. CI's build.py overwrites scripts/ from templates/. The hunk is mirrored into both copies, never by resyncing the whole file, because the two copies currently differ."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The reader of this record. Its 'cannot be identified' scenario is what a branch without the record falls into."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE RECORD IS A GIT CONFIG KEY, NOT A FILE. setup-ticket writes branch.<branch>.leafcutterTicket
+    to the clone's SHARED config, not to a per-worktree config, even when extensions.worktreeConfig
+    is on, so that every worktree of the clone and finalize can read it. The value is the ticket's
+    repo-relative POSIX path at setup time. The reasons are recorded in BO-400e-3-ii's
+    it_requirements (decision 1). In short: it survives the lossy slug and --branch, it never makes
+    the branch "change" its own ticket, and git branch -d/-D/-m delete or move it along with the
+    branch. A worktree marker file and a field written onto the ticket are both rejected, for the
+    same reasons.
+  - >-
+    It is written whenever setup-ticket returns success, both on creating a new worktree and on
+    reusing an existing one for the same ticket. Writing is idempotent: one value, the same value.
+    When the branch already records a DIFFERENT ticket, setup-ticket does not overwrite it, does not
+    reuse the worktree, prints a message naming the branch and the ticket it is already built for,
+    and exits non-zero. The JSON success payload is unchanged apart from any additive field.
+    build-single-ticket keeps reading ticket_path_final.
+  - "create-only, create-fastlane-worktree and create-ac-worktree write no record. The derivation module's documented outcome for a non-EPIC branch with no record is BO-400e-3-ii's evaluation order."
+  - >-
+    The key name and value format are one contract shared by the writer (setup_ticket_worktree.py)
+    and the reader (scripts/build_orchestration/finalize_closable_set.py). The seam is proven by a
+    test that runs the real setup command and then the real derive command against the same
+    scratch clone. Matching constants in two files do not prove it.
+  - >-
+    Change templates/scripts/setup_ticket_worktree.py (the build source) and mirror the same hunk into
+    scripts/setup_ticket_worktree.py. Both files are over the file-size limit, so the addition must
+    be small. Error handling per the project policy: a git config subprocess failure is caught as a
+    specific exception, reported on stderr, and fails setup-ticket. A branch whose record could not
+    be written would silently fall into "cannot identify" at finalize time.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    git config branch.<branch>.leafcutterTicket = <repo-relative POSIX path of the ticket .md> in the
+    clone's shared config, set by setup-ticket. Absent for create-only, create-fastlane-worktree,
+    create-ac-worktree and any branch set up before this change. Read by
+    finalize_closable_set.py derive (BO-400e-3-ii) via `git -C <worktree> config --get`.
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_setup_ticket_records_the_ticket_against_the_branch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run the real setup-ticket against a scratch clone (bootstrap stubbed only where it would spawn build.py); `git config --get branch.feature/close-x.leafcutterTicket` returns tickets/00_inbox/TICKET-20261015-Close_X.md, and `git -C <worktree> status --porcelain` shows no change caused by the record."
+  - name: test_record_round_trips_into_the_derivation_under_a_branch_override
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "setup-ticket with --branch my-fix, commit a sign-off edit to the ticket on feature/my-fix, then run the real finalize_closable_set.py derive: built_for_ticket is the setup path and the set is that ticket plus its source AC."
+  - name: test_same_slug_different_ticket_is_refused_and_record_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Set up TICKET-20261001-Close_X.md, then TICKET-20261015-Close_X.md (same slug); the second exits non-zero naming feature/close-x and the first ticket, the record is unchanged, and no second worktree exists."
+    must_catch:
+      - "reuse the existing worktree for whatever ticket maps to the same slug"
+      - "overwrite the branch record with the newest ticket"
+  - name: test_repeat_setup_is_idempotent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Running setup-ticket twice for the same ticket leaves exactly one value under the key (`git config --get-all` returns one line)."
+  - name: test_ticketless_subcommands_record_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "create-only, create-fastlane-worktree and create-ac-worktree leave no leafcutterTicket key on the branch they create."
+  - name: test_pre_existing_branch_without_record_is_not_guessed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A branch feature/close-x made with plain git worktree add (no record) that changed TICKET-20261015-Close_X.md: derive returns undeterminable / built_for_unknown with empty records, although the slug would reverse to that ticket."
+    must_catch:
+      - "reverse the feature/<slug> branch name into a ticket path"
+test_rationale: >-
+  The record is a contract between two programs written at different times, so the load-bearing
+  test is the seam test: the real setup command writes it and the real derivation reads it, under
+  the --branch override that breaks every name-based approach. The pre-existing-branch test uses a
+  branch whose slug WOULD reverse to the right ticket, so a name-parsing fallback cannot pass it by
+  luck. The collision test covers the lossy-slug defect the BA identified, where two tickets share
+  one branch name.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  IT-PO SPLIT, 2026-10-15. BO-400e-3-ii says the ticket a single-ticket branch was built for must
+  be identified, and closes nothing when it cannot be. The BA found no reliable source:
+  finalize takes only a branch, the feature/<slug> name is lossy and overridable, and setup prints
+  ticket_path_final but persists it nowhere. The IT-PO chose a record written at setup (a git config
+  key on the branch, reasons in BO-400e-3-ii's it_requirements). Writing that record is behaviour
+  no existing AC specified, so it is stated here. BO-400e-3-ii's criteria are unchanged.
+
+  The collision scenario changes one existing behaviour of setup-ticket. Today a second ticket
+  whose name maps to an existing branch silently reuses that branch's worktree. After this change
+  setup stops instead. This is deliberate: reuse would drive the second ticket on a branch recorded
+  for the first.
+  Decided by BrainCandy 2026-10-15: setup-ticket refuses (does not reuse) when a different ticket maps to an existing branch.
+
+  Branches without a record (quick-fix, fast-lane, AC-authoring and pre-existing single-ticket
+  worktrees) close nothing at finalize when they changed tickets or ACs, and report "nothing to
+  close" when they did not (BO-400e-3-ii's evaluation order). A person can record the ticket by
+  hand with `git config branch.<branch>.leafcutterTicket <path>` and re-run finalize.

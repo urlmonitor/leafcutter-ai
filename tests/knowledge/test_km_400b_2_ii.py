@@ -81,6 +81,10 @@ class StoreDouble:
 
     # Ordered dispatch: the first entry whose needles all occur in the statement wins.
     _RUN_HANDLERS = (
+        (("MATCH (n) RETURN count(n)",), "_run_total_nodes"),
+        (("MATCH ()-[r]->() RETURN count(r)",), "_run_total_relationships"),
+        (("SHOW DATABASE",), "_run_show_database"),
+        (("MATCH (g:Snapshot {key:$key}) RETURN g.status",), "_run_generation_status"),
         (("generation_key IS NULL",), "_run_zero_count"),
         (("MERGE (g:Snapshot",), "_run_merge_snapshot"),
         (("UNWIND $rows", "MERGE (n:"), "_run_merge_nodes"),
@@ -91,12 +95,25 @@ class StoreDouble:
         (('g.status="validated"',), "_run_mark_validated"),
     )
 
-    async def _run(self, statement, params=None, write=False):
+    async def _run(self, statement, params=None, write=False, **_ignored):
         params = params or {}
         for needles, handler in self._RUN_HANDLERS:
             if all(needle in statement for needle in needles):
                 return getattr(self, handler)(params)
         return []
+
+    def _run_total_nodes(self, params):
+        return [{"count": len(self.nodes)}]
+
+    def _run_total_relationships(self, params):
+        return [{"count": len(self.relationships)}]
+
+    def _run_show_database(self, params):
+        return [{"access": "read-write"}]
+
+    def _run_generation_status(self, params):
+        record = self.snapshots.get(params["key"])
+        return [{"status": record["status"]}] if record else []
 
     def _run_zero_count(self, params):
         return [{"count": 0}]
@@ -152,7 +169,7 @@ class StoreDouble:
             self.snapshots[params["key"]]["status"] = "ready"
         return []
 
-    async def _transaction(self, callback, write=False):
+    async def _transaction(self, callback, write=False, **_ignored):
         return callback(None)
 
 

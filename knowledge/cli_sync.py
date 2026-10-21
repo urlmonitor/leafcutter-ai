@@ -5,21 +5,41 @@ ARCHITECTURE: CLI composition loads optional adapters only for database commands
 
 DECISION HISTORY
 ========================================
+- 2026-10-20 23:00 [python-coder]: Extend status with retained generations and capacity usage and add a sweep reclaim command that requires the declared bound. (#KM-400f-4)
+- 2026-10-20 18:00 [python-coder]: Run the read-only preflight before setup so a latched store reports the capacity condition, not a raw rejection. (#KM-400f-3/02)
+- 2026-10-20 14:00 [python-coder]: Declare the capacity ceiling by four all-or-none flags, refuse a partial declaration before any network access, and report the measured headroom. (#KM-400f-3)
+- 2026-10-15 04:00 [python-coder]: Carry the operator-declared retention bound into publication and report the reclamation result. (#KM-400f-2)
 - 2026-10-01 12:00 [python-coder]: Separate writer credentials and ancestry verification. (#TICKET-KM-400b-1)
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import argparse
     from knowledge.adapters.neo4j_backend import Neo4jBackend
+    from knowledge.adapters.retention.capacity import CapacityCeiling
+    from knowledge.config import RetentionBound
     from knowledge.contracts import ProjectionSnapshot
 
 import asyncio
 from pathlib import Path
 import subprocess
+
+_BOUND_SOURCE = "command line (--retention-max-generations, --retention-min-age-seconds)"
+_CAPACITY_FLAGS = (
+    "--capacity-max-nodes",
+    "--capacity-max-relationships",
+    "--capacity-refuse-percent",
+    "--capacity-warn-percent",
+)
+_CAPACITY_SOURCE = "command line (" + ", ".join(_CAPACITY_FLAGS) + ")"
+_RECLAIM_NEEDS_BOUND = (
+    "reclaim requires the retention bound: declare --retention-max-generations "
+    "and --retention-min-age-seconds"
+)
+_DECLARING = ("sync", "status", "reclaim")  # commands that accept the declared bound and ceiling
 
 
 def add_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -28,7 +48,7 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
     Args:
         subparsers: Argument-parser collection receiving sync subcommands.
     """
-    for name in ("validate", "plan", "sync", "status", "rollback", "cleanup"):
+    for name in ("validate", "plan", "sync", "status", "reclaim", "rollback", "cleanup"):
         parser = subparsers.add_parser(name)
         parser.add_argument("--root", required=True)
         parser.add_argument("--repository-id", default="leafcutter")
@@ -38,6 +58,13 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         parser.add_argument(
             "--surfaces", nargs="+", choices=sorted(SUPPORTED_SURFACES), default=None
         )
+        if name in _DECLARING:
+            # Declared by the operator, both together; no built-in bound, no reclamation without one.
+            parser.add_argument("--retention-max-generations", type=int, default=None)
+            parser.add_argument("--retention-min-age-seconds", type=int, default=None)
+            # The backend does not report its ceiling over Bolt: the operator declares all four or none.
+            for flag in _CAPACITY_FLAGS:
+                parser.add_argument(flag, type=int, default=None)
         if name in ("rollback", "cleanup"):
             parser.add_argument("--generation-id", required=True)
         if name == "cleanup":
@@ -88,6 +115,8 @@ async def sync(
     revision: str,
     backend: Neo4jBackend,
     surfaces: list[str] | None = None,
+    retention_bound: RetentionBound | None = None,
+    capacity: CapacityCeiling | None = None,
 ) -> dict:
     """Validate source ancestry before CAS so a delayed merge cannot regress state.
 
@@ -97,9 +126,14 @@ async def sync(
         revision: Git revision resolved once to an immutable commit.
         backend: Writer adapter used for staged publication.
         surfaces: Optional explicit surface selection; defaults to the approved set.
+        retention_bound: Declared bound; when given, a successful publication reclaims
+            the generations it permits.
+        capacity: Declared ceiling; None leaves the ceiling unknown (usage is still measured).
 
     Returns:
-        Publication outcome, selected source SHA, generation identity and validation plan.
+        Publication outcome, selected source SHA, generation identity, validation plan,
+        ``reclamation`` (reclaimed and retained counts with a reason per retained generation)
+        and ``capacity`` (the measured headroom report).
     """
     from knowledge.projection.canonical_loader import load_snapshot
 
@@ -134,14 +168,20 @@ async def sync(
             raise ValueError(
                 "source revision is older or non-descendant; explicit reconciliation is required"
             )
+    # Only a declared bound travels with the publication; without one nothing is reclaimed.
+    extra: dict[str, Any] = {} if retention_bound is None else {"retention_bound": retention_bound}
+    if capacity is not None:
+        extra["capacity"] = capacity
     published = await backend.publish(
-        snapshot, expected_generation=active.generation_id if active else None
+        snapshot, expected_generation=active.generation_id if active else None, **extra
     )
     counts = getattr(backend, "publication_counts", None)
     return {
         "status": "ok" if published else "stale",
         "published": published,
         "counts": counts,
+        "reclamation": getattr(backend, "publication_reclamation", None),
+        "capacity": getattr(backend, "publication_capacity", None),
         **_plan(snapshot),
     }
 
@@ -167,6 +207,52 @@ def _plan(snapshot: ProjectionSnapshot) -> dict:
     }
 
 
+def _declared_bound(args: argparse.Namespace) -> RetentionBound | None:
+    """Resolve the retention bound the operator declared for ``sync``, if any.
+
+    Args:
+        args: Parsed command-line arguments for the chosen operation.
+
+    Returns:
+        The declared bound, or None when neither setting was given (no reclamation).
+
+    Raises:
+        ValueError: When only one of the two settings was declared, or one is out of range.
+    """
+    count = getattr(args, "retention_max_generations", None)
+    age = getattr(args, "retention_min_age_seconds", None)
+    if args.command not in _DECLARING:
+        return None
+    if count is None and age is None:
+        if args.command == "reclaim":
+            raise ValueError(_RECLAIM_NEEDS_BOUND)
+        return None
+    from knowledge.config import KnowledgeConfig, resolve_retention_bound
+
+    config = KnowledgeConfig(retention_max_generations=count, retention_min_age_seconds=age)
+    return resolve_retention_bound(config, source=_BOUND_SOURCE)
+
+
+def _declared_capacity(args: argparse.Namespace) -> CapacityCeiling | None:
+    """Resolve the capacity ceiling the operator declared for ``sync``, if any.
+
+    Args:
+        args: Parsed command-line arguments for the chosen operation.
+
+    Returns:
+        The declared ceiling, or None when none of the four settings was given (unknown ceiling).
+
+    Raises:
+        ValueError: When only some of the four settings were declared, or one is out of range.
+    """
+    if args.command not in _DECLARING:
+        return None
+    from knowledge.adapters.retention.capacity import resolve_capacity
+
+    values = [getattr(args, flag[2:].replace("-", "_"), None) for flag in _CAPACITY_FLAGS]
+    return resolve_capacity(*values, source=_CAPACITY_SOURCE)
+
+
 async def run(args: argparse.Namespace) -> dict:
     """Run one standalone command and always release its owned driver.
 
@@ -183,14 +269,28 @@ async def run(args: argparse.Namespace) -> dict:
             load_snapshot, args.root, args.repository_id, args.revision, args.surfaces
         )
         return {"status": "ok", "published": False, **_plan(snapshot)}
+    bound = _declared_bound(args)  # refuses an incomplete declaration before any network access
+    capacity = _declared_capacity(args)  # likewise refused before any network access
     backend = writer_backend(args.root)
     try:
         if args.command == "sync":
-            await backend.setup()
-            return await sync(args.root, args.repository_id, args.revision, backend, args.surfaces)
+            from knowledge.adapters.retention.capacity import prepare_writable
+
+            await prepare_writable(backend, capacity)  # read-only preflight, then setup
+            return await sync(
+                args.root, args.repository_id, args.revision, backend, args.surfaces, bound, capacity
+            )
+        if args.command == "reclaim":
+            from knowledge.cli_generations import reclaim_generations
+
+            if bound is None:  # already refused by _declared_bound; restated for the type checker
+                raise ValueError(_RECLAIM_NEEDS_BOUND)
+
+            return await reclaim_generations(backend, args.repository_id, bound, capacity)
         active = await backend.active(args.repository_id)
         if args.command == "status":
             from knowledge.adapters.git_source import resolve_revision
+            from knowledge.cli_generations import manifest_of, status_report
 
             requested = await asyncio.to_thread(resolve_revision, Path(args.root), args.revision)
             published = active.source_sha if active else None
@@ -199,7 +299,8 @@ async def run(args: argparse.Namespace) -> dict:
                 "requested_sha": requested,
                 "published_sha": published,
                 "lagging": published != requested,
-                "manifest": active.model_dump(mode="json") if active else None,
+                "manifest": manifest_of(active),
+                **await status_report(backend, args.repository_id, bound, capacity),
             }
         if args.command == "rollback":
             changed = await backend.rollback(

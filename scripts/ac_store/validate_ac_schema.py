@@ -36,6 +36,26 @@ failure signal.
 
 AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
+
+DECISION HISTORY:
+  - 2026-10-07 [python-coder/TQ-600a-11, moved here 2026-10-15]: the single-slot
+    ``_schema_validator_cache`` holds (schema_object, compiled_validator).
+    TQ-600a-11 measured that once YAML parsing is no longer the bottleneck,
+    constructing a fresh jsonschema.Draft7Validator(schema) on every one of
+    4,634 per-file calls became the new dominant cost (profiled at ~12s of a
+    ~21s full-store run, versus ~3s actually parsing YAML). main() loads the
+    schema dict exactly once and passes the SAME object through every
+    _validate_file() call in its loop, so keying on object IDENTITY (``is``,
+    never ``id()`` as an integer, which can be recycled for an unrelated
+    object once the original is garbage collected and would silently return a
+    STALE validator for different content) is sufficient and correct: a cache
+    hit only fires for the exact object main() still holds. The comment that
+    carried this text moved into the docstring to repay the file-size ratchet.
+  - 2026-10-15 [python-coder/ACS-900d-4-ii]: ``_STATUS_VALUES`` now includes
+    ``superseded`` so this gate agrees with config/ac_store_schema.json and the
+    commit-time validators. This gate checks record SHAPE only and deliberately
+    does not consult the retired-record predicate.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -59,18 +79,7 @@ from declared_files import declared_files_commit_messages  # noqa: E402
 # their verdicts cannot drift apart (ACS-200e).
 _SCHEMA_REL = Path("config") / "ac_store_schema.json"
 
-# Single-slot cache: (schema_object, compiled_validator). TQ-600a-11 measured
-# that once YAML parsing is no longer the bottleneck (the yaml_safe_loader
-# accessor above), *this* line's prior behaviour -- constructing a fresh
-# jsonschema.Draft7Validator(schema) on every one of 4,634 per-file calls --
-# became the new dominant cost (profiled at ~12s of a ~21s full-store run,
-# versus ~3s actually parsing YAML). main() loads the schema dict exactly
-# once and passes the SAME object through every _validate_file() call in its
-# loop, so keying on object IDENTITY (`is`, never `id()` as an integer -- an
-# id() can be recycled for an unrelated object once the original is garbage
-# collected, which would silently return a STALE validator for different
-# content) is sufficient and correct: a cache hit only fires for the exact
-# object main() is still holding a reference to.
+# Single-slot cache (schema_object, compiled_validator), keyed on object identity; see DECISION HISTORY.
 _schema_validator_cache: tuple[dict[str, Any], Any] | None = None
 
 
@@ -120,7 +129,7 @@ def _infer_repo_root(ac_path: Path) -> Path:
 _READINESS_VALUES = {"draft", "reviewed", "approved"}
 _PRIORITY_VALUES = {"critical", "high", "medium", "low"}
 _LEVEL_VALUES = {"L0", "L1", "L2", "L3"}
-_STATUS_VALUES = {"active", "deprecated", "superseded_by"}
+_STATUS_VALUES = {"active", "deprecated", "superseded", "superseded_by"}  # ACS-900d-4-ii: agrees with the JSON schema
 _WORK_STATUS_VALUES = {"todo", "in_progress", "done"}
 _DOC_TRIGGER_VALUES = {
     "how-to",

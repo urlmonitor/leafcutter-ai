@@ -1,0 +1,82 @@
+id: ACS-900d-4-iii
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "A record that names itself as its own successor is not retired"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+criteria: |
+  Given a commit stages a record X-1 with status "superseded_by",
+    superseded_by: [X-1], and work_status "done", and no test is tagged as
+    covering X-1,
+  When the AC-store commit gates run on that commit,
+  Then the commit is refused with a message naming X-1 and stating that a
+    record cannot supersede itself,
+  And X-1 is not treated as retired, so the done-proof gate also reports X-1's
+    missing covering test;
+  Given instead superseded_by: [X-1, AR-400c-1] where AR-400c-1 exists,
+  When the AC-store commit gates run on that commit,
+  Then the commit is still refused with the same self-supersession message.
+depends_on: [ACS-900d-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The self-supersession refusal belongs to the same new structural successor check in check_ac_schema.py as ACS-900d-4-ii. It must refuse whenever the record's own id appears anywhere in superseded_by, as a scalar or as a list member, including a list that also names valid existing successors. The message must name the record and say that a record cannot supersede itself."
+  - "The shared retired predicate (ACS-900d-4) must return not-retired whenever the record's own id is in superseded_by, even when the other successors are valid. Then check-done-proof reports the missing covering test in the same run."
+  - "The self check must run before, and independently of, the existence check. The record is itself being staged, so existence would trivially pass. Compare ids exactly after whitespace trimming. Do not normalise case unless the store's id regex allows mixed case."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The shared pure predicate, which returns not-retired whenever the record's own id appears in its superseded_by list or scalar"
+test_spec:
+  - name: test_self_successor_refused_with_self_supersession_message
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_ac_schema.py refuses a staged record with superseded_by [X-1], and the message names X-1 and says a record cannot supersede itself."
+    covers: [ACS-900d-4-iii]
+  - name: test_self_successor_not_retired_done_proof_reports_missing_cover
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "check_done_proof.py also reports X-1's missing covering test, because a self-superseding record is not retired."
+    must_catch:
+      - "the predicate checks only that each successor exists, which the record itself satisfies"
+    covers: [ACS-900d-4-iii]
+  - name: test_self_plus_valid_successor_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "superseded_by [X-1, AR-400c-1], with AR-400c-1 present, is still refused with the same self-supersession message."
+    must_catch:
+      - "the self check only fires when the list has exactly one entry"
+    covers: [ACS-900d-4-iii]
+test_rationale: "Test file: unit_tests/commit_guardian/test_acs_900d_4_iii_self_supersession.py. Self-reference passes the existence check by construction, so the discrimination test is what proves the self rule exists separately from -ii. The mixed-list case catches a check that looks only at a single-element list."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Self-reference trivially satisfies "the superseding id exists" (the record
+  exists — it is being committed), so without this rule it is the cheapest way
+  to dodge done-proof. Separate from -ii because existence alone does not catch it.
+
+  IT-PO enrichment (2026-10-15): this goes in the same check_ac_schema.py
+  structural successor check as -ii, and the shared predicate holds the
+  matching not-retired rule. Both refusals must appear in one run.
+change_target: code
+risk_surface: internal
