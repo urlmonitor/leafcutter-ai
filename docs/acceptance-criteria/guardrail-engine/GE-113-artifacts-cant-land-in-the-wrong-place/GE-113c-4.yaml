@@ -73,7 +73,7 @@ it_requirements:
   are fixed by GE-113c-4-i (land together, or record a known issue pointing at GE-113c-4-i). Any other
   refusal, such as the c2-fast-* diagrams' bare-name parent, is fixed or filed as a known issue naming
   the document.
-- Resolve docs/known-issues/commit-guardian/open-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md
+- Resolve docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md
   in the same change.
 declared_files:
 - path: templates/scripts/commit_guardian/check_mermaid_parent_link.py

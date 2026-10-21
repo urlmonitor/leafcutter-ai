@@ -28,6 +28,6 @@ RULE_CHECK_DEPLOY_MAP: tuple[tuple[str, str], ...] = tuple(
         "_rc_backlinks", "_rc_components", "_rc_contracts", "_rc_readiness", "_rc_doc_triggers",
         "_rc_declared", "_rc_changed", "_rc_test_intent", "_test_intent",
         "design_prepass", "_rc_design_grounding", "approval_hold_report", "_approval_holds",
-        "_file_findings", "_rc_file_findings",
+        "_file_findings", "_rc_file_findings", "_rc_protected_fields",
     )
 )

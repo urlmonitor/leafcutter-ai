@@ -56,6 +56,9 @@ HOW A RULE FAMILY REGISTERS (read this before adding one):
      `failed` finding for that record and family; the run continues.
 
 DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-2500a-2-vi, -vii, -viii]: Registered `_rc_protected_fields`;
+    `itpo-handback` is an authoring stage; a run with no before-state applies no repair (a repair
+    becomes `needs a decision`) and the report gains `before_state` {given, repairs_applied}.
   - 2026-10-14 [python-coder/ACD-2500a-1]: Created per the architect-review note
     (sections 1-3). `--stage` is validated here (not by argparse) so an unknown stage
     is a failed report, not an exit-2 usage error.
@@ -80,6 +83,7 @@ import _rc_declared
 import _rc_design_grounding
 import _rc_doc_triggers
 import _rc_file_findings
+import _rc_protected_fields
 import _rc_readiness
 import _rc_record_schema
 import _rc_test_intent
@@ -108,6 +112,7 @@ from _rc_report import (
     dedupe,
     dump_report,
     family_counts,
+    no_write,
     sort_findings,
 )
 from validate_ac_schema import load_ac_store_schema
@@ -118,11 +123,11 @@ logger = logging.getLogger("requirement_rule_check")
 FAMILIES: list[Any] = [
     _rc_record_schema, _rc_backlinks, _rc_components, _rc_readiness, _rc_contracts, _rc_doc_triggers,
     _rc_declared.FAMILY_SURFACE_RULE, _rc_declared.FAMILY_MODIFIES_RULE, _rc_test_intent,
-    _rc_design_grounding, _rc_file_findings,
+    _rc_design_grounding, _rc_file_findings, _rc_protected_fields,
 ]
 
-STAGES = ("po", "ba", "itpo", "test-design", "approval")
-_AUTHORING_STAGES = ("po", "ba", "itpo", "test-design")
+STAGES = ("po", "ba", "itpo", "test-design", "itpo-handback", "approval")
+_AUTHORING_STAGES = ("po", "ba", "itpo", "test-design", "itpo-handback")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -273,6 +278,7 @@ def _apply_repairs(ctx: Context, findings: list[Finding]) -> tuple[list[Finding]
         if changed:
             logger.info("repaired %s in %s (%s)", field, finding.file, finding.message)
             touched.add(finding.file)
+            ctx.applied_repairs.setdefault(finding.file, []).append(finding.repair)
             fixed.append(replace(finding, repair=None))
     return fixed, failures, touched
 
@@ -337,18 +343,23 @@ def run_check(ctx: Context, location: str, setup: list[Finding]) -> dict[str, An
         what = f"changed since {ctx.changed_since}" if ctx.wide else f"found at {location!r}"
         setup.append(Finding(location, None, FAMILY_RECORD_READABLE, DISPOSITION_FAILED,
                              f"no requirement records {what}", subject="empty"))
-    first, _ = _evaluate(ctx, records, families)
-    fixed, failures, touched = _apply_repairs(ctx, first)
-    ctx.forget_loaded()
-    records, reload_failures = _reload(ctx, records, touched)
-    second, handed = _evaluate(ctx, records, families)
-    second = [_unrepaired(f) for f in second]
+    first, handed = _evaluate(ctx, records, families)
+    if not ctx.has_before_state:  # none or unreadable: no file is written, a repair becomes a decision
+        fixed, failures, touched, reload_failures = [], [], set(), []
+        second = [no_write(f) for f in first]
+    else:
+        fixed, failures, touched = _apply_repairs(ctx, first)
+        ctx.forget_loaded()
+        records, reload_failures = _reload(ctx, records, touched)
+        second, handed = _evaluate(ctx, records, families)
+        second = [_unrepaired(f) for f in second]
     second_keys = {f.key for f in second}
     kept_fixed = [f for f in fixed if f.key not in second_keys]
     everything = dedupe([*setup, *load_findings, *reload_failures, *failures, *kept_fixed, *second])
     ordered = sort_findings(everything)
     to_commit = _records_to_commit(ctx) if ctx.wide else None
-    return build_report(location, seen, ordered, family_counts(handed, ordered), to_commit)
+    state = {"given": ctx.has_before_state, "repairs_applied": bool(touched)}
+    return build_report(location, seen, ordered, family_counts(handed, ordered), to_commit, state)
 
 
 def main(argv: list[str] | None = None) -> int:

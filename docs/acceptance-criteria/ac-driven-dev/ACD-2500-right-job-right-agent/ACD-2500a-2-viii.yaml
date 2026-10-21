@@ -30,7 +30,7 @@ depends_on:
   - ACD-2500a-2
   - ACD-2500a-2-iv
 doc_links:
-  - path: docs/known-issues/ac-store/open-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md
+  - path: docs/known-issues/ac-store/resolved/resolved-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md
     relationship: related
     status: exists
     relevance: >-
@@ -61,7 +61,7 @@ it_requirements:
 - An authoring stage run without a before-state still ends with verdict failed (the existing fail-closed
   rule stays); the change is only that nothing is written.
 - /plan-feature's stage-end runs, which always pass --before-ref, behave byte for byte as before.
-- Resolve docs/known-issues/ac-store/open-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md
+- Resolve docs/known-issues/ac-store/resolved/resolved-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md
   in the same change, following the known-issues convention.
 declared_files:
 - path: scripts/ac_store/requirement_rule_check.py

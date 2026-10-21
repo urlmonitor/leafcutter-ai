@@ -3089,7 +3089,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]
@@ -3141,7 +3141,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "ticket_creation_pipeline"
             ]
@@ -3223,7 +3223,7 @@
                     "source": "bash command output (date, git)"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]

@@ -98,7 +98,7 @@ def check_reply(passed: bool = True) -> dict:
 
 def labels(prepass: dict, holds: dict, designer=None, check=None, **overrides) -> dict:
     """Every label the technical route dispatches, with the new stage's replies supplied."""
-    table = {
+    table: dict[str, dict] = {
         "stage-0-triage": {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "forced"},
         "stage-itpo-author": {"status": "ok", "acs_written": IDS, "message": "done"},
         "branch-check": {"output": "ac-authoring/test-design", "exit_code": 0},

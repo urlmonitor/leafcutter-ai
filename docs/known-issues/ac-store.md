@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 26** (1 blocker, 15 high, 10 low) · **Resolved: 4**
+**Open: 25** (1 blocker, 15 high, 9 low) · **Resolved: 5**
 
 ## Open
 
@@ -87,7 +87,6 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `low` | KI-ACS-20260923-doc-links-status-not-reconciled — an AC's `doc_links[].status` field is never reconciled against whether its target document actually exists or shipped | [open-low-ki-acs-20260923-doc-links-status-not-reconciled.md](ac-store/open-low-ki-acs-20260923-doc-links-status-not-reconciled.md) |
 | `low` | KI-ACS-20260928 — the done-proof pytest rootdir walk has no upper bound, so a config file above the project can become the test run's cwd | [open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md](ac-store/open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md) |
 | `low` | KI-ACS-20261014-untagged-done-ratchet-counts-composites-as-untested — the KM-ADM-005 ratchet wants a `# covers:` tag on a composite AC itself, although the required done-proof gate proves a composite through its children, so marking a fully tested parent done fails the required pytest check | [open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md](ac-store/open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md) |
-| `low` | KI-ACS-20261015-rule-check-without-before-state-demotes-approved — run by hand on a feature folder without `--before-ref` or `--before-snapshot`, the requirement rule check rewrites every `approved` record to `draft` in place; graded medium | [open-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md](ac-store/open-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md) |
 | `low` | KI-ACS-20261021-hold-report-releases-code-records-without-tests — the approval-hold report releases a code record with `test_required: false`, which check-ac-schema then refuses once it is approved; graded medium | [open-low-ki-acs-20261021-hold-report-releases-code-records-without-tests.md](ac-store/open-low-ki-acs-20261021-hold-report-releases-code-records-without-tests.md) |
 
 ## Resolved
@@ -98,4 +97,5 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `high` | KI-ACS-010 — The store's test vocabulary is Python-only, so 29 web-app ACs are unvalidatable landmines | [resolved-high-ki-acs-010.md](ac-store/resolved/resolved-high-ki-acs-010.md) |
 | `blocker` | KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke | [resolved-blocker-ki-acs-017.md](ac-store/resolved/resolved-blocker-ki-acs-017.md) |
 | `low` | KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md` | [resolved-low-ki-acs-018.md](ac-store/resolved/resolved-low-ki-acs-018.md) |
+| `low` | KI-ACS-20261015-rule-check-without-before-state-demotes-approved — run by hand on a feature folder without `--before-ref` or `--before-snapshot`, the requirement rule check rewrote every `approved` record to `draft` in place; graded medium — RESOLVED 2026-10-21 (ACD-2500a-2-viii): a run with no before-state writes no file and reports each repair as `needs a decision` | [resolved-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md](ac-store/resolved/resolved-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md) |
 | `low` | KI-ACS-016 — There is no retired `work_status`, so a superseded child stays in its parent's `covered_by` and the parent can never be proved done (fixed on branch `fix/open-items-ki-fc-001-links-and-acs-016`, PR pending) | [resolved-low-ki-acs-016.md](ac-store/resolved/resolved-low-ki-acs-016.md) |

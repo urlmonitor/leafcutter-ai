@@ -67,8 +67,13 @@ def _env() -> dict:
 
 
 def _profile(agent_id: str, tools: str, mutates: list[dict]) -> dict:
-    """One agent's frontmatter: the profile fields under test plus the self-description boilerplate."""
-    front = {"name": agent_id, "tools": tools, "mutates": mutates, "produces": "analysis"}
+    """One agent's frontmatter: the profile fields under test plus the self-description boilerplate.
+
+    A profile that declares a requirement-store surface produces requirement_records, as
+    ACD-2500f-1-i requires of every store writer; that rule is not under test here."""
+    writes_store = any("docs/acceptance-criteria/" in str(item.get("surface", "")) for item in mutates)
+    produces = "requirement_records" if writes_store else "analysis"
+    front = {"name": agent_id, "tools": tools, "mutates": mutates, "produces": produces}
     front["description"] = f"{agent_id} fixture agent"
     front.update({field: [] for field in _BOILERPLATE_LISTS})
     return front
@@ -87,7 +92,7 @@ def _package(tmp_path: Path, profiles: list[dict], *, registry_text: str | None 
         (root / "templates" / "agents" / f"{agent_id}.md").write_text(
             f"---\n{front}---\n\nYou are {agent_id}.\n", encoding="utf-8")
         entry = {"id": agent_id, "template_path": f"templates/agents/{agent_id}.md", "portable": True}
-        entry.update({"category": "planning", "produces": "analysis", "description": profile["description"]})
+        entry.update({"category": "planning", "produces": profile["produces"], "description": profile["description"]})
         entry.update({field: [] for field in ("skills_invoked", "knowledge_channels")})
         entries.append(entry)
     text = registry_text if registry_text is not None else json.dumps(

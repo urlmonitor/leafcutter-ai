@@ -170,6 +170,59 @@ EMPTY_HISTORY_REASON = (
 )
 
 
+# GE-127h-1: the line-comment prefixes of the languages this gate measures
+# ('#' for .py/.sh, '//' for .js/.mjs/.ts/.tsx, '--' for .sql). Held ONCE:
+# the measurement below and describe_measurement_rule() both read it at call
+# time, so editing it moves what is measured and what is published together.
+DECISION_HISTORY_COMMENT_PREFIXES = ("#", "//", "--")
+
+_HISTORY_HEADING = "DECISION HISTORY"
+
+
+def _comment_text(line: str, prefix: str) -> str | None:
+    """Return the text after *prefix* when *line* is a *prefix* comment, else None."""
+    stripped = line.strip()
+    return stripped[len(prefix) :].strip() if stripped.startswith(prefix) else None
+
+
+def _history_heading_prefix(line: str) -> str | None:
+    """Return the prefix whose whole comment text on *line* is the heading, else None."""
+    for prefix in DECISION_HISTORY_COMMENT_PREFIXES:
+        if _comment_text(line, prefix) == _HISTORY_HEADING:
+            return prefix
+    return None
+
+
+def _is_rule_line(line: str, prefix: str) -> bool:
+    """Return True when *line* is a *prefix* comment made only of '=' characters."""
+    text = _comment_text(line, prefix)
+    return bool(text) and set(text) == {"="}
+
+
+def _strip_history_blocks(text: str) -> str:
+    """Drop every line-comment DECISION HISTORY block from *text* (GE-127h-1).
+
+    A block starts at a comment whose whole text is DECISION HISTORY, takes a
+    '=' rule line of the same prefix directly above it, and runs over the
+    consecutive lines carrying the heading's own prefix.
+    """
+    kept: list[str] = []
+    lines = text.splitlines(keepends=True)
+    index = 0
+    while index < len(lines):
+        prefix = _history_heading_prefix(lines[index])
+        if prefix is None:
+            kept.append(lines[index])
+            index += 1
+            continue
+        if kept and _is_rule_line(kept[-1], prefix):
+            kept.pop()
+        index += 1
+        while index < len(lines) and _comment_text(lines[index], prefix) is not None:
+            index += 1
+    return "".join(kept)
+
+
 def _strip_unmeasured_regions(content: str) -> str:
     """Strip *content*'s docstring and block-comment regions.
 
@@ -189,12 +242,13 @@ def _strip_unmeasured_regions(content: str) -> str:
 
     Returns:
         *content* with every triple-quoted string and block-comment region
-        removed entirely, trailing newline included.
+        removed entirely, trailing newline included, and then every
+        line-comment DECISION HISTORY block (GE-127h-1) removed.
     """
     stripped = _TRIPLE_DOUBLE_QUOTE_RE.sub("", content)
     stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
     stripped = _BLOCK_COMMENT_RE.sub("", stripped)
-    return stripped
+    return _strip_history_blocks(stripped)
 
 
 def count_content_lines(content: str) -> int:
@@ -299,6 +353,12 @@ _CATEGORY_PROBES: dict[str, str] = {
 }
 
 
+def _history_probe() -> str:
+    """Build a probe block from the FIRST prefix in the prefix constant (GE-127h-1)."""
+    prefix = DECISION_HISTORY_COMMENT_PREFIXES[0]
+    return f"{prefix} {_HISTORY_HEADING}\n{prefix} probe entry one\n{prefix} probe entry two"
+
+
 def _probe_discarded_categories(measure: Measure) -> set[str]:
     """Empirically determine which content categories *measure* discards.
 
@@ -323,9 +383,12 @@ def _probe_discarded_categories(measure: Measure) -> set[str]:
 
     Returns:
         The set of category keys (a subset of "triple_quoted",
-        "block_comment", "hash_comment") *measure* discards.
+        "block_comment", "hash_comment", "decision_history") *measure* discards.
     """
-    return {category for category, probe in _CATEGORY_PROBES.items() if measure(probe) == 0}
+    discarded = {category for category, probe in _CATEGORY_PROBES.items() if measure(probe) == 0}
+    if measure(_history_probe()) == 0:
+        discarded.add("decision_history")
+    return discarded
 
 
 def _join_with_and(items: list[str]) -> str:
@@ -341,6 +404,16 @@ def _join_with_and(items: list[str]) -> str:
     if len(items) == 1:
         return items[0]
     return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _describe_history_clause() -> str:
+    """State the GE-127h-1 history exclusion, naming the prefixes from the constant."""
+    prefixes = _join_with_and([f"'{p}'" for p in DECISION_HISTORY_COMMENT_PREFIXES])
+    return (
+        f"a decision-history block is not counted: it starts at a comment (prefix {prefixes}) whose whole "
+        f"text is DECISION HISTORY, takes a '=' rule line directly above it if there is one, and ends at "
+        f"the first line that is not a comment line of that prefix"
+    )
 
 
 def describe_measurement_rule() -> str:
@@ -373,11 +446,13 @@ def describe_measurement_rule() -> str:
         discard_fragments.append("block comments")
 
     hash_discarded = "hash_comment" in discarded
-    counted_fragments = ["blank lines"] if hash_discarded else ["blank lines", "'#' comments"]
+    counted_fragments = ["blank lines"] if hash_discarded else ["blank lines", "ordinary '#' comments"]
 
     sentences = []
     if discard_fragments:
         sentences.append(f"discards content inside {_join_with_and(discard_fragments)}")
+    if "decision_history" in discarded:
+        sentences.append(_describe_history_clause())
     sentences.append(f"counts every remaining line, including {_join_with_and(counted_fragments)}")
     if hash_discarded:
         sentences.append("'#' comments are discarded")
@@ -934,6 +1009,16 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-21 [python-coder/GE-127h-1..3]: A line-comment DECISION HISTORY
+  block no longer counts toward a file's measured length. Added the one
+  DECISION_HISTORY_COMMENT_PREFIXES constant ('#', '//', '--') and
+  _strip_history_blocks(), applied at the end of _strip_unmeasured_regions()
+  so count_content_lines(), count_added_measured_lines() (FILE GREW and the
+  crossing check) share one rule. Only line-comment blocks; docstring and
+  block-comment handling is unchanged, so nothing is subtracted twice.
+  describe_measurement_rule() probes it (_history_probe(), prefix taken
+  from the constant) and states start, end and the still-counted ordinary
+  comments.
 - 2026-09-29 [python-coder/GE-127f-2-i]: This module's own code is
   UNCHANGED by this ticket -- `AddedLineCountUnavailableError` and
   `resolve_added_measured_lines` were already correct and already raised
