@@ -252,6 +252,7 @@ class TestReportedResultCarriesRoutingFigures(unittest.TestCase):
             "object consuming the routing step's figures. Got terminal "
             f"payload: {payload!r}",
         )
+        assert knowledge_routing is not None  # narrowed for the type checker; the isinstance check above fails first
         self.assertEqual(
             knowledge_routing.get("read"),
             3,

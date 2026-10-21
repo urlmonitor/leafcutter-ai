@@ -26,6 +26,7 @@ import json
 import logging
 import subprocess
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 
@@ -144,7 +145,10 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
     Returns:
         The :class:`Scope`; ``problem`` is set when a declared AC record is unavailable.
     """
-    records = load_records(ac_ids, ac_root)  # one pass over the store (TQ-500g-1-v)
+    with ThreadPoolExecutor(1) as pool:  # the two reads are independent I/O: overlap them (TQ-500g-1-v)
+        tags_future = pool.submit(covers_tags, test_root, ac_ids)
+        records = load_records(ac_ids, ac_root)  # one pass over the store
+        tags = tags_future.result()
     declared, unavailable = declared_names(records)
     if unavailable:
         return Scope(problem=f"declared_ac_record_unavailable: {', '.join(unavailable)}")
@@ -152,7 +156,7 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
     must_catch = _must_catch_by_name(records)
     in_scope = _in_scope_by_name(records)
     scope, seen, found = Scope(), set(), set()
-    for tag in covers_tags(test_root, ac_ids):
+    for tag in tags:
         if tag["ac_id"] not in wanted or not tag.get("function") or Path(tag["file"]).suffix != ".py":
             continue
         key = (Path(tag["file"]).resolve(), tag["function"])

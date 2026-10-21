@@ -78,10 +78,10 @@ def finish(args: argparse.Namespace, reply: bytes) -> dict:
         common = ["--ac-ids", args.ac_ids, *common]
     writer, code = _call("wrong_version_writer.py", ["write", "--work-key", args.work_key, "--reply", "-", *common], reply)
     manifest = writer.get("manifest_path") if writer else None
-    if code != 0 or not writer or writer.get("written") is not True or not isinstance(manifest, str) or not manifest:
+    if writer is None or code != 0 or writer.get("written") is not True or not isinstance(manifest, str) or not manifest:
         return _shape(False, "write", writer, None)
     verdict, run_code = _call("wrong_version_runner.py", ["run", *common, "--alterations", manifest], None)
-    passed = bool(verdict) and verdict.get("gate_passed") is True and run_code == 0
+    passed = verdict is not None and verdict.get("gate_passed") is True and run_code == 0
     return _shape(passed, None, writer, verdict)
 
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from types import SimpleNamespace
 
 import unit_tests.build_orchestration._tq500g1ix_fixtures as ix
 import unit_tests.build_orchestration._tq500g1x_fixtures as x
@@ -57,8 +56,8 @@ def run_finish(sb: x.XSandbox, stdin: str, *, timeout: int = 600, **kw):
     """Run ``finish`` with *stdin* as bytes (no newline translation); return ``(proc, parsed JSON)``."""
     raw = subprocess.run(finish_cmd(sb, **kw), cwd=sb.work, input=stdin.encode("utf-8"),
                          capture_output=True, timeout=timeout, env=x.env())
-    proc = SimpleNamespace(returncode=raw.returncode, stdout=raw.stdout.decode("utf-8", "replace"),
-                           stderr=raw.stderr.decode("utf-8", "replace"))
+    proc: subprocess.CompletedProcess = subprocess.CompletedProcess(
+        raw.args, raw.returncode, raw.stdout.decode("utf-8", "replace"), raw.stderr.decode("utf-8", "replace"))
     return proc, ix.parse_one_json(proc, "gate")
 
 

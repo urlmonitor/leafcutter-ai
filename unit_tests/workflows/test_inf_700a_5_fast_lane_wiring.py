@@ -122,6 +122,7 @@ class TestObservationDecidesTheReport(_FastLaneCase):
         self.assertGreater(observes[0].call_index, commit.call_index)
         self.assertIn("--commit-status ok", self.prompt(observes[0]))
         report = (result.result or {}).get("knowledge_routing")
+        assert report is not None, "the terminal payload carries no knowledge_routing"
         self.assertEqual((report["written"], report["unwritten"]), (1, 1), report)
         self.assertEqual(report["unwritten_records"][0]["destination"], _MANIFEST[1])
 

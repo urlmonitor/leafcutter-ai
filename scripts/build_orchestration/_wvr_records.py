@@ -17,6 +17,8 @@ ARCHITECTURE: One sorted walk of the store (same order as ``scan_ac_store._load_
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 import re
 import sys
 from pathlib import Path
@@ -25,6 +27,8 @@ import yaml
 
 from _fl_red_baseline_support import _is_declared_test_spec_entry
 from done_proof import _EXCLUDED_SCAN_DIRS, _is_excluded_path, _scan_single_test_file
+
+_THREADS = 8
 
 
 def load_records(ac_ids: list[str], ac_root: Path) -> dict[str, dict | None]:
@@ -40,20 +44,60 @@ def load_records(ac_ids: list[str], ac_root: Path) -> dict[str, dict | None]:
     """
     pending = list(dict.fromkeys(ac_ids))
     found: dict[str, dict | None] = {}
-    for path in sorted(ac_root.rglob("*.yaml")) if pending else ():
-        try:
-            data = path.read_bytes()
-        except OSError:
-            continue
-        hits = {i for i in pending if i.encode("utf-8") in data}  # not findall: it stops at the first alternative
-        record = _parse(path, data) if hits else None
-        for ac_id in [i for i in pending if i in hits]:
-            if record is not None and record.get("id") == ac_id:
-                found[ac_id] = record
-                pending.remove(ac_id)
-        if not pending:
-            break
+    paths = sorted(ac_root.rglob("*.yaml")) if pending else []
+    for path in paths:  # the file named after an id is that id's record: no scan for it (ids are unique)
+        if path.stem in pending:
+            record = _parse(path, _read(path))
+            if record is not None and record.get("id") == path.stem:
+                found[path.stem] = record
+                pending.remove(path.stem)
+    wanted = tuple(pending)  # a snapshot: the workers must not see ``pending`` shrink
+    paths = paths if pending else []  # everything was found by name: nothing left to scan for
+    with ThreadPoolExecutor(_THREADS) as pool:  # the reads are I/O bound; map keeps the sorted order
+        reads = pool.map(lambda path: _read_candidates(path, wanted), paths)
+        for path, hits in zip(paths, reads, strict=True):
+            hits = [i for i in hits if i in pending]
+            record = _parse(path, _read(path)) if hits else None
+            for ac_id in hits:
+                if record is not None and record.get("id") == ac_id:
+                    found[ac_id] = record
+                    pending.remove(ac_id)
+            if not pending:
+                break
     return {i: found.get(i) for i in ac_ids}
+
+
+def _read(path: Path) -> bytes:
+    """Return the bytes of *path* (empty when unreadable)."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return b""
+
+
+def _read_candidates(path: Path, pending: Sequence[str]) -> list[str]:
+    """Return the ids of *pending* that *path* may carry as its ``id`` (none when unreadable)."""
+    try:
+        return sorted(_candidates(path.read_bytes(), pending))
+    except OSError:
+        return []
+
+
+def _candidates(data: bytes, pending: Sequence[str]) -> set[str]:
+    """Return the pending ids this file may carry as its ``id``.
+
+    A file with a top-level ``id:`` line can only be the record of that one id (so a file that
+    merely lists other ids in ``depends_on`` is not parsed). A file with no such line falls back
+    to "mentions the id", so an unusual layout is still parsed, never skipped.
+    """
+    line = _ID_LINE.search(data)
+    if line is not None:
+        token = line.group(1).decode("utf-8", "replace")
+        return {token} & set(pending)
+    return {i for i in pending if i.encode("utf-8") in data}
+
+
+_ID_LINE = re.compile(rb"""^id:[ 	]*['"]?([^\s'"#]+)""", re.MULTILINE)
 
 
 def _alternation(ids: list[str]) -> re.Pattern[bytes]:
@@ -64,7 +108,7 @@ def _alternation(ids: list[str]) -> re.Pattern[bytes]:
 def _parse(path: Path, data: bytes) -> dict | None:
     """Parse one AC file like ``scan_ac_store._load_ac`` (SafeLoader result plus ``_path``), else ``None``."""
     try:
-        loaded = yaml.load(data, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))  # noqa: S506 -- a safe loader
+        loaded = yaml.safe_load(data)
     except yaml.YAMLError as exc:
         print(f"ERROR: {path}: {exc}", file=sys.stderr)
         return None
@@ -109,8 +153,10 @@ def covers_tags(test_root: Path, ac_ids: list[str]) -> list[dict]:
         dirs[:] = [d for d in dirs if d not in _EXCLUDED_SCAN_DIRS]
         for name in names:
             path = Path(folder) / name
-            if name.endswith(".py") and _mentions(path, wanted):
+            if name.endswith(".py"):
                 files.append(path)
+    with ThreadPoolExecutor(_THREADS) as pool:
+        files = [p for p, keep in zip(files, pool.map(lambda p: _mentions(p, wanted), files), strict=True) if keep]
     tags: list[dict] = []
     for path in sorted(files):
         tags.extend(_scan_single_test_file(path))
