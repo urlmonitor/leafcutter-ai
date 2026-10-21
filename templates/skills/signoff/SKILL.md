@@ -910,7 +910,21 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 
 > "Did you discover anything during this ticket that future-you would have benefited from knowing at the start? (no / yes)"
 
-**No path**: proceed — sign-off is complete.
+**No path**: run this ONE command, then proceed — sign-off is complete
+(ADR-034 Amendment 2 A2.3). Fill in the angle-bracket values; do not add a
+`--log` or `--sink` argument:
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent <agent> --event capture_attempt --phase knowledge-capture --outcome nothing-to-record --ticket <ticket> || true
+```
+
+This records that you ran the capture step and had nothing to record. It
+writes a capture attempt to telemetry, not to the knowledge record, so no
+learning is created. `--ticket` is optional: include it only when you have a
+ticket path in hand, otherwise leave it out. **Fail open:** if the command
+prints a warning or exits non-zero, do not retry or work around it — finish
+your sign-off anyway. You do NOT write a `recorded` attempt yourself: the
+helper in the Yes path below does that after a successful capture (A2.4).
 
 **Yes path**:
 1. Ask: "Describe the learning in one to three sentences."

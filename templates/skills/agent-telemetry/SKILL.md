@@ -33,7 +33,8 @@ python .claude/skills/agent-telemetry/scripts/emit_event.py \
 | `--agent` | yes | Name of the emitting agent |
 | `--ticket` | no | Ticket path, when the event is scoped to one |
 | `--phase` | no | Phase name, e.g. `python-coder` |
-| `--outcome` | no | `ok`, `blocked`, `failed`, … |
+| `--outcome` | no | `ok`, `blocked`, `failed`, … free text. For `--event capture_attempt` it is required and must be one of `recorded`, `nothing-to-record`, `failed`; anything else writes nothing, warns on stderr and exits 0. |
+| `--missing-target` | no | Literal path of the script that could not run. Required for `capture_attempt` with outcome `failed` (otherwise refused the same way); `null` in every other record. |
 | `--retry-count` | no | Attempt number, when the event is a retry |
 | `--log` | no | Sink path override. Do not pass it: the default is the install's declared telemetry stream. |
 
@@ -46,8 +47,15 @@ key presence:
 ```json
 {"event_type": "agent_start", "timestamp": "2026-08-19T12:00:00+00:00",
  "agent_name": "ticket-supervisor", "ticket_path": "tickets/…/01_schema.md",
- "payload": {"phase": "python-coder", "outcome": null, "retry_count": null}}
+ "payload": {"phase": "python-coder", "outcome": null, "retry_count": null,
+             "missing_target": null}}
 ```
+
+`missing_target` is present on every record of every event type (`null` unless
+given). The `capture_attempt` event is the capture-attempt ledger (ADR-034
+Amendment 2): one record per run that reached the knowledge-capture step, with
+outcome `recorded` (written by `emit_knowledge.py` itself after a successful
+append), `nothing-to-record`, or `failed` (with `missing_target`).
 
 ## Emission is best-effort
 
