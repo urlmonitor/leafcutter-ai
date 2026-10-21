@@ -57,6 +57,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
 it_requirements:
   - >-
     The path list and message file are captured from the first attempt. Files a specialist

@@ -62,6 +62,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 package_surface: false
+declared_files:
+  - path: scripts/shared_block_identity.py
+    state: to_be_created
 it_requirements:
   - >-
     The check reads INSTALLED routes under a location it is given (the deployed layout root),

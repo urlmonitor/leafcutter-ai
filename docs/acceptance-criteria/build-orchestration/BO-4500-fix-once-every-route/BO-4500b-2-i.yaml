@@ -30,6 +30,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
+declared_files:
+  - path: scripts/shared_block_identity.py
+    state: to_be_created
 it_requirements:
   - >-
     The comparison is made on raw bytes, with no stripping, line-ending conversion or

@@ -42,6 +42,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
 it_requirements:
   - >-
     A reply is readable only as one structured envelope whose commit_answer is an object.

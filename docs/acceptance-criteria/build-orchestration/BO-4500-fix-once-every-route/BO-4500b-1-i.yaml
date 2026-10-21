@@ -41,6 +41,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
 it_requirements:
   - >-
     The unknown-name check compares against the DERIVED block set (BO-4500b-1), never a list kept

@@ -50,6 +50,11 @@ doc_links:
     relevance: "Where route authors already look; cross-link the new page from it."
 assigned_agent: documentation-expert
 estimated_complexity: M
+declared_files:
+  - path: docs/reference/shared-blocks.md
+    state: to_be_created
+  - path: docs/reference/workflow-authoring-contract.md
+    state: existing
 it_requirements:
   - >-
     Put the page under docs/reference/ (for example docs/reference/shared-blocks.md, name

@@ -36,6 +36,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
 it_requirements:
   - >-
     Nesting and overlap are detected from the order of markers within one route template, for

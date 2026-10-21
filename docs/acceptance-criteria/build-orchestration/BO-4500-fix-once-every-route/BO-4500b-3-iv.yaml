@@ -47,6 +47,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
 it_requirements:
   - >-
     A family is decided only by membership in config/commit_step.json reason_codes

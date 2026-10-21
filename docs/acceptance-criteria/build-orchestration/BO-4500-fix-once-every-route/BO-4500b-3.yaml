@@ -78,6 +78,11 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: L
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
+  - path: templates/workflows-js/_shared/awaiting-adoption.json
+    state: to_be_created
 it_requirements:
   - >-
     DECISION SEPARATE FROM DISPATCH. The block's decision is a pure function of (reply, attempt

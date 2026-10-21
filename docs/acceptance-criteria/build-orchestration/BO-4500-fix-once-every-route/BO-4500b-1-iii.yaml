@@ -39,6 +39,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
 it_requirements:
   - >-
     Emptiness is judged on the template text alone, never by comparing it with any source.
