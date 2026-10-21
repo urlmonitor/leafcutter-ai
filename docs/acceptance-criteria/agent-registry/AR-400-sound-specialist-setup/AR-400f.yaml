@@ -34,6 +34,35 @@ doc_links:
     relevance: "FENCED. BO-3100a owns whether hand-off AUTHORITY is bounded -- the means to hand off matches the declared permission. This L1 owns the SHAPE of the declaration -- it says each thing once. A redundant entry grants no extra authority, so BO-3100a's check passes on it."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400f_every_deployed_hand_off_list_names_each_specialist_once
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "Over the checked-out tree and the shared deployed layout (no build of its own): no specialist's own hand-off declaration names an entry that another entry in it already covers or names one entry twice, every compiled hand-off list names each specialist once, and ticket-supervisor's compiled list still includes llm-expert."
+    must_catch:
+      - "the redundant entry is removed by dropping llm-expert from ticket-supervisor's reach altogether"
+    covers: [AR-400f]
+  - name: test_ar_400f_covered_and_repeated_entries_each_refuse_naming_the_redundant_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    description: "In one package copy, one specialist declares 'every ticket-phase agent' plus a ticket-phase specialist, a second names the same specialist twice, and a third names a non-ticket-phase specialist beside 'every ticket-phase agent'; the registry validator CLI exits non-zero with exactly two redundant-entry findings, each naming its specialist and the redundant entry, and none for the third."
+    must_catch:
+      - "the declaration is quietly de-duplicated at compile time and accepted"
+      - "every explicit entry beside the macro is flagged, including one the macro does not cover"
+    covers: [AR-400f]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400f_parent_promise.py. Composite-closure
+  contract for AR-400f. The first test proves the end state across every
+  specialist's declaration and its deployed hand-off list (marker
+  shared_layout_reader), and that removing today's redundant entry kept the
+  permission. The second proves both forms of redundancy are a refusal in one
+  validator CLI run on a copy (no build), with a non-covered control so a
+  check that flags every explicit entry fails. Expected cost: zero build.py
+  runs.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -61,3 +90,8 @@ notes: |
   and rejected for the reason in doc_links: BO-3100a is about authority, and
   this record is about declarations being coherent, which is AR-400's promise.
   AR-300c-5 would have been the nearest host but is done.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

@@ -40,6 +40,39 @@ doc_links:
     relevance: "Names route-learning at line 36; a shared guide is in scope, not only specialist instructions."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400a_every_ability_named_in_deployed_prompts_and_guides_is_deployed
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "Reading the shared deployed layout (no build of its own): every ability that a compiled specialist prompt or a deployed shared guide tells its reader to load is present in the deployed abilities area, or is a grant the specialist marks as supplied by the project; the number of prompts and guides examined equals the number derived from the tree and is non-zero."
+    must_catch:
+      - "the source tree is clean but a dangling reference is reintroduced at deploy time (a guide or prompt fragment that only exists in the deployed layout)"
+      - "the check examines zero prompts or guides and so reports nothing"
+    covers: [AR-400a]
+  - name: test_ar_400a_ghost_ability_in_a_definition_and_a_guide_stops_one_build_naming_both
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    description: "In a copy of the package, plant one instruction to load a nonexistent ability in one specialist definition and one in a shared guide; a single real build.py run into a fresh target exits non-zero before any specialist is deployed, and its output carries two findings, each naming the specialist or guide, the ability and the file and line."
+    must_catch:
+      - "the build stops at the first finding and never reports the second"
+      - "only specialist definitions are checked, so the shared-guide instance passes"
+      - "the finding is printed as a warning and the build still deploys"
+    covers: [AR-400a]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400a_parent_promise.py. Composite-closure
+  contract for AR-400a, proving the L1 promise as a whole through real entry
+  points rather than restating a child's unit test. The first test reads the
+  deployed view (marker shared_layout_reader; zero builds) and so covers the
+  surface no child checks -- what actually ships, guides included. The second
+  is the single real build this parent pays for (marker shared_layout_mutator,
+  since it builds a mutated copy): it shows both scopes of "instructions"
+  (definition and shared guide) stop the same build together, which a check
+  that stopped at the first finding, or that ignored guides, would fail.
+  Expected cost: one build.py run.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -69,3 +102,8 @@ notes: |
   ABILITIES THE PROJECT SUPPLIES are not "nonexistent" just because the
   package does not ship them -- AR-400d owns that case and this L1 must
   respect it.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

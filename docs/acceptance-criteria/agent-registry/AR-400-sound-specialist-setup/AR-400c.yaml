@@ -40,6 +40,36 @@ doc_links:
     relevance: "Tells authors to hand-write an abilities section in the body (and refers to a 'table above' that is no longer there). AR-300 delivers that section; the guidance now produces the duplicates AR-300d exists to prevent."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400c_three_planted_faults_and_one_unmentioned_grant_yield_exactly_three_lines
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    description: "In a copy of the package, plant one nonexistent-ability instruction, one ungranted-ability instruction, one redundant hand-off entry, and one granted ability that the specialist's instructions never mention; the registry validator CLI exits non-zero and its ability and hand-off output contains exactly three finding lines, one per real fault, and no line of any severity about the unmentioned grant."
+    must_catch:
+      - "the obsolete 'granted but never mentioned' direction is kept as a quieter message (info or notice) instead of being removed"
+      - "the noise is removed by suppressing all ability output, so a real fault beside it is silenced too"
+    covers: [AR-400c]
+  - name: test_ar_400c_every_deployed_prompt_has_one_abilities_section_and_no_dead_grant
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "Reading the shared deployed layout (no build of its own): every compiled specialist prompt contains exactly one delivered abilities section, the compiled adr-author does not offer doc-enforcer, and the compiled product-owner does not offer signoff."
+    must_catch:
+      - "authoring guidance still asks for a hand-written abilities section, so some specialist other than llm-expert compiles with two"
+    covers: [AR-400c]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400c_parent_promise.py. Composite-closure
+  contract for AR-400c. The promise has two halves -- nothing that is not a
+  fault is reported, and the faults the noise hid are fixed. The first test
+  proves the first half across all fault kinds at once through the real
+  registry validator CLI on a copied tree (no build), with every message
+  severity in scope rather than only warnings, which AR-400c-4's real-build
+  check filters on. The second proves the second half over the deployed view
+  of every specialist (marker shared_layout_reader), generalising AR-400c-3
+  beyond llm-expert. Expected cost: zero build.py runs.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -69,3 +99,8 @@ notes: |
   THE SAME-CLASS NEIGHBOUR LEFT OUT. The 14 "a human should verify" closure
   warnings (rebuild log lines 280-294) are excluded by the design and are not
   covered by this L1. See AR-400 notes.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

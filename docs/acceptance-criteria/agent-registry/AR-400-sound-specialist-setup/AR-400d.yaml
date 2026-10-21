@@ -41,6 +41,47 @@ doc_links:
     relevance: "Adjacent, not merged: where an adopter's own abilities can live safely is an open problem. This L1 states where a project-supplied ability is looked for; it does not solve KI-BP-009's placement question."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400d_one_build_delivers_present_and_reports_absent_project_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: criterion
+    description: "One real build.py run into a scratch consumer whose .leafcutter/skills holds ability A but not B, from a package copy where one specialist grants both A and B marked as supplied by the project: the build exits 0, the compiled prompt offers A and states B is not installed, and the output names B exactly once, at neither warning nor error severity, and never reports A as missing."
+    must_catch:
+      - "a missing project-supplied ability refuses the install"
+      - "a present project-supplied ability is not delivered because it is looked for in the package"
+    covers: [AR-400d]
+  - name: test_ar_400d_marking_rescues_only_the_marked_grant_of_the_same_id
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    description: "In one package copy, two specialists grant the same unshipped ability id, one marked as supplied by the project and one unmarked; the registry validator CLI exits non-zero with exactly one nonexistent-ability finding, naming the unmarked specialist, and only a not-installed report for the marked one."
+    must_catch:
+      - "any grant to an unshipped id is treated as project-supplied, so a typo in a package grant is rescued"
+      - "the marking is ignored, so the project-supplied grant refuses the build"
+    covers: [AR-400d]
+  - name: test_ar_400d_real_tree_marks_only_sql_coder_database_abilities_as_project_supplied
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    description: "Over the checked-out tree and the shared deployed layout: the only grants marked as supplied by the project are sql-coder's postgres and sql-test, and no compiled specialist prompt mentions collector-enforcer."
+    must_catch:
+      - "package-specific residue from another project is silenced by marking it as project-supplied instead of being removed"
+    covers: [AR-400d]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400d_parent_promise.py. Composite-closure
+  contract for AR-400d. The first test is this parent's one real build (marker
+  shared_layout_mutator, a scratch consumer): both outcomes of a
+  project-supplied grant -- delivered when present, reported and carried on
+  when absent -- in the same install. The second proves the two cases are
+  never confused in either direction (the binding note), through the
+  validator CLI on a copy (no build). The third reads the real tree and the
+  shared deployed layout (marker shared_layout_reader) to prove residue was
+  removed rather than dressed up as project-supplied. Expected cost: one
+  build.py run.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -77,3 +118,8 @@ notes: |
   must be understood (shape check, commit-time check, the done verdict,
   delivery, docs). A declaration understood by some and not others is the
   split-record defect again.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

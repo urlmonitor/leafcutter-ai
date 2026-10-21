@@ -40,6 +40,28 @@ doc_links:
     relevance: "CONTRADICTION TO RECONCILE. Keeps the older field 'as an alias for backward compatibility'. Decision 3 retires it. Amend or supersede explicitly."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400e_deployed_views_list_exactly_each_specialists_declared_abilities
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "Reading the shared deployed layout (no build of its own), for every specialist defined under templates/agents/: the abilities in its compiled prompt, its published card, the deployed architecture diagram and the knowledge graph queried through its CLI are each exactly the set its own definition declares, the deployed registry carries only skills_invoked for it, and every view's population of specialists is the same and equals the number of definitions."
+    must_catch:
+      - "a view still reads the retired skills_used field, so the specialists that were only in skills_invoked show no abilities there"
+      - "a view reads the union of both fields and so lists an ability the declaration dropped"
+      - "a specialist with no grant is missing from some views instead of appearing with none"
+    covers: [AR-400e]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400e_parent_promise.py. Composite-closure
+  contract for AR-400e. The promise is stated from the reader's side, so one
+  test compares every view as the user meets it -- the deployed artifacts and
+  the knowledge-graph CLI -- against the specialist's own declaration, for
+  every specialist at once. AR-400e-1 checks the same equality through the
+  producing functions over the source tree; this test checks what ships
+  (marker shared_layout_reader). Set equality per view, plus equal
+  populations, is the discrimination: an emptied or union-reading view
+  fails. Expected cost: zero build.py runs.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -75,3 +97,8 @@ notes: |
   slots full, re-opening it would turn an approved done record into a
   composite with unfinished work, and the benefit here (every VIEW agrees) is
   stated from the reader's side, which AR-300c never did.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.
