@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -195,6 +195,113 @@ test_intent:
   - clause: both give the same result they give in a full install, judged on the installed text alone
     needs_test: true
     reason: Engine-free operation is the framework-neutrality claim and a fill or check that needs the engine would fail in the harness.
+test_spec:
+  - name: test_fill_is_byte_exact_per_named_block
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Run build_workflow_scripts against a temporary package tree with ALPHA and BETA sources and routes A, B, C; the text between each installed marker pair equals the named source bytes exactly."
+    proves_clause: "installed routes A and B carry, between each marker pair, exactly the text of the named block's source, byte for byte"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_marker_free_route_equals_unfilled_install_output
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Installed route C equals the phase's output with no fill, i.e. the template after config injection only."
+    proves_clause: "installed route C differs from its template only by the configuration values every route receives at install"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_templates_keep_empty_marker_pairs_after_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Hash the route templates before and after the install; they are unchanged and each marker pair is still empty."
+    proves_clause: "the route templates in the package still hold empty marker pairs after the install"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_changed_source_line_reaches_every_consumer
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Install, change one ALPHA line, install again; routes A and B carry the new line and no installed route holds the old text."
+    proves_clause: "installed routes A and B both carry the changed text, and no installed route carries the earlier text"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_reinstall_with_no_change_is_byte_stable_and_writes_nothing
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A third install with unchanged inputs leaves every installed route byte identical and its mtime untouched (compare-before-write)."
+    proves_clause: "a further install with nothing changed leaves every installed route byte for byte as the previous install left it"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_block_placeholder_is_resolved_in_every_copy
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "ALPHA source holds {{config.output_root}}; with a non-default output_root every installed copy carries the configured value and no raw token."
+    proves_clause: "every installed copy of ALPHA-ANSWER carries the configured value in place of the placeholder, exactly as the route's own placeholders are resolved"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_new_block_fills_new_consumer
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Add only a GAMMA source and a marker pair in route C; route C is filled with GAMMA text."
+    proves_clause: "installed route C carries GAMMA-ANSWER's text"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_no_install_code_change_needed_for_new_block
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "The GAMMA fixture is introduced with the production module unmodified and works, and the module source holds no block-name list."
+    proves_clause: "nothing about how the package is installed had to change for GAMMA-ANSWER to be filled"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "a hard-coded list of block names in the install"
+      - "a hard-coded list of consumer routes in the install"
+  - name: test_fill_and_check_are_engine_free
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With no node binary on PATH and no workflow engine harness, the fill runs and the installed text is judged by text comparison alone, giving the same result as the full phase."
+    proves_clause: "both give the same result they give in a full install, judged on the installed text alone"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_shared_block_fill_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Invoke the real build_workflow_scripts entry point, as re-exported by build_phases, against a temporary package tree with workflows enabled; the marker pairs of the installed routes are filled."
+    proves_clause: "installed routes A and B carry, between each marker pair, exactly the text of the named block's source, byte for byte"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_installed_routes_are_written_to_the_real_output_location
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Run the phase into a real output directory, read the installed route files back from disk as bytes and compare them with the block sources."
+    proves_clause: "installed routes A and B carry, between each marker pair, exactly the text of the named block's source, byte for byte"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds build_workflow_scripts, the workflow build phase that renders routes with config injection and compare-before-write, which is where the fill the criteria add belongs
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -62,6 +62,58 @@ test_intent:
   - clause: every installed route is byte for byte as it was before that install began
     needs_test: true
     reason: A failing install must leave the installed set untouched, which a write-as-you-go fill would break.
+test_spec:
+  - name: test_malformed_markers_fail_with_one_message_per_route
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Routes A (start, no end), B (end, no start) and C (ALPHA start then BETA end) each yield one stderr message with route path, 1-based offending line and what is missing or mismatched."
+    proves_clause: "the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_all_malformed_routes_are_named_in_one_failed_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "A single failed install names routes A, B and C in deterministic path-then-line order and exits non-zero once."
+    proves_clause: "all three routes are named in that one failed install, not only the first one found"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "stop at the first malformed route"
+      - "fill an unpaired start marker to end of file"
+      - "silently skip a malformed route"
+  - name: test_malformed_marker_failure_leaves_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after the failed install; byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_malformed_marker_check_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the three-route fixture and assert the failure surfaces from it."
+    proves_clause: "the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the unpaired and mismatched marker check belongs
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -87,6 +87,58 @@ test_intent:
   - clause: it is retry
     needs_test: true
     reason: The reason-code list must reach the block from configuration, which a list typed into the block would fail.
+test_spec:
+  - name: test_out_of_family_and_unknown_codes_and_versions_are_all_report
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Replies (a) refused/check_failed, (b) refused/null, (c) step_disk_full, (d) policy_made_up, (e) committed with answer_version 2 each decide report; none continue, retry, stop or engage."
+    proves_clause: "every one of them is report, and none is continue, retry, stop-as-policy or engage"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "decide the family by the code's prefix"
+      - "retry step_disk_full because it starts with step_"
+      - "stop on policy_made_up because it starts with policy_"
+      - "accept any answer_version on a committed status"
+  - name: test_contract_break_report_names_the_offending_value
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each report states the reply breaks the commit answer contract and names the offending field and value."
+    proves_clause: "each report states that the reply breaks the commit answer contract and names the offending value"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_code_added_to_config_family_changes_decision_without_block_edit
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Install with a fixture config adding step_disk_full to the step family and the block source unchanged; reply (c) decides retry. The real config is never edited."
+    proves_clause: "it is retry"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "a reason-code list typed into the block source"
+  - name: test_contract_violation_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install and evaluate the installed block text on reply (c); it decides report."
+    proves_clause: "every one of them is report, and none is continue, retry, stop-as-policy or engage"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

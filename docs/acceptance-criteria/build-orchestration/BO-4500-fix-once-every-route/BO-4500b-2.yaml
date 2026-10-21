@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -140,6 +140,75 @@ test_intent:
   - clause: its report states, for each block, how many installed copies were inspected and names the routes that carry it
     needs_test: true
     reason: The per-block count is what distinguishes a real pass from a pass on nothing.
+test_spec:
+  - name: test_edited_copy_is_named_with_block_and_first_differing_line
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "On a private copy of installed routes A and B, change one character in route B's ALPHA text; the check fails naming route B, ALPHA-ANSWER and the 1-based first differing line in the installed file."
+    proves_clause: "the check fails, naming route B, the block ALPHA-ANSWER and the first line that differs from the source"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_undrifted_route_is_not_named
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "In the same drift run, route A's name does not appear in the failure output."
+    proves_clause: "route A is not named"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "name every consumer whenever any copy drifts"
+  - name: test_newly_added_route_is_discovered_without_changing_the_check
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Install a new route D marking ALPHA, edit its installed copy, run the unchanged check; it fails naming route D."
+    proves_clause: "the check fails naming route D, Because the routes checked are every installed route found carrying a marker pair, never a list of routes kept in the check"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "a hard-coded list of routes to check"
+  - name: test_correct_install_passes_with_rendered_placeholders
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "On an untouched install whose ALPHA source holds a config placeholder, the check passes by comparing against the source as rendered by the install's own resolution."
+    proves_clause: "it passes"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_pass_report_lists_inspected_count_and_routes_per_block
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The pass report has, per block, an inspected count equal to the number of installed copies and the list of routes carrying it."
+    proves_clause: "its report states, for each block, how many installed copies were inspected and names the routes that carry it"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_identity_check_is_reachable_after_a_real_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install into a temporary layout, then run the identity check over that layout's installed routes and assert it passes with a non-empty report. The check's module is created by this record, so the install entry point is the opened production surface."
+    proves_clause: "it passes"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

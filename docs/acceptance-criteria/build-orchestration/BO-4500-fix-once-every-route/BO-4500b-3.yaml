@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -179,6 +179,91 @@ test_intent:
   - clause: the regression test of every such known issue exercises the block's decision itself
     needs_test: true
     reason: A known issue's regression test left on a retired route copy would pass while the shared block regressed.
+test_spec:
+  - name: test_committed_reply_decides_continue
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Render the block as the install does into a temporary file, evaluate its decision with node and no engine for a committed reply on a first attempt with ceiling 3; decision is continue."
+    proves_clause: "(a) is continue"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_policy_refusal_decides_stop_without_further_attempt
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Refused with policy_protected_branch decides stop and no retry or engage appears."
+    proves_clause: "(b) is stop, with no further attempt"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_step_refusal_decides_retry_with_identical_paths_and_message_file
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Refused with step_index_locked decides retry with paths and message_file equal to the first attempt's."
+    proves_clause: "(c) is retry, offering the identical path list and message file again"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_hook_failed_with_handoff_decides_engage_then_reoffers_identical
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "hook_failed with a handoff naming code-refactoring-specialist decides engage with that specialist verbatim; the next decision after the specialist reports re-offers the identical first paths and message file."
+    proves_clause: "(d) is engage code-refactoring-specialist, then re-offer the identical path list and message file"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_check_failed_and_nothing_to_commit_decide_report
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "hook_failed with no handoff (check_failed) and nothing_to_commit (nothing_changed) each decide report, never continue."
+    proves_clause: "(e) and (f) are report"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_stop_and_report_carry_reply_fields_unchanged
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "For every stop and report decision, status, reason_code, reason, hook_name and failing_files equal the reply's values exactly."
+    proves_clause: "every stop and report decision carries the reply's status, reason_code, reason, hook_name and failing_files unchanged"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_regression_of_each_moved_known_issue_runs_against_block_decision
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each known-issue regression the change names for the /commit and fast-lane copies is re-pointed at the rendered block's decision function and asserts the fixed behaviour there."
+    proves_clause: "the regression test of every such known issue exercises the block's decision itself"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_commit_answer_block_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install with the shipped config/commit_step.json values and evaluate the installed block text's decision for a committed reply; it decides continue."
+    proves_clause: "(a) is continue"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

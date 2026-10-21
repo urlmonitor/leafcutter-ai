@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -77,6 +77,62 @@ test_intent:
   - clause: no installed route carries an empty ALPHA-ANSWER marker pair
     needs_test: true
     reason: The observable harm of an empty source is an empty installed pair, which must be asserted on the installed text.
+test_spec:
+  - name: test_unknown_block_name_fails_install_with_diagnosing_message
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Route A marks ALPHA-ANSWR; the install fails on stderr naming route A, the 1-based start-marker line, ALPHA-ANSWR and the sorted known names ALPHA-ANSWER, BETA-ANSWER."
+    proves_clause: "the install fails with a message naming route A, the line of the start marker, the unknown name ALPHA-ANSWR, and the known block names ALPHA-ANSWER and BETA-ANSWER"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_failed_install_leaves_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "For both the unknown-name and the whitespace-only-source fixtures, snapshot every installed route (all deployed locations) before and compare after the failed install."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_whitespace_only_source_fails_naming_block_and_every_needing_route
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "ALPHA source holds only spaces, tabs, CR and LF; the install fails naming ALPHA-ANSWER as empty and naming route A (and every other route needing it)."
+    proves_clause: "the install fails with a message naming the block ALPHA-ANSWER as having an empty source and naming route A as a route that needs it"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_no_installed_route_carries_empty_marker_pair_after_failure
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "After the empty-source failed install, no installed route contains an ALPHA-ANSWER start marker immediately followed by its end marker."
+    proves_clause: "no installed route carries an empty ALPHA-ANSWER marker pair"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_validation_failures_are_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the unknown-name fixture and assert the failure surfaces from it (non-zero exit / raised install error with the message on stderr)."
+    proves_clause: "the install fails with a message naming route A, the line of the start marker, the unknown name ALPHA-ANSWR, and the known block names ALPHA-ANSWER and BETA-ANSWER"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase whose validation pass the unknown-name and empty-source checks join
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -104,6 +104,73 @@ test_intent:
   - clause: the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as stale because route B uses the block
     needs_test: true
     reason: Self-expiry is what keeps the declaration from outliving its purpose, and only a test with an adopting route exercises it.
+test_spec:
+  - name: test_unused_undeclared_source_fails_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "BETA source exists, no route marks it, no declaration; the install fails naming BETA-ANSWER as a block no route uses."
+    proves_clause: "the install fails with a message naming BETA-ANSWER as a block no route uses"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_unused_and_stale_failures_leave_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after the unused-source failure and the stale-declaration failure; both are byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_declared_awaiting_adoption_install_completes
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With BETA declared in the awaiting-adoption data for BO-9999a-1 and BO-9999a-2 the install completes and returns normally."
+    proves_clause: "the install completes"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_awaiting_adoption_is_reported_on_every_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Captured normal output of two consecutive installs names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2 in declared order, both times."
+    proves_clause: "its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_declaration_goes_stale_once_a_route_marks_the_block
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Route B now marks BETA while the declaration still lists adopters; the install fails naming the declaration as stale because route B uses the block. An empty adopter list is also treated as no declaration."
+    proves_clause: "the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as stale because route B uses the block"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "a declaration that is honoured even when a route uses the block"
+      - "a declaration with an empty adopter list accepted as valid"
+  - name: test_awaiting_adoption_declaration_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the declared fixture and assert its output names the adopters."
+    proves_clause: "the install completes"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the unused-source and stale-declaration checks and the adoption report belong
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

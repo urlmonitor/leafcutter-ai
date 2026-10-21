@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -81,6 +81,66 @@ test_intent:
   - clause: it fails naming ALPHA-ANSWER as a block with no installed copy
     needs_test: true
     reason: A source whose consumers were all removed must be caught by the check even when the install-time check ran elsewhere.
+test_spec:
+  - name: test_zero_inspected_copies_fails_naming_the_location
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Point the check at an empty directory; it fails stating zero installed copies were inspected and naming the absolute location searched."
+    proves_clause: "it fails with a message stating that zero installed copies were inspected and naming the location it looked in"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "report a pass when nothing was inspected"
+      - "skip silently when the location holds no routes"
+  - name: test_declared_block_with_no_copy_is_listed_as_not_inspected
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "BETA source declared awaiting adoption, no installed copy; the report lists BETA-ANSWER as not inspected because it awaits adoption."
+    proves_clause: "its report lists BETA-ANSWER as not inspected because it awaits adoption"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_uninspected_block_is_not_counted_as_matched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "In the same run BETA-ANSWER is absent from the matched-blocks section of the report."
+    proves_clause: "BETA-ANSWER is not listed among the blocks whose copies matched"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "count a declared but uninspected block among the matched blocks"
+  - name: test_undeclared_block_without_copy_fails
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "ALPHA source not declared, no installed route carries it, other routes exist; the check fails naming ALPHA-ANSWER as a block with no installed copy."
+    proves_clause: "it fails naming ALPHA-ANSWER as a block with no installed copy"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_zero_copy_failure_is_reachable_after_a_real_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts phase into a temporary layout whose templates mark no block, then run the identity check on it and assert the zero-inspected failure."
+    proves_clause: "it fails with a message stating that zero installed copies were inspected and naming the location it looked in"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

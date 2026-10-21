@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -109,6 +109,34 @@ test_intent:
   - clause: they agree, and a code added to the configuration but missing from the page fails the test
     needs_test: true
     reason: The criterion requires a test that keeps the page from drifting away from the configuration.
+test_spec:
+  - name: test_page_states_every_configured_reason_code_and_the_ceiling
+    target_dir: unit_tests/reference/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Read config/commit_step.json and docs/reference/shared-blocks.md at test time; every reason code appears under its family name and max_transient_retries appears with its value. A fixture config with an extra code makes the check fail naming that code."
+    proves_clause: "they agree, and a code added to the configuration but missing from the page fails the test"
+    code_file: docs/reference/shared-blocks.md
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "compare only the retry ceiling and ignore reason codes"
+      - "pass when the page lists fewer codes than the configuration"
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: docs/reference/workflow-authoring-contract.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the existing reference page route authors read and the declared place for the cross-link to the new shared-blocks page
+    decision: null
+file_findings_opened_files:
+  - docs/reference/workflow-authoring-contract.md
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

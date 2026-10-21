@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -109,6 +109,99 @@ test_intent:
   - clause: no installed route carries a ceiling the configuration did not supply
     needs_test: true
     reason: The failing install must leave no route holding a default or a raw placeholder.
+test_spec:
+  - name: test_ceiling_3_gives_retry_retry_retry_report
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With a fixture config ceiling 3, four step_index_locked replies yield retry, retry, retry, report in order."
+    proves_clause: "the decisions are retry, retry, retry, report, in that order"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_every_retry_reoffers_first_attempt_paths_and_message_file
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each of the three retries carries paths and message_file equal to the first attempt's."
+    proves_clause: "every retry offers the same path list and message file as the first attempt"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_report_after_ceiling_names_all_four_answers_in_order
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The final report's answers list holds all four commit_answers in arrival order."
+    proves_clause: "the report names all four answers in the order they arrived"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_success_after_transient_failures_continues
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "step_vcs_error twice then committed yields retry, retry, continue."
+    proves_clause: "the decisions are retry, retry, continue"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_ceiling_comes_from_configuration_alone
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Install with a fixture config ceiling of 1 and the block source unchanged; two step_index_locked replies yield retry, report. The real config/commit_step.json is never edited."
+    proves_clause: "the decisions are retry, report"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "a ceiling of 3 typed into the block source"
+      - "a built-in default ceiling used when configuration differs"
+  - name: test_missing_ceiling_fails_install_naming_the_setting
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "A fixture commit_step config without max_transient_retries (and one with a non-integer value) makes the install fail naming max_transient_retries and the file."
+    proves_clause: "the install fails with a message naming the missing setting"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_failed_ceiling_install_leaves_no_route_with_a_supplied_default
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "After the missing-ceiling failed install, no installed route carries a ceiling value or a raw placeholder; installed routes are byte identical to before."
+    proves_clause: "no installed route carries a ceiling the configuration did not supply"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_configured_ceiling_is_reachable_through_the_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point with a fixture commit_step config and assert the installed block carries the configured ceiling."
+    proves_clause: "the decisions are retry, report"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase and its inject_config call through which the configured ceiling must reach the block and fail the install when missing
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

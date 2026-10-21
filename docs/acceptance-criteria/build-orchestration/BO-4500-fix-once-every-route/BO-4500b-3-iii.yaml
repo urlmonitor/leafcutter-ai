@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -103,6 +103,97 @@ test_intent:
   - clause: it is retry with the identical path list and message file, counted against the same transient-retry ceiling, with no further engagement
     needs_test: true
     reason: Mixing engagement and transient retries is where a fresh counter or a second engagement would creep in.
+test_spec:
+  - name: test_handoff_decides_engage_named_specialist
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "hook_failed with a handoff naming code-refactoring-specialist decides engage with exactly that specialist."
+    proves_clause: "the first decision is engage code-refactoring-specialist"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_reoffer_excludes_specialist_reported_extra_file
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "After the specialist reports it also changed scripts/x_helpers.py, the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt and not x_helpers.py."
+    proves_clause: "the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt, and not scripts/x_helpers.py"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "re-derive the re-offer list from what changed"
+      - "add the specialist's reported file to the re-offer"
+  - name: test_repeated_handoff_reports_both_answers_in_order
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A second hook_failed handoff after the re-offer decides report naming both hook_failed answers in arrival order."
+    proves_clause: "it is report, naming both hook_failed answers in order"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_specialist_is_never_engaged_twice_per_commit
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "With specialist_engaged true in the attempt history, no decision is engage, whatever the specialist name or configured retry values."
+    proves_clause: "no second engagement of any specialist is decided for that commit"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "loop on repeated handoffs"
+      - "engage a different specialist on a second handoff"
+  - name: test_declining_or_unreadable_specialist_reply_is_reported_with_quote
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A declining and an unreadable specialist reply each decide report naming the specialist and quoting the reply bounded to 2048 bytes."
+    proves_clause: "it is report, naming the specialist and quoting its reply bounded to 2 KB"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_no_reoffer_after_specialist_declined
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The report decision in the declined case carries no paths or message_file to re-offer and is not retry or engage."
+    proves_clause: "no re-offer is decided"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_transient_after_reoffer_retries_against_same_ceiling_without_engagement
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A step_index_locked reply after the re-offer decides retry with identical paths and message file, increments the shared per-commit counter (a fresh counter would exceed the ceiling), and is never engage."
+    proves_clause: "it is retry with the identical path list and message file, counted against the same transient-retry ceiling, with no further engagement"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_engage_reoffer_loop_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install and evaluate the installed block text on a hook_failed handoff reply; it decides engage."
+    proves_clause: "the first decision is engage code-refactoring-specialist"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

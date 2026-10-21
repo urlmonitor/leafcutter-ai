@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -79,6 +79,55 @@ test_intent:
   - clause: for (e) and (f) the report names both the envelope status and the commit_answer status
     needs_test: true
     reason: A block that trusts only one of the two statuses would pass one of these cases, so both must be asserted.
+test_spec:
+  - name: test_unreadable_or_contradicting_replies_are_all_report
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Evaluate the rendered block's decision for the six hostile replies (prose, no commit_answer, string commit_answer, empty, ok-envelope with hook_failed, blocker-envelope with committed); each is report, none continue, retry or engage, and nothing raises."
+    proves_clause: "every one of them is report, and none is continue, retry or engage"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "read prose containing the word committed as ok"
+      - "trust commit_answer alone and ignore a contradicting envelope status"
+      - "trust the envelope status alone"
+  - name: test_report_quotes_received_bounded_to_2kb
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each report carries received equal to the reply text; for a reply over 2048 bytes the quote is at most 2048 bytes with truncation marked."
+    proves_clause: "the report quotes what was received, bounded to 2 KB"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_envelope_disagreement_report_names_both_statuses
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "For replies (e) and (f) the report names both the envelope status and the commit_answer status."
+    proves_clause: "for (e) and (f) the report names both the envelope status and the commit_answer status"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_hostile_reply_handling_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install and evaluate the installed block text on an empty reply; it decides report."
+    proves_clause: "every one of them is report, and none is continue, retry or engage"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

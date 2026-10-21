@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -66,6 +66,57 @@ test_intent:
   - clause: the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that the two blocks overlap
     needs_test: true
     reason: Overlap is a distinct ordering from nesting, and a check that handles only nesting would let it through.
+test_spec:
+  - name: test_nested_blocks_fail_install_naming_both_and_lines
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Route B marks ALPHA start, BETA start, BETA end, ALPHA end; the install fails naming route B, both blocks, each 1-based start line and that BETA-ANSWER is marked inside ALPHA-ANSWER."
+    proves_clause: "the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that BETA-ANSWER is marked inside ALPHA-ANSWER"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_nesting_and_overlap_failures_leave_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after each failed install; byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_overlapping_blocks_fail_install_as_overlap_not_nesting
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Route B marks ALPHA start, BETA start, ALPHA end, BETA end; the install fails stating the two blocks overlap. Two separate places for the same block in one route stay allowed."
+    proves_clause: "the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that the two blocks overlap"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "detect nesting only and let overlap through"
+      - "refuse two separate places for the same block"
+  - name: test_nesting_check_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the nested fixture and assert the failure surfaces from it."
+    proves_clause: "the install fails with a message naming route B, the blocks ALPHA-ANSWER and BETA-ANSWER, the line of each start marker, and stating that BETA-ANSWER is marked inside ALPHA-ANSWER"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the nesting and overlap check on route templates belongs
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []
