@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f
 criteria: |
   Given the repository holds active generation G32 and retained generations G31 down to G28
@@ -98,8 +98,16 @@ amended_by:
     operation rather than adding a parallel one. readiness moved to approved and
     priority to high at the user's approval gate."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_km_400f_4.py
+- tests/knowledge_live/publication/test_km_400f_4.py
+implemented_by:
+- knowledge/cli_sync.py
+- knowledge/cli_generations.py
+- knowledge/adapters/retention/capacity.py
+- docs/how-to/run-knowledge-retrieval.md
+- docs/reference/knowledge-publication-capacity.md
+- docs/reference/knowledge-retention-bound.md
 change_target: [code, docs]
 risk_surface: contract_boundary
 notes: |

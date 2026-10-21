@@ -170,6 +170,21 @@ The ceiling is declared rather than read because Neo4j does not report it over B
 
 ---
 
+## Operator status and sweep reclamation
+
+`status` and the new `reclaim` command (AC `KM-400f-4`, `knowledge/cli_generations.py`) take the optional `--retention-max-generations` / `--retention-min-age-seconds` pair and the four `--capacity-*` flags (all four or none; a partial or out-of-range declaration is refused before any network access). `status` writes nothing.
+
+| `status` field | Content |
+|---|---|
+| `retention_bound` | The declared bound the verdicts were evaluated against, or the statement `no retention bound declared`. |
+| `generations` | One entry per retained generation: `generation_id`, `source_sha`, `retired_at` (null when never retired; `age_basis` states what the age is measured from), `reclaimable`, `reason`, `age_basis`, `age_seconds`. Verdicts come from `evaluate_retention`, unrecomputed. Without a bound, `reclaimable` and `reason` are `undetermined (no retention bound declared)`. |
+| `retained_count`, `exceeding_bound_count` | Generations listed, and how many exceed the declared count limit (`undetermined (no retention bound declared)` without a bound). |
+| `capacity` | `ceiling_known`, `verdict`, `statement`, and `repository` / `backend` by `nodes` / `relationships`: `usage`, `ceiling` and `remaining`. An undeclared ceiling is the string `unknown`, never omitted. Backend usage is the two whole-database counts; repository usage counts records tagged with this repository's generation keys plus its Snapshot records. |
+
+`reclaim` has no `--generation-id` and requires the retention bound (refused before network access otherwise). It runs the read-only preflight, then `reclaim_superseded` once, and returns `status` (`ok`, or `error` when the evaluation could not be assessed), `reclaimed`, `retained`, `reclaimed_generations` and `retained_generations` (each with its `reason`). Nothing reclaimable is `ok` with `reclaimed: 0`. The active generation and any generation with an unexpired pin are retained.
+
+---
+
 ## See Also
 
 - [Knowledge Publication Reclamation](knowledge-publication-reclamation.md) - Reclamation after the pointer switches; the gate runs before it.

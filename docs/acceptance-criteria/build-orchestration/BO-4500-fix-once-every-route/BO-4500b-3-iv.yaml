@@ -1,0 +1,153 @@
+id: BO-4500b-3-iv
+title: "A reason code outside its family, unknown to the published list, or an unknown answer version is reported as a contract violation and never retried"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given the COMMIT-ANSWER block's decision is given, in turn, replies whose commit_answer is:
+    (a) status refused with reason_code check_failed;
+    (b) status refused with reason_code null;
+    (c) status refused with reason_code step_disk_full, a code absent from the published
+        reason-code list;
+    (d) status refused with reason_code policy_made_up, a code absent from the published list;
+    (e) status committed with answer_version 2,
+  When the decision is taken for each,
+  Then every one of them is report, and none is continue, retry, stop-as-policy or engage,
+  And each report states that the reply breaks the commit answer contract and names the offending
+    value.
+
+  Given step_disk_full is added to the step_ family in the commit step's configuration and the
+    package is installed again, with no change to the block's source,
+  When the decision is taken on reply (c),
+  Then it is retry.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml
+    relationship: describes
+    status: exists
+    relevance: "Families are decided by MEMBERSHIP in one published enumeration, never by reading reason text; a refused code outside policy_/step_ is a contract violation; renaming or moving a code needs answer_version to change."
+  - path: config/commit_step.json
+    relationship: related
+    status: exists
+    relevance: "The published reason-code enumeration and answer_version."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
+it_requirements:
+  - >-
+    A family is decided only by membership in config/commit_step.json reason_codes
+    (policy, step, check, nothing). The pairing of a family with a commit_answer status is the
+    one BO-4500a-4 publishes (a refused status carries a policy_ or step_ code), not one the
+    block invents. A code missing from every family, a null code on a refused status, or a code
+    whose family does not pair with the status is a contract violation.
+  - >-
+    answer_version is compared with the configured answer_version (1 as shipped). Any other value
+    is report, even when the status is committed.
+  - >-
+    Adding a code to a family in the configuration and reinstalling changes the decision with no
+    edit to the block source. The tests use a fixture configuration and never edit the real
+    config/commit_step.json.
+  - >-
+    The report states that the reply breaks the commit answer contract and names the offending
+    field and its value, so a route never mistakes a contract break for a policy stop.
+delivers_to: null
+expects_from:
+  - ac_id: BO-4500b-3
+    contract: >-
+      The COMMIT-ANSWER decision function returning a report decision that carries the offending
+      field and value.
+  - ac_id: BO-4500b-1
+    contract: >-
+      Install-time placeholder resolution inside filled block text, which carries the
+      reason-code enumeration and answer_version from config/commit_step.json.
+test_intent:
+  - clause: every one of them is report, and none is continue, retry, stop-as-policy or engage
+    needs_test: true
+    reason: Deciding by prefix would retry step_disk_full and stop on policy_made_up, and only these unlisted codes expose it.
+  - clause: each report states that the reply breaks the commit answer contract and names the offending value
+    needs_test: true
+    reason: A contract break must be distinguishable from an ordinary refusal in what the route reports.
+  - clause: it is retry
+    needs_test: true
+    reason: The reason-code list must reach the block from configuration, which a list typed into the block would fail.
+test_spec:
+  - name: test_out_of_family_and_unknown_codes_and_versions_are_all_report
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Replies (a) refused/check_failed, (b) refused/null, (c) step_disk_full, (d) policy_made_up, (e) committed with answer_version 2 each decide report; none continue, retry, stop or engage."
+    proves_clause: "every one of them is report, and none is continue, retry, stop-as-policy or engage"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "decide the family by the code's prefix"
+      - "retry step_disk_full because it starts with step_"
+      - "stop on policy_made_up because it starts with policy_"
+      - "accept any answer_version on a committed status"
+  - name: test_contract_break_report_names_the_offending_value
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Each report states the reply breaks the commit answer contract and names the offending field and value."
+    proves_clause: "each report states that the reply breaks the commit answer contract and names the offending value"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_code_added_to_config_family_changes_decision_without_block_edit
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Install with a fixture config adding step_disk_full to the step family and the block source unchanged; reply (c) decides retry. The real config is never edited."
+    proves_clause: "it is retry"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "a reason-code list typed into the block source"
+  - name: test_contract_violation_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install and evaluate the installed block text on reply (c); it decides report."
+    proves_clause: "every one of them is report, and none is continue, retry, stop-as-policy or engage"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  (c) and (d) are the discriminators for the plausible wrong version "decide by the code's prefix":
+  it would retry step_disk_full and stop on policy_made_up. BO-4500a-4 requires membership in the
+  published list. The second scenario proves the list reaches the block from configuration (the
+  BrainCandy final-gate rule "not part of the code but some config file"), not from a copy typed into
+  the block. (e) is fail-closed on a contract the block was not written for, even on a success.
