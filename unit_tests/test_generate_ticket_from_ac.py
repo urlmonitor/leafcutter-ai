@@ -16,6 +16,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
@@ -1173,7 +1175,7 @@ class TestBuildAgentsMapWarnOnMiss:
     """AC-5 (H-1): _build_agents_map logs a WARNING when a guardrail lookup misses."""
 
     def test_ac5_build_agents_map_warns_on_missing_guardrail_entry(
-        self, tmp_path: Path, caplog: object
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         # covers: UNKNOWN
         """AC-5: When change_targets=['schema'] has no entry in the fixture guardrail
@@ -1462,7 +1464,6 @@ class TestRealStoreComputedMapE2E:
         immediately with a clear message — it never falls back to a synthetic
         path.
         """
-        import pytest
         import yaml as _yaml
 
         # ---- Step 1: Load the real AC record from disk ----
