@@ -80,6 +80,7 @@ covered_by:
   - KM-400f-2
   - KM-400f-3
   - KM-400f-4
+  - KM-400f-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
