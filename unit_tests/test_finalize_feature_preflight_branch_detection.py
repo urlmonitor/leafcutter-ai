@@ -1,24 +1,34 @@
 """
 MODULE: test_finalize_feature_preflight_branch_detection
-GOAL: Verify that finalize-feature.js pre-flight resolves branch and worktree_root
-    from the epic/ticket worktree (via git worktree list --porcelain + git -C),
-    not from the ambient session CWD. Regression guard for the bug observed when
-    invoking /finalize-feature from a session CWD on main — which caused a false
+GOAL: Verify that finalize-feature.js pre-flight takes branch and worktree_root
+    from the workspace finalize runs in -- since BO-4300c-3 the workspace maker's
+    answer -- not from the ambient session CWD. Regression guard for the bug observed
+    when invoking /finalize-feature from a session CWD on main, which caused a false
     "must be run from a feature branch" abort even when a valid epic worktree existed.
 
 AC: TICKET-20260707-Finalize_Preflight_Branch_Detection / AC-1
 
-Tests run without invoking Claude Code — they validate the JS file as text
-and use node --check for syntax validation.
+Tests 3-5 drive the REAL finalize-feature.js under the Node-backed E2 harness with a
+scripted maker answer naming a workspace that is not the session CWD; the rest read
+the JS file as text and use node --check for syntax validation.
 """
 
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
+sys.path.insert(0, str(_REPO_ROOT / "unit_tests"))
+
+from _workflow_engine_harness import run_workflow_under_e2, workspace_ensure_reply, workspace_refusal_reply  # noqa: E402
+
+# A workspace that is NOT the folder this test session runs in, named only by the maker's answer.
+_ELSEWHERE = "/tmp/finalize-preflight-elsewhere-wt"
+_ELSEWHERE_BRANCH = "feature/finalize-preflight-elsewhere"
+_GH_CONFIG = {"gh_target_account": None, "gh_repo": None}
 
 
 # ---------------------------------------------------------------------------
@@ -28,6 +38,15 @@ _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
 
 def _js_text() -> str:
     return _JS_PATH.read_text(encoding="utf-8")
+
+
+def _run(workspace_reply):
+    """Run finalize for target EPIC-Elsewhere with the maker's answer scripted; later steps stay unscripted."""
+    result = run_workflow_under_e2(_JS_PATH, timeout=60, args={"target": "EPIC-Elsewhere"},
+                                   label_responses={"workspace-ensure": workspace_reply, "gh-config": _GH_CONFIG})
+    assert result.error == "", result.error
+    assert isinstance(result.result, dict), result.stderr[-2000:]
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -81,74 +100,43 @@ class TestEpicArgExtraction:
 
 
 # ---------------------------------------------------------------------------
-# Test 3 — git worktree list --porcelain used for resolution
+# Test 3 -- the workspace is the maker's answer, asked for in the pre-flight
 # ---------------------------------------------------------------------------
 
 
-class TestWorktreeListUsed:
-    """The pre-flight must use git worktree list --porcelain to resolve the
-    target worktree when an epicArg is provided."""
+class TestWorkspaceComesFromTheMaker:
+    """The pre-flight asks the workspace maker for finalize's workspace (ONE ensure request, before Step 0)
+    and never looks the location up from the folder the session runs in."""
 
-    def test_git_worktree_list_porcelain_present(self):
-        """git worktree list --porcelain must appear in the pre-flight agent prompt."""
-        js = _js_text()
-        assert "git worktree list --porcelain" in js, (
-            "The pre-flight must run 'git worktree list --porcelain' to resolve "
-            "the target worktree — not rely on the session CWD"
-        )
-
-    def test_worktree_resolution_in_preflight_phase(self):
-        """The worktree list call must appear before Step 0 (in the pre-flight)."""
-        js = _js_text()
-        idx_worktree_list = js.find("git worktree list --porcelain")
-        idx_step0 = js.find("phase('Step 0')")
-        assert idx_worktree_list != -1, "git worktree list --porcelain not found"
-        assert idx_step0 != -1, "phase('Step 0') not found"
-        assert idx_worktree_list < idx_step0, (
-            "git worktree list --porcelain must appear in the Pre-flight section, "
-            "before phase('Step 0')"
-        )
+    def test_pre_flight_asks_the_maker_once_before_step_0(self):
+        result = _run(workspace_ensure_reply(_ELSEWHERE, branch=_ELSEWHERE_BRANCH))
+        labels = [c.label for c in result.agent_calls]
+        assert labels[0] == "workspace-ensure" and labels.count("workspace-ensure") == 1, labels
+        prompt = str(result.agent_calls[0].prompt)
+        assert "worktree.py" in prompt and "ensure" in prompt and "epic-elsewhere" in prompt, prompt
+        assert not any("worktree list" in str(c.prompt) for c in result.agent_calls), (
+            "No step may resolve the workspace by listing the worktrees around the session CWD")
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — git -C anchor used in pre-flight detection
+# Test 4 -- branch and root are read off the workspace the maker named
 # ---------------------------------------------------------------------------
 
 
-class TestGitCAnchorInPreflight:
-    """The pre-flight branch/toplevel detection must use git -C <worktree_path>
-    so it reads from the resolved worktree, not the session CWD."""
+class TestBranchAndRootFromTheWorkspace:
+    """Branch and root come from the workspace finalize runs in (the maker's answer), not the session CWD."""
 
-    def test_git_c_anchor_in_preflight_agent_prompt(self):
-        """git -C must appear in the pre-flight agent prompt string."""
-        js = _js_text()
-        # The pre-flight region is between phase('Pre-flight') and phase('Pre-flight 2').
-        preflight_start = js.find("phase('Pre-flight')")
-        preflight2_start = js.find("phase('Pre-flight 2')")
-        assert preflight_start != -1, "phase('Pre-flight') marker not found"
-        assert preflight2_start != -1, "phase('Pre-flight 2') marker not found"
-        preflight_region = js[preflight_start:preflight2_start]
-        assert "git -C" in preflight_region, (
-            "The pre-flight region must use 'git -C <path>' to anchor branch "
-            "and toplevel detection at the resolved worktree, not the session CWD"
-        )
+    def test_later_steps_run_in_the_named_workspace_on_its_branch(self):
+        result = _run(workspace_ensure_reply(_ELSEWHERE, branch=_ELSEWHERE_BRANCH))
+        gh = [c for c in result.agent_calls if c.label == "gh-config"]
+        assert gh and _ELSEWHERE in str(gh[0].prompt), [c.label for c in result.agent_calls]
+        assert result.result.get("branch") == _ELSEWHERE_BRANCH, result.result
 
-    def test_no_bare_git_branch_show_current_in_preflight(self):
-        """The pre-flight must NOT issue a bare `git branch --show-current` without
-        a -C anchor when an epicArg path is taken.
-
-        The bare call IS allowed in the fallback path (no-arg CWD detection), so
-        we verify the anchored variant is also present — meaning the fix is wired in.
-        """
-        js = _js_text()
-        preflight_start = js.find("phase('Pre-flight')")
-        preflight2_start = js.find("phase('Pre-flight 2')")
-        preflight_region = js[preflight_start:preflight2_start]
-        # The anchored variant must be present (the fix is active).
-        assert 'git -C' in preflight_region and 'branch --show-current' in preflight_region, (
-            "The pre-flight must contain both 'git -C' and 'branch --show-current', "
-            "confirming the anchored detection path is implemented"
-        )
+    def test_a_workspace_on_main_is_refused_with_the_feature_branch_guard(self):
+        result = _run(workspace_ensure_reply(_ELSEWHERE, branch="main"))
+        assert result.result.get("status") == "error", result.result
+        assert result.result.get("action_required") == "switch_to_feature_branch", result.result
+        assert [c.label for c in result.agent_calls] == ["workspace-ensure"]
 
 
 # ---------------------------------------------------------------------------
@@ -170,13 +158,13 @@ class TestNoWorktreeFoundError:
         )
 
     def test_no_worktree_error_has_actionable_message(self):
-        """The error returned when no worktree is found must be actionable."""
-        js = _js_text()
-        # The error message must mention git worktree list so the user knows what to do.
-        assert "git worktree list" in js, (
-            "The no-worktree-found error must mention 'git worktree list' so the "
-            "user can see all registered worktrees and retry with the correct name"
-        )
+        """A missing workspace ends the run with an error quoting the maker's own reason; nothing runs after it."""
+        reason = "no workspace could be made for slug epic-elsewhere: TOKEN-missing-workspace"
+        result = _run(workspace_refusal_reply("WORKSPACE_MISSING", reason))
+        message = str(result.result.get("message", ""))
+        assert result.result.get("status") == "error", result.result
+        assert "Workspace step failed" in message and reason in message, message
+        assert [c.label for c in result.agent_calls] == ["workspace-ensure"]
 
     def test_no_worktree_error_action_required_field(self):
         """The early-return is the shared failure, which is a structured error that quotes the reply (the
@@ -205,13 +193,6 @@ class TestMainMasterGuardPreserved:
         assert 'BRANCH === "main"' in js or "BRANCH === 'main'" in js, (
             "The main/master guard must be preserved — "
             "running finalize-feature on main is still an error"
-        )
-
-    def test_branch_derived_from_preflight_info(self):
-        """BRANCH must be set from the workspace maker's accepted answer, not from a CWD-anchored shell call."""
-        js = _js_text()
-        assert "finalizeWorkspace.answer.branch" in js and "const BRANCH =" in js, (
-            "BRANCH must be derived from the accepted workspace answer's branch"
         )
 
     def test_worktree_root_derived_from_preflight_info(self):

@@ -32,6 +32,12 @@ DECISION HISTORY
   DeveloperRepoLockTimeoutError distinct from DeveloperRepoChangedError),
   the unfiltered global snapshot/diff pair, and the developer_repo_guard
   context manager. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02) (ADR-051)
+- 2026-10-21 [smart-bug-resolver/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18,
+  BO-4300f-4-i]: Re-entrant for its own nested sessions (user-approved
+  2026-10-21): the holder names its lock in BO4300_GUARD_HELD_LOCK; a nested
+  pytest session that finds the lock taken and inherits that name skips the
+  lock and its own snapshot instead of waiting on its parent (the
+  bo4500a_5_v self-deadlock). (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18) (ADR-051)
 ====================================================================
 """
 from __future__ import annotations
@@ -48,6 +54,8 @@ from pathlib import Path
 _log = logging.getLogger(__name__)
 
 _LOCK_FILE_NAME = "bo4300-proof-suite.lock"
+# Names the lock a guarded session holds; its own nested pytest sessions inherit it (ADR-051 d8).
+HELD_LOCK_ENV = "BO4300_GUARD_HELD_LOCK"
 _LOCK_POLL_INTERVAL_S = 0.1
 _DEFAULT_LOCK_TIMEOUT_S = 600.0
 _GIT_TIMEOUT_S = 60
@@ -203,6 +211,21 @@ def _lock_timeout_from_env() -> float:
         return _DEFAULT_LOCK_TIMEOUT_S
 
 
+def _lock_key(lock_path: Path) -> str:
+    """Comparable spelling of *lock_path* for the held-lock marker."""
+    return os.path.normcase(str(lock_path.resolve()))
+
+
+def _inherited_from_holder(lock_path: Path) -> bool:
+    """True when this process inherited the marker of the session holding *lock_path*.
+
+    Only consulted after the lock was found taken, so a stale marker (its holder
+    gone, the lock free) never lets a session skip: that session takes the lock.
+    A marker naming a different lock path never matches.
+    """
+    return os.environ.get(HELD_LOCK_ENV) == _lock_key(lock_path)
+
+
 @contextlib.contextmanager
 def _session_lock(repo_root: Path, timeout_s: float):
     """Hold a real OS advisory lock on *repo_root*'s proof-suite lock file.
@@ -211,6 +234,12 @@ def _session_lock(repo_root: Path, timeout_s: float):
     (ADR-051 decision 2) -- the kernel releases it automatically if this
     process dies, so a crashed run never leaves a lock that needs manual
     cleanup.
+
+    Yields ``True`` when this session took the lock, after naming it in
+    ``BO4300_GUARD_HELD_LOCK`` so pytest sessions it starts inherit the name.
+    Yields ``False`` without waiting when the lock is taken and the
+    inherited marker names this same lock: the caller is nested inside the
+    holder, whose own snapshots cover it (ADR-051 decision 8).
     """
     common_dir = _git_common_dir(repo_root)
     common_dir.mkdir(parents=True, exist_ok=True)
@@ -230,6 +259,11 @@ def _session_lock(repo_root: Path, timeout_s: float):
                 _lock_file(fh)
                 acquired = True
             except OSError:
+                if _inherited_from_holder(lock_path):
+                    _log.info("developer_repo_guard: nested in the session holding %s; "
+                              "the outer guard covers this run", lock_path)
+                    yield False
+                    return
                 if time.monotonic() >= deadline:
                     msg = (
                         f"timed out after {timeout_s}s waiting for the developer-repo "
@@ -237,9 +271,15 @@ def _session_lock(repo_root: Path, timeout_s: float):
                     )
                     raise DeveloperRepoLockTimeoutError(msg) from None
                 time.sleep(_LOCK_POLL_INTERVAL_S)
+        previous = os.environ.get(HELD_LOCK_ENV)
+        os.environ[HELD_LOCK_ENV] = _lock_key(lock_path)
         try:
-            yield
+            yield True
         finally:
+            if previous is None:
+                os.environ.pop(HELD_LOCK_ENV, None)
+            else:
+                os.environ[HELD_LOCK_ENV] = previous
             _unlock_file(fh)
     finally:
         fh.close()
@@ -265,7 +305,10 @@ def developer_repo_guard(repo_root: Path, lock_timeout_s: float | None = None):
     """
     repo_root = Path(repo_root)
     timeout = lock_timeout_s if lock_timeout_s is not None else _lock_timeout_from_env()
-    with _session_lock(repo_root, timeout):
+    with _session_lock(repo_root, timeout) as owner:
+        if not owner:  # nested: the holder's before/after snapshots bracket this whole run
+            yield
+            return
         before = snapshot_developer_repo(repo_root)
         try:
             yield

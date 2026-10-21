@@ -536,18 +536,15 @@ def test_dispatch_order_plan_feature() -> None:
     Pre-Stage-0 here):
 
       Pre-Stage-0:
-        1. status-checker   label='detect-current-branch'
-        2. worktree-agent   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
-           resolves .leafcutter/scripts/setup_ticket_worktree.py to an absolute,
+        1. shell-runner     label='detect-current-branch'
+        2. shell-runner     label='resolve-maker-path' (ACD-2100a-1: resolves the
+           workspace maker .leafcutter/scripts/worktree.py to an absolute,
            repository-anchored path at runtime instead of trusting the cwd-relative
            {{config.output_root}} placeholder, which resolved against the parent
-           copy when the cwd was not the repo root — KI-ACD-004. BO-2300a-1-ii:
-           dispatched to worktree-agent, the registry's shell-permitted executor
-           — never status-checker, permits_shell: false — reusing the same
-           workspaceSetupAgentId the worktree-setup dispatch below already used.)
-        3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
-           permission-gate's resolved target agent, no longer hardcoded to
-           'status-checker'. ACD-2100b-5 moved the workspace-setup permission
+           copy when the cwd was not the repo root — KI-ACD-004. One single plain
+           command per probe; the harness default answers the first probe.)
+        3. shell-runner     label='workspace-ensure' (BO-4300c-3: the ONE verbatim
+           maker dispatch, naming that absolute path. ACD-2100b-5 moved the workspace-setup permission
            gate itself OUT of this workflow body entirely -- it no longer makes
            a 'resolve-workspace-setup-permission' agent() dispatch at all. The
            verdict now arrives via `args.workspace_setup_permission`, which the
@@ -570,11 +567,12 @@ def test_dispatch_order_plan_feature() -> None:
 
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
         8. it-po           label='stage-itpo-author'
-           then shell-runner label='rule-check-itpo' (ACD-2500a-1: the
-           requirement rule check runs at the end of the authoring stage).
+           then worktree-agent label='rule-check-itpo' (ACD-2500a-1: the
+           requirement rule check runs at the end of the authoring stage; the
+           stage-end script steps stay on worktree-agent, scriptStepAgentId).
            itpo is auto-approved (ACD-2500c-2), so its output is committed
            (status-checker 'branch-check', commit 'commit-stage-output') before
-           the test-design stage: shell-runner 'design-prepass', then
+           the test-design stage: worktree-agent 'design-prepass', then
            'approval-holds' (the stock pre-pass reply names no records, so no
            designer is dispatched).
 
@@ -619,25 +617,20 @@ def test_dispatch_order_plan_feature() -> None:
         f"plan-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    expected_sequence = [
-        # See this test's docstring above for the rationale behind each step
-        # (ACD-2100a-1 script-path resolution, ACD-2100b-5's no-dispatch
-        # permission gate, BO-1500f-1's resolved worktree-setup target,
-        # BO-2300a-1-ii's worktree-agent dispatch target, the always-on
-        # self-skipping PT phase, and ACD-2100c-1's pauseAtGate()/
-        # "pause-persist" in place of a live final-gate answer).
+    expected_sequence = [  # the docstring above gives each step's rationale
         ("shell-runner", "detect-current-branch"),
+        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path
         ("shell-runner", "workspace-ensure"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
-        ("shell-runner", "rule-check-itpo"),  # ACD-2500a-1: stage-end rule check
+        ("worktree-agent", "rule-check-itpo"),  # ACD-2500a-1: stage-end rule check
         ("status-checker", "branch-check"),
         ("commit", "commit-stage-output"),
-        ("shell-runner", "design-prepass"),
-        ("shell-runner", "approval-holds"),
+        ("worktree-agent", "design-prepass"),
+        ("worktree-agent", "approval-holds"),
         ("worktree-agent", "pause-persist"),
     ]
 
@@ -648,10 +641,7 @@ def test_dispatch_order_plan_feature() -> None:
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    actual_sequence = [
-        (c.agent_type, c.label)
-        for c in result.agent_calls[: len(expected_sequence)]
-    ]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[: len(expected_sequence)]]
 
     assert actual_sequence == expected_sequence, (
         f"plan-feature.js dispatch order wrong (AC-2 / M-1).\n"

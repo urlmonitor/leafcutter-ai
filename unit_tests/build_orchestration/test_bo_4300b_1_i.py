@@ -13,18 +13,15 @@ DECISION HISTORY
 """
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import stat
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from unit_tests.build_orchestration._workspace_maker_fixtures import (  # fixtures first: avoids the builders cycle
-    ensure_deployed_layout,
     make_project,
     run_maker,
 )

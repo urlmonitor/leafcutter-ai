@@ -59,25 +59,13 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
-from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 from unit_tests.workflows.test_acd_2100c_2 import (  # noqa: F401 -- shared real-execution helpers
     _init_git_project, _install_real_pause_store, _parsed_real_result, _real_calls, _run,
-    _write_shaped_calls,
+    _run_plan_feature_real, _write_shaped_calls,
 )
-_WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
-_UT_DIR = Path(__file__).resolve().parent.parent
-if str(_UT_DIR) not in sys.path:
-    sys.path.insert(0, str(_UT_DIR))
-from _workflow_engine_harness import _strip_exports  # noqa: E402
-from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
-
-_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
-_REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
-
-_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout
 
 _DRAFT_RELATIVE_PATH = "docs/acceptance-criteria/test-component/DRAFT-8888.yaml"
 _DRAFT_CONTENT = (
@@ -147,187 +135,8 @@ def _permitted_args(**extra) -> dict:
     return {"workspace_setup_permission": {"permits": True}, **extra}
 
 
-# ---------------------------------------------------------------------------
-# The real-execution harness (self-contained copy of
-# test_acd_2100c_2.py's `_run_plan_feature_real` -- see that file's module
-# docstring for why this real-executes ONLY pause_store.py dispatches and
-# stubs everything else).
-# ---------------------------------------------------------------------------
-
-_SHIM_TEMPLATE = r"""
-'use strict';
-
-const { execSync } = require('child_process');
-
-const __RUN_CWD__ = __RUN_CWD_JSON__;
-const __labelResponses__ = __LABEL_RESPONSES_JSON__;
-const __capturedCalls__ = [];
-
-const _PAUSE_LINE_RE = /^.*pause_store\.py.*$/m;
-
-async function agent(promptOrOpts, opts) {
-  var label =
-    (opts && opts.label) ||
-    (typeof promptOrOpts === 'object' && promptOrOpts && promptOrOpts.label) ||
-    null;
-
-  var record = { label: label, prompt: promptOrOpts, opts: opts || null, real_result: null };
-  var response;
-
-  if (typeof promptOrOpts === 'string' && promptOrOpts.indexOf('pause_store.py') !== -1) {
-    var m = promptOrOpts.match(_PAUSE_LINE_RE);
-    var real = { command: null, cwd: __RUN_CWD__, output: '', exit_code: null, stderr: '' };
-    if (m) {
-      var cmd = m[0].trim().replace(/\{\{config\.output_root\}\}/g, '.leafcutter');
-      real.command = cmd;
-      try {
-        var out = execSync(cmd, { cwd: __RUN_CWD__, encoding: 'utf8', timeout: 15000 });
-        real.output = out;
-        real.exit_code = 0;
-      } catch (e) {
-        real.output = (e.stdout || '').toString();
-        real.stderr = (e.stderr || '').toString();
-        real.exit_code = (e.status === null || e.status === undefined) ? 1 : e.status;
-      }
-    } else {
-      real.stderr = 'harness: could not locate a pause_store.py command line in the prompt';
-      real.exit_code = 1;
-    }
-    record.real_result = real;
-    var parsed = null;
-    try { parsed = JSON.parse((real.output || '').trim()); } catch (_pe) { parsed = null; }
-    response = parsed;
-  } else if (label !== null && Object.prototype.hasOwnProperty.call(__labelResponses__, label)) {
-    response = __labelResponses__[label];
-  } else {
-    response = {
-      status: 'ok', message: 'stub', passed: true, git_type: 'file',
-      branch: 'feature-stub', exit_code: 0, output: '',
-    };
-  }
-
-  __capturedCalls__.push(record);
-  return response;
-}
-
-async function parallel(thunksArg) {
-  var results = [];
-  if (Array.isArray(thunksArg)) {
-    for (var i = 0; i < thunksArg.length; i++) {
-      var fn = thunksArg[i];
-      if (typeof fn === 'function') {
-        try { results.push(await fn()); } catch (_e) { results.push(null); }
-      }
-    }
-  }
-  return results;
-}
-
-async function pipeline(stepsArg) { return parallel(stepsArg); }
-
-async function phase(name, fn) {
-  if (typeof fn === 'function') { return fn(); }
-}
-
-function log(_msg) {}
-
-function workflow() {
-  throw new Error('workflow() cannot be called from within a running workflow.');
-}
-
-const budget = Object.freeze({ tokens_used: 0, tokens_limit: null });
-
-const args = Object.assign({
-  target_file: 'stub/target.py',
-  root_cause: 'stub root cause for harness execution',
-  location_hint: 'line 1',
-  symptom: 'stub symptom',
-  userInput: 'Add a small test feature for pause resolution',
-  ac: 'BO-STUB-1',
-}, __ARGS_JSON__);
-
-(async function __body__() {
-// BEGIN TARGET SCRIPT
-__SCRIPT_BODY__
-// END TARGET SCRIPT
-})().then(function (result) {
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: (typeof result === 'undefined' ? null : result),
-  }));
-}).catch(function (err) {
-  process.stderr.write('harness: top-level error: ' + String(err) + '\n');
-  process.stdout.write(JSON.stringify({
-    calls: __capturedCalls__,
-    result: null,
-    error: String(err),
-  }));
-});
-"""
-
-
-def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
-    """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
-    as a brand-new Node child_process each call -- this IS the "new process"
-    the AC names. Every dispatch whose prompt embeds a `pause_store.py`
-    command line is ACTUALLY EXECUTED via a real Node child_process with
-    `cwd` set to the given directory. Returns the parsed
-    {calls: [...], result: ..., error?: ...} payload.
-
-    This is also this ticket's resolved reachability entry point (see the
-    module docstring's TEST STRATEGY and this file's
-    reachability-angle test): a real subprocess executing the actual,
-    on-disk production script's top-level body -- the E2 workflow-dispatch
-    contract (ADR-030) -- never an import of an inner function.
-
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
-    """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
-
-    shim = (
-        _SHIM_TEMPLATE
-        .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
-        .replace("__ARGS_JSON__", json.dumps(args))
-        .replace("__SCRIPT_BODY__", body)
-    )
-
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="acd_2100c3_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp_path = Path(tmp.name)
-        tmp.write(shim)
-
-    try:
-        proc = subprocess.run(
-            ["node", str(tmp_path)], capture_output=True, text=True, timeout=_TIMEOUT
-        )
-    finally:
-        tmp_path.unlink(missing_ok=True)
-
-    stdout = proc.stdout or ""
-    if not stdout.strip():
-        raise AssertionError(
-            "harness produced no stdout at all.\n"
-            f"returncode={proc.returncode}\nstderr={proc.stderr[:2000]!r}"
-        )
-    try:
-        payload = json.loads(stdout)
-    except json.JSONDecodeError as exc:
-        raise AssertionError(
-            f"harness produced non-JSON stdout: {exc}\n"
-            f"stdout={stdout[:2000]!r}\nstderr={proc.stderr[:2000]!r}"
-        ) from exc
-
-    payload["_stderr"] = proc.stderr
-    payload["_returncode"] = proc.returncode
-    return payload
+# The real-execution harness is test_acd_2100c_2.py's `_run_plan_feature_real`: each call is a
+# brand-new Node child_process -- the "new process" this AC names -- running the real body.
 
 
 _DESIGNED_BATCH = {

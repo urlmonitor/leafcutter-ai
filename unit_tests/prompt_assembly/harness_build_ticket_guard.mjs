@@ -38,6 +38,7 @@
  *     "resolve": {...} | null,           // resolve-target stub reply
  *     "workspace_ensure": {...} | null,  // workspace-ensure stub reply (BO-4300c-3), served verbatim;
  *                                        // absent = ready at record_dir
+ *     "historical_replies": {...},       // label -> reply for lookups only a historical driver asks
  *     "worktree_check": {...} | null,    // build-ticket.js ambient git check reply
  *     "epic": {
  *        "path": "<abs epic folder>",
@@ -768,6 +769,10 @@ async function agent(prompt, opts = {}) {
   const label = opts.label || opts.agentType || "unknown";
 
   // --- infrastructure stubs -------------------------------------------------
+  // A driver materialised from git history may ask lookups the current drivers retired; a scenario answers
+  // them verbatim with `historical_replies` (label -> reply). Such a reply is never recorded as a dispatch.
+  const historical = scenario.historical_replies || {};
+  if (Object.prototype.hasOwnProperty.call(historical, label)) return historical[label];
   if (label === "worktree-check") {
     return scenario.worktree_check === undefined
       ? { git_type: "file", branch: "feat/harness" }

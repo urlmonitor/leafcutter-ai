@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 from unit_tests.build_orchestration._bo_4300c_6_fixtures import (
-    MARKER, assert_inert, declared, deployed_canary, init_repo, merge_branch, observe, run_canary,
+    MARKER, assert_inert, declared, deployed_canary, merge_branch, observe, run_canary,
     write,
 )
 from unit_tests.build_orchestration._workspace_maker_builders import _run_git

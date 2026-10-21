@@ -342,12 +342,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
 
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
+    `label_responses` is merged OVER the harness defaults and a ready
+    `workspace-ensure` answer naming `cwd` (BO-4300c-3: the pause-store command
+    enters the run's workspace first, so the workspace must exist) so a caller
+    reaches the pause-store dispatches this file tests instead of halting at
+    the workspace step. A caller-supplied entry for any label still wins
+    (dict merge order below).
     """
     source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     body = _strip_exports(source)
@@ -355,7 +355,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(cwd), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__SCRIPT_BODY__", body)
     )

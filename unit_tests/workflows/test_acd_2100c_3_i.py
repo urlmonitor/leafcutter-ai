@@ -85,7 +85,7 @@ from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
     _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
-    _read_via_fresh_process, _run,
+    _install_real_pause_store, _read_via_fresh_process, _run,
 )
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _UT_DIR = Path(__file__).resolve().parent.parent
@@ -95,7 +95,6 @@ from _workflow_engine_harness import _strip_exports  # noqa: E402
 from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
-_REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 
 _TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
@@ -113,19 +112,6 @@ _A_DIFFERENT_DECISION_GATE_ID = "gate-ba"
 # ---------------------------------------------------------------------------
 # Fixture builders (self-contained copy of test_acd_2100c_3.py's conventions)
 # ---------------------------------------------------------------------------
-
-
-def _install_real_pause_store(project_dir: Path) -> Path:
-    """Copy the REAL, verbatim scripts/pause_store.py into the fixture
-    project's untracked `.leafcutter/scripts/` -- matching production, where
-    `.leafcutter/` is build output that is never committed (ADR-001). A
-    hand-authored stand-in would not exercise the real CLI's idempotency or
-    error-handling contract (2h.2 Fixture Authenticity Rule).
-    """
-    dest = project_dir / ".leafcutter" / "scripts" / "pause_store.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
-    return dest
 
 
 def _make_worktree_fixture(tmp_path: Path) -> dict:
@@ -312,12 +298,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     ticket ACD-2100c-3's own test_acd_2100c_3.py (same script, no CLI
     wrapper, no live `claude` engine available in this test environment).
 
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
+    `label_responses` is merged OVER the harness defaults and a ready
+    `workspace-ensure` answer naming `cwd` (BO-4300c-3: the pause-store command
+    enters the run's workspace first, so the workspace must exist) so a caller
+    reaches the pause-store dispatches this file tests instead of halting at
+    the workspace step. A caller-supplied entry for any label still wins
+    (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -325,7 +311,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(cwd), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__DRAFT_RELATIVE_PATH_JSON__", json.dumps(_DRAFT_RELATIVE_PATH))
         .replace("__SCRIPT_BODY__", body)

@@ -79,7 +79,9 @@ class TestHandedInLocationIsConfirmed(unittest.TestCase):
                     self.assertIn("--path", command)
                     self.assertTrue(names_path(first, LOCATION), msg=f"{name}: verify does not name {LOCATION}")
                     before = result.agent_calls[:result.agent_calls.index(first)]
-                    self.assertEqual([c.label for c in before if c.label not in PRE_WORKSPACE_LABELS.get(name, ())],
+                    # ACD-2100a-1: plan-feature's maker-path lookup decides which maker copy verifies; not a working step.
+                    preliminary = (*PRE_WORKSPACE_LABELS.get(name, ()), "resolve-maker-path")
+                    self.assertEqual([c.label for c in before if c.label not in preliminary],
                                     [], msg=f"{name}: working steps ran before the verify")
 
     def test_unconfirmed_location_ends_the_run_naming_it(self):

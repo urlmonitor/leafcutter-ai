@@ -4,10 +4,10 @@ GOAL: Behavioral tests for ACD-2100a-1 -- "The worktree step runs the copy of
     the setup script that belongs to the repository being worked on."
 
 INCIDENT BEING REGRESSION-TESTED (KI-ACD-004): templates/workflows-js/
-    plan-feature.js line ~1800 dispatches the "worktree-setup" agent() call
-    with the instruction:
+    plan-feature.js's fallback workspace step (no args.workspace handed in)
+    used to dispatch the workspace maker as:
 
-        python {{config.output_root}}/scripts/setup_ticket_worktree.py create-ac-worktree
+        python3 {{config.output_root}}/scripts/worktree.py ensure --kind ac ...
 
     `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to the
     bare relative name ".leafcutter" (see config/skills_config.default.json).
@@ -19,7 +19,7 @@ INCIDENT BEING REGRESSION-TESTED (KI-ACD-004): templates/workflows-js/
     belongs to the repository the run is supposed to operate on.
 
 WHY A SINGLE FIXTURE COPY CANNOT PROVE THIS (see the AC's own test_rationale):
-    A test that places only one copy of setup_ticket_worktree.py on disk
+    A test that places only one copy of the workspace maker on disk
     cannot fail -- whichever path is resolved, the same file runs. This file
     therefore builds TWO physically distinct, externally-observable copies
     (each stamped with a different `source_copy` marker in its own stdout)
@@ -31,13 +31,13 @@ HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test Mandate):
     so it cannot tell us WHICH physical script file executes or whether a
     real the linked-checkout add landed on disk. This file therefore uses its own
     small harness (`_run_plan_feature_real`) whose agent() mock, for any
-    dispatch matching this file's pre-existing "Run the following command
-    ...:\\n<cmd>\\nReturn JSON: ..." convention (already used by
-    detect-current-branch, resolve-workspace-setup-permission, and
-    worktree-setup), ACTUALLY EXECUTES that command via a real Node
+    shell-runner dispatch ("Run exactly this one command ...\\n\\n<cmd>\\n",
+    the one prompt shape every shell step uses since BO-4300a-1-ia: the
+    detect-current-branch step, the resolve-maker-path probes and the
+    workspace-ensure step), ACTUALLY EXECUTES that command via a real Node
     child_process, with a real controlled `cwd`, against a real temporary
     filesystem fixture. This is a genuine round-trip: the real
-    setup_ticket_worktree.py stub this file writes to disk is the thing that
+    worktree.py stub this file writes to disk is the thing that
     runs, and the real git worktree it creates is the thing this file reads
     back and asserts on -- not a mocked call-args inspection.
 
@@ -80,14 +80,14 @@ _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_s
 
 _TIMEOUT = 40  # seconds; includes real the linked-checkout add I/O.
 _PERMISSION_LABEL = "resolve-workspace-setup-permission"
-_SETUP_LABEL = "worktree-setup"
+_SETUP_LABEL = "workspace-ensure"
 
-_CMD_LINE_RE = re.compile(r"Run the following command[^\n]*:\n([^\n]+)\n")
+_CMD_LINE_RE = re.compile(r"Run exactly this one command[^\n]*\n\n([^\n]+)\n")
 
 
 # ---------------------------------------------------------------------------
 # Fixture script bodies -- the two OBSERVABLY DIFFERENT copies of
-# setup_ticket_worktree.py the Given clause requires.
+# the workspace maker (worktree.py) the Given clause requires.
 # ---------------------------------------------------------------------------
 
 _IN_REPO_STUB = textwrap.dedent(
@@ -99,10 +99,10 @@ _IN_REPO_STUB = textwrap.dedent(
 
 
     def main() -> int:
-        if len(sys.argv) < 2 or sys.argv[1] != "create-ac-worktree":
+        if len(sys.argv) < 2 or sys.argv[1] != "ensure":
             print(json.dumps({"error": "unsupported subcommand"}), file=sys.stderr)
             return 1
-        slug = sys.argv[2] if len(sys.argv) > 2 else "session"
+        slug = sys.argv[sys.argv.index("--slug") + 1] if "--slug" in sys.argv else "session"
         # This copy is physically installed at <repo_root>/.leafcutter/scripts/,
         # so its own file location anchors the repository it belongs to.
         repo_root = Path(__file__).resolve().parents[2]
@@ -123,6 +123,8 @@ _IN_REPO_STUB = textwrap.dedent(
             )
             return 1
         print(json.dumps({
+            "schema_version": 1, "status": "ok", "code": "OK", "verb": "ensure",
+            "workspace_path": str(worktree_path),
             "worktree_path": str(worktree_path),
             "ac_store_path": str(worktree_path / "docs" / "acceptance-criteria"),
             "source_copy": "in-repo",
@@ -142,14 +144,16 @@ _PARENT_STUB = textwrap.dedent(
 
 
     def main() -> int:
-        if len(sys.argv) < 2 or sys.argv[1] != "create-ac-worktree":
+        if len(sys.argv) < 2 or sys.argv[1] != "ensure":
             print(json.dumps({"error": "unsupported subcommand"}), file=sys.stderr)
             return 1
-        slug = sys.argv[2] if len(sys.argv) > 2 else "session"
+        slug = sys.argv[sys.argv.index("--slug") + 1] if "--slug" in sys.argv else "session"
         # This copy is the untracked-parent BUILD OUTPUT -- it must never be the
         # one that runs. It performs no real git operation and reports a bogus
         # location, so a wrong-copy execution is unmistakable in the output.
         print(json.dumps({
+            "schema_version": 1, "status": "ok", "code": "OK", "verb": "ensure",
+            "workspace_path": f"/nonexistent/parent-worktree-{slug}",
             "worktree_path": f"/nonexistent/parent-worktree-{slug}",
             "ac_store_path": "/nonexistent/parent-ac-store",
             "source_copy": "parent",
@@ -176,9 +180,9 @@ def _make_fixture(tmp_path: Path, *, with_repo_copy: bool) -> dict:
 
     Layout:
         tmp_path/                              <- untracked parent (not a repo)
-          .leafcutter/scripts/setup_ticket_worktree.py   <- the WRONG copy
+          .leafcutter/scripts/worktree.py               <- the WRONG copy
           target-repo/                          <- a real git repo, branch "main"
-            .leafcutter/scripts/setup_ticket_worktree.py <- the RIGHT copy
+            .leafcutter/scripts/worktree.py             <- the RIGHT copy
                                                               (only when
                                                               with_repo_copy)
     """
@@ -195,14 +199,14 @@ def _make_fixture(tmp_path: Path, *, with_repo_copy: bool) -> dict:
 
     parent_scripts = parent_dir / ".leafcutter" / "scripts"
     parent_scripts.mkdir(parents=True)
-    (parent_scripts / "setup_ticket_worktree.py").write_text(
+    (parent_scripts / "worktree.py").write_text(
         _PARENT_STUB.replace("@@ADD_VERB@@", _ADD_VERB), encoding="utf-8"
     )
 
     if with_repo_copy:
         repo_scripts = repo_dir / ".leafcutter" / "scripts"
         repo_scripts.mkdir(parents=True)
-        (repo_scripts / "setup_ticket_worktree.py").write_text(
+        (repo_scripts / "worktree.py").write_text(
             _IN_REPO_STUB.replace("@@ADD_VERB@@", _ADD_VERB), encoding="utf-8"
         )
 
@@ -237,7 +241,7 @@ def _real_preflight_verdict(cwd: Path, agent_id: str = "worktree-agent") -> dict
     (that is ACD-2100a-3's concern) -- it is run against THIS repository's
     own real, on-disk `.leafcutter/config/agent_registry.json` (which grants
     'worktree-agent' shell permission) so every scenario below can drive the
-    workflow past that gate to the worktree-setup resolution this file
+    workflow past that gate to the workspace-step resolution this file
     actually exercises, without depending on any permission state the
     fixture itself constructs.
     """
@@ -277,7 +281,7 @@ const __RUN_CWD__ = __RUN_CWD_JSON__;
 const __labelResponses__ = __LABEL_RESPONSES_JSON__;
 const __capturedCalls__ = [];
 
-const _CMD_RE = /Run the following command[^\n]*:\n([^\n]+)\n/;
+const _CMD_RE = /Run exactly this one command[^\n]*\n\n([^\n]+)\n/;
 
 async function agent(promptOrOpts, opts) {
   var label =
@@ -307,7 +311,7 @@ async function agent(promptOrOpts, opts) {
         real.exit_code = (e.status === null || e.status === undefined) ? 1 : e.status;
       }
       record.real_result = real;
-      response = { output: real.output, exit_code: real.exit_code, stderr: real.stderr };
+      response = { command: cmd, exit_status: real.exit_code, stdout: real.output, stderr: real.stderr };
     } else {
       response = { status: 'ok', message: 'stub', passed: true, exit_code: 0, output: '' };
     }
@@ -397,7 +401,7 @@ def _strip_exports(source: str) -> str:
 
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
     """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
-    with every "Run the following command ...:\\n<cmd>\\n" agent() dispatch
+    with every shell-runner "Run exactly this one command ...\\n\\n<cmd>\\n" dispatch
     ACTUALLY EXECUTED (not mocked) via a real Node child_process with `cwd`
     set to the given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
@@ -481,7 +485,7 @@ def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
 
         real = setup_calls[0].get("real_result")
         assert real is not None, (
-            "The worktree-setup prompt did not match the executable "
+            "The workspace-ensure prompt did not match the executable "
             f"shell-command pattern this file relies on: {setup_calls[0].get('prompt')!r}"
         )
         assert real.get("exit_code") == 0, f"setup step failed to run: {real}"
@@ -490,11 +494,11 @@ def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
             out_payload = json.loads(real.get("output", ""))
         except json.JSONDecodeError:
             raise AssertionError(
-                f"worktree-setup did not emit JSON on stdout: {real}"
+                f"workspace-ensure did not emit JSON on stdout: {real}"
             ) from None
 
         assert out_payload.get("source_copy") == "in-repo", (
-            "The PARENT copy of setup_ticket_worktree.py executed instead of the "
+            "The PARENT copy of worktree.py executed instead of the "
             "copy that belongs to the repository being operated on. "
             f"Resolved output: {out_payload}"
         )
@@ -549,7 +553,7 @@ def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
         )
 
         real = setup_calls[0].get("real_result")
-        assert real is not None, f"worktree-setup prompt did not execute: {setup_calls[0]}"
+        assert real is not None, f"workspace-ensure prompt did not execute: {setup_calls[0]}"
         assert real.get("exit_code") == 0, f"setup step failed to run: {real}"
         out_payload = json.loads(real.get("output", "{}"))
 
@@ -593,7 +597,7 @@ def test_wrong_copy_execution_is_observable_and_blocks():
 
         real = setup_calls[0].get("real_result")
         assert real is not None, (
-            f"worktree-setup prompt did not match the executable pattern: "
+            f"workspace-ensure prompt did not match the executable pattern: "
             f"{setup_calls[0].get('prompt')!r}"
         )
 

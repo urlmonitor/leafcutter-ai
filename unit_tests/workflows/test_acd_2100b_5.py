@@ -55,7 +55,7 @@ CONTRACT THIS FILE PINS (mirrors unit_tests/ac_driven_dev/test_acd_2100b_5.py
                "resolve-workspace-setup-permission" dispatch, and no prompt
                that reads config/agent_registry.json).
     Next step: the pre-existing dispatch immediately after the removed gate
-               -- label "resolve-worktree-setup-script-path" -- is the
+               -- label "resolve-maker-path" -- is the
                observable proof that the run proceeded PAST the check. This
                label is untouched by this AC (it belongs to the
                already-implemented ACD-2100a-1 resolution step) and remains
@@ -109,7 +109,7 @@ _TIMEOUT = 40  # seconds; includes real git I/O and (for the real harness) real 
 # agent() call sites around the Pre-Stage-0 Workspace-Setup Dispatch
 # Permission Gate and the step immediately after it.
 _REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
-_NEXT_STEP_LABEL = "workspace-ensure"  # BO-4300c-3: the step after the permission gate is the ONE workspace dispatch
+_NEXT_STEP_LABEL = "resolve-maker-path"  # ACD-2100a-1: the step after the permission gate resolves the maker path
 
 _DEFAULT_AGENT_ID = "worktree-agent"
 _ARGS_VERDICT_KEY = "workspace_setup_permission"

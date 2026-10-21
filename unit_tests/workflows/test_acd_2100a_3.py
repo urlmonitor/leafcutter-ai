@@ -80,7 +80,7 @@ _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_s
 
 _TIMEOUT = 40  # seconds; includes real the linked-checkout add I/O.
 _MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
-_SETUP_RELATED_LABELS = ("workspace-ensure",)  # BO-4300c-3: the ONE workspace step (the script-path resolution and worktree-setup labels are retired)
+_SETUP_RELATED_LABELS = ("resolve-maker-path", "workspace-ensure")  # ACD-2100a-1 maker-path probe, then BO-4300c-3 workspace step
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:

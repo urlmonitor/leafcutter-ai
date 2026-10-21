@@ -628,7 +628,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             self.worktree_root,
             missing_id,
             extra_label_responses={
-                "resolve-connected": {"ac_ids": [], "message": real_missing_message},
+                "resolve-connected": shell_step_reply("", exit_status=1, stderr=real_missing_message),
             },
         )
         self.assertEqual(
@@ -638,10 +638,7 @@ class TestEmptyTightSetIsACleanStopThatSaysWhy(unittest.TestCase):
             "clean nothing-to-build outcome — that distinction must survive "
             f"the exclusion change (BO-2600b-1-ii). Got: {missing_result.result}"
         )
-        self.assertNotEqual(
-            missing_result.result.get("classification"),
-            None,
-        )
+        self.assertIsNotNone(missing_result.result.get("classification"))
         self.assertFalse(
             missing_result.result.get("nothing_to_build"),
             f"A resolution failure must not carry nothing_to_build=true. "
