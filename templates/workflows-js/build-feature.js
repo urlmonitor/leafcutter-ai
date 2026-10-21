@@ -76,6 +76,7 @@ const PLANNER_SCHEMA = {
               properties: {
                 path: { type: "string" },
                 status: { type: "string", enum: ["todo", "blocked"] },
+                source_ac: { type: "array", items: { type: "string" } },
               },
             },
           },
@@ -1591,7 +1592,7 @@ async function repoFactsCall(command, label, phase = "Resolve Target") {
 }
 /** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
 function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
-let realWorktreePath = null, stalenessReport = null;
+let realWorktreePath = null, stalenessReport = null, wvResumed = true;
 // Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
 if (resolveResult.worktree_path) {
   const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}" --reference "${repoAnchor}"`, "worktree-facts-resolved");
@@ -1620,6 +1621,7 @@ if (!realWorktreePath) {
     const worktreeResult = await agent(`Open a NEW git worktree at the EXACT location "${instructedLocation}" on branch "${targetBranch}", starting from "${startRef}". Do not choose any other location. Bootstrap it (copy/symlink .leafcutter so hooks are present). On any error report status "failed".\nReturn JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`, { agentType: "worktree-agent", schema: WORKTREE_SCHEMA, label: "worktree-setup", phase: "Resolve Target" });
     if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error || typeof worktreeResult.worktree_path !== "string") return undetermined({ abort_reason: "worktree-report-unusable", instructed_location: instructedLocation, message: `The worktree-opening agent returned no usable result for "${instructedLocation}". No phase agent has been spawned.` });
     if (!pathsEquivalent(instructedLocation, worktreeResult.worktree_path)) return undetermined({ abort_reason: "worktree-location-mismatch", instructed_location: instructedLocation, reported_location: worktreeResult.worktree_path, message: `The worktree-opening agent reported "${worktreeResult.worktree_path}", not the instructed location "${instructedLocation}". No phase agent has been spawned, and the run's worktree was not replaced.` });
+    wvResumed = worktreeResult.status !== "created";
     realWorktreePath = instructedLocation;
   }
 }
@@ -1825,9 +1827,11 @@ function classifyKnowledgeRouting(reply) {
   return { case: ran ? reply.case : "did_not_run", read: n("read"), written: n("written"), unwritten: n("unwritten"), already_on_branch: n("already_on_branch"),
     waiting: ran && reply.waiting && Number.isFinite(reply.waiting.difference) ? reply.waiting.difference : 0, detail: ran && typeof reply.detail === "string" ? reply.detail : null, manifest: ran && Array.isArray(reply.manifest) ? reply.manifest.filter((p) => typeof p === "string") : [] };
 }
-function commitWithKnowledgeRouting(ticketPath, root, dispatchCommit) {
+function commitWithKnowledgeRouting(ticketPath, root, dispatchCommit, beforeCommit) {
   const cli = (args, label) => repoFactsCall(`python {{config.output_root}}/scripts/knowledge/completion_routing_cli.py ${args} --working-dir "${root}"`, label, "Knowledge Routing").catch(() => null);
   const turn = commitLane.then(async () => {
+    const halted = beforeCommit ? await beforeCommit() : null;
+    if (halted) return { wv_halt: halted };
     const staged = classifyKnowledgeRouting(await cli("stage", "knowledge-routing-step"));
     const named = [...new Set(staged.manifest.map((p) => (p.startsWith(`${root}/`) ? p.slice(root.length + 1) : p)))]
       .filter((p) => classifyPathForm(p) === "relative" && !/[\n",]/.test(p) && !p.split("/").includes("..") && !p.startsWith("debugging/logs/"));
@@ -1845,6 +1849,55 @@ function knowledgeRoutingSummary() {
   const tickets = [...knowledgeRoutingByTicket.values()], sum = (key) => tickets.reduce((total, t) => total + t[key], 0);
   return { tickets, written: sum("written"), unwritten: sum("unwritten"), already_on_branch: sum("already_on_branch"), waiting_tickets: tickets.filter((t) => t.case === "completed_with_waiting").length };
 }
+
+// --- Wrong-Version Runs (TQ-500g-1-vi): thin dispatch, fail-closed parses; the rules live in Python. TWIN: copy of the other route's block.
+const WV = "bf";
+const WV_RUNNER_SCHEMA = { type: "object", properties: { command: { type: "string" }, workspace: { type: "string" }, exit_status: { type: "integer" },
+  stdout: { type: "string" }, stderr: { type: "string" }, declined: { type: "boolean" }, step: { type: "string" }, agent: { type: "string" }, reason: { type: "string" } } };
+const wvRoot = () => String(resolvedTarget.worktree_path).replace(/\\/g, "/");
+const wvPy = (script, args) => `python "${wvRoot()}"/{{config.output_root}}/scripts/build_orchestration/${script}.py ${args}`;
+const wvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || !/^[A-Za-z0-9._-]+$/.test(s)).concat(/["$`\n\r]/.test(wvRoot()) ? [wvRoot()] : []);
+async function wvStep(label, command, workKey) {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: resolvedTarget.worktree_path, run_id: workKey } }),
+      { agentType: "command-step-runner", schema: WV_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
+    const out = JSON.parse(reply.stdout);
+    return out && typeof out === "object" ? out : null;
+  } catch { return null; }
+}
+async function wvRecover(workKey) {
+  const unsafe = wvBad(workKey);
+  if (unsafe.length) return { step: "input-check", detail: unsafe, message: `Wrong-version inputs are not plain values, no command was run: ${JSON.stringify(unsafe)}` };
+  const recovered = await wvStep(`${WV}-wv-recover`, wvPy("wrong_version_runner", "recover"), workKey);
+  return !recovered || recovered.ok !== true ? { step: "recover", detail: recovered, message: `Wrong-version recover step did not pass: ${JSON.stringify(recovered)}` } : null;
+}
+async function wvRuns(workKey, ids) {
+  const flags = `--ac-root "${wvRoot()}/${AC_STORE_REL_PATH}" --test-root "${wvRoot()}" --base-ref HEAD`, idArg = ids.length ? `--ac-ids "${ids.join(",")}" ` : "";
+  const halt = (step, detail) => ({ halt: { step, detail, message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}` }, outcome: null });
+  const unsafe = wvBad(workKey, ids);
+  if (unsafe.length) return halt("input-check", unsafe);
+  let reply = "";
+  if (ids.length) {
+    const listed = await wvStep(`${WV}-wv-list`, wvPy("wrong_version_writer", `list ${idArg}${flags}`), workKey);
+    if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return halt("list", listed);
+    if (listed.owed.length) {
+      try {
+        const raw = await agent(`Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: workKey, repo_root: resolvedTarget.worktree_path, requirement_ids: ids, wrong_versions: listed.owed })}`,
+          { agentType: "test-breaker", label: `${WV}-wv-test-breaker`, phase: "Wrong-Version Runs" });
+        reply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+      } catch { reply = ""; }
+    }
+  }
+  let delim = "WV_REPLY_EOF";
+  while (reply.includes(delim)) delim += "_X";
+  const fin = await wvStep(`${WV}-wv-finish`, `${wvPy("wrong_version_gate", `finish --work-key "${workKey}" --reply - ${idArg}${flags}`)} <<'${delim}'\n${reply}${reply ? "\n" : ""}${delim}`, workKey);
+  if (!fin || typeof fin.gate_passed !== "boolean" || !fin.gate_passed) return halt("finish", fin);
+  const verdict = fin.verdict || {};
+  return { halt: null, outcome: verdict.outcome === undefined ? null : verdict.outcome };
+}
+const wvParallelTickets = new Set(); // paths of tickets driven inside a chunk of more than one (TQ-500g-1-vi M-2)
+const wvStem = (p) => String(p).replace(/\\/g, "/").split("/").filter(Boolean).pop().replace(/\.md$/i, "");
+const wvHaltFields = (h) => ({ gate: "wrong_version_gate", wrong_version_step: h.step, wrong_version_detail: h.detail });
 
 // ---------------------------------------------------------------------------
 // driveTicketPhases — flattened per-ticket phase driver
@@ -1916,6 +1969,9 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
       : [];
   let redBaselineGateOutcome = null; // carried into the final payload below
   let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
+  let wrongVersionOutcome = null; const wvKey = wvStem(worktreeTicketPath);
+  // TQ-500g-1-vi M-2: the serial rule trusted the epic planner; a ticket that owes runs must not share a parallel chunk.
+  if (wvParallelTickets.has(worktreeTicketPath) && sourceAcIds.length) return { status: "blocked", message: "This ticket owes wrong-version runs but its batch ran in parallel; no wrong-version step ran.", ticket_path: worktreeTicketPath, classification: "halt", ...wvHaltFields({ step: "batch-serial-check", detail: { source_ac: sourceAcIds } }) };
 
   /*
    * Step 2 — Filter and sort the phases to dispatch
@@ -2209,8 +2265,9 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         }
       );
       phaseResult = phaseName === "commit"
-        ? await commitWithKnowledgeRouting(worktreeTicketPath, resolvedTarget.worktree_path, dispatchPhase)
+        ? await commitWithKnowledgeRouting(worktreeTicketPath, resolvedTarget.worktree_path, dispatchPhase, async () => { const wv = await wvRuns(wvKey, sourceAcIds); wrongVersionOutcome = wv.outcome; return wv.halt; })
         : await dispatchPhase();
+      if (phaseResult && phaseResult.wv_halt) return refuse(phaseResult.wv_halt.message, "halt", wvHaltFields(phaseResult.wv_halt));
 
       /*
        * THE VERIFICATION POINT (BO-2900f-1-i / -iii)
@@ -2551,7 +2608,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     noPhasesToRun: false,
   });
   // TQ-500f-3-ii: additive; surfaces the gate's recorded outcome, never a completion signal.
-  return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome };
+  return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome, wrong_version_outcome: wrongVersionOutcome };
 }
 
 // ---------------------------------------------------------------------------
@@ -2901,6 +2958,10 @@ phase("Build");
 // dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-ticket.js.
 const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-feature-$PPID" build-feature --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Build", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
 const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+if (wvResumed) {
+  const wvHead = await wvRecover(wvStem(worktreeTarget));
+  if (wvHead) return { status: "blocked", message: `${wvHead.message}. No ticket was dispatched.`, resolved_target: resolvedTarget, classification: "halt", ...wvHaltFields(wvHead) };
+}
 if (target_type === "epic") {
   // -----------------------------------------------------------------------
   // Epic path: planner + parallel batch dispatch (flattened per-phase driver)
@@ -3023,6 +3084,7 @@ if (target_type === "epic") {
       `(5) If nothing further is eligible right now, return an empty batches list — that is a valid, expected answer, and it ends this drive's search for more work. ` +
       `(6) Also return already_done: the absolute paths of every sub-ticket you OMITTED at step (4) because its own frontmatter already reads status: done. This is the set you just computed in order to omit it — report it rather than discarding it. Return [] if none. ` +
       `(7) Also return enumerated: the absolute path of EVERY NN_*.md sub-ticket the folder contains right now, whatever its status and whether or not it is eligible yet — including the ones you omitted at step (4) and the ones not yet ready at step (2). This is the folder's full contents, not a selection. ` +
+      `(8) Each ticket item in batches also carries source_ac: the ticket's source_ac frontmatter as an array of strings, and [] when it has none; always return the key. ` +
       `Return a JSON object with: epic_path, title, batches, already_done, enumerated. Return ONLY the JSON object.`,
       {
         agentType: "status-checker",
@@ -3212,8 +3274,9 @@ if (target_type === "epic") {
 
       const batchResults = [];
 
-      for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
-        const chunk = tickets.slice(i, i + BATCH_SIZE);
+      const chunkSize = tickets.every((t) => t && Array.isArray(t.source_ac) && t.source_ac.length === 0) ? BATCH_SIZE : 1;
+      for (let i = 0; i < tickets.length; i += chunkSize) {
+        const chunk = tickets.slice(i, i + chunkSize);
 
         // BO-100e-1-i — FAIL-CLOSED ELIGIBILITY GATE, keyed on EACH TICKET'S
         // OWN DECLARED depends_on — never on its position in the batch. A
@@ -3330,6 +3393,7 @@ if (target_type === "epic") {
             // own agent template. No ticket-supervisor is dispatched here.
             // isEpicMember=true → the per-ticket pull-request phase is deferred;
             // finalize-feature opens the single epic-level PR.
+            if (chunk.length > 1) wvParallelTickets.add(worktreeTicketPath);
             const result = await driveTicketPhases(worktreeTicketPath, true);
             return {
               ticket_path: ticket.path,

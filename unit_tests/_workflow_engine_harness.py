@@ -174,6 +174,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from _plan_feature_harness_defaults import plan_feature_default_label_responses
+from _wrong_version_harness_defaults import wrong_version_default_label_responses
 
 logger = logging.getLogger(__name__)
 
@@ -865,12 +866,7 @@ _PREFLIGHT_SUBPROCESS_TIMEOUT_SECONDS = 15
 # claim or build-agent dispatch — exactly the behavior BO-2400f-12 requires, but
 # it means every PRE-EXISTING caller of this script that drives it past Resolve
 # without knowing about the new label would otherwise see its claim/test-writer/
-# coder dispatches vanish behind a refusal the moment this gate was added. As
-# with _WORKSPACE_SETUP_PERMISSION_LABEL above, a real producible default is
-# supplied here so every existing and future caller gets a sane "producible"
-# verdict without having to know about this gate; a test that deliberately wants
-# to exercise the refusal path still can — caller-supplied label_responses
-# always take precedence over this default.
+# coder dispatches vanish behind a refusal the moment this gate was added.
 _FAST_LANE_SHIP_SCRIPT_NAME = "fast-lane-ship.js"
 _CHECK_PRODUCIBILITY_LABEL = "check-producibility"
 
@@ -911,7 +907,9 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     defaults for. plan-feature.js's own two ('worktree-setup' /
     'resolve-worktree-setup-script-path', BO-1500a-5-i) are delegated to
     _plan_feature_harness_defaults.py (imported above; see its docstring),
-    which returns `{}` for any other script.
+    which returns `{}` for any other script. build-feature.js and build-ticket.js
+    get passing `bf-wv-*` / `bt-wv-*` replies (TQ-500g-1-vi) from
+    _wrong_version_harness_defaults.py.
 
     Caller-supplied label_responses always take precedence over any default
     here (see run_workflow_under_e2()'s merge order), so a test can still
@@ -933,7 +931,7 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
             },
         }
 
-    return plan_feature_default_label_responses(script_path)
+    return {**plan_feature_default_label_responses(script_path), **wrong_version_default_label_responses(script_path)}
 
 
 def _default_args_for_script(script_path: Path) -> dict[str, Any]:

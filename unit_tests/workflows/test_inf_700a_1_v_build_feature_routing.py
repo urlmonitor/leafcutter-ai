@@ -90,7 +90,7 @@ class _RoutingCase(unittest.TestCase):
         os.makedirs(epic_path, exist_ok=True)
         paths = [self._write(worktree, name, subdir) for name in names]
         tickets = {p: self._ticket_cfg(os.path.basename(p)) for p in paths}
-        present = [{"path": p, "status": "todo"} for p in paths]
+        present = [{"path": p, "status": "todo", "source_ac": []} for p in paths]
         scenario = H.epic_scenario(worktree, epic_path, tickets, [{"present": present}] * 3)
         if routing is not None:
             scenario["knowledge_routing"] = routing(worktree) if callable(routing) else routing
