@@ -1,0 +1,207 @@
+id: BO-400e-3-viii
+title: "With nothing to close, finalization closes nothing, says so and finishes; when the set cannot be worked out it closes nothing, says which part it could not establish, and stops before the merge -- never a success-shaped 'closure completed'"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given branch "feat-docs-only" changed no ticket and no acceptance criterion since it left main
+  When finalization reaches its closure step
+  Then no record changes status and no closure commit is made
+    And the run reports "nothing to close: this branch changed no tickets or acceptance
+      criteria", together with the point on main the branch was compared against
+    And the run carries on to the merge and finishes; "nothing to close" does not stop it
+
+  Given the branch "quick-fix-docs" has no recorded built-for ticket and changed no ticket and
+      no acceptance criterion since it left main
+  When finalization reaches its closure step
+  Then the outcome is "nothing to close", exactly as for "feat-docs-only", and the run carries
+      on to the merge and finishes
+    And the missing built-for record is not reported as a problem, because no record could
+      have been closed anyway
+
+  Given the single-ticket branch "feat-close-x" was built for "TICKET-X.md", which it changed
+      but which already reads done
+  When finalization reaches its closure step
+  Then no record changes status and no closure commit is made
+    And the run reports "TICKET-X.md" by name as already done
+
+  Given the single-ticket branch "feat-close-x" was built for "TICKET-X.md" but changed only
+      "TICKET-Q.md", in passing
+  When finalization reaches its closure step
+  Then no record changes status and no closure commit is made
+    And the run reports "nothing to close: this branch did not change the ticket it was built
+      for (TICKET-X.md)", and names "TICKET-Q.md" as changed but not closable
+
+  Given the point where "feat-close-x" left main cannot be determined -- main is not available
+      locally, or the two share no history in the local copy
+  When finalization reaches its closure step
+  Then no record changes status and no closure commit is made
+    And the run stops before the merge to main, as it does for a declined confirmation
+      (BO-400e-3-vii), and does not merge leaving the records open
+    And the run reports that it could not establish the point where the branch left main
+    And this is reported even if the branch changed no tickets or acceptance criteria, because
+      without that point the run cannot know whether it did
+    And it does not fall back to any other way of choosing records
+    And it does not report the closure as completed
+
+  Given the single-ticket branch "feature/close-x" changed the ticket "TICKET-X.md" since it
+      left main, and no built-for ticket is recorded for "feature/close-x"
+  When finalization reaches its closure step
+  Then no record changes status and no closure commit is made
+    And the run stops before the merge to main and does not merge leaving the records open
+    And the run reports that it could not establish which ticket the branch was built for
+    And it prints the fix: the line
+      `git config branch.feature/close-x.leafcutterTicket <path-of-the-ticket>`
+      followed by an instruction to run finalization again
+    And it does not fall back to treating "TICKET-X.md", or any other ticket the branch
+      changed, as the built-for ticket
+    And it does not report the closure as completed
+  Because "nothing to close" and "could not tell what to close" call for different actions by
+    the person finishing the feature: the first is a finished feature, the second is a feature
+    whose tickets would land on main still open with no route left to close them but another
+    pull request, so the run halts while a re-run can still close them.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-ii
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "When the closure agent's reply cannot be read, :1430-1432 substitutes 'zero closed', :1458 still records the step as completed, and :1677 then reports 'Pre-merge AC closure completed (no open in-scope tickets on this branch)' -- the same words as a genuine empty set."
+  - path: docs/acceptance-criteria/build_pipeline/FIN-100-pre-merge-safety-gate/FIN-100h.yaml
+    relationship: related
+    status: exists
+    relevance: "General rule that a finalize step which did not run is never recorded as succeeded. This record is the Step 3.5-specific, set-derivation case; the unreadable-reply case above is FIN-100h's."
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    The derive step classifies every outcome. The workflow never infers one. outcome
+    nothing_to_close carries reason_code no_records_changed, built_for_not_changed,
+    built_for_already_done or all_already_done. outcome undeterminable carries merge_base_unknown or
+    built_for_unknown. finalize-feature.js maps each reason_code to its report text and must have no
+    code path that turns "undeterminable", a refused dispatch or an unreadable reply into "nothing
+    to close" or "closure completed".
+  - >-
+    Report texts carry the facts the criteria name. no_records_changed includes the merge-base sha
+    that the branch was compared against. built_for_already_done names the ticket. built_for_not_changed
+    names the built-for ticket and lists the changed-but-not-closable tickets.
+    undeterminable names which of the two (the point the branch left main, or the built-for ticket)
+    could not be established, and for built_for_unknown it gives the manual recording command (see
+    BO-400e-3-ix).
+  - >-
+    On both outcomes: no close dispatch, no commit dispatch, no gate (BO-400e-3-vii). The two
+    outcomes then diverge at the merge. UNDETERMINABLE HALTS BEFORE THE MERGE
+    (merge_base_unknown or built_for_unknown, decided by BrainCandy 2026-10-15): the run returns
+    a halted result from Step 3.5. No merge dispatch is made on that path, and none of Step 4's
+    pre-merge dispatches (sync check, PR checks, merge gate) run. The halted result names which
+    part could not be established. For built_for_unknown it prints the exact line
+    `git config branch.<branch>.leafcutterTicket <path-of-the-ticket>` and an instruction to run
+    finalization again. Step 3.5 is never recorded in completedSteps as a completed closure.
+    Reuse the halt that BO-400e-3-vii's decline and unanswered paths use, with the same halted
+    result shape and the same cleanup before return, distinguished only by its reason. Do not add
+    a second halt mechanism. NOTHING_TO_CLOSE DOES NOT HALT: the run records the nothing-to-close
+    report and continues to Step 4 and the merge exactly as a successful closure would.
+  - >-
+    Today's success-shaped fallbacks are removed on the Step 3.5 path: the parsedOr default "assuming
+    zero tickets/ACs closed" (an unreadable reply becomes zero closed) and the outcome text
+    "Pre-merge AC closure completed (no open in-scope tickets on this branch)" used for every
+    zero count. An unreadable reply is FIN-100h's rule. Implementing it here on this step is
+    required by this record's "does not report the closure as completed" clause.
+  - "The merge base is unknown when the base ref does not resolve locally or when git merge-base finds no common ancestor. The module does not fetch, deepen or substitute another ref to recover. Either case is the undeterminable outcome."
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-3-ii
+  contract: "Derive reply fields outcome, reason_code, merge_base, built_for_ticket, already_done, changed_not_closable."
+test_required: true
+test_spec:
+  - name: test_docs_only_branch_reports_nothing_to_close_with_the_compared_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Real scratch repo, branch feat-docs-only changes only docs/; derive returns nothing_to_close / no_records_changed with merge_base equal to the real `git merge-base` sha, and no record changes status."
+  - name: test_built_for_ticket_already_done_is_named
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Branch changed TICKET-X.md, which already reads done; reason built_for_already_done naming TICKET-X.md, empty records."
+  - name: test_only_in_passing_ticket_changed_names_both_tickets
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Branch built for TICKET-X.md changed only TICKET-Q.md; reason built_for_not_changed, built_for_ticket TICKET-X.md, changed_not_closable [TICKET-Q.md]."
+  - name: test_unknown_merge_base_and_unknown_ticket_are_undeterminable_without_fallback
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "(a) base ref absent locally, (b) base ref from an unrelated root with no shared history, (c) no recorded built-for ticket on a branch that changed tickets; each gives undeterminable with the right reason_code and empty records, and the store is unchanged."
+    must_catch:
+      - "fall back to comparing against main's current tree when the merge base is unknown"
+      - "fall back to scanning the inbox when the built-for ticket is unknown"
+  - name: test_finalize_never_reports_undeterminable_or_unreadable_as_completed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Drive finalize-feature.js through run_workflow_under_e2 three ways: derive answered with the real undeterminable output (once merge_base_unknown, once built_for_unknown), with an unreadable reply, and with the real nothing_to_close output. The undeterminable and unreadable runs produce no 'closure completed' outcome line, no completedSteps entry for 3.5, and a halted result. On the undeterminable runs NO merge dispatch (step-4-merge-pr) and no merge-gate dispatch is recorded. The built_for_unknown halt carries the `git config branch.<branch>.leafcutterTicket` fix line. The third reports the nothing-to-close text with the merge-base sha. None of the runs records a close or commit dispatch."
+    must_catch:
+      - "default an unreadable derive reply to zero closed and report completed"
+      - "report undeterminable but carry on to the merge"
+  - name: test_nothing_to_close_path_reaches_the_merge
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "POSITIVE CONTROL for the halt. Derive is answered with the real nothing_to_close output for feat-docs-only and, separately, for a branch with no recorded built-for ticket that changed nothing (quick-fix-docs). With the merge gate answered as a person's confirmation, each run records the step-4 merge dispatch, its result is not halted at Step 3.5, and no built-for-record problem is reported. This proves the undeterminable halt is specific to that outcome and is not a blanket stop on every empty set."
+    must_catch:
+      - "halt the run whenever the closable set is empty"
+test_rationale: >-
+  The record exists because two different situations were reported in the same words. Each test
+  therefore pins one reason_code against a real repository state that produces it: an unrelated-root
+  base ref and a missing ref are real git conditions, not mocked exits. The workflow test runs the
+  three outcomes side by side through the E2 harness, so a single "completed" text reached from more
+  than one of them fails.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_viii_outcomes.py
+  - unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_derive.py
+  - scripts/build_orchestration/finalize_closable_set.py
+  - templates/workflows-js/finalize-feature.js
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
+  Decided by BrainCandy 2026-10-15: undeterminable halts before merge.
+  Scenario order follows the evaluation order recorded in BO-400e-3-ii's notes: merge base
+  first (unknown -> halt), then "changed nothing" (-> nothing to close, no halt, no built-for
+  ticket needed), then the built-for ticket (missing -> halt).
+
+  The "does not fall back" clause in the third scenario is the point of that scenario: the
+  attractive recovery when the branch point is unknown is to compare against main's current
+  tree or to scan the inbox, and both are exactly the defects BO-400e-3-ii removes.
+
+  Deliberately NOT restated here: an unreadable or refused reply from the closing agent.
+  That is FIN-100h's general rule (no covered_by children yet); the doc_link above records
+  that Step 3.5 currently violates it (:1430-1432, :1458, :1677), so whoever decomposes
+  FIN-100h should include this step.

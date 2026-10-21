@@ -1,0 +1,276 @@
+id: KM-400b-5-iv
+title: "Write verification compares content fingerprints instead of reading every stored payload back, and still catches a changed or missing record"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400b-5
+criteria: |
+  Given a write batch of 250 nodes of label AcceptanceCriterion whose payloads total 1,800,000 bytes
+  And the snapshot holds a content fingerprint for each of those 250 payloads
+  When the batch is written and verified
+  Then the data the store returns for verification holds, per node, only its identity and the fingerprint of the stored payload
+  And no stored payload body is returned for verification
+  And the amount of data returned for verification is the same whether the batch's payloads total 1,800,000 bytes or 250,000 bytes
+  And the verification passes when all 250 stored fingerprints equal the snapshot fingerprints
+
+  Given one node in the batch, KM-400b-5, was stored with a payload that differs from the snapshot payload by a single character
+  When the batch is verified
+  Then the verification fails
+  And the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint
+  And the failure is reported with the original cause through the failed-publication result, so the generation is removed as for any other failure after storing
+
+  Given one node in the batch was not stored at all
+  When the batch is verified
+  Then the verification fails and names that node as missing, not as a fingerprint mismatch
+
+  Given a relationship batch whose relationships carry property payloads
+  When it is verified
+  Then the same rules apply: identity and fingerprint are compared, payload bodies are not returned, and a changed or missing relationship fails naming it
+depends_on: [KM-400b-5, KM-400b-5-iii]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-iii.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the bounded batches this record verifies.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml
+    relationship: context
+    status: exists
+    relevance: A verification failure is a failure after storing; its generation must be removed and the cause kept.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-ii.yaml
+    relationship: context
+    status: exists
+    relevance: The generation-level count check is separate from per-batch verification and is unchanged.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Operator guide for publication; must describe what verification compares.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: Component architecture for the projection writer and its publication checks.
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Projection keys and canonical identities must not change; a fingerprint is projection-only data.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: KM-400b-5-iii
+  contract: "Bounded write batches, each with the KM-400b-5-iii batch descriptor {phase: str, label_or_kind: str, ordinal: int, total: int, rows: int, payload_bytes: int} and the records it holds, each record carrying its identity and its payload."
+origin_agent: BrainCandy
+created: '2026-10-21'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The fingerprint must be a collision-resistant cryptographic hash, no weaker than SHA-256, computed over the whole stored payload."
+  - "The snapshot-side and store-side fingerprints must be computed from one shared canonical serialization definition, so two equal payloads never mismatch on key order or whitespace."
+  - "The per-record data returned for verification must have a constant size that does not depend on payload size."
+  - "Adding a fingerprint must not change canonical identities, projection keys or the payload retrieval returns to callers (ADR-062)."
+  - "Generations published before this change, which carry no fingerprint, must stay readable by serving; verification applies only to the generation being published."
+  - "A verification failure must be logged at ERROR with record identity, label and both fingerprints; no payload content may be logged."
+  - "Must handle store errors per the project error handling policy, keeping the original cause through the failed-publication path (KM-400b-5-i, KM-400b-5-ii)."
+test_intent:
+  - clause: "the data the store returns for verification holds, per node, only its identity and the fingerprint of the stored payload"
+    needs_test: true
+    reason: The shape of the read-back is the cost saving, and a query that still returns properties would silently keep the double cost.
+  - clause: "no stored payload body is returned for verification"
+    needs_test: true
+    reason: A leftover full-property read-back would pass every functional check while defeating the purpose.
+  - clause: "the amount of data returned for verification is the same whether the batch's payloads total 1,800,000 bytes or 250,000 bytes"
+    needs_test: true
+    reason: Constant read-back size is the measurable property that proves verification no longer scales with payload.
+  - clause: "the verification passes when all 250 stored fingerprints equal the snapshot fingerprints"
+    needs_test: true
+    reason: A serialization mismatch between the two sides would make every correct publication fail.
+  - clause: "the verification fails"
+    needs_test: true
+    reason: A check that compares only identities would pass an altered payload, which is the weakness this record forbids.
+  - clause: "the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint"
+    needs_test: true
+    reason: The failure detail is computed output that could name the wrong record or omit a fingerprint.
+  - clause: "the failure is reported with the original cause through the failed-publication result, so the generation is removed as for any other failure after storing"
+    needs_test: true
+    reason: A verification failure raised outside the failure path would leave the generation stranded.
+  - clause: "the verification fails and names that node as missing, not as a fingerprint mismatch"
+    needs_test: true
+    reason: Distinguishing missing from changed depends on comparison logic that could conflate the two.
+  - clause: "the same rules apply: identity and fingerprint are compared, payload bodies are not returned, and a changed or missing relationship fails naming it"
+    needs_test: true
+    reason: Relationship verification is a separate path that could keep the old full read-back.
+test_spec:
+  - name: test_verification_readback_returns_only_identity_and_fingerprint_per_node
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Record the statement and rows a recording StoreDouble returns for a 250-node batch and assert each returned row has only the key and the fingerprint fields, and the statement no longer returns properties(n).
+    proves_clause: "the data the store returns for verification holds, per node, only its identity and the fingerprint of the stored payload"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "the node statement still ends RETURN n.key AS key, properties(n) AS props"
+      - "a row that carries the identity, the fingerprint and the payload"
+  - name: test_no_stored_payload_body_is_returned_for_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Use a payload with a unique marker string and assert the marker appears in no value the double returned to verification, for node and relationship batches.
+    proves_clause: "no stored payload body is returned for verification"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a read-back that returns the full property map and ignores the unused fields"
+      - "a read-back that returns a truncated payload prefix"
+  - name: test_readback_size_is_constant_whatever_the_payload_total
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Verify one 250-node batch totalling 1,800,000 bytes and one totalling 250,000 bytes and assert the serialized size of the data returned for verification is identical.
+    proves_clause: "the amount of data returned for verification is the same whether the batch's payloads total 1,800,000 bytes or 250,000 bytes"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a fingerprint field whose length grows with the payload"
+      - "a read-back that returns payload length alongside the fingerprint and pads the row to it"
+  - name: test_matching_fingerprints_pass_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Call verify_rows with 250 expected rows and 250 stored fingerprints computed from the one shared canonical serialization, including a payload whose JSON key order differs, and assert no error.
+    proves_clause: "the verification passes when all 250 stored fingerprints equal the snapshot fingerprints"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "snapshot-side and store-side fingerprints computed from different serializations, failing every correct publication"
+      - "a fingerprint that depends on JSON key order or whitespace"
+  - name: test_single_character_change_fails_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Store node KM-400b-5 with a payload differing by one character and assert verify_rows raises ValueError for a changed payload.
+    proves_clause: "the verification fails"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a check that compares identities only and passes an altered payload"
+      - "a fingerprint computed over only the first 1,024 bytes of the payload"
+      - "a weak checksum such as the payload length"
+  - name: test_failure_names_node_label_and_both_fingerprints
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the raised message names KM-400b-5, label AcceptanceCriterion, the expected fingerprint and the stored fingerprint, contains no payload content, and an ERROR record carries the same four values.
+    proves_clause: "the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a message that names the first node of the batch instead of the changed node"
+      - "a message that gives the expected fingerprint twice"
+      - "an ERROR log that prints the payload"
+  - name: test_verification_failure_removes_the_generation_with_the_original_cause
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Publish through neo4j_projection.publish against a FailureDouble subclass that stores one altered payload and assert ValueError propagates, the failed generation is removed, and publication_removal is outcome removed.
+    proves_clause: "the failure is reported with the original cause through the failed-publication result, so the generation is removed as for any other failure after storing"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "verification run outside the try block so _record_failed_generation never runs"
+      - "an error type that publish does not catch, stranding the generation"
+      - "removal outcome replacing the fingerprint cause in the message"
+  - name: test_missing_node_is_named_missing_not_mismatched
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Omit one stored node from the read-back and assert the failure names that node as missing and does not use the fingerprint mismatch wording.
+    proves_clause: "the verification fails and names that node as missing, not as a fingerprint mismatch"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a missing node reported through the count-only message without naming the node"
+      - "a missing node compared against an empty fingerprint and reported as a mismatch"
+  - name: test_relationship_batches_verify_by_fingerprint_and_name_the_failing_relationship
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish with relationship payloads, assert the relationship statement returns only key and fingerprint, then change one and drop one stored relationship and assert each fails naming it as changed or missing.
+    proves_clause: "the same rules apply: identity and fingerprint are compared, payload bodies are not returned, and a changed or missing relationship fails naming it"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "relationship batches left unverified while node batches use fingerprints"
+      - "relationship read-back that still returns r.payload"
+      - "a changed relationship that passes because only keys are compared"
+  - name: test_km_400b_5_iv_reachable_from_sync_entry_point
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Run `python -m knowledge sync --root <repo>` in a fresh subprocess with only the Neo4j driver replaced by a StoreDouble that stores one altered payload, and assert exit 2 and a failure message naming the changed node and both fingerprints.
+    proves_clause: "the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+  - name: test_km_400b_5_iv_live_fingerprint_verification_against_real_store
+    target_dir: tests/knowledge_live/publication/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Publish into a real Neo4j database, then read the stored fingerprints back with the verification statement and assert they equal the snapshot fingerprints and the statement returns no payload property.
+    proves_clause: "the verification passes when all 250 stored fingerprints equal the snapshot fingerprints"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: true
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - knowledge/adapters/neo4j_domain_build.py
+  - knowledge/adapters/native_verification.py
+  - knowledge/adapters/neo4j_projection.py
+  - knowledge/adapters/neo4j_backend.py
+  - tests/knowledge/_km_400f_2_support.py
+  - tests/knowledge/test_km_400b_2_ii.py
+  - tests/knowledge/test_km_400b_5_i.py
+  - tests/knowledge/test_km_400b_5_ii.py
+  - tests/knowledge/test_km_400f_3.py
+  - config/ac_store_schema.json
+notes: |
+  Authored 2026-10-21. Today each node batch returns every written node's full property
+  set for verification, so a batch of large payloads is paid for twice inside the same
+  time-limited transaction: once to write and once to read back. Comparing a fingerprint
+  removes the read-back cost without weakening the check.
+
+  The fingerprint must cover the whole stored payload. A check that compared only
+  identities would pass a truncated or altered payload, so the single-character case is
+  part of the criteria. Which hash is used, and whether it is computed by the store or
+  stored alongside the record, is for IT PO.

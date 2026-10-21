@@ -67,6 +67,24 @@ def resolve_spawn_ids(declared: list[str], ticket_phase_ids: list[str]) -> list[
     return out
 
 
+def redundancy_findings(subject: str, rel: str, declared: list[str], ticket_phase_ids: list[str]) -> list[str]:
+    """Return one refusing finding per redundant or repeated entry in the RAW ``declared`` list (AR-400f-1).
+
+    ``declared`` must be the specialist's own frontmatter list, repeats kept: the registry copy and
+    ``resolve_spawn_ids`` de-duplicate, so they can never show a repeat. An explicit entry whose target is a
+    ticket-phase agent is covered by the macro whenever the macro is declared; membership is judged on
+    every call against ``ticket_phase_ids``, and nothing is stripped from the declaration.
+    """
+    out: list[str] = []
+    for entry in dict.fromkeys(declared):
+        if declared.count(entry) > 1:
+            out.append(f"{rel}: {subject}.spawn_allowlist lists '{entry}' twice (listed twice); keep one entry")
+        elif MACRO in declared and entry in ticket_phase_ids:
+            out.append(f"{rel}: {subject}.spawn_allowlist has a redundant hand-off entry '{entry}': "
+                       f"{MACRO} already covers it (it is a ticket-phase agent); remove '{entry}'")
+    return out
+
+
 def _phase_ids(agents: list[dict[str, Any]]) -> list[str]:
     """Return the ids of the registry agents currently marked ``is_ticket_phase``."""
     return [a["id"] for a in agents if a.get("is_ticket_phase")]

@@ -1,0 +1,157 @@
+id: BO-400e-3-iii
+title: "Every ticket and acceptance criterion outside the closable set reads exactly the same status after the closure as before it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given an epic branch "EPIC-Alpha" whose closable set is the ticket "alpha-02.md" and its
+      source acceptance criterion "BO-9100a-2"
+    And before finalization starts, the status of every other ticket and acceptance criterion
+      in the store is captured -- including the epic's own siblings "alpha-01.md" (todo),
+      "alpha-03.md" (in_progress) and "alpha-04.md" (done), the acceptance criteria
+      "BO-9100a-1" (todo) and "BO-9100a-3" (in_progress), and records of other epics such
+      as "beta-01.md" (todo) and "BO-9200a-1" (todo)
+  When finalization finishes its closure step and its closure commit exists
+  Then re-reading the same records gives a status equal to the captured one for every record
+    outside the closable set -- "alpha-01.md" todo, "alpha-03.md" in_progress, "alpha-04.md"
+    done, "BO-9100a-1" todo, "BO-9100a-3" in_progress, "beta-01.md" todo, "BO-9200a-1" todo
+    And this holds for records that are parents of a closed acceptance criterion as well:
+      a parent's own recorded status is not set to done by the closure of one of its children
+    And only "alpha-02.md" and "BO-9100a-2" read done that did not read done before
+
+  Given the same capture, and a closure that changed the status of "alpha-01.md" as well
+  When the before and after states are compared
+  Then the difference names "alpha-01.md" with its before and after status
+    And that difference is reported by the finalization run as a closure that went outside
+      its set, not passed over in silence
+  Because a false "done" looks exactly like a real one once written, and the only way to know
+    a closure leaked nothing is a captured before-state compared with the after-state -- a
+    recollection of what used to be open proves nothing, since the whole failure is a write
+    nobody noticed.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-ii
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+    relationship: describes
+    status: exists
+    relevance: "This record is the KI's own Detection method made into a scenario: record siblings' statuses before, re-read after, any change was made by Step 3.5. Used by hand for TQ-600a-5 on 2026-09-30."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Step 3.5, :1257-1466."
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    IT-PO DECISION (the open item in this record's notes): the before/after comparison runs on EVERY
+    finalize, inside the run, not only in the test suite. The second scenario requires the RUN to
+    report a leak, and a test-only comparison cannot report anything about a real run.
+  - >-
+    The comparison lives in the closing module (scripts/build_orchestration/finalize_closable_set.py,
+    the close step; see BO-400e-3-ii), not in workflow JS. The module captures the status of every
+    ticket (tickets/**/*.md, frontmatter status) and every AC (docs/acceptance-criteria/**/*.yaml
+    except index.yaml, work_status) in the worktree immediately before its first write. It re-reads
+    them after its last write, and reports every record outside the fixed set whose status differs,
+    as {path, id, before, after}. Snapshot keys are repo-relative paths, so a record whose file was
+    created or deleted by the closure also shows as a difference.
+  - >-
+    A non-empty difference means: no closure commit is made (the commit-path check of BO-400e-3-v
+    refuses), the run reports each record as "closed outside its set" with its before and after
+    status, and Step 3.5 is NOT recorded in completedSteps or reported as completed. The difference
+    is reported, never repaired: the module does not revert the leaked write on its own. That would
+    be a second unguarded writer of the store. The leak is left visible for the person.
+  - >-
+    The parent-record clause is checked by the same comparison, with no special case. A composite
+    parent of a closed AC is outside the set, so any change to its work_status is a difference. The
+    closer must not roll children up into parents: mark_ac_done.py --ticket/--ac edits only the
+    named AC today, and that stays true.
+  - "Snapshot and compare together add at most 10 seconds on a store of 5,000 AC records and 2,000 tickets on the CI runner. Read only the status field, not a full schema validation."
+  - "The snapshot is never written into the tracked tree. Any persisted copy lives under the worktree's git dir, so the comparison cannot itself become an out-of-set path in the closure commit."
+delivers_to:
+  agent: python-coder
+  contract: >-
+    In the close step's JSON reply: outside_set_changes: [{path: str (repo-relative POSIX), id:
+    str|null, before: str|null, after: str|null}], sorted by path, empty when nothing leaked.
+    Consumed by finalize-feature.js's Step 3.5 report (BO-400e-3-vi) and by the commit-path check
+    (BO-400e-3-v).
+expects_from:
+  ac_id: BO-400e-3-ii
+  contract: "The persisted closable set (records: [{kind, id, path, status}] plus set_digest). It defines 'inside the set' for the comparison."
+test_required: true
+test_spec:
+  - name: test_every_record_outside_the_set_keeps_its_captured_status
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Real scratch repo with the BA's fixture (alpha-01 todo, alpha-03 in_progress, alpha-04 done, BO-9100a-1 todo, BO-9100a-3 in_progress, beta-01 todo, BO-9200a-1 todo; set = alpha-02 + BO-9100a-2); after the real close step every out-of-set record reads its captured status and only alpha-02 and BO-9100a-2 newly read done."
+  - name: test_parent_of_a_closed_ac_is_not_set_done
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "BO-9100a-2's structural parent BO-9100a (todo, covered_by lists BO-9100a-1..3) still reads todo after BO-9100a-2 is marked done."
+  - name: test_a_leaked_status_change_is_reported_by_the_run_with_before_and_after
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Inject a leak (a wrapped closer that also writes alpha-01 to done) and assert outside_set_changes names alpha-01.md with before todo and after done, and that no closure commit exists. NEGATIVE CONTROL: the same run without the injected leak reports an empty difference, which proves the detector is not always-firing."
+    must_catch:
+      - "compare only the records in the closable set"
+      - "skip records whose status was already done before the run"
+  - name: test_leak_report_reaches_the_finalize_report_and_step_is_not_completed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Drive finalize-feature.js through run_workflow_under_e2 with the close dispatch answered by the real module's leak output; the run's report names alpha-01.md as closed outside its set, Step 3.5 is absent from completedSteps, and no outcome line says the closure completed."
+test_rationale: >-
+  The failure being guarded against is a write nobody noticed. The only proof against it is a
+  captured before-state compared with the after-state of a real store, so the tests run the real
+  close step over a real scratch store and inject the leak through the closer rather than mocking
+  the comparison. The fixture covers all three non-closed statuses, including an already-done
+  sibling, so that a "done over done" write is not mistaken for a no-op. The negative control makes
+  sure the detector is not passing by reporting everything or nothing. The workflow test proves the
+  difference is consumed in control flow and is not merely computed.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_iii_outside_set.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_close.py
+  - scripts/build_orchestration/_fcs_records.py
+  - templates/workflows-js/finalize-feature.js
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
+
+  The second scenario is deliberate: it is what makes this a guarantee the run checks for
+  itself rather than a property only a test can observe. Whether the run performs that
+  comparison on every finalize, or only the test suite does, is an IT-PO decision; the
+  criterion requires that a leak, if it happens, is reported rather than silent.
+
+  The parent-record clause exists because the AC store rolls children up into composites; the
+  store already holds composites falsely marked done (see CLAUDE.md "AC-store commits -- stage
+  the parent alongside the child"). Closing one child must not flip its parent.
+
+  Fixture must include all three non-closed statuses (todo, in_progress, done) so that a
+  closure that writes "done" over a record already done is not mistaken for a no-op.

@@ -23,23 +23,23 @@ sys.path.insert(0, str(_STAGE_DIR))
 from _approval_step_support import BATCH, gate_record, names, prepass_for, resume, run, table  # noqa: E402
 from _design_stage_support import PLAN_FEATURE_JS  # noqa: E402
 
-_LINE_COUNT_AT_PIN = 3329
+_LINE_COUNT_AT_PIN = 3310
 _PINNED = (
-    (1660, '    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md'),
-    (1694, '    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md'),
-    (1721, '        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md'),
-    (1734, '  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md'),
-    (1806, '  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md'),
-    (2301, '// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md'),
-    (2346, '    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2367, '// Why why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2372, '// Why why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2403, '// Why why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2583, '  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2914, '    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2959, '    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (3081, '        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (3191, '        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (1647, '    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md'),
+    (1679, '    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md'),
+    (1704, '        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md'),
+    (1715, '  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md'),
+    (1785, '  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md'),
+    (2280, '// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md'),
+    (2325, '    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2346, '// Why why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2351, '// Why why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2382, '// Why why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2565, '  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2897, '    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2942, '    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (3063, '        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (3172, '        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md'),
 )
 _WHY_WHY = re.compile(r"why\s+why", re.IGNORECASE)
 

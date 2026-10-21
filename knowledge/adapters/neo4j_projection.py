@@ -5,6 +5,9 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-20 18:00 [python-coder]: Pass the generation key to the headroom gate so an already-stored generation is not counted twice. (#KM-400f-3/02)
+- 2026-10-20 14:00 [python-coder]: Measure headroom and refuse an unfitting snapshot before the first write; classify a read-only rejection of that write. (#KM-400f-3)
+- 2026-10-15 04:00 [python-coder]: Reclaim superseded generations after the pointer switch only; a failed or stale publication reports 0 reclaimed. (#KM-400f-2)
 - 2026-10-14 23:00 [python-coder]: Protect the active generation by the active pointer alone; with no pointer, report that and reclaim nothing. (#KM-400f-1-iii)
 - 2026-10-14 22:00 [python-coder]: State each verdict's age basis (retired_at, created_at or undetermined); an undetermined age is never reclaimable. (#KM-400f-1-ii)
 - 2026-10-14 21:00 [python-coder]: Report a refused removal as not/partially removed, naming repository and generation, the refusal and what remains. (#KM-400b-5-ii)
@@ -22,6 +25,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from neo4j import ManagedTransaction
     from knowledge.adapters.neo4j_backend import Neo4jBackend
+    from knowledge.adapters.retention.capacity import CapacityCeiling
+    from knowledge.config import RetentionBound
     from knowledge.contracts import ProjectionSnapshot
 
 import hashlib
@@ -31,6 +36,8 @@ import time
 
 from knowledge.adapters.domain_schema import EDGE_TYPES, NODE_LABELS
 from knowledge.adapters.neo4j_backend import scope_key
+from knowledge.adapters.retention.capacity import enforce_headroom, first_write
+from knowledge.adapters.retention.reclaim import nothing_reclaimed
 from knowledge.adapters.neo4j_retention import (  # re-exported: retention lives in neo4j_retention
     active_generation_verdict as active_generation_verdict,
     evaluate_retention as evaluate_retention,
@@ -50,18 +57,32 @@ _CONTROL_SCHEMA_QUERY = (
 
 
 async def publish(
-    db: Neo4jBackend, snapshot: ProjectionSnapshot, expected_generation: str | None
+    db: Neo4jBackend,
+    snapshot: ProjectionSnapshot,
+    expected_generation: str | None,
+    retention_bound: RetentionBound | None = None,
+    capacity: CapacityCeiling | None = None,
 ) -> bool:
     """Build or resume a content-addressed generation, then publish with CAS.
+
+    When a retention bound is declared and the pointer switched, the generations the bound
+    permits are reclaimed in this same operation; ``db.publication_reclamation`` reports it.
+    Before the first write, whole-database usage is measured and a snapshot that does not fit
+    the declared ceiling is refused; ``db.publication_capacity`` reports the headroom.
 
     Args:
         db: Scoped Neo4j adapter owning the driver and transaction policy.
         snapshot: Validated immutable generation and its canonical source records.
         expected_generation: Previously active generation required for compare-and-swap.
+        retention_bound: Declared bound; None means no reclamation.
+        capacity: Declared ceiling; None means it is unknown (usage is still measured).
 
     Returns:
         Whether the guarded operation succeeded.
     """
+    # A failed or stale publication reclaims nothing, and says so with an explicit zero.
+    db.publication_reclamation = nothing_reclaimed()
+    db.publication_capacity = None  # no headroom is reported until usage has been measured
     # The digest names the loaded source content, so it is taken before the collapse: a
     # generation record left by an earlier attempt on the same revision keeps its identity.
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
@@ -75,6 +96,7 @@ async def publish(
     if unsupported[0]["count"]:
         raise ValueError("repository control records require native storage")
     key = scope_key(snapshot.repository_id, snapshot.generation_id)
+    await enforce_headroom(db, len(snapshot.nodes), len(snapshot.edges), capacity, key)  # before any write
     kinds = snapshot.supported_kinds or sorted({n.kind for n in snapshot.nodes})
     metadata = {
         "key": key,
@@ -94,10 +116,10 @@ async def publish(
         "name": snapshot.source_sha[:8],
         "storage_version": 2,
     }
-    rows = await db._run(
+    rows = await first_write(
+        db,
         'MERGE (g:Snapshot {key:$key}) ON CREATE SET g += $meta, g.status="building", g.semantic_ready=false RETURN g.digest AS digest, g.status AS status',
         {"key": key, "meta": metadata},
-        True,
     )
     if rows[0]["digest"] != digest:
         raise ValueError("generation identity already belongs to different content")
@@ -118,9 +140,16 @@ async def publish(
             {"key": key, "now": time.time()},
             True,
         )
-    return await switch_active(
+    switched = await switch_active(
         db, snapshot.repository_id, snapshot.generation_id, expected_generation
     )
+    if switched and retention_bound is not None:
+        from knowledge.adapters.retention.reclaim import reclaim_superseded
+
+        db.publication_reclamation = await reclaim_superseded(
+            db, snapshot.repository_id, retention_bound
+        )
+    return switched
 
 
 async def _record_failed_generation(
@@ -148,7 +177,10 @@ async def _record_failed_generation(
     removal = await _remove_own_generation(db, key, ids)
     db.publication_removal = removal
     cause = str(error) or type(error).__name__
-    error.args = (f"{cause}; {_removal_statement(removal)}", *error.args[1:])
+    # The refusal wording keeps its own undetermined figures free of any bare 0 (KM-400b-5-ii),
+    # so the reclaimed-zero is spelled without a digit there; the integer is in the report.
+    reclaimed = "0 generations reclaimed" if removal["outcome"] == "removed" else "no generations reclaimed"
+    error.args = (f"{cause}; {_removal_statement(removal)}; {reclaimed}", *error.args[1:])
 
 
 async def _count_tagged(db: Neo4jBackend, key: str) -> dict | None:

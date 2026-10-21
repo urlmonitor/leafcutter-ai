@@ -106,6 +106,7 @@ def test_every_record_evaluated_against_all_five_families(tmp_path):
 
 def test_repair_families_fix_and_report_file_and_value(tmp_path):
     # covers: ACD-2500a-2
+    # covers: ACD-2500a
     """Back-link, unambiguous component list and approved-by-agent readiness are each
     repaired on disk (only the one field changes) and reported 'fixed' naming the file
     and the value changed; a second run changes nothing and reports no 'fixed' entry."""
@@ -144,6 +145,7 @@ def test_repair_families_fix_and_report_file_and_value(tmp_path):
 
 def test_report_only_families_never_modify_records(tmp_path):
     # covers: ACD-2500a-2
+    # covers: ACD-2500a
     """Contract symmetry and documentation mapping findings leave every file
     byte-identical and are 'needs a decision'."""
     records = hierarchy(

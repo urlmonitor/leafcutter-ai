@@ -1,0 +1,152 @@
+id: BO-4500b-4
+title: "A reference page states the shared-block marker convention, every install failure, and the COMMIT-ANSWER contract every depth-0 route relies on"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml"
+criteria: |
+  Given the shared-block mechanism (BO-4500b-1, BO-4500b-2) and the COMMIT-ANSWER block (BO-4500b-3)
+    are built,
+  When a route author opens the reference page for shared blocks,
+  Then it states the marker convention: the start and end marker form, how a block is named, that a
+    route template's marker pair is always empty, and that the install fills it,
+  And it lists each install failure -- unknown block name, empty source, unused source, stale
+    awaiting-adoption declaration, text between markers in a template, nested or overlapping
+    blocks, and unpaired or mismatched markers -- each with the message a reader sees and the fix,
+  And it states what the identity check inspects, that it reads installed routes, and that a check
+    which inspected nothing fails,
+  And it states the COMMIT-ANSWER contract: the reply keys the block reads, the five decisions with
+    the condition for each, where the transient-retry ceiling and the reason-code families are
+    configured, and that a specialist is engaged at most once per commit,
+  And it names the routes that take the COMMIT-ANSWER block and states that build-feature and
+    build-ticket do not, because they keep their phase-loop handoff routing.
+
+  Given the reason-code families and the retry ceiling in the commit step's configuration,
+  When the page's statement of them is compared with that configuration by a test,
+  Then they agree, and a code added to the configuration but missing from the page fails the test.
+depends_on: [BO-4500b, BO-4500b-1, BO-4500b-2, BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: reference-doc -- the marker convention and the COMMIT-ANSWER contract."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "The commit step's own reference page (one-answer contract). Link to it; do not restate the step's contract here -- this page covers the CALLER side."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: related
+    status: exists
+    relevance: "Where route authors already look; cross-link the new page from it."
+assigned_agent: documentation-expert
+estimated_complexity: M
+declared_files:
+  - path: docs/reference/shared-blocks.md
+    state: to_be_created
+  - path: docs/reference/workflow-authoring-contract.md
+    state: existing
+it_requirements:
+  - >-
+    Put the page under docs/reference/ (for example docs/reference/shared-blocks.md, name
+    provisional) with the repo's doc frontmatter, and register it in docs/INDEX.md through the
+    normal doc-index path. Cross-link it from docs/reference/workflow-authoring-contract.md, and
+    link to the commit step's reference page (BO-4500a-4-vi) without restating the step's own
+    contract. This page covers the CALLER side.
+  - >-
+    Quote every failure message from the built install's actual output (run against the failing
+    fixtures), not paraphrased from the criteria. Give each failure a stable anchor the how-to
+    (BO-4500b-4-i) can link to.
+  - >-
+    State the reason-code families and max_transient_retries in a form a test can match against
+    config/commit_step.json: each code listed under its family name, and the ceiling as its key
+    and value. The page holds no other copy of configuration values.
+  - >-
+    The config-agreement test is written by test-writer. documentation-expert writes only the
+    page. The test reads config/commit_step.json and the page at test time and fails naming any
+    code present in the configuration but missing from the page.
+  - >-
+    Name the routes that take COMMIT-ANSWER as they stand when the page is written. State that
+    build-feature and build-ticket keep BO-3000a phase-loop routing (BO-3800a-1). While the block
+    still awaits adoption, say so and name the adopting records.
+delivers_to:
+  - agent: documentation-expert
+    contract: >-
+      docs/reference/shared-blocks.md (name provisional) with one stable anchor per install
+      failure, which the how-to (BO-4500b-4-i) links to instead of restating the messages.
+expects_from:
+  - ac_id: BO-4500b-1
+    contract: "Marker convention and the install failure messages (BO-4500b-1-i..v)."
+  - ac_id: BO-4500b-2
+    contract: "What the identity check inspects, its rendered-source comparison, and its pass, failure and zero-inspected wording."
+  - ac_id: BO-4500b-3
+    contract: "COMMIT-ANSWER decision contract."
+test_intent:
+  - clause: "it states the marker convention: the start and end marker form, how a block is named, that a route template's marker pair is always empty, and that the install fills it"
+    needs_test: false
+    reason: Prose content is checked at documentation review and has no executable behaviour.
+  - clause: "it lists each install failure -- unknown block name, empty source, unused source, stale awaiting-adoption declaration, text between markers in a template, nested or overlapping blocks, and unpaired or mismatched markers -- each with the message a reader sees and the fix"
+    needs_test: false
+    reason: Completeness of the prose list is checked at documentation review against the built install's messages.
+  - clause: it states what the identity check inspects, that it reads installed routes, and that a check which inspected nothing fails
+    needs_test: false
+    reason: Prose content is checked at documentation review and has no executable behaviour.
+  - clause: "it states the COMMIT-ANSWER contract: the reply keys the block reads, the five decisions with the condition for each, where the transient-retry ceiling and the reason-code families are configured, and that a specialist is engaged at most once per commit"
+    needs_test: false
+    reason: Prose content is checked at documentation review, and the configured values are proven by the agreement test.
+  - clause: it names the routes that take the COMMIT-ANSWER block and states that build-feature and build-ticket do not, because they keep their phase-loop handoff routing
+    needs_test: false
+    reason: Prose content is checked at documentation review and has no executable behaviour.
+  - clause: they agree, and a code added to the configuration but missing from the page fails the test
+    needs_test: true
+    reason: The criterion requires a test that keeps the page from drifting away from the configuration.
+test_spec:
+  - name: test_page_states_every_configured_reason_code_and_the_ceiling
+    target_dir: unit_tests/reference/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Read config/commit_step.json and docs/reference/shared-blocks.md at test time; every reason code appears under its family name and max_transient_retries appears with its value. A fixture config with an extra code makes the check fail naming that code."
+    proves_clause: "they agree, and a code added to the configuration but missing from the page fails the test"
+    code_file: docs/reference/shared-blocks.md
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "compare only the retry ceiling and ignore reason codes"
+      - "pass when the page lists fewer codes than the configuration"
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: docs/reference/workflow-authoring-contract.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the existing reference page route authors read and the declared place for the cross-link to the new shared-blocks page
+    decision: null
+file_findings_opened_files:
+  - docs/reference/workflow-authoring-contract.md
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500b-4-i]
+implemented_by: []
+notes: |
+  Satisfies BO-4500b's reference-doc trigger. The how-to trigger is BO-4500b-4-i (an L3 under this
+  record, not a sixth L2: BO-4500b is at the five-child L1 cap with b-1..b-5). The component-diagram
+  trigger is BO-4500b-5.
+
+  The second scenario keeps the page from becoming a hand copy of the configuration -- the same
+  rule BO-4500a-4 applies to the step's reference page.

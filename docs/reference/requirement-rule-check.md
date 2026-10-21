@@ -145,14 +145,14 @@ Findings are sorted by file, rule family, subject, record id, message. There is 
 
 ## Rule families
 
-Eleven rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair, and only with a before-state. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
+Eleven rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 3 repair, and only with a before-state. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
 
 | # | Family name (exact string) | Dispositions it produces | Repairable field |
 |---|---|---|---|
 | 1 | `parent-to-child back-links` | `fixed`, `needs a decision` | `covered_by` |
 | 2 | `non-empty graph component list` | `fixed`, `needs a decision` | `components` |
-| 3 | `producer/consumer contract symmetry` | `needs a decision` | none |
-| 4 | `readiness never raised to approved by an authoring agent` | `fixed` | `readiness` |
+| 3 | `readiness never raised to approved by an authoring agent` | `fixed` | `readiness` |
+| 4 | `producer/consumer contract symmetry` | `needs a decision` | none |
 | 5 | `documentation trigger to documentation requirement mapping` | `needs a decision`, `failed` | none |
 | 6 | `specialist versus surface` | `needs a decision`, `not evaluated`, `failed` | none |
 | 7 | `declared files versus modifies links` | `needs a decision`, `not evaluated` | none |
@@ -179,7 +179,11 @@ Every child id must be in its parent's `covered_by`. The parent id comes from `d
 - Empty and zero or several candidates, or the single candidate is not in the registry: `needs a decision`.
 - Non-empty but invalid (for example an id not in `docs/components.json`): `needs a decision`, never rewritten.
 
-### 3. producer/consumer contract symmetry
+### 3. readiness never raised to approved by an authoring agent
+
+A record that ends the stage `approved` but was not `approved` in the before-state is restored: `fixed`; sets `readiness` to the before value, or to `draft` when the record had none or did not exist. Unchanged records, and every record under `--stage approval`, are left alone; the exemption is by stage identity, not by inspecting values.
+
+### 4. producer/consumer contract symmetry
 
 Presence only. `expects_from` and `delivers_to` may each be null, a string, an object or a list.
 
@@ -187,10 +191,6 @@ Presence only. `expects_from` and `delivers_to` may each be null, a string, an o
 - A record delivers to an agent, but no record in the checked folder is assigned that agent and names this record in its `expects_from`: `needs a decision`.
 
 The check never adds, removes or compares contract text. Judging whether two contract descriptions agree stays with the technical planner.
-
-### 4. readiness never raised to approved by an authoring agent
-
-A record that ends the stage `approved` but was not `approved` in the before-state is restored: `fixed`; sets `readiness` to the before value, or to `draft` when the record had none or did not exist. Unchanged records, and every record under `--stage approval`, are left alone; the exemption is by stage identity, not by inspecting values.
 
 ### 5. documentation trigger to documentation requirement mapping
 

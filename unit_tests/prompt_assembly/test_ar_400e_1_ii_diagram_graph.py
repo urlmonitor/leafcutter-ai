@@ -49,7 +49,7 @@ def test_knowledge_graph_has_one_edge_per_declared_ability(tmp_path):
     'skills_used' (never 'skills_invoked'), no entry is declined (dict entries resolve), and
     validate_knowledge_map accepts the relabelled edge type."""
     root = H.lean_root(tmp_path)
-    decl = H.declared_ids(root)
+    decl = H.expected_for_view("graph", root, H.declared_ids(root))
     graph = H.view_graph(root)
     problems = [m for m in H.mismatches("graph", graph.view, decl) if "examined" not in m]
     want_total = sum(len(v) for v in decl.values())
@@ -83,7 +83,7 @@ class TestStrayOlderFieldEntry(unittest.TestCase):
             nonempty = {a: s for a, s in decl.items() if s}
             self.assertEqual([m for m in H.mismatches("diagram", H.view_diagram(root), nonempty)
                               if "examined" not in m], [], "baseline diagram must show the declarations")
-            self.assertEqual([m for m in H.mismatches("graph", before_graph.view, decl)
+            self.assertEqual([m for m in H.mismatches("graph", before_graph.view, H.expected_for_view("graph", root, decl))
                               if "examined" not in m], [], "baseline graph must show the declarations")
             planted = H.plant_stray(root)
             self.assertGreater(len(planted), 1)

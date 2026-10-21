@@ -124,6 +124,13 @@ def stage_script(repo_root: Path, source: Path = DEPLOYED_SCRIPT) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / "setup_ticket_worktree.py"
     dest.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    # The script imports its sibling _setup_ticket_*.py modules from scripts/build_orchestration/
+    # (next to it in a deployed layout), so a copy must carry them too. Globbed, so a future
+    # sibling does not break every staged copy.
+    sibling_dir = dest_dir / "build_orchestration"
+    sibling_dir.mkdir(parents=True, exist_ok=True)
+    for sibling in sorted((_REPO_ROOT / "scripts" / "build_orchestration").glob("_setup_ticket_*.py")):
+        (sibling_dir / sibling.name).write_text(sibling.read_text(encoding="utf-8"), encoding="utf-8")
     return dest
 
 

@@ -37,6 +37,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from workflows._bo2300_step35_replies import STEP35_RESPONSES  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -73,13 +74,8 @@ _FINALIZE_PREFLIGHT_RESPONSES = {
         "status": "already_up_to_date",
         "merge_strategy": "already_up_to_date",
     },
-    "pre-step-4-sync-check": {
-        "status": "up_to_date",
-        "local_sha": "abc1234",
-        "origin_sha": "abc1234",
-        "ahead_count": 0,
-        "behind_count": 0,
-    },
+    "pre-step-4-sync-check": {"status": "up_to_date", "local_sha": "abc1234", "origin_sha": "abc1234", "ahead_count": 0, "behind_count": 0},
+    **STEP35_RESPONSES,
 }
 
 

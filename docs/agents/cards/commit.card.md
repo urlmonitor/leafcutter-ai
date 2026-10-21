@@ -1,12 +1,19 @@
 ---
 agent_id: commit
 title: 'Agent Card: commit'
-description: 'Confirmation-gated commit agent. Shows the planned commit message and
-  file list before issuing git commit. On pre-commit hook failure, invokes the precommit-autofix
-  skill (Haiku for mechanical fixes, Sonnet for structural) and retries once. Refuses
-  --no-verify and force-push absent explicit user authorisation per the Git Safety
-  Protocol. Use when: user types /commit; asks to commit staged changes; asks to commit
-  with a specific message.'
+description: 'Commit agent that runs the shared commit step. Takes an explicit file
+  list and an optional caller-written message file (writes one following the project''s
+  commit-message rules when none is given), shows the message and file list to a person
+  for confirmation on the interactive path, then runs commit_changes.py once with
+  that exact list and file and relays the step''s answer unchanged in a {status, commit_answer,
+  earlier_answers} envelope. On a hook_failed answer it follows the answer''s remedy
+  disposition: engage-specialist returns the handoff, mechanical-autofix is fixed
+  in its own context and re-run with a fresh call of the step up to the configured
+  retry limit, author-clears returns a blocker. Never stages, records or kills by
+  hand, never bypasses checks, and refuses --no-verify and force-push absent explicit
+  user authorisation per the Git Safety Protocol. Use when: user types /commit; asks
+  to commit named files; asks to commit with a specific message; a build route dispatches
+  the commit phase.'
 type: card
 status: active
 created: 2026-08-13
@@ -15,13 +22,7 @@ last_updated: '2026-08-13'
 ---
 # commit
 
-**Confirmation-gated commit agent. Shows the planned commit message and file
-list before issuing git commit. On pre-commit hook failure, invokes the
-precommit-autofix skill (Haiku for mechanical fixes, Sonnet for structural)
-and retries once. Refuses --no-verify and force-push absent explicit user
-authorisation per the Git Safety Protocol.
-Use when: user types /commit; asks to commit staged changes; asks to commit
-with a specific message.**
+**Commit agent that runs the shared commit step. Takes an explicit file list and an optional caller-written message file (writes one following the project's commit-message rules when none is given), shows the message and file list to a person for confirmation on the interactive path, then runs commit_changes.py once with that exact list and file and relays the step's answer unchanged in a {status, commit_answer, earlier_answers} envelope. On a hook_failed answer it follows the answer's remedy disposition: engage-specialist returns the handoff, mechanical-autofix is fixed in its own context and re-run with a fresh call of the step up to the configured retry limit, author-clears returns a blocker. Never stages, records or kills by hand, never bypasses checks, and refuses --no-verify and force-push absent explicit user authorisation per the Git Safety Protocol. Use when: user types /commit; asks to commit named files; asks to commit with a specific message; a build route dispatches the commit phase.**
 
 | Field | Value |
 |-------|-------|
@@ -73,13 +74,16 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ticket_path` | file_path | Absolute path to the ticket markdown file |
+| `paths` | file_list | Explicit list of repo files to commit (never a directory, glob or "all") |
+| `message_file` | file_path | Path of a caller-written commit message file; when absent this agent writes one |
+| `ticket_path` | file_path | Absolute path to the ticket markdown file (supervised path) |
+| `run_or_ac_id` | string | The run id or acceptance criterion id a supervised call commits for |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
-| `sign_off_comment` | sign_off_comment | Sign-off comment with status: ok | blocker | handoff |
+| `sign_off_comment` | sign_off_comment | Reply envelope {status: ok | handoff | blocker, commit_answer, earlier_answers} and, with a ticket_path, a sign-off comment with the same status |
 
 ### Mutates (Side Effects)
 
@@ -98,7 +102,6 @@ flowchart TD
 | `Read` |
 | `Edit` |
 | `Write` |
-| `Agent` |
 | `Skill` |
 ---
 
@@ -121,5 +124,5 @@ flowchart TD
 
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
-| Conditional Behavior | nothing is staged | ask the user what to stage | `None` |
-| Conditional Behavior | you stage Python | SQL, or YAML files that contain a `DECISION HISTORY` | `None` |
+| Conditional Behavior | no explicit file list was given | ask the user which files to commit | `None` |
+| Conditional Behavior | you write a message for Python | SQL, or YAML files that contain a `DECISION HISTORY` | `None` |

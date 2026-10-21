@@ -1,0 +1,297 @@
+id: GE-127d-4
+title: "A change that makes an already-oversized file's measured length fall while its total line count rises is refused, and the refusal names that situation"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked covered file with a permitted length of 400 whose previous
+    version measures 620 under the rule in force and holds 700 lines in total, so
+    it already stands over its limit,
+  And a staged version that measures 610 and holds 712 lines in total,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome names the file and states
+    that its measured length fell from 620 to 610 while its total line count rose
+    from 700 to 712,
+  And the outcome states that this combination is refused for a file already
+    over its limit, and that a reduction in counted lines and an addition of
+    uncounted lines (comments and standalone strings) are accepted when made in separate
+    commits,
+  And this refusal is distinguishable in the outcome from a refusal for crossing
+    the limit, for growth, or for an unpaid two-for-one repayment,
+  And given a tracked covered file with a permitted length of 400 whose previous
+    version measures 390 and holds 450 lines in total, and a staged version that
+    takes 12 lines of code out and puts 20 lines of comments in, so it measures
+    378 and holds 458 lines in total,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced and the commit completes — a file whose
+    previous version stood at or under its permitted length is never refused by
+    this check,
+  And given a file whose previous version stood at exactly its permitted length,
+    with the same shape of change,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced,
+  And whether the previous version stood over its limit is decided by its length
+    under the rule in force now, not under any earlier rule,
+  And given the over-limit file above with a staged version that measures 610
+    and holds 690 lines in total,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced,
+  And given the over-limit file above with a staged version that measures 620
+    and holds 712 lines in total, because the change only put comments into it,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced,
+  And given a newly added file, which has no previous version,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced.
+depends_on:
+  - GE-127d
+  - GE-127d-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Fix direction 3 ("Close the loophole in the gate too. Refuse a change where the
+      measured length fell and the raw length grew for the same file, and name it") and the
+      detection signature ("a commit whose measured length falls while wc -l rises"). Every
+      one of the five gamed templates showed exactly this shape.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The per-file verdict the backstop joins. It already resolves the previous version
+      for the ratchet; the backstop reuses that resolution and that measure.
+  - path: templates/scripts/commit_guardian/check_file_size_rule_parity.py
+    relationship: related
+    status: exists
+    relevance: >-
+      IT PO, read 2026-10-16. Imports check_file_size._classify_file and exercises it on a
+      throwaway probe to establish the enforced "when it applies" fact. A new verdict value
+      returned by _classify_file must not be misread there as a pass or a crossing.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/backstop.py
+    state: to_be_created
+it_requirements:
+  - >-
+    POPULATION: evaluated only when the previous version's length under the current
+    measure is strictly greater than the file's permitted length. Reuse the same
+    previous-length value the ratchet computes (GE-127d-3-iii), never a second reading.
+  - >-
+    The backstop is a canary for gaps in the measure, so it must compare the measured
+    length with a count the measure cannot influence: the total number of lines in the
+    file. It reuses the previous-version resolution the ratchet already performs; when
+    that resolution is INDETERMINATE (GE-127b-1-i) the backstop is not evaluated and the
+    existing INDETERMINATE outcome stands.
+  - >-
+    A refusal here is a reported finding: exit status 1, as for every other size refusal.
+  - >-
+    "TOTAL LINE COUNT" IS THE MEASURE'S OWN PHYSICAL-LINE SPLIT. Previous and current totals
+    use the same split GE-127d-3's measure uses (so a final line without a newline counts
+    once and CRLF equals LF), read from the previous content the ratchet already fetched
+    (get_previous_content) and the staged content it already read — no second git lookup.
+    The trigger is strict on both sides: measured strictly fell AND total strictly rose.
+  - >-
+    MERGES: mirror the ratchet's most-permissive reasoning. During a merge the backstop
+    refuses only when the shape (previous over its limit, measured fell, total rose) holds
+    against EVERY parent that has the file; a merge that adopts one parent's already-vetted
+    version is never refused by it.
+  - >-
+    OUTCOME SHAPE. The refusal block carries its own heading, distinct from FILE TOO LARGE and
+    FILE GREW WHILE ALREADY OVER ITS LIMIT, and states the file, the measured fall (previous
+    -> current) and the total rise (previous -> current) and the separate-commits remedy. When
+    the same file also fails the two-for-one check, both refusals are reported, each under its
+    own heading; neither suppresses the other.
+  - >-
+    HOST AND SIZE. Under GE-127d-3's rule check_file_size.py measures about 561 (IT PO
+    approximation, trailing DECISION HISTORY string included) against its 400 limit, so it is
+    an over-limit file under the ratchet: put the backstop's logic in the measure sub-package
+    (declared_files) and keep check_file_size.py's own growth within what the two-for-one
+    ratchet allows. Signature contracts other modules depend on are frozen: _classify_file's
+    (filepath, previous_lengths) parameters, _print_grown_file's four positional parameters
+    and _report_indeterminate. If _classify_file gains a verdict value, audit every consumer in
+    the same change (main()'s loop, check_file_size_rule_parity._enforced_applies_to_modified_files,
+    and the test fixtures that override main() or mutate _classify_file:
+    _ge_127a_1_ordinary_commit_fixture.py, _ge_127e_3_i_fixture.py, test_ge_127d_1.py).
+  - >-
+    Must follow the repo error-handling policy: specific exceptions around the content reads
+    it reuses; a failure to read either version takes the existing INDETERMINATE path.
+test_spec:
+  - name: test_ge_127d_4_measured_fell_while_total_rose_is_refused_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      In a temporary git repository, stage a version of a tracked covered file whose
+      previous version is over its limit that removes C code lines and adds K comment lines
+      with K > C (C and K varied). The hook refuses with exit 1, naming the file and both
+      pairs of numbers, which the test computes at run time from the two versions with the
+      shared measure and a plain line count, and stating the separate-commits remedy; the two
+      commits made separately (the C-line cut, then the K comments) each pass.
+    must_catch:
+      - "backstop omitted"
+  - name: test_ge_127d_4_an_under_limit_file_with_a_code_cut_and_more_comments_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The same code-cut-plus-more-comments change on a file whose previous version stands
+      under its limit, and on one standing exactly at its limit (previous lengths computed
+      with the shared measure at run time), completes through the hook with no backstop
+      refusal. A file that the pre-2026-10-16 rule measured over its limit but the new rule
+      measures at or under it also passes.
+    must_catch:
+      - "backstop evaluated for every covered file regardless of its limit"
+      - "over-limit judged with > replaced by >= (a file exactly at its limit refused)"
+      - "over-limit judged from the previous version's length under the pre-2026-10-16 rule"
+  - name: test_ge_127d_4_the_backstop_catches_a_measure_gap
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      With the shared measure deliberately replaced in-process by the pre-2026-10-16 rule
+      (`#` and `//` counted, /* */ and triple-quoted strings discarded), replay the
+      2026-10-13 restyle of build-feature.js (over its 1000 limit under either rule) from the KI (`//` runs rewritten as /* */
+      blocks) through the hook's verdict: it is refused by this backstop, naming the
+      situation, even though the degraded measure reports the file shorter.
+  - name: test_ge_127d_4_honest_shapes_are_not_refused_by_the_backstop
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      On a file already over its limit, measured and total both falling, and measured
+      unchanged with total rising (comments only), each pass the hook without this
+      refusal; so does a newly added file.
+    must_catch:
+      - "backstop fires when measured is unchanged and total rose"
+      - "backstop fires on a newly added file"
+  - name: test_ge_127d_4_a_merge_adopting_a_vetted_parent_is_not_refused_by_the_backstop
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      In a temporary repository with a real merge in progress, the staged version of an
+      over-limit file equals the MERGE_HEAD parent's version, which against HEAD shows the
+      measured-fell / total-rose shape; the hook does not produce the backstop refusal. The
+      same staged content committed as an ordinary (non-merge) commit on HEAD is refused.
+    must_catch:
+      - "backstop judged against HEAD alone during a merge"
+  - name: test_ge_127d_4_a_file_failing_both_checks_reports_both_refusals
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      An over-limit file whose staged change both fails the two-for-one requirement and shows
+      the measured-fell / total-rose shape is refused at exit 1 with both refusal blocks, each
+      under its own heading.
+  - name: test_ge_127d_4_the_backstop_refusal_reaches_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      Through the registered hook entry point, the backstop refusal and its four numbers
+      appear in the hook's own output and the exit status is 1.
+test_rationale: |
+  Under a correct measure the backstop's honest trigger is "removed code and added more
+  comments in one change" on an over-limit file, so the criterion descriptor exercises
+  exactly that, and the under-limit descriptor proves the same change on a file at or under
+  its limit is left alone (BrainCandy's 2026-10-16 population decision). Its real
+  purpose is to catch a FUTURE gap in the measure, which no correct measure can
+  demonstrate; the discrimination descriptor therefore degrades the measure to the known-
+  gamed rule and replays the real 2026-10-13 restyle, proving the backstop catches what the
+  measure missed. The merge descriptor exists because the ratchet it sits beside is merge-aware
+  and a HEAD-only backstop would refuse ordinary `git merge origin/main` commits, the defect
+  KI-CG-20260908 already fixed once for the ratchet.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127d-5
+    contract: >-
+      The backstop refusal block (its heading and its remedy sentence), which GE-127d-5's
+      rewritten advice must stay consistent with: no advice line may tell an author that adding
+      comments while cutting code in one commit is free on an over-limit file.
+expects_from:
+  ac_id: GE-127d-3
+  contract: >-
+    The shared measure (content, extension) -> int and its physical-line split, applied to both
+    versions, plus the previous content the ratchet already resolves.
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: backstop-population-narrowed
+  by: business-analyst
+  at: '2026-10-16'
+  note: >-
+    Title and criteria changed on BrainCandy's answer of 2026-10-16: the backstop
+    applies only to files whose previous version is already over its limit
+    (previous measured length strictly greater than the permitted length, under the
+    rule in force per GE-127d-3-iii). A file at or under its limit is never refused
+    by it. Added arms for an under-limit file and a file exactly at its limit, a
+    matching boundary test, and a population it_requirement; the over-limit
+    build-feature.js restyle replay is kept. depends_on and req_status unchanged.
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-16'
+  note: >-
+    criteria untouched. Pinned the total-line definition (the measure's own physical-line
+    split, from content the ratchet already fetched), strict triggers, merge behaviour
+    (refuse only when the shape holds against every parent), a distinct heading with both
+    refusals reported when two-for-one also fails, and the host (logic in the measure
+    sub-package because check_file_size.py is itself over-limit under the new rule; frozen
+    signatures and the consumer audit incl. the parity gate's _classify_file probe). Added
+    merge and both-refusals descriptors.
+- reason: standalone-string-rule-wording
+  by: business-analyst
+  at: '2026-10-20'
+  note: >-
+    Criteria wording only: "uncounted lines (comments, docstrings)" becomes "uncounted lines
+    (comments and standalone strings)", to match BrainCandy's 2026-10-20 rule in GE-127d-3
+    (a Python string standing alone as a statement, docstring or bare, is uncounted). No
+    behaviour change to this record. Title, depends_on and req_status unchanged.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  POPULATION DECIDED BY BRAINCANDY, 2026-10-16: the backstop applies ONLY to files already
+  over their limit — previous measured length strictly greater than the permitted length,
+  measured with the rule in force now (GE-127d-3-iii). A file at or under its limit is never
+  refused by the backstop, even when its measured length falls while its total line count
+  rises. Reason: with every comment uncounted (GE-127d-3), "removed code and added more
+  comments" is an honest change, and the exploit this canary watches for (KI-CG-20261013)
+  happened on oversized files under ratchet pressure. For over-limit files the honest shape
+  is still refused, at a bounded cost: the refusal tells the author to make the reduction
+  and the commenting in separate commits, and each passes on its own (comment-only additions
+  leave the measured length unchanged).
+
+  Known residue, accepted: a measure gap on an under-limit file is not caught by this
+  backstop; the crossing refusal (GE-127a-1) still applies once the file goes over.
+
+  WHY THIS IS AN L2 OF GE-127d AND NOT AN L3 OF GE-127d-3. It is a second, independent check
+  that exists precisely in case GE-127d-3's measure is wrong; filing it under that measure
+  would make the canary a child of what it watches.

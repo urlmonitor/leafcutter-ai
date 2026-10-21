@@ -10,18 +10,34 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
+  Scenario 1 - the declared telemetry stream cannot be written
   Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the install's telemetry location query prints exactly one absolute path,
+    the declared telemetry stream (for example
+    /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
   And the pre-drive feedback-sink reachability probe attempts to append one probe
-    line to the telemetry sink at debugging/logs/agent_telemetry.jsonl,
-  When the probe returns a non-zero result (the append fails — for example the
-    path is not writable),
+    line to that printed absolute path,
+  When the append fails (for example the file at that path is not writable),
   Then no ticket-supervisor is dispatched for the epic,
   And the drive halts immediately at the pre-dispatch stage,
-  And the operator is shown an actionable message that names the failing sink
-    path (debugging/logs/agent_telemetry.jsonl),
-  And that message states the remediation needed to make the sink writable,
+  And the operator is shown an actionable message that names the absolute path
+    the location query printed,
+  And that message states the remediation needed to make the stream writable,
   And no epic tickets are transitioned to in_progress.
-depends_on: [BO-100d-1, BO-100d-1a]
+
+  Scenario 2 - the install declares no usable telemetry location
+  Given /build-feature is invoked for an epic that has at least one ready ticket,
+  When the telemetry location query exits non-zero, or exits zero but prints
+    nothing, or prints a path whose enduring log root no longer exists,
+  Then no ticket-supervisor is dispatched and the drive halts at the
+    pre-dispatch stage,
+  And the probe does not fall back to the workspace-relative path
+    debugging/logs/agent_telemetry.jsonl or to any other path,
+  And the probe creates no file and no directory,
+  And the operator message states that the telemetry location is not declared
+    (or is stale) and that the remediation is to rebuild the install,
+  And no epic tickets are transitioned to in_progress.
+depends_on: [BO-100d, BO-100d-1, BO-100d-1a]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -35,16 +51,26 @@ it_requirements:
   - "The blocking sink-probe gate must be added to templates/workflows/build-feature.md as a mandatory step between Step A (worktree exists) and Step B (dispatch), so the prose path hard-blocks before any ticket-supervisor is dispatched — never after."
   - "The prose gate must invoke the SAME probe semantics defined by BO-100d-1a (append-one-line + mkdir-and-reprobe + genuine-failure classification); the prose must reference the shared probe rather than restate divergent logic, so the two surfaces cannot drift."
   - "Dual-surface parity (the KI-3 lesson): the build-feature.md prose gate and the deterministic build-epic.js gate must BOTH hard-block; a gate that blocks in one path but not the other silently reintroduces the original warn-only bug. The prose must make clear the gate is non-bypassable, not advisory/warn-only."
-  - "The abort branch must print an operator message naming debugging/logs/agent_telemetry.jsonl and the concrete remediation, then exit without dispatching any supervisor (mirror the existing Step A worktree-guard abort prose)."
+  - "The abort branch must print an operator message naming the absolute path the telemetry location query printed (or, when no usable declaration exists, stating that and naming 'rebuild' as the remediation) and the concrete remediation, then exit without dispatching any supervisor (mirror the existing Step A worktree-guard abort prose). The prose must not name the workspace-relative debugging/logs/agent_telemetry.jsonl as the probe target."
   - "Deployed/template parity (ADR-001 self-hosting): build-feature.md is a package source compiled by build.py; edit the package source and verify the deployed slash-command copy via the build.py round-trip — never edit only one side."
   - "Apply the Prompt-Quality Checklist: keep bash probe snippets single-command per the shell convention; do not introduce inline implementation work that the inline_work_guard.py lock would block."
+  - "The prose must obtain the probe target by running the install's telemetry location query (sink_resolution.py --print-location telemetry) and must treat a non-zero exit, empty stdout, or a stale enduring root as a hard stop with remediation 'rebuild'; it must not instruct the agent to create any file or directory on that path."
 delivers_to: null
 expects_from:
   ac_id: BO-100d-1a
-  contract: "The shared pre-drive sink probe helper and its pass/fail semantics (first-probe append to debugging/logs/agent_telemetry.jsonl, mkdir-and-reprobe remediation, genuine-write-failure classification, typed blocked result with sink_path + remediation). The prose gate invokes this same probe so build-feature.md and build-epic.js enforce identical behavior."
+  contract: "The shared pre-drive sink probe helper and its pass/fail semantics (location resolved through the install's telemetry location query with no relative-path fallback, first-probe append to the absolute path it printed, mkdir-and-reprobe remediation, genuine-write-failure classification, typed blocked result with sink_path + remediation). The prose gate invokes this same probe so build-feature.md and build-epic.js enforce identical behavior."
 origin_agent: it-po
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, and a second scenario added for a missing, empty or stale declaration (blocks with 'rebuild', no relative-path fallback), mirroring BO-100d-1a for dual-surface parity (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The abort-message it_requirement and the expects_from contract were updated to match. depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
+  - by: it-po
+    at: "2026-10-16"
+    reason: "IT PO review of the re-pointed criteria. This is a prompt AC (change_target: prompt, assigned_agent: llm-expert, not a coder), so set test_required: false with a test_rationale: command prose cannot be executed by a unit test, and the probe behaviour it invokes is proven behaviorally under BO-100d-1a and its L3s through the shared helper. Added one it_requirement: the prose resolves the target through the location query and stops with 'rebuild' on an unusable declaration, creating nothing. assigned_agent, estimated_complexity S and expects_from kept. criteria and work_status unchanged."
+  - by: BrainCandy
+    at: "2026-10-16"
+    reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -59,3 +85,15 @@ notes: |
   insufficient; this raises the prose gate to a hard block.
 change_target: prompt
 risk_surface: internal
+test_required: false
+test_rationale: >-
+  The deliverable is command prose in templates/workflows/build-feature.md, read by
+  an agent; no unit test can execute it, and a test that checks the prose for the
+  probe step would be the grep-only form the repo CLAUDE.md forbids for gates. The
+  executable behaviour the prose invokes (location resolved through the query, no
+  relative fallback, nothing created on refusal, typed block with sink_path and
+  remediation) lives in the shared probe helper and is proven behaviorally by
+  BO-100d-1a, BO-100d-1a-i and BO-100d-1a-ii. The prose path is to be checked at
+  drive time by a behavioral spot-check: run /build-feature against an install
+  whose declared stream is unwritable and confirm no ticket-supervisor is
+  dispatched.

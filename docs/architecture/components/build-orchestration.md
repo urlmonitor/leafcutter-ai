@@ -34,6 +34,7 @@ Build Orchestration governs how epics and tickets are dispatched to supervisors 
 ## Entry Points
 
 - `templates/workflows-js/build-epic.js` — epic dispatch workflow
+- `templates/scripts/commit_changes.py` — the shared commit step every route calls; inputs and answer contract in [Shared Commit Step](../../reference/shared-commit-step.md)
 
 ## Integration
 

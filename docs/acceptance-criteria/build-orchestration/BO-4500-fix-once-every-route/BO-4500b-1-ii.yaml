@@ -1,0 +1,191 @@
+id: BO-4500b-1-ii
+title: "A block source no route uses fails the install, unless it is openly declared as awaiting named adopters"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given the package holds a source for BETA-ANSWER,
+  And no route template marks a place for BETA-ANSWER,
+  And BETA-ANSWER is not declared as awaiting adoption,
+  When the package is installed,
+  Then the install fails with a message naming BETA-ANSWER as a block no route uses,
+  And every installed route is byte for byte as it was before that install began.
+
+  Given the same package, with BETA-ANSWER declared as awaiting adoption by the records
+    BO-9999a-1 and BO-9999a-2,
+  When the package is installed,
+  Then the install completes,
+  And its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2.
+
+  Given BETA-ANSWER is still declared as awaiting adoption,
+  And route B's template now marks a place for BETA-ANSWER,
+  When the package is installed,
+  Then the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as
+    stale because route B uses the block,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The route migrations BO-4500a-5-i..iv and the /commit route record are the adopters COMMIT-ANSWER will name while it awaits adoption."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
+  - path: templates/workflows-js/_shared/awaiting-adoption.json
+    state: to_be_created
+it_requirements:
+  - >-
+    The awaiting-adoption declaration is tracked DATA inside the package, kept with the block
+    sources and never in install code. Both the install and the identity check
+    (BO-4500b-2-ii) read it from that one place, and neither keeps its own copy.
+  - >-
+    A declaration names at least one adopting record id. A declaration with an empty adopter
+    list counts as no declaration, so an unused block cannot be waved through without saying
+    who will adopt it.
+  - >-
+    Every install that completes with a declared block reports it, naming each adopter verbatim
+    and in declared order, on the install's normal output (not only a log file). The report
+    repeats on every install, not only the first.
+  - >-
+    The declaration is stale as soon as any route template marks the block, however many
+    adopters are still listed. That is the rule the third scenario fixes and the how-to
+    (BO-4500b-4-i) must teach. See the IT PO caveat on BO-4500b-4-i.
+  - >-
+    Unused-source and stale-declaration failures are found in BO-4500b-1's validation pass,
+    before any installed route is written.
+  - >-
+    COMMIT-ANSWER lands declared as awaiting adoption by BO-4500a-5-i, BO-4500a-5-ii,
+    BO-4500a-5-iii, BO-4500a-5-iv and the /commit route's migration record, so the change that
+    adds the block passes its own install.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Awaiting-adoption declaration: tracked package data kept with the block sources, mapping a
+      block name (string) to a non-empty ordered list of adopting record ids (strings, AC ids).
+      Read by the fill (BO-4500b-1, unused-source and stale checks) and by the identity check
+      (BO-4500b-2-ii, which lists a declared block as not inspected). Stale as soon as any route
+      template marks the declared block.
+expects_from:
+  ac_id: BO-4500b-1
+  contract: >-
+    BO-4500b-1's derived block set and derived consumer set (every route template scanned for
+    marker pairs) and its validate-all-then-write fill.
+test_intent:
+  - clause: the install fails with a message naming BETA-ANSWER as a block no route uses
+    needs_test: true
+    reason: An unused source is dead shared code, and an install that ignores it would let a block drift unobserved.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: Both failing scenarios must leave the installed set untouched, which a write-as-you-go fill would break.
+  - clause: the install completes
+    needs_test: true
+    reason: The declaration is the only exemption, and an install that still failed would block the change that lands COMMIT-ANSWER.
+  - clause: its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2
+    needs_test: true
+    reason: The exemption must stay visible on every install, and a silent pass would let the declaration rot.
+  - clause: the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as stale because route B uses the block
+    needs_test: true
+    reason: Self-expiry is what keeps the declaration from outliving its purpose, and only a test with an adopting route exercises it.
+test_spec:
+  - name: test_unused_undeclared_source_fails_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "BETA source exists, no route marks it, no declaration; the install fails naming BETA-ANSWER as a block no route uses."
+    proves_clause: "the install fails with a message naming BETA-ANSWER as a block no route uses"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_unused_and_stale_failures_leave_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after the unused-source failure and the stale-declaration failure; both are byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_declared_awaiting_adoption_install_completes
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With BETA declared in the awaiting-adoption data for BO-9999a-1 and BO-9999a-2 the install completes and returns normally."
+    proves_clause: "the install completes"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_awaiting_adoption_is_reported_on_every_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Captured normal output of two consecutive installs names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2 in declared order, both times."
+    proves_clause: "its report names BETA-ANSWER as awaiting adoption by BO-9999a-1 and BO-9999a-2"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_declaration_goes_stale_once_a_route_marks_the_block
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Route B now marks BETA while the declaration still lists adopters; the install fails naming the declaration as stale because route B uses the block. An empty adopter list is also treated as no declaration."
+    proves_clause: "the install fails with a message naming BETA-ANSWER's awaiting-adoption declaration as stale because route B uses the block"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "a declaration that is honoured even when a route uses the block"
+      - "a declaration with an empty adopter list accepted as valid"
+  - name: test_awaiting_adoption_declaration_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the declared fixture and assert its output names the adopters."
+    proves_clause: "the install completes"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the unused-source and stale-declaration checks and the adoption report belong
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  CONFLICT RESOLVED BETWEEN PO CHALLENGES 2 AND 3. Challenge 3 says an unused source fails the
+  install. Challenge 2 says this L1 ships the COMMIT-ANSWER source while adoption stays in
+  BO-4500a-5-i..iv. Applied literally, the change that lands this L1 would fail its own install,
+  because COMMIT-ANSWER has no consumer until the first route migration lands. The resolution is an
+  explicit, reported, self-expiring declaration: a block may await adoption only by NAMING the
+  records that will adopt it, the install reports it every time, and the declaration fails the
+  install the moment a route adopts the block (third scenario), so it cannot rot in place.
+  Alternative the user may prefer at the gate: drop the declaration and land the mechanism together
+  with the first route migration. That would merge challenge 2's split back together.
+
+  BO-9999a-1/-2 are placeholder ids for the test fixture.

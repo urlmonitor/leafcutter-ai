@@ -136,7 +136,8 @@
                   },
                   "provided_by": {
                     "type": "string",
-                    "description": "Where the ability is provided from when the declaration marks it (copied from the template's skills: declaration)."
+                    "enum": ["project"],
+                    "description": "Where the ability is provided from when the declaration marks it (copied from the template's skills: declaration). 'project' = supplied by the consuming project's own abilities area, not the package (AR-400d)."
                   },
                   "descriptive_only": {
                     "type": "boolean",

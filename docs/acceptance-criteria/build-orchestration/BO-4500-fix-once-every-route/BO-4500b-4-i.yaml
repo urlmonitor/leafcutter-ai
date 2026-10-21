@@ -1,0 +1,76 @@
+id: BO-4500b-4-i
+title: "A how-to walks an author through adding a new shared block and adding a route that consumes one"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-4.yaml"
+criteria: |
+  Given an author who has read only the how-to and wants a new block named DEMO-ANSWER used by one
+    existing route,
+  When they follow its steps in order on a fresh checkout,
+  Then the steps cover creating the block's source, marking an empty place for it in the route's
+    template, declaring it as awaiting adoption when no route uses it yet, installing the package,
+    and running the identity check,
+  And following them ends with an install that succeeds and an identity check that passes, naming
+    DEMO-ANSWER with one inspected copy.
+
+  Given the same author wants an existing route to start consuming COMMIT-ANSWER,
+  When they follow the how-to's second procedure,
+  Then it tells them to mark the empty place, to remove COMMIT-ANSWER's awaiting-adoption entry for
+    the record they are completing when it is the last one, and to reinstall,
+  And it links to the reference page for every failure message rather than restating them.
+depends_on: [BO-4500b-4, BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-4.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b.yaml
+    relationship: related
+    status: exists
+    relevance: "documentation_triggers: how-to -- how an author adds a new shared block and a new consumer."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    Put the how-to under docs/how-to/ with the repo's doc frontmatter, register it in
+    docs/INDEX.md, and link to the reference page's anchor (BO-4500b-4) for every failure message
+    instead of restating it.
+  - >-
+    Before publishing, walk both procedures on a scratch copy of the package, with a fixture
+    block DEMO-ANSWER and one fixture route. Confirm the install succeeds and the identity check
+    reports DEMO-ANSWER with one inspected copy, and record the commands and their output in the
+    sign-off. This walk-through is the verification for the first scenario.
+  - >-
+    The adoption procedure must teach the stale-declaration rule exactly as BO-4500b-1-ii builds
+    it: a declaration is stale as soon as any route marks the block, so the whole declaration is
+    removed in the change that lands the first adopting route. See the IT PO caveat. The wording
+    "when it is the last one" in this record's criteria conflicts with that rule while more than
+    one adopter is listed.
+delivers_to: null
+expects_from:
+  - ac_id: BO-4500b-1
+    contract: "Marker convention and awaiting-adoption declaration (BO-4500b-1-ii)."
+  - ac_id: BO-4500b-4
+    contract: "Reference page anchors, one per install failure, linked instead of restated."
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4500b's how-to trigger. Placed as an L3 under the reference-page L2 because the L1
+  is at its five-child cap; it depends on BO-4500b-1 directly for the behaviour it documents.
+  The first scenario is verifiable by following the steps on a fixture, which is what keeps a
+  how-to honest.

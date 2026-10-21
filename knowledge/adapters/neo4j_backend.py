@@ -5,6 +5,7 @@ ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers
 
 DECISION HISTORY
 ========================================
+- 2026-10-20 14:00 [python-coder]: Forward the declared capacity ceiling into publication, expose its report, and let one statement address the system database. (#KM-400f-3)
 - 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
 - 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
 """
@@ -18,6 +19,8 @@ TransactionResult = TypeVar("TransactionResult")
 if TYPE_CHECKING:
     from collections.abc import Callable
     from neo4j import ManagedTransaction
+    from knowledge.adapters.retention.capacity import CapacityCeiling
+    from knowledge.config import RetentionBound
 
 import asyncio
 import hashlib
@@ -64,6 +67,10 @@ class Neo4jBackend:
     publication_counts: dict | None = None
     # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
     publication_removal: dict | None = None
+    # Reclamation report of the last publication (explicit zero when none), set by neo4j_projection.publish.
+    publication_reclamation: dict | None = None
+    # Capacity headroom report of the last publication (None before usage was measured), set by neo4j_projection.publish.
+    publication_capacity: dict | None = None
 
     def __init__(
         self,
@@ -91,7 +98,11 @@ class Neo4jBackend:
         self.query_timeout = min(max(query_timeout, 0.1), 30.0)
 
     async def _run(
-        self, statement: str, parameters: dict | None = None, write: bool = False
+        self,
+        statement: str,
+        parameters: dict | None = None,
+        write: bool = False,
+        database: str | None = None,
     ) -> list[dict]:
         """Execute a trusted statement within a bounded managed transaction.
 
@@ -99,12 +110,15 @@ class Neo4jBackend:
             statement: Fixed parameterized Cypher text owned by this adapter.
             parameters: Bound values kept separate from Cypher syntax.
             write: Whether the managed transaction may mutate projection data.
+            database: Database to address instead of the configured one (``system`` for
+                administration commands such as ``SHOW DATABASE``).
 
         Returns:
             Database result records converted to plain dictionaries.
         """
+        extra = {} if database is None else {"database": database}
         return await self._transaction(
-            lambda tx: self._rows(tx, statement, parameters or {}), write
+            lambda tx: self._rows(tx, statement, parameters or {}), write, **extra
         )
 
     def _rows(self, tx: ManagedTransaction, statement: str, parameters: dict) -> list[dict]:
@@ -121,13 +135,17 @@ class Neo4jBackend:
         return [record.data() for record in tx.run(statement, parameters)]
 
     async def _transaction(
-        self, callback: Callable[[ManagedTransaction], TransactionResult], write: bool = False
+        self,
+        callback: Callable[[ManagedTransaction], TransactionResult],
+        write: bool = False,
+        database: str | None = None,
     ) -> TransactionResult:
         """Run idempotent database work in a worker and normalize infrastructure faults.
 
         Args:
             callback: Operation executed inside a bounded managed transaction.
             write: Whether the managed transaction may mutate projection data.
+            database: Database to address instead of the configured one.
 
         Returns:
             The callback result after successful managed commit, with bounded retry policy.
@@ -140,7 +158,7 @@ class Neo4jBackend:
 
         def execute() -> TransactionResult:
             """Own the synchronous session within its worker-thread lifetime."""
-            with self.driver.session(database=self.database) as session:
+            with self.driver.session(database=database or self.database) as session:
                 runner = session.execute_write if write else session.execute_read
                 return runner(unit_of_work(timeout=timeout)(callback))
 
@@ -254,20 +272,28 @@ class Neo4jBackend:
         )
 
     async def publish(
-        self, snapshot: ProjectionSnapshot, expected_generation: str | None = None
+        self,
+        snapshot: ProjectionSnapshot,
+        expected_generation: str | None = None,
+        retention_bound: RetentionBound | None = None,
+        capacity: CapacityCeiling | None = None,
     ) -> bool:
         """Build an immutable generation and atomically compare-and-swap its pointer.
 
         Args:
             snapshot: Validated immutable generation and its canonical source records.
             expected_generation: Previously active generation required for compare-and-swap.
+            retention_bound: Declared bound; when given, a successful publication reclaims
+                the generations it permits and reports them in ``publication_reclamation``.
+            capacity: Declared ceiling; measured usage is reported in ``publication_capacity``
+                and a snapshot that does not fit is refused before any write.
 
         Returns:
             Whether the guarded operation succeeded.
         """
         from knowledge.adapters.neo4j_projection import publish
 
-        return await publish(self, snapshot, expected_generation)
+        return await publish(self, snapshot, expected_generation, retention_bound, capacity)
 
     async def query(
         self, repository_id: str, generation_id: str, operation: str, arguments: dict, limit: int

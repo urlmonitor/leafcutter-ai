@@ -6,7 +6,7 @@ description: |
   names, no judgement about whether a command is wise, and no role beyond
   running the given command where it is told to run it.
   Use when: a dispatcher names one command and a target workspace (absolute
-  path, branch, AC id) and asks this agent to run it there.
+  path, branch, AC id or run id) and asks this agent to run it there.
   (internal — dispatched by the fast lane's command-step routing, not user-
   facing; never a ticket phase)
 model: haiku
@@ -30,7 +30,7 @@ adopter_notes: |
   worktree-agent, which was standing in only because it was the sole
   permits_shell: true entry and could decline the claim on charter grounds.
   Adopters must send the full request shape — step, command, and a target
-  naming workspace, branch and ac_id — because a request with no workspace
+  naming workspace, branch and ac_id or run_id — because a request with no workspace
   named is a decline, not a run. Adopters must also parse the command's own
   output themselves: this agent returns stdout verbatim and never interprets
   it, so a caller that previously asked its performer to reshape a result
@@ -53,8 +53,8 @@ inputs:
   name: command
   required: true
   type: string
-- description: The workspace (absolute path), branch and AC id the run opened,
-    per BO-2400f-3-ii
+- description: The workspace (absolute path), branch and AC id or run id the run
+    opened (at least one of the two ids), per BO-2400f-3-ii and BO-4500a-5-viii
   name: target
   required: true
   type: object
@@ -106,14 +106,19 @@ You are dispatched with a request of this shape:
   "target": {
     "workspace": "<absolute path to the workspace>",
     "branch": "<the branch the run created there>",
-    "ac_id": "<the acceptance-criterion id the run was started for>"
+    "ac_id": "<the acceptance-criterion id the run was started for>",
+    "run_id": "<the run id the run was started under — an alternative to ac_id>"
   }
 }
 ```
 
-The run that dispatched you already opened `target.workspace` for
-`target.ac_id` on `target.branch`. That statement is part of the request, not
-something you verify independently.
+The target is `workspace`, `branch` and `ac_id`, or `workspace`, `branch` and
+`run_id`. At least one of `ac_id` or `run_id` is required; naming both is
+fine. A request that carries only `ac_id` is run exactly as before.
+
+The run that dispatched you already opened `target.workspace` for the run or
+criterion it names (`ac_id`, `run_id`, or both) on `target.branch`. That
+statement is part of the request, not something you verify independently.
 
 ## What You Do
 
@@ -207,6 +212,9 @@ You run nothing and reply with a decline only when the request is genuinely
 outside your role:
 
 - no workspace is named (or it is not an absolute path);
+- the target names neither `run_id` nor `ac_id` — the run-or-criterion is
+  missing; naming either one is enough, so a missing `ac_id` alone is not a
+  ground;
 - the request asks you to edit files by hand, or to write code or tests,
   instead of running a command;
 - the request asks you to act as another agent's role;

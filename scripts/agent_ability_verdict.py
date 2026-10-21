@@ -20,8 +20,9 @@ ARCHITECTURE: One public entry point, ``verify_abilities``, plus the shared
     the caller (``agent_ability_gate``, the migration CLI, tests) owns reading
     templates and the registry. Finding kinds: ``divergent``,
     ``declaration-only``, ``record-only`` (comparison), ``unresolved``
-    (resolution; carries ``looked_in`` for the packaged and project-local
-    surfaces) and, from ``missing_condition_findings`` (appended by the gate, not
+    (resolution; carries ``looked_in``: the packaged skills, the only place an
+    unmarked grant resolves), the informational ``INFORMATIONAL_KINDS`` for
+    grants marked ``provided_by: project`` (AR-400d) and, from ``missing_condition_findings`` (appended by the gate, not
     part of ``verify_abilities``' verdict), ``missing-condition`` (a conditional
     grant with no condition). ``descriptive_only`` registry entries describe behaviour and are
     not grants, so they are ignored on the record side. The declaration always
@@ -59,6 +60,13 @@ DECISION HISTORY
 - 2026-10-15 [python-coder/AR-400e-1-iii]: ``_record_abilities`` reads only
   ``skills_invoked``; the retired ``skills_used`` list no longer contributes
   abilities to the comparison. (#AR-400e-1-iii)
+- 2026-10-16 [python-coder/AR-400d]: ``normalize_entries`` carries ``provided_by``
+  and the declaration/record comparison takes part in it. ``_resolve`` no longer
+  accepts a project-local copy for ANY grant (the INF-600g-3-i fallback is
+  superseded): an unmarked grant resolves in the packaged skills only, a grant
+  marked ``provided_by: project`` in the project's area only, with the three
+  ``INFORMATIONAL_KINDS`` (``project-ability-absent``, ``project-override``,
+  ``project-fallback``) said once and never refusing. (#AR-400d-1, #AR-400d-2, #AR-400d-3)
 """
 
 from __future__ import annotations
@@ -68,11 +76,16 @@ from typing import Any
 
 from agent_declaration_shape import require_well_formed, skills_problems, spawn_problems
 from agent_spawn_declaration import MACRO, resolve_spawn_ids
+from project_ability_slots import project_skills_dir, supplied_by_project
 
 _DEFAULT_MODE = "always"
+_GRANT_KEYS = ("condition", "provided_by")
 # Comparison findings (the derived registry copy disagrees with the declaration)
 # are REPORTED by the build and never refuse it; every other kind refuses.
 REPORT_ONLY_KINDS = frozenset({"divergent", "declaration-only", "record-only"})
+# Statements about a project-supplied grant (AR-400d-2): said once at informational severity,
+# never a warning or an error, and never a reason the build refuses.
+INFORMATIONAL_KINDS = frozenset({"project-ability-absent", "project-override", "project-fallback"})
 
 
 class EmptyPopulationError(ValueError):
@@ -85,10 +98,11 @@ class EmptyPopulationError(ValueError):
 
 
 def normalize_entries(raw: Any) -> list[dict[str, str]]:
-    """Normalise a declaration's entries to ``{skill_id, mode[, condition]}`` dicts.
+    """Normalise a declaration's entries to ``{skill_id, mode[, condition][, provided_by]}`` dicts.
 
     A bare string is treated as an ``always`` grant of that id; a dict keeps
-    its ``mode`` (default ``always``) and its non-empty ``condition``.
+    its ``mode`` (default ``always``), its non-empty ``condition`` and its
+    ``provided_by`` marking (``project``; the key is absent, never None, when unmarked).
 
     Args:
         raw: The raw ``skills`` value from frontmatter (list or None).
@@ -107,14 +121,15 @@ def normalize_entries(raw: Any) -> list[dict[str, str]]:
     for item in raw:
         entry = {"skill_id": item} if isinstance(item, str) else item
         norm = {"skill_id": entry["skill_id"], "mode": entry.get("mode") or _DEFAULT_MODE}
-        if entry.get("condition"):
-            norm["condition"] = str(entry["condition"])
+        for key in _GRANT_KEYS:
+            if entry.get(key):
+                norm[key] = str(entry[key])
         out.append(norm)
     return out
 
 
 def _record_abilities(record: dict[str, Any]) -> dict[str, dict[str, str | None]]:
-    """Return the record's grants (from ``skills_invoked`` only): id -> {mode, condition}."""
+    """Return the record's grants (from ``skills_invoked`` only): id -> {mode, condition, provided_by}."""
     abilities: dict[str, dict[str, str | None]] = {}
     descriptive: set[str] = set()
     for item in record.get("skills_invoked") or []:
@@ -127,25 +142,27 @@ def _record_abilities(record: dict[str, Any]) -> dict[str, dict[str, str | None]
         abilities[entry["skill_id"]] = {
             "mode": entry.get("mode"),
             "condition": entry.get("condition"),
+            "provided_by": entry.get("provided_by"),
         }
     for sid in descriptive:
         abilities.pop(sid, None)
     return abilities
 
 
+def _grant_agrees(decl: dict[str, str], rec: dict[str, str | None]) -> bool:
+    """True when one recorded grant matches its declaration (mode/condition only when recorded)."""
+    if (rec["provided_by"] or None) != (decl.get("provided_by") or None):
+        return False  # a dropped or invented marking is a disagreement, never agreement
+    if rec["mode"] is None:
+        return True
+    return rec["mode"] == decl["mode"] and (rec["condition"] or None) == (decl.get("condition") or None)
+
+
 def _agrees(declared: dict[str, dict[str, str]], recorded: dict[str, dict[str, str | None]]) -> bool:
-    """True when declaration and record hold the same grants (mode/condition when recorded)."""
+    """True when declaration and record hold the same grants (mode/condition/marking when recorded)."""
     if set(declared) != set(recorded):
         return False
-    for sid, decl in declared.items():
-        rec = recorded[sid]
-        if rec["mode"] is None:
-            continue
-        if rec["mode"] != decl["mode"]:
-            return False
-        if (rec["condition"] or None) != (decl.get("condition") or None):
-            return False
-    return True
+    return all(_grant_agrees(decl, recorded[sid]) for sid, decl in declared.items())
 
 
 def _compare(agent: str, declared: list[dict[str, str]], record: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -173,18 +190,32 @@ def _resolve(
     entry: dict[str, str],
     packaged_skills_root: Path,
     project_skills_root: Path,
+    marked_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any] | None:
-    """Return an ``unresolved`` finding for one declared ability, or None when it resolves."""
+    """Return the finding for one declared ability, or None when it resolves without comment.
+
+    An UNMARKED grant resolves in the packaged skills only (a project copy never rescues a
+    misspelt id); a grant marked ``provided_by: project`` resolves in the project's own
+    abilities area (AR-400d-1). A marked grant yields an informational finding when the project
+    does not supply it (``project-fallback`` when the package ships it, else
+    ``project-ability-absent``) or deliberately overrides a packaged id (``project-override``).
+    An unmarked grant of an id some OTHER agent marks follows the project-wide rule: it is
+    never refused here and the delivered copy is the project's.
+    """
     sid = entry["skill_id"]
-    looked_in = [
-        {"surface": "packaged", "path": str(packaged_skills_root / sid),
-         "found": (packaged_skills_root / sid / "SKILL.md").is_file()},
-        {"surface": "project_local", "path": str(project_skills_root / sid),
-         "found": (project_skills_root / sid / "SKILL.md").is_file()},
-    ]
-    if any(place["found"] for place in looked_in):
+    packaged = (packaged_skills_root / sid / "SKILL.md").is_file()
+    if not entry.get("provided_by"):
+        if packaged or sid in marked_ids:
+            return None
+        return {"agent": agent, "kind": "unresolved", "ability": sid,
+                "looked_in": [{"surface": "packaged", "path": str(packaged_skills_root / sid), "found": False}]}
+    supplied = supplied_by_project(project_skills_root, sid)
+    kind = {(True, True): "project-override", (False, True): "project-fallback",
+            (False, False): "project-ability-absent"}.get((supplied, packaged))
+    if kind is None:
         return None
-    return {"agent": agent, "kind": "unresolved", "ability": sid, "looked_in": looked_in}
+    return {"agent": agent, "kind": kind, "ability": sid, "project_path": str(project_skills_root / sid),
+            "packaged_path": str(packaged_skills_root / sid)}
 
 
 def verify_abilities(
@@ -221,7 +252,8 @@ def verify_abilities(
     if abilities_examined == 0:
         raise EmptyPopulationError("abilities")
 
-    project_skills_root = project_root / output_root_name / "skills"
+    project_skills_root = project_skills_dir(project_root, output_root_name)
+    marked_ids = frozenset(e["skill_id"] for entries in normalized.values() for e in entries if e.get("provided_by"))
     findings: list[dict[str, Any]] = []
     resolved = 0
     for agent in agent_ids:
@@ -229,16 +261,15 @@ def verify_abilities(
         if finding:
             findings.append(finding)
         for entry in normalized[agent]:
-            missing = _resolve(agent, entry, packaged_skills_root, project_skills_root)
-            if missing:
-                findings.append(missing)
-            else:
-                resolved += 1
+            note = _resolve(agent, entry, packaged_skills_root, project_skills_root, marked_ids)
+            if note:
+                findings.append(note)
+            resolved += note is None or note["kind"] in ("project-override", "project-fallback")
     return {
         "examined_count": len(agent_ids),
         "abilities_examined": abilities_examined,
         "resolved_count": resolved,
-        "ok": not findings,
+        "ok": all(f["kind"] in INFORMATIONAL_KINDS for f in findings),
         "findings": findings,
     }
 
@@ -381,15 +412,30 @@ def _describe_spawn_finding(finding: dict[str, Any]) -> str:
             f"project_local: no project-local agent location is defined)")
 
 
+def _describe_project_finding(finding: dict[str, Any]) -> str:
+    """Render an informational project-supplied-ability statement as one line (no severity marker)."""
+    who, sid, local = finding["agent"], finding["ability"], finding["project_path"]
+    if finding["kind"] == "project-override":
+        return (f"agent '{who}': ability '{sid}' is supplied by the project ({local}) and is used "
+                f"in place of the packaged one ({finding['packaged_path']})")
+    if finding["kind"] == "project-fallback":
+        return (f"agent '{who}': the project does not supply ability '{sid}' (looked in {local}); "
+                f"the packaged copy is used")
+    return (f"agent '{who}' is granted the project-supplied ability '{sid}': looked in the project's "
+            f"skills area {local} and it was not found there, so it is not installed in this project")
+
+
 def describe_finding(finding: dict[str, Any]) -> str:
     """Render one finding as a single human-readable line for the build output."""
     if finding["kind"] == "malformed-declaration":
-        return f"agent '{finding['agent']}' has a {finding['message']}"
+        return f"agent '{finding['agent']}' has a malformed declaration: {finding['message']}"
     if finding.get("field") == "spawn_allowlist" or finding["kind"] == "unresolvable-sub-agent":
         return _describe_spawn_finding(finding)
     if finding["kind"] == "missing-condition":
         return (f"agent '{finding['agent']}' grants ability '{finding['ability']}' as conditional "
                 f"but declares no condition saying when it applies")
+    if finding["kind"] in INFORMATIONAL_KINDS:
+        return _describe_project_finding(finding)
     if finding["kind"] == "unresolved":
         where = "; ".join(f"{p['surface']}: {p['path']}" for p in finding["looked_in"])
         return (f"agent '{finding['agent']}' declares ability '{finding['ability']}' "

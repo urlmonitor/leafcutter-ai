@@ -20,7 +20,9 @@ related_docs:
 
 Names, types, result shapes, reason values and refusal messages for the declared retention bound that decides which retained knowledge-graph generations may be reclaimed (AC `KM-400f-1`).
 
-The evaluation changes nothing. It reclaims no generation, moves no active pointer and expires no continuation. Reclamation is a separate criterion, `KM-400f-2`, that is not built.
+History: before the bound existed nothing reclaimed generations, and two Aura instances latched read-only within four days when their relationship count reached the Aura Free cap of 400,000 (measured 399,773 on 2026-10-12; an earlier reading of 251,326 was taken before the last publications finished writing). A hidden `retention_seconds = 3600` adapter default was removed. The operator surfaces are `status` (lists generations and verdicts) and `reclaim` (sweep); see [Operator status and sweep reclamation](knowledge-publication-capacity.md#operator-status-and-sweep-reclamation).
+
+The evaluation changes nothing. It reclaims no generation, moves no active pointer and expires no continuation. Reclamation is a separate step (AC `KM-400f-2`) that acts on the evaluation's verdicts inside a successful publication; see [Publication reclamation](#publication-reclamation).
 
 The detail sections of the evaluation result (active generation, reclaimable bases, entity-node reconciliation, assessment outcome, read-only condition) are in [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md).
 
@@ -46,9 +48,7 @@ Declared in:
 
 Not established: no code in this change reads the two settings from a kernel configuration file and passes them to `resolve_retention_bound`. The only caller confirmed is the `retention` command, which builds the configuration from command-line flags.
 
-Not established: **the pin source is not populated, so `pinned_continuation_unexpired` never fires against a real store.** The verdict reads `pinned_until` from the `Snapshot` node, and nothing in `knowledge/` writes that property — real continuation pinning lives in the retrieval path (`knowledge/retrieval_steps.py`), not on the node. Against a live database every generation therefore reports a null pin, so one holding an unexpired continuation is reported `reclaimable: true`. The unit tests prove the precedence only against a hand-supplied `pinned_until` fixture.
-
-This is harmless while the evaluation only reports. It is **not** harmless to a caller that deletes what the evaluation calls reclaimable: doing so would reclaim a generation a retrieval is still pinned to, which is the guarantee `KM-400b-3` makes. A reclaiming caller must either read a populated pin source or treat an absent one as "pin state unknown" and decline to reclaim — never as "not pinned".
+Not established: **nothing writes `pinned_until` on a real store**, so `pinned_continuation_unexpired` never fires there; continuations are signed tokens, not stored. A caller that deletes what the evaluation calls reclaimable therefore cannot rely on the pin and uses the shared continuation lifetime instead; see [Pin rule](#reclamation-guards).
 
 ---
 
@@ -220,12 +220,19 @@ The outcome is recorded on the backend as `publication_removal`:
 
 `remaining` is `{"nodes": N, "relationships": M}` or `"undetermined"`.
 
-This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. The evaluation reports it reclaimable on the `publication_failed` basis (KM-400f-1-iv), but nothing removes a left-behind generation automatically yet. A read-only refusal has to be resolved first, because removal needs writes.
+This removal is separate from retention reclaiming. A failed publication reclaims no retained generation (see [Failure result](#failure-and-stale-results)). A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. The evaluation reports it reclaimable on the `publication_failed` basis (KM-400f-1-iv); the next successful publication with a declared bound reclaims it, subject to the guards in [Reclamation guards](#reclamation-guards). A read-only refusal has to be resolved first, because removal needs writes.
+
+---
+
+## Publication reclamation
+
+A successful publication with a declared bound reclaims the generations this evaluation permits, in the same operation and after the pointer switch (AC `KM-400f-2`, `knowledge/adapters/retention/reclaim.py`). Entry points, ordering, result keys, retained reasons, the guards (assessment first, the continuation-lifetime pin rule, unfinished publications, delete by own key) and the sync workflow's declared bound are in [Knowledge Publication Reclamation](knowledge-publication-reclamation.md).
 
 ---
 
 ## See Also
 
+- [Knowledge Publication Reclamation](knowledge-publication-reclamation.md) - How a successful publication reclaims the generations this evaluation permits.
 - [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md) - Active generation, reclaimable bases, entity-node reconciliation, assessment outcome and read-only condition.
 - [Knowledge retrieval how-to](../how-to/run-knowledge-retrieval.md) - Procedures for running knowledge retrieval.
 - [Knowledge Retrieval Answers](knowledge-retrieval-answers.md) - Sibling reference for the retrieval surfaces.
@@ -239,3 +246,7 @@ This removal is separate from retention reclaiming. A failed publication reclaim
 - `knowledge/config.py` - Settings, `RetentionBound`, `resolve_retention_bound`.
 - `knowledge/adapters/neo4j_retention.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
 - `knowledge/cli_retention.py` - The `retention` command.
+- `knowledge/adapters/retention/reclaim.py` - `reclaim_superseded`, the reclamation result and guards.
+- `knowledge/cli_sync.py` - `sync` and its `--retention-max-generations` / `--retention-min-age-seconds` flags.
+- [KM-400f-2](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-2.yaml) - AC for publication-time reclamation; KM-400f-3 and KM-400f-4 consume its counts.
+- [KM-400b-5](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5.yaml) - Owned-history guarantee; foreign repository data untouched.

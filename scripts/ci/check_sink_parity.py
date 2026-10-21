@@ -61,12 +61,26 @@ paragraph mentioning both an imperative "emit" and the literal string
 the telemetry stream historically (e.g. the signoff settlement/scope note,
 which never uses an imperative "emit"). Within that one paragraph:
 
+  (A code-fenced block that directly follows the paragraph, after a blank
+  line, is read as part of it.) Before any mechanism is tried, EVERY
+  ``emit_knowledge.py`` mention in the paragraph (each read up to the next
+  backtick, newlines included) is scanned, and the surface FAILS if any carries
+  ``--sink`` or ``--sink=`` -- so no other mechanism can mask a self-carried
+  sink. The helper itself refuses flag abbreviations (``allow_abbrev=False``).
+  Mechanisms, in precedence order:
+
 - If it names a resolution invocation (a code span containing both
   ``harvest_learnings.py`` and ``--print-sink``), the check runs that
   invocation for real against the DEPLOYED copy at
   ``<deployed-root>/scripts/knowledge/harvest_learnings.py``, with its
   ``cwd`` set to ``--target-dir``, and takes stdout (stripped) as the
   surface's resolved destination.
+- Otherwise, if it names an ``emit_knowledge.py`` invocation (AC INF-700b-1):
+  without ``--sink`` the helper resolves the declared sink itself, so the
+  check runs the DEPLOYED ``<deployed-root>/scripts/knowledge/emit_knowledge.py
+  --print-sink`` for real (same ``cwd``, same comparison). An invocation that
+  carries ``--sink <literal>`` is a self-carried destination and FAILS with a
+  message containing "destination of its own" and that literal.
 - Otherwise, if it names a literal path in backticks matching
   ``debugging/logs/*.jsonl``, that literal IS the surface's self-carried
   destination (the pre-AC / defective shape) -- this is never compared
@@ -136,13 +150,19 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
+# Sibling import: scripts/ci is sys.path[0] when this runs as a script. The
+# emit-mechanism half lives in _sink_parity_emit.py (file-size limit).
+from _sink_parity_emit import (
+    SurfaceResult,
+    _compare_resolved,
+    _emit_invocations,
+    _self_carried_sink_failure,
+)
+
 _OUTPUT_ROOT_NAME = ".leafcutter"
-_QUERY_TIMEOUT_SECONDS = 30
 
 # Matches a resolution invocation naming both the harvester script and its
 # side-effect-free query flag, wherever it appears in the instruction
@@ -168,15 +188,6 @@ _SURFACES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
-@dataclass
-class SurfaceResult:
-    """Outcome of inspecting a single emit surface."""
-
-    surface_id: str
-    ok: bool
-    reason: str = ""
-
-
 def _deployed_root(target_dir: Path) -> Path:
     return target_dir / _OUTPUT_ROOT_NAME
 
@@ -199,35 +210,25 @@ def _find_instruction_paragraph(text: str) -> str | None:
     Pure function: no I/O, no shared-state mutation.
     """
     paragraphs = re.split(r"\n\s*\n+", text)
-    for paragraph in paragraphs:
+    for index, paragraph in enumerate(paragraphs):
         if _IMPERATIVE_EMIT_PATTERN.search(paragraph) and "knowledge_captured" in paragraph:
-            return paragraph
+            return _with_fenced_command(paragraph, paragraphs[index + 1 :])
     return None
 
 
-def _resolve_via_invocation(
-    harvester_path: Path, target_dir: Path
-) -> tuple[str | None, str | None]:
-    """Run the deployed harvester's ``--print-sink`` for real.
+def _with_fenced_command(paragraph: str, following: list[str]) -> str:
+    """Append the code-fenced command that directly follows *paragraph*, if any.
 
-    Returns a ``(resolved_destination, error)`` pair -- exactly one of the
-    two is ``None``.
+    A surface may put the ``emit_knowledge.py`` command in a fenced block
+    separated from its introducing sentence by a blank line; that block is part
+    of the same instruction. Only a paragraph that STARTS with a code fence is
+    joined, so unrelated prose after the instruction is never pulled in.
+
+    Pure function: no I/O, no shared-state mutation.
     """
-    try:
-        result = subprocess.run(
-            [sys.executable, str(harvester_path), "--print-sink"],
-            capture_output=True,
-            text=True,
-            cwd=str(target_dir),
-            timeout=_QUERY_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return None, f"could not invoke {harvester_path} --print-sink: {exc}"
-    if result.returncode != 0:
-        combined = (result.stdout + result.stderr).strip()
-        return None, f"{harvester_path} --print-sink exited {result.returncode}: {combined}"
-    return result.stdout.strip(), None
+    if following and following[0].lstrip().startswith("```"):
+        return paragraph + "\n\n" + following[0]
+    return paragraph
 
 
 def _inspect_surface(
@@ -239,7 +240,7 @@ def _inspect_surface(
 ) -> SurfaceResult:
     """Inspect one surface and return whether it resolves to *declared_sink*.
 
-    See this module's docstring for the exact two-mechanism precedence this
+    See this module's docstring for the exact three-mechanism precedence this
     mirrors.
     """
     try:
@@ -255,32 +256,16 @@ def _inspect_surface(
             "could not locate an append-instruction paragraph (unparseable)",
         )
 
-    invocation_match = _INVOCATION_PATTERN.search(paragraph)
-    if invocation_match is not None:
-        resolved, error = _resolve_via_invocation(harvester_path, target_dir)
-        if error is not None:
-            return SurfaceResult(surface_id, False, error)
-        # A zero exit with empty stdout would otherwise become Path("") ==
-        # Path("."), reported as a path mismatch -- a confusing message for a
-        # different problem. Name it instead. This also narrows `resolved` to
-        # str for the comparison below, which `_resolve_via_invocation`'s
-        # (str | None, str | None) signature cannot express on its own.
-        if not resolved:
-            return SurfaceResult(
-                surface_id,
-                False,
-                f"{harvester_path} --print-sink exited 0 but printed no path, "
-                "so there is no resolved destination to compare against the "
-                f"declared sink {declared_sink!r}",
-            )
-        if Path(resolved) != Path(declared_sink):
-            return SurfaceResult(
-                surface_id,
-                False,
-                f"resolved destination {resolved!r} does not match the "
-                f"declared sink {declared_sink!r}",
-            )
-        return SurfaceResult(surface_id, True)
+    carried = _self_carried_sink_failure(surface_id, paragraph, declared_sink)
+    if carried is not None:
+        return carried
+
+    if _INVOCATION_PATTERN.search(paragraph) is not None:
+        return _compare_resolved(surface_id, harvester_path, target_dir, declared_sink)
+
+    if _emit_invocations(paragraph):
+        emit_path = harvester_path.parent / "emit_knowledge.py"
+        return _compare_resolved(surface_id, emit_path, target_dir, declared_sink)
 
     literal_match = _LITERAL_PATTERN.search(paragraph)
     if literal_match is not None:
@@ -296,9 +281,22 @@ def _inspect_surface(
     return SurfaceResult(
         surface_id,
         False,
-        "append-instruction paragraph names neither a --print-sink "
-        "invocation nor a literal debugging/logs/*.jsonl path (unparseable)",
+        "append-instruction paragraph names no harvest_learnings.py "
+        "--print-sink invocation, no emit_knowledge.py invocation and no "
+        "literal debugging/logs/*.jsonl path (unparseable)",
     )
+
+
+def _any_surface_names_emit_helper(target_dir: Path) -> bool:
+    """Return whether any readable surface file mentions ``emit_knowledge.py``."""
+    for _surface_id, relative_parts in _SURFACES:
+        try:
+            text = _surface_path(target_dir, relative_parts).read_text(encoding="utf-8")
+        except OSError:
+            continue  # a missing/unreadable surface is reported by the caller
+        if "emit_knowledge.py" in text:
+            return True
+    return False
 
 
 def _verify_deployed_tree_complete(
@@ -323,6 +321,9 @@ def _verify_deployed_tree_complete(
             missing.append(f"{surface_id} surface ({path})")
     if not harvester_path.is_file():
         missing.append(f"deployed harvest_learnings.py ({harvester_path})")
+    emit_path = harvester_path.parent / "emit_knowledge.py"
+    if not emit_path.is_file() and _any_surface_names_emit_helper(target_dir):
+        missing.append(f"deployed emit_knowledge.py ({emit_path})")
     if not config_path.is_file():
         missing.append(f"knowledge_sink.json ({config_path})")
 
@@ -524,4 +525,19 @@ if __name__ == "__main__":
 #   after branches 2 and 3 (which are untouched): operational_log_root and
 #   feedback_sink present and absolute, every file key directly under the
 #   root, feedback_sink distinct from the other streams. (#INF-500d-4-iii)
+# - 2026-10-20 [python-coder/INF-700b-1]: Added a third resolution
+#   mechanism. The four surfaces now run the deployed emit_knowledge.py with
+#   no --sink, so an emit invocation is resolved by running the deployed
+#   `emit_knowledge.py --print-sink` for real; one carrying `--sink <literal>`
+#   fails as a destination of its own. _find_instruction_paragraph now joins a
+#   code-fenced block that directly follows the instruction paragraph (signoff
+#   section 7 puts the command in its own block). INF-400c-4-i's criteria are
+#   unchanged: following any surface still reaches the declared sink.
+#   (#INF-700b-1)
+# - 2026-10-20 [python-coder/INF-700b-1]: Closed pr-reviewer M-1. Every
+#   emit_knowledge.py mention in the paragraph is scanned (to the next
+#   backtick, newlines allowed) and any --sink / --sink= refuses the surface
+#   BEFORE the mechanism precedence, so a prose mention, an unbackslashed wrap
+#   or a named harvester command cannot mask it. A deployed tree whose surfaces
+#   use the emit helper but lack emit_knowledge.py now exits 2. (#INF-700b-1)
 # ====================================================================

@@ -117,6 +117,8 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
+| `postgres` | conditional | For every new SQL file or non-trivial edit (Step 2), apply the postgres skill before declaring the SQL ready. |
+| `sql-test` | conditional | After the local-DB deploy succeeds (Step 4), run the sql-test skill to run the SQL test suite. |
 ---
 
 ## Configuration

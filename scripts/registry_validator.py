@@ -41,7 +41,7 @@ from agent_signoff_grant_check import signoff_grant_errors
 from check_skill_refs import ability_reference_verdict
 from registry_verification_flags import validate_verification_flags
 from skill_tool_grant_validator import validate_tool_grants
-from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
+from spawn_bidirectionality_validator import check_spawn_bidirectionality
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
 
 
@@ -56,10 +56,8 @@ def validate_agent_registry(package_root: Path) -> list[str]:
       4. spawn_allowlist / spawned_by bidirectional consistency.
       5. No self-loops in the spawn graph.
       6. No entry carries the retired skills_used key (AR-400e-2-i).
-      7. (Warning only) If an agent's spawn_allowlist contains both the
-         __ticket_phase_agents__ macro and an individually-listed agent whose
-         is_ticket_phase is true, a warning is printed identifying the
-         redundant entry (AC INF-600g-2).
+      7. A redundant or repeated hand-off entry in a definition's own
+         spawn_allowlist is an error (AR-400f-1), found by the ability gate.
 
     Args:
         package_root: Absolute path to the leafcutter package root
@@ -89,7 +87,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir) + validate_produces_field(agents, template_dir))
     errors.extend(validate_tool_grants(template_dir) + signoff_grant_errors(agents, package_root))  # AR-200b-2/3; AR-400c-5
-    warn_redundant_phase_agents(agents)
     # Ability-reference existence gate (AR-400a-1/-2): returned errors, plus the examined counts.
     defs_examined, guides_examined, ref_errors = ability_reference_verdict(package_root, agents)
     errors.extend(ref_errors)

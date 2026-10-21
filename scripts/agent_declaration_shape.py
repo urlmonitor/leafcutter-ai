@@ -19,6 +19,9 @@ ARCHITECTURE: Pure functions, no I/O. ``skills_problems`` / ``spawn_problems``
 DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300-review]: Created. Replaces the silent
   ``continue`` / ``isinstance`` filters in the declaration readers. (#AR-300c-1, #AR-300c-5)
+- 2026-10-16 [python-coder/AR-400d-3]: A ``skills`` entry may carry ``provided_by``; the only accepted
+  value is ``project`` and any other is a defect naming the entry and the value (the commit hook's
+  ``_agent_ability_sync._skill_problem`` carries the same rule). (#AR-400d-3)
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from __future__ import annotations
 from typing import Any
 
 VALID_MODES = ("always", "conditional")
+PROVIDED_BY_PROJECT = "project"  # the only accepted ``provided_by`` value (AR-400d-3)
 
 
 class MalformedDeclarationError(ValueError):
@@ -49,6 +53,9 @@ def _skill_entry_problem(item: Any) -> str | None:
     mode = item.get("mode")
     if mode is not None and mode not in VALID_MODES:
         return f"entry {item!r} has mode {mode!r} (expected one of: {', '.join(VALID_MODES)})"
+    supplier = item.get("provided_by")
+    if supplier is not None and supplier != PROVIDED_BY_PROJECT:
+        return f"entry {item!r} has provided_by {supplier!r} (expected {PROVIDED_BY_PROJECT})"
     return None
 
 

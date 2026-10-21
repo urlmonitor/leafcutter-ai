@@ -26,7 +26,6 @@ ARCHITECTURE: check_spawn_bidirectionality(spawn_map, spawned_by_map,
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from commit_guardian_module_loader import load_commit_guardian_module
 
@@ -143,39 +142,13 @@ def _check_spawned_by_has_matching_allowlist(
     return errors
 
 
-def warn_redundant_phase_agents(agents: list[dict[str, Any]]) -> None:
-    """Warn when spawn_allowlist contains __ticket_phase_agents__ alongside
-    individually-listed agents that already have is_ticket_phase: true.
-
-    The warning is printed to stdout rather than returned as an error because
-    the registry is still structurally valid — the redundancy is informational.
-    Callers should not treat this as a build-blocking condition.
-
-    Args:
-        agents: List of agent dicts from the registry.
-    """
-    phase_agent_ids: set[str] = {
-        a["id"] for a in agents if a.get("is_ticket_phase") is True
-    }
-    for agent in agents:
-        allowlist: list[str] = agent.get("spawn_allowlist") or []
-        if _SPECIAL_TOKEN not in allowlist:
-            continue
-        agent_id = agent["id"]
-        for child_id in allowlist:
-            if child_id == _SPECIAL_TOKEN:
-                continue
-            if child_id in phase_agent_ids:
-                print(
-                    f"[WARNING] {agent_id}.spawn_allowlist: {child_id} is redundantly listed "
-                    f"because it is already included in {_SPECIAL_TOKEN} "
-                    f"(is_ticket_phase: true)"
-                )
-
-
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-21 [python-coder/AR-400f-1]: Deleted warn_redundant_phase_agents() (it printed
+#   a [WARNING] over the de-duplicated registry copy). The check is now
+#   agent_spawn_declaration.redundancy_findings(), a returned error over the RAW frontmatter
+#   list, called from check_skill_refs._own_declarations. (#TICKETLESS reason=ar-400f-1)
 # - 2026-10-09 [python-coder/AR-200b-2]: Moved _warn_redundant_phase_agents()
 #   here from registry_validator.py (pure move, renamed warn_redundant_phase_agents)
 #   to offset the skill-tool-grant wiring added there; the file may not grow.

@@ -1,0 +1,141 @@
+id: BO-400e-3-vi
+title: "Before writing anything, finalization lists every record it is about to close by id and path, and its report carries the same list"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given the closable set for "EPIC-Alpha" is the ticket
+      "tickets/00_inbox/epics/EPIC-Alpha/alpha-02.md" and the acceptance criterion
+      "BO-9100a-2" at
+      "docs/acceptance-criteria/build-orchestration/BO-9100-x/BO-9100a-2.yaml"
+  When finalization reaches its closure step
+  Then before any record is written, it shows the person running it a list with one line
+      per record: the record's id, its path, and its current status
+    And the list states how many tickets and how many acceptance criteria it holds
+    And the finalization run's final report repeats that list, marking each record as
+      closed, refused, or left open
+
+  Given the closure goes on to close a record that was not on the list it showed
+  When the run's final report is produced
+  Then the record is reported as closed outside the shown list
+    And the run does not report the closure as completed
+  Because "done" is load-bearing and a wrong one is invisible afterwards, so the person
+    finishing a feature has to be able to see -- before it happens, not by reading a commit's
+    file list later -- exactly which tickets and acceptance criteria are about to be marked
+    finished in their name.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-ii
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+    relationship: describes
+    status: exists
+    relevance: "Remediation item 2 (print the records about to be closed). The KI notes the damage was visible only in `git show <sha> --stat`, which no finalize run prompts anyone to read."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Step 3.5 shows nothing before it writes today; it logs counts only after the fact (:1460-1464, outcome at :1674-1678)."
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: true
+it_requirements:
+  - >-
+    The listing is rendered from the derive step's records array (BO-400e-3-ii), with one line per
+    record: id, repo-relative path, current status. A header gives the ticket count and the AC
+    count. The rendering is a pure function in the closing module
+    (scripts/build_orchestration/finalize_closable_set.py), returned in the derive reply as a
+    ready-to-show text block, so that finalize-feature.js only displays it and adds no formatting
+    logic (no size growth; see BO-400e-3-ii).
+  - "The listing is shown before the first write of any record. It is emitted through the workflow's narration channel and carried in the confirmation prompt (BO-400e-3-vii), so the person sees it whether or not the gate is still in force."
+  - >-
+    The final report's closure section is built ONLY from the close step's per-record results
+    (BO-400e-3-iv), marking each listed record closed, refused or left open. Any record that the
+    close reply or the leak comparison (BO-400e-3-iii) shows as changed but absent from the shown
+    list is reported as "closed outside the shown list". When that happens, Step 3.5 is not
+    recorded in completedSteps and no "closure completed" outcome line is emitted.
+  - >-
+    Step 6b's scope probe today asks an agent to search the ticket tree for tickets that reference
+    the branch, and pushes its tickets_done into ticketsClosed. It must no longer add records to
+    the run's closed list. Otherwise the final report claims tickets closed that were never on the
+    shown list. Step 6b either reports from the same derived set or is removed. It never searches.
+delivers_to:
+  agent: python-coder
+  contract: "listing_text: str in the derive reply, with a header line '<n> ticket(s), <m> acceptance criteria' followed by one line per record '<id>  <path>  <status>' in set order. Consumed by the confirmation gate (BO-400e-3-vii)."
+expects_from:
+  - ac_id: BO-400e-3-ii
+    contract: "The records array (kind, id, path, status) in set order."
+  - ac_id: BO-400e-3-iv
+    contract: "Per-record close results (closed / refused / left_open)."
+test_required: true
+test_spec:
+  - name: test_listing_is_shown_before_any_record_is_written
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive finalize-feature.js through run_workflow_under_e2 with the derive dispatch answered by the real module's output for the EPIC-Alpha fixture; the listing (both records, with id, path and status, plus the counts header) appears in the log or gate prompt BEFORE the close dispatch is recorded."
+  - name: test_listing_text_has_one_line_per_record_and_counts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The module's listing for the EPIC-Alpha fixture states 1 ticket and 1 acceptance criterion and has exactly one line each for alpha-02.md and BO-9100a-2 with their current status."
+  - name: test_final_report_repeats_the_list_with_per_record_outcome
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Same harness run with the close dispatch answered by the real module's reply; the final report lists alpha-02.md closed and BO-9100a-2 closed, and with a refusal fixture lists refused and left open."
+  - name: test_record_closed_outside_the_shown_list_is_reported_and_step_not_completed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Close reply (from the real module with an injected leak) shows alpha-01.md changed; the report marks it closed outside the shown list and Step 3.5 is not in completedSteps. NEGATIVE CONTROL: Step 6b's scope-probe reply naming an extra done ticket does not add it to the report's closed list."
+    must_catch:
+      - "add Step 6b's tickets_done to the closed list"
+test_rationale: >-
+  "Before any record is written" is an ordering property of the running workflow, so it is asserted
+  on the order of the dispatches recorded by the E2 harness, not on the source text. The replies
+  fed in are the real module's output for the fixture, so the listing under test is the one the
+  module actually produces. The Step 6b negative control exists because that probe is a second
+  route into the closed list that the report would otherwise trust.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_vi_listing.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_records.py
+  - scripts/build_orchestration/_fcs_derive.py
+  - templates/workflows-js/finalize-feature.js
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
+
+  PERMANENT, NOT INTERIM -- decided, with reasons. The KI frames "print and confirm" as a
+  stopgap until scoping is mechanical. The two halves deserve different answers, so they are
+  split: this record is the LISTING, BO-400e-3-vii is the CONFIRMATION.
+    - The listing costs nothing at run time, needs no human present, and is the only place
+      the person who owns the feature sees what was marked finished on their behalf. It stays
+      useful after BO-400e-3-ii is mechanical: a correct derivation can still be pointed at
+      the wrong branch, and an empty list vs a list of forty is information a person acts on.
+      It is also what lets BO-400e-3-iii's second scenario and BO-400e-3-v's abort be
+      reported in terms a person recognises.
+    - The confirmation adds a human stop to every finalize; that is justified only while the
+      derivation cannot be trusted (see BO-400e-3-vii).

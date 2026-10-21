@@ -39,6 +39,9 @@ DECISION HISTORY
   descriptive_only entries) and drops ``skills_used``; the per-field
   population rule is gone and the one-shot migration helper is retired.
   (#AR-400e-2)
+- 2026-10-16 [python-coder/AR-400d-3]: ``_skill_problem`` rejects a ``provided_by``
+  other than ``project`` (a ``MalformedDeclarationError`` naming the value), the same
+  rule as ``scripts/agent_declaration_shape``. (#AR-400d-3)
 """
 
 from __future__ import annotations
@@ -96,6 +99,9 @@ def _skill_problem(item: Any) -> str | None:
     mode = item.get("mode")
     if mode is not None and mode not in ("always", "conditional"):
         return f"entry {item!r} has mode {mode!r} (expected always or conditional)"
+    supplier = item.get("provided_by")
+    if supplier is not None and supplier != "project":
+        return f"entry {item!r} has provided_by {supplier!r} (expected project)"
     return None
 
 

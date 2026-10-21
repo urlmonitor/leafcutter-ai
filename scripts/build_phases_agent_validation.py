@@ -37,6 +37,12 @@ ARCHITECTURE: Two public functions, re-exported from build_phases.py so every
     ``sys.path`` at that point. So this module ships and resolves at import
     time exactly the way build_phases_knowledge.py already does, with no
     deploy-manifest entry required.
+
+DECISION HISTORY
+- 2026-10-16 [python-coder/AR-400d-3]: The per-entry ``skills_invoked`` resolution moved
+  into ``_unresolvable_skill_problem``, which no longer reports a registry entry marked
+  ``provided_by: project`` as an unresolvable skill id (the package need not ship it).
+  (#AR-400d-3)
 """
 
 from __future__ import annotations
@@ -48,6 +54,31 @@ from typing import Any
 from build_phases_profile_consistency import profile_warning_count
 from build_phases_self_description import _self_desc_field_hint
 from template_compiler import parse_frontmatter
+
+
+def _unresolvable_skill_problem(
+    agent_name: str, inv: Any, package_skills_dir: Path, skill_registry_ids: set[str]
+) -> str | None:
+    """Return the problem text for one registry ``skills_invoked`` entry that resolves nowhere, else None.
+
+    Not a problem: an entry with no string ``skill_id``, a ``descriptive_only`` entry (an intentional
+    inline capability, INF-600d-1: no deployed skill dir required) and one marked
+    ``provided_by: project`` (supplied by the consuming project, AR-400d: the package need not ship it).
+    """
+    skill_id = inv.get("skill_id") if isinstance(inv, dict) else None
+    if not skill_id or inv.get("descriptive_only") is True or inv.get("provided_by") == "project":
+        return None
+    if (package_skills_dir / skill_id).exists() or skill_id in skill_registry_ids:
+        return None
+    return (
+        f"Registry entry '{agent_name}' has unresolvable "
+        f"skills_invoked skill_id '{skill_id}'.\n"
+        f"  Not found in the canonical source "
+        f"(templates/skills/{skill_id}/ or an id in "
+        f"config/skill_registry.json).\n"
+        f"  Fix hint: Create the skill template, add a "
+        f"skill_registry.json entry, or correct the skill_id."
+    )
 
 
 def validate_agent_self_description(
@@ -314,23 +345,10 @@ def validate_agent_self_description(
                     skills_invoked = entry.get("skills_invoked") or []
                     if isinstance(skills_invoked, list):
                         for inv in skills_invoked:
-                            skill_id = inv.get("skill_id") if isinstance(inv, dict) else None
-                            if not skill_id:
-                                continue
-                            if inv.get("descriptive_only") is True:
-                                continue  # Intentional inline-capability entry (INF-600d-1) — no deployed skill dir required
-                            in_package = (package_skills_dir / skill_id).exists()
-                            in_skill_registry = skill_id in skill_registry_ids
-                            if not in_package and not in_skill_registry:
-                                problems.append(
-                                    f"Registry entry '{agent_name}' has unresolvable "
-                                    f"skills_invoked skill_id '{skill_id}'.\n"
-                                    f"  Not found in the canonical source "
-                                    f"(templates/skills/{skill_id}/ or an id in "
-                                    f"config/skill_registry.json).\n"
-                                    f"  Fix hint: Create the skill template, add a "
-                                    f"skill_registry.json entry, or correct the skill_id."
-                                )
+                            unresolved = _unresolvable_skill_problem(
+                                agent_name, inv, package_skills_dir, skill_registry_ids)
+                            if unresolved:
+                                problems.append(unresolved)
 
                 # knowledge_channels: check channel range 1-11
                 if field == "knowledge_channels":
