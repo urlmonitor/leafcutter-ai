@@ -37,7 +37,7 @@ def _run(store):
 
 class TestAcClosedOnlyWithItsTicket(unittest.TestCase):
     def test_refused_tickets_source_ac_keeps_its_status(self):
-        # covers: BO-400e-3-iv
+        # covers: BO-400e-3-iv, BO-400e
         # angle: criterion
         """AC BO-400e-3-iv: alpha-02 is closed and BO-9100a-2 marked done; the checking mechanism
         refuses alpha-01, which stays open, and BO-9100a-1 keeps the status it had."""

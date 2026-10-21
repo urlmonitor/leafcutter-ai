@@ -94,21 +94,20 @@ def _load_sibling(name: str, repo_root: Path | None = None) -> ModuleType | None
     """Lazily import the sibling module *name* (ACD-2100a-2: a lone copy must still start).
 
     Looked up, in order, in this script's own directory, its ``build_orchestration/``
-    subdirectory (the deployed layout), then the located repository's
+    subdirectory (the deployed layout), ``../../scripts/build_orchestration/`` (the package
+    source tree, where this copy sits in ``templates/scripts/``), then the located repository's
     ``scripts/build_orchestration/`` (``<repo_root>/scripts/build_orchestration``, or
     ``<repo_root>/leafcutter-ai/scripts/build_orchestration`` in the consumer layout). Returns
     ``None`` when it is in none of them; each caller decides whether that is fatal. Never
     imported at module top level, so ``create-only`` and the other subcommands that do not
     need the sibling work from a copy placed anywhere.
     """
-    dirs = [Path(__file__).resolve().parent / sub for sub in ("", "build_orchestration")]
+    dirs = [Path(__file__).resolve().parent / sub for sub in ("", "build_orchestration", "../../scripts/build_orchestration")]
     if repo_root is not None:
         dirs += [repo_root / base / "scripts" / "build_orchestration" for base in ("", "leafcutter-ai")]
     for directory in dirs:
         candidate = directory / f"{name}.py"
-        if not candidate.is_file():
-            continue
-        spec = importlib.util.spec_from_file_location(name, candidate)
+        spec = importlib.util.spec_from_file_location(name, candidate) if candidate.is_file() else None
         if spec is None or spec.loader is None:
             continue
         module = importlib.util.module_from_spec(spec)
