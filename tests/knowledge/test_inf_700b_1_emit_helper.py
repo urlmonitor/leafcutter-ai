@@ -207,6 +207,23 @@ def _lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
 
 
+def _telemetry_stream(proj: dict[str, Path]) -> Path:
+    """The declared operational telemetry stream, read from the project's own (round-tripped) declaration."""
+    declaration = json.loads((proj["deployed"] / "config" / "knowledge_sink.json").read_text(encoding="utf-8"))
+    return Path(declaration["operational_telemetry_stream"])
+
+
+def _assert_one_recorded_attempt(proj: dict[str, Path], agent: str) -> None:
+    """ADR-034 Amendment 2 A2.4: a successful capture writes exactly one ``recorded`` capture_attempt line."""
+    records = [json.loads(ln) for ln in _lines(_telemetry_stream(proj))]
+    assert len(records) == 1, f"the telemetry stream must hold exactly one line, got {records!r}"
+    record = records[0]
+    assert record["event_type"] == "capture_attempt", record
+    assert record["payload"]["outcome"] == "recorded", record
+    assert record["agent_name"] == agent, record
+    assert record["payload"]["missing_target"] is None, record
+
+
 # ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
@@ -219,7 +236,8 @@ def test_section_7_command_lands_one_clean_record_in_the_declared_sink(shared_re
 
     Must be green only when section 7 names an ``emit_knowledge.py ... --text`` command, the helper
     resolves the declared sink itself, and exactly one ``json.loads``-clean line with the learning
-    (newline preserved) lands there and nothing else is created.
+    (newline preserved) lands there. The only other file created is the declared telemetry stream,
+    holding the one ``recorded`` capture attempt the helper writes itself (ADR-034 Amendment 2 A2.4).
     """
     tokens = _extract_command(_section_seven(shared_reference_layout))
     assert tokens is not None, (
@@ -237,7 +255,10 @@ def test_section_7_command_lands_one_clean_record_in_the_declared_sink(shared_re
     assert record["event"] == "knowledge_captured"
     assert record["text"] == _LEARNING and "\n" in record["text"]
     created = _snapshot(proj["world"]) - before
-    assert created == {os.path.relpath(proj["sink"], proj["world"])}, f"unexpected files created: {created}"
+    expected = {os.path.relpath(proj["sink"], proj["world"]),
+                os.path.relpath(_telemetry_stream(proj), proj["world"])}
+    assert created == expected, f"unexpected files created: {created}"
+    _assert_one_recorded_attempt(proj, "test-writer")
 
 
 @pytest.mark.shared_layout_reader
@@ -308,7 +329,9 @@ def test_live_root_with_missing_log_dir_creates_only_the_log_dir(shared_referenc
     # angle: boundary
     """Fourth row of the fail-open family: a live enduring root whose log directory is missing.
 
-    Only the log directory (and the sink file inside it) may appear; the live root itself is not touched.
+    Only the log directory and the two files inside it may appear: the sink, and the telemetry stream
+    holding the one ``recorded`` capture attempt (ADR-034 Amendment 2 A2.4). The live root itself is
+    not touched.
     """
     proj = _project(tmp_path, shared_reference_layout, "missing_log_dir")
     before = _snapshot(proj["world"])
@@ -316,8 +339,12 @@ def test_live_root_with_missing_log_dir_creates_only_the_log_dir(shared_referenc
     assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
     created = _snapshot(proj["world"]) - before
     log_dir = os.path.relpath(proj["log_root"], proj["world"])
-    assert created == {log_dir, os.path.join(log_dir, "knowledge_emissions.jsonl")}, f"created: {sorted(created)}"
+    stream = os.path.relpath(_telemetry_stream(proj), proj["world"])
+    assert os.path.dirname(stream) == log_dir, "the telemetry stream lands in the same log dir"
+    assert created == {log_dir, os.path.join(log_dir, "knowledge_emissions.jsonl"), stream}, (
+        f"created: {sorted(created)}")
     assert len(_lines(proj["sink"])) == 1
+    _assert_one_recorded_attempt(proj, "test-writer")
 
 
 @pytest.mark.shared_layout_reader

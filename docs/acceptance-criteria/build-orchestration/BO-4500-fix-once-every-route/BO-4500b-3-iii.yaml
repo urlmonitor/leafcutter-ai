@@ -1,0 +1,208 @@
+id: BO-4500b-3-iii
+title: "A specialist is engaged at most once per commit, and the re-offer carries the identical path list and message file"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml"
+criteria: |
+  Given a first commit attempt offering the paths scripts/x.py and unit_tests/test_x.py with the
+    message file .pending/commit-msg.txt,
+  And its reply carries commit_answer.status hook_failed with a handoff naming
+    code-refactoring-specialist,
+  And the specialist then reports that it also changed scripts/x_helpers.py,
+  When the COMMIT-ANSWER block's decision is taken on the first reply and again after the
+    specialist reports,
+  Then the first decision is engage code-refactoring-specialist,
+  And the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with
+    .pending/commit-msg.txt, and not scripts/x_helpers.py.
+
+  Given that re-offer's reply again carries hook_failed with a handoff naming
+    code-refactoring-specialist,
+  When the decision is taken,
+  Then it is report, naming both hook_failed answers in order,
+  And no second engagement of any specialist is decided for that commit.
+
+  Given the specialist, once engaged, declines or returns a reply that cannot be read,
+  When the decision is taken,
+  Then it is report, naming the specialist and quoting its reply bounded to 2 KB,
+  And no re-offer is decided.
+
+  Given the re-offer's reply carries reason_code step_index_locked,
+  When the decision is taken,
+  Then it is retry with the identical path list and message file, counted against the same
+    transient-retry ceiling, with no further engagement.
+depends_on: [BO-4500b-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-v.yaml
+    relationship: describes
+    status: exists
+    relevance: "The re-offer must pass the IDENTICAL path list and message file captured from the first commit_answer, never re-derived."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Its test_lane_engages_specialist_once_and_reoffers_identical_commit must_catch ('re-derive the file list on the re-offer', 'loop on repeated handoffs') is what this record proves once, for every route."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/commit-answer.js
+    state: to_be_created
+it_requirements:
+  - >-
+    The path list and message file are captured from the first attempt. Files a specialist
+    reports having changed appear in any eventual report, but are never added to the re-offer.
+    Whether to widen a commit belongs to BO-3800, not to this block.
+  - >-
+    The specialist engaged is the one the handoff names, taken verbatim and never inferred from
+    prose (BO-3000a). Engagement is recorded in the attempt history and happens at most once per
+    commit, whatever the configured retry values are (BO-4500a-4).
+  - >-
+    A specialist reply that declines or cannot be read gives report, quoting at most 2 KB with
+    the same bound as BO-4500b-3-i, and no re-offer.
+  - >-
+    A transient answer after the re-offer is retried against the same per-commit ceiling
+    (BO-4500b-3-ii) with no further engagement.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-3
+  contract: >-
+    The COMMIT-ANSWER decision function whose attempt history carries first_paths,
+    first_message_file, answers, transient_retries_used and specialist_engaged.
+test_intent:
+  - clause: the first decision is engage code-refactoring-specialist
+    needs_test: true
+    reason: A handoff must engage exactly the named specialist rather than report or retry.
+  - clause: the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt, and not scripts/x_helpers.py
+    needs_test: true
+    reason: Re-deriving the list from what changed would silently widen the commit, and the extra file is the discriminator.
+  - clause: it is report, naming both hook_failed answers in order
+    needs_test: true
+    reason: A repeated handoff must end rather than loop.
+  - clause: no second engagement of any specialist is decided for that commit
+    needs_test: true
+    reason: At most one engagement per commit is the bound that stops a handoff loop.
+  - clause: it is report, naming the specialist and quoting its reply bounded to 2 KB
+    needs_test: true
+    reason: A failed specialist must surface its own reply so the outcome can be diagnosed.
+  - clause: no re-offer is decided
+    needs_test: true
+    reason: Re-offering after a specialist declined would retry a change nobody fixed.
+  - clause: it is retry with the identical path list and message file, counted against the same transient-retry ceiling, with no further engagement
+    needs_test: true
+    reason: Mixing engagement and transient retries is where a fresh counter or a second engagement would creep in.
+test_spec:
+  - name: test_handoff_decides_engage_named_specialist
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "hook_failed with a handoff naming code-refactoring-specialist decides engage with exactly that specialist."
+    proves_clause: "the first decision is engage code-refactoring-specialist"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_reoffer_excludes_specialist_reported_extra_file
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "After the specialist reports it also changed scripts/x_helpers.py, the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt and not x_helpers.py."
+    proves_clause: "the next decision re-offers exactly scripts/x.py and unit_tests/test_x.py with .pending/commit-msg.txt, and not scripts/x_helpers.py"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "re-derive the re-offer list from what changed"
+      - "add the specialist's reported file to the re-offer"
+  - name: test_repeated_handoff_reports_both_answers_in_order
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A second hook_failed handoff after the re-offer decides report naming both hook_failed answers in arrival order."
+    proves_clause: "it is report, naming both hook_failed answers in order"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_specialist_is_never_engaged_twice_per_commit
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "With specialist_engaged true in the attempt history, no decision is engage, whatever the specialist name or configured retry values."
+    proves_clause: "no second engagement of any specialist is decided for that commit"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "loop on repeated handoffs"
+      - "engage a different specialist on a second handoff"
+  - name: test_declining_or_unreadable_specialist_reply_is_reported_with_quote
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A declining and an unreadable specialist reply each decide report naming the specialist and quoting the reply bounded to 2048 bytes."
+    proves_clause: "it is report, naming the specialist and quoting its reply bounded to 2 KB"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_no_reoffer_after_specialist_declined
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The report decision in the declined case carries no paths or message_file to re-offer and is not retry or engage."
+    proves_clause: "no re-offer is decided"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_transient_after_reoffer_retries_against_same_ceiling_without_engagement
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A step_index_locked reply after the re-offer decides retry with identical paths and message file, increments the shared per-commit counter (a fresh counter would exceed the ceiling), and is never engage."
+    proves_clause: "it is retry with the identical path list and message file, counted against the same transient-retry ceiling, with no further engagement"
+    code_file: templates/workflows-js/_shared/commit-answer.js
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_engage_reoffer_loop_is_reachable_through_the_install
+    target_dir: unit_tests/_shared/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts install and evaluate the installed block text on a hook_failed handoff reply; it decides engage."
+    proves_clause: "the first decision is engage code-refactoring-specialist"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The first scenario's x_helpers.py is the discriminator for "re-derive the list from what changed":
+  a specialist that moved code into a new file has NOT been authorised to widen the commit. Whether a
+  specialist's new file should join the commit is a separate decision this record does not make;
+  reporting it is enough (BO-3800 owns the handoff semantics). "At most once" is per commit, per
+  BO-3800a and BO-4500a-4 ("a specialist is engaged at most once, whatever these values are").

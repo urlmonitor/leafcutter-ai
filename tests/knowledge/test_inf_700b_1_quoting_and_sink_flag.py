@@ -257,8 +257,29 @@ def _carrying_surface(proj: dict[str, Path], literal: str, shape: str) -> None:
         text = text[:fence] + "Check it with `python3 harvest_learnings.py --print-sink`.\n   " + text[fence:]
         text = text.replace("emit_knowledge.py --agent", f"emit_knowledge.py --sink {literal} --agent", 1)
     else:
-        text = text.replace("--agent product-owner", f"--agent product-owner\n   --sink {literal}", 1)
+        # Anchor on the emit_knowledge.py command line: the block also carries an emit_event.py line
+        # with its own ``--agent product-owner``, which comes first.
+        text = text.replace("emit_knowledge.py --agent product-owner",
+                            f"emit_knowledge.py --agent product-owner\n   --sink {literal}", 1)
+    _assert_sink_lands_in_emit_knowledge(text, literal)
     path.write_text(text, encoding="utf-8")
+
+
+def _assert_sink_lands_in_emit_knowledge(text: str, literal: str) -> None:
+    """Fail loudly if the injected ``--sink`` is not inside an emit_knowledge.py invocation.
+
+    The nearest preceding command word before the injection must be ``emit_knowledge.py``, with no
+    fence boundary between them, so a template change that moves lines cannot silently test another command.
+    """
+    at = text.find(literal)
+    assert at != -1, "precondition: the injected sink literal is absent"
+    head = text[:at]
+    start = head.rfind("emit_knowledge.py")
+    assert start != -1, "the injected --sink has no emit_knowledge.py before it"
+    between = head[start:]
+    assert "```" not in between and "emit_event.py" not in between, (
+        f"the injected --sink is not inside an emit_knowledge.py command: {between!r}")
+    assert head.rfind("emit_event.py") < start, "the injected --sink landed in an emit_event.py command"
 
 
 @pytest.mark.shared_layout_reader

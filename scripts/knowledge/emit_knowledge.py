@@ -51,6 +51,20 @@ explicit ``--sink`` or ``--rejection-log`` is honoured exactly as given.
 The entry_kind ``unclassified`` is a defined non-value: it is recorded as
 given, with no rejection and without joining the vocabulary.
 
+Capture-attempt ledger (ADR-034 Amendment 2)
+--------------------------------------------
+After a SUCCESSFUL append the helper runs the deployed
+``skills/agent-telemetry/scripts/emit_event.py`` once (``--event capture_attempt
+--outcome recorded``, no ``--log``). ``--text`` that is empty, or empty once the
+record's own agent, component, destination, entry_kind and ticket values and all
+non-alphanumerics are removed, is refused: nothing is appended, the reason goes
+to stderr, exit is 0 and one ``nothing-to-record`` attempt is written. If the
+append itself fails (OSError), a stderr warning names the sink and the error,
+exit is 0 and one ``failed`` attempt is written with ``--missing-target`` set to
+the sink path. A
+vocabulary rejection and ``--print-sink`` write no attempt. If emit_event.py is
+missing or fails, a stderr warning is printed and the knowledge append stands.
+
 Exit codes
 ----------
 1   Only ``--print-sink`` with no usable declaration (see above).
@@ -65,6 +79,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -268,12 +284,68 @@ def _handle_rejection(args: argparse.Namespace, members: dict[str, object]) -> N
             pass
 
 
-def _handle_acceptance(args: argparse.Namespace, canonical_entry_kind: str) -> None:
-    """Write the validated event to the sink.
+def _is_contentless(args: argparse.Namespace) -> bool:
+    """Return True when ``--text`` carries no learning (ADR-034 A2.5).
 
-    A sink-write failure is logged and swallowed: this helper's own contract
-    is best-effort / non-fatal to the calling agent, and a lost knowledge
-    write is preferable to aborting the agent's primary task. When no
+    The text is whitespace-normalised, then every occurrence of the record's own
+    agent, component, destination, entry_kind and ticket values is removed and
+    every non-alphanumeric dropped. Nothing left means the text is empty or only
+    restates the record's own metadata. Pure function: no I/O.
+    """
+    remainder = " ".join((args.text or "").split())
+    descriptive = (args.agent, args.component, args.destination, args.entry_kind, args.ticket)
+    for value in sorted((v for v in descriptive if v), key=len, reverse=True):
+        remainder = re.sub(re.escape(value), "", remainder, flags=re.IGNORECASE)
+    return not re.sub(r"[\W_]+", "", remainder)
+
+
+def _record_capture_attempt(
+    args: argparse.Namespace, outcome: str, missing_target: str | None = None
+) -> None:
+    """Write ONE ``capture_attempt`` ledger record by running the deployed emit_event.py.
+
+    ``missing_target`` is passed as ``--missing-target`` and only for ``failed``.
+
+    The script path is derived from the deployed layout (never a literal) and no
+    ``--log`` is passed, so the telemetry stream resolves from the declaration
+    (ADR-034 A2.2, A2.4). Fails open: a missing script, a launch error or a
+    non-zero exit prints a stderr warning and returns, so the knowledge outcome
+    already reached stands and the helper still exits 0.
+    """
+    script = deployed_output_root() / "skills" / "agent-telemetry" / "scripts" / "emit_event.py"
+    cmd = [sys.executable, str(script), "--agent", args.agent, "--event", "capture_attempt",
+           "--phase", "knowledge-capture", "--outcome", outcome]
+    if args.ticket:
+        cmd += ["--ticket", args.ticket]
+    if missing_target is not None:
+        cmd += ["--missing-target", missing_target]
+    try:
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"WARNING: capture attempt ({outcome}) not recorded: emit_event.py "
+              f"could not run: {exc}", file=sys.stderr)
+        return
+    if done.returncode != 0 or done.stderr.strip():
+        print(f"WARNING: capture attempt ({outcome}) not recorded: emit_event.py "
+              f"exited {done.returncode}: {done.stderr.strip()}", file=sys.stderr)
+
+
+def _refuse_contentless(args: argparse.Namespace) -> None:
+    """Refuse contentless text: append nothing, say why on stderr, log ``nothing-to-record``."""
+    print("REFUSED: --text is empty or only restates the record's own agent, component, "
+          "destination, entry_kind or ticket; no knowledge event written", file=sys.stderr)
+    _record_capture_attempt(args, "nothing-to-record")
+
+
+def _handle_acceptance(args: argparse.Namespace, canonical_entry_kind: str) -> bool:
+    """Write the validated event to the sink; return True when it was appended.
+
+    A sink-write failure is reported and swallowed: a WARNING naming the sink
+    and the error goes to stderr, one ``failed`` capture attempt with
+    ``missing_target`` set to the sink path is written (telemetry is still
+    writable on this path, ADR-034 A2.6), and the helper still exits 0. This
+    helper's own contract is best-effort / non-fatal to the calling agent, and
+    a lost knowledge write is preferable to aborting the primary task. When no
     ``--sink`` was given and the declaration cannot be used, nothing is
     created: the reason goes to stderr and the event is dropped (exit 0).
     """
@@ -282,7 +354,7 @@ def _handle_acceptance(args: argparse.Namespace, canonical_entry_kind: str) -> N
         sink, reason = _resolve_declared_sink()
         if sink is None:
             print(f"WARNING: knowledge event not recorded: {reason}", file=sys.stderr)
-            return
+            return False
     event: dict[str, object] = {
         "event": "knowledge_captured",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -296,8 +368,12 @@ def _handle_acceptance(args: argparse.Namespace, canonical_entry_kind: str) -> N
         event["ticket"] = args.ticket
     try:
         _append_jsonl(sink, event)
-    except OSError:
-        pass
+    except OSError as exc:
+        print(f"WARNING: knowledge event not recorded: could not append to sink {sink}: {exc}",
+              file=sys.stderr)
+        _record_capture_attempt(args, "failed", str(sink))
+        return False
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -305,6 +381,10 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.print_sink:
         return _print_sink()
+
+    if _is_contentless(args):
+        _refuse_contentless(args)
+        return 0
 
     vocab_path = args.vocabulary or default_vocabulary_path()
     members = load_vocabulary(vocab_path)
@@ -317,7 +397,8 @@ def main(argv: list[str] | None = None) -> int:
         _handle_rejection(args, members)
         return 0
 
-    _handle_acceptance(args, canonical_entry_kind)
+    if _handle_acceptance(args, canonical_entry_kind):
+        _record_capture_attempt(args, "recorded")
     return 0
 
 
@@ -331,6 +412,8 @@ if __name__ == "__main__":
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-21 15:00 [python-coder]: A failed sink append now prints a stderr WARNING naming the sink and error and writes one `failed` capture_attempt (missing_target = sink path) instead of vanishing silently (pr-reviewer M-2). (#EPIC-ALearningAnAgentHasTodayActuallyGets/02) (ADR-034)
+# - 2026-10-21 12:00 [python-coder]: Refuse empty/metadata-only --text (A2.5, writes a nothing-to-record attempt) and write ONE `recorded` capture_attempt via the deployed emit_event.py subprocess after a successful append (A2.4, fail open, no --log). (#EPIC-ALearningAnAgentHasTodayActuallyGets/02) (ADR-034)
 # - 2026-10-20 14:00 [python-coder]: --sink optional (declared sink via sink_resolution, no relative fallback); "unclassified" recorded as a defined non-value; absent/unusable/stale declaration creates nothing, warns on stderr, exits 0; explicit --sink/--rejection-log honoured as given. (#EPIC-ALearningAnAgentHasTodayActuallyGets/01) (ADR-034)
 # - 2026-10-20 17:00 [python-coder]: Added read-only --print-sink (same resolution as the no---sink write path; non-zero exit with a stderr reason on an absent/unusable/stale declaration); the five event flags became post-parse-required; module docstring corrected (it imports sink_resolution). (#EPIC-ALearningAnAgentHasTodayActuallyGets/01) (ADR-034)
 # - 2026-10-20 19:40 [python-coder]: allow_abbrev=False so `--sin /x` is an argparse error and cannot carry a sink past check_sink_parity.py (pr-reviewer M-1). (#EPIC-ALearningAnAgentHasTodayActuallyGets/01) (ADR-034)
