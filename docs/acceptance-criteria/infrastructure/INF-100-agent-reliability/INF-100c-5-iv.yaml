@@ -1,8 +1,8 @@
 id: INF-100c-5-iv
 components:
   - feedback_collector
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Every agent that signs off today, including both AC-coverage gates, is a registered feedback writer"
 component: infrastructure
 level: L3
@@ -42,6 +42,13 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+declared_files:
+  - path: templates/config/feedback_categories.yaml
+    state: existing
+  - path: config/feedback_categories.yaml
+    state: existing
+  - path: unit_tests/feedback/test_inf_100c_5_iv.py
+    state: to_be_created
 it_requirements:
   - "Both copies (config/feedback_categories.yaml and templates/config/feedback_categories.yaml) change identically, and the build-deployed copy matches them after a build round-trip (ADR-001)."
   - "Additions only: no existing allowed_writers entry is removed or reordered (INF-100c-3 backward compatibility)."
@@ -64,6 +71,83 @@ test_intent:
   - clause: the source copy and the template copy of the feedback categories file list the same allowed_writers for every category
     needs_test: true
     reason: The two copies are edited by hand, and drift between them ships a fix that installed projects never receive.
+test_spec:
+  - name: test_shipped_package_validate_only_build_passes_the_writer_check
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real scripts/build.py --validate-only as a subprocess on the package as shipped and asserts exit 0 and no missing-writer failure, so the check is exercised against the real agent definitions and categories file.
+    proves_clause: the check reports zero agents that sign off but can write to no category
+    code_file: scripts/build.py
+    must_catch:
+      - restructuring-specialist or change-scope-reviewer left out of the shipped lists
+  - name: test_shipped_categories_name_no_unregistered_writer
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Runs the check on the shipped templates/config/feedback_categories.yaml and config/agent_registry.json and asserts unknown_writers is empty.
+    proves_clause: zero writers that name no registered agent
+    code_file: templates/config/feedback_categories.yaml
+  - name: test_both_ac_gates_are_writers_of_exactly_the_six_categories
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parses the shipped templates/config/feedback_categories.yaml and asserts ac-validator and ac-fulfillment-gate are in allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern, appear once each, and are absent from quality-concern, subagent-quality and process-finding.
+    proves_clause: ac-validator and ac-fulfillment-gate are each listed in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern
+    code_file: templates/config/feedback_categories.yaml
+    must_catch:
+      - a gate missing from success-pattern or any one of the six
+      - a gate added to the reviewer-only quality-concern category
+      - a gate listed twice in one category
+  - name: test_restructuring_and_scope_reviewer_are_writers_of_exactly_the_six_categories
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parses the shipped templates/config/feedback_categories.yaml and asserts restructuring-specialist and change-scope-reviewer are in the same six categories once each and in none of quality-concern, subagent-quality and process-finding.
+    proves_clause: restructuring-specialist and change-scope-reviewer are each listed in the allowed_writers of the same six categories
+    code_file: templates/config/feedback_categories.yaml
+    must_catch:
+      - the two agents added to complete only
+      - the two agents added to a seventh category such as quality-concern
+  - name: test_source_and_template_copies_list_the_same_allowed_writers
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parses config/feedback_categories.yaml and templates/config/feedback_categories.yaml and asserts every category has the same allowed_writers in both, in the same order.
+    proves_clause: the source copy and the template copy of the feedback categories file list the same allowed_writers for every category
+    code_file: config/feedback_categories.yaml
+    must_catch:
+      - the four agents added to one copy only
+      - the same agents added to the two copies in a different order
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build.py
+  - config/feedback_categories.yaml
+  - templates/config/feedback_categories.yaml
+  - templates/agents/restructuring-specialist.md
+file_findings:
+  - file: config/feedback_categories.yaml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the source copy whose allowed_writers lists the four agents must join, additions only, and it must stay identical to the template copy.
+    decision: null
+  - file: templates/config/feedback_categories.yaml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the template copy the build deploys, already lists ac-validator and ac-fulfillment-gate in the six categories (lines 49-50, 78-79, 116-117, 147-148, 178-179, 219-220), lacks the other two agents, and carries the decision history to extend.
+    decision: null
+file_findings_opened_files:
+  - config/feedback_categories.yaml
+  - templates/config/feedback_categories.yaml
 delivers_to:
   agent: python-coder
   contract: "To INF-100c-5-v: feedback categories file (source and template copies) listing ac-validator, ac-fulfillment-gate, restructuring-specialist and change-scope-reviewer in the allowed_writers of complete, knowledge-gap, tooling-issue, convention-ambiguity, blocker and success-pattern, so the build deploys it to installed projects"
@@ -72,7 +156,10 @@ expects_from:
   contract: "The build-time consistency check from INF-100c-5, run against the shipped agent definitions and the deployed feedback categories file, returning missing_writers (list[str]) and unknown_writers (list of {writer: str, categories: list[str]}); this record makes both empty."
 origin_agent: business-analyst
 created: 2026-10-21
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
 superseded_by: null
 covered_by: []
 implemented_by: []
