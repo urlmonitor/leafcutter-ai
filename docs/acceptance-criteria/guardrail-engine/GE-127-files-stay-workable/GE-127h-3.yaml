@@ -209,7 +209,8 @@ amended_by:
   date: '2026-10-21'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/30_TICKET-20261021-GE-127h-3.md
 change_target:
   - code
 risk_surface: contract_boundary

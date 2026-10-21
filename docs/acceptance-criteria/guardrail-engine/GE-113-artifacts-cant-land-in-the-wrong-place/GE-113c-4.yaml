@@ -236,7 +236,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-113c-4-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/23_TICKET-20261021-GE-113c-4.md
 change_target:
   - code
 risk_surface: contract_boundary

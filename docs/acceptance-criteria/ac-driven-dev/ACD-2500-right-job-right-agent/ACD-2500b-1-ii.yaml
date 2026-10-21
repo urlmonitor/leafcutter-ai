@@ -123,7 +123,8 @@ amended_by:
   date: '2026-10-21'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/08_TICKET-20261021-ACD-2500b-1-ii.md
 change_target:
   - code
 risk_surface: internal

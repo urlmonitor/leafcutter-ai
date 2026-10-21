@@ -365,7 +365,8 @@ amended_by:
   date: '2026-10-21'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/02_TICKET-20261021-ACD-2500a-2-vi.md
 change_target:
   - code
 risk_surface: contract_boundary

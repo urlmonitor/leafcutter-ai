@@ -284,7 +284,8 @@ covered_by:
   - ACD-300c-4-ii
   - ACD-300c-4-iii
   - ACD-300c-4-iv
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/13_TICKET-20261021-ACD-300c-4.md
 change_target:
   - pipeline
   - code

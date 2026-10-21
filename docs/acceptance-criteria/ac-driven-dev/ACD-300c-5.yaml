@@ -146,7 +146,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - ACD-300c-5-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/20_TICKET-20261021-ACD-300c-5.md
 change_target:
   - pipeline
 risk_surface: internal
