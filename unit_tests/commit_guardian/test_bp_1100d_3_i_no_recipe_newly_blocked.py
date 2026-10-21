@@ -99,18 +99,16 @@ def test_census_actually_sees_recipes() -> None:
     # covers: BP-1100d-3-i
     """Guard against a census that silently scans nothing.
 
-    BO-4300a-1-ia: the fast-lane commit step no longer carries a command line (the commit agent is asked for
-    the outcome, and its own protocol sets the exemption), so the sample recipe is taken from the shipped
-    workflows that DO still spell one out -- the census must find at least one exempt commit recipe across
-    them, and the detector must still recognise it as a commit.
+    BO-4300a-1-ia: no shipped workflow spells out a commit command line any more (the commit agent is
+    asked for the outcome, and its own protocol sets the exemption), so the sample recipe is taken from
+    every source the census scans -- markdown fences (the commit agent's own charter still ships one) and
+    workflow prompts. The census must find at least one exempt commit recipe there, and the detector must
+    still recognise it as a commit.
     """
     hook = _load_hook()
-    exempt = [
-        t
-        for path in sorted((_TEMPLATES / "workflows-js").glob("*.js"))
-        for _, t in _js_recipes(path)
-        if "COMMIT_AGENT_MODE=1" in t and "commit" in t
-    ]
-    assert exempt, "census found no exempt shipped commit recipe in any workflow; extraction is broken"
+    sources = [(p, _markdown_recipes) for p in sorted(_TEMPLATES.rglob("*.md"))]
+    sources += [(p, _js_recipes) for p in sorted((_TEMPLATES / "workflows-js").glob("*.js"))]
+    exempt = [t for path, extract in sources for _, t in extract(path) if "COMMIT_AGENT_MODE=1" in t and "commit" in t]
+    assert exempt, "census found no exempt shipped commit recipe in any scanned source; extraction is broken"
     payload = {"tool_input": {"command": exempt[0]}}
     assert hook._is_git_commit_call(payload), "detector no longer recognises the shipped exempt commit recipe"
