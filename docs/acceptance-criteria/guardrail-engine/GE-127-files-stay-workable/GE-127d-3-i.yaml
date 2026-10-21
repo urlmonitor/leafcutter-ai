@@ -128,8 +128,10 @@ it_requirements:
     SHELL `#` AND HERE-DOCUMENTS (IT PO). `#` starts a comment only at the start of a word;
     `$#`, `${#name}`, `${name#pat}`, `a#b`, `16#ff` are code. A here-document body (`<<WORD`,
     `<<-WORD` with leading tabs stripped from the terminator line, quoted or backslashed WORD,
-    several on one line, `<<<` excluded) is a literal: every body line counts, including lines
-    beginning with `#` and blank lines.
+    several on one line, `<<<` excluded) is a literal: every NON-BLANK body line counts,
+    including lines beginning with `#`; a whitespace-only body line does not count
+    (GE-127d-3's line rule, BrainCandy 2026-10-21), and neither does a blank line inside any
+    other used string, template literal or dollar-quoted body.
   - >-
     TEST ORACLES MUST SHARE NO CODE WITH THE MEASURE. For Python the oracle takes EVERY
     standalone string from `ast` (2026-10-20 rule): every ast.Expr statement, at any depth and
@@ -289,6 +291,15 @@ amended_by:
     changed rule. The it_requirement saying every here-document body line counts
     "including ... blank lines" is left for the IT PO. Note: test_native_decision.py's
     measured figure (399 under the 2026-10-20 rule) will change again under this rule.
+- reason: technical-enrichment-blank-lines-never-count
+  by: it-po
+  at: '2026-10-21'
+  note: >-
+    criteria untouched. The here-document it_requirement now counts only non-blank body lines,
+    and states that a blank line inside any used string, template literal or dollar-quoted
+    body does not count. Re-measured 2026-10-21 (IT PO approximation, ge-127d working tree):
+    tests/knowledge/test_native_decision.py measures 352 under this rule (332 under the
+    pre-2026-10-16 rule), still under its 400 limit.
 superseded_by: null
 covered_by: []
 implemented_by: []

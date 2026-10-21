@@ -167,25 +167,30 @@ it_requirements:
     statement made of nothing but non-f string literals, in ANY position: docstrings,
     bare strings mid-module or mid-function, and a trailing DECISION HISTORY block alike
     (bytes and raw literals included). A string that is assigned, passed, returned or part
-    of a larger expression is code, and a standalone f-string is code. Blank lines outside
-    comments and standalone strings stay counted. Decided by BrainCandy 2026-10-16 ("NO
-    comment counts toward a file's length, in any style") and 2026-10-20 (standalone
-    strings uncounted like comments, superseding "docstring position only").
+    of a larger expression is code, and a standalone f-string is code. Whitespace-only lines
+    are never counted, wherever they stand (see THE LINE RULE). Decided by BrainCandy
+    2026-10-16 ("NO comment counts toward a file's length, in any style"), 2026-10-20
+    (standalone strings uncounted like comments, superseding "docstring position only") and
+    2026-10-21 (blank lines never count, anywhere).
   - >-
     The language is chosen from the file's covered extension. A covered extension
     with no tokenizer is a defect in this change, not a raw-count fallback: GE-127d-3-ii
     owns the could-not-measure outcome, and the deployed-copy descriptor below fails
     if any checked extension is unmapped.
   - >-
-    THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16). A physical line
-    counts when it carries at least one token that is neither a comment nor part of a
-    standalone Python string statement, OR when it is whitespace-only and lies outside every
-    comment and standalone string. Every physical line spanned by a USED multi-line string
-    value (a Python string that is assigned, passed, returned or part of a larger expression,
-    a Python f-string, a JS template literal, a quoted shell string, a shell here-document
-    body, a SQL string) counts, blank or not. Every physical line wholly inside a comment or a
-    standalone Python string is uncounted, blank or not; a physical line shared between a
-    standalone string and code (e.g. `"""end"""; x = 1`) counts once. LF and CRLF content measure identically (the 2026-09-23 CRLF
+    THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16; revised 2026-10-21 for
+    BrainCandy's blank-line decision). A physical line counts if and only if it holds a code
+    token: some non-whitespace character that belongs to neither a comment nor a standalone
+    Python string statement. A whitespace-only line (spaces, tabs, form feeds, or nothing)
+    NEVER counts, wherever it stands — outside comments, between comment paragraphs, inside a
+    block comment or standalone string, and also inside a USED multi-line string value (a
+    Python string that is assigned, passed, returned or part of a larger expression, a Python
+    f-string, a JS template literal, a quoted shell string, a shell here-document body, a SQL
+    string, a dollar-quoted body). Every non-blank physical line spanned by such a used value
+    counts. Every physical line wholly inside a comment or a standalone Python string is
+    uncounted; a physical line shared between a standalone string and code (e.g.
+    `"""end"""; x = 1`) counts once. Adding or removing whitespace-only lines anywhere
+    therefore never changes the measured length. LF and CRLF content measure identically (the 2026-09-23 CRLF
     phantom-line defect in this module's own history must not return), as does a file with
     no trailing newline. "Total line count" wherever a sibling record compares against it
     (GE-127d-4) uses the SAME physical-line split as this measure.
@@ -251,11 +256,14 @@ it_requirements:
     (inject_config rewrites it at deploy time); build such a corpus string by concatenation.
   - >-
     THIS CHANGE MUST PASS THE FILE-SIZE GATE UNDER THE RULE IT INTRODUCES. Re-measured by the IT
-    PO on 2026-10-20 at 7897ca013 with an approximate token-stream classifier implementing the
-    2026-10-20 rule (not a gate run): _file_size_ratchet.py 335 -> 302, check_file_size.py
-    312 -> 293, check_file_size_rule_parity.py 239 -> 198, _file_description.py 199 -> 188 —
-    every file this tree of records edits stays under its 400 limit, with roughly 100 lines of
-    headroom on the two largest. The constraint is therefore ordinary: rebuild the deployed
+    PO on 2026-10-21 over the WORKING-TREE versions in the ge-127d implementation worktree (on
+    top of 6891f24d8, implementation uncommitted) with an approximate token-stream classifier
+    implementing the 2026-10-21 rule (not a gate run), shown as pre-2026-10-16 rule -> current
+    rule (raw): _file_size_ratchet.py 295 -> 215 (1087), check_file_size.py 363 -> 274 (1087),
+    check_file_size_rule_parity.py 267 -> 163 (531), _file_description.py 206 -> 145 (498);
+    the new sub-package's largest modules, c_family_lines.py 200, jsx_lines.py 125. Every file
+    this tree of records edits stands well under its 400 limit; check_file_size.py, the
+    largest, has about 125 lines of headroom. The constraint is therefore ordinary: rebuild the deployed
     layout (`python scripts/build.py --target-dir .`) before committing so the hook judges the
     change with the new rule, and keep each edited file at or under 400 measured lines; new
     lexer code goes in the sub-package, not into _file_size_ratchet.py or check_file_size.py.
@@ -263,20 +271,14 @@ it_requirements:
     a string is uncounted only by its syntactic role (a standalone statement).
   - >-
     POPULATION CHANGE, MEASURED — RE-MEASURE BEFORE BUILDING AND RECORD IT IN THE TICKET.
-    IT PO approximation at 7897ca013 over 2853 tracked .py files, all of which tokenize on
-    3.12, applying the 2026-10-20 rule: over 400 under the pre-2026-10-16 rule 193, under the
-    new rule 156. 45 files drop to at-or-under (line comments stop counting); 8 cross from
-    at-or-under to over, every one a test file whose USED multi-line strings (fixtures,
-    expected output) now count and whose old measure discarded them:
-    unit_tests/test_final_gate_and_commit_message.py 399 -> 559,
-    unit_tests/workflows/test_acd_2100a_1.py 326 -> 481, test_acd_2100c_2.py 391 -> 469,
-    test_acd_2100a_3.py 325 -> 413, unit_tests/prompt_assembly/test_test_requirements_guard.py
-    375 -> 438, unit_tests/commit_guardian/test_ge_127f_2_i.py 399 -> 438,
-    test_ge_119_contract_shrinking_rename_aware.py 252 -> 418,
-    test_ge_118c_doc_types_deployed_resolution.py 335 -> 401. No trailing DECISION HISTORY
-    string pushes any file over. tests/knowledge/test_native_decision.py measures 399 (332
-    before), so it does NOT cross 400 as GE-127d-3-i's notes expected. The superseded
-    2026-10-16 figures (164 over, 14 newly over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
+    IT PO approximation on 2026-10-21 over the 2864 .py files in the ge-127d worktree's index
+    (working-tree content; all tokenize on 3.12), applying the 2026-10-21 rule: over 400 under
+    the pre-2026-10-16 rule 194, under the current rule 98. 97 files drop to at-or-under (line
+    comments and blank lines stop counting); exactly 1 crosses from at-or-under to over —
+    unit_tests/test_final_gate_and_commit_message.py 399 -> 485, a test file whose USED
+    multi-line fixture strings now count where the old measure discarded them. The
+    superseded figures (2026-10-16: 164 over, 14 newly over; 2026-10-20: 156 over, 8 newly
+    over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
     were not measured here. GE-127d-3-iii keeps the switch from refusing an unchanged file; record the
     implementer's own before/after figures per extension in the ticket.
   - >-
@@ -597,6 +599,17 @@ amended_by:
     the decision and the statement-joining route as out of scope. Title, depends_on and
     req_status unchanged. it_requirements (the line rule, item 1's "blank lines outside
     comments ... stay counted") left for the IT PO.
+- reason: technical-enrichment-blank-lines-never-count
+  by: it-po
+  at: '2026-10-21'
+  note: >-
+    criteria untouched. it_requirements reconciled with the 2026-10-21 rule: item 1 no longer
+    keeps blank lines counted; THE LINE RULE now counts a line iff it holds a code token, and
+    a whitespace-only line never counts anywhere, including inside used multi-line strings,
+    here-document bodies and dollar-quoted bodies. Re-measured over the ge-127d working tree:
+    .py over 400 194 (pre-2026-10-16 rule) -> 98 (current rule), 97 drop under, 1 crosses
+    over (test_final_gate_and_commit_message.py 399 -> 485); self-measure _file_size_ratchet.py
+    215, check_file_size.py 274, check_file_size_rule_parity.py 163, _file_description.py 145.
 superseded_by: null
 covered_by:
   - GE-127d-3-i

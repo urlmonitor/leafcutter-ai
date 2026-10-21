@@ -87,7 +87,10 @@ it_requirements:
     trailing whitespace stripped; that list's length equals the measured length by
     construction. Keying by the whole physical line would charge 1 added line for restyling a
     trailing `// note` to `/* note */` on a code line, which is a comment rewrite with the code
-    unchanged. A blank line outside comments is a counted line keyed as empty.
+    unchanged. Whitespace-only lines are not counted lines (GE-127d-3, 2026-10-21), so they
+    are neither keyed nor diffed anywhere — not outside comments, not inside used strings —
+    and a change that only adds or removes blank lines yields 0 added by construction, not by
+    a special case.
   - >-
     GROSS, NEVER NET, AND THE MERGE AND DELETION RULES ARE UNCHANGED. Still the sum of
     inserted/replacing lines from a SequenceMatcher with autojunk off, never current minus
@@ -229,6 +232,13 @@ amended_by:
     the new arms are unproven. Title, depends_on and req_status unchanged. The it_requirement
     "A blank line outside comments is a counted line keyed as empty" now contradicts the
     criteria and is left for the IT PO.
+- reason: technical-enrichment-blank-lines-never-count
+  by: it-po
+  at: '2026-10-21'
+  note: >-
+    criteria untouched. The added-lines it_requirement no longer keys blank lines as empty
+    counted lines: whitespace-only lines are not counted lines, so they are never keyed or
+    diffed, and blank-line-only changes add 0 by construction.
 superseded_by: null
 covered_by: []
 implemented_by: []

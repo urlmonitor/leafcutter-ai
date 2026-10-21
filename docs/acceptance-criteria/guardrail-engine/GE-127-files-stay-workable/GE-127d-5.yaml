@@ -138,7 +138,8 @@ it_requirements:
   - >-
     The advice may keep telling authors that formatting-only reductions are not the
     remedy and may point at restructuring (GE-127e / GE-127f). It must not recommend
-    deleting blank lines, even though blank lines count.
+    deleting blank lines; it states that blank lines do not count, so deleting them is not a
+    remedy (BrainCandy 2026-10-21).
   - >-
     THE GENERATED STATEMENT IS PROBED PER LANGUAGE (IT PO). The probe set GE-127d-2 built
     (triple-quoted, block comment, hash comment — language-blind) is replaced by probes run
@@ -146,9 +147,12 @@ it_requirements:
     and block comment form the language's lexer declares, and for Python (2026-10-20 rule) a
     docstring, a BARE standalone string statement away from docstring position (mid-module,
     and a trailing module-level block), a string ASSIGNED to a name, a string passed as an
-    argument, and a standalone f-string — plus a blank line outside comments. The generated
-    statement must say standalone strings are uncounted and used strings (and f-strings) are
-    counted only because those probes measured that way. The statement is
+    argument, and a standalone f-string — plus blank-line probes for every extension (a
+    whitespace-only line between code lines, and one inside a used multi-line string or
+    template literal), each of which must measure as UNCOUNTED. The generated statement must
+    say standalone strings are uncounted, used strings (and f-strings) are counted, and blank
+    lines are not counted anywhere, only because those probes measured that way; a measure
+    that counted a blank line again would change the statement. The statement is
     built from what the measure actually did with each probe, never from a table of what it
     is supposed to do, so a change that made any one style counted again changes the
     statement in the same call (GE-127d-2's seam). The per-file Measures line may use the
@@ -333,6 +337,15 @@ amended_by:
     it_requirements left for the IT PO: "It must not recommend deleting blank lines, even
     though blank lines count" and the probe list's "plus a blank line outside comments"
     assume the superseded rule.
+- reason: technical-enrichment-blank-lines-never-count
+  by: it-po
+  at: '2026-10-21'
+  note: >-
+    criteria untouched. Dropped "even though blank lines count" from the advice
+    it_requirement (blank lines do not count, so deleting them is not a remedy). The probe
+    list's blank-line probes, now per extension and including a blank line inside a used
+    multi-line string, must measure as uncounted, and the generated statement says blank lines
+    are not counted anywhere only because they did.
 superseded_by: null
 covered_by: []
 implemented_by: []
