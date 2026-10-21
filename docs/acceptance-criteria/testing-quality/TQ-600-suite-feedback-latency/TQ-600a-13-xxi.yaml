@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -306,6 +306,157 @@ test_intent:
   - clause: 'each of these outcomes is demonstrated by executing the lane''s selection, retry and verdict behaviour against a synthetic population of live-database tests made to pass, fail, or fail-then-pass against a real disposable database, with the first execution and the retry run as two separate jobs that share only the handed-over list, never by reading the workflow definition for a service, a trigger or a selection'
     needs_test: false
     reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+test_spec:
+  - name: test_tq_600a_13_xxi_the_live_lane_executes_the_whole_folder_including_deselected_tests
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the live lane's first-execution subcommand of scripts/ci/post_merge_suite.py run as a child process over a synthetic live folder (passing tests, a manual-marked test, a timing_ratio-marked test, a nested subfolder) under a pytest.ini whose addopts carries the default `-m \"not manual and not timing_ratio\"`; no database is needed because the synthetic tests do not connect"
+    description: The live lane's report lists every test of the synthetic folder, the default-deselected manual and timing_ratio ones included, and none from outside the folder.
+    proves_clause: 'the same post-merge run, under the same triggers and the same coalescing as TQ-600a-13-ii, also executes a live-database lane: it starts the same disposable graph-database instances, of the same database version and on the same addresses, that the Proof-of-done check starts, and executes every test in the live-database test folder against them — the whole folder, not only the tests of recently changed criteria, including any test in that folder the default run would otherwise deselect'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the lane keeps pytest.ini's default deselection and silently drops the manual and timing_ratio tests of the folder"
+      - "the lane narrows its selection to the tests of recently changed criteria"
+      - "the lane executes a hard-coded list of modules instead of the folder"
+  - name: test_tq_600a_13_xxi_the_live_lane_runs_against_the_same_real_databases_as_proof_of_done_MANUAL
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    requires_db: true
+    surface_invoked: "a test of the live-database folder itself, so the live lane's own first execution runs it against the three real disposable instances: it connects to 17687, 18087 and 18088 with the done-proof credentials, asserts each reports a 5.26 community server, then runs the lane's run and retry subcommands over a tiny synthetic live population (pass, fail, fail-then-pass) against that real database"
+    description: Against the real disposable databases the lane's three instances answer on the Proof-of-done addresses and version, and the synthetic population ends as pass, fail and passed-on-retry; an unreachable database fails the test and never skips it.
+    proves_clause: 'the same post-merge run, under the same triggers and the same coalescing as TQ-600a-13-ii, also executes a live-database lane: it starts the same disposable graph-database instances, of the same database version and on the same addresses, that the Proof-of-done check starts, and executes every test in the live-database test folder against them — the whole folder, not only the tests of recently changed criteria, including any test in that folder the default run would otherwise deselect'
+    code_file: scripts/ci/post_merge_suite.py
+    convention_test_file: tests/knowledge_live/test_km_400f_1.py
+    to_be_created: false
+    must_catch:
+      - "an instance on a drifted port or image tag from the Proof-of-done check's"
+  - name: test_tq_600a_13_xxi_the_live_retry_reexecutes_exactly_the_failures_under_the_same_marker_override
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the live lane's run job then retry job of .github/workflows/post-merge-suite.yml executed verbatim by the shared workflow-step executor over real child pytest sessions on a synthetic live folder, the retry receiving only the failure list artifact"
+    description: Only the first-run failures are executed again, once, including a default-deselected one, no passing test re-runs, and the retry job sees nothing but the handed-over list.
+    proves_clause: 'when some live-database tests fail on the first execution, exactly those tests are executed again — each once, and no test that passed — on a fresh machine that starts its own fresh disposable database instances and receives nothing from the first execution except the list of tests to re-execute'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the retry drops the marker override, so a deselected failing test reports deselected and executes nothing"
+      - "the retry re-executes the whole folder instead of only the failures"
+      - "the retry reads the first execution's report or workspace instead of only the list"
+  - name: test_tq_600a_13_xxi_a_live_test_failing_twice_is_red_and_named_as_live_lane
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the verdict builder of scripts/ci/post_merge_suite.py fed recorded live-lane first-run and retry reports in which one test fails on both executions, beside a green correctness lane"
+    description: The run is red, the live_database object names the test by full node id in failing, and the correctness-lane failing list does not contain it.
+    proves_clause: 'a live-database test that fails on both executions makes the post-merge run red, and the run''s result names that test by its full node id and as belonging to the live-database lane'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the live lane's failures are ignored and the run reads green"
+      - "the live failure is merged into the top-level failing list with no lane attribution"
+      - "the failing id is shortened and no longer a full node id"
+  - name: test_tq_600a_13_xxi_a_live_test_that_fails_then_passes_is_passed_on_retry_not_red
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the verdict builder of scripts/ci/post_merge_suite.py fed recorded live-lane reports with one fail-then-pass test, and the same node id also passing-on-retry in the correctness lane"
+    description: The run stays green on that account, the id is listed as passed-on-retry in the live_database object, and an id common to both lanes is counted once per lane in the pass-on-retry window.
+    proves_clause: 'a live-database test that fails and then passes does not by itself make the run red, and is named as passed-on-retry exactly as a correctness-lane test is, for TQ-600a-13-xiii to track'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a fail-then-pass live test turns the run red"
+      - "the live passed-on-retry id is dropped from the pass-on-retry window"
+      - "an id present in both lanes is double-counted in one window"
+  - name: test_tq_600a_13_xxi_the_run_is_green_only_when_both_lanes_are_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the verdict job of .github/workflows/post-merge-suite.yml executed by the shared workflow-step executor with seeded correctness and live reports for every green/red combination, then its `Verdict: red` step"
+    description: "Green only for green plus green, red when either lane is red, and a red live lane with a green correctness lane fails the job at the step named `Verdict: red` so the same `Post-merge suite status` verdict carries it."
+    proves_clause: 'the post-merge run is green only when both the correctness lane and the live-database lane are green, so a red live-database lane holds pull requests through the same `Post-merge suite status` verdict the correctness lane feeds, with no second hold check'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the combination ignores the live lane so a red live lane reads green"
+      - "the live lane is read as red but the named Verdict step is skipped and the run concludes success"
+  - name: test_tq_600a_13_xxi_the_live_population_is_collected_afresh_from_the_folder
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "two executions of the live lane's first-execution subcommand as child processes over one synthetic folder, a new test module added between them with no other edit"
+    description: The second execution reports the added test and no list of node ids was stored or read between the two.
+    proves_clause: 'the live-database lane''s population is collected afresh on every run from the folder itself, never from a stored list, so a live-database test added to the folder after this change is executed by the next post-merge run with no other edit'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a population list cached from the first execution hides the added test"
+  - name: test_tq_600a_13_xxi_the_correctness_and_timing_selections_and_the_partition_are_untouched
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the correctness lane's run job executed verbatim by the shared workflow-step executor over a synthetic project that also holds a live folder, compared with a recorded pre-change baseline of collected ids, plus the TQ-600a-13-xii partition check executed over default, correctness and timing sets with the live lane's re-executed ids present"
+    description: The correctness lane collects the same ids as the recorded baseline, the timing lane's selection is unchanged, and the partition check stays green with the live lane not a fourth member.
+    proves_clause: 'adding this lane changes neither the correctness lane''s own selection nor the timing lane''s, and the partition of TQ-600a-13-xii — every test collected by exactly one of the default run, the correctness lane and the timing lane — still holds with the live-database lane not counted as a fourth member of it, because the live-database lane re-executes default-run tests with a database present rather than taking them out of the default run'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the correctness lane's selection shifts a test between lanes"
+      - "the partition check enumerates the live lane as a fourth member and goes red on the overlap"
+  - name: test_tq_600a_13_xxi_the_workflow_runs_the_live_lane_and_writes_the_combined_verdict_artifact
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "post-merge-suite.yml's live run job and verdict job executed verbatim by the shared workflow-step executor, which invokes `python scripts/ci/post_merge_suite.py` exactly as the workflow does"
+    description: Running the workflow's live jobs executes the lane through the real entry point and uploads a post-merge-verdict artifact whose top-level verdict is the combined one and whose schema_version is above 2.
+    proves_clause: 'the post-merge run is green only when both the correctness lane and the live-database lane are green, so a red live-database lane holds pull requests through the same `Post-merge suite status` verdict the correctness lane feeds, with no second hold check'
+    code_file: scripts/ci/post_merge_suite.py
+  - name: test_tq_600a_13_xxi_the_verdict_file_read_back_carries_the_live_database_object
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the `verdict` subcommand of scripts/ci/post_merge_suite.py run as a child process, writing post-merge-verdict.json to a real temp path that the test then reads back and parses"
+    description: The written file has schema_version above 2, unchanged correctness-lane fields, and a live_database object with verdict, stage, collected, collected_ids, first_run_failures, failing, passed_on_retry, skipped, unreachable_skips, run_runner and retry_runner.
+    proves_clause: 'a live-database test that fails on both executions makes the post-merge run red, and the run''s result names that test by its full node id and as belonging to the live-database lane'
+    code_file: scripts/ci/post_merge_suite.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvi.yaml
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/_post_merge_stages.py
+  - scripts/ci/_lane_report_plugin.py
+  - .github/workflows/post-merge-suite.yml
+  - .github/workflows/ci.yml
+  - tests/knowledge_live/test_km_400f_1.py
+  - unit_tests/suite_performance/test_tq_600a_13_v.py
+  - unit_tests/suite_performance/_ending_harness.py
+  - config/ac_store_schema.json
+  - scripts/ac_store/_ac_schema_test_spec_validators.py
+file_findings:
+  - file: .github/workflows/post-merge-suite.yml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the post-merge workflow whose run, retry and verdict jobs gain the live lane, and it carries no database service today.
+    decision: null
+  - file: scripts/ci/post_merge_suite.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It owns classify, build_verdict_file (SCHEMA_VERSION 2, lane-only fields) and the run, retry and verdict subcommands where the live lane's selection, retry hand-over and combined verdict belong.
+    decision: null
+file_findings_opened_files:
+  - .github/workflows/post-merge-suite.yml
+  - scripts/ci/post_merge_suite.py
 origin_agent: BrainCandy
 created: 2026-10-21
 amended_by: []

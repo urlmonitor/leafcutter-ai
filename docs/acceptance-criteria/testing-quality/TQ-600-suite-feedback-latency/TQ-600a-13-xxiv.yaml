@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -31,8 +31,8 @@ criteria: |
     post-merge live-database lane cannot stand in for a criterion's own proof, and a red one
     does not change the Proof-of-done outcome of an unrelated pull request (that is the
     hold's job, through `Post-merge suite status`),
-  And a pull request that changes no live-database criterion starts no database in its
-    Proof-of-done check, as before,
+  And a pull request that changes no live-database criterion starts the same databases in
+    its Proof-of-done check as before (today: on every pull request),
   And this is demonstrated by executing the Proof-of-done selection on two recorded pull
     requests — one changing a live-database criterion to done, one changing none — and
     comparing the tests selected and the outcome with the same pull requests judged before
@@ -98,14 +98,10 @@ it_requirements:
     `post-merge-verdict` artifact, the post-merge run history or the `Post-merge suite
     status` check; any such read added by the lane work is a defect.
   - >-
-    OPEN POINT — "STARTS NO DATABASE ... AS BEFORE" DOES NOT MATCH TODAY'S JOB. The
-    `done-proof` job declares its three database services at job level with no condition,
-    so today they start for EVERY pull request, including one that changes no live-database
-    criterion. Read literally, the clause would require changing the job, which the rest of
-    this record forbids. Until the owner settles it (see caveat raised at enrichment), the
-    implementer keeps today's behaviour — the databases start for every pull request — and
-    treats "as before" as the governing word; no change to service start-up is made under
-    this record.
+    DATABASE START-UP IS UNCHANGED. The `done-proof` job declares its three database
+    services at job level with no condition, so they start for every pull request,
+    including one that changes no live-database criterion. The owner settled on 2026-10-21
+    that this stays as it is: no change to service start-up is made under this record.
   - >-
     TEST COST: the selection and judgement run in-process against two recorded pull-request
     diffs; under 0.5 s in the default run, no build, no GitHub. The live-database test that
@@ -127,15 +123,87 @@ test_intent:
   - clause: 'the Proof-of-done check never reads the post-merge lane''s verdict, so a green post-merge live-database lane cannot stand in for a criterion''s own proof, and a red one does not change the Proof-of-done outcome of an unrelated pull request (that is the hold''s job, through `Post-merge suite status`)'
     needs_test: true
     reason: A selector that consults the post-merge verdict would change outcomes with no change to the pull request, which only varying that verdict reveals.
-  - clause: 'a pull request that changes no live-database criterion starts no database in its Proof-of-done check, as before'
+  - clause: 'a pull request that changes no live-database criterion starts the same databases in its Proof-of-done check as before (today: on every pull request)'
     needs_test: true
-    reason: Whether databases start for a pull request with no live criterion is observable job behaviour, though today they start unconditionally, so the clause awaits the owner's reading of as before.
+    reason: Making database start-up conditional while adding the lane would change Proof-of-done for every pull request, and only comparing the job with today's unconditional start-up shows it.
   - clause: 'this is demonstrated by executing the Proof-of-done selection on two recorded pull requests — one changing a live-database criterion to done, one changing none — and comparing the tests selected and the outcome with the same pull requests judged before the change, never by reading the workflow file for a service definition'
     needs_test: false
     reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+test_spec:
+  - name: test_tq_600a_13_xxiv_proof_of_done_selects_the_same_tests_as_the_recorded_baseline
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "check_changed_done_acs of scripts/commit_guardian/check_done_proof.py run in-process over two recorded pull-request diffs (one changing a live-database criterion to done with a covers-tagged live test, one changing none) in a synthetic AC store and test root, the result compared with a baseline captured once from the selector before TQ-600a-13-xxi lands and kept as a fixture"
+    description: For both recorded pull requests the criteria evaluated, the covering tests selected and the violations returned equal the recorded baseline, and the live criterion's covering test is among the selected and no unrelated test is.
+    proves_clause: 'the Proof-of-done check starts the same disposable database instances and executes the same live-database tests — those covering the changed criteria, and no others — as it did before the lane was added'
+    code_file: scripts/commit_guardian/check_done_proof.py
+    must_catch:
+      - "the selection is widened to the whole live-database folder"
+      - "the selection is lifted into shared code that drops the covers-tag scoping"
+      - "the test compares the post-change selector with itself instead of the recorded baseline"
+  - name: test_tq_600a_13_xxiv_a_failing_live_proof_still_blocks_the_pull_request
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "check_done_proof.py --mode ci-changed run as a child process in a scratch git repository holding a pull request that marks a criterion done whose covers-tagged test fails, compared with the recorded baseline exit status and message"
+    description: The check exits non-zero naming the criterion, exactly as the baseline recorded, and exits zero for the pull request whose covering test passes.
+    proves_clause: 'its pass or fail outcome for that pull request is the same as before the lane was added: a criterion whose live-database test fails still blocks the pull request'
+    code_file: scripts/commit_guardian/check_done_proof.py
+    must_catch:
+      - "a refactor turns a failing live proof into a skip so the criterion merges as done unproven"
+      - "a refactor turns a failing live proof into a pass"
+  - name: test_tq_600a_13_xxiv_proof_of_done_never_reads_the_post_merge_verdict
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "check_done_proof.py --mode ci-changed run as a child process over the same recorded pull request four times, with a post-merge-verdict artifact present and green, present and red with a live-database failure, present and did_not_complete, and absent"
+    description: Exit status and output are identical across all four, so neither a green live lane stands in for the criterion's own proof nor a red one changes an unrelated pull request's outcome.
+    proves_clause: 'the Proof-of-done check never reads the post-merge lane''s verdict, so a green post-merge live-database lane cannot stand in for a criterion''s own proof, and a red one does not change the Proof-of-done outcome of an unrelated pull request (that is the hold''s job, through `Post-merge suite status`)'
+    code_file: scripts/commit_guardian/check_done_proof.py
+    must_catch:
+      - "the selector consults the post-merge verdict and waives a live criterion's proof when the lane is green"
+      - "the selector fails an unrelated pull request when the live lane is red"
+  - name: test_tq_600a_13_xxiv_the_done_proof_job_still_declares_its_three_databases_unconditionally
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the `done-proof` job of .github/workflows/ci.yml loaded as parsed data through the shared workflow loader and compared with its definition recorded at the commit before TQ-600a-13-xxi, together with executing its `run:` step's check_done_proof.py invocation on a pull request that changes no live-database criterion"
+    description: The job's services, ports, credentials, memory settings, health checks and absence of any job-level condition equal the recorded baseline, so the databases start on every pull request, and the pull request that changes no live criterion is judged as before. Structural by necessity, because starting service containers is an event of the hosting service the unit layer cannot produce; the judgement half is executed.
+    proves_clause: 'a pull request that changes no live-database criterion starts the same databases in its Proof-of-done check as before (today: on every pull request)'
+    code_file: .github/workflows/ci.yml
+    must_catch:
+      - "the database start-up is made conditional on a live-database criterion being changed"
+      - "a shared definition changes a port, image tag, credential or heap setting of one of the three instances"
+  - name: test_tq_600a_13_xxiv_the_ci_changed_command_runs_end_to_end_on_the_two_recorded_pull_requests
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "`python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base <ref> --test-root .` run as a subprocess exactly as the done-proof job runs it, in a scratch git repository holding the two recorded pull requests"
+    description: The real entry point exits non-zero for the pull request whose done criterion has no passing covering test and zero for the one that changes no criterion, matching the recorded baseline.
+    proves_clause: 'its pass or fail outcome for that pull request is the same as before the lane was added: a criterion whose live-database test fails still blocks the pull request'
+    code_file: scripts/commit_guardian/check_done_proof.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/commit_guardian/check_done_proof.py
+  - .github/workflows/ci.yml
+  - tests/knowledge_live/test_km_400f_1.py
+  - unit_tests/suite_performance/test_tq_600a_13_xvi_baseline.py
+  - unit_tests/suite_performance/test_tq_600a_13_xvi_units.py
 origin_agent: BrainCandy
 created: 2026-10-21
-amended_by: []
+amended_by:
+  - "2026-10-21 BrainCandy (final gate): the clause about a pull request that changes no
+    live-database criterion said it starts no database, as before, which does not match
+    today's job (its databases start for every pull request). Reworded to starts the same
+    databases as before (today: on every pull request); service start-up stays unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

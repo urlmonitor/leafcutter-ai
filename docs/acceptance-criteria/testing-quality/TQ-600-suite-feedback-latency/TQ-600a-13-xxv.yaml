@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -42,6 +42,7 @@ depends_on:
   - TQ-600a-13
   - TQ-600a-13-xvi
   - TQ-600a-13-xxi
+  - TQ-600a-13-xxii
   - TQ-600a-13-xxiii
 doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvi.yaml
@@ -169,6 +170,104 @@ test_intent:
   - clause: 'each of these is demonstrated by executing the proof''s selection and judgement against a synthetic project in which a failing live-database test is made to pass, to fail and to skip at the head, and one in which the database is not started, never by reading the proof workflow for a service definition'
     needs_test: false
     reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+test_spec:
+  - name: test_tq_600a_13_xxv_the_proof_executes_the_red_runs_live_failures_with_the_live_marker_override
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the `Prepare fix proof` and `Post-merge fix proof` jobs of post-merge-fix-proof.yml executed verbatim by the shared workflow-step executor over real child pytest sessions, with a served red-run artifact whose live_database.failing names a default-deselected live test, a synthetic head in which it passes, and the database address reachable through a local stand-in listener"
+    description: The ids come from the artifact's live_database object, the live test executes under the whole-folder marker expression and passes, and the proof records the red run id.
+    proves_clause: 'the proof run starts the same disposable database instances as the live-database lane and executes those failing live-database tests against the pull request''s head, with the same selection, build and strictness as the post-merge run'
+    code_file: scripts/ci/post_merge_fix_proof.py
+    must_catch:
+      - "the proof reads live ids from the top-level failing list so none are found"
+      - "the proof keeps the correctness selection `manual and not timing_ratio` so the live test is deselected, executes nothing and the run is reported passed"
+      - "the ids are taken from the notice body or the pull request instead of the artifact"
+  - name: test_tq_600a_13_xxv_a_did_not_complete_live_lane_is_proved_by_the_whole_folder
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same two jobs executed against a served red artifact whose live_database verdict is did_not_complete and whose failing list is empty, with heads where the whole synthetic live folder is green and where one test fails"
+    description: The whole folder executes against the head and the proof passes only for the green head and fails for the head with a failing, skipped or missing test.
+    proves_clause: 'for a run whose live-database lane did not complete, the proof run executes the whole live-database lane against the head and passes only if that lane is green by TQ-600a-13-xxi''s, -xxii''s and -xxiii''s rules'
+    code_file: scripts/ci/post_merge_fix_proof.py
+    must_catch:
+      - "a did-not-complete run has no failing ids so the proof selects nothing and passes"
+      - "the whole-lane proof judges only failures and ignores the lane's empty or all-skipped endings"
+  - name: test_tq_600a_13_xxv_a_live_test_that_skips_in_the_proof_is_not_a_pass
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the proof's judge in scripts/ci/post_merge_fix_proof.py (and the imported live-lane classification) fed recorded head reports in which a wanted live test passes, fails, skips with the no-database reason and skips with another reason"
+    description: Only the passing report is a pass; every skipped wanted live test, whatever its reason, yields a problem line and fails the proof.
+    proves_clause: 'a live-database test that skips in the proof run, for any reason, is not a pass, and the proof does not pass while any such test skipped'
+    code_file: scripts/ci/post_merge_fix_proof.py
+    must_catch:
+      - "a skip-blind judgement passes every live test run without a database"
+      - "the proof re-implements the classification and treats an other-reason skip as passed"
+  - name: test_tq_600a_13_xxv_a_proof_whose_database_never_became_healthy_is_not_proven_and_the_hold_stays
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "the proof jobs of post-merge-fix-proof.yml executed by the shared workflow-step executor with the live database address set to a port nothing listens on, then the conclusion of the job named exactly `Post-merge fix proof` read as the hold reads it"
+    description: The proof is reported as not proven, the named job's conclusion is not success, and a live part that is skipped, not run or failed never leaves that conclusion reading success.
+    proves_clause: 'a proof run whose database never became healthy is reported as not proven, never as passed, and the hold stays'
+    code_file: scripts/ci/post_merge_fix_proof.py
+    must_catch:
+      - "the live part never ran yet the job named `Post-merge fix proof` still concludes success and releases the hold"
+      - "an unreachable database is read as a skip and a skip as a pass"
+  - name: test_tq_600a_13_xxv_a_correctness_only_red_run_starts_no_database
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "the two proof jobs executed by the shared workflow-step executor with a served red artifact whose failing ids are all correctness-lane tests and whose live_database object is green, recording whether any database probe or live job step ran"
+    description: The proof runs exactly the correctness ids as before, no live job step or database probe executes, and the existing TQ-600a-13-xvi outcomes are unchanged.
+    proves_clause: 'a declared fix for a run whose failing tests are all correctness-lane tests starts no database, as before this change'
+    code_file: scripts/ci/post_merge_fix_proof.py
+    must_catch:
+      - "the live part starts unconditionally so every correctness-only proof pays the database start-up"
+      - "the correctness-only proof now also runs the live folder"
+  - name: test_tq_600a_13_xxv_the_proof_workflow_is_reachable_and_reports_the_named_job_conclusion
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "post-merge-fix-proof.yml run through its real entry point, `python scripts/ci/post_merge_fix_proof.py prepare`, `verify` and `prove`, by the shared workflow-step executor on a served red run with a declared fix"
+    description: A declared fix of a live-database red run reaches the prove step and the job named `Post-merge fix proof` concludes success only when the live proof passed.
+    proves_clause: 'the proof run starts the same disposable database instances as the live-database lane and executes those failing live-database tests against the pull request''s head, with the same selection, build and strictness as the post-merge run'
+    code_file: scripts/ci/post_merge_fix_proof.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/ci/post_merge_fix_proof.py
+  - .github/workflows/post-merge-fix-proof.yml
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/_post_merge_stages.py
+  - unit_tests/suite_performance/_proof_harness.py
+  - unit_tests/suite_performance/test_tq_600a_13_xvi_units.py
+  - unit_tests/suite_performance/test_tq_600a_13_xvi_baseline.py
+file_findings:
+  - file: scripts/ci/post_merge_fix_proof.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the proof's selection and judge, but LANE_SELECTION is the fixed correctness expression and verify reads only the top-level failing list, which are the behaviours the live proof changes.
+    decision: null
+  - file: .github/workflows/post-merge-fix-proof.yml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its single prove job declares no services, so starting databases only for live proofs means a separate job or start step while the job named `Post-merge fix proof` stays the hold's one reading.
+    decision: null
+file_findings_opened_files:
+  - scripts/ci/post_merge_fix_proof.py
+  - .github/workflows/post-merge-fix-proof.yml
 origin_agent: BrainCandy
 created: 2026-10-21
 amended_by: []

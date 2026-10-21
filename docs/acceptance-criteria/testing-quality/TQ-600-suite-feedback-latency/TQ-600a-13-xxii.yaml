@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -87,6 +87,10 @@ declared_files:
   - path: scripts/ci/post_merge_suite.py
     state: existing
   - path: .github/workflows/post-merge-suite.yml
+    state: existing
+  - path: scripts/ci/_post_merge_stages.py
+    state: existing
+  - path: scripts/ci/_notice_render.py
     state: existing
 assigned_agent: python-coder
 estimated_complexity: S
@@ -168,6 +172,116 @@ test_intent:
   - clause: 'each of these is demonstrated by producing the ending — a database instance that is started and never answers, and one that answers its health probe and then refuses the first connection — and observing the verdict, its stage and the notice write, never by reading the workflow''s health-check settings'
     needs_test: false
     reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+test_spec:
+  - name: test_tq_600a_13_xxii_a_database_that_never_answers_ends_the_run_as_live_database_startup
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the live lane's first-execution subcommand of scripts/ci/post_merge_suite.py run as a child process with the lane's database address set to a local port nothing listens on and a short start-up limit, then the verdict builder fed the report it wrote and a green correctness lane"
+    description: The lane's reachability check fails, no live test is executed, and the verdict is did_not_complete with the live-database start-up stage, a stage that is none of setup, collection, retry_failed or the other correctness stages.
+    proves_clause: 'the post-merge run is not green, and its verdict is did-not-complete with the stage named as the live-database start-up, worded differently from both a test failure and the correctness lane''s own did-not-complete stages'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "an instance that never answers reads as nothing failed and the run is green"
+      - "the start-up ending reuses the setup stage so its wording matches a correctness-lane ending"
+      - "the lane executes its tests anyway and reports connection errors"
+  - name: test_tq_600a_13_xxii_a_database_that_answers_its_probe_then_refuses_the_first_connection_is_startup
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "a local listener that accepts the health probe's connection and then refuses or resets every later one, put at the lane's database address, with the live lane's first-execution subcommand run as a child process"
+    description: The lane's pre-test connection check records a failed reachability result and the verdict is live-database start-up, not a list of connection-error test failures.
+    proves_clause: 'the post-merge run is not green, and its verdict is did-not-complete with the stage named as the live-database start-up, worded differently from both a test failure and the correctness lane''s own did-not-complete stages'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a passed health probe is trusted and the first test's connection errors are read as genuine regressions"
+  - name: test_tq_600a_13_xxii_no_node_ids_and_no_failing_tests_heading_for_a_startup_ending
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the notice renderer (scripts/ci/_notice_render.py) and the verdict builder fed a live-lane report full of connection-error failures together with the failed reachability result"
+    description: The verdict's live failing list is empty and the rendered notice says the live-database tests never ran with no failing-tests heading.
+    proves_clause: 'no live-database test is reported as failing by node id for that run, so the notice, the held pull request''s comment and the hold''s output say "the live-database tests never ran" and never show a "failing tests" heading over connection errors'
+    code_file: scripts/ci/_notice_render.py
+    must_catch:
+      - "the connection-error tests stay in the failing list and the notice shows a failing-tests heading over them"
+      - "the new stage has no plain-words cause so the notice only shows the bare stage code"
+  - name: test_tq_600a_13_xxii_a_retry_machine_whose_database_never_became_healthy_is_not_passed_on_retry
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the verdict job of .github/workflows/post-merge-suite.yml executed by the shared workflow-step executor with a live first-run report holding failures, a failed live retry job result and no live retry report (the runner's answer supplied, stated as a substitution for the hosting service's failed service health check)"
+    description: "The run is did_not_complete with the live-database start-up stage, the failures are not passed_on_retry, and the job fails at the step named `Verdict: did not complete`."
+    proves_clause: 'a database that fails to become healthy only on the retry''s fresh machine makes the run did-not-complete, never green and never "passed on retry"'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a retry that executed nothing is read as zero remaining failures and so as passed on retry"
+      - "the run is green because the first execution's failures are discarded"
+  - name: test_tq_600a_13_xxii_the_startup_ending_raises_or_updates_the_notice_and_closes_nothing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "the produced verdict file applied through scripts/ci/post_merge_notice.py's planner against the recording fake issue service, once with no open notice and once with one open"
+    description: With none open one notice is created, with one open it is commented and edited, no close is issued, and the state block carries did_not_complete with the live-database start-up stage.
+    proves_clause: 'the notice lifecycle treats this ending as TQ-600a-13-v treats every did-not-complete ending: it raises the notice when none is open, updates the open one otherwise, closes no notice and lifts no hold'
+    code_file: scripts/ci/post_merge_notice.py
+    must_catch:
+      - "the unrecognised stage falls into the close branch and an open notice is closed"
+      - "the unrecognised stage falls into a no-op branch and no notice is raised"
+  - name: test_tq_600a_13_xxii_a_green_correctness_lane_does_not_turn_a_startup_ending_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the combined verdict of scripts/ci/post_merge_suite.py built from a green correctness report and a live lane whose start-up did not complete"
+    description: The combined verdict is did_not_complete with the live-database start-up stage, never green, and outranks a red correctness lane too.
+    proves_clause: 'a correctness lane that was green in the same run does not turn the run green while the live-database lane did not complete'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the green lane wins the combination and the run is green"
+      - "a did-not-complete live lane is ranked below a red correctness lane and the stage is lost"
+  - name: test_tq_600a_13_xxii_the_workflow_verdict_job_fails_at_the_did_not_complete_step_for_startup
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "post-merge-suite.yml's verdict job executed verbatim by the shared workflow-step executor, which invokes `python scripts/ci/post_merge_suite.py verdict` and `exit-status` as the workflow does, given the live run job's failed result and no live report"
+    description: "The live start-up ending reaches the real entry point and the run concludes failure at `Verdict: did not complete` with the stage in the uploaded artifact."
+    proves_clause: 'the post-merge run is not green, and its verdict is did-not-complete with the stage named as the live-database start-up, worded differently from both a test failure and the correctness lane''s own did-not-complete stages'
+    code_file: scripts/ci/post_merge_suite.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/_post_merge_stages.py
+  - scripts/ci/_notice_render.py
+  - scripts/ci/post_merge_notice.py
+  - .github/workflows/post-merge-suite.yml
+  - .github/workflows/ci.yml
+  - unit_tests/suite_performance/test_tq_600a_13_v.py
+  - unit_tests/suite_performance/_ending_harness.py
+file_findings:
+  - file: scripts/ci/post_merge_suite.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It builds the verdict file and calls lane_stage from _post_merge_stages, so the combined verdict and the new live-database start-up stage are decided through it.
+    decision: null
+  - file: .github/workflows/post-merge-suite.yml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its run, retry and verdict jobs are where a live job's failure before any step runs reaches the verdict job as a dependency result and where the `Verdict:` steps carry the conclusion.
+    decision: null
+file_findings_opened_files:
+  - scripts/ci/post_merge_suite.py
+  - .github/workflows/post-merge-suite.yml
 origin_agent: BrainCandy
 created: 2026-10-21
 amended_by: []
