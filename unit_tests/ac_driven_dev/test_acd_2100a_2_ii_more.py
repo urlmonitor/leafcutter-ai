@@ -45,6 +45,7 @@ from unit_tests.ac_driven_dev.test_acd_2100a_2_ii import (
     _copy_script_outside,
     _init_repo_with_origin,
     _parse_json_payload,
+    _run_git,
     _worktree_registered,
 )
 
@@ -280,6 +281,43 @@ class TestExplicitRepositoryLocationStillBypassesSearchInBothSubcommands(unittes
             _worktree_registered(self._repo_dir, Path(payload_fl["worktree_path"])),
             f"create-fastlane-worktree's worktree was not registered under {self._repo_dir}",
         )
+
+
+class TestLoneCopyWithNoOccupancySiblingRefusesToOpenAFastLaneWorkspace(unittest.TestCase):
+    """A lone copy that can find no _setup_ticket_fastlane_occupancy.py must fail, not skip the check."""
+
+    def test_lone_copy_without_the_occupancy_sibling_creates_nothing_and_exits_nonzero(self):
+        # covers: BO-2400f-13
+        # angle: failure
+        """The script copy sits in the repository (so the anchor resolves) but neither its own directory
+        nor <repo>/scripts/build_orchestration holds the occupancy sibling. create-fastlane-worktree exits non-zero naming
+        the missing module and creates no worktree and no fast-lane branch. CONTROL: with the sibling in
+        <repo>/scripts/build_orchestration (a real consumer install) the same invocation succeeds, so the refusal is caused
+        by the missing sibling alone. WRONG VERSION: the missing sibling skips the occupancy check and
+        opens the workspace anyway."""
+        tmp_root = Path(tempfile.mkdtemp(prefix="acd2100a2ii-nosibling-"))
+        self.addCleanup(shutil.rmtree, tmp_root, ignore_errors=True)
+        repos = {}
+        for name, with_sibling in (("control", True), ("lone", False)):
+            repo = tmp_root / f"repo-{name}"
+            _init_repo_with_origin(repo, tmp_root, with_occupancy=with_sibling)
+            repos[name] = (repo, _copy_script_inside(repo))
+
+        def run(name: str, slug: str) -> subprocess.CompletedProcess:
+            repo, script = repos[name]
+            return subprocess.run([sys.executable, str(script), "create-fastlane-worktree", slug],
+                                  cwd=str(repo), capture_output=True, text=True,
+                                  timeout=_SUBPROCESS_TIMEOUT_SECONDS, check=False)
+
+        control = run("control", "nosibling-control")
+        self.assertEqual(control.returncode, 0, f"control: stdout={control.stdout!r} stderr={control.stderr!r}")
+        result = run("lone", "nosibling-lone")
+        self.assertNotEqual(result.returncode, 0, f"stdout={result.stdout!r} stderr={result.stderr!r}")
+        self.assertIn("_setup_ticket_fastlane_occupancy", result.stdout + result.stderr)
+        lone_repo = repos["lone"][0]
+        listed = _run_git(["worktree", "list", "--porcelain"], lone_repo).stdout
+        self.assertEqual(listed.count("worktree "), 1, listed)
+        self.assertEqual(_run_git(["branch", "--list", "fast-lane/*"], lone_repo).stdout.strip(), "")
 
 
 if __name__ == "__main__":

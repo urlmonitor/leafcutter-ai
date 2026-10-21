@@ -49,6 +49,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
 
 _FAST_LANE_SHIP_JS = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _QUICK_FIX_JS = _REPO_ROOT / "templates" / "workflows-js" / "quick-fix.js"
@@ -111,6 +112,7 @@ def _fast_lane_ship_full_success(ac_id: str) -> tuple[Path, dict[str, Any], dict
             "message": "PR opened",
         },
     }
+    label_responses.update(wrong_version_passing())
     return _FAST_LANE_SHIP_JS, label_responses, {"ac": ac_id}
 
 

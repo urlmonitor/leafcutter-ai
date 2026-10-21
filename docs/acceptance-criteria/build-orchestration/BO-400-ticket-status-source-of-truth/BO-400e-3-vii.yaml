@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -136,8 +136,10 @@ origin_agent: BrainCandy
 created: 2026-10-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo_400e_3_vii_gate.py
+implemented_by:
+  - templates/workflows-js/finalize-feature.js
 notes: |
   Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
 
