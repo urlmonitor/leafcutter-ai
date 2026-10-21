@@ -5,8 +5,8 @@ components: [knowledge_management]
 level: L3
 status: active
 req_status: active
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 parent: KM-400b-5
 criteria: |
@@ -125,6 +125,200 @@ test_intent:
   - clause: "the result reports 2 retried batches, naming each, and the publication succeeds"
     needs_test: true
     reason: A retry record held in a single slot would report only the last retried batch.
+test_spec:
+  - name: test_retry_repeats_only_the_failed_batch_and_continues_with_the_next
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Use a FailureDouble subclass that raises a time-limit BackendUnavailable on the first attempt of the 34th node batch, and assert the batch log shows batches 1 to 33 written once, batch 34 twice, then batch 35.
+    proves_clause: "the publication continues with batch 35 and does not rewrite batches 1 to 33"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a retry wrapped around the whole build, rewriting batches 1 to 33"
+      - "a retry that restarts the label loop from its first batch"
+  - name: test_retried_batch_rows_exist_exactly_once_after_the_retry
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Make the double store the rows of the failed first attempt before raising, then assert after the retry that each of the 250 keys of batch 34 appears exactly once in the store for the generation.
+    proves_clause: "each of the 250 rows of batch 34 exists exactly once in G33 after the retry"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a retry that uses CREATE and duplicates rows stored by the abandoned attempt"
+      - "a retry that sends only the rows missing from a guessed partial write"
+  - name: test_count_check_figures_are_unchanged_by_a_retry
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish once with a retried batch and once without, and assert publication_counts is identical, expecting and keeping the same node and relationship figures.
+    proves_clause: "the generation's count check expects and keeps 11,307 nodes, the same figures as a publication with no retry"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "an expected count taken from the number of rows sent, which double-counts the retried batch"
+      - "a kept count read from a tally of successful writes instead of the store"
+  - name: test_publication_succeeds_when_the_second_attempt_succeeds
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Fail the first attempt of batch 34 with a time limit and assert neo4j_projection.publish returns True, the pointer switches, and no failure removal runs.
+    proves_clause: "the publication succeeds"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a retry that re-raises the first error after logging it"
+      - "a retry that succeeds but marks the generation failed"
+  - name: test_result_reports_the_retried_batch_with_rows_and_bytes
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the result carries one retried_batches record naming label AcceptanceCriterion, batch 34, 250 rows, its payload bytes, attempts 2 and the max_attempts of 3.
+    proves_clause: "the publication result states that batch 34 of label AcceptanceCriterion was retried once, with its rows and payload bytes"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "attempts reported as 1 for a batch that needed two attempts"
+      - "a record without the payload bytes of the batch"
+  - name: test_no_fourth_attempt_is_made
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: Make every attempt of batch 34 time out and assert the double saw exactly 3 attempts of that batch.
+    proves_clause: "no fourth attempt is made"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "an attempt loop written as range(max_attempts + 1)"
+      - "an unbounded while loop that retries until success"
+  - name: test_exhausted_retries_fail_the_publication_and_remove_the_generation
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Time out all 3 attempts and assert BackendUnavailable propagates, the generation's nodes are removed, publication_removal is outcome removed, and the active pointer is unchanged.
+    proves_clause: "the publication fails, and the removal of G33 required for a failure after storing takes place"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "exhaustion raising a type that publish does not catch, so _record_failed_generation never runs"
+      - "removal skipped because the failing batch is still marked in flight"
+  - name: test_exhausted_result_states_time_limit_cause_after_three_attempts
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the failure states a time-limit cause and 3 attempts, with attempt_causes holding three time-limit entries, and an ERROR log was written without payload content.
+    proves_clause: "the result states that the cause is the writer's time limit, after 3 attempts"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a final cause overwritten by the generic backend unavailable text"
+      - "an attempts figure of 2 from an off-by-one in the counter"
+  - name: test_read_only_refusal_is_not_retried_and_fails_at_once
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Use the ReadOnlyDouble refusal on the first attempt of batch 34 and assert the batch was sent exactly once and no wait occurred.
+    proves_clause: "the batch is not retried"
+    code_file: knowledge/adapters/neo4j_backend.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a retry condition that catches every BackendUnavailable"
+      - "eligibility decided by matching the word timeout in the message text"
+  - name: test_uniqueness_violation_is_not_retried
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Raise a constraint-violation error classified as a rule violation on batch 34 and assert exactly one attempt and an immediate failure.
+    proves_clause: "the batch is not retried"
+    code_file: knowledge/adapters/neo4j_backend.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a retry condition that catches every Neo4jError"
+      - "a retry of a rule violation that fails identically three times"
+  - name: test_read_only_refusal_is_the_reported_cause
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the propagated failure message carries the read-only refusal text as its cause and not a time-limit or generic cause.
+    proves_clause: "the publication fails at once with the read-only refusal as its cause"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a generic retries-exhausted error that replaces the refusal"
+      - "a wrapper that drops __cause__"
+  - name: test_uniqueness_violation_is_the_reported_cause
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the propagated failure carries the violation text as its cause, with the original exception kept as __cause__.
+    proves_clause: "the publication fails at once with the violation as its cause"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a violation wrapped in a message that omits the original text"
+      - "a violation reported as a time-limit cause"
+  - name: test_two_retried_batches_are_both_reported
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Time out batches 12 and 34 once each and assert publication succeeds and retried_batches holds two records naming batch 12 and batch 34.
+    proves_clause: "the result reports 2 retried batches, naming each, and the publication succeeds"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+    must_catch:
+      - "a single-slot retry record holding only the last retried batch"
+      - "the retried list reset at the start of each label"
+  - name: test_km_400b_5_v_reachable_from_sync_entry_point
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Run `python -m knowledge sync --root <repo>` in a fresh subprocess with only the Neo4j driver replaced by a StoreDouble that times out one batch once, and assert exit 0 and a retried batch in the printed result.
+    proves_clause: "the publication succeeds"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-v]
+    requires_db: false
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - knowledge/adapters/neo4j_domain_build.py
+  - knowledge/adapters/native_verification.py
+  - knowledge/adapters/neo4j_projection.py
+  - knowledge/adapters/neo4j_backend.py
+  - tests/knowledge/_km_400f_2_support.py
+  - tests/knowledge/test_km_400b_2_ii.py
+  - tests/knowledge/test_km_400b_5_i.py
+  - tests/knowledge/test_km_400b_5_ii.py
+  - tests/knowledge/test_km_400f_3.py
+  - config/ac_store_schema.json
 notes: |
   Authored 2026-10-21. Records are written by key, so repeating a batch whose transaction
   was abandoned at the time limit cannot duplicate anything; the user asked for a bounded

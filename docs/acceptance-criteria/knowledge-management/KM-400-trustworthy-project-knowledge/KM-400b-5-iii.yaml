@@ -5,8 +5,8 @@ components: [knowledge_management]
 level: L3
 status: active
 req_status: active
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 parent: KM-400b-5
 criteria: |
@@ -114,6 +114,187 @@ test_intent:
   - clause: "the batches are the same as with a row cap alone: full batches of 250 rows and one final partial batch"
     needs_test: true
     reason: This guards against the byte bound changing behaviour for the common small-record case.
+test_spec:
+  - name: test_no_node_batch_exceeds_the_row_cap
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish the 11,307-node snapshot through neo4j_projection.publish against a recording StoreDouble subclass and assert every UNWIND node batch holds at most 250 rows.
+    proves_clause: "no write batch holds more than 250 rows"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a closing check that tests rows > 250 after appending, so a batch closes at 251 rows"
+      - "a byte-only closing rule that lets 1,000-byte rows grow past 250 rows"
+  - name: test_no_batch_exceeds_the_payload_budget_unless_it_holds_one_record
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Measure the serialized payload bytes of every recorded node batch and assert none exceeds 2,000,000 bytes unless it holds exactly one row.
+    proves_clause: "no write batch holds more than 2,000,000 bytes of payload, except a batch holding exactly one record"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a closing check that uses bytes >= budget before adding the next row, so a batch overruns by one record"
+      - "bytes estimated from the in-memory object instead of the serialized payload actually sent"
+      - "the old fixed 250-row slicing kept unchanged"
+  - name: test_large_record_batches_hold_at_most_ten_rows
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the 300 nodes of one label carrying about 200,000 bytes each are written in batches of at most 10 rows.
+    proves_clause: "the 300 nodes of about 200,000 bytes are written in batches of at most 10 rows each"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "payload size measured as the row's key count, so large rows batch at 250"
+      - "a budget compared against characters of one field rather than the whole serialized row"
+  - name: test_small_record_batches_are_not_split_below_the_row_cap
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the batches of the 11,000 nodes of about 1,000 bytes each are full 250-row batches followed by one partial batch per label.
+    proves_clause: "batches of the 11,000 small nodes still hold up to 250 rows each, so they are not split further than the row cap requires"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a payload budget applied per label total so small batches fragment into a few dozen rows"
+      - "a constant minimum batch of 50 rows for every label"
+  - name: test_oversized_node_is_written_alone_and_not_dropped
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert each of the 7 nodes of 2,500,000 bytes appears in a batch of exactly one row, that the store double received all 7, and that the partitioner terminates.
+    proves_clause: "each of the 7 nodes larger than the budget is written alone in a batch of one row, and is neither dropped nor rejected"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a partitioner that skips a record larger than the budget"
+      - "a partitioner that raises ValueError for a record larger than the budget"
+      - "a partitioner that loops forever emitting an empty batch when the first record exceeds the budget"
+  - name: test_publication_result_names_each_oversized_node
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: After publish, read the publication result and assert it lists exactly the 7 oversized nodes, each with canonical id, label and payload bytes, and logs a WARNING without payload content.
+    proves_clause: "the publication result names each of those 7 nodes as larger than the payload budget, with its identity, label and size in bytes"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "an oversized list that holds only the first record"
+      - "an oversized entry that carries the label but not the size in bytes"
+      - "a WARNING log line that includes the payload text"
+  - name: test_every_node_is_written_exactly_once_across_batches
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Sum the rows and collect the keys over all recorded node batches and assert the total is 11,307 with no key repeated.
+    proves_clause: "every one of the 11,307 nodes is written exactly once, so the sum of rows across all node batches is 11,307"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a closing step that re-emits the last row at each batch boundary"
+      - "a final flush that is skipped, losing the trailing partial batch"
+  - name: test_publication_result_states_row_cap_and_payload_budget_in_force
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish once with the defaults and once with a configured row cap and budget, and assert the result states the configured values each time.
+    proves_clause: "the publication result states the row cap and the payload budget that were in force"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a result that reports the literal 250 and 2000000 regardless of configuration"
+      - "a result that omits the payload budget"
+  - name: test_no_relationship_batch_exceeds_the_row_cap_or_payload_budget
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish a snapshot with 28,814 relationships of which 40 carry about 150,000 bytes and assert every relationship MERGE batch holds at most 250 rows and at most 2,000,000 bytes unless it holds one row.
+    proves_clause: "no relationship batch holds more than 250 rows or more than 2,000,000 bytes of payload, except a batch holding exactly one record"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "relationship batching left on the fixed 250-row slice while only node batching is bounded"
+      - "a byte bound applied to nodes only"
+  - name: test_every_relationship_is_written_exactly_once_across_batches
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Sum rows and collect keys over all recorded relationship batches and assert 28,814 distinct keys with no repeat, and that the double's kept count equals 28,814.
+    proves_clause: "every one of the 28,814 relationships is written exactly once"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a boundary bug that duplicates the first row of every following batch"
+      - "a relationship kind whose last partial batch is dropped"
+  - name: test_small_payload_snapshot_batches_match_a_row_cap_alone
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish a snapshot whose nodes are all about 1,000 bytes and assert the batch sizes equal the sequence of full 250-row batches plus one final partial batch that a row cap alone yields.
+    proves_clause: "the batches are the same as with a row cap alone: full batches of 250 rows and one final partial batch"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+    must_catch:
+      - "a payload budget that triggers on label overhead and splits small batches early"
+      - "batches that are non-deterministic in order between two runs of the same snapshot"
+  - name: test_km_400b_5_iii_reachable_from_sync_entry_point
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Run `python -m knowledge sync --root <repo>` in a fresh subprocess with only the Neo4j driver replaced by a recording StoreDouble, as test_km_400b_5_i does, and assert exit 0 and that every recorded node batch obeys the row cap and payload budget.
+    proves_clause: "no write batch holds more than 250 rows"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iii]
+    requires_db: false
+  - name: test_km_400b_5_iii_live_oversized_snapshot_publishes_into_empty_store
+    target_dir: tests/knowledge_live/publication/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Publish a snapshot containing 7 nodes larger than the budget into an empty real Neo4j database, then read back counts and assert 7 oversized nodes are stored and the generation count check passes.
+    proves_clause: "each of the 7 nodes larger than the budget is written alone in a batch of one row, and is neither dropped nor rejected"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iii]
+    requires_db: true
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - knowledge/adapters/neo4j_domain_build.py
+  - knowledge/adapters/native_verification.py
+  - knowledge/adapters/neo4j_projection.py
+  - knowledge/adapters/neo4j_backend.py
+  - tests/knowledge/_km_400f_2_support.py
+  - tests/knowledge/test_km_400b_2_ii.py
+  - tests/knowledge/test_km_400b_5_i.py
+  - tests/knowledge/test_km_400b_5_ii.py
+  - tests/knowledge/test_km_400f_3.py
+  - config/ac_store_schema.json
 notes: |
   Authored 2026-10-21 from an observed failure. On a fresh hosted (Aura Free) instance the
   first knowledge sync aborted with a client-configured transaction timeout after writing

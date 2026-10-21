@@ -5,8 +5,8 @@ components: [knowledge_management]
 level: L3
 status: active
 req_status: active
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 parent: KM-400b-5
 criteria: |
@@ -108,6 +108,162 @@ test_intent:
   - clause: "the same rules apply: identity and fingerprint are compared, payload bodies are not returned, and a changed or missing relationship fails naming it"
     needs_test: true
     reason: Relationship verification is a separate path that could keep the old full read-back.
+test_spec:
+  - name: test_verification_readback_returns_only_identity_and_fingerprint_per_node
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Record the statement and rows a recording StoreDouble returns for a 250-node batch and assert each returned row has only the key and the fingerprint fields, and the statement no longer returns properties(n).
+    proves_clause: "the data the store returns for verification holds, per node, only its identity and the fingerprint of the stored payload"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "the node statement still ends RETURN n.key AS key, properties(n) AS props"
+      - "a row that carries the identity, the fingerprint and the payload"
+  - name: test_no_stored_payload_body_is_returned_for_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Use a payload with a unique marker string and assert the marker appears in no value the double returned to verification, for node and relationship batches.
+    proves_clause: "no stored payload body is returned for verification"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a read-back that returns the full property map and ignores the unused fields"
+      - "a read-back that returns a truncated payload prefix"
+  - name: test_readback_size_is_constant_whatever_the_payload_total
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Verify one 250-node batch totalling 1,800,000 bytes and one totalling 250,000 bytes and assert the serialized size of the data returned for verification is identical.
+    proves_clause: "the amount of data returned for verification is the same whether the batch's payloads total 1,800,000 bytes or 250,000 bytes"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a fingerprint field whose length grows with the payload"
+      - "a read-back that returns payload length alongside the fingerprint and pads the row to it"
+  - name: test_matching_fingerprints_pass_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Call verify_rows with 250 expected rows and 250 stored fingerprints computed from the one shared canonical serialization, including a payload whose JSON key order differs, and assert no error.
+    proves_clause: "the verification passes when all 250 stored fingerprints equal the snapshot fingerprints"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "snapshot-side and store-side fingerprints computed from different serializations, failing every correct publication"
+      - "a fingerprint that depends on JSON key order or whitespace"
+  - name: test_single_character_change_fails_verification
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Store node KM-400b-5 with a payload differing by one character and assert verify_rows raises ValueError for a changed payload.
+    proves_clause: "the verification fails"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a check that compares identities only and passes an altered payload"
+      - "a fingerprint computed over only the first 1,024 bytes of the payload"
+      - "a weak checksum such as the payload length"
+  - name: test_failure_names_node_label_and_both_fingerprints
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Assert the raised message names KM-400b-5, label AcceptanceCriterion, the expected fingerprint and the stored fingerprint, contains no payload content, and an ERROR record carries the same four values.
+    proves_clause: "the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a message that names the first node of the batch instead of the changed node"
+      - "a message that gives the expected fingerprint twice"
+      - "an ERROR log that prints the payload"
+  - name: test_verification_failure_removes_the_generation_with_the_original_cause
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Publish through neo4j_projection.publish against a FailureDouble subclass that stores one altered payload and assert ValueError propagates, the failed generation is removed, and publication_removal is outcome removed.
+    proves_clause: "the failure is reported with the original cause through the failed-publication result, so the generation is removed as for any other failure after storing"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "verification run outside the try block so _record_failed_generation never runs"
+      - "an error type that publish does not catch, stranding the generation"
+      - "removal outcome replacing the fingerprint cause in the message"
+  - name: test_missing_node_is_named_missing_not_mismatched
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Omit one stored node from the read-back and assert the failure names that node as missing and does not use the fingerprint mismatch wording.
+    proves_clause: "the verification fails and names that node as missing, not as a fingerprint mismatch"
+    code_file: knowledge/adapters/native_verification.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "a missing node reported through the count-only message without naming the node"
+      - "a missing node compared against an empty fingerprint and reported as a mismatch"
+  - name: test_relationship_batches_verify_by_fingerprint_and_name_the_failing_relationship
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Publish with relationship payloads, assert the relationship statement returns only key and fingerprint, then change one and drop one stored relationship and assert each fails naming it as changed or missing.
+    proves_clause: "the same rules apply: identity and fingerprint are compared, payload bodies are not returned, and a changed or missing relationship fails naming it"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+    must_catch:
+      - "relationship batches left unverified while node batches use fingerprints"
+      - "relationship read-back that still returns r.payload"
+      - "a changed relationship that passes because only keys are compared"
+  - name: test_km_400b_5_iv_reachable_from_sync_entry_point
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Run `python -m knowledge sync --root <repo>` in a fresh subprocess with only the Neo4j driver replaced by a StoreDouble that stores one altered payload, and assert exit 2 and a failure message naming the changed node and both fingerprints.
+    proves_clause: "the failure names node KM-400b-5, its label, the expected fingerprint and the stored fingerprint"
+    code_file: knowledge/adapters/neo4j_projection.py
+    covers: [KM-400b-5-iv]
+    requires_db: false
+  - name: test_km_400b_5_iv_live_fingerprint_verification_against_real_store
+    target_dir: tests/knowledge_live/publication/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Publish into a real Neo4j database, then read the stored fingerprints back with the verification statement and assert they equal the snapshot fingerprints and the statement returns no payload property.
+    proves_clause: "the verification passes when all 250 stored fingerprints equal the snapshot fingerprints"
+    code_file: knowledge/adapters/neo4j_domain_build.py
+    covers: [KM-400b-5-iv]
+    requires_db: true
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - knowledge/adapters/neo4j_domain_build.py
+  - knowledge/adapters/native_verification.py
+  - knowledge/adapters/neo4j_projection.py
+  - knowledge/adapters/neo4j_backend.py
+  - tests/knowledge/_km_400f_2_support.py
+  - tests/knowledge/test_km_400b_2_ii.py
+  - tests/knowledge/test_km_400b_5_i.py
+  - tests/knowledge/test_km_400b_5_ii.py
+  - tests/knowledge/test_km_400f_3.py
+  - config/ac_store_schema.json
 notes: |
   Authored 2026-10-21. Today each node batch returns every written node's full property
   set for verification, so a batch of large payloads is paid for twice inside the same
