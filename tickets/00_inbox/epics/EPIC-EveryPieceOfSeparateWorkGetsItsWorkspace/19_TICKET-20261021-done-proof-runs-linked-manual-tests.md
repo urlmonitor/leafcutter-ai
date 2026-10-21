@@ -1,6 +1,6 @@
 ---
 title: "The done-proof check runs an AC's linked _MANUAL tests instead of refusing them as not run"
-status: todo
+status: done
 components:
   - ac_store
   - commit_guardian
@@ -23,7 +23,7 @@ agents:
   test-writer: signed_off
   python-coder: signed_off
   pr-reviewer: signed_off
-  commit: needed
+  commit: signed_off
 ---
 
 # 19: The done-proof check runs an AC's linked _MANUAL tests
@@ -73,7 +73,7 @@ tests:
 - [x] test-writer
 - [x] python-coder
 - [x] pr-reviewer — 2026-10-21 15:26
-- [ ] commit
+- [x] commit — 2026-10-21 15:31
 
 ## Comments
 
@@ -118,3 +118,7 @@ feedback-id: fb_2026-10-21_ed09f8af
 
 No high-confidence findings. Selection safe: classification reads only the AC's linked node ids, so extra tests selected by -m/-k can never change a verdict; opt-in is confined to _run_pytest_and_parse called with linked_functions from _run_python_test_phase and only when a linked name ends in _MANUAL; default suite and CI shards untouched. Re-marks: b-4 and b-5 keep four CI-runnable covers tests each matching their test_spec. New tests are real (sentinel proves unlinked sibling stays out; failing-linked case asserts 'linked test failed:'; default-deselect guard).
 [M-1] -k is a substring match: names containing a linked name (incl. timing_ratio or other _MANUAL tests, since the later -m also lifts not timing_ratio) are also run. Cannot alter results; may only lengthen the run toward the timeout (reported as run-did-not-finish). Suppressed: 2 low (removed BP-100n-4-ii comment block, long -k argv on Windows).
+
+### 2026-10-21 15:31 — commit (status: ok)
+feedback-id: fb_2026-10-21_2858a344
+Committed 2a0bb4b844c31868b48f9d0f2d694a198ba862f9 (fix(ac-store): the done-proof check runs an AC's linked _MANUAL tests). All pre-commit hooks passed on the first attempt; no autofix applied.
