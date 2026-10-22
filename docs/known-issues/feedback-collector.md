@@ -56,17 +56,17 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`feedback-collector/resolved/`](feedback-collector/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 2** (0 blocker, 0 high, 2 low) · **Resolved: 1**
+**Open: 1** (0 blocker, 0 high, 1 low) · **Resolved: 2**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
 | `low` | KI-FC-002 — The sidecar id-recovery fallback is keyed on whole seconds and shares one stderr file, so parallel agents can read each other's feedback id | [open-low-ki-fc-002.md](feedback-collector/open-low-ki-fc-002.md) |
-| `low` | KI-FC-003 — `ac-validator` is in no category's `allowed_writers`, so it has never submitted a single feedback record | [open-low-ki-fc-003.md](feedback-collector/open-low-ki-fc-003.md) |
 
 ## Resolved
 
 | Severity | Issue | File |
 |---|---|---|
+| `low` | KI-FC-003 — signing-off agents missing from every category's `allowed_writers` (fixed: the build now fails on any such agent, INF-100c-5) | [resolved-low-ki-fc-003.md](feedback-collector/resolved/resolved-low-ki-fc-003.md) |
 | `low` | KI-FC-001 — The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora (fixed by PR #1169, `818c301c0`) | [resolved-low-ki-fc-001.md](feedback-collector/resolved/resolved-low-ki-fc-001.md) |

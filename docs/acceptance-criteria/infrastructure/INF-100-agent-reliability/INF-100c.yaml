@@ -29,6 +29,7 @@ covered_by:
   - INF-100c-2
   - INF-100c-3
   - INF-100c-4
+  - INF-100c-5
 implemented_by: []
 change_target:
   - code

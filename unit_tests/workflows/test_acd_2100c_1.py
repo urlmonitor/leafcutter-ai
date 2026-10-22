@@ -94,14 +94,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# unit_tests/ must be on sys.path so _workflow_engine_harness is importable
-# from this sub-package (unit_tests/workflows/), mirroring every other file
-# in this directory (test_bo_2300_pause_resume.py, test_acd_2100b_5.py, ...).
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import fill_workspace_answer, run_workflow_under_e2  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -490,7 +487,7 @@ def _assemble_gate_machinery_source() -> str:
     verbatim source of every function resolveGate()/pauseAtGate() transitively
     call, in dependency order.
     """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     head = ("parseAgentJson", "validateAnswerShape", "applyAnswerByType")
     tail = ("isAgentRefusal", "_buildRepoRootResolutionSnippet", "buildPauseStoreCommand",
             "readPauseRecordWithRetry", "pauseAtGate", "resolveGate")

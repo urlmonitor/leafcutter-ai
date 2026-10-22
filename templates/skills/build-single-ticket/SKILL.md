@@ -1,7 +1,7 @@
 ---
 name: build-single-ticket
 internal: true
-description: Drive a single standalone ticket (not part of an epic) through its phase agents. Creates an isolated worktree, dispatches ticket-supervisor, and on success the ticket lifecycle folder is reconciled on main by finalize-feature.js. Invoked by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/` folder.
+description: Drive a single standalone ticket (not part of an epic) through its phase agents. Gets an isolated workspace from the one workspace maker, dispatches ticket-supervisor, and on success the ticket lifecycle folder is reconciled on main by finalize-feature.js. Invoked by /build-feature when its argument resolves to a `.md` file outside an `EPIC-*/` folder.
 ---
 
 # build-single-ticket
@@ -30,19 +30,17 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
 
 ## Step 1 — Validate the ticket file
 
-1. Resolve `$ARGUMENTS` to an absolute path. Call it `TICKET_PATH`.
+1. Resolve `$ARGUMENTS` to an absolute path. Call it `MAIN_TICKET_PATH` (the
+   ticket's main-copy path; no step of this skill reads, edits or moves the
+   ticket at this path).
 2. Confirm the file exists and ends in `.md`.
 3. Confirm its parent directory is exactly `tickets/00_inbox` or
    `tickets/01_todo` (no `EPIC-*` segment between).
 4. If under `tickets/99_done/`, refuse with:
    `"Ticket is already in 99_done/. Move it back to 01_todo/ manually
    to re-drive."` and exit non-zero.
-5. Read the frontmatter. Confirm it has an `agents:` map with at least
-   one entry. If empty, refuse with:
-   `"Ticket has no `agents:` map — re-create it via /create-ticket so
-   business-analyst + refinement populate the map before driving."`
-   Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
-   trap codified in user-memory.)
+5. The `agents:` map check happens in Step 2, on the workspace copy of the
+   ticket, once the maker has answered.
 6. **Delete `.build-feature.lock` (inline-work-guard handoff).** Before
    dispatching `ticket-supervisor`, remove the sentinel lock written by
    `/build-feature` so phase agents are not blocked by `inline_work_guard.py`:
@@ -59,54 +57,42 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
    Phase agents that subsequently call Edit/Write will find no lock and be
    allowed through. If the lock file does not exist, the `rm -f` is a no-op.
 
-## Step 2 — Set up the worktree (mandatory, blocking)
+## Step 2 — Get the workspace (run the maker once, mandatory, blocking)
 
-Per the project convention (`feedback_epic_worktree.md`): standalone tickets
-large enough to invoke `/build-feature` should run in their own worktree,
-NEVER on `main`. The bootstrap recipe is implemented in
-`scripts/setup_ticket_worktree.py` — do not re-implement inline steps here.
-
-Call the script via a Bash tool call:
+Standalone tickets large enough to invoke `/build-feature` run in their own
+workspace, NEVER on `main`. The workspace comes from the one workspace maker;
+this skill has no recipe of its own for it. Derive `<slug>` from the ticket's
+file name (without `.md`), then run the maker as ONE command by the absolute
+path of the deployed `worktree.py` (the install's `scripts/worktree.py`; the
+path `worktree.py where` prints). Never use a cwd-relative path and never chain
+commands:
 
 ```bash
-python scripts/setup_ticket_worktree.py setup-ticket "$TICKET_PATH"
+python <absolute-install-root>/scripts/worktree.py ensure --kind ticket --slug <slug> --ticket <MAIN_TICKET_PATH> --repo-root <absolute-project-root>
 ```
 
-Parse the JSON output (single line on stdout):
+On a non-zero exit, surface the maker's answer verbatim and stop — do NOT fall
+through to running on `main` or in the current checkout. Silent-main-branch
+execution is the exact bug the workspace convention exists to prevent.
 
-- `worktree_path` → `WORKTREE_PATH`
+On exit 0, parse the single JSON object on stdout and map:
+
+- `workspace_path` → `WORKTREE_PATH`
 - `branch` → `BRANCH`
-- `ticket_path_final` → `TICKET_PATH` (the ticket's path inside the worktree)
+- `ticket_path_in_worktree` → `TICKET_PATH` (the ticket's path inside the
+  workspace; the ONLY source of `TICKET_PATH`)
 
-On non-zero exit, surface stderr verbatim and stop — do NOT fall through to
-running on `main`. Silent-main-branch execution is the exact bug the worktree
-convention exists to prevent.
+Keep the whole answer unchanged for the workflow's `args.workspace`. The maker
+does not move the ticket file — folder position is reconciled on main by
+`finalize-feature.js` after merge. From here on every step reads and edits the
+ticket only at `TICKET_PATH`.
 
-The script creates and bootstraps the worktree. It does NOT move the ticket
-file — folder position is reconciled on main by `finalize-feature.js` after
-merge.
-
-**Pre-commit hook bootstrap (AC BO-1500b-1-i):** `setup_ticket_worktree.py`
-guarantees that the fresh worktree has a working pre-commit configuration
-before the first commit.  At the end of `_bootstrap()`, it calls
-`_establish_pre_commit_config(main_repo, worktree_path)` which:
-
-1. Is a no-op if `.leafcutter` or `.pre-commit-config.yaml` already exists
-   (e.g. was materialised by `build.py`).
-2. Creates a symlink `.leafcutter -> <main_repo>/.leafcutter` (preferred on
-   Linux native FS).
-3. Falls back to copying `.pre-commit-config.yaml` from the main repo when
-   the symlink fails (Windows / NTFS `OSError` / `EPERM`).
-4. Warns and continues if neither source exists (project not yet bootstrapped
-   — operator must run `build.py` manually before committing).
-
-This means **all package hooks are active** in the new worktree from the
-moment `setup_ticket_worktree.py` returns.  A stage commit that would
-violate an AC hook (e.g. `check-ac-schema`, `check-parent-link`) is blocked
-rather than landing unchecked.  If you observe hooks being silently skipped,
-confirm that `_establish_pre_commit_config` ran (check stderr output from
-`setup_ticket_worktree.py`) and that `<worktree>/.leafcutter` resolves to a
-non-empty directory.
+Now read the frontmatter of the ticket at `TICKET_PATH`. Confirm it has an
+`agents:` map with at least one entry. If empty, refuse with:
+`"Ticket has no `agents:` map — re-create it via /create-ticket so
+business-analyst + refinement populate the map before driving."`
+Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
+trap codified in user-memory.)
 
 Do NOT dispatch `worktree-agent` as a separate Agent tool call.
 
@@ -236,13 +222,13 @@ BEHIND=$(git rev-list --count HEAD..main 2>/dev/null || echo 0)
 if [ "$BEHIND" -gt 0 ]; then
   TICKET_CREATION_SHA=$(git log --diff-filter=A --format=%H -- "<ticket_path>" | tail -1)
   if [ -n "$TICKET_CREATION_SHA" ] && git merge-base --is-ancestor "$TICKET_CREATION_SHA" HEAD 2>/dev/null; then
-    echo "INFO: worktree contains ticket-creation commit ($TICKET_CREATION_SHA); the $BEHIND commit(s) on main are unrelated activity (likely concurrent merges during the drive)."
+    echo "INFO: checkout contains ticket-creation commit ($TICKET_CREATION_SHA); the $BEHIND commit(s) on main are unrelated activity (likely concurrent merges during the drive)."
   elif [ -n "$TICKET_CREATION_SHA" ]; then
-    echo "WARNING: worktree HEAD does NOT contain the ticket-creation commit at $TICKET_CREATION_SHA. The worktree may have been bootstrapped from a stale base ref. Verify ticket content is current and consider rebasing."
+    echo "WARNING: checkout HEAD does NOT contain the ticket-creation commit at $TICKET_CREATION_SHA. The checkout may have been prepared from a stale base ref. Verify ticket content is current and consider rebasing."
   else
-    echo "WARNING: worktree branch is $BEHIND commit(s) behind local main."
+    echo "WARNING: checkout branch is $BEHIND commit(s) behind local main."
     echo "Could not locate ticket-creation commit in git history — unable to determine reachability."
-    echo "The worktree may have been bootstrapped from origin/main before a local create-ticket commit was made. Verify ticket content is current."
+    echo "The checkout may have been prepared from origin/main before a local create-ticket commit was made. Verify ticket content is current."
   fi
 fi
 ```
@@ -260,7 +246,7 @@ This check distinguishes two cases when `BEHIND > 0`:
   without alarm.
 
 If the ticket-creation commit cannot be located in git history (edge case — e.g.
-the ticket was not committed before the worktree was created), the check degrades
+the ticket was not committed before the checkout was prepared), the check degrades
 to the original generic `WARNING` text.
 
 The check is advisory only and exits 0 in all branches — it never blocks the
@@ -366,7 +352,7 @@ post-completion — share one write path.
 7. Commit and push the new entry so it lands on the PR branch the
    `pull-request` phase already opened. The commit goes through the `commit`
    agent: a raw commit is blocked by the `enforce_commit_delegation` hook,
-   including the `git -C <path> commit` spelling. Dispatch it with the worktree
+   whatever the git spelling. Dispatch it with the worktree
    path, the single changelog file path to stage, and the message
    `chore(changelog): add ticket-completion entry for <ticket basename>`, then
    push:
@@ -444,9 +430,9 @@ command above — it will:
 1. Gate on your confirmation before merging.
 2. Run `gh pr merge` (Step 2).
 3. Sync `main` and run tests (Steps 3–4).
-4. Close the ticket and remove the worktree (Steps 5–6).
+4. Close the ticket and clear the workspace through the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) (Steps 5–6).
 
-Per `feedback_merge_before_worktree_remove.md`: the worktree will not be removed
+Per `feedback_merge_before_worktree_remove.md`: the workspace will not be cleared (by the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`))
 until the merge succeeds — `/finalize-feature` enforces this ordering internally;
 you do not need to merge manually first.
 
@@ -469,24 +455,13 @@ Do not add any other preamble or summary text.
 - **Does not bypass user escalation.** When the supervisor surfaces
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
-- **Does not create AC-authoring worktrees.** The dedicated AC-authoring
-  worktree (branched from `origin/main`) is created by `/plan-feature`
-  via `scripts/setup_ticket_worktree.py create-ac-worktree`
-  (AC BO-1500a-1). This skill creates implementation worktrees (branched
-  from local `main`) for ticket execution — a separate concern from AC
-  authoring.
-  The `create-ac-worktree` subcommand is **idempotent and reuse-safe** (AC
-  BO-1500a-1-i): if a prior authoring run crashed and left behind a worktree
-  or branch, the next invocation detects the pre-existing state and reuses it
-  rather than failing with "worktree already exists" or "branch already exists".
-  Existing AC YAML files committed on the branch are never deleted or overwritten.
+- **Does not create AC-authoring workspaces.** The dedicated AC-authoring
+  workspace is made by `/plan-feature` through the same one workspace maker
+  (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`; kind `ac`); this skill makes the ticket workspace (kind `ticket`) for ticket
+  execution — a separate concern from AC authoring.
   **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
-  the protected `main` branch when they run `/plan-feature`,
-  the AC-authoring workflow still proceeds normally — it creates the authoring
-  worktree from `origin/main` regardless of the user's current checkout.  No
-  branch switch is required.  This skill's implementation worktrees use the same
-  structural isolation principle but branch from local `main` rather than
-  `origin/main` (see `scripts/setup_ticket_worktree.py` for the distinction).
+  the protected `main` branch when they run `/plan-feature`, the AC-authoring
+  workflow still proceeds normally; no branch switch is required.
   See `templates/skills/plan-feature/SKILL.md §MP` for the full specification of
   main-branch invocation behaviour for the AC-authoring workflows.
 - **Does not push the AC-authoring branch or open the AC-authoring PR.** After
@@ -524,8 +499,8 @@ Do not add any other preamble or summary text.
 
 ## Contrast: this skill vs. `/quick-fix`
 
-This skill (`build-single-ticket`) always creates a **new isolated worktree** (Step 2 via
-`setup_ticket_worktree.py`) and drives the ticket on a **new branch**. The ticket persists
+This skill (`build-single-ticket`) always gets a **new isolated workspace** (Step 2 via
+the one workspace maker) and drives the ticket on a **new branch**. The ticket persists
 in the inbox until `finalize-feature.js` reconciles it on `main` after the PR is merged.
 
 The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) is the
@@ -533,15 +508,15 @@ The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) 
 
 | Aspect | `build-single-ticket` (this skill) | `/quick-fix` |
 |--------|-----------------------------------|----|
-| Worktree | New isolated worktree created | **Current worktree — no new directory** |
+| Workspace | New isolated workspace from the workspace maker (`scripts/worktree.py`, `docs/how-to/get-a-workspace.md`) | **Current workspace — no new directory** |
 | Branch | New branch per ticket | **Current branch — no switch** |
 | Entry | Invoked by `/build-feature` for single-ticket paths | Invoked directly by `/quick-fix` |
 | Ticket lifecycle | Full inbox → PR → finalize | Single-shot — ticket created and driven to commit inline |
 
 **When to use this skill vs. `/quick-fix`:** use this skill when the fix requires a clean
 branch and a full PR lifecycle. Use `/quick-fix` when you have already diagnosed a bug,
-want the fix committed on your current branch immediately, and do not want a new worktree
-directory created (AC BP-600a-1).
+want the fix committed on your current branch immediately, and do not want a new workspace
+from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) (AC BP-600a-1).
 
 See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
 
@@ -615,8 +590,8 @@ escalation:
    >   Root cause: <root_cause>
    ```
 
-3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill creates
-   a new isolated worktree, bootstraps the branch, and drives the full phase-agent pipeline
+3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill gets
+   a new isolated workspace from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), and drives the full phase-agent pipeline
    (including `python-coder` for the fix and `pr-reviewer` for review).
 
 **AC ID continuity contract (BP-600e-3):**
@@ -637,8 +612,9 @@ escalation summary output format and artefact preservation rules.
   dispatches this skill for single-ticket arguments.
 - `.claude/agents/ticket-supervisor.md` — the inner driver this
   skill spawns.
-- `scripts/setup_ticket_worktree.py` — canonical worktree + ticket-move
-  script called in Step 2. Edit this script to change the bootstrap steps.
+- `scripts/worktree.py` — the one workspace maker called in Step 2 (deployed
+  under the install root's `scripts/`). Its bootstrap steps are its own; this
+  skill does not restate them.
 - `.claude/skills/building-epics/SKILL.md` — operational runbook
   the supervisor follows.
 - `.claude/skills/signoff/SKILL.md` — ticket-state schema the

@@ -1,0 +1,152 @@
+id: BO-4500a-4-vii
+title: "A supervised commit is stopped only by an overall time limit, never because a check is quiet"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given a call marked supervised whose checks are started with no keyboard input attached,
+    and one check that prints nothing for longer than 60 seconds and then passes,
+  When the step runs that commit,
+  Then the commit is recorded and the answer is committed,
+  And no check is ended because it was quiet.
+
+  Given a call marked supervised during which a check tries to read keyboard input,
+  When the check reads,
+  Then it receives end of input at once instead of waiting,
+  And the step neither waits for a person nor reports that a check awaited input.
+
+  Given a call marked supervised whose commit is still running when the configured overall
+    commit time limit (default 1800 seconds) runs out,
+  When that limit is reached,
+  Then the step ends the commit and every process it started, records no commit,
+  And the answer is refused with a step-family reason code meaning the commit timed out,
+    with a reason in plain words naming the limit,
+  And the answer never carries the reason code check_awaited_input.
+
+  And the bug symptom ("A supervised commit is refused with reason_code check_awaited_input
+    whenever any single pre-commit hook takes longer than input_wait_limit_seconds (60).
+    pre-commit buffers each hook's output until that hook finishes, so a slow hook looks
+    silent. Seen 2026-10-21: quick-fix run wf_2ad50bda-ae8's commit was killed while
+    check-identifier-uniqueness / check-ac-parent-covered-by were running on a loaded host;
+    the commit was otherwise fine and had to be made by hand. On this host whole hook runs
+    routinely take 5-10 minutes.") must not occur
+depends_on: [BO-4500a-4, BO-4500a-4-iv]
+doc_links:
+  - path: config/commit_step.json
+    relationship: describes
+    status: exists
+    relevance: "Holds input_wait_limit_seconds today; the new overall commit time limit key and the new step_ reason code land here, not in code (BO-4500a final-gate decision)."
+  - path: config/commit_step.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Must change in the same commit as config/commit_step.json and the code."
+  - path: templates/scripts/commit_step_base.py
+    relationship: describes
+    status: exists
+    relevance: "run_without_input() is the silence timer this requirement replaces with a wall-clock backstop."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    KEEP stdin=subprocess.DEVNULL for the commit and also close the remaining interactive paths
+    in the commit's environment: GIT_TERMINAL_PROMPT=0 and GIT_EDITOR=':'. A check that reads
+    input gets end of file at once, so silence never means "awaiting input".
+  - >-
+    REPLACE the silence timer in run_without_input() (templates/scripts/commit_step_base.py)
+    with an overall wall-clock backstop for a genuinely hung commit. The limit is read from
+    config/commit_step.json under a new key (commit_time_limit_seconds, default 1800) that
+    replaces input_wait_limit_seconds; it is never hard-coded. On expiry the commit's whole
+    process group is killed and no commit is recorded.
+  - >-
+    REPORT the backstop under its own step-family code (step_timed_out), added to
+    reason_codes.step in config/commit_step.json, so status is refused and a caller may retry
+    per the family rule. Never report it as check_awaited_input.
+  - >-
+    STOP reporting check_awaited_input from silence. Retire it from config/commit_step.json
+    (and from commit_changes.py's answer path) unless a provable case remains; retiring or
+    moving a code is a breaking contract change and needs answer_version to change in the same
+    file (BO-4500a-4 it_requirements).
+  - >-
+    config/commit_step.json, config/commit_step.schema.json, commit_step_config.py and the step
+    code change together in one commit; the vocabulary stays in config, not code. Update the
+    BO-4500a-4-iv tests that assert the silence rule (test_check_waiting_for_input_is_ended_and_reported)
+    so they assert this requirement instead of being left asserting the retired behaviour.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract; reason_code families read from config/commit_step.json."
+test_required: true
+test_spec:
+  - name: test_silent_slow_check_is_not_ended_and_commit_is_recorded
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Against a disposable config with commit_time_limit_seconds set to 30 and no input_wait_limit_seconds key, a supervised real commit through a fixture check that prints nothing for 4 seconds and then passes is committed; the answer has status committed and a sha."
+    must_catch:
+      - "a silence timer still kills a quiet check before the overall limit"
+      - "the step still requires input_wait_limit_seconds and refuses with step_config_unreadable"
+  - name: test_check_reading_stdin_gets_eof_and_does_not_block
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A fixture check that reads stdin to end and then passes completes at once under a supervised call; the commit is recorded and no answer carries check_awaited_input."
+    must_catch:
+      - "inherit the caller's terminal so the check blocks until the backstop"
+  - name: test_commit_env_disables_terminal_prompt_and_editor
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "A fixture check writes its GIT_TERMINAL_PROMPT and GIT_EDITOR environment to a file outside the repo; after a supervised call the file shows GIT_TERMINAL_PROMPT=0 and GIT_EDITOR=':'."
+  - name: test_hung_commit_is_ended_at_wall_clock_limit_with_step_timed_out
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With commit_time_limit_seconds set to 3, a fixture check that keeps printing a line every half second and never exits is ended near 3 seconds; no commit is recorded, no child process survives, and the answer is refused with reason_code step_timed_out from the step family, never check_awaited_input."
+    must_catch:
+      - "a silence timer that never fires because the check keeps printing"
+      - "only the direct child is killed and the hook's process group survives"
+  - name: test_backstop_vocabulary_is_read_from_config
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The shipped config/commit_step.json lists step_timed_out under reason_codes.step, carries commit_time_limit_seconds (1800) and validates against config/commit_step.schema.json; a disposable copy with commit_time_limit_seconds removed or 0 makes a supervised call refuse with step_config_unreadable rather than fall back to a built-in limit."
+test_rationale: >-
+  The defect was a timer that confused 'slow' with 'awaiting input', so every test runs the
+  real step against a real child process: a quiet-but-healthy check must commit, a stdin
+  reader must not block, and only a truly hung check (one that keeps printing, so a silence
+  timer would never catch it) is ended, by the wall clock, under its own step_ code. The
+  config test keeps the limit and the code in config/commit_step.json, per the BO-4500a
+  final-gate decision.
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/scripts/commit_step_base.py
+  - templates/scripts/commit_changes.py
+notes: |
+  Authored by /quick-fix. Root cause: The 'waiting for input' detection is a silence timer: run_without_input() kills the commit's process group after `limit` seconds with no output and reports check_awaited_input. But the commit is already started with stdin=subprocess.DEVNULL, so no hook can block on keyboard input: a read gets end-of-file at once. Silence therefore never means 'awaiting input'; it only means 'slow', and the step kills correct commits. Fix (BrainCandy approved 2026-10-21): (1) keep stdin=DEVNULL and close the remaining interactive paths in the commit's environment: GIT_TERMINAL_PROMPT=0 and GIT_EDITOR=':'; (2) replace the silence timer with an overall wall-clock backstop for a genuinely hung commit, read from config (a new key, e.g. commit_time_limit_seconds, default 1800, replacing input_wait_limit_seconds), reported under its own step_ reason code (e.g. step_timed_out, added to the step family in config/commit_step.json reason_codes) — never check_awaited_input; (3) stop reporting check_awaited_input from silence (retire it, or keep it only for a case that is actually provable). This amends the approved requirement BO-4500a-4-iv, whose criterion defines 'waiting for input' as no output for input_wait_limit_seconds: author the new requirement as a child that amends it (amended_by on BO-4500a-4-iv), and update its tests rather than leaving them asserting the silence rule. config/commit_step.json and its schema must change together with the code; keep the vocabulary in config, not code (BO-4500a final-gate decision).
+
+  Placement: the AC schema stops at L3, so a child of the L3 BO-4500a-4-iv is not
+  representable. This record is an L3 sibling under BO-4500a-4 (the one-answer contract L2;
+  BO-4500a holds its five-L2 cap, L3s are uncapped) and amends BO-4500a-4-iv, which records
+  the amendment in its amended_by. It supersedes -iv's fourth scenario (the 60-second
+  wait for keyboard input) only; -iv's attribution scenarios stay in force.

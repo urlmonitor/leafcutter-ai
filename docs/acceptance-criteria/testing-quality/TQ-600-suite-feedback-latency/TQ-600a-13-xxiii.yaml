@@ -1,0 +1,322 @@
+id: TQ-600a-13-xxiii
+components:
+  - testing_quality
+  - knowledge_management
+title: "In the live-database lane a skipped test is never a passed test, and a skip for an unreachable database means the lane is broken"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the live-database tests skip, rather than fail, when no database is reachable,
+    which is correct in the per-PR shards that start no database,
+  And that the live-database lane of TQ-600a-13-xxi exists precisely to supply a database,
+    so in that lane a skip for an unreachable database does not mean "not applicable here"
+    but "the lane failed to do its one job",
+  And that a lane in which every test skipped executes nothing, which a verdict built only
+    from failures would read as green,
+  When the live-database lane's tests are executed and one or more of them skips,
+  Then no skipped test is counted as passed, in the verdict or in any count the run reports,
+  And a test that skips with a reason stating that no database was reachable makes the run
+    did-not-complete, with the stage named as the live-database lane having had no
+    reachable database, and the result names each such test by its full node id,
+  And a test that skips for any other reason is named in the run's result with that reason,
+    as skipped, separately from both the passed and the failing tests, so a skip is visible
+    rather than absorbed,
+  And a live-database lane in which no test executed to a pass or a failure — every test
+    skipped, or the folder collected nothing — is never green, whatever the reasons,
+  And a test that skips for an unreachable database on the retry's fresh machine, after
+    failing on the first execution, is not passed-on-retry and makes the run did-not-complete,
+  And this rule applies only to the live-database lane: the same tests skipping in the
+    per-PR shards, which start no database, change nothing there,
+  And each of these is demonstrated by executing the lane against a synthetic population in
+    which tests pass, fail, skip for an unreachable database and skip for another stated
+    reason, observing the verdict and the named lists, never by searching the test files for
+    a skip call.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-v
+  - TQ-600a-13-xxi
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The lane whose skips this record refuses to read as passes.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-v.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      "An empty population is never green" — this record carries the same rule one step
+      further, to a population that was collected but executed nothing.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "A check that examined nothing must not look like a check that found nothing." An
+      all-skipped live-database lane reporting green would be a fifth instance.
+  - path: scripts/ci/post_merge_suite.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The verdict classifier that reads the live lane's per-test report and must count a
+      skip as neither passed nor failed.
+  - path: tests/knowledge_live/
+    relationship: describes
+    status: exists
+    relevance: >-
+      The tests whose skip-when-no-database behaviour this record interprets inside the
+      live lane only.
+declared_files:
+  - path: scripts/ci/post_merge_suite.py
+    state: existing
+  - path: scripts/ci/_lane_report_plugin.py
+    state: existing
+  - path: scripts/ci/_post_merge_stages.py
+    state: existing
+  - path: scripts/ci/_notice_render.py
+    state: existing
+  - path: tests/knowledge_live/_live_skip.py
+    state: to_be_created
+  - path: tests/knowledge_live/test_km_400f_1.py
+    state: existing
+  - path: tests/knowledge_live/test_km_400f_1_i.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400f_1_iii.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400f_1_v.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400f_2.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400f_3.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400f_4.py
+    state: existing
+  - path: tests/knowledge_live/publication/test_km_400b_5_i.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    AGENT CONFIRMED: python-coder (verdict logic in scripts/ci/, as TQ-600a-13-v).
+  - >-
+    SKIPS ARE READ FROM THE PER-TEST REPORT, NEVER FROM TEST SOURCE. Each live-lane test's
+    outcome and skip reason come from the machine-readable per-test report the lane already
+    produces (TQ-600a-13-ii: verdicts come from per-test results, not exit statuses). The
+    report must therefore carry, for every skipped test, its node id and its skip reason
+    text; if the current report shape drops the reason, extending it is in scope.
+  - >-
+    "NO DATABASE WAS REACHABLE" IS ONE RECOGNISABLE REASON, OWNED IN ONE PLACE. The lane
+    recognises an unreachable-database skip by one shared, stable reason (or marker) that
+    every live-database test uses when it skips for want of a database, defined once and
+    imported by the classifier and the tests alike — never by a substring guess and never
+    by a per-test list. Whether the folder's tests already share one reason must be
+    confirmed against source by the implementer; if they do not, making them share it is in
+    scope (python-coder, tests/knowledge_live/ helpers) and the changed files are added to
+    declared_files. A skip whose reason is not the recognised one is an other-reason skip.
+  - >-
+    NEW STAGE, DISTINCT FROM -xxii's. An unreachable-database skip makes the live lane
+    did_not_complete with its own stage (indicative `live_database_unreachable`), separate
+    from the start-up stage of TQ-600a-13-xxii, added to the same single stage vocabulary
+    and rendered by every reader. Its node ids go in `live_database.unreachable_skips`, and
+    other-reason skips in `live_database.skipped` with their reasons (verdict artifact shape
+    in TQ-600a-13-xxi's delivers_to).
+  - >-
+    NO COUNT TREATS A SKIP AS A PASS. Every count or list the verdict job emits for the live
+    lane — passed, failing, collected-and-executed — excludes skips; a live lane with zero
+    tests executed to a pass or a failure is never green, regardless of how many were
+    collected or why they skipped.
+  - >-
+    A RETRY SKIP IS NOT A RETRY PASS. A first-run failure that skips on the live retry is
+    neither passed-on-retry nor failed-twice: an unreachable skip there makes the run
+    did_not_complete; an other-reason skip there is reported as skipped and the test is not
+    passed-on-retry.
+  - >-
+    LIVE LANE ONLY. The classification applies to the live lane's report alone; the per-PR
+    shards' behaviour and the correctness lane's verdict, where the same tests skip with no
+    database, are unchanged.
+  - >-
+    OWNER DECISION RECORDED, NOT TAKEN HERE. An other-reason skip is visible but does not
+    make the run red or did-not-complete (BA notes); if the owner later decides otherwise,
+    that is a criteria change, not an implementation choice.
+  - >-
+    TEST COST: under 0.5 s of the family's 15 s default-run budget; a synthetic population
+    whose tests pass, fail, skip with the recognised reason and skip with another reason
+    needs no real graph database.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-xxv
+    contract: >-
+      The live-lane skip classification as an importable function in scripts/ci/ (name
+      indicative `classify_live_results(report) -> {passed: [id], failed: [id],
+      unreachable_skips: [id], skipped: [{id, reason}]}`), with the rule that any skip is
+      never a pass and an unreachable skip is did_not_complete, so the fix proof judges a
+      live-database test by the same rule instead of re-implementing it.
+expects_from:
+  - ac_id: TQ-600a-13-xxi
+    contract: >-
+      The live-database lane's per-test results, including each skip and its reason.
+test_intent:
+  - clause: 'no skipped test is counted as passed, in the verdict or in any count the run reports'
+    needs_test: true
+    reason: A verdict built only from failures counts a skip as a pass, which is the exact defect this record exists to stop.
+  - clause: 'a test that skips with a reason stating that no database was reachable makes the run did-not-complete, with the stage named as the live-database lane having had no reachable database, and the result names each such test by its full node id'
+    needs_test: true
+    reason: Recognising the unreachable reason and choosing its stage is classification logic that a wrong match would turn into green or into an other-reason skip.
+  - clause: 'a test that skips for any other reason is named in the run''s result with that reason, as skipped, separately from both the passed and the failing tests, so a skip is visible rather than absorbed'
+    needs_test: true
+    reason: An other-reason skip silently merged into the passed list or dropped is invisible without observing the named lists.
+  - clause: 'a live-database lane in which no test executed to a pass or a failure — every test skipped, or the folder collected nothing — is never green, whatever the reasons'
+    needs_test: true
+    reason: An all-skipped or empty lane has no failures, so a failure-driven verdict would report it green.
+  - clause: 'a test that skips for an unreachable database on the retry''s fresh machine, after failing on the first execution, is not passed-on-retry and makes the run did-not-complete'
+    needs_test: true
+    reason: A retry that only skipped has no failure left, so naive retry logic would call it passed on retry.
+  - clause: 'this rule applies only to the live-database lane: the same tests skipping in the per-PR shards, which start no database, change nothing there'
+    needs_test: true
+    reason: Applying the rule to every report would turn the correctness lane or the shards red wherever these tests legitimately skip.
+  - clause: 'each of these is demonstrated by executing the lane against a synthetic population in which tests pass, fail, skip for an unreachable database and skip for another stated reason, observing the verdict and the named lists, never by searching the test files for a skip call'
+    needs_test: false
+    reason: This clause prescribes how the other clauses are demonstrated rather than stating an outcome of its own.
+test_spec:
+  - name: test_tq_600a_13_xxiii_no_skip_is_counted_as_passed_in_any_live_lane_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the live-lane classification of scripts/ci/post_merge_suite.py (indicative classify_live_results) fed a recorded report of passed, failed, unreachable-skipped and other-skipped tests, and the verdict builder fed the same report"
+    description: The passed list, the failing list and the collected-and-executed count contain no skipped id, and the skipped ids appear only in their own lists.
+    proves_clause: 'no skipped test is counted as passed, in the verdict or in any count the run reports'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a verdict built only from failures counts every skip as a pass"
+      - "collected-and-executed is len(results), so skipped tests inflate it"
+  - name: test_tq_600a_13_xxiii_an_unreachable_database_skip_makes_the_lane_did_not_complete_and_names_the_test
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    surface_invoked: "the live-lane classification and the verdict builder of scripts/ci/post_merge_suite.py fed a recorded report in which two tests skip with the recognised no-database reason and one passes"
+    description: The verdict is did_not_complete with the live_database_unreachable stage, distinct from the live start-up stage, and live_database.unreachable_skips holds both full node ids.
+    proves_clause: 'a test that skips with a reason stating that no database was reachable makes the run did-not-complete, with the stage named as the live-database lane having had no reachable database, and the result names each such test by its full node id'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the recognised reason is matched by a loose substring so an unrelated skip is read as unreachable"
+      - "the unreachable skip is read as an other-reason skip and the run stays green"
+      - "the stage reuses the start-up stage of TQ-600a-13-xxii"
+  - name: test_tq_600a_13_xxiii_an_other_reason_skip_is_named_with_its_reason_and_kept_apart
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    surface_invoked: "the live-lane classification of scripts/ci/post_merge_suite.py fed a recorded report with one test skipped for a stated non-database reason beside passing tests"
+    description: The skip appears in live_database.skipped as an id with its reason, is absent from the passed and failing lists, and does not by itself make the run red or did_not_complete.
+    proves_clause: 'a test that skips for any other reason is named in the run''s result with that reason, as skipped, separately from both the passed and the failing tests, so a skip is visible rather than absorbed'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "an other-reason skip is merged into the passed list"
+      - "an other-reason skip is dropped from the result and is invisible"
+      - "the skip's reason text is lost"
+  - name: test_tq_600a_13_xxiii_a_lane_that_executed_nothing_to_a_pass_or_failure_is_never_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    surface_invoked: "the verdict builder of scripts/ci/post_merge_suite.py fed a recorded live report whose every test is skipped for a stated other reason, and one whose folder collected nothing"
+    description: Neither report yields green, whatever the skip reasons, and the empty one is did_not_complete rather than a pass.
+    proves_clause: 'a live-database lane in which no test executed to a pass or a failure — every test skipped, or the folder collected nothing — is never green, whatever the reasons'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "an all-skipped lane has no failures so a failure-driven verdict reports green"
+      - "an empty live folder reads green"
+  - name: test_tq_600a_13_xxiii_a_retry_skip_for_an_unreachable_database_is_not_passed_on_retry
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the verdict builder of scripts/ci/post_merge_suite.py fed a recorded live first-run report with a failed test and a retry report in which that test skipped, once with the unreachable reason and once with another reason"
+    description: The test is never passed-on-retry or failed-twice; the unreachable skip makes the run did_not_complete and the other-reason skip is reported as skipped.
+    proves_clause: 'a test that skips for an unreachable database on the retry''s fresh machine, after failing on the first execution, is not passed-on-retry and makes the run did-not-complete'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "a retry that only skipped has no failure left, so the test is called passed on retry"
+      - "a retry skip is counted as failed twice and the run is red"
+  - name: test_tq_600a_13_xxiii_the_same_skips_in_the_correctness_lane_and_shards_change_nothing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    surface_invoked: "the correctness-lane path of scripts/ci/post_merge_suite.py (build_verdict_file with lane correctness) fed a recorded report whose tests skip with the unreachable-database reason, compared with its recorded pre-change verdict"
+    description: The correctness verdict, stage and lists for that report are identical to the recorded baseline and no live-only stage appears.
+    proves_clause: 'this rule applies only to the live-database lane: the same tests skipping in the per-PR shards, which start no database, change nothing there'
+    code_file: scripts/ci/post_merge_suite.py
+    must_catch:
+      - "the unreachable-skip rule is applied to every report so the correctness lane turns did_not_complete where these tests legitimately skip"
+  - name: test_tq_600a_13_xxiii_the_lane_report_written_by_a_real_session_carries_each_skip_reason
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "a real child pytest session loading scripts.ci._lane_report_plugin with --lane-report over a synthetic population that passes, fails, skips with the recognised no-database reason and skips with another reason, the written report file read back from disk and fed to the live-lane classification"
+    description: The on-disk report holds each skipped test's node id and reason text, and the classification of that real file gives the four named lists.
+    proves_clause: 'a test that skips with a reason stating that no database was reachable makes the run did-not-complete, with the stage named as the live-database lane having had no reachable database, and the result names each such test by its full node id'
+    code_file: scripts/ci/_lane_report_plugin.py
+    must_catch:
+      - "the report keeps only a status string so the reason of every skip is dropped and none can be told apart"
+  - name: test_tq_600a_13_xxiii_the_verdict_cli_reads_a_skip_report_and_exits_non_zero
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "`python scripts/ci/post_merge_suite.py verdict` then `exit-status` run as child processes over artifacts holding a live report with an unreachable-database skip"
+    description: The real entry point writes a did_not_complete verdict with the live_database_unreachable stage and its unreachable_skips ids, and exit-status exits non-zero.
+    proves_clause: 'a test that skips with a reason stating that no database was reachable makes the run did-not-complete, with the stage named as the live-database lane having had no reachable database, and the result names each such test by its full node id'
+    code_file: scripts/ci/post_merge_suite.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/_post_merge_stages.py
+  - scripts/ci/_lane_report_plugin.py
+  - tests/knowledge_live/test_km_400f_1.py
+  - unit_tests/suite_performance/test_tq_600a_13_v.py
+  - unit_tests/suite_performance/_ending_harness.py
+file_findings:
+  - file: scripts/ci/post_merge_suite.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds classify and build_verdict_file, which today count a skip only through the collected and skipped totals and know no live lane, so the skip classification belongs here, though the per-test skip reason it needs is not recorded by _lane_report_plugin.py and the live tests' skip reason is a per-test f-string not a shared constant.
+    decision: null
+file_findings_opened_files:
+  - scripts/ci/post_merge_suite.py
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  OPEN POINT FOR THE OWNER — SKIPS FOR OTHER REASONS. The folder may contain tests that skip
+  for reasons unrelated to the local database (for example a test that needs a hosted
+  database or a credential the post-merge run does not hold). This record makes those
+  visible and forbids counting them as passed, but does NOT make them turn the run red or
+  did-not-complete, because doing so would hold every pull request on a credential the run
+  was never given. If the owner wants a non-database skip to fail the lane, that is a one-
+  clause change here.
+
+  NO DELIVERS_TO, DELIBERATELY. As in TQ-600a-13-xxii, the notice of TQ-600a-13-iii reads
+  this ending through the existing did-not-complete verdict and stage vocabulary of
+  TQ-600a-13-v, gaining one stage value and a named list of other-reason skips. No new
+  contract is declared toward TQ-600a-13-iii, an approved record of an earlier run.
+
+  HOW "NO DATABASE WAS REACHABLE" IS RECOGNISED is the IT PO's to settle (a shared skip
+  reason, a marker, or the lane's own reachability probe), but it must be decided from the
+  test's own result, never from searching test source.

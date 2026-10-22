@@ -510,51 +510,39 @@ class TestPreflightArgNormalizationFIN100g2i:
 # ---------------------------------------------------------------------------
 
 class TestUnresolvableTargetErrorFIN100g3:
-    """FIN-100g-3: when a supplied target resolves to no registered worktree, the
-    pre-flight emits ONE actionable error naming (a) the target, (b) the expected
-    argument forms, and (c) the candidate worktrees + branches — more specific than
-    the generic FIN-100g-1 branch-named error.
+    """FIN-100g-3 (re-pointed by BO-4300c-3): the target becomes the maker's slug and the maker's answer
+    decides the workspace. A non-ok answer ends the run with ONE structured error quoting exactly what the
+    maker said, so the target, expected forms and candidate worktrees it names reach the operator verbatim
+    instead of being re-derived by a git listing here.
     """
+
+    @staticmethod
+    def _step():
+        return _js_text().split("const finalizeWorkspace")[1].split("phase('Pre-flight 2')")[0]
 
     def test_unresolvable_target_error_names_target(self):
         # covers: FIN-100g-3
-        preflight = _get_preflight_block(_js_text())
-        assert "No worktree found matching target '${epicArg}'" in preflight, (
-            "The no-matching-worktree error must name the unresolved target "
-            "(interpolate ${epicArg})."
-        )
+        js = _js_text()
+        assert "epicArg" in js.split("const finalizeSlug")[1].splitlines()[0], "slug must derive from the target (epicArg)"
+        assert "--slug" in js.split("const finalizeWorkspace")[1].splitlines()[1], "maker command must carry the slug"
 
     def test_unresolvable_target_error_lists_expected_forms(self):
         # covers: FIN-100g-3
-        preflight = _get_preflight_block(_js_text())
-        assert "bare branch-name string" in preflight, (
-            "The unresolved-target error must name the bare-string argument form."
-        )
-        assert "target/target_branch key" in preflight, (
-            "The unresolved-target error must name the object {target/target_branch} form."
-        )
+        js = _js_text()
+        assert "bare branch-name string" not in self._step(), "the retired expected-forms guidance is re-implemented"
+        assert "typeof args === 'string'" in js and "args.target_branch" in js, "both argument forms must be accepted"
 
     def test_unresolvable_target_error_lists_candidate_worktrees(self):
         # covers: FIN-100g-3
-        preflight = _get_preflight_block(_js_text())
-        assert "git worktree list --porcelain" in preflight, (
-            "The unresolved-target error must source candidates from "
-            "`git worktree list --porcelain`."
-        )
-        assert "andidate worktree" in preflight, (
-            "The unresolved-target error must list the candidate worktrees "
-            "(and their checked-out branches)."
-        )
+        step = self._step()
+        assert "git worktree list" not in step, "the workspace step must not list worktrees itself"
+        assert "return workspaceFailure(finalizeWorkspace)" in step, "a non-ok answer must end the run quoting the maker"
 
     def test_unresolvable_target_error_distinct_from_generic(self):
         # covers: FIN-100g-3
-        preflight = _get_preflight_block(_js_text())
-        # Distinct from the generic FIN-100g-1 error: the FIN-100g-3 message adds
-        # BOTH the expected-forms guidance AND the candidate list.
-        assert "target/target_branch key" in preflight and "andidate worktree" in preflight, (
-            "The unresolved-target error must be more specific than the generic "
-            "branch-named error — it must add expected-forms guidance and a candidate list."
-        )
+        step = self._step()
+        assert "return workspaceFailure(finalizeWorkspace)" in step and "must be run from a feature branch" in step
+        assert step.index("workspaceFailure(finalizeWorkspace)") != step.index("must be run from a feature branch")
 
 
 # ---------------------------------------------------------------------------
@@ -572,7 +560,7 @@ class TestDeployParitySelfCheckFIN100g4:
     def test_deploy_parity_check_runs_before_triage(self):
         # covers: FIN-100g-4
         js = _js_text()
-        dp = js.find('label: "step-3-deploy-parity"')
+        dp = js.find('"step-3-deploy-parity"')
         triage = js.find('label: "step-3-triage"')
         assert dp != -1, "The deploy-parity self-check (label step-3-deploy-parity) must exist."
         assert triage != -1, "The triage dispatch (label step-3-triage) must exist."
@@ -597,8 +585,8 @@ class TestDeployParitySelfCheckFIN100g4:
         js = _js_text()
         # The self-check filters build-state failures out of postMergeFailures BEFORE
         # the triage branch consumes them, so triage only ever sees a consistent layer.
-        assert "build_state_only_failures" in js, (
-            "The self-check must produce a build_state_only_failures set."
+        assert "const buildStateOnly" in js or "let buildStateOnly" in js, (
+            "The self-check must produce a build-state-only failure set (computed from the re-run)."
         )
         assert "postMergeFailures = postMergeFailures.filter" in js, (
             "Build-state failures must be filtered out of the set handed to triage."
@@ -615,7 +603,7 @@ class TestDeployParitySelfCheckFIN100g4:
     def test_build_state_exclusion_is_data_driven_not_name_based(self):
         # covers: FIN-100g-4-i
         js = _js_text()
-        assert "data-driven" in js and "hard-coded name" in js, (
+        assert "data-driven" in js and "hard-coded test/helper name" in js, (
             "FIN-100g-4-i: the build-state exclusion must be data-driven "
             "(passes-after-verified-redeploy), never keyed on a hard-coded test/helper name."
         )
@@ -625,7 +613,7 @@ class TestUnresolvableTargetAbortOrderingFIN100g3i:
     """FIN-100g-3-i: a supplied-but-unresolvable target must hit the found:false
     unresolved-target error, NOT the misleading main-branch abort. The two early
     returns both short-circuit before Step 0, so the guarantee is an ORDERING one:
-    the found:false return must precede the '!BRANCH || main/master' abort in the
+    the not-accepted-workspace return must precede the '!BRANCH || main/master' abort in the
     workflow body (otherwise a supplied target that resolves to branch:null →
     BRANCH="" would fire the '!BRANCH' main-abort first).
     """
@@ -633,16 +621,8 @@ class TestUnresolvableTargetAbortOrderingFIN100g3i:
     def test_found_false_return_precedes_main_branch_abort(self):
         # covers: FIN-100g-3-i
         js = _js_text()
-        found_false_idx = js.find("if (preflightInfo.found === false)")
-        # Anchor on the actual abort CONDITION, not the message text (which also
-        # appears in an earlier explanatory comment).
-        main_abort_idx = js.find('if (!BRANCH || BRANCH === "main"')
+        found_false_idx = js.find("if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace)")
+        main_abort_idx = js.find('if (!BRANCH || BRANCH === "main"')  # the abort CONDITION, not its message text
         assert found_false_idx != -1, "found:false early-return must exist in the workflow body."
         assert main_abort_idx != -1, "main-branch abort condition must exist in the workflow body."
-        assert found_false_idx < main_abort_idx, (
-            "The found:false unresolved-target return must come BEFORE the main-branch "
-            "abort (FIN-100g-3-i). If the abort is reordered above it, a supplied-but-"
-            "unresolvable target (branch:null → BRANCH='') would fire the misleading "
-            "'must be run from a feature branch' abort instead of the actionable "
-            "unresolved-target error."
-        )
+        assert found_false_idx < main_abort_idx, "the unresolved-target return must come BEFORE the main-branch abort (FIN-100g-3-i)"

@@ -157,9 +157,9 @@
       "category": "mechanical",
       "model": "haiku",
       "subagent_type": "general-purpose",
-      "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
+      "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a.",
       "disposition": "mechanical-autofix",
-      "instruction": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
+      "instruction": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a.",
       "agent": "general-purpose",
       "skills": []
     },
@@ -249,6 +249,17 @@
       "disposition": "author-clears",
       "instruction": "A /build-epic ticket is about to be committed without both gate verdicts on record (or the wrong-version verdict is out of date for the staged code). Re-run the missing or out-of-date gate, or stage the marked ticket file; never edit, delete or close a record or marker by hand.",
       "agent": null,
+      "skills": []
+    },
+    {
+      "hook_id": "precommit-canary-pre-commit",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "The stage canary refused the install's own declared known-bad input (its reserved canary path) staged in an ordinary commit. Unstage that path; nothing else triggers it.",
+      "disposition": "mechanical-autofix",
+      "instruction": "The stage canary refused the install's own declared known-bad input (its reserved canary path) staged in an ordinary commit. Unstage that path; nothing else triggers it.",
+      "agent": "general-purpose",
       "skills": []
     }
   ]

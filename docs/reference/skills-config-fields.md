@@ -133,7 +133,7 @@ Controls the pre-removal process and log cleanup in the `close-worktree` flow.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `worktree_cleanup.kill_residual_processes` | boolean | `true` | When `true`, background processes whose `cmdline` matches the worktree path are terminated before `git worktree remove`. When `false`, a summary is printed and the user must act manually. |
+| `worktree_cleanup.kill_residual_processes` | boolean | `true` | When `true`, background processes whose `cmdline` matches the worktree path are terminated before the workspace maker removes the workspace. When `false`, a summary is printed and the user must act manually. |
 | `worktree_cleanup.log_globs` | string[] | `["*.log", "precommit-autofix*.log", ".sql_test_results.json"]` | Glob patterns for files to delete from the worktree directory before removal. |
 | `worktree_cleanup.protected_paths` | string[] | `[]` | Path substrings — any process whose `cmdline` contains any listed entry aborts the cleanup instead of being killed. Use to protect production processes (e.g. a live trading daemon). |
 

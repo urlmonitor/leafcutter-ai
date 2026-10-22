@@ -51,7 +51,12 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    run_workflow_under_e2,
+    shell_step_reply,
+    workspace_ensure_reply,
+    workspace_refusal_reply,
+)
 
 __all__ = [
     "_JS_PATH",
@@ -62,6 +67,9 @@ __all__ = [
     "_full_success_responses",
     "_labels",
     "run_workflow_under_e2",
+    "shell_step_reply",
+    "workspace_ensure_reply",
+    "workspace_refusal_reply",
 ]
 
 
@@ -115,13 +123,9 @@ def _full_success_responses(**overrides: Any) -> dict[str, Any]:
         _full_success_responses(**{"green-verify/strict": {...}})
     """
     responses: dict[str, Any] = {
-        "isolation-check": {
-            "status": "ok",
-            "is_repo": True,
-            "session_cwd": "/repo",
-            "initial_branch": "fix/some-branch",
-            "needs_isolation": False,
-        },
+        # BO-4300c-3: the ONE workspace step -- the maker's ready answer is the workspace every later phase
+        # works in (it replaces the retired isolation-check / self-isolate decision).
+        "workspace-ensure": workspace_ensure_reply("/repo", branch="fix/some-branch"),
         "guard-checks": {"status": "ok", "target_file_dirty": False, "dirty_files": []},
         "ac-creation": {
             "status": "ok",

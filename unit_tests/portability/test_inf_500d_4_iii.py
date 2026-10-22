@@ -1,8 +1,7 @@
 """
 MODULE: test_inf_500d_4_iii
-GOAL: RED test stubs for AC INF-500d-4-iii -- every per-drive workspace is
-    built pointing at the same enduring log location as the project it
-    belongs to.
+GOAL: Tests for AC INF-500d-4-iii -- every per-drive workspace is built pointing at the same enduring
+    log location as the project it belongs to.
 AC: INF-500d-4-iii (source_ac); design: ADR-069.
 
 CONTRACT THIS FILE FIXES (python-coder implements against exactly this):
@@ -18,12 +17,12 @@ CONTRACT THIS FILE FIXES (python-coder implements against exactly this):
     2. ``build.py --log-root <ABS>`` records ``<ABS>`` verbatim as the root. A
        non-absolute value makes build.py exit non-zero, naming the value and
        the word "absolute" or "relative", and writes no declaration.
-    3. The worktree bootstrap (``templates/scripts/setup_ticket_worktree.py``
-       ``_bootstrap(main_repo, worktree_path)``) reads
-       ``<main_repo>/.leafcutter/config/knowledge_sink.json`` and passes its
-       root to the worktree's build. When that cannot be read it prints a
-       stderr WARNING naming the path it tried and never leaves a declaration
-       whose ``operational_log_root`` is the worktree's own default root.
+    3. The DEPLOYED workspace maker (``worktree.py ensure``, run as a separate process) reads
+       ``<install>/config/knowledge_sink.json`` of the install that deployed it and builds the
+       workspace with ``--log-root <root>`` (``operational_log_root``, else the parent of
+       ``knowledge_emission_sink``). When that cannot be read it still answers ok, builds with
+       ``--no-log-root`` (the workspace records ``{}``) and prints a stderr WARNING naming the path
+       it tried and why. The retired ``setup_ticket_worktree.py`` bootstrap no longer exists.
     4. Location query CLI: the DEPLOYED
        ``<output_root>/scripts/knowledge/sink_resolution.py --print-location
        {root|feedback|telemetry|knowledge}`` -- exit 0 and exactly one absolute
@@ -36,16 +35,17 @@ CONTRACT THIS FILE FIXES (python-coder implements against exactly this):
        not directly under the root, or ``feedback_sink`` equal to another
        stream.
 
-REAL-ARTIFACT NOTE: the bootstrap tests run the REAL ``_bootstrap`` (in a fresh
-    subprocess) which runs the REAL ``build.py`` into a git-initialised temp
-    worktree (consumer layout: ``<wt>/leafcutter-ai`` -> this package); the main
-    install's recorded declaration is written with ``json.dumps``. Nothing mocks
-    the build or the write.
+REAL-ARTIFACT NOTE: the maker tests run the REAL deployed maker (a private copy inside its own install, so
+    the install's declaration can be varied) against a real bare hub and project clone; the project's
+    declaration is written by the package's own helper. The only stand-in is the fixture project's
+    ``scripts/build.py`` (it records its argv and writes the declaration the flags ask for; a real build
+    costs ~60s, see CLAUDE.md "Tests must not spawn their own build.py"). The consumers of the declaration
+    (location query, feedback writer, guard-root resolver, parity check) are verbatim files copied from the
+    shared deployed layout.
 
-Not covered here (kept out for build-cost reasons, one ~60s build each): the
-    pre-feature main declaration variant (parent of knowledge_emission_sink),
-    the symlinked-worktree no-regression case, the NOTE text, and the
-    scripts/setup_ticket_worktree.py mirror (a separate drift hook guards it).
+Not covered here (kept out for build-cost reasons): the symlinked-workspace no-regression case and the
+    NOTE text. The older-build retry lives in test_inf_500d_4_iii_older_worktree_build.py; the reader's
+    reason wording in test_inf_500d_4_iii_reader.py.
 """
 # @ac-tag: INF-500d-4-iii
 
@@ -60,6 +60,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from unit_tests.build_orchestration._workspace_maker_fixtures import ensure_deployed_layout
+from unit_tests.portability import _inf_500d_4_iii_support as sup
 
 _WORKTREE_ROOT = Path(__file__).resolve().parents[2]
 _SCRIPTS_DIR = _WORKTREE_ROOT / "scripts"
@@ -69,7 +71,6 @@ if str(_SCRIPTS_DIR) not in sys.path:
 from build_phases_knowledge import build_knowledge_sink_declaration  # noqa: E402
 
 _BUILD_PY = _SCRIPTS_DIR / "build.py"
-_TEMPLATE_BOOTSTRAP = _WORKTREE_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
 _SINK_RESOLUTION_SRC = _SCRIPTS_DIR / "knowledge" / "sink_resolution.py"
 _PARITY_CHECK = _SCRIPTS_DIR / "ci" / "check_sink_parity.py"
 
@@ -82,16 +83,8 @@ _STREAM_FILES = {
     "telemetry": "agent_telemetry.jsonl",
     "knowledge": "knowledge_emissions.jsonl",
 }
-
-_BOOTSTRAP_DRIVER = (
-    "import importlib.util, sys\n"
-    "from pathlib import Path\n"
-    "spec = importlib.util.spec_from_file_location('swt', sys.argv[1])\n"
-    "m = importlib.util.module_from_spec(spec)\n"
-    "sys.modules['swt'] = m\n"
-    "spec.loader.exec_module(m)\n"
-    "m._bootstrap(Path(sys.argv[2]), Path(sys.argv[3]))\n"
-)
+_WARNING = re.compile(r"WARNING: no enduring log root readable from (.+?) \((.+)\); logs written in this "
+                      r"workspace will not survive its removal\.")
 
 
 # ---------------------------------------------------------------------------
@@ -127,19 +120,6 @@ def _full_declaration(root: Path) -> dict:
     }
 
 
-def _run_bootstrap(main_repo: Path, worktree: Path) -> subprocess.CompletedProcess[str]:
-    """Run the real template _bootstrap against a git-initialised consumer-layout worktree."""
-    worktree.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "init", "-q", str(worktree)], check=True, capture_output=True)
-    os.symlink(_WORKTREE_ROOT, worktree / "leafcutter-ai")
-    _seed_skills_config(worktree)
-    return subprocess.run(
-        [sys.executable, "-c", _BOOTSTRAP_DRIVER, str(_TEMPLATE_BOOTSTRAP),
-         str(main_repo), str(worktree)],
-        capture_output=True, text=True, timeout=_BUILD_TIMEOUT, cwd=str(worktree), check=False,
-    )
-
-
 def _query(output_root: Path, name: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
     return subprocess.run(
@@ -161,17 +141,17 @@ def _snapshot(*roots: Path) -> set[str]:
                 seen.add(os.path.join(dirpath, name))
     return seen
 
-
 @pytest.fixture(scope="module")
 def inherited_worktree(tmp_path_factory):
-    """A worktree bootstrapped from a main install whose recorded root is R."""
+    """A workspace the deployed maker made from a project install whose recorded root is R."""
     base = tmp_path_factory.mktemp("inf500d4iii_inherit")
-    main = base / "main"
     root = base / "enduring" / "logs"
-    _write_declaration(main / ".leafcutter", _full_declaration(root))
-    worktree = base / "wt"
-    proc = _run_bootstrap(main, worktree)
-    return {"main": main, "wt": worktree, "root": root, "proc": proc, "base": base}
+    install, maker = sup.project_install(base)
+    sup.write_real_declaration(install, root)
+    run = sup.ensure_workspace(base, "inherit", maker)
+    if run["workspace"] is not None:
+        sup.copy_deployed_consumers(run["workspace"])
+    return {"install": install, "wt": run["workspace"], "root": root, "run": run, "base": base}
 
 
 # ---------------------------------------------------------------------------
@@ -243,40 +223,69 @@ def test_inherited_root_is_recorded_verbatim_and_a_relative_one_is_refused(tmp_p
         "a refused build must write no declaration"
 
 
-def test_bootstrapped_worktree_inherits_the_main_installs_recorded_root(inherited_worktree):
+def test_maker_workspace_inherits_the_projects_durable_log_root(inherited_worktree):
     # covers: INF-500d-4-iii
-    # angle: real_artifact
-    """The worktree's deployed declaration names the main install's root R, never a worktree-derived one."""
-    fx = inherited_worktree
-    assert fx["proc"].returncode == 0, f"bootstrap failed:\n{fx['proc'].stderr[-2500:]}"
-    data = _declaration(fx["wt"] / ".leafcutter")
+    # angle: deployed
+    """The maker's ok answer names a workspace whose declaration records the project's root R, every sink directly under it."""
+    fx, run = inherited_worktree, inherited_worktree["run"]
+    assert (run["answer"].get("status"), run["exit_code"]) == ("ok", 0), run["answer"]
+    data = sup.declaration_of(fx["wt"])
     assert data.get("operational_log_root") == str(fx["root"])
-    for key in _FILE_KEYS:
-        assert Path(data[key]).parent == fx["root"], f"{key}={data[key]!r} not under R"
+    for key, name in (("feedback_sink", "feedback.jsonl"), ("knowledge_emission_sink", "knowledge_emissions.jsonl"),
+                      ("operational_telemetry_stream", "agent_telemetry.jsonl")):
+        assert data.get(key) == str(fx["root"] / name), f"{key}={data.get(key)!r} not directly under R"
     for key, value in data.items():
-        assert not value.startswith(str(fx["wt"])), f"{key} lies under the worktree"
-        # a wrong version deriving the root from main_repo's path lands here
-        assert not value.startswith(str(fx["main"])), f"{key} derived from main_repo path"
+        assert not value.startswith(str(fx["wt"])), f"{key} lies under the workspace"
+        # a wrong version deriving the root from the project's path lands here
+        assert not value.startswith(str(run["project"])), f"{key} derived from the project path"
+    assert len(run["calls"]) == 1, f"one build expected, saw {run['calls']}"
+    argv = run["calls"][0]
+    assert "--no-log-root" not in argv and argv[argv.index("--log-root") + 1] == str(fx["root"]), argv
+    assert "no enduring log root" not in run["stderr"], run["stderr"]
 
 
-def test_bootstrap_without_a_readable_main_declaration_says_so_loudly(tmp_path):
+def test_unreadable_project_root_builds_with_no_log_root_and_warns(tmp_path):
     # covers: INF-500d-4-iii
     # angle: failure
-    """No main declaration: stderr WARNING names the path tried; worktree is not declared as its own root."""
-    main = tmp_path / "main"
-    main.mkdir()
-    worktree = tmp_path / "wt"
-    proc = _run_bootstrap(main, worktree)
-    tried = main / ".leafcutter" / "config" / "knowledge_sink.json"
-    chunks = proc.stderr.split("WARNING")[1:]
-    assert any(str(tried) in chunk for chunk in chunks), \
-        f"no WARNING naming {tried}; stderr tail:\n{proc.stderr[-2500:]}"
-    declaration = worktree / ".leafcutter" / "config" / "knowledge_sink.json"
-    if declaration.is_file():
-        own_root = tmp_path / "debugging" / "logs"
-        value = json.loads(declaration.read_text(encoding="utf-8")).get("operational_log_root")
-        assert value is None or Path(value) != own_root, \
-            "declaration silently names the worktree's own root as the log root"
+    """Declaration absent or relative: still ok, the workspace records {}, the build got --no-log-root, the warning names path + reason."""
+    relative = json.dumps({"operational_log_root": "debugging/logs", "feedback_sink": "debugging/logs/feedback.jsonl"})
+    problems: list[str] = []
+    for case, text in (("absent", None), ("relative", relative)):
+        base = tmp_path / case
+        base.mkdir()
+        install, maker = sup.project_install(base)
+        if text is not None:
+            sup.write_declaration(install, text)
+        tried = install / "config" / "knowledge_sink.json"
+        run = sup.ensure_workspace(base, f"unreadable-{case}", maker)
+        if (run["answer"].get("status"), run["exit_code"]) != ("ok", 0) or run["workspace"] is None:
+            problems.append(f"[{case}] the answer must stay ok: {run['answer']}")
+            continue
+        if sup.declaration_of(run["workspace"]) != {}:
+            problems.append(f"[{case}] workspace must record the empty declaration: {sup.declaration_of(run['workspace'])}")
+        argv = run["calls"][0] if len(run["calls"]) == 1 else []
+        if "--no-log-root" not in argv or "--log-root" in argv:
+            problems.append(f"[{case}] the single build must carry --no-log-root only: {run['calls']}")
+        found = _WARNING.search(run["stderr"])
+        if not found or found.group(1) != str(tried) or not found.group(2).strip():
+            problems.append(f"[{case}] warning must name {tried} and a reason; stderr:\n{run['stderr'][-1200:]}")
+        elif case == "relative" and "absolute" not in found.group(2):
+            problems.append(f"[{case}] reason must say the root is not absolute: {found.group(2)!r}")
+    assert problems == [], "\n".join(problems)
+
+
+def test_legacy_two_key_declaration_is_inherited_from_the_parent_of_the_emission_sink(tmp_path):
+    # covers: INF-500d-4-iii
+    # angle: boundary
+    """A pre-feature declaration (no operational_log_root) still hands the build the parent of knowledge_emission_sink."""
+    root = tmp_path / "enduring" / "logs"
+    install, maker = sup.project_install(tmp_path)
+    sup.write_declaration(install, json.dumps({"knowledge_emission_sink": str(root / "knowledge_emissions.jsonl"),
+                                               "operational_telemetry_stream": str(root / "agent_telemetry.jsonl")}))
+    run = sup.ensure_workspace(tmp_path, "legacy", maker)
+    assert (run["answer"].get("status"), run["exit_code"]) == ("ok", 0), run["answer"]
+    assert sup.declaration_of(run["workspace"]).get("operational_log_root") == str(root)
+    assert "no enduring log root" not in run["stderr"], run["stderr"]
 
 
 def test_config_and_guard_roots_still_resolve_to_the_worktree(inherited_worktree):
@@ -358,11 +367,11 @@ def test_location_query_refuses_when_the_declaration_is_absent(tmp_path):
 
 
 @pytest.mark.parametrize("case", ["split", "relative_root", "missing_root", "duplicate_stream"])
-def test_sink_parity_check_rejects_a_split_or_relative_log_root(inherited_worktree, tmp_path, case):
+def test_sink_parity_check_rejects_a_split_or_relative_log_root(tmp_path, case):
     # covers: INF-500d-4-iii
     # angle: failure
     """Each bad declaration fails check_sink_parity naming the key; the correct one still passes."""
-    src = inherited_worktree["wt"] / ".leafcutter"
+    src = ensure_deployed_layout() / ".leafcutter"
     target = tmp_path / "proj"
     deployed = target / ".leafcutter"
     for rel in (("skills", "signoff"), ("agents",), ("scripts", "knowledge"), ("config",)):

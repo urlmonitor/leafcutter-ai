@@ -69,6 +69,28 @@ python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --ag
 
 Fill the angle-bracket values, and do not add `--log` or `--sink`.
 
+## Failed capture attempt
+
+An agent runs this only when the Yes-path `emit_knowledge.py` command it just
+ran exited non-zero (a missing script exits 2, a crash or import error exits
+1). A helper that exits 0, even with a warning on stderr, has handled its own
+failure, so add no record: each failure leaves at most one `failed`
+attempt (ADR-034 Amendment 2 A2.8).
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent <agent> --event capture_attempt --phase knowledge-capture --outcome failed --missing-target '<missing target>' --ticket <ticket> || true
+```
+
+Fill the angle-bracket values. `<missing target>` is the first path after
+`python3` in the `emit_knowledge.py` command you just ran, copied verbatim, and
+it is never a category or a skill name. If the path contains a single quote,
+write each `'` as `'\''` (ADR-034 A1.1). Include `--ticket` only when you have
+a ticket path in hand, otherwise leave it out. Do not add `--log` or `--sink`.
+
+Do not retry or work around the failure; finish your sign-off. If this section
+cannot be read, or the command's script above is absent, no record is possible and the
+failure stays on stderr and in your comment (ADR-034 A2.6).
+
 ## Emission is best-effort
 
 A sink that cannot be written produces a stderr warning and **exit 0**. This is

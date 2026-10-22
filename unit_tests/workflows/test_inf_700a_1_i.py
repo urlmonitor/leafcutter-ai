@@ -46,7 +46,13 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+    workspace_ensure_reply,
+)
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
@@ -70,13 +76,13 @@ def _fast_lane_ship_full_success(ac_id: str) -> tuple[Path, dict[str, Any], dict
     fixture; kept in sync deliberately by hand (each completion path is a
     genuinely different script with its own phase names)."""
     label_responses: dict[str, Any] = {
-        "fastlane-worktree": {
+        "workspace-ensure": workspace_ensure_from_opened({
             "worktree_path": "/tmp/inf700a1i-fastlane-worktree",
             "branch": "fast-lane/test-inf700a1i",
             "ac_store_path": "/tmp/inf700a1i-fastlane-worktree/docs/acceptance-criteria",
             "created": True,
-        },
-        "resolve-connected": {"ac_ids": [ac_id], "message": "1 to build"},
+        }),
+        "resolve-connected": resolve_connected_reply({"ac_ids": [ac_id], "message": "1 to build"}),
         "claim-connected": _claim_fx.claim_ran([ac_id], message="claimed 1 AC"),
         "test-writer-connected": {
             "status": "ok",
@@ -121,13 +127,7 @@ def _quick_fix_full_success() -> tuple[Path, dict[str, Any], dict[str, Any]]:
     successful close. Mirrors _full_success_responses() in
     unit_tests/workflows/test_quick_fix_workflow.py."""
     label_responses: dict[str, Any] = {
-        "isolation-check": {
-            "status": "ok",
-            "is_repo": True,
-            "session_cwd": "/repo",
-            "initial_branch": "fix/inf700a1i-branch",
-            "needs_isolation": False,
-        },
+        "workspace-ensure": workspace_ensure_reply("/repo", branch="fix/inf700a1i-branch"),
         "guard-checks": {"status": "ok", "target_file_dirty": False, "dirty_files": []},
         "ac-creation": {
             "status": "ok",

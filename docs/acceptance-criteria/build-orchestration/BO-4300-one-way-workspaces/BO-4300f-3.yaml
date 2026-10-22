@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -66,6 +66,12 @@ it_requirements:
   and its registration; unsent work -> bring over as a marker-bearing clone ONLY when provably lossless
   (every commit sha present on the new line, uncommitted and untracked content byte-identical), otherwise
   leave untouched and list for a human decision (Q10: never retired while it holds unsent work).'
+- 'BRING-OVER TARGET (Q4 + Q5, DECIDED user 2026-09-28): a workspace brought over lands where the maker
+  would put it -- <landing-root>/<kind>/<slug> for its canonical identity, landing root per BO-4300b-2 --
+  never in the legacy folder; its identity is taken from the legacy branch through the one naming table''s
+  declared aliases (BO-4300a-2). The line of work keeps its existing branch name (never renamed, so no
+  open pull request or hub ref is orphaned), and the marker records that branch. A legacy branch that no
+  declared alias maps to is not guessed: it is left untouched and listed as needing a decision.'
 - Stuck registration entries made from another platform (the WSL 'locked initializing' admin entries)
   are removed individually; nothing else is touched by their removal.
 - Offers a no-change preview of what it would do; its report is one JSON object listing retired, brought_over
@@ -113,21 +119,62 @@ test_spec:
   type: behavioral
   angle: criterion
   description: git worktree list afterwards lists only the needs_decision entries (plus the main checkout).
+- name: test_brought_over_workspace_lands_at_its_canonical_location_keeping_its_branch
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: A legacy worktree on EPIC-Alpha holding an unpushed commit, brought over, is a marker-bearing
+    clone at <landing-root>/epic/alpha (not in the legacy folder) on branch EPIC-Alpha with the commit intact,
+    and a later ensure --kind epic --slug alpha answers ok with that same workspace_path and line_of_work
+    existing or resumed.
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decisions-q4-q5
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. Recorded the user's 2026-09-28 decisions for the cut-over:
+    brought-over workspaces land at the Q5 landing root under their canonical Q4 identity, keep their
+    existing branch, and an unmappable legacy branch is listed for a decision rather than guessed.
+    One test added. readiness stays approved.
 superseded_by: null
 covered_by: [BO-4300f-3-i, BO-4300f-3-ii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-3.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12_TICKET-20260928-BO-4300-legacy-cut-over.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_migrate.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_migrate.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
 notes: |
   Cut-over chore from the decision memo and section 8 of the consolidation analysis (19
   registered worktrees plus the WSL background-worktrees entries stuck "initializing"). The
   holds-work verdict is BO-4100c-1. DECIDED by the user at the BA gate, 2026-09-25 (Q10): a
   workspace that still holds unsent work is never retired by the cut-over -- it is brought over,
-  or left untouched and listed for a human decision, as the criteria say.
+  or left untouched and listed for a human decision, as the criteria say. Q4 and Q5 -- DECIDED
+  (user, 2026-09-28): brought-over workspaces take their canonical <kind>/<slug> identity and the
+  new sibling landing root; their branches keep their names.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 12_TICKET-20260928-BO-4300-legacy-cut-over.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+#   Q4 + Q5 DECIDED (user, 2026-09-28): brought-over workspaces land at the new landing root
+#   under their canonical identity, keep their branch; one test added. criteria unchanged.
+# ====================================================================

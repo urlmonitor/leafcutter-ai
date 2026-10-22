@@ -206,13 +206,15 @@ nothing above the log directory (A1.4).
 |---|---|
 | Status | Accepted |
 | Date | 2026-10-21, revised 2026-10-21 after review |
-| Amends | Adds A2.1–A2.7; scopes A1.1 and one Amendment 1 Alternatives bullet without withdrawing them |
+| Amends | Adds A2.1–A2.8; scopes A1.1 and one Amendment 1 Alternatives bullet without withdrawing them |
 | Full text | [amendments/ADR-034/amendment-2-capture-attempt-ledger-is-telemetry.md](amendments/ADR-034/amendment-2-capture-attempt-ledger-is-telemetry.md) |
 
 A capture-attempt record is telemetry, never knowledge, and `emit_event.py` is its sole writer,
 with a closed outcome set and `missing_target` on every record (A2.1–A2.2). The no-learning path
 is one `emit_event.py` command (A2.3). `emit_knowledge.py` writes `recorded` (or `failed` on a
 failed append) itself and refuses empty or metadata-only text (A2.4–A2.5); A2.6–A2.7 state limits.
+Capture-step telemetry commands live once in named `agent-telemetry` sections that `signoff`
+points to, and an agent records `failed` only on a non-zero helper exit, naming the script (A2.8).
 
 ## 5. References
 
