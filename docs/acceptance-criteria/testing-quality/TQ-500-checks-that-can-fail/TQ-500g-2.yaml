@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -55,33 +55,132 @@ estimated_complexity: M
 delivers_to:
 - agent: python-coder
   ac_id: TQ-500g-2-ii
-  contract: 'JSON at <git-dir>/leafcutter/work/<work-key>/to_run_later.json: {to_run_later: [{test: str
-    (''<repo-relative test file>::<test name>''), wrong_version: str, reason: str}]}. It is absent or
-    empty when the writer names none.'
-expects_from: null
+  contract: >-
+    User decision OQ-1 (A), 2026-10-22. One JSON file per
+    requirement id whose tests the writer wrote, at <git-dir>/leafcutter/to-run-later/<ac-id>.json,
+    where <git-dir> is `git rev-parse --git-dir` of the worktree the writer works in (per worktree, so two
+    lanes never share it). Shape: {ac_id: str, to_run_later: [{test: str ('<repo-relative POSIX test file
+    path>::<test function name>'), wrong_version: str (non-empty, the writer's own words), reason: str
+    (one line: why the writer expects the test to catch it)}]}. UTF-8 JSON, no BOM. Each dispatch rewrites
+    the file for its ids whole; none named is written as {"ac_id": "<id>", "to_run_later": []}. A name
+    whose matching key (wrong_version_key in scripts/build_orchestration/_wvr_scope.py: trimmed,
+    case-folded, revert-the-fix aliases folded) equals a must_catch name of the same test, or "the fix
+    undone", is NOT listed: those are owed already and stay blocking. The writer only writes this file;
+    it never edits the AC store.
+expects_from:
+- ac_id: TQ-500g-2-ii
+  contract: >-
+    `wrong_version_runner.py run` gates every in-scope test whose test_spec entry says requires_db: true
+    on check_test_db(<repo root>) from scripts/db_check/checker.py. Any status other than "reachable"
+    gives those tests result "not_run" (blocking, so the verdict is unfinished) with the checker's own
+    message, naming testing_context.db_connection_test and never an address. The writer quotes those rows
+    as "not run".
+- ac_id: TQ-500g-2-i
+  contract: >-
+    A database run in which the test database did not hold the wrong version while the tests ran comes
+    back with result "invalid" and a detail starting "the suite put the correct code back before the
+    tests ran" (or "not_run" when the catalogue could not be read). Neither is "caught", so the writer
+    never quotes such a row as a pre-fix red.
 it_requirements:
-- Edit templates/agents/sql-test-writer.md only, after TQ-500f-4-i has landed on the same template (depends_on).
-  Replace 'do not run the test suite' with running the writer's own tests. Keep the ban on deploying SQL
-  anywhere except the configured test database.
-- Runs use only the address from testing_context.db_connection_test, through scripts/db_check/checker.py
-  (the one reader). Before running, use the check_test_db outcome. Never use an address the agent chose.
-- '''Before the fix'' is the object''s definition at the base ref, installed into the test database for
-  that run and then replaced by the fixed one. The prompt warns about the setUpClass re-deploy trap: alter
-  the file the suite installs from, never only the database.'
-- 'An answer is labelled ''observed'' only when a quoted run''s output backs it, and ''reasoned'' otherwise.
-  With no test database configured: name testing_context.db_connection_test, report both runs as not run,
-  label every answer reasoned, and claim no catch.'
-- The to-run-later wrong versions are written in machine form (the delivers_to shape), and also rendered
-  in the hand-off prose.
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
-- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
-  is fixed, the pre-commit done-proof path refuses to mark it done.'
+- >-
+  Surface: edit templates/agents/sql-test-writer.md only (the source template; never a deployed copy
+  under .claude/ or .leafcutter/). The text this changes is TQ-500f-4-i's (done): the intro line "You do
+  not deploy SQL or run tests", the Step 4b closing paragraph "You do not run your tests, so every answer
+  is reasoning", the Step 5 report line "every answer labelled reasoned", and the Constraints bullet "Do
+  not deploy SQL or run the test suite". The Q1-Q3 questions and the four-item vacuity checklist stay word
+  for word identical to templates/agents/test-writer.md (TQ-500f-4 parity). This AC changes only running,
+  quoting and labelling.
+- >-
+  Database gate first, through the one resolver (alignment question 2). Before any run the writer runs
+  `python "{{config.output_root}}/scripts/db_check/checker.py" --target-dir <project root>`, the same
+  invocation templates/agents/test-runner.md uses. It prints one JSON line and exits 0 only when status is
+  "reachable". Any other status (not_configured, invalid, config_error, unreachable), or a checker that
+  cannot be run, fails closed: make no run, report both runs as not run quoting the checker's status and
+  message, name testing_context.db_connection_test, label every answer reasoned, claim no catch. The
+  writer never composes, guesses, prints or passes a database address itself.
+- >-
+  The two runs reuse the shared reader and kind rule and never fork them (alignment question 1). With the
+  fix in the working tree (the writer was dispatched by sql-coder after the fix), the writer makes both
+  runs with ONE invocation of the shared runner:
+  `python "{{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py" run --ac-ids <ids>
+  --test-root <test root> --ac-root <AC store root> --base-ref <base ref>`, with no --alterations and no
+  --record. The runner runs the tests on the code as written (the post-fix run) and then on "the fix
+  undone", prepared from git at the base ref (the pre-fix run). It reads both through
+  pytest_outcome_reader and the done_proof_kind_support / _kind_plugin kind rule, and puts the code back.
+  The writer never runs pytest, psql or another runner of its own, and never reads pytest text itself.
+- >-
+  What counts as observed. Post-fix pass: the verdict has rows for "the fix undone" and its reason is not
+  "failing on the code as written" (the runner reaches that run only after every in-scope test passed on
+  the code as written). Pre-fix red: the guarding test's row for "the fix undone" has result "caught".
+  Any other result (survived, did_not_load, invalid, not_run, not_in_scope, not_applicable) is quoted as
+  such and is never a red. In this invocation the rows for named must_catch versions come back "invalid"
+  with "no entry in the alterations manifest", because the writer passes no manifest. The writer does not
+  quote them as results and does not read the invocation's gate_passed as a gate verdict; the route's own
+  gate (wrong_version_gate.py finish) runs those versions later.
+- >-
+  Labels. A Q1-Q3 answer is labelled observed only when it quotes a verdict row (the row's test,
+  wrong_version, result and detail verbatim) from a run made in this dispatch, and reasoned otherwise.
+- >-
+  Test-first dispatch (user decision OQ-3 (A), 2026-10-22). With no fix in the working tree (dispatched
+  before the coder), the pre-fix run is
+  `python "{{config.output_root}}/scripts/build_orchestration/fast_lane.py" verify_red_baseline --ac-ids
+  <ids> --test-root <test root> --ac-root <AC store root> --base-ref <base ref>`, the shared kind-aware
+  red-baseline reader. Its JSON is quoted for the pre-fix answers. The post-fix run is reported not run
+  ("the fix is not written yet") and the answers that depend on it are reasoned. The post-fix and
+  wrong-version runs then happen at the route's normal finish gate (wrong_version_gate.py finish) before
+  commit.
+- >-
+  Base ref. The writer uses the base ref the dispatcher passes. When none is passed it uses
+  `git merge-base HEAD origin/main` (verify_red_baseline's default) and names the ref it used in the
+  report. It never picks a ref to make a run come out red.
+- >-
+  The setUpClass re-deploy trap (alignment question 3). The prompt states the trap: a suite that
+  re-installs database code from its source files when it starts silently undoes a break put only into
+  the database. The writer never alters the database or a source file by hand. "Before the fix" is always
+  the runner's "the fix undone", which alters the source file, and TQ-500g-2-i decides whether the
+  database held it. A row "invalid: the suite put the correct code back before the tests ran" is quoted
+  as invalid and never as a red, the answers it would back stay reasoned, and the report names the
+  remedy: the suite must install from the source files the work changes.
+- >-
+  Hand-on. Every Q1 wrong version this dispatch did not run, and that is neither a must_catch name nor
+  "the fix undone", is written to the delivers_to file AND listed under the report's "To run later"
+  heading. The two lists are identical; "none" in prose means the file holds an empty list.
+- >-
+  Database writes. Only the runner's database step (TQ-500g-2-i) installs SQL, and only into the database
+  check_test_db resolved. The writer itself never deploys SQL.
+- >-
+  Step 3 fixture example (user decision OQ-4 (A), 2026-10-22). The example switches from
+  DatabaseManager('reload') to the templates/agents/test-writer.md Step 2b pattern:
+  `from db_check.checker import resolve_test_db_address`, with
+  `address = resolve_test_db_address(Path.cwd())` in setUp. DbConnectionTestNotConfiguredError is never
+  caught to skip, there is no fallback address, and tearDown always rolls back.
+- >-
+  The writer never passes --record. That flag (PR #1305, TQ-500g-1-vii/-viii, not on main at the time of
+  this alignment) writes a route's commit-backstop record, and the writer's own run is not the gate.
+- >-
+  Any database address in a template, fixture or doc is the placeholder
+  postgresql://<user>:<password>@<host>:<port>/<database>. INF-1100d-4 scans shipped files.
+- >-
+  File size (alignment question 5): no ratchet applies. check-file-size does not measure .md files and
+  check-doc-length covers docs/ only. sql-test-writer has no entry in scripts/evals/agent_eval_config.json
+  yet (TQ-200d-2 is todo), so check-agent-eval-staleness does not fire for this edit. Keep the added text
+  to the running and labelling rules; do not restate the runner's rules in prose.
+- >-
+  Composite done-proof: this L2 is test_required: false and has children. Until
+  KI-CG-20260914-done-proof-precommit-ignores-test-required is fixed, the pre-commit done-proof path
+  refuses to mark it done.
 test_required: false
-test_rationale: 'Prompt-only: the writer''s conduct is instruction text. Behavioural substitute: the TQ-200d-2
-  sql-test-writer eval rows (''observed'' only with a quoted run; no run claimed without a test database).
-  Deterministic backstop: TQ-500g-2-ii runs the database tests against the wrong versions, whatever the
-  writer reported.'
+test_rationale: >-
+  Prompt-only: the writer's conduct is instruction text in templates/agents/sql-test-writer.md, and a test
+  asserting text in the template is the grep-only proof CLAUDE.md forbids. Behavioural substitute: the
+  TQ-200d-2 sql-test-writer eval rows ("stored-procedure regression": observed only with a quoted runner
+  row; trap "no test database": every answer reasoned, the setting named, no run claimed). TQ-200d-2 is
+  todo and sql-test-writer is not yet in scripts/evals/agent_eval_config.json, so until it lands the
+  substitute is pr-reviewer checking the diff against each Then clause. Deterministic backstop: the
+  route's wrong-version gate (wrong_version_gate.py finish, extended by TQ-500g-2-i and -ii) runs the
+  database tests against every wrong version whatever the writer reported, and the runner and db_check
+  rules the writer quotes are themselves tested under TQ-500g-1-i, TQ-500g-2-i, TQ-500g-2-ii and
+  INF-1100d-3-i.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -121,3 +220,27 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   llm-expert lane. Build after TQ-500f-4-i (same template).
+
+  IT-PO TECHNICAL ALIGNMENT (2026-10-22, lane fast-lane/tq-500g-2)
+  Aligned to what main holds: wrong_version_runner.py (+ _wvr_*), wrong_version_writer.py
+  (list/write, --base-ref, declared or derived scope), wrong_version_gate.py finish,
+  test-breaker.md, pytest_outcome_reader, done_proof_kind_support / _kind_plugin,
+  scripts/db_check/checker.py and sql-test-writer.md Step 4b (TQ-500f-4).
+    Q1 shared reader: the writer's two runs are one `wrong_version_runner.py run` without
+       --alterations ("the fix undone" is the pre-fix run, the baseline is the post-fix run).
+    Q2 test database only: checker.py --target-dir first; anything but reachable fails closed.
+    Q3 re-deploy trap: decided by TQ-500g-2-i's catalogue check; an invalid row is never a red.
+    Q4 CI: prompt-only; nothing here runs in CI.
+    Q5 size: no ratchet on agent templates.
+  "--record" is NOT on main at this date: it is in PR #1305 (fast-lane/tq-500g-1-epic). The
+  writer never passes it.
+  USER DECISIONS (2026-10-22, all the recommended options):
+    OQ-1 (A) the to-run-later list lives at <git-dir>/leafcutter/to-run-later/<ac-id>.json;
+         no route changes.
+    OQ-3 (A) test-first: the pre-fix run goes through fast_lane.py verify_red_baseline
+         --ac-root; the post-fix run is reported "not run"; the post-fix wrong-version run
+         happens at the normal finish gate before commit.
+    OQ-4 (A) the Step 3 example switches to resolve_test_db_address (the test-writer.md
+         Step 2b pattern).
+  Build order inside the lane: TQ-500g-2-ii, then TQ-500g-2-i, then this prompt. The prompt
+  quotes rows only those two produce.
