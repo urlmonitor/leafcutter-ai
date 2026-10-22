@@ -23,9 +23,11 @@ DECISION HISTORY
 """
 from __future__ import annotations
 
+import ast
 import json
 import unittest
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import deployed_maker_path
 from unit_tests.build_orchestration.test_bo_4300e_2 import WorkspaceCase, names_file, shas_name
 
 TOKEN_ENV_NAMES = (
@@ -133,6 +135,51 @@ class TestAuthorisedLoss(WorkspaceCase):
         self.assertFalse(ws.exists())
         self.assertEqual(self.refs(self.hub), hub_before)
         self.assertEqual((self.refs(self.project), self.git(["status", "--porcelain"], self.project)), project_before)
+
+
+MAKER_FILES = ("worktree_remove.py", "worktree_ensure_state.py")
+
+
+def _own_nodes(func: ast.AST):
+    """Every node of *func*'s body, without descending into nested function definitions."""
+    stack = list(ast.iter_child_nodes(func))
+    while stack:
+        node = stack.pop()
+        yield node
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            stack.extend(ast.iter_child_nodes(node))
+
+
+def _calls_rmtree(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    fn = node.func
+    return (isinstance(fn, ast.Attribute) and fn.attr == "rmtree") or (isinstance(fn, ast.Name) and fn.id == "rmtree")
+
+
+class TestOneDeleteHelper(unittest.TestCase):
+    def test_one_delete_helper_and_no_dead_locate(self):
+        # covers: BO-4300e-2
+        # angle: deployed
+        """M17: in the DEPLOYED worktree_remove.py and worktree_ensure_state.py exactly one function
+        calls shutil.rmtree, and no locate_ready_only is defined. Must be implemented: the one
+        whole-folder delete helper lives in worktree_remove.py and the dead locate_ready_only is
+        deleted. Control: the scan really finds the helper (so zero is not a blind scan)."""
+        scripts = deployed_maker_path().parent
+        callers: list[str] = []
+        defined: list[str] = []
+        for name in MAKER_FILES:
+            path = scripts / name
+            self.assertTrue(path.is_file(), msg=f"{path} is not deployed")
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if node.name == "locate_ready_only":
+                        defined.append(f"{name}:{node.name}")
+                    if any(_calls_rmtree(n) for n in _own_nodes(node)):
+                        callers.append(f"{name}:{node.name}")
+        self.assertEqual(len(callers), 1, msg=f"functions calling rmtree: {callers}")
+        self.assertEqual(defined, [], msg=f"dead code still defined: {defined}")
 
 
 if __name__ == "__main__":

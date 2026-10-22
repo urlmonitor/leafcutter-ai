@@ -112,6 +112,7 @@ implemented_by:
 - templates/scripts/worktree_git.py
 - templates/scripts/worktree_identity.py
 - templates/scripts/worktree_log_root.py
+- templates/scripts/worktree_remove.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The

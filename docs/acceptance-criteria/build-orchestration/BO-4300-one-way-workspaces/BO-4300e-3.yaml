@@ -146,6 +146,7 @@ amended_by:
 superseded_by: null
 covered_by: [BO-4300e-3-i, BO-4300e-3-ii]
 implemented_by:
+- templates/scripts/worktree_remove.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   Q8 -- DECIDED (user, 2026-09-28): a refusal to remove a workspace holding unpushed or
