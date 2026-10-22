@@ -222,6 +222,7 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300c_2.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03_TICKET-20260928-BO-4300-answer-contract.md
 - templates/scripts/worktree.py
@@ -231,6 +232,14 @@ implemented_by:
 - templates/scripts/worktree_paths.py
 - scripts/build_phases_script_deploy_standalone.py
 - scripts/build_deploy_manifest_helpers.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- scripts/suite_performance/_shared_layout_producer.py
+- unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/_bo_4300f_2_fixtures.py
+- .github/workflows/ci.yml
+- unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
 notes: |
   F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
   the JSON, and set-up let package installers and the build write to the same channel. Whether
