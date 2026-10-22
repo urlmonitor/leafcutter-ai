@@ -24,6 +24,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import gate_verdict_records as gvr
+
 _LOG = logging.getLogger("wrong_version_gate")
 _HERE = Path(__file__).resolve().parent
 _TIMEOUT_SECONDS = 3600
@@ -39,6 +41,7 @@ def _parser() -> argparse.ArgumentParser:
     step.add_argument("--ac-root", required=True)
     step.add_argument("--test-root", required=True)
     step.add_argument("--base-ref", default="HEAD")
+    step.add_argument("--record", default=None, help="Ticket key; passed to the runner, which writes the record.")
     return parser
 
 
@@ -73,6 +76,10 @@ def finish(args: argparse.Namespace, reply: bytes) -> dict:
     Returns:
         The object to print; ``gate_passed`` is true only when the runner ran and passed.
     """
+    if args.record is not None and (
+        not gvr.valid_key(args.record) or gvr.remove_record(Path(args.test_root), args.record, "wrong_version")
+    ):
+        return _shape(False, None, None, None)
     common = ["--ac-root", args.ac_root, "--test-root", args.test_root, "--base-ref", args.base_ref or "HEAD"]
     if args.ac_ids:
         common = ["--ac-ids", args.ac_ids, *common]
@@ -80,7 +87,8 @@ def finish(args: argparse.Namespace, reply: bytes) -> dict:
     manifest = writer.get("manifest_path") if writer else None
     if writer is None or code != 0 or writer.get("written") is not True or not isinstance(manifest, str) or not manifest:
         return _shape(False, "write", writer, None)
-    verdict, run_code = _call("wrong_version_runner.py", ["run", *common, "--alterations", manifest], None)
+    extra = ["--record", args.record] if args.record is not None else []
+    verdict, run_code = _call("wrong_version_runner.py", ["run", *common, "--alterations", manifest, *extra], None)
     passed = verdict is not None and verdict.get("gate_passed") is True and run_code == 0
     return _shape(passed, None, writer, verdict)
 

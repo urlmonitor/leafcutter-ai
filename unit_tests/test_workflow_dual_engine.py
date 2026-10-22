@@ -481,9 +481,11 @@ def test_dispatch_order_build_epic() -> None:
 
       Phase 0 (Worktree Guard):
         1. status-checker  label='worktree-check'  — git context check
+        2. command-step-runner label='be-wv-recover' — drive-head recover (TQ-500g-1-viii)
+        3. command-step-runner label='be-gate-marker-close-all' — stale-marker close
 
       Phase 1 (Planner):
-        2. status-checker  label='epic-planner'    — reads Master_Plan.md
+        4. status-checker  label='epic-planner'    — reads Master_Plan.md
 
       → Exits early (planner stub returns no batches)
 
@@ -509,14 +511,10 @@ def test_dispatch_order_build_epic() -> None:
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    # Assert the exact ordered sequence (agentType, label) for the first two calls.
-    expected_sequence = [
-        ("shell-runner", "workspace-ensure"),
-        ("status-checker", "epic-planner"),
-    ]
-    actual_sequence = [
-        (c.agent_type, c.label) for c in result.agent_calls[:2]
-    ]
+    # Exact ordered (agentType, label) of the first four calls: workspace guard, drive-head recover + close-all (TQ-500g-1-viii), planner.
+    expected_sequence = [("shell-runner", "workspace-ensure"), ("command-step-runner", "be-wv-recover"),
+                         ("command-step-runner", "be-gate-marker-close-all"), ("status-checker", "epic-planner")]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[:4]]
 
     assert actual_sequence == expected_sequence, (
         f"build-epic.js dispatch order wrong (AC-2 / M-1).\n"

@@ -241,6 +241,17 @@
       "skills": []
     },
     {
+      "hook_id": "check-build-epic-gate-verdicts",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "A /build-epic ticket is about to be committed without both gate verdicts on record (or the wrong-version verdict is out of date for the staged code). Re-run the missing or out-of-date gate, or stage the marked ticket file; never edit, delete or close a record or marker by hand.",
+      "disposition": "author-clears",
+      "instruction": "A /build-epic ticket is about to be committed without both gate verdicts on record (or the wrong-version verdict is out of date for the staged code). Re-run the missing or out-of-date gate, or stage the marked ticket file; never edit, delete or close a record or marker by hand.",
+      "agent": null,
+      "skills": []
+    },
+    {
       "hook_id": "precommit-canary-pre-commit",
       "category": "mechanical",
       "model": "haiku",
