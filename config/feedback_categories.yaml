@@ -8,10 +8,11 @@
 #   id:               string  — kebab-case identifier (stable, never rename)
 #   description:      string  — one sentence; explains what this category captures
 #   allowed_writers:  list    — agent ids from agent_registry.json that may write
-#                               this category. Use [all_agents] as a sentinel
-#                               (resolved by submit_feedback.py to the full list
-#                               of is_ticket_phase agents). The special value
-#                               [hook] means only commit_guardian hooks may write.
+#                               this category, matched literally. Every agent whose
+#                               definition sets signoff: true must appear in at
+#                               least one category (the build checks this). The
+#                               special value [hook] means only commit_guardian
+#                               hooks may write.
 #   default_severity: string  — low | medium | high; used by aggregate.py when
 #                               the caller omits --severity.
 #
@@ -50,6 +51,8 @@ categories:
       - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: low
 
   - id: knowledge-gap
@@ -79,6 +82,8 @@ categories:
       - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: medium
 
   - id: quality-concern
@@ -119,6 +124,8 @@ categories:
       - ticket-supervisor
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: medium
 
   - id: convention-ambiguity
@@ -150,6 +157,8 @@ categories:
       - ticket-supervisor
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: medium
 
   - id: blocker
@@ -181,6 +190,8 @@ categories:
       - ticket-supervisor
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: high
 
   - id: subagent-quality
@@ -220,6 +231,8 @@ categories:
       - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
+      - restructuring-specialist
+      - change-scope-reviewer
     default_severity: low
 
   - id: process-finding
@@ -278,4 +291,15 @@ categories:
 #   quality-concern (reviewer-class only), subagent-quality (supervisor-only), and
 #   process-finding (hook-only) remain unchanged.
 #   (#TICKET-20260715-BO-2200b-1)
+# - 2026-09-28 [c3a469610]: ac-validator and ac-fulfillment-gate were registered as
+#   writers of the six broad categories (ac gates registered); 1e1ddc7f9 earlier
+#   added live-surface-tester. Recorded here retroactively, as neither commit logged it.
+# - 2026-10-21 [python-coder/KI-FC-003 INF-100c-5-iv]: Added restructuring-specialist and
+#   change-scope-reviewer to complete, knowledge-gap, tooling-issue, convention-ambiguity,
+#   blocker and success-pattern (both sign off yet were in no list, so every submission
+#   was refused). quality-concern, subagent-quality and process-finding are unchanged.
+#   Removed the [all_agents] sentinel from the schema comment (INF-100c-5-ii):
+#   submit_feedback.py never implemented it and matches allowed_writers literally. The
+#   build now fails when an agent that signs off is in no list (INF-100c-5).
+#   (#KI-FC-003)
 # ====================================================================

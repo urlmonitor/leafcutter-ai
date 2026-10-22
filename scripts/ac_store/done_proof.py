@@ -199,7 +199,7 @@ from _done_proof_phase_helpers import (
     _execute_vitest,
     _handle_no_direct_tests, _maybe_reachability_verdict,
     _parse_vitest_stdout,
-    _resolve_pytest_run_cwd,  # BO-2900a-3
+    _manual_opt_in_args, _resolve_pytest_run_cwd,  # BO-2900a-3, ticket 19
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
@@ -1256,7 +1256,7 @@ def find_unrecognised_angle_tags(records: list[dict]) -> list[dict]:
     return unrecognised
 
 
-def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
+def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, ...] = ()) -> dict[str, str]:
     """Execute pytest on *test_files* and return ``{nodeid: outcome}``.
 
     Runs ``python -m pytest -v --tb=no --no-header`` on the given files as a
@@ -1335,8 +1335,15 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     reported with the same sentinel, so a killed run is never mistaken for a
     completed run whose named tests genuinely failed.
 
+    Ticket 19 (KI-ACS-20261013): *linked_functions* names the AC's linked
+    test functions; when any is ``_MANUAL``, the sibling
+    ``_manual_opt_in_args`` adds ``-m``/``-k`` so exactly those linked tests
+    run even where addopts deselects manual tests by default. Empty (the
+    default) leaves the selection untouched, for every other caller.
+
     Args:
         test_files: Absolute paths to Python test files to execute.
+        linked_functions: Bare names of the linked test functions.
 
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
@@ -1348,7 +1355,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     if not test_files:
         return {}
     cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=no", "--no-header"]
-    cmd.extend(str(f) for f in test_files)
+    cmd.extend([*_manual_opt_in_args(linked_functions), *(str(f) for f in test_files)])
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
     try:
@@ -1631,16 +1638,6 @@ def _classify_outcomes(
 # _is_imported_elsewhere, _infer_project_root, _find_no_entry_point_unit and
 # _apply_reachability_gate now live in the sibling module
 # _done_proof_reachability_gate.py (imported at the top of this file).
-# Moved verbatim, no behaviour change.
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# BP-100n-4-ii: _split_linked_tests_by_language, _handle_no_direct_tests,
-# _maybe_reachability_verdict, _run_python_test_phase, _run_ts_test_phase,
-# _classify_ts_outcomes, and _build_failure_reason — the orchestration
-# helpers verify_done_eligible's body below calls — now live in the sibling
-# module _done_proof_phase_helpers.py (imported at the top of this file).
 # Moved verbatim, no behaviour change.
 # ---------------------------------------------------------------------------
 

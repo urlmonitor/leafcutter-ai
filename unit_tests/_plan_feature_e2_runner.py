@@ -115,7 +115,11 @@ class SourceParseError(Exception):
 def read_e2_source() -> str:
     """Return the full text of the E2 runtime plan-feature.js file."""
     try:
-        return E2_PLAN_FEATURE_JS.read_text(encoding="utf-8")
+        # BO-4300c-3: the template carries an EMPTY WORKSPACE-ANSWER marker pair the build fills from the single
+        # tracked source; fill it the same way here so the body that runs has its shared helpers.
+        from _workflow_engine_harness import _fill_workspace_answer
+
+        return _fill_workspace_answer(E2_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     except OSError as exc:
         msg = f"Cannot read E2 plan-feature.js at {E2_PLAN_FEATURE_JS}: {exc}"
         raise NodeScriptError(msg) from exc
@@ -231,8 +235,11 @@ const __agentShim = async (promptOrOpts, opts) => {
   const __isDeliberateOverride = (
     __mockResult &&
     typeof __mockResult === 'object' &&
-    typeof __mockResult.output === 'string' &&
-    Object.prototype.hasOwnProperty.call(__mockResult, 'exit_code')
+    ((typeof __mockResult.output === 'string' &&
+      Object.prototype.hasOwnProperty.call(__mockResult, 'exit_code')) ||
+     (typeof __mockResult.stdout === 'string' &&
+      Object.prototype.hasOwnProperty.call(__mockResult, 'exit_status')) ||
+     __mockResult.declined === true)
   );
   if (call.label === 'resolve-workspace-setup-permission' && !__isDeliberateOverride) {
     return __workspacePermissionDefault;

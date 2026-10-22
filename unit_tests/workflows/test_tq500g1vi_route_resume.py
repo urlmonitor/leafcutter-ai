@@ -58,10 +58,10 @@ def test_k4_resumed_drive_recovers_first_then_reruns_sequence_before_commit():
         recover = fx.request_of(fx.calls(result, route.recover)[0])
         assert re.search(r"wrong_version_runner\.py\s+recover\s*$", recover["command"]), recover["command"]
         assert recover["target"]["workspace"] == wt and recover["target"]["run_id"] == fx.STEM, recover
-        assert bool(fx.calls(result, "worktree-setup")) == (case == "setup_reused"), f"{case}: {labels}"
+        assert len(fx.calls(result, "workspace-ensure")) == 1, f"{case}: the maker is asked exactly once: {labels}"
     wt, _ = fx.worktree_case(FRESH)
     fresh = fx.run_route(route, {fx.PLANNER: _resumed_plan(wt), **fx.wv_replies(route, list_=v.list_reply(OWED))}, case=FRESH)
-    assert fx.calls(fresh, "worktree-setup") and not fx.calls(fresh, route.recover), f"a fresh worktree is recovered: {fx.labels_of(fresh)}"
+    assert fx.calls(fresh, "workspace-ensure") and not fx.calls(fresh, route.recover), f"a fresh worktree is recovered: {fx.labels_of(fresh)}"
     assert fx.labels_of(fresh).index(route.finish) < fx.labels_of(fresh).index(fx.COMMIT), fx.labels_of(fresh)
     # recover runs ONCE at the drive head: an epic of two tickets recovers once, before the epic planner
     items = [fx.epic_item(1, [fx.AC]), fx.epic_item(2, [fx.AC])]

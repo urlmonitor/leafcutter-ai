@@ -66,7 +66,7 @@ def test_three_ts_child_files_are_proved_by_js_runner(tmp_path, monkeypatch):
         calls.append((set(files), project_dir))
         return {str(path): "PASSED" for path in files}
 
-    def unexpected_pytest(files):
+    def unexpected_pytest(files, linked_functions=()):
         pytest.fail(f"TypeScript child proof incorrectly routed to pytest: {files}")
 
     monkeypatch.setattr(done_proof, "run_vitest_and_parse", js_runner)
@@ -89,7 +89,7 @@ def test_mixed_child_proof_runs_both_languages(tmp_path, monkeypatch):
     (test_root / "package.json").write_text('{}', encoding="utf-8")
     calls = []
 
-    def python_runner(files):
+    def python_runner(files, linked_functions=()):
         assert files == [py], "Only Python sources belong in pytest"
         calls.append("python")
         return {f"{py.name}::test_contract": "PASSED"}
@@ -178,7 +178,7 @@ def test_incomplete_python_proof_stops_before_ts(tmp_path, monkeypatch):
     ac_root, test_root, _ = _three_children(tmp_path)
     _source(test_root, "test_python.py", "FX-100-1")
 
-    def incomplete(files):
+    def incomplete(files, linked_functions=()):
         assert all(path.suffix == ".py" for path in files)
         return {done_proof._PYTEST_RUN_INCOMPLETE_SENTINEL: "fixture process interrupted"}
 

@@ -124,7 +124,7 @@ no batch size, no manual PR:
 
 The `fast-lane-ship` workflow then, in fixed code-defined order:
 
-1. **Worktree** — `create-fastlane-worktree <slug>` opens `fast-lane/<slug>` off
+1. **Worktree** — the workspace maker (see [get-a-workspace](get-a-workspace.md)) (kind `fastlane`) opens the workspace off
    the latest `origin/main`, bootstrapped.
 2. **Resolve** — `select_connected --ac <id>` computes the connected build set.
    An empty set (already done, or nothing not-done) is a clean no-op: no PR.
@@ -149,7 +149,7 @@ connected set:
 | `ac_store_root` | No | `"docs/acceptance-criteria"` | Path (from the worktree root) to the AC YAML store. |
 
 Most users should prefer the one-command form above; the inner primitive does not
-create a worktree, commit, or open a PR.
+create a worktree (the workspace maker (see [get-a-workspace](get-a-workspace.md)) does), commit, or open a PR.
 
 ### Programmatic API — exclude_structural_parent
 

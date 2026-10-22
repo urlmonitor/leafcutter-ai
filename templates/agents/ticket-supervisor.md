@@ -142,6 +142,9 @@ You are invoked with:
 ticket_path:    <absolute or repo-relative path to the ticket markdown file>
 context:        <optional payload from the caller (/build-feature or user) —
                  e.g. carrying-over retry counters from an earlier interrupted run>
+ticket_key:     <ticket file stem, from build-epic.js; absent when you were started
+                 by the user: use the ticket file's stem>
+runs_alone:     <true|false: the ticket's chunk holds only this ticket>
 ```
 
 Resolve `ticket_path` to an absolute path before any Read or Edit. If the
@@ -334,7 +337,9 @@ IF next_agent == "test-writer":
 **Do NOT skip on an empty `tests:` array for a code ticket.** For AC-generated
 tickets, `## Test Requirements` is derived from the source AC (`test_spec` first,
 else the Gherkin `criteria`) and is never a hardcoded `tests: []` stub; test-writer
-then confirms the red baseline. An explicit `agents: test-writer: not_needed` in
+then confirms the red baseline. Before the first coder spawn of the drive you run the
+red-baseline reader exactly as `building-epics` §5.10.1 pins it (the test-writer's
+sign-off never stands in for its verdict) and report `red_baseline_gate`. An explicit `agents: test-writer: not_needed` in
 the ticket frontmatter remains a valid skip path (explicit override wins).
 
 **Skip actions (only when NO coder is needed):**
@@ -378,8 +383,13 @@ ticket 04) is the **blocking layer**. This warn is non-destructive and never hal
    worktree-root lock per `building-epics` §5.2 BEFORE spawning. Hold the
    lock for the agent's lifetime; release it per §5.3 on success AND on
    every failure path. Wrap the spawn in a `trap`-style `finally` so a
-   crash still releases. For `commit`, run the knowledge-routing stage and
-   observe inside that lock exactly as `building-epics` §5.9 orders them.
+   crash still releases. For `commit`, inside that lock first run the
+   wrong-version gate of `building-epics` §5.10.2 before EVERY commit spawn
+   (also after a retry, handoff or remedy agent; never reuse an earlier
+   result, never run `recover`), spawn `commit` only when `finish` reports
+   `gate_passed` true (on any halt release the lock and spawn none), then run
+   the knowledge-routing stage and observe exactly as `building-epics` §5.9
+   orders them. Return `wrong_version_outcome` and `red_baseline_gate`.
    Stage the stage reply's `manifest` paths by name, and return the observe
    reply as `knowledge_routing`.
 4. Spawn the chosen agent via the `Agent` tool with input

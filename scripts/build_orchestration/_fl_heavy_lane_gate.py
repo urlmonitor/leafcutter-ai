@@ -48,6 +48,7 @@ from pathlib import Path
 
 import yaml
 
+import gate_verdict_records as gvr
 from _fl_common import _LOG, _scan_test_root_for_covers_tags
 from project_python import resolve_project_python  # TQ-500f-3-v
 from _fl_red_baseline_support import (
@@ -302,7 +303,7 @@ def _green_remedy(verdict: dict, had_record: bool) -> str:
     return text
 
 
-def heavy_lane_gate(
+def _heavy_lane_gate_core(
     *,
     source_ac_ids: list[str],
     test_root: Path,
@@ -360,6 +361,36 @@ def heavy_lane_gate(
     return result
 
 
+def heavy_lane_gate(
+    *,
+    source_ac_ids: list[str],
+    test_root: Path,
+    ac_root: Path,
+    ticket: Path | None = None,
+    record: str | None = None,
+) -> dict:
+    """Run the gate and, when *record* is given, leave its verdict as a gate-verdict record.
+
+    Args:
+        source_ac_ids: The ticket's source_ac id(s); empty means "not applicable".
+        test_root: Root directory to scan for covering tests (also the worktree for the record).
+        ac_root: Root directory of the AC YAML store.
+        ticket: Ticket file for the pass record (see ``_heavy_lane_gate_core``).
+        record: Ticket key to write ``red_baseline.json`` for (TQ-500g-1-viii); ``None`` writes nothing.
+
+    Returns:
+        The core verdict unchanged; with *record*, ``gate_passed`` false and a ``reason`` naming the record
+        when the key is not one plain path segment or the record cannot be written.
+    """
+    if record is not None and not gvr.valid_key(record):
+        return {"gate_passed": False, "reason": f"record: ticket key {record!r} is not one plain path segment"}
+    verdict = _heavy_lane_gate_core(source_ac_ids=source_ac_ids, test_root=test_root, ac_root=ac_root, ticket=ticket)
+    if record is None:
+        return verdict
+    error = gvr.write_record(test_root, record, "red_baseline", source_ac_ids, verdict)
+    return verdict if error is None else {**verdict, "gate_passed": False, "reason": f"record: {error}"}
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -380,7 +411,9 @@ def heavy_lane_gate(
 #   ``halt_classification`` and ``remedy`` (F3 option A; the name avoids the
 #   reader's own list key ``green_at_baseline``). HEAVY_WRAPPER_KEYS is the one
 #   wrapper-only key set for both lane-parity seam tests. The reader is unchanged.
+# - 2026-10-22 [python-coder/TQ-500g-1-viii]: heavy_lane_gate gained the optional ``record`` key: the
+#   verdict of every outcome is written as red_baseline.json by gate_verdict_records (fail closed).
+#   The pass-record logic moved, unchanged, into _heavy_lane_gate_core.
 # - 2026-10-22 [python-coder/TQ-500f-3-v]: The not-applicable and reused
 #   verdicts name the PROJECT interpreter (project_python), the same one the
-#   reader now judges with, instead of the interpreter that launched the gate.
-# ====================================================================
+#   reader now judges with, instead of the interpreter that launched the gate.# ====================================================================

@@ -1,0 +1,142 @@
+id: INF-100c-5-i
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: approved
+priority: high
+title: "A feedback writer that names no registered agent is reported by the build"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the feedback categories file lists "ac-validater" (a misspelling) in the
+    allowed_writers of the blocker category,
+  And no agent named "ac-validater" exists in the agent registry,
+  When the package build runs,
+  Then the build output reports "ac-validater" as a writer that names no registered agent,
+  And the report names the category it appears in ("blocker"),
+  And a writer that appears in three categories is reported once, naming all three
+    categories,
+  And writers that do name a registered agent (for example sql-coder and epic-supervisor)
+    are not reported.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
+    relationship: describes
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/build_phases_feedback_writers.py
+    state: to_be_created
+  - path: unit_tests/feedback/test_inf_100c_5_i.py
+    state: to_be_created
+it_requirements:
+  - "The registered-agent set is the agent ids in config/agent_registry.json, as the criteria state, read at check time and never copied into the check."
+  - "Each unknown writer is reported once, naming every category it appears in, in sorted order, so a renamed agent's leftover name is one entry and not one per category."
+  - "The report must appear in the build output at WARNING severity or higher on every build where it applies, and must not depend on a verbose or debug flag."
+  - "Whether an unknown writer also fails the build is not decided (caveat logged). Until it is decided, the report must not by itself fail the build; INF-100c-5's missing-writer failure is unaffected."
+  - "Sentinel writers are excluded by the same rule submission applies (INF-100c-5-ii); this record adds no exclusion list of its own."
+test_intent:
+  - clause: the build output reports "ac-validater" as a writer that names no registered agent
+    needs_test: true
+    reason: Detecting the unknown name is a set difference between two files, and a wrong source set would miss it.
+  - clause: the report names the category it appears in ("blocker")
+    needs_test: true
+    reason: The category is looked up per writer, so a report without it would leave the stale entry unfindable.
+  - clause: a writer that appears in three categories is reported once, naming all three categories
+    needs_test: true
+    reason: Grouping by writer is computed, and the naive loop reports the same writer three times.
+  - clause: writers that do name a registered agent (for example sql-coder and epic-supervisor) are not reported
+    needs_test: true
+    reason: A false positive on real agents would make the report noise that everyone learns to ignore.
+test_spec:
+  - name: test_build_output_reports_a_misspelt_writer_at_warning_without_failing
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Copies scripts/, templates/ and config/ into a tmp package root with ac-validater added to blocker, runs that copy's scripts/build.py --validate-only as a subprocess with no verbose flag, and asserts the output reports ac-validater at WARNING or higher and the exit code is not made non-zero by the report alone.
+    proves_clause: the build output reports "ac-validater" as a writer that names no registered agent
+    code_file: scripts/build.py
+    must_catch:
+      - a report printed only under a verbose or debug flag
+      - a report that makes the build fail by itself
+  - name: test_unknown_writer_entry_names_the_category_it_appears_in
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Runs the check on a categories file whose blocker list holds ac-validater and asserts the unknown_writers entry for it carries categories equal to blocker.
+    proves_clause: the report names the category it appears in ("blocker")
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+  - name: test_writer_in_three_categories_is_reported_once_with_all_three
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Lists one stale name in three categories and asserts unknown_writers holds exactly one entry for it whose categories are the three names in sorted order.
+    proves_clause: a writer that appears in three categories is reported once, naming all three categories
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a loop that reports the same writer once per category
+      - an entry that keeps only the first category it was found in
+      - categories listed in file order instead of sorted order
+  - name: test_registered_writers_are_not_reported_as_unknown
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Runs the check with sql-coder and epic-supervisor listed as writers and registered in config/agent_registry.json, and asserts neither appears in unknown_writers, including when neither signs off.
+    proves_clause: writers that do name a registered agent (for example sql-coder and epic-supervisor) are not reported
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a known set built from the signing-off agents only, which flags sql-coder and epic-supervisor
+      - a known set copied into the check instead of read from the registry
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build.py
+  - templates/scripts/feedback/feedback_validation.py
+  - unit_tests/feedback/test_submit_feedback_unknown_agent.py
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check from INF-100c-5, which loads the agent definitions and every category's allowed_writers in one pass and returns unknown_writers as a sorted list of {writer: str, categories: list[str]}; this record fixes what goes into that list and how it is reported."
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Requested direction 2 of KI-FC-003 (stale or misspelt writer). A renamed agent leaves its
+  old name behind as exactly this kind of writer. Whether the report also fails the build
+  is an open question carried to the IT PO / user: the request says "reported", so this
+  record asserts the report, not a build failure. A misspelt writer loses no feedback by
+  itself; the agent it was meant to name is caught by INF-100c-5 when that agent signs off.

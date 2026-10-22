@@ -36,6 +36,8 @@ from _quick_fix_harness import (  # noqa: E402
     _phase_block,
     _skill,
     run_workflow_under_e2,
+    shell_step_reply,
+    workspace_refusal_reply,
 )
 
 
@@ -146,52 +148,43 @@ class TestBP600WorkflowGuardsHalt:
 
     def test_ac_bp600a2_blocked_isolation_check_halts_with_no_downstream_dispatch(self):
         # covers: BP-600a-2
-        """A 'blocked' isolation-check response must halt immediately — no
-        self-isolate, no guard-checks, nothing downstream."""
+        """A workspace step the maker REFUSES (the retired 'blocked isolation-check') must halt immediately
+        -- the run ends with status error quoting the refusal, nothing downstream is dispatched (BO-4300c-3).
+        """
         result = run_workflow_under_e2(
             _JS_PATH,
             label_responses={
-                "isolation-check": {
-                    "status": "blocked",
-                    "is_repo": True,
-                    "session_cwd": "/repo",
-                    "needs_isolation": False,
-                    "message": "isolation-check refused to proceed",
-                }
+                "workspace-ensure": workspace_refusal_reply(
+                    "WORKSPACE_OCCUPIED", "workspace refused: the location is occupied"
+                )
             },
         )
-        assert result.result is not None and result.result.get("status") == "blocked"
+        assert result.result is not None and result.result.get("status") == "error", result.result
+        assert "workspace_occupied" in str(result.result.get("message")).lower(), result.result
         assert result.dispatch_count == 1, (
-            "A blocked isolation-check must halt before any further dispatch "
+            "A refused workspace step must halt before any further dispatch "
             f"(BP-600a-2). Labels dispatched: {_labels(result)}"
         )
 
     def test_ac_bp600a2_blocked_self_isolate_halts_with_no_downstream_dispatch(self):
         # covers: BP-600a-2
-        """A 'blocked' self-isolate response must halt immediately with
-        halt_reason 'isolation_failed' — no guard-checks, nothing downstream."""
+        """A workspace step whose reply is no usable answer (the retired 'blocked self-isolate' -- creation
+        failed and said nothing a caller can use) must halt immediately: no guard-checks, nothing downstream,
+        and no other location substituted."""
         result = run_workflow_under_e2(
             _JS_PATH,
             label_responses={
-                "isolation-check": {
-                    "status": "ok",
-                    "is_repo": False,
-                    "session_cwd": "/untracked/workspace",
-                    "initial_branch": "",
-                    "needs_isolation": True,
-                },
-                "self-isolate": {
-                    "status": "blocked",
-                    "worktree_root": "",
-                    "branch": "",
-                    "message": "worktree creation failed",
-                },
+                "workspace-ensure": shell_step_reply(
+                    {"status": "error", "code": "CREATE_FAILED", "message": "worktree creation failed"},
+                    exit_status=1,
+                ),
             },
         )
         assert result.result is not None
-        assert result.result.get("status") == "blocked"
-        assert result.result.get("halt_reason") == "isolation_failed"
-        assert result.dispatch_count == 2, (
-            "A blocked self-isolate must halt before guard-checks or any later "
+        assert result.result.get("status") == "error"
+        assert "workspace step failed" in str(result.result.get("message")).lower(), result.result
+        assert "worktree creation failed" in str(result.result.get("message")), "the reply must be quoted"
+        assert result.dispatch_count == 1, (
+            "A failed workspace step must halt before guard-checks or any later "
             f"phase. Labels dispatched: {_labels(result)}"
         )

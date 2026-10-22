@@ -1,13 +1,16 @@
 """
 MODULE: unit_tests/workflows/test_bo4000a_worktree_report_adjudication.py
-GOAL: Behavioral tests for BO-4000a — a worktree step that reports any
-    location other than the one it was told stops the run before a single
-    phase agent is dispatched.
-BUSINESS CONTEXT: FIELD EVIDENCE — run wf_0e0872f9-453, 2026-09-14. The
-    worktree-setup agent opened a worktree at a location it was never told.
-    See BO-4000a.yaml.
-ARCHITECTURE: Every test drives templates/workflows-js/build-feature.js's
-    own top-level body through unit_tests/_workflow_engine_harness.py.
+GOAL: Behavioral tests for BO-4000a -- a worktree step that reports anything other than a usable answer
+    stops the run before a single phase agent is dispatched.
+BUSINESS CONTEXT: FIELD EVIDENCE -- run wf_0e0872f9-453, 2026-09-14. The worktree-setup agent opened a
+    worktree at a location it was never told. See BO-4000a.yaml.
+RE-POINTED BY BO-4300c-3 / BO-4300a-1-ia: no agent is told a location any more, so there is no "instructed"
+    location to mismatch. The workflow runs the maker's command once and adjudicates the reply: only an ok
+    answer naming a workspace_path is accepted, and its path is used exactly as spelled; a reply that is no
+    usable answer (a refusal, a failed command, prose, nothing) stops the run, quoting what came back,
+    before any phase agent. The two failure modes stay distinguishable by what the stop quotes.
+ARCHITECTURE: Every test drives templates/workflows-js/build-feature.js's own top-level body through
+    unit_tests/_workflow_engine_harness.py.
 """
 from __future__ import annotations
 
@@ -19,7 +22,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests._workflow_engine_harness import run_workflow_under_e2, shell_step_reply  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
@@ -33,38 +36,37 @@ def _run(label_responses):
 
 
 def _phase_calls(result):
-    """Any dispatch that is not one of the Resolve-Target-phase facts calls."""
-    facts_labels = {
-        "resolve-target", "worktree-facts-resolved", "worktree-base",
-        "worktree-facts-location", "branch-standing", "worktree-setup",
-    }
-    return [c for c in result.agent_calls if c.label not in facts_labels]
+    """Any dispatch that is not one of the Resolve-Target-phase calls."""
+    return [c for c in result.agent_calls if c.label not in bfx.RESOLVE_PHASE_LABELS]
 
 
 class TestWrongReportedLocationRefusesBeforeAnyPhaseAgent(unittest.TestCase):
     def test_reported_location_other_than_instructed_stops_before_any_phase_agent(self) -> None:
         # covers: BO-4000a
         # angle: failure
-        """The worktree-opening agent reporting the incident's nested
-        epic-folder path instead of the instructed location stops the run,
-        naming both locations, before any phase agent is dispatched.
+        """The workspace step reporting a refusal that names the incident's nested epic-folder path as the
+        occupant (the maker declining to place a workspace there) stops the run, quoting what it said, before
+        any phase agent is dispatched -- and the nested path is never adopted as the location.
         """
-        result = _run(bfx.success_label_responses(
-            ticket_paths=[TICKET], opened_worktree_path=bfx.INCIDENT_NESTED,
-        ))
+        refusal = bfx.refused_workspace(
+            "OCCUPIED", "the location is occupied", occupied_path=bfx.INCIDENT_NESTED,
+        )
+        result = _run(bfx.success_label_responses(ticket_paths=[TICKET], workspace_reply=refusal))
         self.assertEqual(_phase_calls(result), [])
         payload = result.result or {}
-        self.assertEqual(payload.get("abort_reason"), "worktree-location-mismatch")
-        self.assertIn(bfx.NAMED_LOCATION, payload.get("instructed_location", ""))
-        self.assertIn(bfx.INCIDENT_NESTED, payload.get("reported_location", ""))
+        self.assertEqual(payload.get("status"), "error")
+        self.assertIn("the workspace maker refused", str(payload.get("message")))
+        self.assertIn(bfx.INCIDENT_NESTED, str(payload.get("message")), "the reply must be quoted")
+        self.assertNotEqual((payload.get("resolved_target") or {}).get("worktree_path"), bfx.INCIDENT_NESTED)
 
 
 class TestSameLocationDifferentlySpelledIsAccepted(unittest.TestCase):
     def test_same_location_in_another_spelling_is_accepted(self) -> None:
         # covers: BO-4000a
         # angle: boundary
-        """Forward-slash, lower-case, and trailing-separator spellings of the
-        instructed location are accepted and the run proceeds.
+        """Forward-slash, lower-case, backslash and trailing-separator spellings of the location in the
+        maker's answer are all accepted and the run proceeds (the answer's spelling is taken as given; there
+        is no second spelling to compare it against).
         """
         for spelling in (
             bfx.NAMED_LOCATION.lower(),
@@ -73,7 +75,7 @@ class TestSameLocationDifferentlySpelledIsAccepted(unittest.TestCase):
         ):
             with self.subTest(spelling=spelling):
                 result = _run(bfx.success_label_responses(
-                    ticket_paths=[TICKET], opened_worktree_path=spelling,
+                    ticket_paths=[TICKET], workspace_reply=bfx.ready_workspace(spelling),
                 ))
                 self.assertTrue(_phase_calls(result), f"stderr={result.stderr!r}")
 
@@ -82,29 +84,34 @@ class TestUnreadableResultRefusesDistinguishably(unittest.TestCase):
     def test_unreadable_worktree_result_refuses_distinguishably_from_wrong_location(self) -> None:
         # covers: BO-4000a
         # angle: failure
-        """No usable result from the worktree-opening agent stops the run
-        with a reason distinguishable from a wrong-location refusal.
+        """No usable result from the workspace step (a failed command, whose stdout is not the maker's
+        answer) stops the run with a reason distinguishable from a refusal: it says no valid answer was
+        received instead of saying the maker refused.
         """
-        responses = bfx.success_label_responses(ticket_paths=[TICKET])
-        responses["worktree-setup"] = {"status": "failed", "error": "boom"}
-        result = _run(responses)
+        unreadable = shell_step_reply({"status": "failed", "error": "boom"}, exit_status=1)
+        result = _run(bfx.success_label_responses(ticket_paths=[TICKET], workspace_reply=unreadable))
         self.assertEqual(_phase_calls(result), [])
         payload = result.result or {}
-        self.assertEqual(payload.get("abort_reason"), "worktree-report-unusable")
-        self.assertNotEqual(payload.get("abort_reason"), "worktree-location-mismatch")
+        self.assertEqual(payload.get("status"), "error")
+        message = str(payload.get("message"))
+        self.assertIn("no valid answer was received", message)
+        self.assertNotIn("the workspace maker refused", message)
+
+        refused = _run(bfx.success_label_responses(
+            ticket_paths=[TICKET], workspace_reply=bfx.refused_workspace("OCCUPIED", "occupied"),
+        ))
+        self.assertNotEqual(message, str((refused.result or {}).get("message")))
 
 
 class TestLaterWorktreePathDoesNotReplaceResolvedWorktree(unittest.TestCase):
     def test_later_worktree_path_in_an_agent_result_does_not_replace_the_resolved_worktree(self) -> None:
         # covers: BO-4000a
         # angle: seam
-        """In the reuse case, a stray worktree_path in a LATER agent result
-        (here, the epic-planner's own reply) does not change the root of
-        subsequent phase prompts.
+        """In the reuse case, a stray worktree_path in a LATER agent result (here, the epic-planner's own
+        reply) does not change the root of subsequent phase prompts.
         """
         responses = bfx.success_label_responses(
             ticket_paths=[TICKET], resolved_worktree_path=bfx.UXP_WORKTREE,
-            resolved_worktree_facts=bfx.facts(),
         )
         responses["epic-planner"]["worktree_path"] = "/some/other/place"
         result = _run(responses)
@@ -118,23 +125,21 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
     def test_worktree_report_adjudication_is_reachable_from_the_workflow_top_level_body(self) -> None:
         # covers: BO-4000a
         # angle: reachability
-        """The wrong-location, unreadable-result, and reuse-not-overwritten
-        cases are each driven through the harness running build-feature.js's
-        own top-level body.
+        """The refused, unreadable-result, and reuse-not-overwritten cases are each driven through the
+        harness running build-feature.js's own top-level body.
         """
-        wrong = _run(bfx.success_label_responses(
-            ticket_paths=[TICKET], opened_worktree_path=bfx.INCIDENT_NESTED,
+        refused = _run(bfx.success_label_responses(
+            ticket_paths=[TICKET], workspace_reply=bfx.refused_workspace("OCCUPIED", "occupied"),
         ))
-        self.assertEqual(_phase_calls(wrong), [])
+        self.assertEqual(_phase_calls(refused), [])
 
-        unreadable_responses = bfx.success_label_responses(ticket_paths=[TICKET])
-        unreadable_responses["worktree-setup"] = {"status": "failed"}
-        unreadable = _run(unreadable_responses)
+        unreadable = _run(bfx.success_label_responses(
+            ticket_paths=[TICKET], workspace_reply=shell_step_reply({"status": "failed"}, exit_status=1),
+        ))
         self.assertEqual(_phase_calls(unreadable), [])
 
         reuse = _run(bfx.success_label_responses(
             ticket_paths=[TICKET], resolved_worktree_path=bfx.UXP_WORKTREE,
-            resolved_worktree_facts=bfx.facts(),
         ))
         self.assertTrue(_phase_calls(reuse))
 

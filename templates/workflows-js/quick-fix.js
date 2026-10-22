@@ -14,7 +14,7 @@
  * Otherwise — cwd is not a repo at all (common when it is an untracked workspace
  * parent), HEAD is detached, or the branch is main/master (PR-only under the
  * require-ci-lint ruleset, so a direct commit cannot be pushed) — the workflow
- * self-isolates via scripts/setup_ticket_worktree.py create-only before doing any
+ * self-isolates via the workspace maker (scripts/worktree.py ensure --kind feature) before doing any
  * work. Every phase after Guards is anchored to the resulting worktree root.
  *
  * Implements BP-600a through BP-600e. NOTE: BP-600a-1, BP-600a-2, BP-600b-1 and
@@ -231,109 +231,25 @@ if (!diagnosis || !diagnosis.target_file || !diagnosis.root_cause) {
 
 const { target_file, location_hint, symptom, root_cause, divergence_decision } = diagnosis
 
-// Step 0a — OBSERVE. This call only reports what the current location is; it
-// creates nothing and decides nothing. The decision is made in JS below.
-const isolationCheck = await agent(
-  `You are the isolation-decision phase of /quick-fix. Report what the current location is.
-Create nothing.
+// Step 0a — the workspace. BO-4300c-3 / BO-4300a-1-ia: this workflow never works in the main copy, the
+// folder it was started from, or a folder it made up. Its workspace is the workspace maker's answer
+// (handed in as args.workspace) or the answer of exactly ONE verbatim dispatch of the maker command;
+// anything but an accepted answer ends the run here, quoting what was received.
 
-Every command below is a SINGLE simple command. Never chain with &&, ;, || or pipes, and never use cd — use absolute paths or "git -C <path>".
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-1. Run: pwd
-   Record the output as session_cwd. This is defined even outside a git repository.
+const quickFixSlug = 'quick-fix-' + String(target_file).split(/[\\/]/).pop().toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+const workspace = await workspaceObtain(
+  'python3 {{config.output_root}}/scripts/worktree.py ensure --kind feature --slug ' + quickFixSlug, 'Guards')
+if (!workspace.accepted) return workspaceFailure(workspace)
 
-2. Run: git rev-parse --is-inside-work-tree
-   If it exits non-zero ("fatal: not a git repository"), set is_repo=false and leave
-   initial_branch as an empty string.
-   If it exits 0 and prints "true", set is_repo=true and run:
-     git branch --show-current
-   recording the output as initial_branch. An empty result means detached HEAD.
-
-3. Set needs_isolation = true when is_repo is false, OR initial_branch is "", "main",
-   or "master". Otherwise set it false.
-
-Return status="ok" — this step never blocks, it only reports. Do NOT run
-git worktree add, do NOT run setup_ticket_worktree.py, and do NOT dispatch
-worktree-agent or the feature skill. Creating the worktree is a later step, and only
-if this script decides it is needed.`,
-  { label: 'isolation-check', phase: 'Guards', schema: ISOLATION_CHECK_SCHEMA }
-)
-
-const isolationBlock = blockedOnFailure(isolationCheck, 'Guards (isolation-check)', 'Isolation-check agent')
-if (isolationBlock) return isolationBlock
-
-// Step 0b — DECIDE, here, in control flow. This replaces the former "no isolation,
-// ever" guard, which had no answer for a non-repo cwd and offered a dead end on main
-// (PR-only: the commit cannot be pushed, so confirming "yes" produced unlandable work).
-let worktreeRoot
-let activeBranch
-let selfIsolated = false
-
-if (isolationCheck.needs_isolation) {
-  const isolateResult = await agent(
-    `You are the self-isolation phase of /quick-fix. The current location cannot be used in
-place — it is not a git repository, or HEAD is detached, or the branch is main/master,
-which is PR-only here so a direct commit could not be pushed.
-
-Create an isolated worktree using the repository's canonical script. Never use
-worktree-agent, never use the feature skill, and never hand-roll a bare "git worktree add":
-a hand-made worktree gets none of the bootstrap and silently skips every package pre-commit
-hook for the whole run. The script below calls git worktree add for you and bootstraps the
-result — that is exactly why it is the required tool.
-
-Session cwd: ${isolationCheck.session_cwd}
-
-Use single, simple commands only.
-
-1. Locate the script by testing these absolute paths in order:
-     ls "${isolationCheck.session_cwd}/scripts/setup_ticket_worktree.py"
-     ls "${isolationCheck.session_cwd}/leafcutter-ai/scripts/setup_ticket_worktree.py"
-   The first that exists is script_path — the first is the deployed/consumer layout, the
-   second the dev workspace-parent layout where leafcutter-ai/ is a subdirectory. If
-   neither exists, return status="blocked" naming both paths tried.
-   script_repo_root is script_path with the trailing /scripts/setup_ticket_worktree.py removed.
-
-2. MANDATORY staleness gate, before creating anything. The create-only subcommand roots the
-   new branch at LOCAL main, not origin/main — it is the one subcommand in that script that
-   does (create-ac-worktree and create-fastlane-worktree both root at origin/main). A stale
-   local main silently yields a stale branch.
-     Run: git -C "<script_repo_root>" fetch origin
-     Run: git -C "<script_repo_root>" rev-list --left-right --count main...origin/main
-   The output is "<L>\\t<R>". If R is non-zero, return status="blocked": local main is R
-   commits behind. Tell the user to run
-     git -C "<script_repo_root>" checkout main
-     git -C "<script_repo_root>" merge --ff-only origin/main
-   and re-run /quick-fix. Do NOT create the worktree.
-
-3. Derive a short kebab-case slug from the diagnosed bug:
-     target file: ${target_file}
-     root cause:  ${root_cause}
-   For example, "fast-lane-structural-parent".
-
-4. Run: python "<script_path>" create-only "<slug>"
-   Idempotent: an existing worktree for that slug is reused and reported with created=false
-   rather than failing.
-   Parse the single-line JSON payload it prints to stdout:
-     {"worktree_path": "...", "branch": "feature/<slug>", "created": true|false}
-   Return worktree_root and branch from that payload verbatim — do not construct the path
-   any other way. The branch is ALWAYS feature/<slug>: the script does not honour fix/,
-   bugfix/, hotfix/ or chore/ prefixes on creation.`,
-    { label: 'self-isolate', phase: 'Guards', schema: SELF_ISOLATE_SCHEMA }
-  )
-
-  const isolateBlock = blockedOnFailure(isolateResult, 'Guards (self-isolate)', 'Self-isolate agent',
-    { halt_reason: 'isolation_failed' })
-  if (isolateBlock) return isolateBlock
-
-  worktreeRoot = isolateResult.worktree_root
-  activeBranch = isolateResult.branch
-  selfIsolated = true
-  log(`Self-isolated into ${worktreeRoot} on ${activeBranch} (created: ${isolateResult.created !== false}).`)
-} else {
-  worktreeRoot = isolationCheck.session_cwd
-  activeBranch = isolationCheck.initial_branch
-  log(`Operating in place: ${worktreeRoot} on ${activeBranch}.`)
-}
+// Step 0b — the established workspace: every later phase is anchored to it.
+const worktreeRoot = workspace.workspace_path
+const activeBranch = workspaceBranch(workspace.answer)
+const selfIsolated = true
+log(`Workspace ready: ${worktreeRoot} on ${activeBranch || '(branch not reported)'}.`)
 
 // Step 0b — uncommitted-changes guard, anchored to the established worktree.
 const guardResult = await agent(
@@ -344,8 +260,8 @@ Worktree root: ${worktreeRoot}
 Branch:        ${activeBranch}
 
 1. Run: git -C "${worktreeRoot}" branch --show-current
-   Confirm it equals "${activeBranch}". If it does not, return status="blocked" with a
-   message saying the branch changed — that is a bug, quick-fix must never switch branches.
+   ${activeBranch ? `Confirm it equals "${activeBranch}". If it does not, return status="blocked" with a
+   message saying the branch changed — that is a bug, quick-fix must never switch branches.` : 'Report it; the workspace maker named no branch to compare against.'}
 
 2. Run: git -C "${worktreeRoot}" status --porcelain
    Check whether "${target_file}" appears in the output.
@@ -454,7 +370,7 @@ log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`
 
 // BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
 // dispatches get scratchEnvNote and the mutation-proof/PR-body files live in scratchDir. Fail-open: /tmp, no note.
-const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
+const scratchItem = ((await agent(`From the working copy ${worktreeRoot}, run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { agentType: 'status-checker', label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
 const scratchDir = typeof scratchItem === 'string' && scratchItem ? scratchItem : '/tmp'
 const scratchEnvNote = scratchDir === '/tmp' ? '' : `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchDir}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.`
 

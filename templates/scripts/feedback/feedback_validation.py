@@ -24,6 +24,10 @@ import sys
 
 VALID_ADDRESSED_BY_TYPES = ("ticket", "commit", "pr")
 _TAG_RE = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
+# The one writer id that names no agent: ``submit_feedback.py --source hook``
+# bypasses ``validate_writer`` and the process-finding list carries it. The
+# build's writer check imports this rather than keeping a sentinel of its own.
+HOOK_WRITER = "hook"
 
 
 def validate_category(category: str, cats: dict) -> None:
@@ -44,6 +48,24 @@ def validate_category(category: str, cats: dict) -> None:
     sys.exit(1)
 
 
+def writer_allowed(phase: str, category: str, cats: dict) -> bool:
+    """Return True when ``phase`` is a literal member of the category's allowed_writers.
+
+    This is the ONE writer rule: ``validate_writer`` (submission) and the build's
+    writer-consistency check (INF-100c-5) both call it, so they cannot drift.
+    There is no sentinel expansion; a name is admitted only if it is listed.
+
+    Args:
+        phase: The agent name or writer id submitting feedback.
+        category: The category id string.
+        cats: The loaded categories dict.
+
+    Returns:
+        bool: True when the writer is listed for the category.
+    """
+    return phase in cats[category].get("allowed_writers", [])
+
+
 def validate_writer(phase: str, category: str, cats: dict) -> None:
     """Raise SystemExit(1) if phase is not in the category's allowed_writers.
 
@@ -53,7 +75,7 @@ def validate_writer(phase: str, category: str, cats: dict) -> None:
         cats: The loaded categories dict.
     """
     allowed: list = cats[category].get("allowed_writers", [])
-    if phase in allowed:
+    if writer_allowed(phase, category, cats):
         return
     print(
         f"ERROR: Phase '{phase}' is not an allowed writer for category "

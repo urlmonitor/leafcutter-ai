@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -195,7 +195,16 @@ amended_by:
 superseded_by: null
 covered_by: [BO-4300c-3-i, BO-4300c-3-ii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-3.md
+- templates/workflows-js/_shared/workspace-answer.js
+- templates/workflows-js/build-epic.js
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
+- templates/workflows-js/create-ticket.js
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/finalize-feature.js
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/quick-fix.js
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: |
   The CALLER half of BO-4300c -- the half the incident violated. F2: plan-feature's
   no-workspace mode, build-epic's fallback to the epic folder, finalize's "unknown", the fast
@@ -203,3 +212,12 @@ notes: |
   plan 6.1, last paragraph), not on source text. Never-straight-to-main as an end state is
   BO-1800e; this record is the halt at the start.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

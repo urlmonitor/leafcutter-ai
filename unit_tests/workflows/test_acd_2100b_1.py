@@ -81,7 +81,7 @@ _PREFLIGHT_SCRIPT = (
 )
 
 _TIMEOUT = 20
-_SETUP_RELATED_LABELS = ("resolve-worktree-setup-script-path", "worktree-setup")
+_SETUP_RELATED_LABELS = ("workspace-ensure",)  # BO-4300c-3: the ONE workspace step (the script-path resolution and worktree-setup labels are retired)
 
 # Vocabulary this report must never contain -- a statement about agent
 # permission, or a pointer at a permission setting (AC-3/AC-4).

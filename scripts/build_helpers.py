@@ -62,7 +62,7 @@ from build_colors import success as _success
 from build_colors import warn as _warn
 from build_capability_merge import resolve_veto_or_merge
 from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
-from build_shim_probe import resolve_effective_shim_strategy
+from build_shim_env import effective_shim_strategy
 from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
@@ -974,13 +974,12 @@ def _compute_output_mappings(
             if build_phases_mod is None:
                 _add(tpl, output, tpl.read_text(encoding="utf-8"))
                 continue
-            emitted = build_phases_mod._emit_workflow_variant(tpl.read_bytes(), engine)
+            emitted = build_phases_mod._emit_workflow_variant(build_phases_mod._workflow_source_bytes(tpl, workflows_js_dir), engine)
             try:
                 emitted = inject_config(emitted.decode("utf-8"), config).encode("utf-8")
             except UnicodeDecodeError:
                 pass  # Non-UTF-8 content: injection skipped, matching the real phase's fallback.
             _add(tpl, output, emitted)
-
     return mappings
 
 
@@ -1444,7 +1443,7 @@ def install_shims(
     """
     if config is None:
         config = {}
-    strategy = resolve_effective_shim_strategy(config.get("shim_strategy", "auto"), target_root)
+    strategy = effective_shim_strategy(config, target_root)
     if output_root is None:
         output_root = target_root / config.get("output_root", ".leafcutter")
 

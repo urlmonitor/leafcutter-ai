@@ -6,7 +6,7 @@ GOAL: Real-artifact scratch install and a released-together process launcher
 WHAT THE SCRATCH INSTALL IS: a bare ``origin`` repository whose ``main`` is
     the base branch (origin/main); one ordinary clone of it (``base``) that
     plays the part of whoever merges pull requests; and linked worktrees of
-    that clone (``git worktree add``), each on its own branch -- the isolated
+    that clone (the linked-checkout add), each on its own branch -- the isolated
     working directories two units of work run in. Because linked worktrees
     share one object store and one set of remote-tracking refs, a fetch in one
     worktree is seen by the other, exactly as in a real install. The sink and
@@ -45,6 +45,7 @@ from pathlib import Path
 from typing import Any
 
 import workflows._inf700a5_fixtures as fx
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
 
 CLI_PATH = fx._REPO_ROOT / "scripts" / "knowledge" / "completion_routing_cli.py"
 ROUTING_PATH = fx._REPO_ROOT / "scripts" / "knowledge" / "completion_routing.py"
@@ -144,12 +145,12 @@ class ScratchInstall:
         """A linked worktree of the base clone on a new branch off origin/main."""
         _git(["fetch", "origin", "main"], self.base)
         path = self.root / f"wt-{branch}"
-        _git(["worktree", "add", "-b", branch, str(path), "origin/main"], self.base)
+        link_checkout(self.base, ["-b", branch, str(path), "origin/main"])
         return path
 
     def discard(self, wt: Path, branch: str) -> None:
         """Abandon a unit of work: remove its worktree and delete its branch unmerged."""
-        _git(["worktree", "remove", "--force", str(wt)], self.base)
+        unlink_checkout(self.base, ["--force", str(wt)])
         _git(["branch", "-D", branch], self.base)
 
     def merge(self, branch: str) -> None:

@@ -510,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
             test_root=Path(args.test_root),
             ac_root=Path(args.ac_root),
             ticket=Path(args.ticket) if args.ticket else None,
+            record=args.record,
         )
         print(json.dumps(gate_verdict))
         return 0 if gate_verdict["gate_passed"] else 1

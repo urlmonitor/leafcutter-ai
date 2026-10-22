@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -37,8 +37,10 @@ criteria: |
     by the same check without anyone editing a list,
   And when an agent asked to run a shell command declines, answers in prose, or
     answers without a result, the workflow ends with an error that quotes the
-    answer received, and no later step of that workflow is dispatched -- a
-    refusal is never taken as the step having run.
+    answer received -- or, where a more specific rule classifies that refusal
+    (BO-2400f-5-iii's declined step in the fast lane), with that rule's halt,
+    which also quotes the answer -- and no later step of that workflow is
+    dispatched; a refusal is never taken as the step having run.
 depends_on:
 - BO-4300a-1
 doc_links:
@@ -241,12 +243,40 @@ amended_by:
     in one shared place). Added a runtime harness test for a refused non-workspace shell step, and the
     lint tests' report now names workflow, step, agent and command, with no-permission counting as not
     permitted. readiness stays reviewed.
+- reason: defer-to-declined-step-rule
+  by: human:user
+  at: 2026-10-16
+  note: >-
+    Last clause amended after merging main (83db3c9ba): the fast lane's resolve step keeps
+    BO-2400f-5-iii's declined-step halt, which must also quote the answer; other shell
+    steps still end with a quoting error. Kernel decision dec-53b45488fdc621d9, approved
+    by the user 2026-10-16; implemented by ticket 17.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300a_1_ia.py
+- unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ia.md
+- templates/workflows-js/_shared/workspace-answer.js
+- templates/workflows-js/build-epic.js
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
+- templates/workflows-js/create-ticket.js
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/finalize-feature.js
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/quick-fix.js
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), workflow-body half: carries the parent''s criteria verbatim.
   The surface is templates/workflows-js/*.js (python-coder). The entry-skill half (skills and commands
   that run the maker and pass its answer in) is BO-4300a-1-ib (llm-expert). F1 and F12; verified on the
   recorded dispatch list of a workflow run, not on source text.'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

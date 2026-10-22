@@ -155,7 +155,7 @@ def test_workspace_setup_dispatches_to_a_shell_permitted_agent():
         f"but config/agent_registry.json does not mark that agent's "
         f"'permits_shell' as true (got {permitted!r}). The isolated-workspace "
         "setup step performs repository-mutating commands (fetch, branch, "
-        "worktree add) and must only be dispatched to an agent whose "
+        "linked-checkout add) and must only be dispatched to an agent whose "
         "registered charter permits shell/repository commands."
     )
 

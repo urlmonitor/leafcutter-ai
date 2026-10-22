@@ -32,7 +32,13 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 import workflows._inf700a5_fixtures as fx  # noqa: E402
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    finalize_baseline_responses,
+    run_workflow_under_e2,
+    shell_step_reply,
+    workspace_ensure_reply,
+)
 
 _CLI = fx._REPO_ROOT / "scripts" / "knowledge" / "completion_routing_cli.py"
 _JS = fx._REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
@@ -60,9 +66,7 @@ class _ScratchOriginCase(unittest.TestCase):
         self.main = root / "main"
         fx._run_git(["clone", str(self.origin), str(self.main)], root)
         self.wt = root / "wt-feature"
-        fx._run_git(
-            ["worktree", "add", "-b", "feature", str(self.wt), "origin/main"], self.main
-        )
+        link_checkout(self.main, ["-b", "feature", str(self.wt), "origin/main"])
         self.sink = root / "install-logs" / "knowledge_emissions.jsonl"
         self.state = root / "install-logs" / "harvest_state.json"
 
@@ -126,7 +130,7 @@ class TestTheObservationFinalizeIssuesAgainstAMergedBranch(_ScratchOriginCase):
         self.assertIs(record["eligible"], True, "the shared sink outlives this removal")
         self.assertEqual(observed["written"], 1, observed)
 
-        fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
+        unlink_checkout(self.main, ["--force", str(self.wt)])
         self.assertFalse(self.wt.exists(), "the announcement must not stop the removal")
 
 
@@ -183,7 +187,7 @@ class TestTheTeardownObservationCoversEveryStageOnTheBranch(_ScratchOriginCase):
         self.assertIn(self.L2, named[_UNPUBLISHED]["text"])
         self.assertEqual(named[_UNPUBLISHED]["reason"], "left_out_of_commit")
         self.assertIs(named[_UNPUBLISHED]["eligible"], True)
-        fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
+        unlink_checkout(self.main, ["--force", str(self.wt)])
         self.assertFalse(self.wt.exists())
 
     def test_a_later_stage_that_could_not_complete_does_not_erase_earlier_stages(self) -> None:
@@ -209,10 +213,9 @@ class TestTheTeardownObservationCoversEveryStageOnTheBranch(_ScratchOriginCase):
 def _finalize_responses(observe: Any) -> dict[str, Any]:
     """Label responses that drive finalize-feature.js through Step 7."""
     responses: dict[str, Any] = {
-        "pre-flight": {"found": True, "branch": "feature/teardown", "worktree_root": _WT},
+        "workspace-ensure": workspace_ensure_reply(_WT, branch="feature/teardown"),
         "gh-config": {"gh_target_account": None, "gh_repo": None},
-        "step-0-baseline": {"status": "ok", "baseline_sha": "abc1234",
-                            "baseline_failures": [], "baseline_run_at": "2026-10-09T00:00:00Z"},
+        **finalize_baseline_responses(),
         "step-1-pr-probe": {"found": True, "number": 7, "url": "https://example.invalid/pull/7"},
         "step-2-merge-main": {"status": "merged", "merge_strategy": "merged_main"},
         "step-3-test-run": {"passed": True, "output": "ok", "failing_tests": []},
@@ -228,7 +231,8 @@ def _finalize_responses(observe: Any) -> dict[str, Any]:
         _REMOVE_LABEL: {"removed": True, "conflict_pids": []},
     }
     if observe is not None:
-        responses[_OBSERVE_LABEL] = observe
+        # BO-4300a-1-ia: the observation is a shell step -- the CLI prints the JSON, the executor relays it.
+        responses[_OBSERVE_LABEL] = shell_step_reply(observe)
     return responses
 
 

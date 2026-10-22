@@ -170,13 +170,13 @@
       "properties": {
         "kill_residual_processes": {
           "type": "boolean",
-          "description": "When true, background processes matching the worktree path are terminated before git worktree remove. When false, a summary is printed and the user must act manually.",
+          "description": "When true, background processes matching the worktree path are terminated before the workspace is removed. When false, a summary is printed and the user must act manually.",
           "default": true
         },
         "log_globs": {
           "type": "array",
           "items": {"type": "string"},
-          "description": "Glob patterns for log files to remove from the worktree directory before git worktree remove.",
+          "description": "Glob patterns for log files to remove from the workspace directory before the workspace is removed.",
           "default": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"]
         },
         "protected_paths": {

@@ -173,7 +173,7 @@ target paths. At least one AC-N line with a target_path is required.
 ```
 Follow the failed-path recipe (signoff §4).
 
-### Step 3 — Locate Worktree Root
+### Step 3 — Resolve the Repository Root
 
 Determine the absolute path of the worktree root. Use the directory containing
 `ticket_path` as the starting point:
