@@ -27,6 +27,7 @@ import importlib.util
 import io
 import json
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -111,7 +112,12 @@ def _clean_pkg(base: str) -> Path:
 def _register_writer(root: Path, name: str) -> None:
     """A signing-off specialist must be a feedback writer (INF-100c-5), so a copy that makes
     one sign off also registers it; otherwise the writer check, not the grant check, fails."""
-    cats_path = root / "templates" / "config" / "feedback_categories.yaml"
+    cfg_dir = root / "templates" / "config"
+    if cfg_dir.is_symlink():  # the slice links templates/config to the REAL tree: copy before writing
+        real = cfg_dir.resolve()
+        cfg_dir.unlink()
+        shutil.copytree(real, cfg_dir)
+    cats_path = cfg_dir / "feedback_categories.yaml"
     cats = yaml.safe_load(cats_path.read_text(encoding="utf-8"))
     complete = next(c for c in cats["categories"] if c["id"] == "complete")
     if name not in complete["allowed_writers"]:
