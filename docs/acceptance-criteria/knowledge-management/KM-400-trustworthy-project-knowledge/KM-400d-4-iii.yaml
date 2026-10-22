@@ -5,8 +5,8 @@ components: [knowledge_management]
 level: L3
 status: active
 req_status: active
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 parent: KM-400d-4
 criteria: |
@@ -62,12 +62,235 @@ doc_links:
     relationship: context
     status: exists
     relevance: The 'unavailable' branch gains the step name.
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
 expects_from:
-  ac_id: KM-400d-4-i
-  contract: The adapter's own name lookups are an identifiable, timeable step separate from connect.
+  - ac_id: KM-400d-4-i
+    contract: "Every name lookup made inside the graph adapter's own calls is an identifiable step, separate from connect, that reports per retrieval request: elapsed lookup time in integer milliseconds (int, never null once a lookup ran) and whether the address came from the process-lifetime remembered lookups (bool). Lookups outside the adapter's calls are not counted. Delivered in-process."
+  - ac_id: KM-400d-4-ii
+    contract: "When the deadline passes, the retrieval path knows which step was in progress (one of \"name lookup\", \"connect\", \"query\") and the elapsed milliseconds already spent in that step on the retrieval clock, and makes both available to the result builder before the answer is printed, even while the abandoned call is still blocked. Delivered in-process."
+declared_files:
+  - path: knowledge/contracts.py
+    state: existing
+  - path: knowledge/service.py
+    state: existing
+  - path: knowledge/adapters/neo4j_backend.py
+    state: existing
+it_requirements:
+  - "Result contract (additive to stats, nothing existing renamed, removed or re-typed): stats.resolve_ms (int | null), stats.connect_ms (int | null), stats.query_ms (int | null), stats.resolve_from_memory (bool | null; true when every adapter lookup in the request used a remembered address), and stats.deadline_step (\"name lookup\" | \"connect\" | \"query\" | null; null unless the deadline was reached)."
+  - "A step that never started must be reported as null, never as 0; a measured zero is reported only when the step ran or was served from remembered lookups (ACS-1100 inherited)."
+  - "All step timings must be measured on the same retrieval clock as stats.duration_ms, and their sum must not exceed stats.duration_ms by more than rounding."
+  - "The existing warning text \"retrieval deadline reached\" must stay unchanged so current consumers keep matching it; the step name is added, never substituted."
+  - "Step naming must hold on the abandonment path of KM-400d-4-ii: the reported step is the one in progress when the deadline passed, even while that call is still blocked."
+  - "Name-lookup time counts only lookups made inside the graph adapter's own calls (the KM-400d-4-i scope)."
+  - "Timing instrumentation must add no more than 5 ms to a retrieval."
+  - "The added fields must pass the result schema and the kernel integration adapter's validation without failing existing schema parity checks."
+test_intent:
+  - clause: the result has status ok
+    needs_test: true
+    reason: Adding timing instrumentation must not turn a healthy retrieval into a failure.
+  - clause: "its stats carry three separate fields: name-lookup time about 200 ms, connect time about 300 ms and query time about 500 ms (each within 100 ms)"
+    needs_test: true
+    reason: Each timing is computed around a different step, and a wrong boundary would shift time between them.
+  - clause: none of the three is folded into another
+    needs_test: true
+    reason: Folding lookup time into connect time is the exact ambiguity that hides the WSL lookup stall from a user.
+  - clause: the result has status unavailable
+    needs_test: true
+    reason: Step naming must extend the unavailable outcome without changing its status.
+  - clause: it names "name lookup" as the step the deadline was reached in, with the time already spent in that step (about 2000 ms)
+    needs_test: true
+    reason: Attributing the miss to the lookup step is computed from in-progress state and is the point of the diagnostic.
+  - clause: the connect and query times are reported as not reached (null), not as 0
+    needs_test: true
+    reason: A zero for a step that never ran would be a false measurement, which ACS-1100 forbids.
+  - clause: the result names "connect" as the step the deadline was reached in
+    needs_test: true
+    reason: Telling a stuck connect apart from a stuck lookup is computed behaviour a wrong boundary would get wrong.
+  - clause: it reports the name-lookup time (about 50 ms) and the query time as not reached (null)
+    needs_test: true
+    reason: The completed step must carry its measured time while the unstarted step stays null.
+  - clause: the result names "query" as the step the deadline was reached in
+    needs_test: true
+    reason: A miss during the query must not be attributed to an earlier step.
+  - clause: it reports the name-lookup and connect times measured before the query started
+    needs_test: true
+    reason: Earlier step timings must survive a deadline miss in a later step rather than being lost.
+  - clause: its name-lookup time is reported as 0 with an indication that the remembered address was used, not as not reached
+    needs_test: true
+    reason: The remembered-address case is a distinct branch that must not be confused with a step that never ran.
+test_spec:
+  - name: test_km_400d_4_iii_successful_retrieve_has_status_ok_with_step_timings_present
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python -m knowledge retrieve run as a fresh subprocess (real argv, real main, real KnowledgeService and Neo4jBackend._transaction) through a shared support module in the style of tests/knowledge/_km_400e_8_support.py; the subprocess installs a fake resolver as socket.getaddrinfo that sleeps 0.2 s per lookup and a fake neo4j driver whose connect sleeps 0.3 s and whose queries sleep 0.5 s in total, all with time.sleep inside the transaction worker thread; deadline_ms 10000"
+    description: The printed result has status ok and its stats carry resolve_ms, connect_ms and query_ms as integers.
+    proves_clause: the result has status ok
+    code_file: knowledge/service.py
+  - name: test_km_400d_4_iii_step_timings_match_the_injected_delays_within_100_ms
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run with 0.2 s lookup, 0.3 s connect and 0.5 s query delays, reading stats from the printed JSON"
+    description: stats.resolve_ms is 200 +/- 100, stats.connect_ms is 300 +/- 100 and stats.query_ms is 500 +/- 100.
+    proves_clause: "its stats carry three separate fields: name-lookup time about 200 ms, connect time about 300 ms and query time about 500 ms (each within 100 ms)"
+    code_file: knowledge/adapters/neo4j_backend.py
+  - name: test_km_400d_4_iii_no_step_time_is_folded_into_another
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run, repeated with the lookup delay changed to 1.0 s and the other delays unchanged, comparing stats between the two runs; also checking resolve_ms + connect_ms + query_ms does not exceed stats.duration_ms by more than rounding"
+    description: Raising only the lookup delay raises only resolve_ms (by about 800 ms) and leaves connect_ms and query_ms within 100 ms of before.
+    proves_clause: none of the three is folded into another
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "lookup time is measured inside the connect window so connect_ms grows with the lookup delay"
+      - "the three timings overlap so their sum exceeds duration_ms"
+  - name: test_km_400d_4_iii_deadline_miss_during_lookup_is_unavailable
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "the same fresh-subprocess python -m knowledge retrieve run with deadline_ms 2000 and a resolver that blocks 20 s with time.sleep (not cancellable)"
+    description: The printed result has status unavailable and the warning "retrieval deadline reached" unchanged.
+    proves_clause: the result has status unavailable
+    code_file: knowledge/service.py
+  - name: test_km_400d_4_iii_lookup_miss_names_name_lookup_step_and_time_spent
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run with the 20 s blocked lookup and deadline_ms 2000, reading stats from the printed JSON while the blocked call is still running"
+    description: stats.deadline_step is "name lookup" and stats.resolve_ms is about 2000 (within 300 ms).
+    proves_clause: it names "name lookup" as the step the deadline was reached in, with the time already spent in that step (about 2000 ms)
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "the step is read after the abandoned call returns so the answer is delayed or names no step"
+      - "the miss is attributed to connect or query because the lookup is not an identifiable step"
+  - name: test_km_400d_4_iii_steps_not_reached_are_null_not_zero_after_lookup_miss
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run with the 20 s blocked lookup and deadline_ms 2000"
+    description: stats.connect_ms and stats.query_ms are present in the printed JSON with the value null, not 0.
+    proves_clause: the connect and query times are reported as not reached (null), not as 0
+    code_file: knowledge/service.py
+    must_catch:
+      - "unstarted steps default to 0 instead of null"
+      - "the keys are omitted from stats instead of being null"
+  - name: test_km_400d_4_iii_connect_miss_names_connect_step
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run with a 0.05 s lookup, a connect that blocks 20 s with time.sleep and deadline_ms 2000"
+    description: stats.deadline_step is "connect".
+    proves_clause: the result names "connect" as the step the deadline was reached in
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "the step boundary puts the stuck connect inside the name lookup step"
+  - name: test_km_400d_4_iii_connect_miss_keeps_lookup_time_and_nulls_query_time
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run with the 0.05 s lookup and the 20 s blocked connect"
+    description: stats.resolve_ms is about 50 (within 100 ms) and stats.query_ms is null.
+    proves_clause: it reports the name-lookup time (about 50 ms) and the query time as not reached (null)
+    code_file: knowledge/service.py
+    must_catch:
+      - "a completed step's time is discarded when a later step misses the deadline"
+  - name: test_km_400d_4_iii_query_miss_names_query_step
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run where lookup and connect each take 0.05 s and the query blocks 20 s with time.sleep, deadline_ms 2000"
+    description: stats.deadline_step is "query".
+    proves_clause: the result names "query" as the step the deadline was reached in
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "a miss during the query is attributed to the earlier connect step"
+  - name: test_km_400d_4_iii_query_miss_keeps_lookup_and_connect_times
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run with 0.1 s lookup plus connect and a 20 s blocked query"
+    description: stats.resolve_ms and stats.connect_ms are integers within 100 ms of their injected delays and are not null.
+    proves_clause: it reports the name-lookup and connect times measured before the query started
+    code_file: knowledge/service.py
+    must_catch:
+      - "earlier step timings are lost when the deadline fires in a later step"
+  - name: test_km_400d_4_iii_remembered_lookup_in_a_later_request_reports_zero_with_memory_flag
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "a fresh child process that builds one retriever through knowledge.config.build_retriever, runs two retrieve requests against the fake driver and resolver, and prints both results' stats"
+    description: The first request has resolve_from_memory false and a measured resolve_ms, the second has resolve_ms 0 with resolve_from_memory true rather than null.
+    proves_clause: its name-lookup time is reported as 0 with an indication that the remembered address was used, not as not reached
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "a request served from remembered lookups reports resolve_ms null"
+      - "a remembered lookup reports a measured time of the first request"
+  - name: test_km_400d_4_iii_step_fields_are_reachable_through_the_retrieve_cli
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python -m knowledge retrieve --backend neo4j run as a fresh subprocess with real argv (the harness entry script only pre-installs the fake resolver and fake driver factory, then calls knowledge.__main__.main)"
+    description: The JSON the real CLI prints carries stats.resolve_ms, stats.connect_ms and stats.query_ms and the result parses back through KnowledgeRetrievalResult.
+    proves_clause: the result has status ok
+    code_file: knowledge/service.py
+    convention_test_file: tests/knowledge/test_km_400e_8.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-22"
+test_design_opened_files:
+  - knowledge/service.py
+  - knowledge/__main__.py
+  - knowledge/contracts.py
+  - knowledge/adapters/neo4j_backend.py
+  - tests/knowledge/test_km_400e_8.py
+  - tests/knowledge/_km_400e_8_support.py
+  - config/ac_store_schema.json
+  - docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+file_findings:
+  - file: knowledge/contracts.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: KnowledgeRetrievalResult defines stats as an open dict and the deadline_ms limits, so the additive step fields are carried through its result contract.
+    decision: null
+  - file: knowledge/service.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: KnowledgeService.retrieve writes stats.duration_ms and the deadline warning, the place where step timings and the step name join the result.
+    decision: null
+  - file: knowledge/adapters/neo4j_backend.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _transaction worker is where lookup, connect and query run, so the per-step boundaries are measured there.
+    decision: null
+file_findings_opened_files:
+  - knowledge/contracts.py
+  - knowledge/service.py
+  - knowledge/adapters/neo4j_backend.py
 origin_agent: business-analyst
 created: '2026-10-22'
 amended_by: []
