@@ -853,8 +853,10 @@ best-effort handling (log a warning and proceed if any step fails):
    classify the learning, pass `--entry-kind unclassified --destination
    "(unrouted)"` (ADR-034 Amendment 1 A1.3). **Fail open:** if the helper
    prints a warning or exits non-zero, do not retry or work around it — finish
-   your sign-off anyway. The JSON below documents the record the helper
-   writes; you do not produce it by hand:
+   your sign-off anyway; if it exited non-zero, also load the
+   `agent-telemetry` skill and record the failure as its
+   `Failed capture attempt` section directs. The JSON below documents the
+   record the helper writes; you do not produce it by hand:
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```
