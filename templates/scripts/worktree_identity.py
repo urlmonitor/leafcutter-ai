@@ -11,7 +11,8 @@ BUSINESS CONTEXT: The same piece of work must always map to the same
     on the hub, at the location, or in an old-style linked worktree.
 ARCHITECTURE: Stdlib-only; imports ``worktree_git`` (git boundary),
     ``worktree_answer`` (code table), ``worktree_layout`` (other-project
-    occupant) and ``worktree_paths`` (path spelling). ``worktree.py`` calls
+    occupant), ``worktree_paths`` (path spelling) and ``worktree_remove``
+    (the shared whole-folder delete). ``worktree.py`` calls
     ``resolve`` once per request and passes the :class:`Identity` to the
     other functions here. Nothing here writes to the hub or to git's
     worktree administration: legacy registrations are read as plain files.
@@ -20,10 +21,7 @@ ARCHITECTURE: Stdlib-only; imports ``worktree_git`` (git boundary),
 from __future__ import annotations
 
 import logging
-import os
 import re
-import shutil
-import stat
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +31,7 @@ import worktree_answer as wa
 import worktree_git as wg
 import worktree_layout as wl
 import worktree_paths as wp
+import worktree_remove as wrm
 
 _log = logging.getLogger(__name__)
 
@@ -43,17 +42,59 @@ LEGACY_ALIASES: dict[str, tuple[tuple[str, str], ...]] = {
     "epic": (("EPIC-", "the feature skill names epic lines EPIC-<Name>"),),
     "ac": (("ac-authoring/", "create-ac-worktree named AC lines ac-authoring/<slug>"),),
     "fastlane": (("fast-lane/", "create-fastlane-worktree named lines fast-lane/<slug>"),),
-    "ticket": (("feature/", "setup-ticket's retired ticket sub-command named lines feature/<slug>"),),
 }
 
+
+def _check_alias_table() -> None:
+    """Refuse a naming table that declares a kind's canonical ``<kind>/`` prefix as any alias (A4)."""
+    canonical = {f"{k}/": k for k in wg.VALID_KINDS}
+    for kind, aliases in LEGACY_ALIASES.items():
+        for prefix, _reason in aliases:
+            if prefix in canonical:
+                raise ValueError(f"LEGACY_ALIASES[{kind!r}] declares {prefix!r}, which is canonical for "
+                                 f"kind {canonical[prefix]!r}")
+
+
+_check_alias_table()
+
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z])(?=[A-Z])")
-_SLUG_DISALLOWED = re.compile(r"[^a-z0-9._-]+")
+_SLUG_DISALLOWED = re.compile(r"[^a-z0-9.-]+")
+_SLUG_DOTS = re.compile(r"\.{2,}")
+_SLUG_EDGE = "-."
+SLUG_MAX_LENGTH = 64
+_WINDOWS_DEVICES = frozenset({"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)),
+                              *(f"lpt{i}" for i in range(1, 10))})
 
 
 def slugify(text: str) -> str:
-    """Return the deterministic lower-case kebab form of *text* (CamelCase and spaces split)."""
+    """Return the safe kebab form of *text*: one valid ref segment, or ``""`` when nothing is left (A5).
+
+    Lower-case letters, digits, ``-`` and single ``.``; no leading or trailing
+    ``-``/``.``; no ``.lock`` suffix. ``_`` and every other separator become
+    ``-``. Non-ASCII letters are dropped (``café`` becomes ``caf``). There is
+    no default slug.
+    """
     spaced = _CAMEL_BOUNDARY.sub("-", text.strip())
-    return _SLUG_DISALLOWED.sub("-", spaced.lower()).strip("-") or "workspace"
+    slug = _SLUG_DOTS.sub(".", _SLUG_DISALLOWED.sub("-", spaced.lower())).rstrip(_SLUG_EDGE)
+    while slug.endswith(".lock"):
+        slug = slug[: -len(".lock")].rstrip(_SLUG_EDGE)
+    return slug.lstrip(_SLUG_EDGE)
+
+
+def slug_problem(slug: str) -> str | None:
+    """Return why a normalised *slug* cannot name a workspace on every OS, else ``None`` (pure).
+
+    Refuses an empty slug, a slug over :data:`SLUG_MAX_LENGTH` characters
+    (never truncated: that could merge two identities) and a slug whose name
+    part before the first ``.`` is a Windows reserved device name.
+    """
+    if not slug:
+        return "nothing is left of it after normalising (letters, digits, '-' and single '.' only)"
+    if len(slug) > SLUG_MAX_LENGTH:
+        return f"it is {len(slug)} characters long; the limit is {SLUG_MAX_LENGTH} (it is never truncated)"
+    if slug.split(".", 1)[0] in _WINDOWS_DEVICES:
+        return f"{slug.split('.', 1)[0]!r} is a reserved device name on Windows and cannot be a folder"
+    return None
 
 
 def _prefixes(kind: str) -> tuple[str, ...]:
@@ -91,7 +132,12 @@ class Identity:
 
 def resolve(kind: str, raw_slug: str) -> Identity:
     """Return the canonical :class:`Identity` for a request's ``--kind`` and ``--slug``."""
-    return Identity(kind, normalize_slug(raw_slug, kind))
+    slug = normalize_slug(raw_slug, kind)
+    problem = slug_problem(slug)
+    if problem is not None:
+        raise wa.UsageError(f"--slug {raw_slug!r} for kind {kind!r} cannot name work: {problem}. "
+                            "Nothing was created.")
+    return Identity(kind, slug)
 
 
 # ---------------------------------------------------------------- hub lines
@@ -198,11 +244,11 @@ def occupied_refusal(repo_root: Path, ident: Identity, location: Path, hub: str)
 
 def discard_new_clone(workspace: Path, place: Path) -> None:
     """Remove a clone this request just made (it holds no work) and its emptied kind folder."""
-    def _force(func, path, _exc):  # read-only git objects on Windows
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
     try:
-        shutil.rmtree(workspace, onerror=_force)
+        reason = wrm.delete_whole_folder(workspace)
+        if reason is not None:
+            _log.warning("discard_new_clone: %s", reason)
+            return
         parent = workspace.parent
         if parent != place and not any(parent.iterdir()):
             parent.rmdir()
@@ -289,6 +335,9 @@ def attach_ticket(answer: dict[str, Any], ticket: TicketRequest | None, workspac
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/06]:
+#   A5 safe slugs (empty -> UsageError, no default), A4 dropped ticket<-feature/
+#   alias plus a load-time alias/canonical overlap check, M17 shared delete helper.
 # - 2026-10-10 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06]:
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
 #   Created for BO-4300a-2, a-1-ii, d-3, d-3-i, d-4: the one naming table
