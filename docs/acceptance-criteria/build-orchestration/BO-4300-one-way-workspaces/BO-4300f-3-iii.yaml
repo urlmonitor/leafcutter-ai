@@ -1,0 +1,92 @@
+id: BO-4300f-3-iii
+title: 'Work the cut-over cannot carry over exactly keeps the old workspace for a decision'
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given four old-style workspaces -- "m" in the middle of a merge with an
+    unresolved conflict, "s" whose line of work has a stashed change, "i" holding
+    a change staged for commit but not committed, and "l" locked by its user with
+    the reason "on USB drive" --
+  When the cut-over is run,
+  Then "m", "s" and "l" are each left untouched and listed as needing a decision,
+    each with the reason it was kept,
+  And "i" is either brought over with the change still staged and its content
+    identical, or left untouched and listed as needing a decision,
+  And no folder, register entry, stash entry or branch of the four is changed,
+    even where nothing of it is unsent.
+depends_on: [BO-4300f-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300f-3
+  contract: Cut-over per-workspace verdict and its retired / brought_over / needs_decision report.
+package_surface: false
+it_requirements:
+- An operation in progress is any of merge, rebase (either backend), cherry-pick, revert or bisect. Stash
+  entries are repository-wide, so a stash counts for the workspace whose branch it was made on. A user
+  lock is any lock whose reason is not the WSL 'initializing' entry that IT3 of BO-4300f-3 removes. The
+  no-change preview reports the same reasons.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_merge_stash_and_user_lock_keep_the_old_workspace_for_a_decision
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Legacy worktrees m (mid-merge with a conflict), s (stash made on its branch) and l (locked
+    with reason 'on USB drive') are each listed in needs_decision with their reason, in the preview and
+    in the run; their folders, register entries, stash entries and branches are unchanged.
+- name: test_staged_change_is_carried_over_staged_or_kept_for_a_decision
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Legacy worktree i holding a staged, uncommitted change is either a brought-over workspace
+    whose index still holds that change with identical content, or untouched and listed in needs_decision.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON report, and the state of each legacy worktree, its register entry and the stash afterwards.
+  Each kind of not-exactly-carryable state is set up for real, so a cut-over that ignores one of them fails.
+origin_agent: business-analyst
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Hardening item P9 (M6 also-open), approved by the user 2026-10-22 as amendment A9. Staged changes
+  are either carried over with the index kept, or listed for a decision.
+target_epic: EPIC-WorkspaceMakerHardening

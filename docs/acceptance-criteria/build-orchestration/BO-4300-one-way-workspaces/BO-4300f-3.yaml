@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -24,6 +24,10 @@ criteria: |
   And each old workspace holding unsent work is either brought over as a
     workspace the one maker recognises, with that work intact, or left untouched
     and listed as needing a decision,
+  And a brought-over workspace is never answered ready until its tools have been
+    installed inside it and its protections shown to fire, and the cut-over's
+    report names, for each brought-over workspace not yet shown ready, the one
+    request that makes it ready,
   And the 2 unfinished entries are gone from the register, and nothing else is
     changed by their removal,
   And afterwards the register of old-style workspaces lists only those left for a
@@ -71,7 +75,9 @@ it_requirements:
   never in the legacy folder; its identity is taken from the legacy branch through the one naming table''s
   declared aliases (BO-4300a-2). The line of work keeps its existing branch name (never renamed, so no
   open pull request or hub ref is orphaned), and the marker records that branch. A legacy branch that no
-  declared alias maps to is not guessed: it is left untouched and listed as needing a decision.'
+  declared alias maps to is not guessed: it is left untouched and listed as needing a decision. A legacy
+  branch resolves by every kind''s canonical prefix first and by declared aliases second, and never to
+  two identities.'
 - Stuck registration entries made from another platform (the WSL 'locked initializing' admin entries)
   are removed individually; nothing else is touched by their removal.
 - Offers a no-change preview of what it would do; its report is one JSON object listing retired, brought_over
@@ -92,6 +98,11 @@ it_requirements:
 - All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
   isolated global and system config; afterwards the developer's own repository's branches, registered
   worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+- 'DEFERRED READINESS (A8, user 2026-10-22): the cut-over writes a brought-over workspace''s marker with
+  state ''creating'' and adds next: the exact ensure request (ensure --kind <k> --slug <s>) to its brought_over
+  entry. That ensure answers workspace_action ''completed'', line_of_work ''resumed'', and keeps every brought-over
+  commit and every uncommitted and untracked file byte-identical; its clean-tree check and canaries never
+  refuse on, or touch, the brought-over content (BO-4300c-1-ii).'
 test_required: true
 test_spec:
 - name: test_legacy_workspace_with_nothing_unsent_is_retired_folder_and_registration
@@ -128,6 +139,22 @@ test_spec:
     clone at <landing-root>/epic/alpha (not in the legacy folder) on branch EPIC-Alpha with the commit intact,
     and a later ensure --kind epic --slug alpha answers ok with that same workspace_path and line_of_work
     existing or resumed.
+- name: test_legacy_feature_line_is_one_workspace_whichever_kind_finds_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: A legacy worktree on feature/x is cut over; then ensure --kind feature --slug x answers ok
+    with the same workspace_path, and afterwards exactly one workspace and one line of work exist for it.
+- name: test_brought_over_workspace_is_not_ready_until_proven
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: After the cut-over, a brought-over workspace's marker is in state 'creating', verify does not
+    answer it ok, and its brought_over entry carries next naming the ensure request; that ensure answers
+    ok with workspace_action 'completed' and line_of_work 'resumed', and every brought-over commit and every
+    uncommitted and untracked file is byte-identical before and after.
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
@@ -143,8 +170,24 @@ amended_by:
     brought-over workspaces land at the Q5 landing root under their canonical Q4 identity, keep their
     existing branch, and an unmappable legacy branch is listed for a decision rather than guessed.
     One test added. readiness stays approved.
+- reason: bo4300-hardening-A4
+  by: human:user
+  at: '2026-10-22'
+  note: A legacy branch resolves by canonical prefixes first, aliases second, never to two identities; one test added.
+- reason: bo4300-hardening-A8
+  by: human:user
+  at: '2026-10-22'
+  note: User-approved criteria insert - a brought-over workspace is not ready until proven, and the report names the ensure request that makes it ready; new IT and one test.
+- reason: bo4300-hardening-A9
+  by: human:user
+  at: '2026-10-22'
+  note: Child BO-4300f-3-iii added (work the cut-over cannot carry over exactly is kept for a decision); covered_by updated.
+- reason: bo4300-hardening-A9b
+  by: human:user
+  at: '2026-10-22'
+  note: Child BO-4300f-3-iv added (retiring an old workspace reports the ignored files it deletes); covered_by updated.
 superseded_by: null
-covered_by: [BO-4300f-3-i, BO-4300f-3-ii]
+covered_by: [BO-4300f-3-i, BO-4300f-3-ii, BO-4300f-3-iii, BO-4300f-3-iv]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12_TICKET-20260928-BO-4300-legacy-cut-over.md
 - templates/scripts/worktree.py

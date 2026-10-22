@@ -1,0 +1,76 @@
+id: BO-4300f-3-iv
+title: 'Retiring an old workspace reports the ignored files it deletes'
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given an old-style workspace holding nothing unsent whose folder also holds
+    files version control is told to ignore -- ".env.local" and a folder "build/" --
+  When the cut-over retires it,
+  Then its folder is gone,
+  And the report's entry for it lists ".env.local" and "build/" as ignored content
+    that was deleted,
+  And the no-change preview lists the same paths before anything is deleted.
+depends_on: [BO-4300f-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300f-3
+  contract: Cut-over report (retired entries) and no-change preview.
+package_surface: false
+it_requirements:
+- Ignored content is listed from version control's own ignored-file listing, with a wholly ignored folder
+  named as that folder; the report field is ignored_removed [path] on the retired entry.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_retired_workspace_reports_its_deleted_ignored_content
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: A clean legacy worktree holding an ignored .env.local and an ignored build/ folder is retired;
+    its folder is gone, its retired entry's ignored_removed lists exactly .env.local and build/, and the
+    no-change preview run before it listed the same paths and deleted nothing.
+test_rationale: Every assertion is made on what the deployed maker actually did to a real legacy worktree --
+  its JSON report and preview, and the folder afterwards. Ignored files are invisible to the unsent-work
+  verdict, so only the report shows a person what was lost.
+origin_agent: business-analyst
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Hardening item N7, approved by the user 2026-10-22 as amendment A9b, option R: the ignored
+  content is deleted and reported in ignored_removed, and the preview lists the same paths.
+target_epic: EPIC-WorkspaceMakerHardening

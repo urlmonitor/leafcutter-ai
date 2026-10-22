@@ -1,0 +1,79 @@
+id: BO-4300e-3-ii
+title: 'A failed deletion of the line on the shared project leaves the workspace in place'
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "alpha" holding nothing unsent, whose line of work exists on
+    the shared project, and a shared project that refuses to delete that line,
+  When clearing "alpha" is requested together with deletion of its line on the
+    shared project,
+  Then the request ends with a failure naming the deletion on the shared project
+    as the step that failed,
+  And "alpha"'s folder and files are identical before and after,
+  And the line of work on the shared project is identical before and after.
+depends_on: [BO-4300e-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-3
+  contract: remove with --delete-remote-branch.
+package_surface: false
+it_requirements:
+- '--delete-remote-branch deletes the hub branch before any local deletion; a failed push is GIT_FAILED
+  (status error, exit 1, step naming it) and nothing local is deleted. Fixture: a bare hub whose update
+  hook rejects deletions.'
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_rejected_remote_branch_deletion_leaves_workspace_and_hub_line_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With a bare hub whose update hook rejects deletions, remove --delete-remote-branch on a clean
+    workspace answers status error, code GIT_FAILED, exit 1, with step naming the deletion on the hub; the
+    workspace folder is byte-identical and the hub branch ref is unchanged.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace and the hub afterwards. Only a real
+  hub that refuses the push shows whether local deletion waits for the remote one.
+origin_agent: business-analyst
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Hardening item M5 (push --delete failure), approved by the user 2026-10-22 as amendment A7.
+  Deleting the hub line first means a refused deletion can never leave a cleared workspace whose
+  line still exists on the hub with no local copy to retry from.
+target_epic: EPIC-WorkspaceMakerHardening
