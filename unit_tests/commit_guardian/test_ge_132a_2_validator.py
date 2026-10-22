@@ -57,7 +57,7 @@ ENGAGE_SPECIALIST_AGENTS = {
     "check-sql-complexity": "sql-coder",
     "check-ticket-ac-limits": "python-coder",
 }
-AUTHOR_CLEARS_HOOKS = ("check-doc-links", "check-secrets", "check-commit-scope")
+AUTHOR_CLEARS_HOOKS = ("check-doc-links", "check-secrets", "check-commit-scope", "check-build-epic-gate-verdicts")
 
 
 def _loaded(repo: Path, *hook_ids: str) -> dict:
