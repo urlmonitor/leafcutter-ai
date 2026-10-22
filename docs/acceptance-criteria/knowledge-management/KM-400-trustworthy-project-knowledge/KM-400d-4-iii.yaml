@@ -1,0 +1,86 @@
+id: KM-400d-4-iii
+title: "A retrieval result reports name-lookup, connect and query time and names the step a deadline miss happened in"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: medium
+work_status: todo
+parent: KM-400d-4
+criteria: |
+  Scenario: per-step timings on a successful retrieval
+  Given the graph server name lookup takes 0.2 s, opening the connection takes 0.3 s and the queries take 0.5 s in total
+  When a fresh process runs one knowledge retrieve request with deadline_ms 10000
+  Then the result has status ok
+  And its stats carry three separate fields: name-lookup time about 200 ms, connect time about 300 ms and query time about 500 ms (each within 100 ms)
+  And none of the three is folded into another
+
+  Scenario: deadline miss during the name lookup
+  Given the graph server name lookup blocks for 20 s
+  When a retrieve request with deadline_ms 2000 runs
+  Then the result has status unavailable
+  And it names "name lookup" as the step the deadline was reached in, with the time already spent in that step (about 2000 ms)
+  And the connect and query times are reported as not reached (null), not as 0
+
+  Scenario: deadline miss while connecting
+  Given the name lookup returns in 0.05 s and opening the connection blocks for 20 s
+  When a retrieve request with deadline_ms 2000 runs
+  Then the result names "connect" as the step the deadline was reached in
+  And it reports the name-lookup time (about 50 ms) and the query time as not reached (null)
+
+  Scenario: deadline miss while querying
+  Given the name lookup and connect finish in 0.1 s and the query blocks for 20 s
+  When a retrieve request with deadline_ms 2000 runs
+  Then the result names "query" as the step the deadline was reached in
+  And it reports the name-lookup and connect times measured before the query started
+
+  Scenario: remembered lookup in a later request
+  Given one process has already looked up the graph server names
+  When a second retrieve request in that process reuses the remembered addresses
+  Then its name-lookup time is reported as 0 with an indication that the remembered address was used, not as not reached
+depends_on: [KM-400d-4, KM-400d-4-i, KM-400d-4-ii]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-4.yaml
+    relationship: context
+    status: exists
+    relevance: Parent L2 (session budgets).
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: The step naming extends the unavailable outcome without changing its status or its distinction from no-match.
+  - path: docs/reference/knowledge-retrieval-answers.md
+    relationship: context
+    status: exists
+    relevance: Quality and timing fields contract; the new step timings are additions to stats.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherited -- an unmeasured step is reported as not reached, never as a measured zero.
+  - path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+    relationship: context
+    status: exists
+    relevance: The 'unavailable' branch gains the step name.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400d-4-i
+  contract: The adapter's own name lookups are an identifiable, timeable step separate from connect.
+origin_agent: business-analyst
+created: '2026-10-22'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Analysis: /home/henzeh/.cache/lc_probe/cli_query_time_limit_analysis.md (option b plus
+  analyst A's resolve_ms addition). Today a deadline miss says only "retrieval deadline
+  reached"; naming the step and separating name-lookup time points a WSL user at the machine
+  fix instead of the graph server. Suggested field names from the analysis (IT PO to confirm):
+  stats.resolve_ms, stats.connect_ms, stats.query_ms and a step name on the deadline warning.
+  The ±100 ms tolerances, null-for-not-reached and the remembered-lookup scenario are BA
+  additions for testability -- confirm at review.

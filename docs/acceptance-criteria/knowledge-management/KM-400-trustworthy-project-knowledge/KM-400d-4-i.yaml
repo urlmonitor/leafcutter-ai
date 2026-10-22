@@ -1,0 +1,96 @@
+id: KM-400d-4-i
+title: "Cold retrieval fits the default deadline when the graph host's IPv6 name lookup stalls"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: medium
+work_status: todo
+parent: KM-400d-4
+criteria: |
+  Scenario: IPv4-first lookup inside the graph adapter's own calls (default)
+  Given LEAFCUTTER_NEO4J_ADDRESS_FAMILY is unset
+  And the name resolver answers IPv4-only lookups for every graph server name in 0.05 s
+  And the same resolver takes 15 s to answer any lookup that also asks for IPv6 addresses
+  And the routing table names a second server (the reader) whose name differs from the configured server name
+  When a fresh process runs one knowledge retrieve request with the default deadline_ms of 10000
+  Then the request returns status ok with its evidence
+  And stats.duration_ms is below 10000
+  And both server names (configured server and reader) were looked up IPv4-first
+
+  Scenario: fallback to the normal lookup when the IPv4 lookup fails
+  Given LEAFCUTTER_NEO4J_ADDRESS_FAMILY is unset
+  And the resolver reports "no such address" for the IPv4-only lookup of the graph server name
+  And the normal lookup (any address family) of that name returns an IPv6 address
+  When a fresh process runs one knowledge retrieve request
+  Then the adapter connects using the address from the normal lookup
+  And the request is not reported unavailable because of the failed IPv4 lookup
+
+  Scenario: lookups outside the graph adapter's own calls are unchanged
+  Given LEAFCUTTER_NEO4J_ADDRESS_FAMILY is unset
+  And the graph adapter has been created in a process that also runs other network clients
+  When code outside the graph adapter's own calls looks up a name, on the same thread or another thread, including the graph server's own name
+  Then that lookup asks for the address family the caller requested, with no IPv4-first step
+  And its result is not served from the adapter's remembered lookups
+
+  Scenario: opt-out restores the normal lookup
+  Given LEAFCUTTER_NEO4J_ADDRESS_FAMILY is set to "any"
+  When a fresh process runs one knowledge retrieve request
+  Then every graph server name lookup asks for any address family, exactly as with no IPv4-first behaviour
+  And an unrecognised value such as "ipv6" is reported as a configuration warning in the result and treated as the default "ipv4-first"
+
+  Scenario: lookups are remembered for the process lifetime only
+  Given LEAFCUTTER_NEO4J_ADDRESS_FAMILY is unset
+  When one process runs three retrieve requests against the same graph server
+  Then each distinct (server name, port) pair is looked up at most once in that process
+  And the configured server name and the reader name may each be looked up once
+  And a second, new process looks each name up again (nothing is stored on disk)
+depends_on: [KM-400d-4]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-4.yaml
+    relationship: context
+    status: exists
+    relevance: Parent L2. Its cumulative deadline budget is what a cold connect must fit inside.
+  - path: docs/reference/knowledge-retrieval-answers.md
+    relationship: context
+    status: exists
+    relevance: deadline_ms default 10000 and maximum 30000 stay unchanged; this AC does not raise them.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Public CLI path the behaviour is proven through; documents the opt-out switch once built.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: KM-400d-4-iii reports the name-lookup time measured around these lookups.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-10-22'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Source: joint analysis /home/henzeh/.cache/lc_probe/cli_query_time_limit_analysis.md
+  (2026-10-22, analysts A and B agree). On WSL2 with DNS tunneling on (the default) and a
+  Windows DNS suffix search list, an IPv6 lookup of a name that has no IPv6 address stalls
+  15 s; the routing driver looks up two different names per cold process (15 s + 5 s), so a
+  cold connect takes about 20.7 s against a 10 s default deadline. Measured with an
+  IPv4-first-with-fallback lookup: cold connect 0.92 s; full default-budget retrieval ok in
+  1.57 s. Aura publishes no IPv6 address, so dual-stack clients lose nothing today.
+  User-directed design (for the IT PO, not criteria): the IPv4-first behaviour is scoped by
+  call site, not by host name -- it applies only while a per-thread flag is set by the graph
+  adapter around its own session work (Neo4jBackend._transaction), installed once and
+  idempotently; host-name scoping would miss the reader lookup. The driver's resolver hook
+  and an IP literal in the URI are rejected (they cannot change the address family and break
+  TLS SNI / hostname verification). Opt-out switch values: "ipv4-first" (default) and "any".
+  The "unrecognised value" clause is a BA assumption (default plus warning) -- confirm at review.
+  Residual risk kept visible by the opt-out: a client with an A record but no IPv4 route
+  would not reach a future IPv6 address unless "any" is set.
+  Out of scope: raising default deadlines, moving connect time outside the deadline, a
+  background daemon, a result cache.

@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: done
+work_status: in_progress
 parent: KM-400d
 criteria: |
   Given a request capped at two results and a session with a fixed cumulative content and deadline budget
@@ -51,6 +51,9 @@ covered_by:
 - tests/knowledge/test_disclosure_limits.py::test_semantic_followup_uses_remaining_candidate_budget
 - tests/knowledge/test_kernel_bridge.py::test_small_caller_excerpt_cap_is_never_widened
 - tests/knowledge_live/neo4j_checks.py::test_live_graph_neighbors_preserve_edge_anchor_and_bound
+- KM-400d-4-i
+- KM-400d-4-ii
+- KM-400d-4-iii
 implemented_by:
 - tickets/00_inbox/TICKET-20261001-KM-400d-4.md
 change_target: code

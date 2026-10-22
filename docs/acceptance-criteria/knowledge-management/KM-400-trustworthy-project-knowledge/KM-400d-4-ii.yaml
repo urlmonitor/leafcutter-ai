@@ -1,0 +1,87 @@
+id: KM-400d-4-ii
+title: "The retrieval deadline bounds the caller's wait, including a stuck lookup, connect or close"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: medium
+work_status: todo
+parent: KM-400d-4
+criteria: |
+  Scenario: a blocking graph call outlives the deadline
+  Given a retrieve request with deadline_ms 2000
+  And the graph server name lookup blocks for 20 s in a way that cannot be cancelled (not a cancellable sleep)
+  When a fresh process runs the knowledge retrieve command
+  Then the command prints its JSON answer with status unavailable and the warning "retrieval deadline reached"
+  And the process exits with the unavailable exit code
+  And the time from the start of the retrieval to process exit is at most 3000 ms (deadline plus 1000 ms)
+  And that time is counted on the retrieval clock that stats.duration_ms uses, not from process start
+
+  Scenario: closing the graph connection also blocks
+  Given a retrieve request with deadline_ms 2000
+  And the graph transaction blocks for 20 s and closing the graph connection blocks for 20 s, neither cancellable
+  When a fresh process runs the knowledge retrieve command
+  Then the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+  And the printed answer is complete, valid JSON
+
+  Scenario: a stuck connect after a fast lookup
+  Given a retrieve request with deadline_ms 2000
+  And the name lookup returns in 0.05 s but opening the connection blocks for 20 s
+  When a fresh process runs the knowledge retrieve command
+  Then the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+
+  Scenario: useful evidence produced before the deadline is still reported
+  Given a retrieve request with deadline_ms 2000
+  And the first query returns one evidence item at 500 ms and the follow-up query then blocks for 20 s
+  When a fresh process runs the knowledge retrieve command
+  Then the answer states whether useful evidence was produced before the deadline
+  And the process exits at most 3000 ms after the start of the retrieval
+depends_on: [KM-400d-4]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-4.yaml
+    relationship: context
+    status: exists
+    relevance: Parent L2. This AC replaces its clause "cancellation or deadline exhaustion stops further work" for the real CLI.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: A deadline miss stays unavailable, distinct from an empty search; this AC must not change that status.
+  - path: docs/reference/knowledge-retrieval-answers.md
+    relationship: context
+    status: exists
+    relevance: deadline_ms is documented as the cumulative deadline; status and exit-code contract.
+  - path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+    relationship: context
+    status: exists
+    relevance: The 'unavailable' branch is the journey a deadline miss ends in.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-10-22'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Supersedes the deadline-exhaustion clause of KM-400d-4 ("cancellation or deadline
+  exhaustion stops further work") for the real CLI. KM-400d-4 is marked done, but that clause
+  is false on the real CLI: its covering test's slow backend is a cancellable asyncio sleep,
+  so it cannot see a blocking worker thread outliving the deadline. Measured 2026-10-22: a
+  10 s default deadline took 32.45 s of wall time (exit 2, status unavailable, duration_ms
+  10008); in-process the result was ready at 12.33 s and the event loop returned at 22.96 s
+  because shutdown joined the abandoned worker thread, and closing the driver waited ~2.3 s
+  on the in-flight connect. The bound is stated from retrieval start, not process start,
+  because interpreter start-up alone measured 2.8-5.5 s on this host.
+  Analysis: /home/henzeh/.cache/lc_probe/cli_query_time_limit_analysis.md (B2, option a).
+  The kernel-hosted path must not block on an expired call either; that path is out of this
+  AC's test scope (CLI) but must not regress.
+  The concrete 2000 ms deadline in the scenarios is a test value; the 1000 ms margin is the
+  user's bound and applies to every deadline_ms value 1-30000.
+  The 'useful evidence' scenario restates KM-400d-4's "reports whether useful evidence was
+  produced" under a blocking call -- BA addition, confirm at review.
