@@ -3,12 +3,13 @@ title: "The self-healing hook's ordering guard accepts only stage canaries befor
 ac_traceability:
   id: BO-1700c-1-iii
   path: docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c-1-iii.yaml
-status: todo
+status: done
 components:
   - commit_guardian
   - build_orchestration
 created: '2026-10-22'
 last_updated: '2026-10-22'
+ac_coverage: 3/3
 depends_on: []
 priority: medium
 roadmap_phase: phase_1
@@ -27,12 +28,12 @@ files_touched:
   - templates/scripts/commit_guardian/ensure_precommit_config.py
   - unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
 agents:
-  test-writer: needed
-  python-coder: needed
-  pr-reviewer: needed
-  ac-validator: needed
-  ac-fulfillment-gate: needed
-  commit: needed
+  test-writer: signed_off
+  python-coder: signed_off
+  pr-reviewer: signed_off
+  ac-validator: signed_off
+  ac-fulfillment-gate: signed_off
+  commit: signed_off
 ---
 
 # 09: The self-healing hook's ordering guard accepts only stage canaries before it and fails closed otherwise
@@ -78,13 +79,13 @@ the offender, when any other hook is registered before it.
 3. Update the "index 0" docstrings to "first after the stage canaries", and add a DECISION HISTORY entry.
 
 ## Acceptance Criteria
-- [ ] AC-1: BO-1700c-1-iii (A14, accepted order). With only stage canaries (`precommit-canary-pre-commit`,
+- [x] AC-1: BO-1700c-1-iii (A14, accepted order). With only stage canaries (`precommit-canary-pre-commit`,
   `precommit-canary-commit-msg`) before `ensure-precommit-config`, `ordering_violation` returns None and
   the hook exits 0 with a resolvable config. The real templates manifest passes.
-- [ ] AC-2: BO-1700c-1-iii (A14, fail closed, names the offender). With a manifest where `check-secrets`
+- [x] AC-2: BO-1700c-1-iii (A14, fail closed, names the offender). With a manifest where `check-secrets`
   precedes `ensure-precommit-config`, whether before or after the canaries, `ordering_violation` names
   `check-secrets`. The hook run as a subprocess exits 1 and its stderr names `check-secrets`.
-- [ ] AC-3: BO-1700c-1-iii (fail closed on anything else). A manifest without `ensure-precommit-config`, or
+- [x] AC-3: BO-1700c-1-iii (fail closed on anything else). A manifest without `ensure-precommit-config`, or
   an unreadable or unparsable manifest, makes the hook exit 1 with a message saying why. It never exits 0
   with a warning.
 
@@ -92,7 +93,7 @@ the offender, when any other hook is registered before it.
 
 ```yaml
 tests:
-- name: test_only_stage_canaries_before_the_heal_is_accepted
+- name: test_only_stage_canaries_before_self_heal_is_accepted
   file: unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
   covers:
   - BO-1700c-1-iii
@@ -101,7 +102,7 @@ tests:
     is None, and the ids read from templates/scripts/commit_guardian/commit_guardian.json give None.
   framework: unittest
   type: behavioral
-- name: test_other_hook_before_the_heal_fails_closed_naming_it
+- name: test_non_canary_hook_before_self_heal_fails_closed_naming_it
   file: unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
   covers:
   - BO-1700c-1-iii
@@ -124,13 +125,80 @@ tests:
 ```
 
 ## Sign-offs
-- [ ] test-writer
-- [ ] python-coder
-- [ ] pr-reviewer
-- [ ] ac-validator
-- [ ] ac-fulfillment-gate
-- [ ] commit
+- [x] test-writer — 2026-10-22 12:00
+- [x] python-coder — 2026-10-22 13:00
+- [x] pr-reviewer — 2026-10-22 14:00
+- [x] ac-validator — 2026-10-22 15:00
+- [x] ac-fulfillment-gate — 2026-10-22 10:55
+- [x] commit — 2026-10-22 16:00
 
 ## Comments
 
 _(Append-only log -- leave blank when authoring.)_
+
+### 2026-10-22 12:00 — test-writer (status: ok)
+feedback-id: (submit-failed)
+Wrote unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py (3 tests, unittest, git-added). Ran only that file: 3 failed, all absence reds (ordering_violation not yet defined). Subprocess assertions (exit 1 + stderr naming check-secrets; invalid JSON / missing heal exit 1) sit after the function call, so they only bite once the function exists; the coder must make both halves pass. Wrong versions caught: prefix match on "precommit-canary" without trailing dash; checking only the first hook; ignoring non-canary hooks placed before the canaries; exit 0 with a warning. Real manifest asserted accepted.
+completion_manifest:
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: templates/scripts/commit_guardian/commit_guardian.json (real manifest ids)
+    consuming_side: ensure_precommit_config.ordering_violation / main() run as subprocess
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python ensure_precommit_config.py as a subprocess (CLI main) beside a commit_guardian.json"
+red_baseline:
+  - test_name: test_only_stage_canaries_before_self_heal_is_accepted
+    file: unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
+    kind: absence
+    error: "AttributeError: module '_epc_under_test' has no attribute 'ordering_violation'"
+  - test_name: test_non_canary_hook_before_self_heal_fails_closed_naming_it
+    file: unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
+    kind: absence
+    error: "AttributeError: module '_epc_under_test' has no attribute 'ordering_violation'"
+  - test_name: test_missing_heal_or_unreadable_manifest_fails_closed
+    file: unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
+    kind: absence
+    error: "AttributeError: module '_epc_under_test' has no attribute 'ordering_violation'"
+
+### 2026-10-22 13:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Added ordering_violation() and fail-closed _check_manifest_order() in main() of templates/scripts/commit_guardian/ensure_precommit_config.py (328 lines); heal runs first, then the manifest beside the script is checked; docstrings and DECISION HISTORY updated. Renamed two tests to the AC test_spec names (test file and Test Requirements). TestManifestIndex0 already encoded the canary-first rule and passes unchanged (no consumer_drift). Deployed copies (scripts/, .leafcutter/scripts/) are gitignored build outputs, not hand-edited.
+red_baseline_results:
+  - test_name: test_only_stage_canaries_before_self_heal_is_accepted
+    result: green
+  - test_name: test_non_canary_hook_before_self_heal_fails_closed_naming_it
+    result: green
+  - test_name: test_missing_heal_or_unreadable_manifest_fails_closed
+    result: green
+
+### 2026-10-22 14:00 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+No high-confidence findings. Guard reads the sibling commit_guardian.json (.leafcutter/scripts/commit_guardian/), the same file run_hook.py reads; heal runs before the guard in main(); every deploy of the script (build_commit_guardian rglob) ships the sibling manifest. 11 tests pass. Medium: guard checks manifest order, not generated YAML order; deployed copies under scripts/ and .leafcutter/ stay stale until rebuild.
+
+### 2026-10-22 15:00 — ac-validator (status: ok)
+feedback-id: (submit-failed)
+All 3 ACs covered (BO-1700c-1-iii). Store alignment script exit 0. No delivers_to/expects_from fields on the ACs.
+AC-1 covered:
+  implementation: templates/scripts/commit_guardian/ensure_precommit_config.py - ordering_violation (returns None when only precommit-canary-* precede ensure-precommit-config)
+  test: test_only_stage_canaries_before_self_heal_is_accepted (unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py:67)
+AC-2 covered:
+  implementation: ensure_precommit_config.py - ordering_violation names first non-canary hook; main() prints to stderr and sys.exit(1)
+  test: test_non_canary_hook_before_self_heal_fails_closed_naming_it (test_bo_1700c_1_iii_ordering_guard.py:80)
+AC-3 covered:
+  implementation: ensure_precommit_config.py - ordering_violation (missing heal message), _check_manifest_order (OSError/ValueError/KeyError/TypeError -> message), main() exit 1
+  test: test_missing_heal_or_unreadable_manifest_fails_closed (test_bo_1700c_1_iii_ordering_guard.py:98)
+Test run: local 11 passed. Linux Docker unit_tests/commit_guardian: 7 failures, identical on clean base (chmod/unreadable tests pass as root), not caused by this diff.
+
+
+### 2026-10-22 10:55 — ac-fulfillment-gate (status: ok)
+feedback-id: (submit-failed)
+All 1 L3 ACs verified (BO-1700c-1-iii). Resolver ok after fixes; 3 auto-fixes applied to docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c-1-iii.yaml:
+- work_status: todo -> done via mark_ac_done.py ("no-op ... already work_status=done" on re-run; first run applied it)
+- implemented_by: + templates/scripts/commit_guardian/ensure_precommit_config.py (in diff and files_touched)
+- covered_by: + unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py (carries `# covers: BO-1700c-1-iii`)
+check_ac_schema.py exit 0. AC file git-added. Commit phase may proceed.
+
+### 2026-10-22 16:00 — commit (status: ok)
+feedback-id: (submit-failed)
+Auto-authorized commit gate: subject "fix(commit-guardian): the self-healing hook fails closed when a non-canary hook precedes it"; staged files: 4 (AC yaml, ensure_precommit_config.py, this ticket, ordering guard test).

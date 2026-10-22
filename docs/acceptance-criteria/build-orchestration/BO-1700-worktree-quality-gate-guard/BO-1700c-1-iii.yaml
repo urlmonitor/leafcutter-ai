@@ -8,7 +8,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1700-worktree-quality-gate-guard/BO-1700c.yaml"
 criteria: |
   Given the manifest is misconfigured so that a hook other than a stage canary (the
@@ -70,5 +70,7 @@ amended_by:
   at: '2026-10-22'
   note: 'Follows the parent''s 2026-10-21 amendment: entries before the heal may be stage canaries only. test_spec added (required for an approved code AC).'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_bo_1700c_1_iii_ordering_guard.py
+implemented_by:
+  - templates/scripts/commit_guardian/ensure_precommit_config.py
