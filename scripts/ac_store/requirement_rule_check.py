@@ -56,6 +56,8 @@ HOW A RULE FAMILY REGISTERS (read this before adding one):
      `failed` finding for that record and family; the run continues.
 
 DECISION HISTORY:
+  - 2026-10-22 [python-coder/EPIC-RightJobRightAgentFollowUps mypy]: typed the empty no-before-state
+    accumulators; `_unrepaired` moved verbatim to _rc_report.unrepaired to pay the size ratchet.
   - 2026-10-21 [python-coder/ACD-2500a-2-vi, -vii, -viii]: Registered `_rc_protected_fields`;
     `itpo-handback` is an authoring stage; a run with no before-state applies no repair (a repair
     becomes `needs a decision`) and the report gains `before_state` {given, repairs_applied}.
@@ -114,6 +116,7 @@ from _rc_report import (
     family_counts,
     no_write,
     sort_findings,
+    unrepaired,
 )
 from validate_ac_schema import load_ac_store_schema
 
@@ -299,14 +302,6 @@ def _reload(ctx: Context, records: list[Record], touched: set[str]) -> tuple[lis
     return kept, findings
 
 
-def _unrepaired(finding: Finding) -> Finding:
-    """A pass-2 finding still carrying a repair means the repair did not stick."""
-    if finding.repair is None:
-        return finding
-    return replace(finding, disposition=DISPOSITION_FAILED, repair=None,
-                   message=f"still violated after the repair pass: {finding.message}")
-
-
 def _load_scope(ctx: Context, setup: list[Finding]) -> tuple[list[Record], list[Finding], int]:
     """The records to check: the whole folder, or (--changed-since) the files git reports changed."""
     if not ctx.wide:
@@ -345,14 +340,14 @@ def run_check(ctx: Context, location: str, setup: list[Finding]) -> dict[str, An
                              f"no requirement records {what}", subject="empty"))
     first, handed = _evaluate(ctx, records, families)
     if not ctx.has_before_state:  # none or unreadable: no file is written, a repair becomes a decision
-        fixed, failures, touched, reload_failures = [], [], set(), []
+        fixed, failures, touched, reload_failures = list[Finding](), list[Finding](), set[str](), list[Finding]()
         second = [no_write(f) for f in first]
     else:
         fixed, failures, touched = _apply_repairs(ctx, first)
         ctx.forget_loaded()
         records, reload_failures = _reload(ctx, records, touched)
         second, handed = _evaluate(ctx, records, families)
-        second = [_unrepaired(f) for f in second]
+        second = [unrepaired(f) for f in second]
     second_keys = {f.key for f in second}
     kept_fixed = [f for f in fixed if f.key not in second_keys]
     everything = dedupe([*setup, *load_findings, *reload_failures, *failures, *kept_fixed, *second])

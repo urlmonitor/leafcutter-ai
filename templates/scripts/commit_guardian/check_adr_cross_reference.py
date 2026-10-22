@@ -59,6 +59,7 @@ DECISION HISTORY:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
 import subprocess
@@ -391,11 +392,9 @@ def _configure_stdout() -> None:
         None.
     """
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-            sys.stderr.reconfigure(encoding="utf-8")
-        except AttributeError:
-            pass
+        for stream in (sys.stdout, sys.stderr):
+            if isinstance(stream, io.TextIOWrapper):
+                stream.reconfigure(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,8 @@ ARCHITECTURE: Pure data and functions, no I/O, no imports from sibling _rc_ modu
     Deployed flat into <root>/scripts/ac_store/ (AC_STORE_DEPLOY_MAP).
 
 DECISION HISTORY:
+  - 2026-10-22 [python-coder/EPIC-RightJobRightAgentFollowUps mypy]: `unrepaired` moved here verbatim from
+    requirement_rule_check.py (was `_unrepaired`) to pay for a type-annotation edit under the size ratchet.
   - 2026-10-21 [python-coder/ACD-2500a-2-vi, ACD-2500a-2-viii]: Added FAMILY_PROTECTED, `no_write`
     (a repair becomes `needs a decision` when the run has no before-state) and the additive
     top-level `before_state` {given, repairs_applied}, which sorts before family_counts and findings.
@@ -114,6 +116,14 @@ def no_write(finding: Finding) -> Finding:
     message = f"no before-state was given, so nothing was repaired; would {verb} {value!r} on {field}: {finding.message}"
     return replace(finding, disposition=DISPOSITION_DECISION, repair=None, message=message,
                    detail={"field": field, verb: value})
+
+
+def unrepaired(finding: Finding) -> Finding:
+    """A pass-2 finding still carrying a repair means the repair did not stick."""
+    if finding.repair is None:
+        return finding
+    return replace(finding, disposition=DISPOSITION_FAILED, repair=None,
+                   message=f"still violated after the repair pass: {finding.message}")
 
 
 def dedupe(findings: list[Finding]) -> list[Finding]:

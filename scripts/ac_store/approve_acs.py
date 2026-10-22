@@ -62,7 +62,7 @@ from typing import Optional
 import yaml
 
 from _approval_holds import approval_hold_reason, build_report
-from _approve_support import ID_RE, id_matches, read_back_problem, restore, set_top_level
+from _approve_support import ID_RE, _find_ac_file, id_matches, read_back_problem, restore, set_top_level
 
 
 # Matches the amended_by key line itself, including any inline value such as
@@ -78,34 +78,6 @@ _AMENDED_BY_KEY_RE = re.compile(r"^amended_by:[^\n]*(?:\n|\Z)", re.MULTILINE)
 # continuation line, or a column-0 block-sequence dash ("-") can never match
 # this pattern, so none of them can be mistaken for the block's end.
 _TOP_LEVEL_KEY_RE = re.compile(r"^[A-Za-z_][\w-]*:", re.MULTILINE)
-
-
-# ---------------------------------------------------------------------------
-# AC lookup helper (same pattern as mark_ac_done.py)
-# ---------------------------------------------------------------------------
-
-
-def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
-    """Walk ac_root recursively for a YAML file whose ``id`` field matches ac_id.
-
-    Args:
-        ac_root: Root directory to search recursively.
-        ac_id: The AC identifier string to match against the ``id:`` field.
-
-    Returns:
-        The first matching Path, or None if not found.
-    """
-    for candidate in ac_root.rglob("*.yaml"):
-        try:
-            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
-            # measured benefit (criterion 1) -- see
-            # /home/henzeh/tq600a1-backup/narrow_report.md.
-            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
-        except (yaml.YAMLError, OSError):
-            continue
-        if isinstance(data, dict) and data.get("id") == ac_id:
-            return candidate
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -540,8 +512,8 @@ def _run_ids(args: argparse.Namespace, ac_root: Path, report: Optional[dict]) ->
         print(f"ERROR: AC(s) {missing or 'none named'} not found (or not a plain id) in {ac_root}", file=sys.stderr)
         return 1
     code = 0
-    for ac_id in ids:
-        result = _promote_leaf(files[ac_id], dry_run=args.dry_run, report=report, priority=args.priority, any_readiness=True)
+    for ac_id, leaf in ((i, p) for i, p in files.items() if p is not None):  # ``missing`` returned above if any is None
+        result = _promote_leaf(leaf, dry_run=args.dry_run, report=report, priority=args.priority, any_readiness=True)
         if result == 1 and report is not None:
             report["failed"].append(ac_id)
         code = code or result
@@ -574,6 +546,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-22 [python-coder/EPIC-RightJobRightAgentFollowUps mypy]:
+#   _run_ids iterates only located files (type narrowing; unreachable None, `missing` returned
+#   above); _find_ac_file moved verbatim to _approve_support.py to pay the size ratchet.
 # - 2026-09-14 [python-coder/ACD-1200b-5-ii]: (KI-ACS-017)
 #   Replaced the module-level _AMENDED_BY_RE line-shape regex with
 #   _find_amended_by_block, which delimits the amended_by block by finding

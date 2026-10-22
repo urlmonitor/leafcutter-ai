@@ -170,7 +170,7 @@ EMPTY_HISTORY_REASON = (
 )
 
 
-# GE-127h-1: the line-comment prefixes of the languages this gate measures
+# GE-134a-1: the line-comment prefixes of the languages this gate measures
 # ('#' for .py/.sh, '//' for .js/.mjs/.ts/.tsx, '--' for .sql). Held ONCE:
 # the measurement below and describe_measurement_rule() both read it at call
 # time, so editing it moves what is measured and what is published together.
@@ -196,11 +196,11 @@ def _history_heading_prefix(line: str) -> str | None:
 def _is_rule_line(line: str, prefix: str) -> bool:
     """Return True when *line* is a *prefix* comment made only of '=' characters."""
     text = _comment_text(line, prefix)
-    return bool(text) and set(text) == {"="}
+    return text is not None and set(text) == {"="}
 
 
 def _strip_history_blocks(text: str) -> str:
-    """Drop every line-comment DECISION HISTORY block from *text* (GE-127h-1).
+    """Drop every line-comment DECISION HISTORY block from *text* (GE-134a-1).
 
     A block starts at a comment whose whole text is DECISION HISTORY, takes a
     '=' rule line of the same prefix directly above it, and runs over the
@@ -243,7 +243,7 @@ def _strip_unmeasured_regions(content: str) -> str:
     Returns:
         *content* with every triple-quoted string and block-comment region
         removed entirely, trailing newline included, and then every
-        line-comment DECISION HISTORY block (GE-127h-1) removed.
+        line-comment DECISION HISTORY block (GE-134a-1) removed.
     """
     stripped = _TRIPLE_DOUBLE_QUOTE_RE.sub("", content)
     stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
@@ -354,7 +354,7 @@ _CATEGORY_PROBES: dict[str, str] = {
 
 
 def _history_probe() -> str:
-    """Build a probe block from the FIRST prefix in the prefix constant (GE-127h-1)."""
+    """Build a probe block from the FIRST prefix in the prefix constant (GE-134a-1)."""
     prefix = DECISION_HISTORY_COMMENT_PREFIXES[0]
     return f"{prefix} {_HISTORY_HEADING}\n{prefix} probe entry one\n{prefix} probe entry two"
 
@@ -407,7 +407,7 @@ def _join_with_and(items: list[str]) -> str:
 
 
 def _describe_history_clause() -> str:
-    """State the GE-127h-1 history exclusion, naming the prefixes from the constant."""
+    """State the GE-134a-1 history exclusion, naming the prefixes from the constant."""
     prefixes = _join_with_and([f"'{p}'" for p in DECISION_HISTORY_COMMENT_PREFIXES])
     return (
         f"a decision-history block is not counted: it starts at a comment (prefix {prefixes}) whose whole "
@@ -761,8 +761,8 @@ def get_previous_length(
     return measure(content)
 
 
-def _merge_head_path() -> Path | None:
-    """Return the on-disk path of ``MERGE_HEAD``, or None when not merging.
+def _merge_head_path() -> Path:
+    """Return the on-disk path of ``MERGE_HEAD`` (the file itself may be absent).
 
     Uses ``git rev-parse --git-path MERGE_HEAD`` rather than
     ``git rev-parse -q --verify MERGE_HEAD`` — the latter resolves only the
@@ -1009,7 +1009,7 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-10-21 [python-coder/GE-127h-1..3]: A line-comment DECISION HISTORY
+- 2026-10-21 [python-coder/GE-134a-1..3]: A line-comment DECISION HISTORY
   block no longer counts toward a file's measured length. Added the one
   DECISION_HISTORY_COMMENT_PREFIXES constant ('#', '//', '--') and
   _strip_history_blocks(), applied at the end of _strip_unmeasured_regions()

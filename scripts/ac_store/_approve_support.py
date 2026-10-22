@@ -13,6 +13,8 @@ DECISION HISTORY:
     whatever its current value, and inserts the line after `id:` (or at the top) when the record has none,
     so a draft record or one without a priority line is approved like a reviewed one (H-1, M-1). The
     read-back also demands the last amended_by entry to be the one just appended (L-4).
+  - 2026-10-22 [python-coder/EPIC-RightJobRightAgentFollowUps mypy]: _find_ac_file moved here verbatim from
+    approve_acs.py to pay for the type-narrowing edit that file needed under the size ratchet.
 """
 
 from __future__ import annotations
@@ -77,3 +79,26 @@ def restore(ac_file: Path, raw_bytes: bytes, problem: str) -> int:
         return 1
     print(f"ERROR: {ac_file} {problem}; original content restored, promotion aborted", file=sys.stderr)
     return 1
+
+
+def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
+    """Walk ac_root recursively for a YAML file whose ``id`` field matches ac_id.
+
+    Args:
+        ac_root: Root directory to search recursively.
+        ac_id: The AC identifier string to match against the ``id:`` field.
+
+    Returns:
+        The first matching Path, or None if not found.
+    """
+    for candidate in ac_root.rglob("*.yaml"):
+        try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+            # measured benefit (criterion 1) -- see
+            # /home/henzeh/tq600a1-backup/narrow_report.md.
+            data = yaml.load(candidate.read_text(encoding="utf-8"), Loader=yaml.SafeLoader)
+        except (yaml.YAMLError, OSError):
+            continue
+        if isinstance(data, dict) and data.get("id") == ac_id:
+            return candidate
+    return None
