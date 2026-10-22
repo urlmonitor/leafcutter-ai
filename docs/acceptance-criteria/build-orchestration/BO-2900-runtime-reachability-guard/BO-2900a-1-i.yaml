@@ -41,7 +41,7 @@ it_requirements:
   config_schema_fragment:
     reached_through_predicate:
       type: object
-      description: "The single fact the verdict turns on: { reached_through: bool } — true only when the code under proof was entered while a frame of the unit's entry point was an ancestor on the SAME call stack. Never a conjunction of two independently-recorded booleans."
+      description: "The single fact the verdict turns on, read from BO-2900a-2's amended reach_record: { reached_through: 'reached'|'not_reached'|'undecidable', undecidable_cause: 'subject_not_named'|null, observation: 'watched'|'unwatched', unwatchable_cause: str|null, entered_entry_point: bool }. 'reached' only when code belonging to the declared unit was entered while a frame of that unit's entry point was a live ancestor on the SAME call chain, including across a launched program (BO-2900a-2-i). Never a conjunction of two independently-recorded booleans. This case's refusal fires only on the literal 'not_reached' together with entered_entry_point true; entered_entry_point is read only to word the reason and can never refuse on its own. 'undecidable' or observation 'unwatched' gives no verdict and no refusal (BO-2900a-2-ii, BO-2900a-2-iii)."
   reference_file_path: "scripts/ac_store/done_proof.py"
   n_location_rule: "1"
   required_skills:
@@ -55,7 +55,7 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: BO-2900a-2
-  contract: "The reached_through boolean of the observation record, computed as 'the target callable was entered while an entry-point frame was an ancestor on the same call stack during that test's execution' — supplied as one fact, not two."
+  contract: "The reached_through value of BO-2900a-2's amended reach_record, one per (proof test, declared unit): 'reached'|'not_reached'|'undecidable', computed as 'code belonging to the declared unit was entered while an entry-point frame of that unit was a live ancestor on the same call chain during that test's execution' — supplied as one fact, not two — alongside the separately readable entered_entry_point: bool, undecidable_cause: 'subject_not_named'|null, observation: 'watched'|'unwatched' and unwatchable_cause. BO-2900a-2's config_schema_fragment is authoritative for the full shape."
 test_spec:
   - name: test_entering_a_different_action_does_not_make_the_criterion_eligible
     target_dir: unit_tests/ac_store/
@@ -99,3 +99,25 @@ notes: |
 
   Kept as an L3 rather than a fourth L2 because it does not add a new guarantee — it
   fixes the interpretation of an existing one, and it shares BO-2900a-1's fixtures.
+
+  2026-10-21 (IT PO). The reached-through contract is aligned with BO-2900a-2's
+  amended reach_record and the 2026-10-21 amendment of BO-2900a-1. criteria,
+  title, req_status, depends_on, test_spec, work_status and readiness are
+  untouched.
+    (1) it_requirements.config_schema_fragment.reached_through_predicate. Before:
+        { reached_through: bool }. Now reached_through has three values
+        ('reached'|'not_reached'|'undecidable') with undecidable_cause, observation,
+        unwatchable_cause and entered_entry_point. The refusal fires only on the
+        literal 'not_reached' with entered_entry_point true. 'undecidable' or
+        'unwatched' gives no verdict. This agrees with BO-2900a-2 (the
+        reach_record), BO-2900a-2-ii (unwatched is not a refusal), BO-2900a-2-iii
+        (three-way answer, entered_entry_point alone cannot refuse) and BO-2900a-2-i
+        (the call chain can span a launched program).
+    (2) expects_from.contract. Before: "The reached_through boolean ... the target
+        callable was entered". Now it names the three-way value per (proof test,
+        declared unit), with the subject being code belonging to the declared unit
+        and not a single target callable. This agrees with BO-2900a-2 and
+        BO-2900a-2-iii.
+  Left as it was: the constraint "read the single reached_through flag". It is
+  still correct that this is one fact; 'flag' is loose wording, not a
+  contradiction.
