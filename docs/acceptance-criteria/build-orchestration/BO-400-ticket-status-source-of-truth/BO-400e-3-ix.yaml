@@ -183,6 +183,7 @@ covered_by:
 implemented_by:
   - templates/scripts/worktree_ticket_record.py
   - templates/scripts/worktree.py
+  - templates/scripts/worktree_ensure_steps.py
 amended_by:
 - reason: implementation-moved-to-workspace-maker
   by: claude_code
