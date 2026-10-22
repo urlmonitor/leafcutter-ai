@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -65,116 +65,262 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "The writer's list and write steps the route calls, and their JSON contracts in delivers_to."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-v.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The fast-lane wiring this AC mirrors (merged, PR #1280): the wrapper contract in its delivers_to, and the fastlane-wv-* block in fast-lane-ship.js."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-x.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The --base-ref flag on list and write, and the additive scope key on owed items (merged)."
+  - path: docs/agents/cards/command-step-runner.card.md
+    relationship: describes
+    status: exists
+    relevance: "The shell executor's card. Its Spawned By list and spawn diagram mirror the registry, so it changes with the spawned_by edit below."
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+package_surface: false
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-1
+  contract: >-
+    The finish commands this AC's two routes record under unit_tests/_workflow_engine_harness.py, for the
+    TQ-500g-1 seam test to execute for real against one fixture repo. Each is the command string of the
+    bf-wv-finish (build-feature.js) or bt-wv-finish (build-ticket.js) dispatch: python
+    <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key
+    <ticket file stem> --reply - [--ac-ids <source_ac ids, comma-separated>] --ac-root
+    <worktree>/docs/acceptance-criteria --test-root <worktree> --base-ref HEAD <<'<delimiter>' followed by
+    the reply text and the delimiter line. It is built the same way as fast-lane-ship.js's
+    fastlane-wv-finish command: same flag set, same order, same base ref, same here-document rule.
 expects_from:
 - ac_id: TQ-500g-1-v
   contract: >-
-    Gate wrapper CLI built by TQ-500g-1-v: python scripts/build_orchestration/wrong_version_gate.py
-    finish --work-key <key> --reply - --ac-ids <ids> --ac-root <path> --test-root <worktree root>
-    --base-ref <ref>, with the raw test-breaker reply on stdin. It prints {gate_passed: bool,
-    stopped_at: null|"write", writer: <writer write JSON>|null, verdict: <runner run JSON
-    verbatim>|null} and exits 0 if and only if gate_passed. The full contract is in TQ-500g-1-v
-    delivers_to.
+    Gate wrapper CLI (merged, PR #1280): python scripts/build_orchestration/wrong_version_gate.py finish
+    --work-key <key> --reply - [--ac-ids <comma-separated ids>] --ac-root <path> --test-root <worktree root>
+    --base-ref <ref>, with the raw test-breaker reply on stdin (empty when nothing was owed). --ac-ids is
+    omitted when the ticket has no source requirement. finish forwards the same ids, AC root, test root
+    and base ref to the writer's write step and, only when the writer wrote a manifest, to the runner's run
+    step. stdout is exactly one JSON object {gate_passed: bool, stopped_at: null|"write", writer: <writer
+    write JSON>|null, verdict: <runner run JSON verbatim>|null}; exit 0 if and only if gate_passed. An
+    internal error still prints the shape with gate_passed false. Full contract in TQ-500g-1-v delivers_to.
 - ac_id: TQ-500g-1-i
   contract: >-
-    Runner JSON inside finish's verdict ({gate_passed, applicable, verified, outcome, reason,
-    results, survivors, unfinished}; shape in TQ-500g-1-i delivers_to), and the recover step
-    wrong_version_runner.py recover (no flags, worktree root as working directory; prints
-    {restored, ok, copy_dir, detail}).
+    Runner JSON inside finish's verdict ({gate_passed, applicable, verified, outcome, reason, results,
+    survivors, unfinished}; shape in TQ-500g-1-i delivers_to). The recover step is python
+    <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py recover: no
+    flags, run with the worktree root as its working directory, prints {restored: [str], ok: bool,
+    copy_dir: str|null, detail: str}. recover closes EVERY open journal under the worktree's
+    <git-dir>/leafcutter/wrong-version-runs, not only the current ticket's. On a worktree with no
+    journals it prints ok true and restored [].
 - ac_id: TQ-500g-1-iv
   contract: >-
-    Dispatch of agent test-breaker: inputs {work_key, repo_root (absolute worktree root),
-    requirement_ids, wrong_versions: [{name, files}]}; one JSON reply, never read as an outcome.
-    Shape in TQ-500g-1-iv delivers_to.
+    Dispatch of agent test-breaker: inputs {work_key: str, repo_root: str (absolute worktree root),
+    requirement_ids: [str], wrong_versions: [{name: str, files: [str], scope: "declared"|"derived"}]}. One
+    JSON reply, never read as an outcome by the route, only handed to finish on stdin. Shape in
+    TQ-500g-1-iv delivers_to. test-breaker's registry spawned_by already names build-feature.js and
+    build-ticket.js.
 - ac_id: TQ-500g-1-ix
   contract: >-
-    Writer list step: wrong_version_writer.py list --ac-ids <ids> --ac-root <path> --test-root
-    <path> prints {owed: [{name, files}], error} (exit 0 when printed, 1 when the AC store or test
-    root cannot be read). The write step is reached only through finish. Both read scope from the
-    AC store, never from the route. Shapes in TQ-500g-1-ix delivers_to.
+    Writer list step: python <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py
+    list --ac-ids <ids> --ac-root <path> --test-root <path> --base-ref <ref>. It prints {owed: [{name, files,
+    scope}], error: str|null}; exit 0 when printed (also when owed is []), 1 when the AC store or test root
+    cannot be read. The write step is reached only through finish. Both read scope from the AC store, never
+    from the route.
+- ac_id: TQ-500g-1-x
+  contract: >-
+    list and write both take --base-ref <ref> (default HEAD). Owed items carry the additive scope key
+    ("declared"|"derived"); the route passes owed to test-breaker unchanged, scope included. list exits 1
+    with owed [] and error set when an owed name has no declared scope and the changed files cannot be
+    worked out against the base ref. With --base-ref HEAD the derived scope is the worktree's uncommitted
+    changes, tracked and untracked (non-ignored).
 it_requirements:
 - >-
-  Placement: immediately before the commit dispatch, after the last pre-commit phase (review
-  included). So no later step can change the code the runs judged. The sequence runs on every
-  drive that reaches that point, whatever earlier sign-offs say. It is not a phase in the agents
-  map, so there is no sign-off to trust.
+  Placement: immediately before every commit dispatch, after the last pre-commit phase (review
+  included), so no later step can change the code the runs judged. "Every" includes a commit
+  re-dispatch after a handoff or a remedy agent (for example restructuring-specialist after a
+  file-size refusal): the code may have changed, so the sequence runs again before that dispatch.
+  The sequence is not a phase in the agents map, so there is no sign-off to trust. A ticket whose
+  commit phase is not dispatched in this drive (already signed_off, or not_needed) gets no runs and
+  no commit from this drive.
 - >-
-  Sequence, the same as TQ-500g-1-v's, every time, in this order. (0) On a resumed drive: recover,
-  at the head of the per-ticket driver, before the list step and before test-breaker reads any
-  file. (1) When the ticket has source_ac ids: the writer's list step for those ids, run fresh
-  immediately before the dispatch. (2) When owed is non-empty: dispatch test-breaker with
-  work_key, repo_root (absolute worktree root), requirement_ids (the source_ac ids) and
-  wrong_versions = the list's owed array unchanged. (3) and (4) One finish dispatch with the reply
-  on stdin. (5) Reach the commit dispatch only when finish's own gate_passed is true.
+  Sequence, the same as fast-lane-ship.js's wrong-version block, in this order. (0) Recover on a
+  resumed drive (placement and signal in the next requirement). (1) When the ticket has source_ac
+  ids: the list step for those ids, run fresh immediately before the dispatch. (2) When owed is
+  non-empty: dispatch test-breaker with work_key, repo_root (absolute worktree root), requirement_ids
+  (the source_ac ids) and wrong_versions = the list's owed array unchanged. (3) One finish dispatch
+  with the reply on stdin. (4) Reach the commit dispatch only when finish's own gate_passed is true.
 - >-
-  Inputs: the ticket's source_ac ids, the worktree root as --test-root, the AC store root as
-  --ac-root, and --base-ref HEAD passed explicitly. On these per-ticket routes HEAD is the state
-  before this ticket began, so earlier tickets' commits are not undone.
+  Resumed-drive signal and recover placement, per route. build-feature.js: the drive is resumed when
+  it reuses an existing worktree, that is when realWorktreePath is established by the resolved-worktree
+  facts (scenario 1) or by the occupied-location reuse branch (scenario 2), or the worktree-setup
+  agent reports status "reused". It is fresh only when worktree-setup reports "created"; a fresh
+  worktree has its own git-dir and so no journals. This is the counterpart of fast-lane-ship.js's
+  workspaceCreated === false. Recover runs ONCE per drive, after the worktree is established and
+  before the first ticket is dispatched (before the epic planner and before the single-ticket call
+  to driveTicketPhases). It must not run inside driveTicketPhases: recover closes every open journal
+  in the worktree, so in a parallel chunk it would put back a sibling's in-flight alteration in the
+  middle of that sibling's run. build-ticket.js: it has no worktree-creation step (the worktree is
+  caller-supplied or found by the ambient check), so no drive can be told apart as fresh. It runs
+  recover on every drive, once, right after the Worktree Guard establishes
+  resolvedTarget.worktree_path and before the Planner, so the red-baseline gate's test run never reads
+  altered code either. On a clean worktree recover is a no-op that prints ok true.
 - >-
-  Reply transport and writer stop: as TQ-500g-1-v decided. The reply goes in on stdin through a
-  quoted here-document whose delimiter does not occur in the reply, and reaches the writer byte for
-  byte. When the writer stops, finish never calls the runner and reports gate_passed false with
-  stopped_at "write". The ticket halts as blocked, with the writer's JSON verbatim in its result.
+  Dispatch labels, pinned for the tests. build-feature.js: bf-wv-recover, bf-wv-list,
+  bf-wv-test-breaker, bf-wv-finish. build-ticket.js: bt-wv-recover, bt-wv-list, bt-wv-test-breaker,
+  bt-wv-finish. Each dispatch carries phase "Wrong-Version Runs" in its options. The twin parity test
+  compares the sequences with the bf-/bt- prefix removed, so the four suffixes (wv-recover, wv-list,
+  wv-test-breaker, wv-finish) must be identical in both files and match the fast lane's suffixes.
 - >-
-  The JS never interprets the test-breaker reply. A dispatch that throws, is refused or returns
-  nothing is passed on as an empty reply, so with names owed the writer stops and the ticket halts.
+  Inputs, the same values the fast lane passes. Every step that takes a base ref gets --base-ref HEAD
+  passed explicitly: the list step and finish both pass it, and finish forwards that same value to the
+  writer's write step and to the runner (TQ-500g-1-v). The base ref never comes from the reply, an
+  earlier list output or an environment variable. --ac-ids is the ticket's source_ac ids joined by
+  commas (omitted when there are none), --ac-root is <worktree>/docs/acceptance-criteria
+  (AC_STORE_REL_PATH), --test-root is the worktree root, and the scripts are called as
+  <worktree>/{{config.output_root}}/scripts/build_orchestration/<script>.py. On these per-ticket routes
+  HEAD is the state before this ticket's own commit, so earlier tickets' commits are not undone.
 - >-
-  Nothing owed: test-breaker is not dispatched, and finish still runs with an empty stdin.
-  K3 (no source_ac): the list step and test-breaker are skipped, and finish runs with no ids, so the
-  runner itself returns "wrong-version runs not applicable: no source requirement". Record
-  verdict.outcome on the ticket outcome (as red_baseline_gate is recorded) and continue. Never
-  record "verified".
+  Owed items carry the additive scope key ("declared" | "derived", TQ-500g-1-x). The route does not read,
+  filter, reorder or drop it: wrong_versions for test-breaker is the list's owed array unchanged, scope
+  included. A list exit 1 for a base ref whose changed files cannot be worked out is a fail-closed halt
+  like any other list failure.
 - >-
-  Dispatch every command step (recover, list, finish) through an executor agent registered with
-  permits_shell: true in config/agent_registry.json (for example command-step-runner). Never use
-  status-checker: it is registered read-only and has refused shell steps (KI-BO-20260927,
-  KI-BO-20260901-1620). Today command-step-runner's spawned_by names user and fast-lane-ship.js
-  only. Use the executor build-feature.js already uses for its red-baseline gate, or make spawned_by
-  reciprocal for build-feature.js and build-ticket.js, so the build's asymmetric-spawn check and the
-  check-agent-spawn-consistency hook pass. test-breaker already lists both files in spawned_by.
+  Reply transport and writer stop: as TQ-500g-1-v decided and fast-lane-ship.js does. The reply goes in
+  on stdin through a quoted here-document whose delimiter does not occur in the reply (start from
+  WV_REPLY_EOF and extend it while the reply contains it), and reaches the writer byte for byte, with no
+  shell expansion of $, backticks or quotes. No reply file is written. When the writer stops, finish
+  never calls the runner and reports gate_passed false with stopped_at "write"; the ticket halts as
+  blocked with finish's JSON verbatim in its result.
 - >-
-  Fail closed on every command reply. recover: ok must be the boolean true. list: owed must be an
-  array and error null. finish: gate_passed must be a boolean. A null, refused or unparseable reply,
-  or one that fails its check, halts the ticket as blocked and never counts as a pass. The commit
-  dispatch is unreachable on any path that has not read gate_passed true from finish's own JSON.
+  The JS never interprets the test-breaker reply. A string reply goes in as is; an object reply goes in as
+  its JSON text; a dispatch that throws, is refused or returns nothing goes in as an empty reply. With
+  names owed, the writer then stops and the ticket halts. The JS never decides that an empty reply means
+  nothing is owed.
 - >-
-  gate_passed false: halt the ticket before commit, carrying finish's JSON verbatim (survivors,
-  unfinished, or the writer's error) in the blocked result.
+  Nothing owed: test-breaker is not dispatched, and finish still runs with an empty stdin. K3 (no
+  source_ac): the list step and test-breaker are skipped, and finish runs with no --ac-ids, so the runner
+  itself returns "wrong-version runs not applicable: no source requirement". Record verdict.outcome on
+  the ticket outcome under the key wrong_version_outcome (the fast lane's key; null when finish gave no
+  verdict), beside red_baseline_gate, and continue. Never record "verified".
 - >-
-  work_key: the ticket's file stem, one plain path segment and stable across a resume. The same key
-  goes to test-breaker and to finish.
+  Executor: dispatch every command step (recover, list, finish) as agentType command-step-runner, the
+  agent fast-lane-ship.js uses (permits_shell true). Never status-checker: it is registered read-only and
+  has refused shell steps (KI-BO-20260927, KI-BO-20260901-1620). This includes NOT copying the twins'
+  red-baseline gate, which still dispatches status-checker. The request is the executor's documented
+  shape, JSON.stringify({step: <label>, command, target: {workspace: <worktree root>, branch: <the
+  drive's branch when the route knows it>, run_id: <work_key>}}); run_id is used because K3 has no AC id.
+  The reply is parsed as the fast lane does: JSON.parse(reply.stdout), and a decline (no stdout), a throw
+  or a non-object counts as no reply. The twins carry their own copy of the fast lane's executor reply
+  schema (CLAIM_RUNNER_SCHEMA), identical in content, since the engine has no module loader.
 - >-
-  Serialization. build-feature.js drives a batch's tickets in parallel in one shared worktree, and
-  finish alters working files while it runs. From the list step through the commit dispatch, a
-  ticket's sequence must not overlap another ticket's finish or commit step in the same worktree.
-  Use the exclusion the route already applies to its commit phase. If the route has none, raise it
-  as a blocker before the build; never invent a lock in this AC.
+  Registry (config/agent_registry.json), the one concrete edit: command-step-runner's spawned_by becomes
+  ["user", "fast-lane-ship.js", "build-feature.js", "build-ticket.js"]. No other field changes, no new
+  entry. Both names are recognised external callers because templates/workflows-js/build-feature.js and
+  build-ticket.js exist (is_recognized_external_caller, INF-600k-1), so the registry validator's
+  asymmetric-spawn check and the check-agent-spawn-consistency hook accept them without a
+  spawn_allowlist counterpart. The same change regenerates docs/agents/cards/command-step-runner.card.md
+  (Spawned By list and spawn diagram), which that hook compares with the registry, and updates the
+  adopter_notes sentence in templates/agents/command-step-runner.md that says spawned_by lists only "user"
+  and "fast-lane-ship.js". test-breaker's spawned_by already lists both files and is not touched. Deployed
+  copies regenerate through build.py.
 - >-
-  Once TQ-500g-3-i and -3-ii exist, the same single before-commit finish call also carries them.
-  Do not add a second dispatch for them.
+  package_surface: false (IT-PO decision 2026-10-21). The check-package-surface-declaration commit-msg
+  hook (ACS-100i-8) refuses only a NEW entry in a watched registry (a new id under agents in
+  config/agent_registry.json). Adding two values to an existing entry's spawned_by adds no entry, so the
+  hook reports nothing to evaluate. Declaring true would wrongly impose the structured it_requirements
+  object. If the build ends up adding a new registry entry after all, that is out of this AC's scope and
+  needs its own AC with package_surface true.
 - >-
-  Edit only templates/workflows-js/ sources. Deployed mirrors regenerate through build.py. Respect
-  the E2 leaf invariant and ADR-006: no workflow() call inside the workflow; test-breaker is
-  dispatched at depth 1 from the workflow body.
+  Fail closed on every command reply. recover: ok must be the boolean true. list: owed must be an array
+  and error null. finish: gate_passed must be a boolean. A null, refused, declined or unparseable reply,
+  or one that fails its check, halts as blocked and never counts as a pass. The commit dispatch is
+  unreachable on any path that has not read gate_passed true from finish's own JSON.
 - >-
-  Change build-feature.js (driveTicketPhases) and its declared twin build-ticket.js together, as the
-  TWIN rule in the build-feature.js header requires. Place the sequence in the per-ticket loop right
-  before the commit phase is dispatched, the mirror image of the TQ-500f-3-ii red-baseline block
-  before the first coder. Reuse TQ-500g-1-v's command builders where the engine allows it. It has
-  no module loader, so a twin copy of the builder text is acceptable if it stays identical.
+  Halt shape: the blocked result carries the fast lane's keys: gate "wrong_version_gate",
+  wrong_version_step ("recover" | "list" | "finish") and wrong_version_detail (the parsed reply verbatim,
+  or null), with finish's JSON (survivors, unfinished, or the writer's error) in the message. Inside
+  driveTicketPhases and build-ticket.js's loop it uses the routes' existing refuse(...) helper with
+  classification "halt". A recover halt in build-feature.js happens before any ticket starts, so the
+  whole drive returns blocked and no ticket is dispatched. These routes claim no ACs, so there is no
+  release step; nothing is left claimed by a halt.
 - >-
-  K4: the sequence runs whenever the commit phase is about to be dispatched, including on resume
-  when every earlier phase is already signed_off.
+  work_key: the ticket's file stem (file name without .md), one plain path segment and stable across a
+  resume. The same key goes to test-breaker, to finish and to the executor's target.run_id.
 - >-
-  JS growth: build-feature.js (2816 counted lines) and build-ticket.js (1525) are both over the
-  1000-line .js ratchet. Expected growth is about 45 to 65 lines each: three command builders, the
-  test-breaker dispatch, the fail-closed parses and the recording of the outcome. This needs an
-  offsetting shrink or a recorded ratchet decision by the user before commit.
+  Serialization in build-feature.js. Chunks of up to BATCH_SIZE (12) tickets run through parallel() in one
+  shared worktree. The existing exclusion is commitLane: commitWithKnowledgeRouting chains each ticket's
+  stage, commit and observe steps one ticket at a time. The sequence from the list step through the commit
+  dispatch runs inside that same commitLane turn, ahead of its stage step, so no ticket's list, test-breaker
+  or finish overlaps another ticket's finish or commit. On a halt the turn resolves to the blocked result
+  without the stage, commit or observe steps, and the lane moves on to the next ticket. This placement is
+  kept under the one-ticket-per-chunk rule below: a serial batch never has two tickets in the lane at once,
+  and a parallel batch has no ticket that owes runs, but every K3-style finish (no ids) still runs inside
+  the turn. build-ticket.js drives one ticket sequentially and needs no exclusion. Recover stays once at
+  the drive head: it runs before any batch starts, when no journal can belong to a run in progress, so the
+  serial rule does not move it.
 - >-
-  The workflow tests that carry must_catch exercise build-feature.js and build-ticket.js as they stand
-  in templates/workflows-js/ when they run, never a deployed copy left from an earlier build.
+  One ticket per chunk when a batch owes runs (user decision 2026-10-21). Why: commitLane does not exclude
+  a sibling's NON-commit phases, and finish builds "the fix undone" and any derived scope from ALL
+  uncommitted changes against HEAD (TQ-500g-1-x), alters the guarded files and restores its copies at the
+  end. A sibling's coder or test-runner in flight at that moment would be judged against, reverted, or
+  overwritten. Rule: when any ticket in a /build-feature batch has a source requirement (source_ac, so it
+  owes wrong-version runs), that batch is driven one ticket at a time, so each ticket's runs see only its
+  own changes. A batch in which no ticket has source_ac stays parallel in chunks of BATCH_SIZE, as today.
+  The single-ticket path and build-ticket.js drive one ticket already and are unchanged.
+- >-
+  Where the decision sits in build-feature.js: in the epic path's batch loop ("run THIS LOOK's batches"),
+  where `for (let i = 0; i < tickets.length; i += BATCH_SIZE)` slices `chunk = tickets.slice(i, i +
+  BATCH_SIZE)` before the chunk's thunks go to parallel(chunkThunks). BATCH_SIZE stays the constant 12
+  declared at the head of the epic path. The change is only the step: a per-batch chunk size of 1 when the
+  batch owes runs, else BATCH_SIZE, decided once per batch before its first chunk. Everything after the
+  slice (the BO-100e-1-i eligibility gate, the path-form refusal, parallel(), the halt and staged-leftover
+  checks) stays as it is; a one-ticket chunk is still dispatched through parallel() with one thunk. The
+  per-ticket source_ac read inside driveTicketPhases is too late for this decision, so the batch-level
+  answer comes from the epic planner (label epic-planner, PLANNER_SCHEMA), whose
+  batches[].tickets[] items gain a source_ac key: the ticket's source_ac frontmatter as an array of
+  strings, and [] when the ticket has none. Unlike the ticket planner's convention (omit when absent),
+  here the key is always returned, so its absence means "not read".
+- >-
+  Fail closed on that decision: a ticket whose batch item has no source_ac key, a non-array value, or a
+  planner reply that cannot be read as such counts as having a source requirement, and its batch is
+  driven serially. Only a batch in which every ticket item carries source_ac as an empty array stays
+  parallel. The decision is a thin dispatch-side choice in the JS: no new script, no lock, no change to
+  the planner's batching rules (antichain, files_touched split).
+- >-
+  Once TQ-500g-3-i and -3-ii exist, the same single before-commit finish call also carries them. Do not
+  add a second dispatch for them.
+- >-
+  Edit only templates/workflows-js/ sources (plus the registry, card and executor template named above).
+  Deployed mirrors regenerate through build.py. Respect the E2 leaf invariant and ADR-006: no workflow()
+  call inside the workflow; test-breaker and command-step-runner are dispatched at depth 1 from the
+  workflow body. No Python changes: wrong_version_gate.py, the writer and the runner are used as merged.
+- >-
+  Change build-feature.js (driveTicketPhases and the drive head) and its declared twin build-ticket.js
+  together, as the TWIN rule in the build-feature.js header requires. Copy the fast lane's builders
+  (script dir, ids flag, common flags, the step helper, the delimiter loop, the finish command) as text,
+  kept identical between the twins apart from the label prefix, since the engine has no module loader.
+- >-
+  K4: the sequence runs whenever the commit phase is about to be dispatched, including on resume when
+  every earlier phase is already signed_off.
+- >-
+  JS growth: thin dispatch only, no rule logic in the JS. Counted lines today (count_content_lines in
+  scripts/commit_guardian/_file_size_ratchet.py, measured 2026-10-21): build-feature.js 2433, build-ticket.js
+  1353, both over the 1000-line .js limit, so the ratchet refuses any growth. The fast lane's block was +52
+  measured lines. Expected growth: build-feature.js about 62 to 82 (the block, the schema copy, the
+  drive-head recover, the commitLane hook-in, plus about 7 to 12 for the one-ticket-per-chunk rule: the
+  source_ac key on the planner's ticket item schema, one sentence in the epic-planner prompt and the
+  per-batch chunk step), build-ticket.js about 45 to 60 (the block, the schema copy and the recover after
+  the Worktree Guard). Anything well beyond that means rule logic leaked into the JS.
+  The user will approve a one-time check-file-size skip for these two files at commit (the BO-3900 and
+  TQ-500g-1-v precedent); record the measured growth in the commit message.
+- >-
+  Existing build-feature.js and build-ticket.js workflow tests reach the commit dispatch, so after this
+  change they meet the new executor dispatches. Give them passing wrong-version stubs (recover ok true,
+  list owed [], finish gate_passed true), as TQ-500g-1-v did for the older fast-lane tests, rather than
+  weakening the new fail-closed parses.
+- >-
+  The workflow tests that carry must_catch exercise build-feature.js and build-ticket.js as they stand in
+  templates/workflows-js/ when they run, never a deployed copy left from an earlier build.
 test_spec:
 - name: test_build_feature_runs_wrong_version_sequence_right_before_commit_dispatch
   target_dir: unit_tests/workflows/
@@ -183,92 +329,175 @@ test_spec:
   angle: reachability
   surface_invoked: templates/workflows-js/build-feature.js under unit_tests/_workflow_engine_harness.py
   description: >-
-    Drives build-feature.js under the workflow-engine harness. For K1 the recorded dispatches show,
-    after the last pre-commit phase and before the commit agent: the list step, test-breaker with the
-    owed array unchanged, then finish. The steps carry the ticket's source_ac ids, the worktree root,
-    the AC root, --base-ref HEAD and the ticket's work key.
+    Drives build-feature.js for K1. The recorded dispatches show, after the last pre-commit phase and before
+    the commit agent: bf-wv-list, bf-wv-test-breaker, then bf-wv-finish, each command step as agentType
+    command-step-runner. The list and finish commands carry the ticket's source_ac ids, the worktree root as
+    --test-root, the AC root and --base-ref HEAD; finish carries the ticket stem as --work-key.
   must_catch:
   - runner placed after the commit phase
-  - owed entries filtered or re-spelled before the test-breaker dispatch
+  - list step called without --base-ref
+  - command step dispatched to status-checker
   in_scope_files:
   - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+- name: test_owed_list_reaches_test_breaker_unchanged
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: >-
+    The list executor returns two owed entries, one with two files and scope "declared", the other with scope
+    "derived". The bf-wv-test-breaker input carries wrong_versions equal to that owed array (same order,
+    spellings, files and scope keys), requirement_ids equal to the source_ac ids, work_key equal to the
+    ticket stem and an absolute repo_root.
+  must_catch:
+  - owed entries filtered or re-spelled before the test-breaker dispatch
+  - scope key stripped from owed items before the dispatch
+  in_scope_files:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+- name: test_finish_command_carries_reply_byte_for_byte
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: >-
+    For each twin, the harness returns a test-breaker reply holding $HOME, backticks, a single quote and a
+    line reading WV_REPLY_EOF. The recorded bf-wv-finish / bt-wv-finish command is executed by a real shell
+    in a temp git repo with a temp AC store (the TQ-500g-1-v fixtures), and the writer's manifest holds that
+    replacement's altered copy exactly.
+  must_catch:
+  - reply expanded by the shell
+  - reply cut off at a line equal to the here-document delimiter
+  in_scope_files:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
 - name: test_k2_survivor_never_reaches_commit
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: criterion
   description: >-
-    K2: finish returns gate_passed false with a survivor. No commit dispatch, and a blocked result
-    carrying finish's JSON naming the test and the wrong version.
+    K2: finish returns gate_passed false with a survivor. No commit dispatch, and a blocked result with gate
+    "wrong_version_gate", wrong_version_step "finish" and wrong_version_detail equal to finish's JSON naming
+    the test and the wrong version. K1: gate_passed true, and commit follows.
   must_catch:
   - runner verdict ignored
   - a refused finish reply read as a pass
   in_scope_files:
   - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
 - name: test_writer_stop_and_unparseable_replies_halt_the_ticket
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: failure
   description: >-
-    finish with stopped_at "write" halts the ticket as blocked with the writer's error. A null,
-    refused or wrongly shaped reply from recover, list or finish halts it as well. A test-breaker
-    dispatch that returns null is passed on as an empty reply. No commit follows in any case.
+    finish with stopped_at "write" halts the ticket as blocked with the writer's error. A null, declined,
+    non-JSON or wrongly shaped reply from bf-wv-recover, bf-wv-list or bf-wv-finish halts as well. A
+    test-breaker dispatch that returns null is passed on as an empty reply. No commit follows in any case.
   must_catch:
   - writer stop treated as nothing owed
   - list reply without an owed array treated as nothing owed
+  - recover ok false ignored
   in_scope_files:
   - templates/workflows-js/build-feature.js
-- name: test_k4_resumed_ticket_recovers_then_reruns_sequence_before_commit
+  - templates/workflows-js/build-ticket.js
+- name: test_k4_resumed_drive_recovers_first_then_reruns_sequence_before_commit
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: failure
   description: >-
-    K4: every phase before commit is already signed_off. The resumed drive calls recover first, then
-    list, test-breaker and finish, and only then commit.
+    K4 in build-feature.js: the worktree facts report an existing worktree (reused, no worktree-setup
+    dispatch) and every phase before commit is already signed_off. bf-wv-recover is the first command step
+    recorded, before the epic planner or ticket planner's first phase and before any red-baseline or
+    test-breaker dispatch; then bf-wv-list, bf-wv-test-breaker and bf-wv-finish, and only then commit. With a
+    fresh worktree (worktree-setup reports "created") no bf-wv-recover is recorded.
   must_catch:
   - resumed drive trusts earlier sign-offs and skips the runs
   - recovery called after test-breaker has read the code
+  - recover dispatched inside the per-ticket driver
   in_scope_files:
   - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+- name: test_commit_redispatch_after_remedy_reruns_sequence
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: >-
+    The first commit dispatch fails with a remedy handoff, a remedy agent runs, and commit is dispatched
+    again. A fresh bf-wv-list and bf-wv-finish are recorded before the second commit dispatch as well as
+    before the first.
+  must_catch:
+  - sequence run only once per ticket rather than before every commit dispatch
+  in_scope_files:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
 - name: test_k3_records_not_applicable_never_verified
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: discrimination
   description: >-
-    K3 (no source_ac): no list step and no test-breaker dispatch are recorded, and finish runs with
-    no ids. Its verdict.outcome 'wrong-version runs not applicable: no source requirement' is recorded
-    on the ticket outcome, commit is dispatched, and nothing says verified.
+    K3 (no source_ac): no bf-wv-list and no bf-wv-test-breaker are recorded, and bf-wv-finish runs without
+    --ac-ids. Its verdict.outcome 'wrong-version runs not applicable: no source requirement' is recorded as
+    wrong_version_outcome on the ticket outcome, commit is dispatched, and nothing says verified.
   must_catch:
   - K3 recorded as verified
   - K3 halted
   - finish skipped for a ticket with no source requirement
   in_scope_files:
   - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
 - name: test_nothing_owed_skips_test_breaker_and_still_runs_finish
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: boundary
   description: >-
-    The list returns owed [] for a ticket with source_ac. No test-breaker dispatch is recorded, and
-    finish is dispatched with an empty stdin before commit.
+    The list returns owed [] for a ticket with source_ac. No bf-wv-test-breaker dispatch is recorded, and
+    bf-wv-finish is dispatched with an empty here-document body before commit.
   must_catch:
   - runner skipped when nothing is owed
+  - test-breaker dispatched with an empty wrong_versions list
   in_scope_files:
   - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
 - name: test_parallel_batch_never_overlaps_finish_with_a_sibling_commit
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: seam
   description: >-
-    Two tickets in one batch reach the step before commit together. The recorded dispatch order never
-    interleaves one ticket's finish with the other ticket's finish or commit.
+    Two tickets with source_ac [] share one parallel chunk (the only case that stays parallel) and reach
+    the step before commit together. In the recorded dispatch order one ticket's bf-wv-finish (no --ac-ids)
+    through commit and knowledge-routing-observe form one unbroken run, and the other ticket's bf-wv-finish
+    and commit fall outside it. A halt in the first ticket's finish records no stage, commit or observe for
+    it, and the second ticket still proceeds.
   must_catch:
   - finish dispatched while a sibling's commit is in flight
+  - sequence run outside the commitLane turn
+  in_scope_files:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+- name: test_batch_with_source_ac_runs_one_ticket_at_a_time
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  surface_invoked: templates/workflows-js/build-feature.js under unit_tests/_workflow_engine_harness.py
+  description: >-
+    The epic planner returns one batch of three independent tickets, one of them with source_ac
+    ["TQ-X-1"] and two with source_ac []. The recorded dispatches show each ticket's whole drive (ticket
+    planner through commit) finishing before the next ticket's first dispatch. Second case: one ticket's
+    batch item has no source_ac key; the batch is again driven one ticket at a time. Control: a batch of
+    three tickets that all carry source_ac [] is dispatched as one parallel chunk, its tickets' first
+    dispatches all recorded before any of them reaches commit, as today.
+  must_catch:
+  - parallel chunk kept when a ticket owes wrong-version runs
+  - unreadable source_ac treated as none
   in_scope_files:
   - templates/workflows-js/build-feature.js
 - name: test_build_ticket_twin_gates_commit_identically
@@ -277,21 +506,40 @@ test_spec:
   type: integration
   angle: deployed
   description: >-
-    build-ticket.js, driven with the same K1 to K4 responses, gives the same dispatch sequence and
-    decisions as build-feature.js. So the twin cannot drift.
+    build-ticket.js, driven with the same K1 to K4 responses, records bt-wv-recover on every drive (before
+    the Planner), then the same sequence and decisions as build-feature.js with the bf-/bt- prefix removed:
+    the same commands apart from the label, the same halt keys and the same wrong_version_outcome.
   must_catch:
   - build-ticket.js twin not updated
+  - build-ticket.js skips recover because it cannot tell a resumed drive
   in_scope_files:
+  - templates/workflows-js/build-feature.js
   - templates/workflows-js/build-ticket.js
+- name: test_command_step_runner_spawned_by_names_both_routes
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: >-
+    Reads the real config/agent_registry.json and docs/agents/cards/command-step-runner.card.md.
+    command-step-runner's spawned_by contains build-feature.js and build-ticket.js beside user and
+    fast-lane-ship.js, the card's Spawned By list matches, and the registry validator's spawn checks pass.
 test_required: true
 test_rationale: >-
-  Same method as TQ-500f-3-ii, the wiring precedent: drive both twins under the harness and assert
-  on the recorded dispatches. K4 is the case a phase-map-based wiring would miss, and it also proves
-  that recovery comes before test-breaker reads the code. The parallel-batch entry covers the one
-  hazard this route has and the fast lane does not: a shared worktree. The wrapper's own behaviour
-  (verdict verbatim, writer stop never reaches the runner, reply byte for byte) is proven once in
-  TQ-500g-1-v and is not repeated here. Verdict identity across routes is the TQ-500g-1 seam test,
-  which executes the recorded commands for real.
+  Same method as TQ-500f-3-ii and TQ-500g-1-v: drive both twins under the harness and assert on the
+  recorded dispatches, never on the workflow source. Labels are pinned (bf-wv-*, bt-wv-*) so the tests can
+  name each step. K4 is the case a phase-map-based wiring would miss, and its test also proves recover runs
+  once at the drive head, before anything reads code, and outside the per-ticket driver where it would
+  disturb a sibling. The commit re-dispatch entry covers the remedy loop the fast lane does not have. The
+  parallel-batch entry proves the sequence rides inside commitLane for the batches that stay parallel. The
+  sibling non-commit hazard is removed by the user's one-ticket-per-chunk rule, and its discrimination
+  entry pairs the serial case (including an unreadable source_ac) with a control batch that stays
+  parallel, so a rule that serialises everything or nothing both fail. The byte-for-byte entry is
+  repeated per twin because each twin carries its own copy of the here-document builder. The wrapper's own
+  behaviour (verdict verbatim, writer stop never reaches the runner) is proven once in TQ-500g-1-v and not
+  repeated. Every must_catch entry names both JS files in in_scope_files, because a wrong version in either
+  twin must be caught by this AC's own runs; no Python is touched. Verdict identity across routes is the
+  TQ-500g-1 seam test, which executes the recorded finish commands for real.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by:
@@ -302,6 +550,14 @@ amended_by:
 - reason: "User-approved criteria amendment (2026-10-15), from the IT-PO's clauses for the BA: the runs now follow asking the writer what is owed and, when anything is, having test-breaker prepare it from that list unchanged; K4's resumed drive first puts back any code a cut-short earlier run left altered, before anything reads it. depends_on gains TQ-500g-1-v, TQ-500g-1-iv, TQ-500g-1-ix and TQ-500g-1-x. All other clauses kept."
   date: '2026-10-15'
   by: business-analyst
+  directed_by: user
+- reason: "Technical alignment with the merged TQ-500g-1-v (PR #1280) and TQ-500g-1-x: --base-ref on list and finish, owed scope passed unchanged, pinned bf-wv-*/bt-wv-* labels, per-route resume signal and recover placement, command-step-runner spawned_by edit (package_surface false), commitLane serialization plus an open sibling-phase blocker, in_scope_files on every must_catch, measured JS growth. delivers_to to the TQ-500g-1 seam test added. Criteria unchanged."
+  date: '2026-10-21'
+  by: it-po
+  directed_by: user
+- reason: "User decision on the parallel-batch blocker: one ticket per chunk. A /build-feature batch in which any ticket has source_ac (or its source_ac cannot be read) is driven one ticket at a time; batches with no source ACs stay parallel. it_requirements name the decision point (the BATCH_SIZE chunk step in the batch loop, fed by a source_ac key on the epic planner's ticket items), keep the commitLane placement and the drive-head recover. test_spec gains test_batch_with_source_ac_runs_one_ticket_at_a_time; the parallel-batch entry now uses source_ac [] tickets. JS growth estimate updated. Criteria unchanged."
+  date: '2026-10-21'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []
@@ -358,3 +614,38 @@ notes: |
   FOLLOW-UPS OUTSIDE THIS AC: depends_on does not name TQ-500g-1-v (the
   wrapper), -iv or -ix (BA/user to add). The backfill caveat for must_catch
   entries without in_scope_files in TQ-500g-1-v's notes applies here too.
+
+  IT-PO ALIGNMENT (2026-10-21): AGAINST THE MERGED FAST LANE (#1280) AND -x
+  Every step takes --base-ref HEAD: list and finish pass it, finish forwards
+  it to the writer and the runner. Owed items carry scope and go to
+  test-breaker unchanged. Labels pinned: bf-wv-{recover,list,test-breaker,
+  finish} in build-feature.js, bt-wv-* in build-ticket.js, phase "Wrong-Version
+  Runs", executor command-step-runner (not status-checker, which the twins'
+  red-baseline gate still uses; do not copy that).
+  RESUME SIGNAL: build-feature.js = the worktree was reused, not created by
+  worktree-setup (the counterpart of the fast lane's workspaceCreated ===
+  false); recover runs once at the drive head, never inside driveTicketPhases,
+  because recover closes every open journal in the worktree and would undo a
+  parallel sibling's in-flight run. build-ticket.js has no creation step, so it
+  recovers on every drive right after the Worktree Guard (a no-op when clean).
+  REGISTRY: command-step-runner spawned_by gains build-feature.js and
+  build-ticket.js; card regenerated; executor template adopter_notes updated.
+  No new registry entry, so package_surface: false (ACS-100i-8 watches new
+  entries only).
+  SERIALIZATION: the sequence rides inside the existing commitLane turn, ahead
+  of the knowledge-routing stage. OPEN BLOCKER for the epic path: commitLane
+  does not exclude siblings' non-commit phases, and finish's "fix undone" and
+  derived scope read every uncommitted change in the shared worktree. User
+  decision needed before the epic-path wiring is built.
+  NO PYTHON CHANGES. JS growth expected +55..70 (build-feature.js) and +45..60
+  (build-ticket.js) measured lines; a one-time check-file-size skip for both
+  files is expected at commit.
+
+  USER DECISION (2026-10-21): ONE TICKET PER CHUNK
+  Resolves the parallel-batch blocker above. When any ticket in a
+  /build-feature batch has source_ac (or its source_ac cannot be read), the
+  batch is driven one ticket at a time, so each ticket's runs see only its own
+  changes. Batches with no source ACs stay parallel. Decided at the batch
+  loop's BATCH_SIZE chunk step, from a source_ac key (always present, [] when
+  none) on the epic planner's ticket items. commitLane placement and the
+  drive-head recover are unchanged. No criteria clause contradicts the rule.
