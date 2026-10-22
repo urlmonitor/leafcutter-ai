@@ -12,7 +12,8 @@ ARCHITECTURE: Pure functions over :class:`_wvr_pytest.PytestRun`; no I/O. The
     verdict shape is TQ-500g-1-i's ``delivers_to``: ``gate_passed``,
     ``applicable``, ``verified``, ``outcome``, ``reason`` (``survivor`` |
     ``unfinished`` | ``failing on the code as written`` | text | null),
-    ``results``, ``survivors``, ``unfinished``. A survivor outranks unfinished
+    ``results``, ``survivors``, ``unfinished`` plus the additive ``non_blocking_survivors`` (TQ-500g-2-ii, always present, ``[]`` when none:
+    survivors among rows with ``blocking`` false, i.e. the to-run-later extras). A survivor outranks unfinished
     in ``reason`` because it is the definitive stop.
 """
 
@@ -124,8 +125,10 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
     Returns:
         The verdict dict in TQ-500g-1-i's shape.
     """
-    survivors = [{"test": r["test"], "wrong_version": r["wrong_version"]} for r in rows if r["result"] == "survived"]
-    unfinished = [] if reason_override else _unfinished(rows)
+    blocking = [r for r in rows if r["blocking"]]  # a to-run-later extra (blocking false) never decides the gate
+    survivors = [{"test": r["test"], "wrong_version": r["wrong_version"]} for r in blocking if r["result"] == "survived"]
+    side = [{"test": r["test"], "wrong_version": r["wrong_version"]} for r in rows if not r["blocking"] and r["result"] == "survived"]
+    unfinished = [] if reason_override else _unfinished(blocking)
     reason = reason_override or ("survivor" if survivors else "unfinished" if unfinished else None)
     gate_passed = reason is None
     if outcome is None:
@@ -136,4 +139,5 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
     return {
         "gate_passed": gate_passed, "applicable": applicable, "verified": bool(rows) and not unfinished and not reason_override,
         "outcome": outcome, "reason": reason, "results": rows, "survivors": survivors, "unfinished": unfinished,
+        "non_blocking_survivors": side,
     }

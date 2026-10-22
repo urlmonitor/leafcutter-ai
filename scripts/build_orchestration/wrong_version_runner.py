@@ -30,17 +30,20 @@ import os
 import signal
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+import _wvr_db as db_mod
 import _wvr_gate as gate_mod
 import gate_verdict_records as gvr
+from _wvr_extras import demote, extra_rows
 from _wvr_pytest import PytestRun, run_selected
 from _wvr_scope import (
     UNDONE_NAME,
     ChangesError,
     DiffCache,
     OwedName,
+    Scope,
     ScopedTest,
     build_alterations,
     changed_non_test_files,
@@ -65,6 +68,7 @@ class WrongVersion:
     key: str
     name: str
     holders: list[ScopedTest] = field(default_factory=list)
+    extra_labels: set[str] = field(default_factory=set)  # holders that run it as a to-run-later extra (non-blocking)
 
     @property
     def is_undone(self) -> bool:
@@ -77,11 +81,17 @@ class PutBackFailed(Exception):
 
 
 def _wrong_versions(tests: list[ScopedTest]) -> list[WrongVersion]:
-    """List the wrong versions to run: named ones in order, then the fix undone."""
+    """List the wrong versions to run: named ones in order, then the extras, then the fix undone."""
     ordered: dict[str, WrongVersion] = {}
     for test in tests:
         for key, name in test.versions.items():
             ordered.setdefault(key, WrongVersion(key, name)).holders.append(test)
+    for test in tests:  # the writer's extras (TQ-500g-2-ii) after every named version, so a named spelling wins
+        for key, name in test.extras.items():
+            wv = ordered.setdefault(key, WrongVersion(key, name))
+            if test not in wv.holders:
+                wv.holders.append(test)
+                wv.extra_labels.add(test.label)
     undone = ordered.pop(wrong_version_key(UNDONE_NAME), WrongVersion(wrong_version_key(UNDONE_NAME), UNDONE_NAME))
     return [*ordered.values(), undone]
 
@@ -231,7 +241,8 @@ def _execute(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str, a
     out_rows += [row(name, "", "invalid", f"declared test not found: {name} is declared in test_spec but no covers-tagged test of that name exists") for name in scope.missing]
     if not scope.tests and not scope.missing:
         return assemble(out_rows, applicable=False, outcome=NO_TESTS_OUTCOME)
-    return _verdict_for(scope.tests, out_rows, test_root, ac_root, base_ref, alterations, gate_dir)
+    out_rows += extra_rows(scope.extras_read.notes)
+    return _verdict_for(scope, out_rows, test_root, ac_root, base_ref, alterations, gate_dir)
 
 
 def _stopped(message: str, rows: list[dict] | None = None) -> dict:
@@ -245,17 +256,24 @@ def _rel_to(root: Path, path: Path) -> str | None:
     return None if rel.startswith("..") or os.path.isabs(rel) else rel
 
 
-def _verdict_for(tests: list[ScopedTest], out_rows: list[dict], test_root: Path, ac_root: Path, base_ref: str,
+def _verdict_for(scope: Scope, out_rows: list[dict], test_root: Path, ac_root: Path, base_ref: str,
                  alterations: str | None, gate_dir: Path) -> dict:
     """Run the baseline and each wrong version; return the verdict."""
+    tests = scope.tests
     root = Path(gate_mod.git_text(test_root, "rev-parse", "--show-toplevel"))
+    for t in tests:  # rows name a test by its repo-relative path (the form a to-run-later file uses)
+        rel = _rel_to(root, Path(t.label.partition("::")[0]))
+        t.label = t.label if rel is None else rel + "::" + t.label.partition("::")[2]
+        if t.node is not None:
+            t.node = replace(t.node, cwd=root)  # the pytest child runs at the repo root
     manifest, problem = load_manifest(alterations)
     run_id = f"{time.strftime('%Y%m%dT%H%M%S')}-{os.getpid()}"
     ctx = Context(root, _rel_to(root, test_root), _rel_to(root, ac_root), base_ref, manifest, problem,
                   gate_mod.RunGate(root, gate_dir / run_id), tests=[t for t in tests if t.node is not None])
     unresolved = [t for t in tests if t.node is None]
     rows = [row(t.label, "", "invalid", t.issue) for t in unresolved] + out_rows
-    runnable = [t for t in tests if t.node is not None]
+    runnable, blocked = db_mod.gate([t for t in tests if t.node is not None], scope.db_names, root)
+    rows += blocked
     if not runnable:
         return assemble(rows)
     base_rows, ok = _baseline(runnable)
@@ -272,7 +290,7 @@ def _verdict_for(tests: list[ScopedTest], out_rows: list[dict], test_root: Path,
         except PutBackFailed as exc:
             rows.append(row("", wv.name, "not_run", str(exc)))
             return _stopped(str(exc), rows)
-        rows += classify_run(runnable if wv.is_undone else wv.holders, wv.holders, run, wv.name, wv.is_undone)
+        rows += demote(classify_run(runnable if wv.is_undone else wv.holders, wv.holders, run, wv.name, wv.is_undone), wv.extra_labels)
         if ctx.interrupted:
             break
     return assemble(rows)

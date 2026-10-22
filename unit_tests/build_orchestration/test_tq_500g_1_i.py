@@ -22,7 +22,7 @@ RESULT_VALUES = {"caught", "survived", "did_not_load", "not_applied", "invalid",
                  "not_in_scope", "not_applicable"}
 ROW_KEYS = {"test", "wrong_version", "result", "blocking", "detail"}
 VERDICT_KEYS = {"gate_passed", "applicable", "verified", "outcome", "reason", "results",
-                "survivors", "unfinished"}
+                "survivors", "unfinished", "non_blocking_survivors"}
 
 
 def test_t2_survivor_stops_although_t1_caught_it(tmp_path):
@@ -54,6 +54,7 @@ def test_runner_cli_end_to_end_on_refresh_fixture(tmp_path):
     stop = fx.build_sandbox(tmp_path / "stop")
     proc, verdict = fx.run_runner(stop)
     assert set(verdict) == VERDICT_KEYS, sorted(verdict)
+    assert verdict["non_blocking_survivors"] == []
     assert verdict["applicable"] is True and verdict["verified"] is True
     assert verdict["results"], "results must list the (test, wrong version) pairs"
     for row in verdict["results"]:
