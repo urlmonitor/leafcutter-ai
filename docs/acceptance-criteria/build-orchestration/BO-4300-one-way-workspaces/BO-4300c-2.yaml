@@ -224,6 +224,8 @@ covered_by:
 - unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py
 - unit_tests/build_orchestration/test_bo_4300c_2.py
 - unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/test_bo_4300a_1_clone_source.py
+- unit_tests/build_orchestration/test_bo_4300c_2_contract_codes.py
 implemented_by:
 - templates/scripts/workspace_root.py
 - templates/scripts/worktree_canaries.py
@@ -245,6 +247,7 @@ implemented_by:
 - unit_tests/build_orchestration/_bo_4300f_2_fixtures.py
 - .github/workflows/ci.yml
 - unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
+- templates/scripts/worktree_ensure_steps.py
 notes: |
   F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
   the JSON, and set-up let package installers and the build write to the same channel. Whether

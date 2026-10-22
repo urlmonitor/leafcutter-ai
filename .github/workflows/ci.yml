@@ -522,6 +522,7 @@ jobs:
           unit_tests/build_orchestration/test_bo_4300f_4.py
           unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
           unit_tests/build_orchestration/test_bo_4300a_1_marker_survival.py
+          unit_tests/build_orchestration/test_bo_4300a_1_route_shape.py
           -m "manual or not manual" -ra -s
 
   workspace-maker-windows:

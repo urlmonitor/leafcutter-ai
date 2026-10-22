@@ -114,8 +114,12 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
     return proc
 
 
-def copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
-    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace."""
+def copy_optional_files(repo_root: Path, workspace_path: Path) -> list[str]:
+    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace.
+
+    Returns the names actually copied (BO-4300c-2 ``bootstrap.env_copied``).
+    """
+    copied: list[str] = []
     for name in (".env", ".mcp.json"):
         src = repo_root / name
         if not src.is_file() or (workspace_path / name).exists():
@@ -124,6 +128,9 @@ def copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
             shutil.copy2(src, workspace_path / name)
         except OSError as exc:
             _log.warning("copy_optional_files: could not copy %s: %s", src, exc)
+        else:
+            copied.append(name)
+    return copied
 
 
 def marker_path(workspace: Path) -> Path:
