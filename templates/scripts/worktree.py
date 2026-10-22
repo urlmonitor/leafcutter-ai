@@ -144,7 +144,7 @@ def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_p
                                config_path=config_path, line_of_work=line_of_work)
     if proof.get("status") in ("refused", "error"):
         return proof  # a refusal never carries a workspace location
-    checks = proof["checks"]
+    checks = wr.with_restored_tree(proof["checks"], workspace_path)  # the work is back in place
     ready = {**(marker or {}), **wst.build_marker(ident.kind, ident.slug, branch, hub, repo_root, base_commit, "ready",
                                                checks, workspace=workspace_path)}
     if marker and marker.get("created_at"):
@@ -263,29 +263,6 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
         return {**_ensure_locked(repo_root, hub, ident, place, workspace_path, args, ticket), **ctx}
 
 
-def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
-    """Read-only readiness re-check of the workspace marker at ``--path``."""
-    bad_override = wl.override_refusal(args)
-    if bad_override is not None:
-        return bad_override
-    workspace_path = wp.resolve_arg(args.path)
-    marker = wg.read_marker(workspace_path)
-    if marker is None:
-        return _err("NOT_FOUND", f"No leafcutter workspace marker found at {workspace_path}.")
-    if marker.get("state", "ready") != "ready":
-        return worktree_remove.incomplete_answer(workspace_path, marker)
-    hub = wp.from_portable(marker.get("hub", ""), workspace_path)
-    project_root = marker.get("project_root")
-    computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "",
-                                 project_root=Path(wp.from_portable(project_root or "", workspace_path)))
-    checks = wr.stored_checks(computed, marker)
-    answer = {"status": "ok", "path": str(workspace_path), **wp.path_fields(workspace_path),
-              "marker": marker, "checks": checks, "hub": hub}
-    if project_root:
-        answer.update(_repo_context(Path(wp.from_portable(project_root, workspace_path))))
-    return answer
-
-
 def cmd_where(_args: argparse.Namespace) -> dict[str, Any]:
     """Print the maker's own absolute path."""
     here = Path(__file__).resolve()
@@ -339,7 +316,7 @@ _DISPATCH = {
     "ensure": cmd_ensure,
     "locate": worktree_remove.cmd_locate,
     "list": worktree_admin.cmd_list,
-    "verify": cmd_verify,
+    "verify": worktree_admin.cmd_verify,
     "remove": worktree_remove.cmd_remove,
     "where": cmd_where,
     "migrate-legacy": worktree_migrate.cmd_migrate_legacy,

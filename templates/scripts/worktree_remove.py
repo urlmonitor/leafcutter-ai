@@ -45,7 +45,6 @@ from typing import Any
 
 import worktree_admin
 import worktree_answer as wa
-import worktree_ensure_state as wes
 import worktree_git as wg
 import worktree_layout as wl
 import worktree_paths as wp
@@ -57,8 +56,8 @@ _EXTENDED_PREFIX = "\\\\?\\"
 
 
 def incomplete_answer(workspace: Path, marker: dict[str, Any]) -> dict[str, Any]:
-    """INCOMPLETE answer for a half-made workspace: names ``remnant_path``, never a ``workspace_path``."""
-    return {**wes.incomplete_refusal(workspace, marker), "remnant_path": str(workspace)}
+    """Alias of :func:`worktree_admin.incomplete_answer` (resolved at call time: the import cycle forbids a bind)."""
+    return worktree_admin.incomplete_answer(workspace, marker)
 
 
 def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:

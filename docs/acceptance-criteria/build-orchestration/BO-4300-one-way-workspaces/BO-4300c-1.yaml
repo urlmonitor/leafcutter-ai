@@ -186,8 +186,9 @@ amended_by:
   at: '2026-10-22'
   note: Independent-copy and installed-tools ingredients gain their extra checks; new IT for verify's read-only re-check (never refuses on base_is_fresh or tree_clean); criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
+covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii, unit_tests/build_orchestration/test_bo_4300c_1_independence.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_refuses.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_readonly.py, unit_tests/build_orchestration/test_bo_4300a_1_same_location.py]
 implemented_by:
+- templates/scripts/worktree_admin.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
 - templates/scripts/worktree.py
 - templates/scripts/worktree_git.py
