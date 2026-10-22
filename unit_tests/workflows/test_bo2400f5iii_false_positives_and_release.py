@@ -25,7 +25,10 @@ from unit_tests.workflows._bo2400f5iii_fixtures import (  # noqa: E402
     run_lane,
 )
 
+from _workflow_engine_workspace import shell_step_reply, workspace_refusal_reply  # noqa: E402
+
 _PLAIN = {"step": "x", "agent": "a", "isCommandStep": False}
+_COMMAND_STEPS = frozenset({"resolve-connected", "claim-connected"})
 
 
 def _with(label: str, **changes: Any) -> dict[str, Any]:
@@ -48,8 +51,9 @@ _CASES: list[tuple[str, Any, dict[str, Any]]] = [
     ("check-producibility",
      {"producible": False, "reason": "member BO-1 is declined/deferred status"},
      {"status": "refused", "message_has": "Refusing the resolved connected build set"}),
+    # A command-step-runner reply whose command ran and failed: the stderr merely MENTIONS a refusal word.
     ("resolve-connected",
-     {"ac_ids": [], "message": "resolution error: manifest refused to parse"},
+     shell_step_reply("", exit_status=1, stderr="resolution error: manifest refused to parse"),
      {"status": "error", "failing_phase": "resolve",
       "message_has": "Resolver could not resolve"}),
     ("fastlane-commit",
@@ -61,9 +65,11 @@ _CASES: list[tuple[str, Any, dict[str, Any]]] = [
      {"status": "error", "failing_phase": "pull-request",
       "message_has": "open the PR manually",
       "has_keys": ["worktree_path", "branch", "ac_ids"]}),
-    ("fastlane-worktree",
-     {"outcome": None, "message": "Connection refused"},
-     {"status": "refused", "failing_phase": "worktree"}),
+    # The maker step: an ordinary maker refusal whose text says "refused" ends the run through the workspace
+    # rule (status error), never as a declined_step.
+    ("workspace-ensure",
+     workspace_refusal_reply(message="Connection refused"),
+     {"status": "error", "message_has": "Workspace step failed"}),
 ]
 
 
@@ -75,7 +81,8 @@ class TestRefusalWordsInOrdinaryRepliesAreNotDeclines(unittest.TestCase):
         # angle: discrimination
         problems: list[str] = []
         for label, reply, _ in _CASES:
-            verdict = classify_in_node(json.dumps(reply), _PLAIN)
+            meta = {**_PLAIN, "isCommandStep": label in _COMMAND_STEPS}
+            verdict = classify_in_node(json.dumps(reply), meta)
             if verdict.get("kind") == "declined":
                 problems.append(f"[{label}] classified declined: {verdict}")
         self.assertEqual(problems, [], "\n".join(problems))
@@ -115,7 +122,7 @@ _POST_CLAIM = (
     "fastlane-review", "fastlane-changelog", "fastlane-commit",
 )
 _PRE_OR_AT_CLAIM = (
-    "fastlane-worktree", "fastlane-worktree-verify", "resolve-connected",
+    "resolve-connected",
     "check-producibility", "claim-connected", "fastlane-pr",
 )
 
@@ -148,6 +155,11 @@ class TestReleaseWiringOnDecline(unittest.TestCase):
                 problems.append(f"[{label}] did not halt as declined_step: {result.result}")
             if releases:
                 problems.append(f"[{label}] unexpected release dispatch(es): {releases}")
+        # The maker step ends the run as an error (no claim exists yet), so it releases nothing either.
+        workspace_declined = run_lane({"workspace-ensure": decline_reply_for("shell-runner")})
+        released = [c.label for c in workspace_declined.agent_calls if str(c.label).startswith("release-on")]
+        if released or (workspace_declined.result or {}).get("status") != "error":
+            problems.append(f"[workspace-ensure] want an error end with no release: {workspace_declined.result} {released}")
         self.assertEqual(problems, [], "\n".join(problems))
 
 

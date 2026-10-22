@@ -88,12 +88,13 @@ class TestFastLaneShipWorkflow(unittest.TestCase):
 
     def test_ac4_auto_creates_worktree(self) -> None:
         # covers: BO-2400f-4
-        """The workflow references the create-fastlane-worktree subcommand."""
+        """The workflow auto-creates the worktree through the workspace maker's ensure command
+        (BO-4300c-3 replaced the create-fastlane-worktree subcommand and its agent dispatch)."""
         content = self._require_file()
         self.assertIn(
-            "create-fastlane-worktree", content,
-            "The workflow must auto-create the worktree via "
-            "setup_ticket_worktree.py create-fastlane-worktree (BO-2400f-3/f-4).",
+            "worktree.py ensure --kind fastlane", content,
+            "The workflow must auto-create the worktree via the workspace maker "
+            "(worktree.py ensure --kind fastlane) (BO-2400f-3/f-4, BO-4300c-3).",
         )
 
     def test_ac4_resolves_connected_set(self) -> None:
@@ -477,20 +478,14 @@ class TestTestWriterSchemaNullableReason(unittest.TestCase):
 
 
 class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
-    """The worktree location must be read off git, never off the LLM's claim.
+    """The worktree location must be the workspace maker's accepted answer, never the LLM's claim.
 
-    The worktree phase is an LLM agent. It has twice returned a path it composed
-    rather than the one create-fastlane-worktree printed: 2026-08-11 on BO-2400f
-    (<worktree>/tickets/00_inbox) and 2026-09-07 on UXP-700d, where it reported
-    <repo_root>/worktrees/<slug> while git had placed the worktree at
-    <workspace>/worktrees/<slug>. The resolver then ran against a directory that
-    did not exist and the whole lane halted.
-
-    Recomputing the path in the workflow would not fix it and would break
-    consumers. setup_ticket_worktree.py's _resolve_installed_layout() puts
-    worktrees under the workspace PARENT in the dev layout and under the consumer
-    project root in an installed layout, so any single hardcoded convention is
-    wrong in one of the two. git knows the real location in both.
+    The worktree phase used to be an LLM agent that twice returned a path it composed rather than the one
+    the creation command printed (2026-08-11 on BO-2400f, 2026-09-07 on UXP-700d). That was first closed by
+    a second "ask git" probe; BO-4300c-3 / BO-4300a-1-ia closed it for good: there is no claim and no probe.
+    The location is the ``workspace_path`` of the maker's ONE accepted answer (a shell executor relays the
+    command's stdout verbatim), a reply that is not an accepted answer ends the run quoting it, and there is
+    no fallback location of any kind.
     """
 
     def setUp(self) -> None:
@@ -500,10 +495,10 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
 
     def test_workflow_asks_git_where_the_worktree_is(self) -> None:
         self.assertIn(
-            "git worktree list --porcelain",
+            "workspaceObtain(",
             self.content,
-            "The workflow must ask git for the worktree location rather than "
-            "trusting the phase agent's reported path.",
+            "The workflow must obtain its workspace from the workspace maker's accepted answer rather than "
+            "trusting a phase agent's reported path.",
         )
 
     def test_reported_path_is_not_used_without_confirmation(self) -> None:
@@ -513,42 +508,32 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
             "worktreeResult.worktree_path is the LLM's claim and must not be "
             "assigned straight to worktreePath — it has been fabricated twice.",
         )
+        self.assertIn(
+            "const worktreePath = workspace.workspace_path;",
+            self.content,
+            "worktreePath must be the accepted answer's workspace_path and nothing else.",
+        )
 
     def test_the_path_must_be_quoted_from_the_raw_git_output(self) -> None:
         self.assertRegex(
             self.content,
-            r"gitRaw\s*\.\s*includes\s*\(\s*gitReportedPath\s*\)",
-            "The confirmed path must be checked for presence in the raw git "
-            "output it was supposedly read from. A path absent from that output "
-            "was invented rather than quoted, which is the one failure mode this "
-            "step exists to catch.",
+            r"if\s*\(\s*!workspace\.accepted\s*\)\s*return\s+workspaceFailure\(\s*workspace\s*\)",
+            "A reply that is not an accepted ok answer naming a workspace_path must end the run before any "
+            "later step (the failure quotes what was received) -- a path nobody printed is never used.",
         )
 
     def test_an_unconfirmed_path_halts_instead_of_proceeding(self) -> None:
-        self.assertIn(
-            "does not appear in",
-            self.content,
-            "A path git did not actually print must halt with a message naming "
-            "both the reported path and git's raw output. That path was composed "
-            "rather than quoted, which is what sent the resolver to a "
-            "non-existent directory.",
-        )
+        shared = (_REPO_ROOT / "templates" / "workflows-js" / "_shared" / "workspace-answer.js").read_text(encoding="utf-8")
+        self.assertIn("Received: ", shared, "The shared failure must quote what was received, not a bare 'failed'.")
+        self.assertIn("no other location was used", shared, "The shared failure must state no other location was substituted.")
 
     def test_silence_from_git_falls_back_rather_than_halting(self) -> None:
-        """An unanswered probe is not evidence of fabrication.
-
-        The first version of this guard halted whenever the verification
-        dispatch returned nothing. That made the whole lane unrunnable any time
-        one extra agent call hiccupped -- a worse failure mode than the bug it
-        prevents, and it broke every fixture that walks this workflow without
-        stubbing the new label. Only a positive contradiction halts now.
-        """
-        self.assertRegex(
+        """No answer is NOT evidence of anything and is NOT forgiven: there is no claimed location to fall
+        back to any more, so a silent step ends the run instead of continuing on a guess."""
+        self.assertNotRegex(
             self.content,
-            r"gitReportedPath\s*\|\|\s*claimedWorktreePath",
-            "With no answer from git the workflow must fall back to the phase "
-            "agent's claim, leaving it no worse off than before this guard "
-            "existed, rather than refusing to run at all.",
+            r"gitReportedPath|claimedWorktreePath",
+            "The claim / git-probe fallback must be gone: no variable may carry a claimed location.",
         )
 
     def test_no_hardcoded_worktrees_convention_is_assumed(self) -> None:

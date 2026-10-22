@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _bo4500a4_support import JUDGE_FAILS, StepScenario, install_checks, scenario3  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
 # Unique substring in both fixture script names: a mutation under test may kill by it
 # instead of machine-wide, which is equivalent for proving the test notices a kill.
@@ -128,7 +129,7 @@ class TestNoSharedSideEffects(unittest.TestCase):
             with self.subTest(outcome=outcome):
                 sc, argv = _scenario_for(self, outcome)
                 sibling = sc.scratch / "sibling"
-                sc.git("worktree", "add", "-q", "-b", "sibling-branch", str(sibling))
+                link_checkout(sc.repo, ["-q", "-b", "sibling-branch", str(sibling)])
                 sibling_run = _start_fixture_run(self, sc.scratch, sibling, "pytest")
                 local_run = _start_fixture_run(self, sc.scratch, sc.repo, "unittest")
                 _run_outcome(self, outcome, sc, argv)

@@ -13,6 +13,7 @@ from pathlib import Path
 import unit_tests.workflows._quick_fix_harness as qf
 import unit_tests.workflows._tq500f3ii_fixtures as fx
 from unit_tests._workflow_engine_harness import run_workflow_under_e2
+from unit_tests._workflow_engine_workspace import resolve_connected_reply, workspace_ensure_from_opened
 from unit_tests.workflows._fast_lane_claim_fixtures import claim_ran
 
 SCRATCH_LABEL = "scratch-item"
@@ -45,10 +46,10 @@ def _heavy_lane(script: str) -> tuple[dict, dict]:
 def _fast_lane(worktree: Path) -> tuple[dict, dict]:
     ac_ids = ["BO-9441a"]
     responses = {
-        "fastlane-worktree": {"worktree_path": str(worktree), "branch": "fast-lane/bo4400f1",
-                              "ac_store_path": str(worktree / "docs" / "acceptance-criteria"),
-                              "created": True},
-        "resolve-connected": {"ac_ids": ac_ids, "message": "1 to build"},
+        "workspace-ensure": workspace_ensure_from_opened({
+            "worktree_path": str(worktree), "branch": "fast-lane/bo4400f1",
+            "ac_store_path": str(worktree / "docs" / "acceptance-criteria"), "created": True}),
+        "resolve-connected": resolve_connected_reply(ac_ids),
         "claim-connected": claim_ran(ac_ids, message="claimed 1 AC"),
         "test-writer-connected": {"status": "ok", "tests_written": ["unit_tests/x/test_stub.py"],
                                   "gate_passed": True, "reason": None, "green_at_baseline": [],

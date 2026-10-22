@@ -6,8 +6,8 @@ BUSINESS CONTEXT: The self-healing hook re-materializes .pre-commit-config.yaml 
     checks whether .pre-commit-config.yaml resolves to a readable file; if not, it
     tries to create the .leafcutter symlink (via git-common-dir resolution) and falls
     back to copying the config directly when symlinks are unavailable (NTFS/Windows).
-    The hook is registered at index 0 in commit_guardian.json so it runs BEFORE
-    all other hooks. It is idempotent (safe to call repeatedly) and atomic
+    The hook is the first entry of commit_guardian.json after the stage canaries
+    (BO-4300c-1-ii), so it runs BEFORE all other hooks. It is idempotent (safe to call repeatedly) and atomic
     (write-temp-then-rename so partial failures leave a clean state).
 ARCHITECTURE: Import-based tests exercise the module functions directly via mocks
     so no live git repository or pre-commit installation is required. Subprocess-
@@ -23,6 +23,10 @@ DECISION HISTORY
     - ImportError when module missing (import-based tests).
     - Non-zero subprocess exit / empty stdout when script missing.
     - AssertionError on manifest test (ensure-precommit-config absent from index 0).
+- 2026-10-21 [smart-bug-resolver/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18,
+  BO-1700c-1]: TestManifestIndex0 now asserts the amended order -- the stage
+  canaries BO-4300c-1-ii places first, then ensure-precommit-config as the first
+  non-canary hook (user decision "canary first", 2026-10-21).
 ====================================================================
 """
 
@@ -512,59 +516,33 @@ class TestAtomicityPartialFailureCleanState(unittest.TestCase):
 
 
 class TestManifestIndex0(unittest.TestCase):
-    """ensure-precommit-config must be the FIRST entry in hooks_manifest.hooks."""
+    """ensure-precommit-config is the first hook registered after the stage canaries."""
+
+    # The members BO-4300c-1-ii places first, in this order (each is the first hook of its stage).
+    _LEADING_CANARIES = ["precommit-canary-pre-commit", "precommit-canary-commit-msg"]
 
     def test_manifest_index_0(self):
         # covers: BO-1700c-1
-        """assert ensure_precommit_config is registered first (index 0) in commit_guardian.json.
+        """The self-healing hook is the first non-canary entry of hooks_manifest.hooks.
 
-        The ticket requires that ensure_precommit_config be listed at index 0
-        in hooks_manifest.hooks so it runs BEFORE all other hooks.
-
-        This test:
-        1. Reads scripts/commit_guardian/commit_guardian.json.
-        2. Locates the hooks_manifest.hooks array.
-        3. Asserts that hooks[0]["id"] == "ensure-precommit-config".
-
-        This test is RED until python-coder registers the hook in the manifest.
-        The manifest file exists; only the hook entry at index 0 is missing.
+        BO-1700c-1 as amended 2026-10-21 ("canary first"): every entry before
+        ensure-precommit-config is one of the stage canaries BO-4300c-1-ii places
+        first, those canaries are exactly precommit-canary-pre-commit then
+        precommit-canary-commit-msg, and the first entry that is not a canary is
+        ensure-precommit-config -- so it still runs before every other hook.
         """
-        self.assertTrue(
-            _MANIFEST_PATH.exists(),
-            msg=(
-                f"commit_guardian.json not found at {_MANIFEST_PATH}. "
-                "Verify the repository structure is intact."
-            ),
-        )
-
         try:
             data = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
-            self.fail(
-                f"Cannot read or parse commit_guardian.json at {_MANIFEST_PATH}: {exc}"
-            )
-
-        hooks = data.get("hooks_manifest", {}).get("hooks", [])
-
-        self.assertTrue(
-            len(hooks) > 0,
-            msg=(
-                "hooks_manifest.hooks must not be empty. "
-                f"Found: {len(hooks)} entries."
-            ),
-        )
-
-        first_hook_id = hooks[0].get("id", "")
-        self.assertEqual(
-            first_hook_id,
-            "ensure-precommit-config",
-            msg=(
-                f"Expected hooks_manifest.hooks[0].id == 'ensure-precommit-config'. "
-                f"Got: '{first_hook_id}'. "
-                "Register ensure_precommit_config.py at index 0 in commit_guardian.json "
-                "so it fires BEFORE all other hooks."
-            ),
-        )
+            self.fail(f"Cannot read or parse commit_guardian.json at {_MANIFEST_PATH}: {exc}")
+        ids = [hook.get("id", "") for hook in data.get("hooks_manifest", {}).get("hooks", [])]
+        self.assertIn("ensure-precommit-config", ids, "ensure-precommit-config is not registered")
+        heal = ids.index("ensure-precommit-config")
+        self.assertEqual(ids[:heal], self._LEADING_CANARIES,
+                         f"only the stage canaries may precede ensure-precommit-config; found {ids[:heal]}")
+        first_non_canary = next(i for i in ids if not i.startswith("precommit-canary"))
+        self.assertEqual(first_non_canary, "ensure-precommit-config",
+                         f"the first non-canary hook must be ensure-precommit-config, got {first_non_canary!r}")
 
 
 if __name__ == "__main__":

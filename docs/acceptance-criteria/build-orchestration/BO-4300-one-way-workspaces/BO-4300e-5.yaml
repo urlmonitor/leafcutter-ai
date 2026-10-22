@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -43,7 +43,8 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: BO-4300e-3
-  contract: remove CLI including the up-front discard authorisation argument.
+  contract: remove CLI including --discard-token T, where T is the one-time token from the same workspace's
+    own UNSENT_WORK refusal (Q8, decided 2026-09-28).
 package_surface: false
 it_requirements:
 - 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
@@ -52,17 +53,61 @@ it_requirements:
 - Commands shown are exactly the deployed maker's CLI as built (BO-4300a-1 / BO-4300c-2); no hand-written
   alternative recipe, no symlink or copy steps.
 - 'Location: docs/how-to/clear-a-workspace.md; linked from get-a-workspace.md. Documents locate, remove,
-  the UNSENT_WORK refusal lists, delivering work first, and the up-front discard authorisation exactly
-  as built (Q8 open until then -- do not guess the mechanism).'
-test_required: false
+  the UNSENT_WORK refusal lists, delivering work first, and the up-front discard authorisation as decided
+  (Q8, user 2026-09-28): the refusal returns a one-time discard_token bound to that workspace and exactly
+  the listed unsent work; to discard, repeat the remove with --discard-token <that token>; a token does
+  not work for another workspace or once anything unsent changes (ask again for a fresh one); there is
+  no environment variable, config setting or remembered answer that authorises a discard.'
+test_required: true
+test_spec:
+- name: test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: docs/how-to/clear-a-workspace.md exists with valid frontmatter, is reachable from docs/INDEX.md,
+    and its published commands run against the deployed maker with the documented outcome -- remove on a
+    workspace with unsent work is refused with a discard_token, and the documented repeat with
+    --discard-token clears it.
+test_rationale: 'The deliverable is a published document, so a waiver would let it close unproven. The
+  proof is ticket 13''s real doc test (unit_tests/build_orchestration/test_bo_4300_docs.py), whose test for
+  this record carries `# covers: BO-4300e-5` and asserts on the delivered artifact itself -- the file exists with
+  valid frontmatter, is reachable from docs/INDEX.md, and its published remove commands, including the two-step token flow, give the documented outcomes. A grep of the template or a waiver
+  (test_required: false) would pass with the page missing or its commands broken. Settled by the coordinator
+  2026-09-28: the six BO-4300 doc records close through this test, not through a waiver.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: doc-ac-test-contract
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. test_required: false (a waiver with no test_rationale,
+    which check-done-proof does not honour) replaced by test_required: true and a test_spec naming
+    ticket 13's real doc test with its `# covers:` tag, plus a test_rationale -- the consistent option
+    settled by the coordinator 2026-09-28 for all six BO-4300 doc records. The Q8 'open' requirement is restated for the decided discard token (user,
+    2026-09-28). readiness stays
+    approved.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300_docs.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300e-5.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md
+- docs/how-to/clear-a-workspace.md
 notes: |
-  documentation_trigger how-to on BO-4300e. The authorisation mechanism is OPEN (Q8); the page
-  documents whatever IT PO and the user settle.
+  documentation_trigger how-to on BO-4300e. Q8 -- DECIDED (user, 2026-09-28): the authorisation
+  is the one-time discard token returned by the refusal (BO-4300e-3); the page documents that
+  two-step flow.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 13_TICKET-20260928-BO-4300-docs-and-diagrams.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Doc test contract: test_required true + test_spec naming ticket 13's covers-tagged doc test
+#   + test_rationale; Q8 two-step token flow documented as decided.
+# ====================================================================

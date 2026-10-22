@@ -49,7 +49,7 @@ WHY THESE FIXTURES ARE REAL GIT, NOT MOCKS: every assertion below is on the
     performing it as a real repository operation and executing the check as
     a process against the resulting staged state") and this repo's
     Real-Artifact Behavioral Test Mandate. A fresh ``git init`` repo per test
-    (rather than a ``git worktree add`` off this repository) is used because
+    (rather than a the linked-checkout add off this repository) is used because
     ``check_contract_shrinking.py``, unlike ``check_doc_frontmatter.py``,
     needs no real ``docs/components.json``/``docs/FRONTMATTER.md`` context —
     same reasoning ``test_ge_120e_4_i.py`` (the sibling AC covering the

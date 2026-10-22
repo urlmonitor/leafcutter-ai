@@ -25,6 +25,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":  # BO-4300f-2 (Q6): refuse before any other import writes bytecode or a phase runs
+    _keep, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    from build_target_guard import exit_if_implicit_package_build
+    sys.dont_write_bytecode = _keep
+    exit_if_implicit_package_build(sys.argv[1:], Path(__file__).resolve().parent.parent)
+
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
 from build_phases import (
     reset_deploy_failures,
@@ -429,7 +435,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     * ``scripts/knowledge/`` — knowledge scripts from ``_manifest_knowledge_scripts``.
     * ``scripts/build_orchestration/`` — from ``_manifest_build_orchestration_scripts``.
     * ``scripts/<name>`` — standalone Python files from ``templates/scripts/``
-      (includes ``setup_ticket_worktree.py``).
+      (the workspace maker among them).
     * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
     * ``scripts/doc_compliance/`` — from ``_manifest_doc_compliance_scripts``.
     * ``scripts/sync_platforms/`` — from ``_manifest_sync_platforms_scripts``.
@@ -2074,14 +2080,9 @@ if __name__ == "__main__":
 #   file is absent or frontend-design was not listed. Idempotent.
 #   (#EPIC-Oneagenthandlesboththelookandthecodefor/17)
 # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Class B resolution.
-#   Extended _get_source_deployable_scripts() with four new per-phase manifest helpers:
-#   _manifest_workflow_tool_scripts (add_component, knowledge_query, set_ticket_status,
-#   ticket_prioritizer), _manifest_knowledge_scripts (harvest_learnings),
-#   _manifest_template_standalone_scripts (setup_ticket_worktree + others from
-#   templates/scripts/*.py). Imported and wired three new phases into internal_phases
-#   in _run_phases(): build_workflow_tools, build_knowledge_scripts,
-#   build_template_standalone_scripts. These close the Class B deploy gaps so the
-#   script reference guard passes after all legitimate scripts are deployed.
+#   Extended _get_source_deployable_scripts() with four per-phase manifest helpers
+#   (workflow tools, knowledge scripts, templates/scripts/*.py) wired as three new
+#   phases so the script reference guard passes once all legitimate scripts deploy.
 #   (#EPIC-BuildGuardFalsePositive/03)
 # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/02]: Added
 #   _get_source_deployable_scripts() and _check_script_reference_guard() preflight
@@ -2112,25 +2113,10 @@ if __name__ == "__main__":
 #   BP-900g-1-i command-reference reachability guard into the real build so
 #   the guardrail is enforced, not merely callable.
 #   (#EPIC-BuildPipelinePhantomRemediation/06)
-# - 2026-08-25 [python-coder/BP-900g-8]: Added _check_intra_package_closure_guard(),
-#   a third preflight (alongside _check_script_reference_guard and
-#   _check_tracked_source_guard) that computes, for every script this build will
-#   deploy, its DERIVED transitive intra-package dependency closure via
-#   build_referential_integrity.compute_intra_package_closure (AST-based static
-#   analysis of imports, relative imports, and importlib.util.spec_from_file_location
-#   dynamic loads -- never a hand-maintained list) and fails the build when a
-#   resolved dependency is not itself in the deployable set. Also rewrote
-#   _manifest_ac_store_scripts to derive from build_phases.AC_STORE_DEPLOY_MAP
-#   (imported here) instead of scanning every file physically present in
-#   scripts/ac_store/ -- the latter made the guard's "deployed" set really mean
-#   "exists in source", which could never detect a file present in source but
-#   absent from the real deploy map (BP-900g-5's fifth it_requirement). Running
-#   the new guard against the real deploy map (before this ticket's two new
-#   AC_STORE_DEPLOY_MAP entries) surfaced both generate_ticket_from_ac.py's
-#   missing _component_migration_map.py (the AC's cited instance) and a second,
-#   previously-undiscovered instance: validate_ac_schema.py's missing
-#   _ac_components.py -- concrete evidence the mechanism is derived rather than
-#   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-08-25 [python-coder/BP-900g-8]: Added _check_intra_package_closure_guard(), a third
+#   preflight that fails the build when a script's DERIVED intra-package import closure
+#   (build_referential_integrity.compute_intra_package_closure) is not in the deployable set;
+#   _manifest_ac_store_scripts now derives from build_phases.AC_STORE_DEPLOY_MAP. (#BP-900g-8)
 # - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]:
 #   write_file() now calls announce_if_local_change_replaced(target) (new
 #   import from build_phases) right before overwriting an existing file whose

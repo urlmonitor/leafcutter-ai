@@ -80,14 +80,7 @@ _TEMPLATES_DIR = _REPO_ROOT / "templates"
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
-# ---------------------------------------------------------------------------
-# Lazy import of the (not-yet-existing) detector function.
-#
-# We wrap in try/except so the test module imports cleanly and each test
-# function can show its own failure rather than a single collection error.
-# When detect_deploy_collisions does not exist, _DETECT is None and every
-# test raises ImportError explicitly — that IS the red baseline.
-# ---------------------------------------------------------------------------
+# Guarded import: a missing detector fails each test by name, not module collection.
 try:
     from build_phases import detect_deploy_collisions as _DETECT  # noqa: E402
 except ImportError:
@@ -457,7 +450,7 @@ class TestBuildEntrypointExitsNonZeroOnCollision:
         # non-empty.  A subprocess-level proof on a synthetic tree is also
         # provided via test_build_exits_nonzero_on_collision (monkeypatch path).
 
-    def test_real_build_has_no_collisions_after_deconfliction(self):
+    def test_real_build_has_no_collisions_after_deconfliction(self, tmp_path):
         # covers: BP-300d
         # covers: BP-100m-1
         """
@@ -504,6 +497,7 @@ class TestBuildEntrypointExitsNonZeroOnCollision:
         )
 
         # Once prose templates are gone, build.py --dry-run must exit 0 (no collision).
+        # Explicit --target-dir: an implicit build at the package root is refused (BO-4300f-2).
         # --self-description-enforcement=warning: Isolates the deploy-collision guard from
         # the unrelated pre-existing self-description error (2 dangling skill_ids for
         # run-tests in python-coder and direct-write in documentation-expert, tracked
@@ -514,8 +508,8 @@ class TestBuildEntrypointExitsNonZeroOnCollision:
                 sys.executable,
                 str(_SCRIPTS_DIR / "build.py"),
                 "--dry-run",
-                "--self-description-enforcement",
-                "warning",
+                "--target-dir", str(tmp_path / "deploy_target"),
+                "--self-description-enforcement", "warning",
             ],
             cwd=str(_REPO_ROOT),
             capture_output=True,

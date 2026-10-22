@@ -52,7 +52,7 @@ TEST STRATEGY: self-contained real-execution harness (per this directory's
     a REAL git repository ("the project") holding a REAL, verbatim copy of
     this repository's own scripts/pause_store.py under its untracked
     .leafcutter/scripts/ (matching production; ADR-001), and a REAL
-    `git worktree add` of that repository as a sibling directory holding NO
+    the linked-checkout add of that repository as a sibling directory holding NO
     .leafcutter/ of its own. Driving templates/workflows-js/plan-feature.js's
     real, on-disk top-level body via a real Node child_process with `cwd` set
     to the worktree -- TWICE (sometimes three times) per test, as independent
@@ -79,18 +79,24 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
     _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
-    _read_via_fresh_process, _run, _strip_exports,
+    _install_real_pause_store, _read_via_fresh_process, _run,
 )
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
-_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
-_REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
+_UT_DIR = Path(__file__).resolve().parent.parent
+if str(_UT_DIR) not in sys.path:
+    sys.path.insert(0, str(_UT_DIR))
+from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
+
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 # The AC-1 "drafted work" real artifact: the shim below makes every
 # "stage-itpo-author" dispatch actually WRITE this file with a fresh nonce,
@@ -108,19 +114,6 @@ _A_DIFFERENT_DECISION_GATE_ID = "gate-ba"
 # ---------------------------------------------------------------------------
 
 
-def _install_real_pause_store(project_dir: Path) -> Path:
-    """Copy the REAL, verbatim scripts/pause_store.py into the fixture
-    project's untracked `.leafcutter/scripts/` -- matching production, where
-    `.leafcutter/` is build output that is never committed (ADR-001). A
-    hand-authored stand-in would not exercise the real CLI's idempotency or
-    error-handling contract (2h.2 Fixture Authenticity Rule).
-    """
-    dest = project_dir / ".leafcutter" / "scripts" / "pause_store.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
-    return dest
-
-
 def _make_worktree_fixture(tmp_path: Path) -> dict:
     """Build the Given: a REAL git repository ("the project") holding a REAL
     `.leafcutter/scripts/pause_store.py`, and a REAL git worktree of that
@@ -132,12 +125,7 @@ def _make_worktree_fixture(tmp_path: Path) -> dict:
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-c3i-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-c3i-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 
@@ -310,12 +298,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     ticket ACD-2100c-3's own test_acd_2100c_3.py (same script, no CLI
     wrapper, no live `claude` engine available in this test environment).
 
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
+    `label_responses` is merged OVER the harness defaults and a ready
+    `workspace-ensure` answer naming `cwd` (BO-4300c-3: the pause-store command
+    enters the run's workspace first, so the workspace must exist) so a caller
+    reaches the pause-store dispatches this file tests instead of halting at
+    the workspace step. A caller-supplied entry for any label still wins
+    (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -323,7 +311,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(cwd), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__DRAFT_RELATIVE_PATH_JSON__", json.dumps(_DRAFT_RELATIVE_PATH))
         .replace("__SCRIPT_BODY__", body)

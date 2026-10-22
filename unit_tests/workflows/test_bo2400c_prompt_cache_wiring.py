@@ -164,7 +164,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 import build as _build  # noqa: E402 — after sys.path setup
 from injection_builders import assemble_context_bundle  # noqa: E402
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, resolve_connected_reply, run_workflow_under_e2, workspace_answer_of, workspace_ensure_from_opened  # noqa: E402
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
@@ -463,29 +463,16 @@ _BUNDLE_OK_RESPONSE = {
 # Request phase. Every key matches a label already present in
 # fast-lane-ship.js's existing agent() dispatches.
 _GREEN_LABELS: dict = {
-    "fastlane-worktree": {
+    "workspace-ensure": workspace_ensure_from_opened({
         "worktree_path": "/tmp/fastlane-wt-bo2400c",
         "branch": "fast-lane/bo-stub-1",
         "ac_store_path": "/tmp/fastlane-wt-bo2400c/docs/acceptance-criteria",
         "created": True,
-    },
-    # The worktree location is confirmed against git rather than taken from the
-    # creation agent, which has twice returned a path it composed (BO-2400f
-    # 2026-08-11, UXP-700d 2026-09-07). The workflow requires the reported path
-    # to appear verbatim in this raw output, so the green baseline must satisfy
-    # that: a raw block the path is genuinely quoted from.
-    "fastlane-worktree-verify": {
-        "worktree_path": "/tmp/fastlane-wt-bo2400c",
-        "raw": (
-            "worktree /tmp/fastlane-wt-bo2400c\n"
-            "HEAD 0000000000000000000000000000000000000000\n"
-            "branch refs/heads/fast-lane/bo-stub-1"
-        ),
-    },
-    "resolve-connected": {
+    }),
+    "resolve-connected": resolve_connected_reply({
         "ac_ids": ["BO-STUB-1"],
         "message": "1 to build",
-    },
+    }),
     "claim-connected": _claim_fx.claim_ran(["BO-STUB-1"]),
     "test-writer-connected": {
         "status": "ok",
@@ -828,8 +815,8 @@ def test_ac4iv_run_varying_values_do_not_appear_before_the_breakpoint():
     result = _run_ship()
     assert result.error == "", f"Harness error: {result.error}"
 
-    worktree_path = _GREEN_LABELS["fastlane-worktree"]["worktree_path"]
-    branch = _GREEN_LABELS["fastlane-worktree"]["branch"]
+    answer = workspace_answer_of(_GREEN_LABELS["workspace-ensure"])
+    worktree_path, branch = answer["workspace_path"], answer["branch"]
     target_ac = "BO-STUB-1"
 
     for label in ("test-writer-connected", "coder-connected"):

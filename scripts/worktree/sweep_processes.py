@@ -1,7 +1,7 @@
 """
 MODULE: sweep_processes
 GOAL: Terminate residual background worker processes and remove log files
-    before calling ``git worktree remove``, so no orphaned PIDs or
+    before the workspace maker removes a workspace, so no orphaned PIDs or
     partially-deleted worktree directories survive an epic's close flow.
 BUSINESS CONTEXT: After a ``/build-feature`` epic completes, the worktree
     directory must be fully removable.  Long-running host processes (live
@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import importlib
 import json
 import os
 import sys
@@ -48,6 +49,7 @@ _DEFAULT_CONFIG: dict[str, Any] = {
 }
 
 _KILL_GRACE_SECONDS = 5
+_CONFIG_LOADER_MODULE = "config_loader"
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +70,7 @@ class SweepResult:
         error: Non-None when a fatal condition prevented the sweep from running
             (e.g. invalid worktree path, all processes conflicted).  When set,
             ``killed_pids`` will be empty and callers should NOT proceed to
-            ``git worktree remove``.
+            the workspace maker's remove step.
     """
 
     killed_pids: list[int] = field(default_factory=list)
@@ -103,7 +105,10 @@ def _load_worktree_config(config: dict[str, Any] | None, config_path: Path | Non
         _here = Path(__file__).resolve().parent
         _pdw_scripts = _here.parent
         sys.path.insert(0, str(_pdw_scripts))
-        from config_loader import load_config  # type: ignore[import-not-found]
+        # Optional dependency, resolved by name at run time: it is not deployed with this
+        # script in a consumer install (the maker always passes a config), and the except
+        # below falls back to the safe defaults.
+        load_config = importlib.import_module(_CONFIG_LOADER_MODULE).load_config
         target_root = Path.cwd()
         loaded = load_config(config_path, target_root)
         worktree_cleanup = loaded.get("worktree_cleanup", {})
@@ -275,7 +280,12 @@ def _terminate_process(proc: Any) -> str | None:
 # Public API
 # ---------------------------------------------------------------------------
 
-def sweep(worktree_path: str, config: dict[str, Any] | None = None, config_path: Path | None = None) -> SweepResult:
+def sweep(
+    worktree_path: str,
+    config: dict[str, Any] | None = None,
+    config_path: Path | None = None,
+    exclude_pids: frozenset[int] | None = None,
+) -> SweepResult:
     """Terminate background processes whose cmdline or cwd matches worktree_path.
 
     Design invariants:
@@ -295,6 +305,9 @@ def sweep(worktree_path: str, config: dict[str, Any] | None = None, config_path:
             skills_config.json or safe defaults.
         config_path: Explicit path to a skills_config.json file, used only when
             ``config`` is None.
+        exclude_pids: PIDs never treated as candidates (the caller's own process
+            and its ancestors: their command line names the worktree it is about
+            to clear, but they are not "a program still running inside it").
 
     Returns:
         A ``SweepResult`` describing what happened.
@@ -315,9 +328,10 @@ def sweep(worktree_path: str, config: dict[str, Any] | None = None, config_path:
 
     # -- Step 1: enumerate candidates -----------------------------------------
     candidates: list[Any] = []
+    skip = exclude_pids or frozenset()
     for proc in psutil.process_iter(["pid", "cmdline", "cwd"]):
         try:
-            if _is_process_in_worktree(proc, resolved_path):
+            if proc.pid not in skip and _is_process_in_worktree(proc, resolved_path):
                 candidates.append(proc)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
@@ -332,7 +346,7 @@ def sweep(worktree_path: str, config: dict[str, Any] | None = None, config_path:
         result.error = (
             f"Sweep aborted: {len(protected_conflicts)} process(es) matched "
             "protected_paths. No processes were killed. Resolve the conflicts "
-            "manually before retrying git worktree remove."
+            "manually before retrying the workspace removal."
         )
         return result
 
@@ -399,7 +413,7 @@ def main() -> None:
     Exits 0 on clean sweep; exits 1 on any conflict or error.
     """
     parser = argparse.ArgumentParser(
-        description="Sweep residual processes and log files from a worktree before git worktree remove."
+        description="Sweep residual processes and log files from a workspace before it is removed."
     )
     parser.add_argument("worktree_path", help="Absolute path to the worktree directory.")
     parser.add_argument(

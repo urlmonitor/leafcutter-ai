@@ -168,7 +168,7 @@ class TestWorktreeConfigResolution(unittest.TestCase):
     def test_submission_succeeds_from_parent_dir(self):
         # covers: INF-100c-1-i
         """End-to-end: submit_feedback.py must succeed when CWD is the worktree's
-        parent directory (simulating git worktree add from the main repo dir)."""
+        parent directory (simulating the linked-checkout add from the main repo dir)."""
         jsonl_path = Path(self.tmpdir) / "feedback_parent_test.jsonl"
         result = subprocess.run(
             [

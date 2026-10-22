@@ -16,7 +16,7 @@ components:
 pre-merge test baseline, opens a PR if one is missing, merges `origin/main`
 into the worktree, runs post-merge tests with triage, merges the PR to main
 only when tests pass, auto-tickets any pre-existing failures, closes tracking
-tickets, and removes the feature worktree.
+tickets, and removes the feature worktree (workspaces are made and cleared by the workspace maker (see [get-a-workspace](get-a-workspace.md))).
 
 Run it from the feature branch:
 
@@ -41,7 +41,7 @@ incomplete step.
 | 4 | Merge PR | This step is only reached when `blocks_finalization === false`. You are prompted: `Merge PR #N (<branch> → main)?`. On `yes`, the PR is merged via `gh pr merge`. On `no`, finalization halts with no changes made to main. |
 | 5 | Sync local main | `git checkout main && git pull`. The new HEAD SHA is reported. |
 | 6 | Create tracking tickets + close | A `create-ticket` call is dispatched for each `pre_existing` or `flaky` triage entry, producing inbox tracking tickets. Then `status-checker` closes the branch's tracking tickets and archives the epic (if applicable). |
-| 7 | Remove worktree | If the feature worktree still exists, `worktree-agent remove` is dispatched (with its own confirmation gate). |
+| 7 | Remove worktree | If the feature worktree still exists, `worktree-agent remove` is dispatched (with its own confirmation gate); clearing is done by the workspace maker (see [get-a-workspace](get-a-workspace.md)). |
 
 ---
 
@@ -121,7 +121,7 @@ you are ready to merge.
 ### `worktree_conflict_pids` (step 7)
 
 **What it means:** The `worktree-agent` reported processes holding locks on
-the worktree path, preventing removal.
+the worktree path, preventing removal (see the workspace maker (see [get-a-workspace](get-a-workspace.md))).
 
 **What to do:**
 

@@ -86,6 +86,63 @@ def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     return raw
 
 
+_WS_START = "// WORKSPACE-ANSWER-START"
+_WS_END = "// WORKSPACE-ANSWER-END"
+
+
+def _inline_workspace_answer(text: str, name: str, src_dir: Path) -> str:
+    """Fill a template's empty WORKSPACE-ANSWER marker pair from ``_shared/``.
+
+    BO-4300c-3: the single tracked block (``<src_dir>/_shared/workspace-answer.js``)
+    is copied between the markers at build time (E2 bodies have no ``require``,
+    ADR-030). A template without the pair is returned unchanged; a pair that
+    already holds text (a hand copy) or a missing source raises ``ValueError``
+    naming the template, so nothing is deployed. Runs before config injection.
+    """
+    start = text.find(_WS_START)
+    if start == -1:
+        return text
+    end = text.find(_WS_END, start)
+    if end == -1:
+        raise ValueError(f"{name}: {_WS_START} has no matching {_WS_END}")
+    if text[start + len(_WS_START):end].strip():
+        raise ValueError(
+            f"{name}: the WORKSPACE-ANSWER marker pair already holds text; it must be "
+            f"empty (the build fills it from _shared/workspace-answer.js) -- no hand copies"
+        )
+    source = src_dir / "_shared" / "workspace-answer.js"
+    if not source.is_file():
+        raise ValueError(f"{name}: carries WORKSPACE-ANSWER markers but {source} is missing")
+    block = source.read_text(encoding="utf-8").strip()
+    return text[:start + len(_WS_START)] + "\n" + block + "\n" + text[end:]
+
+
+def _workflow_source_bytes(js_file: Path, src_dir: Path) -> bytes:
+    """Return a workflow template's bytes with its WORKSPACE-ANSWER pair filled.
+
+    The one place the build and the output-mappings manifest agree on the
+    pre-variant, pre-injection content of a workflow, so the recorded
+    ``expected_output_hash`` predicts exactly what ``build_workflow_scripts``
+    writes (BO-4300c-3). A template without the markers is returned unchanged.
+    """
+    raw = js_file.read_bytes()
+    if _WS_START.encode() not in raw:
+        return raw
+    return _inline_workspace_answer(raw.decode("utf-8"), js_file.name, src_dir).encode("utf-8")
+
+
+def _inline_all_workflow_sources(src_dir: Path) -> dict[str, bytes]:
+    """Return ``{filename: bytes}`` for every top-level workflow template.
+
+    Each entry has its WORKSPACE-ANSWER marker pair filled (BO-4300c-3); a
+    hand-filled pair or missing source raises ``ValueError`` before any write.
+    """
+    return {
+        js_file.name: _workflow_source_bytes(js_file, src_dir)
+        for js_file in sorted(src_dir.glob("*.js"))
+    }
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -274,9 +331,13 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     written = 0
     unchanged = 0
 
+    # BO-4300c-3: fill every WORKSPACE-ANSWER marker pair BEFORE anything is
+    # written, so a hand-filled pair or a missing source deploys nothing.
+    inlined = _inline_all_workflow_sources(workflows_js_src)
+
     for js_file in sorted(workflows_js_src.glob("*.js")):
         dest = output_dir / js_file.name
-        content = js_file.read_bytes()
+        content = inlined[js_file.name]
 
         try:
             emitted = _emit_workflow_variant(content, engine)

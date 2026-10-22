@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -15,8 +15,11 @@ change_target: code
 risk_surface: safety
 criteria: |
   Given a workspace holding one unpushed commit and one uncommitted change,
-  When clearing it is requested with authorisation to discard its unsent work
-    given in the request itself,
+  And a request to clear it was refused, listing that commit and that file and
+    returning a one-time token bound to that workspace and exactly that unsent
+    work,
+  When clearing it is requested again with that token given in the request
+    itself,
   Then the workspace is gone completely, without any question being asked,
   And the answer lists what was discarded: the unpushed commit by identifier and
     the uncommitted file by path,
@@ -49,9 +52,22 @@ expects_from:
   contract: UNSENT_WORK verdict and unsent lists.
 package_surface: false
 it_requirements:
-- 'Discard authorisation is an argument of the one remove request (Q8 open: an explicit flag, or a token
-  echoed from a prior UNSENT_WORK refusal bound to that path and unsent set). Never an environment variable,
-  a config setting, or a remembered answer; never asked interactively.'
+- 'DISCARD TOKEN (Q8, DECIDED user 2026-09-28): remove on a workspace holding unsent work is refused UNSENT_WORK
+  (exit 2) listing unsent.commits and unsent.files and carrying discard_token (BO-4300c-2): a one-time
+  token bound to exactly what would be lost -- that workspace (its canonical path and its maker record,
+  so a workspace re-made at the same path never accepts an older token), its unsent commit shas, and its
+  uncommitted and untracked files including their content. Only `remove --path <same> --discard-token <that
+  token>` discards it; the maker recomputes the binding at request time and accepts the token only on an
+  exact match.'
+- 'A token presented for another workspace, or after the unsent set changed (a commit added or pushed,
+  a file added, removed or edited), authorises nothing: the request is refused UNSENT_WORK with the current
+  lists and a fresh token, its message states that the presented token does not match, and nothing is changed.
+  A workspace with nothing unsent is removed without a token; a token is never required to remove clean
+  work.'
+- 'The token is never read from an environment variable, a config setting, stdin or any file, and the
+  maker stores nothing between invocations: the binding is recomputed from the workspace''s current state
+  on every request, and the token string is written only to the refusal''s stdout answer. Never asked
+  interactively.'
 - An authorised remove answers ok with discarded.commits and discarded.files; it never deletes or pushes
   the hub branch unless --delete-remote-branch is also given.
 - The maker never reads stdin and never prompts; every decision it needs arrives as an argument of the
@@ -72,8 +88,29 @@ test_spec:
   framework: unittest
   type: behavioral
   angle: criterion
-  description: With authorisation in the request and stdin closed, the folder is gone and the answer is
-    ok.
+  description: With the discard_token from the preceding UNSENT_WORK refusal given as --discard-token and
+    stdin closed, the folder is gone and the answer is ok.
+- name: test_refusal_returns_a_discard_token_with_the_unsent_lists
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: remove without a token on the workspace is refused UNSENT_WORK (exit 2) listing the unpushed
+    sha and the uncommitted path, carries a non-empty discard_token, and leaves the workspace byte-identical.
+- name: test_token_is_not_taken_from_the_environment_or_config
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: With the valid token placed in environment variables and in the project's config, remove
+    without --discard-token is refused UNSENT_WORK and the workspace is byte-identical.
+- name: test_token_is_not_persisted_anywhere
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: After the refusal, the token string appears in no file under the test's temp directory
+    (project, hub, landing root, workspace, isolated HOME) and not on stderr.
 - name: test_answer_lists_discarded_commit_and_file
   target_dir: unit_tests/build_orchestration/
   framework: unittest
@@ -92,13 +129,37 @@ test_rationale: Every assertion is made on what the deployed maker actually did 
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decision-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Q8 DECIDED (user, 2026-09-28). Criteria tightened to the decided flow: the authorising request
+    carries the one-time token returned by the earlier refusal. it_requirements state the token's
+    binding (workspace path and maker record, unsent shas, uncommitted files with content), exact-match
+    acceptance, the mismatch refusal with a fresh token, and no env/config/stdin/persistence. Three
+    tests added, one reworded. readiness stays approved.
 superseded_by: null
 covered_by: [BO-4300e-3-i]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300e-3.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
-  OPEN (Q8, not decided here): whether authorisation is a caller-supplied confirmation token or
-  an explicit flag. The customer intent this record fixes is only that authorisation is given up
-  front, in the request, never asked interactively.
+  Q8 -- DECIDED (user, 2026-09-28): a refusal to remove a workspace holding unpushed or
+  uncommitted work returns a ONE-TIME TOKEN bound to exactly what would be lost (the workspace,
+  its unsent commits and files); only a remove request carrying that exact token may discard it;
+  the token is invalid for any other workspace and once the unsent set changes; it is never an
+  environment variable or config setting, and never remembered. Criteria tightened to the decided
+  two-step flow (refusal with token, then the request carrying it), as BO-4300d-4 was for Q9.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 08_TICKET-20260928-BO-4300-locate-and-clear.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   Q8 DECIDED (user, 2026-09-28): criteria tightened to the refusal-token-then-request flow;
+#   token binding, mismatch and no-persistence rules; three tests added.
+# ====================================================================

@@ -157,9 +157,9 @@
       "category": "mechanical",
       "model": "haiku",
       "subagent_type": "general-purpose",
-      "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
+      "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a.",
       "disposition": "mechanical-autofix",
-      "instruction": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
+      "instruction": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md §2a.",
       "agent": "general-purpose",
       "skills": []
     },
@@ -238,6 +238,17 @@
       "disposition": "engage-specialist",
       "instruction": "A staged file has a lint violation CI's required Lint (ruff) check would reject (file, line and rule are named). Fix the violation; on RESULT: could_not_check, follow the printed fix (e.g. install the pinned ruff) instead.",
       "agent": "python-coder",
+      "skills": []
+    },
+    {
+      "hook_id": "precommit-canary-pre-commit",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "The stage canary refused the install's own declared known-bad input (its reserved canary path) staged in an ordinary commit. Unstage that path; nothing else triggers it.",
+      "disposition": "mechanical-autofix",
+      "instruction": "The stage canary refused the install's own declared known-bad input (its reserved canary path) staged in an ordinary commit. Unstage that path; nothing else triggers it.",
+      "agent": "general-purpose",
       "skills": []
     }
   ]

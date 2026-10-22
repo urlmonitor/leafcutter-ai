@@ -151,15 +151,15 @@ def test_deployed_workflow_js_script_paths_resolve(tmp_path: Path) -> None:
     # while checking nothing at all.
     expected = {
         f"{output_root.name}/scripts/pause_store.py",
-        f"{output_root.name}/scripts/setup_ticket_worktree.py",
+        f"{output_root.name}/scripts/worktree.py",
         f"{output_root.name}/scripts/build_orchestration/fast_lane.py",
     }
     missing_expected = expected - seen
     assert not missing_expected, (
         f"The deployed-tree scan found no reference to {sorted(missing_expected)!r}. "
         f"It found: {sorted(seen)!r}. plan-feature.js/finalize-feature.js invoke "
-        "pause_store.py at every gate, setup_ticket_worktree.py bootstraps every "
-        "AC-authoring and fast-lane worktree, and fast-lane-ship.js/fast-lane-build.js "
+        "pause_store.py at every gate, worktree.py (the workspace maker) makes every "
+        "AC-authoring and fast-lane workspace, and fast-lane-ship.js/fast-lane-build.js "
         "invoke fast_lane.py at every gate — their absence means this test is no "
         "longer checking anything (AC BP-900g-6)."
     )

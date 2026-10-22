@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -72,9 +72,13 @@ delivers_to:
     (BO-4300a-1-ii, BO-4300c-2); `locate (--kind
     K --slug S | --path P | --branch B) [--repo-root P]` -- read-only; `list [--repo-root P]` -- read-only
     scan of the landing place''s markers, never git worktree list; `verify --path P [--kind K --slug S]
-    [--repo-root P]` -- read-only readiness re-check; `remove --path P [<up-front discard authorisation;
-    flag or token, Q8 open>] [--delete-remote-branch] [--repo-root P]`; `where` -- prints the maker''s
-    own absolute path. There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
+    [--repo-root P]` -- read-only readiness re-check; `remove --path P [--discard-token T] [--delete-remote-branch] [--repo-root P]`
+    -- T is the one-time token from this same workspace''s own UNSENT_WORK refusal (Q8, decided 2026-09-28,
+    BO-4300e-3); `where` -- prints the maker''s
+    own absolute path. ensure, locate, list, verify and remove also accept [--landing-root P], the explicit
+    landing-place override the maker validates (Q5, decided 2026-09-28, BO-4300b-2); --kind K --slug S is
+    normalised to the one identity <kind>/<slug>, legacy spellings accepted as aliases (Q4, decided
+    2026-09-28, BO-4300a-2). There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
     2), and no flag that skips a readiness ingredient.'
 - agent: llm-expert
   contract: 'The exact single-command invocation the workspace skill and every entry skill run: `python
@@ -119,7 +123,9 @@ it_requirements:
   unless --allow-stale-base); check out the line of work from origin/main, or resume origin/<branch> (BO-4300d-4);
   when --ticket was given, locate the ticket inside the workspace (BO-4300a-1-ii); set gc.auto 0 and maintenance.auto
   false in the workspace; copy .env and .mcp.json; run the install build inside the workspace with an
-  explicit config path; install the shim for every hook stage the workspace''s own hook declaration names
+  explicit config path and an explicit --target-dir naming the workspace (build.py refuses an implicit
+  build into the package repository, Q6 decided 2026-09-28, BO-4300f-2; the explicit target keeps a workspace
+  of the package itself buildable); install the shim for every hook stage the workspace''s own hook declaration names
   (BO-4300c-1-ii); clean-tree check; one canary per declared stage; write the marker; emit the answer.'
 - 'GIT INVOCATION SPELLING (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): the maker runs git
   as a subprocess with its working directory set to the target, or with -C <path> for verbs other than
@@ -131,10 +137,16 @@ it_requirements:
 - The build entry point and its config are derived from the main checkout's own install config (the memo's
   --config-path derivation, stripping the top_level_packages prefix). NO_CONFIG when that is impossible;
   never the build's default config, never the maker's own location.
-- 'Work identity and naming live in ONE table inside the maker (Q4 open): callers pass kind plus the raw
-  work identity they hold, the maker normalises it, and the same identity from any route yields the same
-  landing location and the same line of work. The table must accommodate whichever scheme the user picks,
-  including an alias for legacy spellings (BO-4300a-2).'
+- 'Work identity and naming live in ONE table inside the maker (Q4, DECIDED user 2026-09-28): callers pass
+  kind plus the raw work identity they hold, the maker normalises it to the one identity <kind>/<slug>
+  for every kind (ticket, feature, ac, fastlane, epic, scratch), and the same identity from any route
+  yields the same landing location and the same line of work. The legacy spellings (EPIC-<Name>, ac-authoring/...,
+  fast-lane/..., feature/...) are declared in that same table as aliases resolving to the same identity;
+  the rules are in BO-4300a-2 and are implemented by ticket 06.'
+- 'Landing place (Q5, DECIDED user 2026-09-28): the landing root is <parent-of-project>/<project-dir-name>-worktrees/,
+  derived from the resolved main checkout, in the dev layout as in the consumer layout, unless an explicit
+  validated --landing-root is given; the rules are in BO-4300b-2 and are implemented by ticket 04. The
+  folder name worktrees/<slug> of fixed decision 1 is superseded; the clone mechanism is not.'
 - The marker record is the maker's registry under clones (no git command lists clones). It holds schema_version,
   kind, slug, branch, hub, project_root (absolute path of the main checkout the workspace was made from
   -- the ONLY way a workspace identifies its project, BO-4300b-1), base_commit, maker_version, state ('creating'|'ready')
@@ -208,7 +220,9 @@ test_spec:
   framework: unittest
   type: behavioral
   angle: criterion
-  description: All five workspace_path values share the project's one landing place as parent.
+  description: All five workspace_path values share the project's one landing place as parent. (The exact
+    Q5 location is asserted by BO-4300b-2's tests in ticket 04, so this ticket-01 test stays green across
+    that change.)
 - name: test_every_route_receives_answer_of_identical_shape
   target_dir: unit_tests/build_orchestration/
   framework: unittest
@@ -270,10 +284,27 @@ amended_by:
     the ticket_path_in_worktree answer fields. Item 5: ensure installs every declared stage shim and
     runs one canary per stage; git spelling rule (no `git -C <path> commit`). Item 6: no tracked copy
     outside templates/scripts/, with a test. readiness stays reviewed for re-approval.
+- reason: user-decisions-q4-q5-q6-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. Recorded the user's 2026-09-28 decisions: Q4 naming
+    (one <kind>/<slug> identity, legacy spellings as aliases; rules in BO-4300a-2, ticket 06); Q5
+    landing root <parent-of-project>/<project-dir-name>-worktrees/ with a validated --landing-root
+    override (BO-4300b-2, ticket 04); Q6 the install build inside a workspace is run with an explicit
+    --target-dir; Q8 remove takes --discard-token T from the workspace's own UNSENT_WORK refusal
+    (BO-4300e-3, ticket 08). The delivers_to CLI contract follows; the exact landing location is
+    asserted by BO-4300b-2's tests (ticket 04), not by this record's. readiness stays approved.
 superseded_by: null
-covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii]
+covered_by: [BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-1.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01_TICKET-20260927-BO-4300a-1.md
+- docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+- docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+- docs/architecture/components/worktree-manager.md
+- docs/components.json
+- scripts/build_deploy_manifest_helpers.py
+- scripts/build_phases_script_deploy.py
 notes: |
   The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the
   shape). Freshness itself stays BO-4100a, protections firing stays BO-1700a/d -- this
@@ -282,3 +313,31 @@ notes: |
   behavioural: real test projects with a real shared project, the installed maker run as a
   separate process (BO-4300f-4).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 02:42 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Added this file-level block (missing until now, found by the commit
+#   phase's 2026-09-28 02:41 staged-mode check_documentation.py run, which
+#   also caught pr-reviewer's still-open H-1/H-2). work_status was set to
+#   done by ac-fulfillment-gate on 2026-09-28 02:40, after ac-validator's
+#   2026-09-28 02:27 sign-off traced AC-4/AC-5 as covered against the
+#   BO-4300c-2 result contract on python-coder's 2026-09-28 02:10 reship.
+#   No criteria, test_spec, or delivers_to/expects_from content changed.
+# - 2026-09-28 10:30 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   work_status reverted done -> todo. BO-4300a-1 is a composite L2 whose children
+#   (a-1-ia, a-1-ib, a-1-ii) are separate, unbuilt tickets of this epic; check-done-proof
+#   refuses a done composite with unfinished children (CLAUDE.md 'AC-store commits').
+#   Ticket 01's own behaviour is built and its 10 tests are green; this record flips to
+#   done once its children are done.
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 01_TICKET-20260927-BO-4300a-1.md.
+#   Removed the superseded BO-4300a-1-i from covered_by (it is status superseded_by BO-4300a-1-ia/-ib, both still listed), so check-done-proof can prove this composite from its live children.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Recorded Q4 (naming table, ticket 06), Q5 (landing root, ticket 04), Q6 (explicit --target-
+#   dir for the in-workspace build) and Q8 (--discard-token, ticket 08) in it_requirements and
+#   the delivers_to CLI contract. criteria unchanged.
+# ====================================================================

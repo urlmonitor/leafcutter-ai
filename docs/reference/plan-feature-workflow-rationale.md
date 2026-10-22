@@ -43,8 +43,8 @@ AC-authoring worktree this route creates) is itself "inside a git
 repository" by `git rev-parse --show-toplevel`'s definition — but that
 command reports the WORKTREE'S OWN directory, which holds no installed
 `.leafcutter/` of its own (ADR-001: it is untracked build output that only
-`install_shims` populates on the project's own checkout; `git worktree add`
-only ever checks out TRACKED content). `git rev-parse --git-common-dir`
+`install_shims` populates on the project's own checkout; a workspace's
+checkout only ever holds TRACKED content). `git rev-parse --git-common-dir`
 does not have that problem: it always resolves to the ONE `.git` directory
 shared by the main checkout and every one of its linked worktrees,
 regardless of which of them the command runs from — so its parent
@@ -74,7 +74,7 @@ Explains: `workspaceSetupAgentId` / `workspaceSetupPermission` at Pre-Stage-0.
 
 ```text
 The isolated-workspace setup step below runs repository-mutating commands
-(fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
+(fetch, branch-create, workspace make via the workspace maker). It must
 be dispatched only to an agent whose registered charter (config/agent_registry.json)
 permits running repository/shell commands.
 

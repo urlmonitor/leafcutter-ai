@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -118,10 +118,35 @@ amended_by:
     ticket_path_in_worktree (same change set as BO-4300a-1-ii); no rewritten passage spells `git -C
     <path> commit`. One test spec added. readiness reset to reviewed.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_2_ia.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-2-ia.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md
+- CLAUDE.md
+- templates/agents/worktree-agent.md
+- templates/agents/epic-supervisor.md
+- templates/skills/feature/SKILL.md
+- templates/skills/building-epics/SKILL.md
+- templates/skills/build-feature-ops-notes/SKILL.md
+- templates/skills/ship/SKILL.md
+- templates/skills/plan-feature/SKILL.md
+- templates/skills/quick-fix/SKILL.md
+- templates/workflows/close-worktree.md
+- templates/workflows/build-backlog.md
+- templates/workflows/worktree.md
+- templates/workflows-js/finalize-feature.js
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/quick-fix.js
 notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the prompt surfaces (llm-expert). With BO-4300f-2-ib
   the union of the two Givens is the parent''s. Carries the CLAUDE.md recipe rewrites (symlink-preferred
   bootstrap, fail-open OR check, allowlist dual-update rule).'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 14_TICKET-20260928-BO-4300-retire-former-ways.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

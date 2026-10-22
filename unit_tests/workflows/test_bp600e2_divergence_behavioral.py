@@ -73,7 +73,11 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    run_workflow_under_e2,
+    workspace_ensure_reply,
+)
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "quick-fix.js"
 
@@ -86,13 +90,7 @@ def _base_label_responses() -> dict[str, Any]:
     stays on the direct in-place path and reaches the divergence check with
     the fewest possible stubs."""
     return {
-        "isolation-check": {
-            "status": "ok",
-            "is_repo": True,
-            "session_cwd": "/tmp/quick-fix-red-baseline",
-            "initial_branch": "feature/quick-fix-red-baseline-test",
-            "needs_isolation": False,
-        },
+        "workspace-ensure": workspace_ensure_reply("/tmp/quick-fix-red-baseline", branch="feature/quick-fix-red-baseline-test"),
         "guard-checks": {
             "status": "ok",
             "target_file_dirty": False,

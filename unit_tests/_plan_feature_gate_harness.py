@@ -236,8 +236,12 @@ def make_repo_fixture(tmp_path: Path, *, agents: list[dict] | None = None) -> Pa
 # ---------------------------------------------------------------------------
 
 
-def worktree_setup_calls(result: Any, label: str = "worktree-setup") -> list:
-    """Return every agent() call on `result` whose label matches `label`."""
+def worktree_setup_calls(result: Any, label: str = "workspace-ensure") -> list:
+    """Return every agent() call on `result` whose label matches `label`.
+
+    The isolated-workspace setup step is the ONE ``workspace-ensure`` dispatch of the workspace maker's
+    command to the shell executor (BO-4300c-3); the retired ``worktree-setup`` label is never dispatched.
+    """
     return [c for c in result.agent_calls if c.label == label]
 
 

@@ -69,7 +69,12 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+)
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
@@ -119,7 +124,7 @@ def _run_lane(
     ac_id: str,
     extra_label_responses: dict[str, Any] | None = None,
 ) -> HarnessResult:
-    label_responses = {"fastlane-worktree": _worktree_label_response(worktree_root)}
+    label_responses = {"workspace-ensure": workspace_ensure_from_opened(_worktree_label_response(worktree_root))}
     if extra_label_responses:
         label_responses.update(extra_label_responses)
     return run_workflow_under_e2(
@@ -161,10 +166,10 @@ class TestRefusalPrecedesAllDispatch(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {
+                "resolve-connected": resolve_connected_reply({
                     "ac_ids": ["FLT-960a", "FLT-960b"],
                     "message": "2 to build",
-                },
+                }),
                 "check-producibility": {
                     "producible": False,
                     "unproducible": [
@@ -262,10 +267,10 @@ class TestRefusalPrecedesAllDispatch(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {
+                "resolve-connected": resolve_connected_reply({
                     "ac_ids": ["FLT-960a", "FLT-960b", "FLT-960c"],
                     "message": "3 to build",
-                },
+                }),
                 "check-producibility": {
                     "producible": False,
                     "unproducible": [
@@ -295,7 +300,7 @@ class TestRefusalPrecedesAllDispatch(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": ["FLT-960a"], "message": "1 to build"},
+                "resolve-connected": resolve_connected_reply({"ac_ids": ["FLT-960a"], "message": "1 to build"}),
                 "check-producibility": {"message": "not a real verdict"},
             },
         )
@@ -325,10 +330,10 @@ class TestRefusalReleasesNothing(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {
+                "resolve-connected": resolve_connected_reply({
                     "ac_ids": ["FLT-960a", "FLT-960b"],
                     "message": "2 to build",
-                },
+                }),
                 "check-producibility": {
                     "producible": False,
                     "unproducible": [
@@ -369,7 +374,7 @@ class TestProducibleSetIsNeverRefused(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": ["FLT-960a"], "message": "1 to build"},
+                "resolve-connected": resolve_connected_reply({"ac_ids": ["FLT-960a"], "message": "1 to build"}),
                 "check-producibility": {"producible": True, "unproducible": []},
                 # An explicit successful claim is required from BO-2400f-7-iii onward.
                 # This test previously supplied none and rode the harness's generic
@@ -414,7 +419,7 @@ class TestProducibleSetIsNeverRefused(_FixtureCase):
             self.worktree_root,
             "FLT-960a",
             extra_label_responses={
-                "resolve-connected": {"ac_ids": ["FLT-960a"], "message": "1 to build"},
+                "resolve-connected": resolve_connected_reply({"ac_ids": ["FLT-960a"], "message": "1 to build"}),
                 "check-producibility": {"producible": True, "unproducible": []},
             },
         )
