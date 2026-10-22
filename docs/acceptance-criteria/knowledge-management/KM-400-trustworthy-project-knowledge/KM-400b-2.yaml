@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 parent: KM-400b
 criteria: |
   Given valid generation A is active
@@ -42,6 +42,7 @@ origin_agent: business-analyst
 created: '2026-10-01'
 amended_by:
   - "2026-10-14: business-analyst added L3 children KM-400b-2-i (identical duplicate relationships are collapsed before publication starts and reported) and KM-400b-2-ii (the count check expects the distinct-identity count and still fails a real shortfall). Every publication since 2026-10-12 failed its count check because one AC listed a test path twice. This record's criteria, fields and tests are unchanged. work_status moved from done to in_progress because both new children are todo."
+  - "2026-10-21: status audit. Both children KM-400b-2-i and KM-400b-2-ii are done, and their covers-tagged tests (tests/knowledge/test_km_400b_2_i.py, test_km_400b_2_ii.py) and this record's own deterministic tests (test_projection.py, test_source_boundaries.py) pass under AC_ENFORCE_STRICT=1. work_status moved from in_progress to done. Criteria, covered_by and tests unchanged; the live neo4j check was not run."
 superseded_by: null
 covered_by:
 - KM-400b-2-i

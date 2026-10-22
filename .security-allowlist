@@ -1,6 +1,8 @@
 # Allowlist for bypass tokens in commit-guardian scripts
 GENERIC_SECRET:scripts/commit_guardian/check_architecture_scaffolds.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
+# KM-400e-8 test fixture: a fake writer password asserted never to appear in output
+GENERIC_SECRET:tests/knowledge/_km_400e_8_support.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
