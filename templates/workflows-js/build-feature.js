@@ -2145,12 +2145,11 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         }
         redBaselineGateOutcome = gateVerdict.outcome || (gateVerdict.gate_passed ? "verify_red_baseline gate passed" : `verify_red_baseline gate failed: ${gateVerdict.reason || "unknown"}`);
         if (!gateVerdict.gate_passed) {
-          return refuse(`verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.remedy || ""}`,
+          return refuse(`verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.refusal || ""}${gateVerdict.remedy || ""}`,
             gateVerdict.halt_classification || "halt", { gate: "verify_red_baseline", gate_verdict: gateVerdict });
         }
       }
     }
-
     let retryLoop = true;
 
     while (retryLoop) {

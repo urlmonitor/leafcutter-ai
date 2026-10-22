@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -35,6 +34,7 @@ import _fl_common  # noqa: F401  (puts scripts/ac_store on sys.path)
 import done_proof_kind_support as kind_support
 from done_proof import _PYTEST_RUN_INCOMPLETE_SENTINEL, _resolve_pytest_timeout_seconds
 from pytest_outcome_reader import parse_pytest_outcomes
+from project_python import resolve_for_files  # TQ-500f-3-v: the project's interpreter
 
 _LOG = logging.getLogger("wrong_version_runner")
 _PYTEST_FLAGS = ("-v", "--tb=no", "--no-header", "-p", "no:cacheprovider", "--continue-on-collection-errors")
@@ -149,7 +149,7 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
     """Launch pytest, classify how it ended, and read a finished run."""
     files = sorted({n.file for n in nodes})
     budget = _resolve_pytest_timeout_seconds(files)
-    cmd = [sys.executable, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
+    cmd = [*resolve_for_files(files).argv, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
     cmd.extend(n.arg for n in nodes)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, env=_child_env(kind_path))

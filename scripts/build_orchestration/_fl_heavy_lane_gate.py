@@ -50,6 +50,7 @@ import yaml
 
 import gate_verdict_records as gvr
 from _fl_common import _LOG, _scan_test_root_for_covers_tags
+from project_python import resolve_project_python  # TQ-500f-3-v
 from _fl_red_baseline_support import (
     _partition_newly_added,
     _resolve_git_baseline_context,
@@ -216,13 +217,13 @@ def _record_reusable(record: dict, ids: list[str], test_root: Path) -> bool:
         return False
 
 
-def _reused_verdict(record: dict) -> dict:
+def _reused_verdict(record: dict, test_root: Path) -> dict:
     """Pass verdict for a reused record; names ``recorded_at`` and ``head``."""
     stamp, head = record.get("recorded_at"), record.get("head")
     return {
         "gate_passed": True,
         "reason": None,
-        "interpreter": sys.executable,
+        "interpreter": resolve_project_python(test_root).display,
         "applicable": True,
         "verified": True,
         "reused": True,
@@ -337,7 +338,7 @@ def _heavy_lane_gate_core(
             "applicable": False,
             "verified": False,
             "outcome": "red-baseline reader not applicable: no source requirement",
-            "interpreter": sys.executable,
+            "interpreter": resolve_project_python(test_root).display,
         }
     from fast_lane import verify_red_baseline
 
@@ -345,7 +346,7 @@ def _heavy_lane_gate_core(
         ticket = test_root / ticket
     had_record, record = _read_record(ticket)
     if record is not None and _record_reusable(record, source_ac_ids, test_root):
-        return _reused_verdict(record)
+        return _reused_verdict(record, test_root)
     verdict = verify_red_baseline(
         ac_ids=source_ac_ids, test_root=test_root, ac_root=ac_root
     )
@@ -413,4 +414,6 @@ def heavy_lane_gate(
 # - 2026-10-22 [python-coder/TQ-500g-1-viii]: heavy_lane_gate gained the optional ``record`` key: the
 #   verdict of every outcome is written as red_baseline.json by gate_verdict_records (fail closed).
 #   The pass-record logic moved, unchanged, into _heavy_lane_gate_core.
-# ====================================================================
+# - 2026-10-22 [python-coder/TQ-500f-3-v]: The not-applicable and reused
+#   verdicts name the PROJECT interpreter (project_python), the same one the
+#   reader now judges with, instead of the interpreter that launched the gate.# ====================================================================

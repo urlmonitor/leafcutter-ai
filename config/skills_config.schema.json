@@ -280,6 +280,10 @@
           "type": "string",
           "description": "Human-readable reminder about test output constraints (never write to project dirs).",
           "default": "Never write to project dirs; use tmp_path or %TEMP%"
+        },
+        "python_command": {
+          "type": "string",
+          "description": "TQ-500f-3-v. The command that runs this project's Python, e.g. 'uv run python' or '.venv/bin/python' (shlex-split; a relative executable path resolves against the worktree root). The gates (red-baseline, done-proof, wrong-version) run the project's tests as '<python_command> -m pytest'. Unset: the worktree's .venv interpreter, else 'uv run' for a uv-managed project, else the interpreter running the gate."
         }
       },
       "additionalProperties": true

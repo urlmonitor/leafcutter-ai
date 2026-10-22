@@ -113,6 +113,7 @@ from done_proof import (
     _parse_pytest_verbose_output,
     _resolve_pytest_timeout_seconds,
 )
+from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-v
 
 # The declared signal's OBSERVED-outcome half (TQ-500f-3-i it_requirements):
 # an absence red is an import, name, or attribute lookup error for the named
@@ -301,7 +302,7 @@ def _run_pytest_with_kind_plugin(
         ``_run_pytest_and_parse_with_kind``.
     """
     cmd = [
-        sys.executable,
+        *resolve_for_files(test_files).argv,  # TQ-500f-3-v: the project's interpreter
         "-m",
         "pytest",
         "-v",
@@ -349,7 +350,7 @@ def _run_pytest_with_kind_plugin(
             f"returncode {proc.returncode}"
         )
         print(f"WARNING: fast_lane: {message}", file=sys.stderr)
-        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, {}
+        return with_import_failures({_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, proc), {}
     outcomes = _parse_pytest_verbose_output(proc.stdout, proc.returncode)
     kinds = _load_kind_map(kind_output_path, outcomes)
     return outcomes, kinds
@@ -371,4 +372,9 @@ def _run_pytest_with_kind_plugin(
 #   object per node -- see that module's DECISION HISTORY for the bug this
 #   fixes (bare asserts and chained exceptions corrupting the whole batch's
 #   kinds under the old positional pairing).
+# - 2026-10-22 [python-coder/TQ-500f-3-v]: The pytest child runs under the
+#   project's interpreter (project_python.resolve_for_files) instead of
+#   sys.executable, and an unfinished run's sentinel carries the modules it
+#   could not import, so the red-baseline reader can name an un-importable
+#   project package rather than report "no red outcome".
 # ====================================================================
