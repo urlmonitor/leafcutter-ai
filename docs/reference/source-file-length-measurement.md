@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/reference/document-length-standard.md
   - docs/architecture/components/commit-guardian.md
-  - docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml
+  - docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
   - templates/skills/doc-enforcer/SKILL.md
   - templates/scripts/commit_guardian/_file_size_ratchet.py
   - templates/scripts/commit_guardian/README.md
@@ -35,7 +35,7 @@ If the function's output and this quotation ever differ, the function is right: 
 |---|---|---|
 | Triple-quoted strings (`"""` or `'''`) | No | Docstrings included. The region and its closing newline contribute zero lines. |
 | Block comments (`/* ... */`) | No | JSDoc included. Same zero-line rule. |
-| Decision-history block | No | Line-comment form only; see below. Added by GE-127h-1. |
+| Decision-history block | No | Line-comment form only; see below. Added by GE-134a-1. |
 | Blank lines | Yes | |
 | Ordinary comment lines (`#`, `//`, `--`) | Yes | A comment that merely mentions the words `DECISION HISTORY` is an ordinary comment. |
 | Code | Yes | |
@@ -50,7 +50,7 @@ The same rule applies to every covered extension; it does not look at the file's
 - A block inside text the rule already leaves out (a module docstring or a block comment) is not subtracted a second time.
 - A file whose whole content is one block measures `0` and is not refused as empty or unreadable.
 
-The block's heading, underline and entry form are defined by the decision-history convention in the [doc-enforcer skill](../../templates/skills/doc-enforcer/SKILL.md) and are not repeated here. The requirement behind the exclusion is [GE-127h](../acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml).
+The block's heading, underline and entry form are defined by the decision-history convention in the [doc-enforcer skill](../../templates/skills/doc-enforcer/SKILL.md) and are not repeated here. The requirement behind the exclusion is [GE-134a](../acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml).
 
 ## Examples
 

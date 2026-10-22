@@ -38,6 +38,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 import pytest  # noqa: E402
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 _WORKFLOWS_DIR = _UNIT_TESTS_DIR.parent / "templates" / "workflows-js"
@@ -85,7 +86,7 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
             "output": "",  # unparseable — wtPayload will be null
             "stderr": "",
         },
-        # The scan-orphans / scan-committed-stages / final-gate / apply-approval
+        # The scan-orphans / scan-committed-stages / final-gate / approval-step
         # responses below are retained from the ORIGINAL test even though the
         # fixed Pre-Stage-0 halt now returns before any of those steps run —
         # removing them would silently narrow this test's coverage if a future
@@ -93,7 +94,7 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
         "scan-orphans-git-status": {"exit_code": 0, "output": ""},
         "scan-committed-stages": {"exit_code": 0, "output": ""},
         "final-gate": {"action": "approve", "priority": "medium"},
-        "apply-approval": {"status": "ok", "updated": []},
+        **approval_step_replies(),  # ACD-300c-4: approval-holds / approval-apply
     }
 
     result = run_workflow_under_e2(plan_feature, label_responses=label_responses)

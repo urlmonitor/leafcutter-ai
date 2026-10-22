@@ -1,4 +1,4 @@
-id: GE-127h-1
+id: GE-134a-1
 components:
   - commit_guardian
 readiness: approved
@@ -30,10 +30,10 @@ criteria: |
     module docstring or a block comment) is not subtracted a second time, so that file
     measures what it measured before this change.
 depends_on:
-  - GE-127h
+  - GE-134a
   - GE-127c
 doc_links:
-  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
     relationship: parent
     status: exists
   - path: templates/skills/doc-enforcer/SKILL.md
@@ -49,7 +49,7 @@ it_requirements:
 - Changed in the one measurement function of the size standard (templates/scripts/commit_guardian/_file_size_ratchet.py).
   Every gate that measures length (crossing, growth ratchet, published-rule agreement) picks the change
   up; there is no second implementation.
-- Lands in the same change as GE-127h-3, so the published rule and the measurement change together; otherwise
+- Lands in the same change as GE-134a-3, so the published rule and the measurement change together; otherwise
   the rule-agreement check of GE-127d-1 fails.
 - A file whose measured length drops because of this change is not reported as a violation, and no stored
   baseline needs a hand edit.
@@ -93,7 +93,7 @@ test_intent:
   needs_test: true
   reason: Double subtraction is a computed edge case that would under-count files.
 test_spec:
-- name: test_ge_127h_1_python_and_javascript_history_blocks_are_not_measured
+- name: test_ge_134a_1_python_and_javascript_history_blocks_are_not_measured
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -103,7 +103,7 @@ test_spec:
     lines; measure_current_length gives 80 and 120.
   proves_clause: the Python file measures 80 and the JavaScript file measures 120
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
-- name: test_ge_127h_1_history_block_is_left_out_of_the_length_the_size_check_quotes
+- name: test_ge_134a_1_history_block_is_left_out_of_the_length_the_size_check_quotes
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
@@ -114,7 +114,7 @@ test_spec:
     of the production modules in a temporary git repository, no build.py, no POSIX flock).'
   proves_clause: the Python file measures 80 and the JavaScript file measures 120
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
-- name: test_ge_127h_1_line_comment_block_is_left_out_in_every_covered_language
+- name: test_ge_134a_1_line_comment_block_is_left_out_in_every_covered_language
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -133,7 +133,7 @@ test_spec:
   - a per-extension prefix mapping that leaves out a checked extension such as .mjs
   - the block continued over lines with any comment prefix instead of its heading's prefix
   - a second copy of the prefixes kept beside the constant (for example in the published rule text)
-- name: test_ge_127h_1_lines_outside_the_block_measure_as_before
+- name: test_ge_134a_1_lines_outside_the_block_measure_as_before
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -143,7 +143,7 @@ test_spec:
   proves_clause: every line outside the block is measured exactly as it was before this change, including
     ordinary comments, docstrings, JSDoc and blank lines
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
-- name: test_ge_127h_1_file_without_a_history_block_measures_as_before
+- name: test_ge_134a_1_file_without_a_history_block_measures_as_before
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -152,7 +152,7 @@ test_spec:
     length the pre-change rule gives (the existing GE-127d-2 counts stay green).
   proves_clause: a file with no decision-history block measures the same length as before this change
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
-- name: test_ge_127h_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice
+- name: test_ge_134a_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -194,11 +194,23 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-1 to GE-134a-1 and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-1 family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
 superseded_by: null
 covered_by:
-  - GE-127h-1-i
+  - GE-134a-1-i
 implemented_by:
-- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/26_TICKET-20261021-GE-127h-1.md
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/26_TICKET-20261021-GE-134a-1.md
 change_target:
   - code
 risk_surface: contract_boundary
@@ -209,7 +221,7 @@ notes: |
   block inside a module docstring or a /* */ header is already free today, and the history
   block in its doc-enforcer form (line comments, usually at the end of the file) is counted.
   This record therefore removes the line-comment history block only and keeps every other
-  part of the rule "as before", as GE-127h says. See the open question in the BA report on
+  part of the rule "as before", as GE-134a says. See the open question in the BA report on
   D1's wording "docstrings and JSDoc still count". Forms found in scripts/ and templates/ on
   2026-10-16: about 245 "# DECISION HISTORY" line-comment headings, of which ~160 have "="
   rule lines above and below, ~50 have none and ~36 only below; one "// DECISION HISTORY" in

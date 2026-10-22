@@ -1,9 +1,9 @@
 """
-MODULE: unit_tests/commit_guardian/_ge_127h_fixture.py
-COVERS: GE-127h-1, GE-127h-1-i, GE-127h-2, GE-127h-3 (shared fixture module --
+MODULE: unit_tests/commit_guardian/_ge_134a_fixture.py
+COVERS: GE-134a-1, GE-134a-1-i, GE-134a-2, GE-134a-3 (shared fixture module --
     carries no tests of its own)
 
-GOAL: Shared builders and helpers for the GE-127h suite: a file's
+GOAL: Shared builders and helpers for the GE-134a suite: a file's
     line-comment DECISION HISTORY block is left out of its measured length.
     Reuses _ge_127d_2_fixture.build_fixture_tree (a copy of the production
     modules in a temporary git repository -- no build.py, no POSIX flock) for
@@ -11,9 +11,9 @@ GOAL: Shared builders and helpers for the GE-127h suite: a file's
 
     - loaders for the REAL production _file_size_ratchet.py (and for a
       disposable copy whose prefix constant has been rewritten);
-    - the GE-127h-1 worked examples (80-line Python + 25-line ruled block,
+    - the GE-134a-1 worked examples (80-line Python + 25-line ruled block,
       120-line JavaScript + 15-line unruled header block);
-    - an INDEPENDENT counter implementing the rule as the GE-127h-3 statement
+    - an INDEPENDENT counter implementing the rule as the GE-134a-3 statement
       publishes it, never importing production, so agreement with the
       quoted length is a genuine reproducibility proof (the same discipline
       _ge_127d_2_fixture.independent_count_content_lines follows).
@@ -22,7 +22,7 @@ TEST-WRITER DESIGN DECISIONS (python-coder must honour these names):
 
     1. PREFIX_CONSTANT_NAME = "DECISION_HISTORY_COMMENT_PREFIXES": the ONE
        module-level constant in _file_size_ratchet.py holding the
-       line-comment prefixes, exactly ("#", "//", "--"). GE-127h-1's IT PO
+       line-comment prefixes, exactly ("#", "//", "--"). GE-134a-1's IT PO
        note requires one such constant but names none; this pins the name.
        It must be a plain module-level assignment (``NAME = (...)`` or
        ``NAME: tuple[str, ...] = (...)``) that the measurement AND the
@@ -38,7 +38,7 @@ TEST-WRITER DESIGN DECISIONS (python-coder must honour these names):
        GE-127d-2 suite's own fixture.
 
 DECISION HISTORY
-- 2026-10-21 [test-writer/GE-127h-1..3]: Initial authoring.
+- 2026-10-21 [test-writer/GE-134a-1..3]: Initial authoring.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ SHIPPED_CONFIG = REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "comm
 PREFIX_CONSTANT_NAME = "DECISION_HISTORY_COMMENT_PREFIXES"
 EXPECTED_PREFIXES: tuple[str, ...] = ("#", "//", "--")
 
-# The line-comment prefix each shipped checked extension uses (GE-127h-1
+# The line-comment prefix each shipped checked extension uses (GE-134a-1
 # test_spec): '#' for .py and .sh, '//' for .js/.mjs/.ts/.tsx, '--' for .sql.
 PREFIX_BY_EXTENSION: dict[str, str] = {
     ".py": "#",
@@ -90,6 +90,8 @@ _RULE = "=" * 68
 def _load_from(path: Path, module_name: str) -> ModuleType:
     """Import the module file at *path* under *module_name*, fresh."""
     spec = importlib.util.spec_from_file_location(module_name, str(path))
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot build an import spec for {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -98,7 +100,7 @@ def _load_from(path: Path, module_name: str) -> ModuleType:
 
 def load_ratchet() -> ModuleType:
     """Load the REAL production templates/.../_file_size_ratchet.py."""
-    return _load_from(RATCHET_SRC, "ge_127h_file_size_ratchet")
+    return _load_from(RATCHET_SRC, "ge_134a_file_size_ratchet")
 
 
 def prefix_constant(module: ModuleType) -> tuple[str, ...] | None:
@@ -129,7 +131,7 @@ def load_ratchet_with_prefixes(tmp_dir: Path, prefixes: tuple[str, ...], tag: st
     rewritten = "".join(lines[: span[0] - 1]) + replacement + "".join(lines[span[1] :])
     dest = tmp_dir / f"_file_size_ratchet_{tag}.py"
     dest.write_text(rewritten, encoding="utf-8")
-    return _load_from(dest, f"ge_127h_ratchet_copy_{tag}")
+    return _load_from(dest, f"ge_134a_ratchet_copy_{tag}")
 
 
 def measure_text(module: ModuleType, tmp_dir: Path, name: str, content: str) -> int:
@@ -166,7 +168,7 @@ def history_entries(prefix: str, count: int, start: int = 0) -> list[str]:
     entries = []
     for k in range(start, start + count):
         if k % 2 == 0:
-            entries.append(f"{prefix} - 2026-10-{(k % 28) + 1:02d} [python-coder/GE-127h-1]: entry {k}")
+            entries.append(f"{prefix} - 2026-10-{(k % 28) + 1:02d} [python-coder/GE-134a-1]: entry {k}")
         else:
             entries.append(f"{prefix}   continuation of entry {k - 1}")
     return entries
@@ -178,7 +180,7 @@ def ruled_python_block(entry_count: int = 22) -> list[str]:
 
 
 def python_example(extra_code_lines: int = 0) -> str:
-    """GE-127h-1's Python file: 80 measured lines + the 25-line ruled block.
+    """GE-134a-1's Python file: 80 measured lines + the 25-line ruled block.
 
     *extra_code_lines* code lines are added before the block, outside it.
     """
@@ -188,7 +190,7 @@ def python_example(extra_code_lines: int = 0) -> str:
 
 
 def javascript_example() -> str:
-    """GE-127h-1's JavaScript file: a 15-line '//' header block (no rule
+    """GE-134a-1's JavaScript file: a 15-line '//' header block (no rule
     lines: the heading plus 14 entries), then 120 measured lines."""
     block = ["// DECISION HISTORY", *history_entries("//", 14)]
     lines = [*block, *body_lines(120, "//", "const value_{i} = {i};")]
@@ -196,7 +198,7 @@ def javascript_example() -> str:
 
 
 def h_1_i_example(trailing: list[str] | None = None) -> str:
-    """GE-127h-1-i's fixture: mention comment, LABEL line, 6-line block
+    """GE-134a-1-i's fixture: mention comment, LABEL line, 6-line block
     (heading, rule line, 4 entries), then x = 1 (plus *trailing* lines)."""
     lines = [
         "# see DECISION HISTORY below for why",
@@ -223,7 +225,7 @@ def _strip_regions(content: str) -> str:
 
 
 def pre_change_count(content: str) -> int:
-    """The measurement rule in force BEFORE GE-127h-1, re-coded here."""
+    """The measurement rule in force BEFORE GE-134a-1, re-coded here."""
     return len(_strip_regions(content).splitlines())
 
 
@@ -243,7 +245,7 @@ def _heading_prefix(line: str) -> str | None:
 
 def _is_rule_line(line: str, prefix: str) -> bool:
     text = _comment_text(line, prefix)
-    return bool(text) and set(text) == {"="}
+    return text is not None and bool(text) and set(text) == {"="}
 
 
 def strip_history_blocks(lines: list[str]) -> list[str]:

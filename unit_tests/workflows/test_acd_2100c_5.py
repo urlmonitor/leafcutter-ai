@@ -121,7 +121,9 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests.workflows._acd_2100c_support import _cancel_answer  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -164,7 +166,7 @@ _MUTATING_LABELS = (
     "commit-stage-output",
     "commit-stage-output-product-truth",
     "commit-flow-reconciliation",
-    "apply-approval",
+    "approval-apply",
     "deliver-authoring-branch",
 )
 
@@ -196,13 +198,6 @@ def _run_mid_gate(label_overrides=None, resume_answer=None, run_id="run"):
     return run_workflow_under_e2(
         _PLAN_FEATURE_JS, timeout=_TIMEOUT, label_responses=label_responses, args=args
     )
-
-
-def _cancel_answer(gate_id, channel):
-    answer = {"gate_id": gate_id, "action": "cancel"}
-    if channel is not None:
-        answer["channel"] = channel
-    return answer
 
 
 _RESOLVE_GATE_SIGNATURE = (
@@ -500,7 +495,7 @@ class TestWorkSurvivesAMissingGateResultOnTheRealExitPath(unittest.TestCase):
             result = run_workflow_under_e2(
                 patched_script,
                 timeout=_TIMEOUT,
-                label_responses={},
+                label_responses=approval_step_replies(),  # an approve would reach approval-apply
                 args=dict(_PERMITTED, run_id="acd2100c5-forced-null-final-gate"),
             )
         finally:

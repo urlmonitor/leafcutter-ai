@@ -1,11 +1,11 @@
 """
-MODULE: unit_tests/commit_guardian/test_ge_127h_1.py
-COVERS: GE-127h-1 -- "A file's decision-history block is left out of its
+MODULE: unit_tests/commit_guardian/test_ge_134a_1.py
+COVERS: GE-134a-1 -- "A file's decision-history block is left out of its
     measured length, in every covered language, and nothing else changes"
 
-GOAL: The six test_spec descriptors of GE-127h-1, built exactly as the test
+GOAL: The six test_spec descriptors of GE-134a-1, built exactly as the test
     design lists them. Shared builders, loaders and the independent counter
-    live in _ge_127h_fixture.py (see its docstring for the pinned name of the
+    live in _ge_134a_fixture.py (see its docstring for the pinned name of the
     prefix constant, DECISION_HISTORY_COMMENT_PREFIXES).
 
 RED TODAY: count_content_lines counts every '#', '//' and '--' comment line,
@@ -16,7 +16,7 @@ RED TODAY: count_content_lines counts every '#', '//' and '--' comment line,
     (the same block as line comments) that is red today.
 
 DECISION HISTORY
-- 2026-10-21 [test-writer/GE-127h-1]: Initial authoring.
+- 2026-10-21 [test-writer/GE-134a-1]: Initial authoring.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _ge_127d_2_fixture as d2  # noqa: E402
-import _ge_127h_fixture as fx  # noqa: E402
+import _ge_134a_fixture as fx  # noqa: E402
 
 _SHIPPED_EXTENSIONS = json.loads(fx.SHIPPED_CONFIG.read_text(encoding="utf-8"))["file_size"]["checked_extensions"]
 
@@ -40,8 +40,8 @@ def ratchet():
     return fx.load_ratchet()
 
 
-def test_ge_127h_1_python_and_javascript_history_blocks_are_not_measured(ratchet, tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_python_and_javascript_history_blocks_are_not_measured(ratchet, tmp_path):
+    # covers: GE-134a-1
     # angle: criterion
     """The 80-line Python file with its 25-line ruled '#' block measures 80;
     the 120-line JavaScript file with its 15-line unruled '//' header block
@@ -55,8 +55,8 @@ def test_ge_127h_1_python_and_javascript_history_blocks_are_not_measured(ratchet
     assert fx.measure_text(ratchet, tmp_path, "example.js", javascript_text) == 120
 
 
-def test_ge_127h_1_history_block_is_left_out_of_the_length_the_size_check_quotes(tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_history_block_is_left_out_of_the_length_the_size_check_quotes(tmp_path):
+    # covers: GE-134a-1
     # angle: reachability
     """Through the fixture copy of check_file_size.py: under a limit of 80
     the Python example passes, listed at 80 lines; one more code line is
@@ -79,8 +79,8 @@ def test_ge_127h_1_history_block_is_left_out_of_the_length_the_size_check_quotes
 
 
 @pytest.mark.parametrize("extension", _SHIPPED_EXTENSIONS)
-def test_ge_127h_1_line_comment_block_is_left_out_in_every_covered_language(extension, ratchet, tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_line_comment_block_is_left_out_in_every_covered_language(extension, ratchet, tmp_path):
+    # covers: GE-134a-1
     # angle: discrimination
     """For every shipped checked extension: N measured lines plus a block
     headed '<prefix> DECISION HISTORY' measures N; the prefix comes from the
@@ -111,8 +111,8 @@ def test_ge_127h_1_line_comment_block_is_left_out_in_every_covered_language(exte
     assert ";;" in copy.describe_measurement_rule(), copy.describe_measurement_rule()
 
 
-def test_ge_127h_1_lines_outside_the_block_measure_as_before(ratchet, tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_lines_outside_the_block_measure_as_before(ratchet, tmp_path):
+    # covers: GE-134a-1
     # angle: criterion
     """Ordinary '#' and '//' comments, a docstring, a JSDoc block and blank
     lines keep their pre-change count; only the 5 block lines go."""
@@ -135,7 +135,7 @@ def test_ge_127h_1_lines_outside_the_block_measure_as_before(ratchet, tmp_path):
             f"# {'=' * 68}",
             "# DECISION HISTORY",
             f"# {'=' * 68}",
-            "# - 2026-10-21 [python-coder/GE-127h-1]: entry one",
+            "# - 2026-10-21 [python-coder/GE-134a-1]: entry one",
             "#   continuation of entry one",
         ]
     ) + "\n"
@@ -197,8 +197,8 @@ _NO_BLOCK_FILES = {
 }
 
 
-def test_ge_127h_1_file_without_a_history_block_measures_as_before(ratchet, tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_file_without_a_history_block_measures_as_before(ratchet, tmp_path):
+    # covers: GE-134a-1
     # angle: criterion
     """Python, SQL and JavaScript files without a block (but with rule lines,
     mentions and near-miss headings) measure their pinned pre-change length."""
@@ -207,8 +207,8 @@ def test_ge_127h_1_file_without_a_history_block_measures_as_before(ratchet, tmp_
         assert fx.measure_text(ratchet, tmp_path, name, content) == pinned, name
 
 
-def test_ge_127h_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice(ratchet, tmp_path):
-    # covers: GE-127h-1
+def test_ge_134a_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice(ratchet, tmp_path):
+    # covers: GE-134a-1
     # angle: discrimination
     """A history block inside a trailing triple-quoted string (the form
     _file_size_ratchet.py uses) or inside a /* */ header measures exactly

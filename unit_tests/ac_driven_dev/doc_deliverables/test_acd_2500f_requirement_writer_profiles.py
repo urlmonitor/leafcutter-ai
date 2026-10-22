@@ -50,7 +50,10 @@ def _guided_value(front: dict, role: str) -> str | None:
     """What section P1 leads to for one template: the highest-ranked signal that applies decides."""
     for _, (signal, hint) in sorted(_signal_rows().items()):
         if "requirement records" in signal and _writes_store(front):
-            return re.search(r"the value is `([a-z_]+)`", hint).group(1)
+            value = re.search(r"the value is `([a-z_]+)`", hint)
+            if value is None:
+                raise AssertionError(f"P1 hint for the requirement-records signal names no value: {hint!r}")
+            return value.group(1)
         if signal.startswith("`role:`"):
             found = re.search(r"`role: " + re.escape(role) + r"` → (?:likely )?`([a-z_]+)`", hint)
             if found:

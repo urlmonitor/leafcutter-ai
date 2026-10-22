@@ -100,6 +100,20 @@ amended_by:
       no author, the standard does not apply, and that is said out loud), not a point patch
       against an observed shortcoming. Full reasoning, including the two settled design
       questions, is in GE-127g's own notes.
+  - reason: split-ge-127h-to-new-l0
+    date: '2026-10-22'
+    by: main-session
+    directed_by: user
+    entry: >-
+      covered_by lost GE-127h ("Recording why a file changed never counts against its
+      size"), taking this L0 from 8 L1 children back to 7 of 7. GE-127h had been added on
+      2026-10-16 without the new L0 the 2026-10-09 amendment above requires, so the
+      whole-store tree-limit check refused this record. On the user's decision of
+      2026-10-22 it was renumbered with its children to GE-134a, GE-134a-1, GE-134a-1-i,
+      GE-134a-2, GE-134a-3 and GE-134a-4 under the new goal GE-134
+      (docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134.yaml).
+      No child_limit_override was used. The rule above still stands: this L0 has no L1
+      headroom, and the next record in its family needs a new L0 or a split.
 superseded_by: null
 covered_by:
   - GE-127a
@@ -109,7 +123,6 @@ covered_by:
   - GE-127e
   - GE-127f
   - GE-127g
-  - GE-127h
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

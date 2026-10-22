@@ -1,4 +1,4 @@
-id: GE-127h
+id: GE-134a
 components:
   - commit_guardian
 title: "Recording why a file changed never counts against its size"
@@ -19,9 +19,9 @@ criteria: |
   file, including its ordinary comments and descriptions, is still measured as before,
   and the published rule says exactly what is left out.
 depends_on:
-  - GE-127
+  - GE-134
 doc_links:
-  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134.yaml
     relationship: parent
     status: exists
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
@@ -45,13 +45,25 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-16
-amended_by: []
+amended_by:
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h to GE-134a and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Its parent link and depends_on now point at GE-134 instead of GE-127. Criteria and every
+    other field are unchanged.
 superseded_by: null
 covered_by:
-  - GE-127h-1
-  - GE-127h-2
-  - GE-127h-3
-  - GE-127h-4
+  - GE-134a-1
+  - GE-134a-2
+  - GE-134a-3
+  - GE-134a-4
 implemented_by: []
 documentation_triggers:
   - reference-doc

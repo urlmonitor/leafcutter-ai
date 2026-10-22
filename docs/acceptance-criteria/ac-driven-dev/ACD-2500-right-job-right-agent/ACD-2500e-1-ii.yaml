@@ -30,7 +30,7 @@ criteria: |
     as before the move.
 depends_on:
   - ACD-2500e-1
-  - GE-127h-1
+  - GE-134a-1
 doc_links:
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500e-1-i.yaml
     relationship: related
@@ -47,7 +47,7 @@ it_requirements:
   existing entries, per the doc-enforcer append-only decision-history convention.
 - No line of code changes in either file; the build's agent validation and the profile consistency check
   give identical output before and after.
-- Build after GE-127h-1. If the destination history sits in a docstring, which the measurement already
+- Build after GE-134a-1. If the destination history sits in a docstring, which the measurement already
   leaves out, the size-related reason for that dependency does not apply (logged as a caveat).
 declared_files:
 - path: scripts/build_phases_profile_consistency.py
@@ -176,6 +176,6 @@ notes: |
   consistency check that received this history). Destination chosen by the user at the BA
   gate (2026-10-16): scripts/build_phases_agent_validation.py, which defines
   validate_agent_self_description (L53). The entries were moved out of that file's
-  validate_agent_self_description docstring "to restore headroom". Once GE-127h-1 is done
-  decision history costs no measured lines, so they can go back. Depends on GE-127h-1 for
+  validate_agent_self_description docstring "to restore headroom". Once GE-134a-1 is done
+  decision history costs no measured lines, so they can go back. Depends on GE-134a-1 for
   that reason.

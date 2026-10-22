@@ -27,7 +27,8 @@ def test_ac4_sequence_shows_the_steps_in_order():
     # covers: ACD-2500c-4
     # angle: criterion
     """planner records test intent -> rule check -> (pre-pass) -> code-aware step writes design -> rule check
-    -> approval gate -> build -> test writer consumes the design, in that order."""
+    -> hand-back commit, round and itpo-handback check -> approval gate -> approve_acs.py dry run, then apply
+    for the released ids (ACD-300c-4) -> final commit -> build -> test writer consumes the design, in order."""
     block = D.mermaid(D.read(SEQUENCE))
     order = _positions(block, [
         "records with it_requirements and test_intent (no test_spec)",
@@ -36,12 +37,19 @@ def test_ac4_sequence_shows_the_steps_in_order():
         "PF->>TD: stage-test-design-author",
         "PF->>RC: rule-check-test-design --before-ref HEAD",
         "PF->>HR: approval-holds (all ids)",
+        "PF->>PF: commit test-design-handback",
+        "PF->>ITPO: it-po-findings-round-N",
+        "PF->>RC: rule-check-itpo-handback --stage itpo-handback",
         "PF->>User: final-gate",
-        "PF->>SC: apply-approval",
+        "PF->>AA: approval-holds: approve_acs.py --ids (all ids) --dry-run --json",
+        "PF->>AA: approval-apply: approve_acs.py --ids (released ids only) --priority p --json",
+        "PF->>PF: commit plan-feature(TEST-DESIGN, final)",
         "Note over PF,TW: build",
         "TW->>TW: reads test_spec",
     ])
     assert order == sorted(order), f"steps out of order: {order}"
+    assert "participant AA as approve_acs.py" in block
+    assert "apply-approval" not in block and "status-checker" not in block, "the retired agent edit is still drawn"
 
 
 def test_ac4_sequence_shows_pending_branch_at_gate_and_at_test_writer():

@@ -42,7 +42,7 @@ writing these assertions:
     {"status": "ok", "message": "Pipeline cancelled at final gate (IT-PO). ...",
      ...} with ZERO "pause-persist" dispatches — the live defect (§1), RED.
   - Feeding "final-gate" a genuine, non-refusal "approve" answer dispatches
-    "apply-approval" — the control proving a correct fix must not reject every
+    "approval-apply" — the control proving a correct fix must not reject every
     live-gate answer (§2), confirmed still correct today.
 
 TICKET: none (ad-hoc RED-baseline authoring task, worktree

@@ -31,7 +31,7 @@ from _acd_2500b_approval_fixtures import build, reviewed_intent, reviewed_no_tes
 from _acd_300c_4_fixtures import PENDING, amended_by_of, approval_entries  # noqa: E402
 
 FREE, HELD = "ACD-9990a-1", "ACD-9990a-2"
-_TRIAGE = {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "fixture"}
+_TRIAGE: dict[str, object] = {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "fixture"}
 
 
 def _pipeline(tmp_path, monkeypatch):

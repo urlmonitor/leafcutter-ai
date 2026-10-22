@@ -189,7 +189,7 @@ def test_rewrite_after_approval_pauses_again_instead_of_approving(prepass, monke
 
     assert len(calls(result, "stage-test-design-author")) == 1, names(result)  # re-dispatched once
     assert len(calls(result, "rule-check-test-design")) == 2, names(result)  # and re-checked
-    assert calls(result, "apply-approval") == [], f"the rewrite was approved unseen: {names(result)}"
+    assert calls(result, "approval-apply") == [], f"the rewrite was approved unseen: {names(result)}"
     last_check = position(result, "rule-check-test-design", 1)
     assert [i for i, c in enumerate(result.agent_calls) if c.label == "commit-stage-output" and i > last_check] == []
     assert position(result, "pause-persist") > last_check, names(result)

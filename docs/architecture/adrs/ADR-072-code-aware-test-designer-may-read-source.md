@@ -4,7 +4,7 @@ description: "One pre-approval agent, test-designer (Sonnet), may open source an
 type: "adr"
 status: "active"
 created: "2026-10-14"
-last_updated: "2026-10-21"
+last_updated: "2026-10-22"
 deciders:
   - BrainCandy
   - adr-author
@@ -164,6 +164,10 @@ still undecided is shown as held and is never approved.
 (label `test-design-handback`) before the IT PO's first hand-back round, so the hand-back
 rule check's before-state is the post-design batch.
 
+*Amended 2026-10-22 (ACD-2500a-2-ix):* the rule check after each hand-back round runs as
+`--stage itpo-handback` and is fail-closed: a failed check or a failed `test-design-handback`
+commit stops the run before the final gate.
+
 ### 5. Success is judged from disk and fails closed
 
 The designer's JSON reply (`{status, records: [{id, test_design, file_findings, reason}],
@@ -203,6 +207,11 @@ readiness gate is not extended.
 /plan-feature's `apply-approval` step MUST receive only the ids the hold report returns as
 not held. Held records stay `reviewed`.
 
+*Amended 2026-10-22 (ACD-300c-4):* the `apply-approval` agent edit is gone. The approval
+step is `approve_acs.py`: its `--dry-run --json` run (label `approval-holds`) reports the
+released ids, and only those ids go to the apply run (`--ids <released> --priority <p>
+--json`, label `approval-apply`). A failed approval returns before the commit.
+
 ### 7. must_catch is Sonnet-only
 
 `must_catch` entries in `test_spec` MUST be written only by `test-designer`, from reading
@@ -238,7 +247,9 @@ misses mutants and an amendment that takes the ADR-033 §2.3 route.
   `plan-feature(TEST-DESIGN, final)`.
 - *Amended 2026-10-21: closed by ACD-300c-4. /plan-feature now approves through
   `approve_acs.py` in id-list mode (`--ids`), for exactly the ids its `--dry-run` hold
-  report releases.* Original text:
+  report releases.* *Amended 2026-10-22: the approval step runs as `approval-holds` (dry
+  run), then `approval-apply` (released ids only); the `apply-approval` label below no
+  longer exists.* Original text:
   **The M-5 bypass stays open.** /plan-feature approves through an agent edit
   (`apply-approval`: a `status-checker` edits `readiness`), not through `approve_acs.py`.
   This change filters that edit's id list through the same hold predicates that

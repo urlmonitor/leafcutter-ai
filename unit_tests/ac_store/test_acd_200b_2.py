@@ -134,7 +134,7 @@ def _import(directory: Path, name: str):
 def _is_guardian_module(module: object) -> bool:
     """True for a module loaded from any commit_guardian folder (template or deployed copy)."""
     file = getattr(module, "__file__", None)
-    return bool(file) and Path(file).parent.name == "commit_guardian"
+    return isinstance(file, str) and Path(file).parent.name == "commit_guardian"
 
 
 @contextlib.contextmanager

@@ -1,4 +1,4 @@
-id: GE-127h-1-i
+id: GE-134a-1-i
 components:
   - commit_guardian
 readiness: approved
@@ -29,15 +29,15 @@ criteria: |
   And a file whose whole content is one decision-history block measures 0, and is not
     refused as an empty or unreadable file.
 depends_on:
-  - GE-127h-1
+  - GE-134a-1
 doc_links:
-  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h-1.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a-1.yaml
     relationship: parent
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-- The boundary rules live in the same measurement function as GE-127h-1; there is no separate pre-pass.
+- The boundary rules live in the same measurement function as GE-134a-1; there is no separate pre-pass.
 declared_files:
 - path: templates/scripts/commit_guardian/_file_size_ratchet.py
   state: existing
@@ -66,7 +66,7 @@ test_intent:
   needs_test: true
   reason: A zero-length file must not trip the empty-file refusal.
 test_spec:
-- name: test_ge_127h_1_i_a_mention_comment_and_a_label_line_are_counted
+- name: test_ge_134a_1_i_a_mention_comment_and_a_label_line_are_counted
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -78,7 +78,7 @@ test_spec:
   must_catch:
   - any line containing 'DECISION HISTORY' starts a block, so the mention comment is dropped
   - a code line containing the words is treated as a block heading
-- name: test_ge_127h_1_i_the_six_block_lines_are_not_counted
+- name: test_ge_134a_1_i_the_six_block_lines_are_not_counted
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -87,7 +87,7 @@ test_spec:
     9).
   proves_clause: the 6 block lines are not counted
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
-- name: test_ge_127h_1_i_code_after_the_block_is_counted
+- name: test_ge_134a_1_i_code_after_the_block_is_counted
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -99,7 +99,7 @@ test_spec:
   must_catch:
   - the block runs to the end of the file, so x = 1 is dropped
   - the block ends only at a blank line, so code directly after the last entry is dropped
-- name: test_ge_127h_1_i_only_a_whole_text_heading_starts_a_block
+- name: test_ge_134a_1_i_only_a_whole_text_heading_starts_a_block
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -110,7 +110,7 @@ test_spec:
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
   must_catch:
   - a startswith or substring match on DECISION HISTORY instead of the whole comment text
-- name: test_ge_127h_1_i_a_rule_line_belongs_to_the_block_only_when_directly_above
+- name: test_ge_134a_1_i_a_rule_line_belongs_to_the_block_only_when_directly_above
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
@@ -123,7 +123,7 @@ test_spec:
   must_catch:
   - any rule line within a few lines above the heading is swallowed
   - the rule line is never attached, so a ruled block measures one line too many
-- name: test_ge_127h_1_i_a_file_that_is_only_a_history_block_measures_zero_and_is_not_refused
+- name: test_ge_134a_1_i_a_file_that_is_only_a_history_block_measures_zero_and_is_not_refused
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
@@ -150,7 +150,7 @@ file_findings:
   verdict: consistent
   line_range: null
   found_in: null
-  reason: It holds count_content_lines, where the block boundary rules must live with the GE-127h-1 exclusion.
+  reason: It holds count_content_lines, where the block boundary rules must live with the GE-134a-1 exclusion.
   decision: null
 file_findings_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
@@ -160,10 +160,22 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-1-i to GE-134a-1-i and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-1-i family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/28_TICKET-20261021-GE-127h-1-i.md
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/28_TICKET-20261021-GE-134a-1-i.md
 change_target:
   - code
 risk_surface: contract_boundary

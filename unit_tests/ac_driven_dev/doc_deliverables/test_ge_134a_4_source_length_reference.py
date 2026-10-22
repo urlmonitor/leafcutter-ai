@@ -1,9 +1,9 @@
-"""GE-127h-4 and its parent GE-127h -- the source-file length reference and the free decision history.
+"""GE-134a-4 and its parent GE-134a -- the source-file length reference and the free decision history.
 
-GE-127h-4 is ``test_required: false`` (a reference doc). Its checks read docs/reference/source-file-length-measurement.md
+GE-134a-4 is ``test_required: false`` (a reference doc). Its checks read docs/reference/source-file-length-measurement.md
 and hold it to the rule in force: the quoted rule must equal ``describe_measurement_rule()``, and each worked
 example, with its line annotations removed, must measure what the doc says under the real ``count_content_lines``.
-The GE-127h check drives the same real ratchet module on a small file.
+The GE-134a check drives the same real ratchet module on a small file.
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ import sys
 from unit_tests.ac_driven_dev.doc_deliverables import _doc_support as D
 
 sys.path.insert(0, str(D.REPO / "unit_tests" / "commit_guardian"))
-import _ge_127h_fixture  # noqa: E402
+import _ge_134a_fixture  # noqa: E402
 
-R = _ge_127h_fixture.load_ratchet()  # the real templates/scripts/commit_guardian/_file_size_ratchet.py
+R = _ge_134a_fixture.load_ratchet()  # the real templates/scripts/commit_guardian/_file_size_ratchet.py
 
 PAGE = D.REPO / "docs" / "reference" / "source-file-length-measurement.md"
 # The trailing "# counted ..." / "// not counted ..." note the doc puts after each example line.
@@ -37,7 +37,7 @@ def _example(language: str) -> tuple[list[str], int, int]:
 
 
 def test_reference_quotes_the_published_rule_verbatim_and_names_what_is_left_out():
-    # covers: GE-127h-4
+    # covers: GE-134a-4
     # angle: real_artifact
     """The quoted rule is exactly describe_measurement_rule()'s output, and the doc names what is left out:
     decision-history blocks and the text the rule already left out (triple-quoted strings, block comments)."""
@@ -51,7 +51,7 @@ def test_reference_quotes_the_published_rule_verbatim_and_names_what_is_left_out
 
 
 def test_python_and_javascript_examples_measure_what_they_state():
-    # covers: GE-127h-4
+    # covers: GE-134a-4
     # angle: real_artifact
     """One Python and one JavaScript example each show raw count and measured length side by side, and the
     real counting function, run on the example with its notes removed, gives exactly those two numbers."""
@@ -63,7 +63,7 @@ def test_python_and_javascript_examples_measure_what_they_state():
 
 
 def test_reference_states_history_costs_nothing_so_moving_it_frees_nothing():
-    # covers: GE-127h-4
+    # covers: GE-134a-4
     # angle: criterion
     """It states a decision-history block costs no measured lines, so moving it elsewhere frees none."""
     D.assert_all(
@@ -75,19 +75,19 @@ def test_reference_states_history_costs_nothing_so_moving_it_frees_nothing():
     )
 
 
-def test_reference_links_ge_127h_and_the_doc_enforcer_convention_instead_of_restating_it():
-    # covers: GE-127h-4
+def test_reference_links_ge_134a_and_the_doc_enforcer_convention_instead_of_restating_it():
+    # covers: GE-134a-4
     # angle: criterion
-    """It links GE-127h and the doc-enforcer skill's decision-history convention and says the convention is
+    """It links GE-134a and the doc-enforcer skill's decision-history convention and says the convention is
     not repeated here."""
     text = D.flat(D.read(PAGE))
-    assert "(../acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml)" in text
+    assert "(../acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml)" in text
     assert "[doc-enforcer skill](../../templates/skills/doc-enforcer/SKILL.md) and are not repeated here" in text
 
 
-# ---------------------------------------------------------------- GE-127h (parent)
+# ---------------------------------------------------------------- GE-134a (parent)
 def test_parent_decision_history_is_free_while_code_and_comments_still_count():
-    # covers: GE-127h
+    # covers: GE-134a, GE-134
     # angle: criterion
     """Through the real ratchet: adding a decision-history entry adds no measured line and leaves the length
     unchanged, an ordinary comment still counts as one line, and the published rule names what is left out."""

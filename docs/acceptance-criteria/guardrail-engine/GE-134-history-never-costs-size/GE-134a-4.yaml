@@ -1,4 +1,4 @@
-id: GE-127h-4
+id: GE-134a-4
 components:
   - commit_guardian
   - documentation_system
@@ -12,7 +12,7 @@ req_status: draft
 work_status: done
 roadmap_phase: phase_1
 criteria: |
-  Given the measurement rule after GE-127h-1 and GE-127h-3,
+  Given the measurement rule after GE-134a-1 and GE-134a-3,
   When the size standard's reference documentation for source files is written or updated,
   Then it states the rule in the same words the standard publishes, and names what is left
     out: decision-history blocks, and the text the rule already left out before,
@@ -20,13 +20,13 @@ criteria: |
     measured length side by side,
   And it states that a decision-history block costs no measured lines, so moving a file's
     decision history into another file or document frees no measured lines,
-  And it links GE-127h and the decision-history convention in the doc-enforcer skill rather
+  And it links GE-134a and the decision-history convention in the doc-enforcer skill rather
     than restating that convention.
 depends_on:
-  - GE-127h-1
-  - GE-127h-3
+  - GE-134a-1
+  - GE-134a-3
 doc_links:
-  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
     relationship: parent
     status: exists
   - path: templates/skills/doc-enforcer/SKILL.md
@@ -39,12 +39,12 @@ it_requirements:
   choice), within the document-length standard.
 - Quotes the published rule verbatim from the size standard's output. If GE-127d-1's rule-agreement check
   compares published places, this page is one of them.
-- Links GE-127h and templates/skills/doc-enforcer/SKILL.md instead of restating the decision-history convention.
+- Links GE-134a and templates/skills/doc-enforcer/SKILL.md instead of restating the decision-history convention.
 delivers_to: null
 expects_from:
-  ac_id: GE-127h-3
+  ac_id: GE-134a-3
   contract: The published measurement-rule sentence, exactly as the size standard states it in its refusals
-    and published-rule output, for GE-127h-4's reference doc to quote verbatim.
+    and published-rule output, for GE-134a-4's reference doc to quote verbatim.
 test_required: false
 test_rationale: "Documentation-only deliverable; agreement between the published rule and this doc is enforced by GE-127d-1's check, and links and frontmatter by the documentation checks at commit time."
 origin_agent: business-analyst
@@ -53,14 +53,26 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-4 to GE-134a-4 and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-4 family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/31_TICKET-20261021-GE-127h-4.md
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/31_TICKET-20261021-GE-134a-4.md
 change_target:
   - docs
 risk_surface: internal
 notes: |
-  Answers GE-127h's reference-doc trigger. No source-file size reference exists under
+  Answers GE-134a's reference-doc trigger. No source-file size reference exists under
   docs/reference/ today (document-length-standard.md covers docs/**/*.md only); the author
   chooses whether to add a sibling page or a section, within docs/reference/.
