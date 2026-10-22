@@ -1943,6 +1943,56 @@ const knowledgeStageStep = knowledgeStaged.manifest.length
     `   (knowledge-routing writes: stage these BY NAME — they must ride this commit)\n`
   : "";
 
+// Wrong-version runs (TQ-500g-1-v): thin dispatches, fail-closed parses; the rules live in Python.
+phase("Wrong-Version Runs");
+const wvDir = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration`;
+const wvIds = acIds.length ? `--ac-ids ${batchIdsCsv} ` : "";
+const wvFlags = `--ac-root ${acStoreRoot} --test-root ${worktreePath} --base-ref HEAD`;
+const wvStep = async (label, command) => {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }),
+      { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
+    const out = JSON.parse(reply.stdout);
+    return out && typeof out === "object" ? out : null;
+  } catch { return null; }
+};
+const wvHalt = async (step, detail) => {
+  const releaseReply = await agent(
+    `You are the release-phase agent. The wrong-version ${step} step stopped the run before commit.\n\n` +
+    `Release all claimed ACs back to todo by running this single Bash command:\n   ${releaseInvocation}\n\n` +
+    `Return {"released":[...]} from stdout. Ignore non-zero exit (best-effort release).`,
+    { agentType: RELEASE_EXECUTOR_AGENT_TYPE, schema: RELEASE_SCHEMA, label: "release-on-wrong-version-fail", phase: "Wrong-Version Runs" });
+  const released = buildReleaseOutcomeFields(releaseReply, claimResult.claimed || [], RELEASE_EXECUTOR_AGENT_TYPE);
+  return { status: "blocked", message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)} No PR is opened. ${released.note}`,
+    failing_phase: "wrong-version", gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail,
+    worktree_path: worktreePath, branch, built_ac_ids: acIds, classification: "halt", ...released.fields };
+};
+if (workspaceCreated === false) {
+  const recovered = await wvStep("fastlane-wv-recover", `python ${wvDir}/wrong_version_runner.py recover`);
+  if (!recovered || recovered.ok !== true) return await wvHalt("recover", recovered);
+}
+let wvReply = "";
+if (acIds.length) {
+  const listed = await wvStep("fastlane-wv-list", `python ${wvDir}/wrong_version_writer.py list ${wvIds}${wvFlags}`);
+  if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return await wvHalt("list", listed);
+  if (listed.owed.length) {
+    try {
+      const raw = await agent(
+        `Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: targetAc, repo_root: worktreePath, requirement_ids: acIds, wrong_versions: listed.owed })}`,
+        { agentType: "test-breaker", label: "fastlane-wv-test-breaker", phase: "Wrong-Version Runs" });
+      wvReply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+    } catch { wvReply = ""; }
+  }
+}
+let wvDelim = "WV_REPLY_EOF";
+while (wvReply.includes(wvDelim)) wvDelim += "_X";
+const wvFinish = await wvStep("fastlane-wv-finish",
+  `python ${wvDir}/wrong_version_gate.py finish --work-key ${targetAc} --reply - ${wvIds}${wvFlags} <<'${wvDelim}'
+${wvReply}${wvReply ? "\n" : ""}${wvDelim}`);
+if (!wvFinish || typeof wvFinish.gate_passed !== "boolean" || !wvFinish.gate_passed) return await wvHalt("finish", wvFinish);
+const wvVerdict = wvFinish.verdict || {};
+const wvRan = wvVerdict.applicable === true;
+
 // Phase 5 — Commit: mark ACs done + commit on the worktree branch (BO-2400f-4)
 phase("Commit");
 
@@ -1965,7 +2015,7 @@ const commitResult = await agent(
   `Step 2 — Stage everything on the worktree:\n` + knowledgeStageStep +
   `   git -C "${worktreePath}" add -A\n\n` +
   `Step 3 — Commit (set the COMMIT_AGENT_MODE token so the guardian allows it):\n` +
-  `   COMMIT_AGENT_MODE=1 git -C "${worktreePath}" commit -m "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" -m "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green."\n` +
+  `   COMMIT_AGENT_MODE=1 git -C "${worktreePath}" commit -m "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" -m "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green${wvRan ? " + wrong-version runs" : ""}."\n` +
   `   Every claim in the commit message must be verifiable in the staged diff.\n` +
   `   If a pre-commit hook fails, fix the reported issue and retry once.\n\n` +
   `Return JSON: { "status": "ok", "branch": "${branch}", "message": "<summary>" } ` +
@@ -2144,6 +2194,7 @@ return {
   review_medium_findings: reviewMediumFindings,
   review_low_suppressed_count: reviewLowSuppressedCount,
   knowledge_routing: knowledgeRouting,
+  wrong_version_outcome: wvVerdict.outcome === undefined ? null : wvVerdict.outcome,
   changelog_required: changelogRequired,
   changelog_entry_path:
     (changelogResult && changelogResult.entry_path) || null,

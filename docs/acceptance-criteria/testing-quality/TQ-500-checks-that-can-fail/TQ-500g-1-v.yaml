@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -72,7 +72,8 @@ delivers_to:
     --ac-root <AC store root> --test-root <absolute worktree root> --base-ref <ref>.
     stdin carries the raw reply text of agent test-breaker, byte for byte; it is empty when
     nothing was owed and no agent was dispatched. The wrapper runs the writer's write step
-    (TQ-500g-1-ix) with that reply and the same ids, AC root and test root. Only when the writer
+    (TQ-500g-1-ix, extended by TQ-500g-1-x) with that reply and the same ids, AC root, test root
+    and --base-ref (the same value it later passes to the runner). Only when the writer
     exits 0 does it run the runner's run step (TQ-500g-1-i) with --alterations <the
     manifest_path the writer printed> and the same ids, AC root, test root and base ref. stdout:
     exactly one JSON object {gate_passed: bool, stopped_at: null|"write", writer: <the writer's
@@ -120,7 +121,18 @@ expects_from:
     --reply <path|-> --ac-ids --ac-root --test-root. It prints {written, manifest_path, error,
     entries, ignored_reply_names, preparer_anomalies}, exits 0 when the manifest was written and
     1 when it stopped, and writes no manifest when it stops. Both steps read scope from the AC
-    store's test_spec (must_catch, in_scope_files), never from the route.
+    store's test_spec (must_catch, in_scope_files), never from the route. As extended by
+    TQ-500g-1-x (see that entry), both steps also take --base-ref.
+- ac_id: TQ-500g-1-x
+  contract: >-
+    Extended writer CLI (merged). Both list and write take --base-ref <ref> (default HEAD; empty
+    means HEAD), and the route passes the value it passes to the runner. List stdout is exactly one
+    JSON object {owed: [{name: str, files: [str], scope: "declared"|"derived"}], error: str|null};
+    scope is an additive third key, informational for the preparer, and the route passes owed to
+    test-breaker unchanged, scope included. List exits 1 with owed [] and error set when an owed name
+    has no declared scope and the changed files cannot be worked out against the base ref. Write
+    stdout and the alterations manifest are unchanged from TQ-500g-1-ix; when the changed files
+    cannot be worked out, write stops with written false, manifest_path null and the base-ref error.
 it_requirements:
 - >-
   Placement: immediately before the commit dispatch, after verify_green_and_coverage and the Review
@@ -143,7 +155,27 @@ it_requirements:
   Inputs: the runner gets the same values on every route: the batch's AC ids, the worktree root
   as --test-root, the AC store root as --ac-root, and --base-ref HEAD passed explicitly. The fast
   lane commits once at the end, so HEAD is still the state before the work began. The list step
-  and the write step get the same ids, AC root and test root.
+  and the write step get the same ids, AC root, test root and base ref. All three steps take
+  --base-ref: the route passes --base-ref HEAD explicitly to the list step and to finish, and finish
+  forwards that same value to both the writer's write step and the runner (TQ-500g-1-x). The base
+  ref never comes from the reply, an earlier list output or an environment variable.
+- >-
+  Owed items carry the additive scope key ("declared" | "derived", TQ-500g-1-x). The route does
+  not read, filter or drop it: wrong_versions for test-breaker is the list's owed array unchanged,
+  scope included. A list exit 1 for a base ref whose changed files cannot be worked out is a
+  fail-closed halt like any other list failure.
+- >-
+  List speed (user decisions 2026-10-15 and 2026-10-21). The writer's list step took 82 s for one
+  requirement id on this repository. Find and remove the cause before wiring the route; a full
+  test-root scan per call or per id is the likely one. The fix lives in the one shared reader that
+  list, write and runner all use (_wvr_scope / _wvw_list); no second, faster reader is added, and the
+  list's names, files and order stay identical to the runner's and the write step's for the same
+  inputs. The gated check runs on this repository (real AC store, real test root), not only on a
+  small fixture, and is relative to the machine it runs on: the 50-id run takes at most 2.0 x the
+  1-id run's time + 1.0 s (so a per-id rescan fails on any machine speed), and each run stays under
+  an absolute ceiling of 15 s (so the original 82 s defect fails). TQ-500g-1-ix's figure of at most
+  2 s for 50 ids remains a target measured on a developer machine; it is not a CI gate, because an
+  absolute wall-clock budget failed on CI's Proof-of-done runner while passing everywhere else.
 - >-
   Reply transport (IT-PO decision 2026-10-14): stdin. The workflow body cannot write files, so a
   shell executor would have to persist the reply in an extra step. Instead the finish command the
@@ -246,23 +278,30 @@ test_spec:
   must_catch:
   - runner placed after the commit dispatch
   - test-breaker dispatched before the list step
+  - list step called without --base-ref
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_owed_list_reaches_test_breaker_unchanged
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: seam
   description: >-
-    The list executor returns two owed entries, one with two in-scope files. The test-breaker dispatch
-    input carries wrong_versions equal to that owed array (same order, spellings and files), the
-    same requirement_ids, the work key and an absolute repo_root.
+    The list executor returns two owed entries, one with two in-scope files and scope "declared", the
+    other with scope "derived". The test-breaker dispatch input carries wrong_versions equal to that
+    owed array (same order, spellings, files and scope keys), the same requirement_ids, the work key
+    and an absolute repo_root.
   must_catch:
   - owed entries filtered, reordered or re-spelled before the dispatch
   - in-scope files dropped from the dispatch
+  - scope key stripped from owed items before the dispatch
   - repo_root passed as a relative path
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_test_breaker_reply_reaches_writer_byte_for_byte
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -278,6 +317,8 @@ test_spec:
   - reply cut off at a line equal to the here-document delimiter
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_nothing_owed_skips_test_breaker_and_still_runs_finish
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -291,6 +332,8 @@ test_spec:
   - test-breaker dispatched with an empty wrong_versions list
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_f2_survivor_stops_before_commit_and_pr
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -304,6 +347,8 @@ test_spec:
   - runner dispatched but its verdict ignored
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_f3_not_applicable_continues_never_verified
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -317,6 +362,8 @@ test_spec:
   - F3 halted as a failure
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_writer_stop_halts_before_commit_with_writer_error
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -330,6 +377,8 @@ test_spec:
   - writer stop treated as nothing owed
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_refused_or_unparseable_command_replies_fail_closed
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -346,6 +395,8 @@ test_spec:
   - existing verify_green_and_coverage halt removed
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_resumed_drive_recovers_before_test_breaker_reads
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -359,6 +410,8 @@ test_spec:
   - recover ok false ignored
   in_scope_files:
   - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/wrong_version_gate.py
 - name: test_gate_finish_verdict_is_runner_json_verbatim
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -367,12 +420,18 @@ test_spec:
   description: >-
     On a temp git repo and AC store with a readable reply fixture, finish's verdict equals,
     key for key, the JSON the runner prints when run directly with the manifest the writer
-    wrote and the same ids, roots and base ref. gate_passed equals verdict.gate_passed.
+    wrote and the same ids, roots and base ref. gate_passed equals verdict.gate_passed. With an
+    owed name that has no declared scope and a --base-ref other than HEAD, the write step's derived
+    files match the list step's for that same base ref, which shows finish forwarded --base-ref to
+    the write step.
   must_catch:
   - wrapper rewrites or summarises the runner's verdict
   - wrapper passes a different base ref or AC root to the runner
+  - wrapper omits --base-ref from the writer's write step
   in_scope_files:
   - scripts/build_orchestration/wrong_version_gate.py
+  - scripts/build_orchestration/fast_lane.py
+  - templates/workflows-js/fast-lane-ship.js
 - name: test_gate_finish_writer_stop_never_runs_runner
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -387,6 +446,8 @@ test_spec:
   - writer stop reported as gate_passed true
   in_scope_files:
   - scripts/build_orchestration/wrong_version_gate.py
+  - scripts/build_orchestration/fast_lane.py
+  - templates/workflows-js/fast-lane-ship.js
 - name: test_gate_finish_nothing_owed_empty_stdin_still_runs_runner
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -401,6 +462,8 @@ test_spec:
   - empty stdin treated as a writer stop when nothing is owed
   in_scope_files:
   - scripts/build_orchestration/wrong_version_gate.py
+  - scripts/build_orchestration/fast_lane.py
+  - templates/workflows-js/fast-lane-ship.js
 - name: test_gate_finish_cli_end_to_end
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -410,6 +473,27 @@ test_spec:
   description: >-
     Runs finish as a subprocess with the reply on stdin. Asserts exactly one JSON object on stdout
     with keys gate_passed, stopped_at, writer and verdict, and exit 0 if and only if gate_passed.
+- name: test_writer_list_meets_time_budget_on_real_repo
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  surface_invoked: python scripts/build_orchestration/wrong_version_writer.py list
+  description: >-
+    Runs the list step as a subprocess against this repository's real AC store and real test root
+    with --base-ref HEAD, once for 1 requirement id and once for 50 ids drawn from the store (ids
+    with must_catch entries included). Each run prints the list shape and exits 0. The gated timing
+    assertion is relative: the 50-id run takes at most 2.0 x the 1-id run's time + 1.0 s, and both
+    runs finish under an absolute ceiling of 15 s. The 2 s figure from TQ-500g-1-ix is a developer-
+    machine target, not asserted here. For the same ids, the owed names and files equal what the
+    write step and the runner derive through the shared reader.
+  must_catch:
+  - list rescans the whole test root per id
+  - a second reader added for list that disagrees with the runner's
+  - list cost grows with the number of ids
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_scope.py
+  - scripts/build_orchestration/_wvw_list.py
 test_required: true
 test_rationale: >-
   A workflow gate is only proven by driving the workflow and asserting that its replies control the
@@ -431,6 +515,14 @@ amended_by:
 - reason: "User-approved criteria amendment (2026-10-15), from the IT-PO's clauses for the BA: the runs now follow asking the writer what is owed and, when anything is, having test-breaker prepare it from that list unchanged; F3's outcome is the runner's own not-applicable outcome (on main: 'wrong-version runs not applicable: no covering test declares a wrong version or the discrimination angle'), never 'verified'. depends_on gains TQ-500g-1-iv, TQ-500g-1-ix and TQ-500g-1-x. All other clauses kept."
   date: '2026-10-15'
   by: business-analyst
+  directed_by: user
+- reason: "Technical amendment after TQ-500g-1-x merged: --base-ref on all three steps (list, the writer's write step via finish, and the runner); owed items carry the additive scope key and reach test-breaker unchanged; expects_from gains TQ-500g-1-x. List-speed fix (user decision 2026-10-15): new it_requirement and timing test against the real repo (82 s for one id vs. the 2 s / 50 ids budget of TQ-500g-1-ix), fixed in the one shared reader. Every must_catch entry now names the files this AC touches. Criteria unchanged."
+  date: '2026-10-15'
+  by: it-po
+  directed_by: user
+- reason: "List-speed gate changed after CI evidence (user decision 2026-10-21): the absolute 2 s budget passed in every CI test shard, on Windows and in a Linux replica, but failed 3 times running in CI's Proof-of-done job. The gated assertion is now scaling (50 ids <= 2.0 x the 1-id time + 1.0 s) plus an absolute 15 s ceiling per run; the 2 s figure stays a developer-machine target. it_requirement and test_spec entry test_writer_list_meets_time_budget_on_real_repo rewritten; must_catch gains 'list cost grows with the number of ids'. Criteria unchanged."
+  date: '2026-10-21'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []
@@ -497,3 +589,24 @@ notes: |
   their names with files [], so test-breaker can prepare nothing for them and
   the runner reports them unfinished. Wiring this route before those entries
   are backfilled stops every fast-lane work whose ACs carry such entries.
+
+  IT-PO AMENDMENT (2026-10-15): AFTER TQ-500g-1-x
+  TQ-500g-1-x is merged: owed names without a declaration now get a derived
+  scope (scope "derived") from the files the work changed against --base-ref,
+  which replaces the files [] case in the follow-up above. --base-ref goes to all three steps; finish
+  forwards it to the write step as well as the runner. The route passes owed
+  (with its scope key) to test-breaker unchanged.
+  LIST SPEED (user decision 2026-10-15): list took 82 s for one id here
+  against a 2 s / 50 ids budget. Fix it in the shared reader before wiring the
+  route, proven by a timing test on the real repo. No second reader.
+  in_scope_files on every must_catch entry now name the files this AC touches
+  (fast-lane-ship.js, fast_lane.py, wrong_version_gate.py); the timing test
+  names the reader modules (_wvr_scope.py, _wvw_list.py).
+
+  IT-PO AMENDMENT (2026-10-21): LIST-SPEED GATE IS SCALING PLUS A CEILING
+  The absolute 2 s budget failed 3 times in a row in CI's Proof-of-done job
+  (its own runner) while passing in every test shard, on Windows and in a
+  Linux replica. User decision: gate on scaling (50 ids <= 2.0 x 1-id time
+  + 1.0 s, catches a per-id rescan at any machine speed) plus a 15 s ceiling
+  per run (catches the original 82 s defect). The 2 s figure stays a target
+  measured on a developer machine, not a CI gate.

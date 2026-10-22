@@ -125,6 +125,18 @@ def _init_repo(path: Path) -> Path:
     return path
 
 
+def _import_under_name(module_name: str, path: Path):
+    """Import the file at *path* as a fresh module named *module_name*."""
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot build an import spec for {path}"
+        raise AssertionError(msg)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _load_relocated_copy(real_source: Path, dest_dir: Path):
     """Copy *real_source* to *dest_dir* and import it so its ``__file__`` is the copy.
 
@@ -147,12 +159,13 @@ def _load_relocated_copy(real_source: Path, dest_dir: Path):
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / "setup_ticket_worktree.py"
     shutil.copy2(real_source, dest_path)
+    # The script imports its sibling _setup_ticket_*.py modules from build_orchestration/ beside it.
+    sibling_dir = dest_dir / "build_orchestration"
+    sibling_dir.mkdir(parents=True, exist_ok=True)
+    for sibling in sorted((_REPO_ROOT / "scripts" / "build_orchestration").glob("_setup_ticket_*.py")):
+        shutil.copy2(sibling, sibling_dir / sibling.name)
     module_name = f"_bo4100d4_copy_{uuid.uuid4().hex}"
-    spec = importlib.util.spec_from_file_location(module_name, dest_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return _import_under_name(module_name, dest_path)
 
 
 class TestGitToplevelAnchorDefect(unittest.TestCase):
@@ -358,10 +371,7 @@ class TestGitToplevelAnchorDefect(unittest.TestCase):
                 # Load the REAL script from its true, unmodified, in-repo
                 # location — no copying, no relocation.
                 module_name = f"_bo4100d4_inplace_{uuid.uuid4().hex}"
-                spec = importlib.util.spec_from_file_location(module_name, real_source)
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
+                module = _import_under_name(module_name, real_source)
 
                 # The calling context is genuinely inside this repository too,
                 # matching real-world invocation of the checked-out source.

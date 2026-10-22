@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400e
 criteria: |
   Given the knowledge backend requires a database name and a username
@@ -84,8 +84,12 @@ amended_by:
     waiver is the deliberate price of not stretching KM-400f's wording to cover a fifth
     child it does not honestly describe."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/knowledge/test_km_400e_8.py
+implemented_by:
+  - knowledge/cli_sync.py
+  - .github/workflows/knowledge-sync.yml
+  - docs/how-to/run-knowledge-retrieval.md
 change_target: [code, config, docs]
 risk_surface: contract_boundary
 notes: |
