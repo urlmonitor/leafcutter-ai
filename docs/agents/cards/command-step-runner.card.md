@@ -43,6 +43,8 @@ facing; never a ticket phase)**
 
 - `user`
 - `fast-lane-ship.js`
+- `build-feature.js`
+- `build-ticket.js`
 ---
 
 ## Knowledge Flow
@@ -64,10 +66,14 @@ flowchart TD
 
     user["user\n(phase tier)"]:::phase
     fast_lane_ship.js["fast-lane-ship.js\n(phase tier)"]:::phase
+    build_feature.js["build-feature.js\n(phase tier)"]:::phase
+    build_ticket.js["build-ticket.js\n(phase tier)"]:::phase
     command_step_runner["command-step-runner\n(utility tier, priority ?)"]:::target
 
     user -->|dispatches| command_step_runner
     fast_lane_ship.js -->|dispatches| command_step_runner
+    build_feature.js -->|dispatches| command_step_runner
+    build_ticket.js -->|dispatches| command_step_runner
 ```
 ---
 

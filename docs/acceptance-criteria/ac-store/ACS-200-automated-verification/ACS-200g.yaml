@@ -58,6 +58,7 @@ superseded_by: null
 covered_by:
   - ACS-200g-1
   - ACS-200g-2
+  - ACS-200g-3
 implemented_by: []
 change_target: pipeline
 risk_surface: safety
@@ -81,3 +82,7 @@ notes: |
   only L1 (ACS-200d, ticket source_acs) is a different subject, so this record
   takes a letter slot as an L2 — the same slot shape its siblings ACS-200e and
   ACS-200f occupy, per the reasoning recorded in ACS-200f-1.
+  CHILD ACS-200g-3 (added 2026-10-21, user decision, fixes KI-TQ-20261021):
+  the reachability check of the schema guardrail runs the real deployed entry
+  point against a small fixture repository instead of the real one, so its run
+  time no longer grows with the store and it stops timing out on cold CI runners.
