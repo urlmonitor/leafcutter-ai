@@ -949,7 +949,9 @@ helper in the Yes path below does that after a successful capture (A2.4).
    keeps the record unrouted until it can be classified. **Fail open:** if the
    helper prints a warning or exits non-zero (for example the install has no
    usable sink declaration), do not retry or work around it — finish your
-   sign-off anyway.
+   sign-off anyway. If the command exited non-zero, also record the failure
+   as the `agent-telemetry` skill's `Failed capture attempt` section directs
+   (ADR-034 Amendment 2 A2.8).
 
    The JSON below documents the record the helper writes; you do not produce it
    by hand.
@@ -1066,9 +1068,10 @@ asks an agent to load either, so their absence is not a condition that can
 occur here anymore. The one recognised escape hatch is a failure of the emit
 helper itself (it warns or exits non-zero, e.g. the build-time sink
 declaration is missing or stale): log a warning and proceed — do not block
-sign-off. (What the proceed-anyway branch
-must leave behind as a countable artefact is `INF-700b-1-ii`'s obligation,
-not re-specified here.)
+sign-off. When the helper exited non-zero, the proceed-anyway branch leaves
+a countable failure record: run the ONE command in the `agent-telemetry`
+skill's `Failed capture attempt` section, exactly as written there (ADR-034
+Amendment 2 A2.8). Include `--ticket` only when you have a ticket path in hand.
 
 ---
 

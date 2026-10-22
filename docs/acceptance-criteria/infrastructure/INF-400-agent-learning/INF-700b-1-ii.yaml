@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-1.yaml"
@@ -106,10 +106,20 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. CAVEAT (BP-1100f-3-i partial-surface flag): assigned_agent remains llm-expert because the criteria's subject is the capture step's branch behaviour, which lives in Markdown templates. But the failure record's writer is a Python surface llm-expert cannot author, and the deployed emitter (agent-telemetry/scripts/emit_event.py) has a closed payload of { phase, outcome, retry_count } with nowhere to put the missing-target name. Not split: a split would require inventing criteria about a writer script that the BA's criteria never mention, and INF-700b is already at its five-child cap so a sibling is structurally unavailable. Recorded instead as an it_requirement plus a recommended python-coder follow-up AC for the emitter payload extension."
     by: it-po
     at: 2026-08-26
+  - reason: "Marked done at record level: distinguishability (AC-6) is scoped by this AC's Implementation Notes to the record's closed-set outcome field (failed vs nothing-to-record), which tests/knowledge/test_inf_700b_1_ii.py proves. The period-level partition that counts these rows is INF-700b-3's job and is not built; done here must not be read as implying it exists. delivers_to.agent still reads python-coder; it is superseded by llm-expert per the 2026-10-21 architect-review (emit_event.py support landed in INF-700b-1-i), and that requirement-defining field is deliberately left unedited."
+    by: ac-fulfillment-gate
+    at: 2026-10-22
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_inf_700b_1_ii.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/03_TICKET-20261016-INF-700b-1-ii.md
+- templates/skills/agent-telemetry/SKILL.md
+- templates/skills/signoff/SKILL.md
+- templates/agents/product-owner.md
+- templates/agents/business-analyst.md
+- templates/agents/it-po.md
+- templates/skills/agent-telemetry/scripts/emit_event.py
 notes: |
   This is the AC that closes the specific way this loop died: the step declares
   itself mandatory and then permits a warning as the exit, so eight weeks of
