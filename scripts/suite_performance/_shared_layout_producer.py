@@ -29,6 +29,11 @@ ARCHITECTURE: Private helper imported by
          processes: the first caller to acquire the lock produces; every
          other caller blocks on the same lock, then observes the
          now-complete (or now-failed) cache instead of retrying.
+      3. (Maker-state seed: ``_shared_layout_seed`` writes the maker's
+         ``.leafcutter/`` marker and rescue files into the staging dir first;
+         after the build their survival is written to a sidecar in the run
+         directory and they are removed again, so the published layout is
+         pristine. Read the result with ``seeded_survival()``.)
       3. Production runs a real, DIRECTED
          ``python <this worktree>/scripts/build.py --target-dir <private>``
          subprocess straight against an EMPTY private staging directory --
@@ -98,6 +103,12 @@ import sys
 import threading
 from pathlib import Path
 
+from scripts.suite_performance._shared_layout_seed import (
+    SEEDED_STATE_FILES,
+    read_seeded_survival,
+    record_and_clear_seed,
+    seed_maker_state,
+)
 from scripts.suite_performance._shared_layout_coordination import (
     MANIFEST_FILENAME,
     PRIVATE_DIRNAME,
@@ -111,7 +122,12 @@ from scripts.suite_performance._shared_layout_coordination import (
     write_failure_record,
 )
 
-__all__ = ["SharedReferenceLayoutError", "get_or_produce_shared_layout"]
+__all__ = [
+    "SEEDED_STATE_FILES",
+    "SharedReferenceLayoutError",
+    "get_or_produce_shared_layout",
+    "seeded_survival",
+]
 
 _log = logging.getLogger(__name__)
 
@@ -218,9 +234,11 @@ def _produce(run_base: Path, published: Path) -> Path:
     """Produce the layout via a directed build into an empty private dir,
     then publish it.
 
-    No source-tree copy: *private* is left for ``build.py`` itself to
-    create (its ``--target-dir`` writes the deployed output straight into
-    it) -- see ``_run_build_subprocess``'s docstring for why this is a
+    No source-tree copy: ``build.py`` writes the deployed output straight into
+    *private*, which holds only the maker-state seed (``_shared_layout_seed``;
+    BO-4300a-1 IT9) when the build starts. After the build the seed's survival is
+    recorded to a sidecar in *run_base* and the seed is removed, so the published
+    layout is pristine -- see ``_run_build_subprocess``'s docstring for why this is a
     DIRECTED build rather than the self-targeting form. The staging dir is
     only renamed to *published* after ``.build_manifest.json`` is confirmed
     present at its root, so a waiter can never observe a partially-written
@@ -245,6 +263,7 @@ def _produce(run_base: Path, published: Path) -> Path:
         # half-deployed staging dir).
         shutil.rmtree(private, ignore_errors=True)
 
+    seed_maker_state(private)
     _run_build_subprocess(private)
 
     if not (private / MANIFEST_FILENAME).exists():
@@ -252,6 +271,9 @@ def _produce(run_base: Path, published: Path) -> Path:
             f"deploy subprocess exited 0 but {private / MANIFEST_FILENAME} is "
             "missing -- refusing to publish an incomplete layout"
         )
+
+    # The seed proved itself against that one build; take it out before publishing.
+    record_and_clear_seed(private, run_base)
 
     try:
         os.rename(private, published)
@@ -265,6 +287,16 @@ def _produce(run_base: Path, published: Path) -> Path:
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
+
+def seeded_survival() -> dict[str, dict[str, bool]]:
+    """Return ``{rel_path: {"present": bool, "sha256_matches": bool}}`` for the seed.
+
+    Read from the sidecar ``<run_base>/seeded-survival.json`` written during the
+    layout's one real build; produces the layout first if it does not exist yet.
+    """
+    get_or_produce_shared_layout()
+    return read_seeded_survival(run_base_dir())
 
 
 def get_or_produce_shared_layout() -> Path:

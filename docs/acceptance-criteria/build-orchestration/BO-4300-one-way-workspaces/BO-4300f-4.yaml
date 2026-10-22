@@ -160,6 +160,11 @@ implemented_by:
 - unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
 - unit_tests/build_orchestration/test_bo_4300f_4.py
 - unit_tests/build_orchestration/test_bo_4300f_4_i.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- scripts/suite_performance/_shared_layout_producer.py
+- unit_tests/build_orchestration/_bo_4300f_2_fixtures.py
+- .github/workflows/ci.yml
+- unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
 notes: |
   F13: most behavioural fast-lane tests exercise the tracked scripts/ copy rather than the
   deployed template, no test runs the template's ac or fast-lane create against a real
