@@ -1,5 +1,5 @@
 id: GE-117b-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "A changed public symbol docstring referencing a real AC satisfies the symbol-AC declaration"
 component: guardrail-engine
@@ -32,6 +32,7 @@ criteria: |
   Then the check produces no verdict for that unchanged symbol
 depends_on:
   - GE-117b
+  - GE-124c-2-i
 doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b.yaml"
     relationship: parent
@@ -45,24 +46,96 @@ doc_links:
   - path: "docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md"
     relationship: describes
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124c-2-i.yaml"
+    relationship: related
+    status: exists
+    relevance: "Owns the ONE shared AC-id resolver that GE-117, GE-124 and GE-111 must all call."
+  - path: "templates/scripts/commit_guardian/_ac_store_index.py"
+    relationship: reuses
+    status: exists
+    relevance: "get_ac_index — the fingerprint-cached store index the shared resolver is built on."
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "Implement the symbol-AC surface in the same NEW hook check_declaration_traceability.py (module and symbol surfaces share the hook); the decision-history surface (GE-117c) EXTENDS the existing check_documentation.py tail-tag validator — do not duplicate AC-resolution logic across the two, share it (see next requirement)."
-  - "Discover top-level public symbols by parsing the STAGED blob in-process with the Python stdlib ast module: walk module-body FunctionDef/AsyncFunctionDef/ClassDef nodes. A symbol is public when its name does not start with '_', EXCEPT that when the module defines __all__ the __all__ membership is authoritative. No MCP/jcodemunch — a commit hook has no MCP channel."
-  - "Resolve each declared AC reference against the AC store by EXTRACTING scan_ac_store.py's _load_ac_by_id into an importable shared module that both this hook and scan_ac_store.py depend on (extract-don't-copy; guarantee no regression to scan_ac_store.py's existing behavior). A reference is VALID iff _load_ac_by_id returns a record; None means the id does not exist."
+  - "Implement the symbol-AC surface in the same NEW hook as GE-117a-1 (templates/scripts/commit_guardian/check_declaration_traceability.py); the module and symbol surfaces share the hook and its staged-blob parse."
+  - "Discover top-level public symbols by parsing the STAGED blob in-process with the Python stdlib ast module: module-body functions (sync and async) and classes. A symbol is public when its name does not start with '_', EXCEPT that when the module defines __all__ the __all__ membership is authoritative. No MCP/jcodemunch — a commit hook has no MCP channel."
+  - "A symbol is 'new or changed' when it is absent from HEAD or its source span differs between HEAD and the index; an unchanged symbol in a changed file produces no verdict."
+  - "Resolve each declared AC reference ONLY through the shared id-resolution entry point GE-124c-2-i adds to scripts/ac_store/ac_coverage_resolver.py (backed by _ac_store_index.get_ac_index), shared with GE-124 and GE-111. Do NOT extract or copy scan_ac_store._load_ac_by_id and do NOT add another store walker. If GE-124c-2-i has not landed when this is built, build that entry point first rather than shipping a private resolver that GE-124c-2-i would then have to unpick."
+  - "Treat the resolver's 'store unreachable' answer as its own state: a loud fail-open advisory (GE-120), never an 'invalid' verdict and never a silent pass."
   - "Emit the per-symbol verdict {file, symbol, surface: 'symbol-ac', verdict: 'satisfied'|'missing'|'invalid', declared_refs: [str], resolved: bool}; declared_refs is always a list; keep the shape structurally aligned with the module-component and decision-history verdicts for GE-117d-1 aggregation."
   - "Scope is diff-only AND public-only: only new/changed public symbols are evaluated; unchanged symbols and private symbols produce no verdict."
   - "Docstring PRESENCE is GE-100's floor and is NOT re-specified here; this surface asserts only that an existing public-symbol docstring carries a resolvable AC reference."
   - "Fail-open on INTERNAL hook error only (exit 0, stderr advisory, clean stdout); real missing/invalid declarations fail-closed via GE-117d-1."
-  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify parity via the build.py round-trip (ADR-001)."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip, confirming the shared resolver and the index module it imports are reachable in the deployed layout."
 delivers_to:
   agent: python-coder
   contract: "Per-symbol AC-declaration verdict {file, symbol, surface: 'symbol-ac', verdict: 'satisfied'|'missing'|'invalid', declared_refs: [str], resolved: bool} consumed by GE-117d (block) and GE-117e (message/autofix)"
-expects_from: null
+expects_from:
+  ac_id: GE-124c-2-i
+  contract: "One public id-resolution entry point on scripts/ac_store/ac_coverage_resolver.py: an AC id string in, one of three answers out (resolved record | not-found | store-unreachable), observing the store at call time with no private snapshot"
+test_spec:
+  - name: test_ge_117b_1_public_symbol_citing_a_resolvable_ac_is_satisfied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo with a temp AC store containing GE-900a-1, stage a new public function whose docstring cites GE-900a-1: one symbol-ac verdict for it, verdict 'satisfied', declared_refs ['GE-900a-1']."
+  - name: test_ge_117b_1_public_symbol_citing_no_ac_is_missing_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a changed public function whose docstring cites no AC: the verdict is 'missing', surface 'symbol-ac', and it names the symbol."
+  - name: test_ge_117b_1_unchanged_symbol_in_a_changed_file_gets_no_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Commit a file with two AC-less public functions to HEAD, then stage an edit to only one of them: a verdict is produced for the edited function and none for the untouched one."
+    must_catch:
+      - "treats every public symbol in a changed file as changed"
+  - name: test_ge_117b_1_classes_and_async_functions_are_evaluated
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Stage a new public class and a new public async function, both without an AC reference: each gets its own 'missing' verdict."
+    must_catch:
+      - "walks only FunctionDef nodes and misses ClassDef or AsyncFunctionDef"
+  - name: test_ge_117b_1_resolution_comes_from_the_shared_resolver_only
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Patch the GE-124c-2-i shared entry point to answer not-found for every id, then evaluate a symbol citing an AC that DOES exist in the temp store: the verdict is not 'satisfied'. A surviving private resolution path keeps resolving and fails this test."
+    must_catch:
+      - "resolves AC ids through a private store walker or a copy of scan_ac_store._load_ac_by_id instead of the shared entry point"
+  - name: test_ge_117b_1_unreachable_store_is_neither_invalid_nor_a_silent_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Point the check at an absent AC store: it produces no 'invalid' verdict for the cited id, and it writes an advisory naming the unreadable store to stderr instead of passing silently."
+test_rationale: |
+  The three criteria scenarios are proven against a real temp git index and a real temp AC
+  store, because both inputs are file-backed and the defects that matter live at those seams.
+  Two boundary tests target the classic diff-scoping and ast-walk mistakes that pass the happy
+  path. The seam test is the behavioural form of 'use the shared resolver'. It forces the shared
+  entry point to lie and asserts the check believes it. A grep for an import line would pass on
+  a copy that imports the resolver and then overrides it. GE-124c-2-i requires the three checks
+  to agree, and only this form proves it. The failure test pins the third resolver answer: an
+  unreadable store must not show up as 'invalid' (a false block) or as a pass (a false green).
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Re-pointed AC-id resolution from 'extract scan_ac_store._load_ac_by_id' to the shared GE-124c-2-i entry point (the GE-124 tree requires all three traceability checks to share one resolver), set expects_from to GE-124c-2-i, defined 'changed symbol', added the store-unreachable state, and added change_target, declared_files, test_spec and test_rationale. Corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by:
   - GE-117b-1-i

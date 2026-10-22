@@ -1,5 +1,5 @@
 id: GE-117a
-readiness: draft
+readiness: approved
 priority: medium
 title: "Each file states which part of the system it belongs to"
 component: guardrail-engine

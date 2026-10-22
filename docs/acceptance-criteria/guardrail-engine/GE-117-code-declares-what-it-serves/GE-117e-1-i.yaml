@@ -42,20 +42,73 @@ doc_links:
   - path: "docs/components.json"
     relationship: related
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "PROMPT-never-fabricate is the safety floor for autofix: multi-candidate match => present candidates and insert only after selection; no match => report inability and ask the developer to supply the value; no single confident contextual AC => ask the developer for the AC. Never invent a component name or AC id."
-  - "Given the GE-117e-1 component-inference PREREQUISITE (components.json has no directory_patterns; index.yaml patterns are a different id namespace), the module-component autofix's DEFAULT path today is the no-confident-inference PROMPT specified here — i.e. until a components.json pattern-inference lands, the module-component branch always reaches this prompt behavior rather than the GE-117e-1 auto-insert branch."
-  - "AC-ref prompt-on-ambiguity is independent of that prerequisite and applies whenever commit context does not yield a single resolvable AC."
-  - "Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "PROMPT-never-fabricate is the safety floor for autofix: multi-candidate match => present every candidate and insert only after selection; no match => report inability and ask the developer to supply the value; no single confident contextual AC => ask the developer for the AC. Never invent a component name or AC id."
+  - "Multi-match means more than one docs/components.json component's primary_code covers the file; no-match means none does (the GE-117e-1 inference rule). index.yaml directory_patterns play no part in either."
+  - "A value the developer supplies is validated before insertion: a component must be a registered components.json id and an AC must resolve through the shared GE-124c-2-i resolver; an unvalidated value is refused, not written."
+  - "Without an interactive terminal (no TTY, or end of input) the autofix writes nothing and exits reporting that a choice is required; it never falls back to a default."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed entry point after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117e-1
   contract: "The autofix apply behavior whose ambiguous / no-confident-inference branch this edge case defines"
+test_spec:
+  - name: test_ge_117e_1_i_multi_match_presents_candidates_and_waits_for_selection
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With two components whose primary_code both cover the staged file, run the autofix with scripted input: the prompt lists both ids, the file is byte-identical before the selection, and after selecting the second id that id (only) is inserted."
+    must_catch:
+      - "silently picks the first or the longest matching primary_code prefix"
+  - name: test_ge_117e_1_i_no_match_inserts_nothing_and_asks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With no component covering the staged file, run the autofix: the file is byte-identical, and the output says the component could not be inferred and asks for one."
+    must_catch:
+      - "inserts a placeholder, the parent directory name or a default component"
+  - name: test_ge_117e_1_i_no_single_contextual_ac_inserts_nothing_and_asks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With the commit context declaring zero AC ids, and in a second run two, invoke the autofix for a blocked public symbol: no AC reference is inserted in either run and the developer is asked for the AC."
+    must_catch:
+      - "inserts the first of several contextual AC ids"
+  - name: test_ge_117e_1_i_supplied_value_is_validated_before_insertion
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Answer the prompts with an unregistered component and a dangling AC id: neither is written to the file."
+  - name: test_ge_117e_1_i_non_interactive_run_writes_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Run the autofix on an ambiguous item with stdin closed: the file is byte-identical and the exit reports that a choice is required."
+test_rationale: |
+  Every criteria scenario here is a negative claim, that the autofix does not write. So each
+  test asserts the file is byte-identical, not just that a prompt was printed. A tool can print
+  the right prompt and still have written a guess. Prompts are driven with scripted input so
+  the tests run unattended. Two cases are added beyond the criteria because they are how
+  'never fabricate' is lost in practice: accepting an unvalidated typed value, and defaulting
+  when no terminal is attached (CI, an agent, a hook runner).
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Replaced 'the module-component branch always prompts until a components.json pattern field lands' with the primary_code multi/no-match rule (see GE-117e-1); added validation of developer-supplied values and the non-interactive rule; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

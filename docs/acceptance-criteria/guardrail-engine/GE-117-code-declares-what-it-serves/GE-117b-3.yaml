@@ -1,5 +1,5 @@
 id: GE-117b-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "How-to guide: citing the AC a public function or class satisfies"
 component: guardrail-engine
@@ -33,6 +33,8 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "Teach the SAME 'public' definition GE-117b-1 implements (underscore rule, __all__ authoritative) and the multi-AC citation form from GE-117b-1-ii; keep the cited-reference format consistent with what the coder implements."
