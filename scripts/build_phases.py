@@ -327,6 +327,7 @@ from build_phases_clean import (  # noqa: E402, F401  # re-exported for callers
     _MANAGED_ARTIFACT_DIRS,
     clean_stale_artifacts,
 )
+from build_phases_feedback_writers import run_feedback_writer_check  # noqa: E402, F401  # re-exported (INF-100c-5)
 
 
 def _compute_phase_mappings(

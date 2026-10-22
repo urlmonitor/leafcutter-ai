@@ -85,6 +85,8 @@ def _plant(root: Path, name: str = _NAME, *, signoff=_ABSENT, grants=("signoff",
     rec["skills_invoked"] = [{"skill_id": g, "mode": "always"} for g in shown]
     data["agents"] = [a for a in data["agents"] if a["id"] != name] + [rec]
     _write_registry(root, data)
+    if signoff is True:
+        _register_writer(root, name)
 
 
 def _set_tier(root: Path, name: str, tier: str) -> None:
@@ -102,7 +104,19 @@ def _clean_pkg(base: str) -> Path:
     tpl = root / "templates" / "agents" / "product-owner.md"
     tpl.write_text(tpl.read_text(encoding="utf-8").replace("signoff: false", "signoff: true"),
                    encoding="utf-8")
+    _register_writer(root, "product-owner")
     return root
+
+
+def _register_writer(root: Path, name: str) -> None:
+    """A signing-off specialist must be a feedback writer (INF-100c-5), so a copy that makes
+    one sign off also registers it; otherwise the writer check, not the grant check, fails."""
+    cats_path = root / "templates" / "config" / "feedback_categories.yaml"
+    cats = yaml.safe_load(cats_path.read_text(encoding="utf-8"))
+    complete = next(c for c in cats["categories"] if c["id"] == "complete")
+    if name not in complete["allowed_writers"]:
+        complete["allowed_writers"].append(name)
+    cats_path.write_text(yaml.safe_dump(cats, sort_keys=False), encoding="utf-8")
 
 
 def _validator_door(root: Path) -> list[str]:
