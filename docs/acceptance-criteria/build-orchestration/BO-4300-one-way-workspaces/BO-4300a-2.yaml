@@ -193,8 +193,10 @@ amended_by:
 superseded_by: null
 covered_by:
   - unit_tests/build_orchestration/test_bo_4300a_2.py
+  - unit_tests/build_orchestration/test_bo_4300a_2_safe_slugs.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
+- templates/scripts/worktree_identity.py
 notes: |
   F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
   EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
