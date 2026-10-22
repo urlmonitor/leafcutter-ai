@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-21'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 28** (1 blocker, 15 high, 12 low) · **Resolved: 3**
+**Open: 29** (1 blocker, 15 high, 13 low) · **Resolved: 5**
 
 ## Open
 
@@ -97,3 +97,4 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `high` | KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture | [resolved-high-ki-tq-012-a-test-fixture-reassigns-the-real.md](testing-quality/resolved/resolved-high-ki-tq-012-a-test-fixture-reassigns-the-real.md) |
 | `high` | KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits | [resolved-high-ki-tq-20260901-1310.md](testing-quality/resolved/resolved-high-ki-tq-20260901-1310.md) |
 | `low` | KI-TQ-20260928-subtest-failures-read-as-passed — the shared pytest outcome parser reads a test whose only failures are in subTest blocks as PASSED | [resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md](testing-quality/resolved/resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md) |
+| `high` | KI-TQ-20261021-acs200g-hook-run-outgrows-its-30s-timeout — the ACS-200g reachability test runs the deployed check_ac_schema.py under a hard 30 s timeout, but one staged record still makes the hook index the whole AC store, so a cold CI runner times out at random and fails the required suite | [resolved-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md](testing-quality/resolved/resolved-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md) |

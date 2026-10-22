@@ -106,6 +106,7 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `write-c4-diagram` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration

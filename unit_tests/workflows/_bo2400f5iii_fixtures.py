@@ -44,6 +44,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 from workflows._fast_lane_claim_fixtures import claim_declined, claim_ran  # noqa: E402
+from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
 WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
@@ -70,8 +71,17 @@ EXCLUDED_LABELS = frozenset(
 )
 
 
+# - "fastlane-wv-*" (TQ-500g-1-v): the wrong-version steps are command steps with their OWN halt
+#   contract -- a missing, declined or unusable reply halts as a ``blocked`` payload with
+#   failing_phase "wrong-version", releasing the claimed ACs and opening no commit or PR. They never
+#   emit ``halt_kind: declined_step``, so this sweep's shape assertion does not describe them; their
+#   halts are pinned in test_tq500g1v_route_halts.py.
+WRONG_VERSION_PREFIX = "fastlane-wv-"
+
+
 def _is_excluded(label: str) -> bool:
-    return label in EXCLUDED_LABELS or label.startswith("release-on")
+    return (label in EXCLUDED_LABELS or label.startswith("release-on")
+            or label.startswith(WRONG_VERSION_PREFIX))
 
 
 _RELEASABLE_FILES_MODIFIED = ["scripts/build_orchestration/fast_lane.py"]
@@ -150,6 +160,8 @@ BASE_RESPONSES: dict[str, Any] = {
         "message": "PR opened",
     },
 }
+
+BASE_RESPONSES.update(wrong_version_passing())
 
 
 def run_lane(overrides: dict[str, Any] | None = None) -> HarnessResult:

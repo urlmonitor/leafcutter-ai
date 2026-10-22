@@ -2255,6 +2255,11 @@
                 {
                     "skill_id": "write-c4-diagram",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3513,7 +3518,9 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "user",
-                "fast-lane-ship.js"
+                "fast-lane-ship.js",
+                "build-feature.js",
+                "build-ticket.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,

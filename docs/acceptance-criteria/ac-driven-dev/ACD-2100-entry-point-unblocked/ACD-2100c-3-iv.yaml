@@ -1,0 +1,119 @@
+id: ACD-2100c-3-iv
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Resuming a paused run stays on the route it was paused on instead of re-triaging into a different decision"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a run paused at a decision point other than covered-route-gate (for example
+    final-gate) whose durable pause record exists on disk, and whose own earlier stages
+    have already written and committed their AC records to the store, so that a fresh
+    triage of the same request would now classify it as 'covered',
+  When the route is started again with the person's answer supplied for that decision
+    point (args.resume_answer naming the gate the pause record names),
+  Then the resumed run reaches that decision point on the route the paused run was on --
+    taken from the paused record, not recomputed by a fresh triage against the current
+    store -- and applies the person's answer to it exactly as ACD-2100c-3 requires,
+  And covered-route-gate is never opened for such a resume,
+  And when the run pauses at any gate, the route it is on is recorded in that pause's
+    context so a later resume can take it from there,
+  And a fresh run (no resume_answer) and a resume of covered-route-gate itself keep
+    today's Stage 0 triage behaviour unchanged,
+  And the bug symptom ("Resuming a paused /plan-feature run (args.resume_answer set, a durable pause record naming e.g. final-gate) re-runs Stage 0 triage before reaching the paused gate. When the run's own earlier stages have already written and committed their AC records, triage now sees them, classifies the request as 'covered', and the run pauses at covered-route-gate instead of applying the person's answer at the gate it was paused at. Seen 2026-10-21 on run pf-shared-code-inliner-20261021b: the person answered the final gate with approve + priority high, the resumed run returned {status: paused_awaiting_input, gate_id: covered-route-gate}, and the approval was never applied (it had to be applied by hand).") must not occur.
+depends_on: [ACD-2100c-3, ACD-2100c-3-ii]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. Stage 0 triage is dispatched unconditionally and its route recomputed on every invocation, including a resume; pauseAtGate persists only the gate's context snapshot, which carries no route."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The resume contract this constrains: a resume must reach the decision the run is paused at."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+    relevance: "Operator how-to authored by ACD-2100e-2; resuming at the final gate is the flow it describes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change lands under templates/workflows-js/plan-feature.js only. .claude/workflows/plan-feature.js is build output."
+  - "When the run pauses at a gate, the effective route is recorded in the pause record's context alongside the existing snapshot."
+  - "When args.resume_answer is present and the durable pause record names a gate other than covered-route-gate, take the route from the paused record instead of re-classifying; covered-route-gate must not be opened for such a resume."
+  - "With no args.resume_answer, or when resuming covered-route-gate itself, Stage 0 triage behaves exactly as today."
+  - "If the pause record is unreadable, end with the existing pause_record_unreadable status rather than falling through to a fresh triage route."
+  - "FILE-SIZE RATCHET (GE-127): plan-feature.js is over its file-size limit; every added measured line must be offset by removing about two (redundant // comments or blank-line runs, no behaviour change), verified with scripts/commit_guardian/check_file_size.py run from the worktree."
+  - "Must satisfy the repository error-handling policy: reading the pause record is external I/O."
+test_spec:
+  - name: test_resume_at_final_gate_with_triage_now_covered_applies_answer_without_covered_gate
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Drive plan-feature through unit_tests/_workflow_engine_harness.py with stubbed agent()
+      replies: a pause record naming final-gate whose context records the paused route,
+      resume_answer approving final-gate, and a stubbed ac-triage that would now answer
+      'covered'. No covered-route-gate is raised and the final-gate answer is applied.
+  - name: test_pause_record_context_carries_the_effective_route
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A run that pauses at a gate writes a pause record whose context names the route the
+      run was on, read back from the pause-store write dispatched by the stubbed agent().
+  - name: test_fresh_run_triaged_covered_still_opens_covered_route_gate
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Without resume_answer, a stubbed ac-triage answering 'covered' still raises
+      covered-route-gate exactly as before.
+  - name: test_resume_of_covered_route_gate_keeps_triage_behaviour
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      A resume whose answer and pause record name covered-route-gate is handled by today's
+      triage path and the answer is applied to covered-route-gate.
+test_rationale: >-
+  The defect is a route recomputed against a store the run itself has changed, so each
+  test drives the real workflow code through the engine harness with stubbed agent()
+  replies rather than grepping the template. The final-gate case reproduces the observed
+  run and proves the answer is applied; the pause-context case pins the data the fix
+  depends on; the fresh-run and covered-gate-resume cases are the discrimination guards
+  that keep today's triage behaviour where it is still correct.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-3-ii
+    contract: "readPauseRecordWithRetry and the pause_record_unreadable terminal status for an unreadable pause record."
+origin_agent: BrainCandy
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Authored by /quick-fix. Root cause: Stage 0 triage is re-dispatched unconditionally on every invocation, including a resume, and its route decision is recomputed against the CURRENT store, which on a resume includes the run's own output. Nothing carries the original run's route across the pause: pauseAtGate() persists only the gate's context snapshot, which holds no route. So a resume can route away from the gate it is resuming. Fix: when the run is a resume of a paused gate (args.resume_answer present and the durable pause record names a gate other than covered-route-gate), the run must reach that paused gate on the route the paused run was on, not on a freshly recomputed one: record the effective route in the pause context when pausing, and on such a resume take the route from the paused record instead of re-classifying (in particular never open covered-route-gate for it). A fresh run, and a resume of covered-route-gate itself, keep today's triage behaviour. Note plan-feature.js is over its file-size limit: the check-file-size ratchet requires removing about twice the lines a change adds..
+
+  PLACEMENT: ACD-2100c is at its L2 cap of 5, and this is a technical constraint on the
+  already-specified ACD-2100c-3 behaviour (a paused run picks up at the decision it was
+  waiting on with the person's answer applied) -- re-triage must not divert the resume
+  into a different decision. Hence an L3 Roman-suffix child next to ACD-2100c-3-iii (the
+  same class of diversion via the orphan scan), not a new L2 and not a
+  child_limit_override.
+
+  PARENT STATE: ACD-2100c-3 carries work_status: done. That claim did not hold on the
+  live run named in the criteria; this todo child is the open constraint against it.

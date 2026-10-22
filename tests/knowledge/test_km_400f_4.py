@@ -320,6 +320,8 @@ def _fresh(tmp_path, name):
 
 def test_km_400f_4_reachable_from_entry_point(tmp_path):
     # covers: KM-400f-4
+    # covers: KM-400f — the composite outcome end to end: the real CLI keeps what the bound
+    # says to keep, lets the rest go and shows the remaining room (refusal: test_km_400f_3).
     # angle: reachability
     # Entry points: `python -m knowledge status` and `python -m knowledge reclaim` (knowledge.__main__.main()
     # with real argv in a fresh subprocess); only the writer's Neo4j driver is replaced.
