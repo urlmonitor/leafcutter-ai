@@ -69,6 +69,7 @@ from build_phases import (
     AC_STORE_DEPLOY_MAP,
     set_local_change_baseline,
     announce_if_local_change_replaced,
+    run_feedback_writer_check,
 )
 from agent_preparation_delivery import refuse_if_agents_compiled
 from build_phases_collisions import _check_deploy_collision_guard
@@ -359,7 +360,7 @@ def _inject_changelogs_dir(config: dict, package_root: Path) -> None:
 
 
 def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run: bool) -> int:
-    """Run config and registry validation and return an exit code.
+    """Run config, registry and feedback-writer validation and return an exit code.
 
     Returns 0 to continue, 1 to abort.
 
@@ -380,24 +381,15 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
     if registry_errors:
         if _handle_registry_errors(registry_errors, dry_run):
             return 1
-    return 0
+    return run_feedback_writer_check(package_root)  # INF-100c-5: signs-off vs allowed_writers
 
 
 # _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
 # (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
-
 # _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
-
-
 # _manifest_agent_support_scripts moved to build_deploy_manifest_helpers.py.
-
-
 # _manifest_template_standalone_scripts moved to build_deploy_manifest_helpers.py.
-
-
 # _manifest_doc_compliance_scripts moved to build_deploy_manifest_helpers.py.
-
-
 # _manifest_sync_platforms_scripts moved to build_deploy_manifest_helpers.py.
 # All eight moves above are the BP-1500g-1 headroom pass; imported from that
 # module above, unchanged in behaviour. _get_source_deployable_scripts and
