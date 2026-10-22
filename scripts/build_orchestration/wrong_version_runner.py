@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import _wvr_gate as gate_mod
+import gate_verdict_records as gvr
 from _wvr_pytest import PytestRun, run_selected
 from _wvr_scope import (
     UNDONE_NAME,
@@ -341,8 +342,29 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--ac-root", required=True)
     run.add_argument("--base-ref", default="HEAD")
     run.add_argument("--alterations", default="")
+    run.add_argument("--record", default=None, help="Ticket key the verdict record is written for.")
     sub.add_parser("recover", help="Put back any file a cut-short run left altered")
     return parser
+
+
+def _run_and_record(args: argparse.Namespace) -> dict:
+    """Run the ``run`` step and, with ``--record``, leave its verdict as ``wrong_version.json``.
+
+    A key that is not one plain path segment stops before anything runs or is written. A record that
+    cannot be written turns the verdict into ``gate_passed`` false naming the record.
+    """
+    if args.record is not None and not gvr.valid_key(args.record):
+        msg = f"record: ticket key {args.record!r} is not one plain path segment"
+        return assemble([row("", "", "invalid", msg)], reason_override=msg, outcome=msg)
+    ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+    try:
+        payload = run_runner(ids, Path(args.test_root), Path(args.ac_root), args.base_ref, args.alterations or None)
+    except BaseException as exc:  # noqa: BLE001 -- KeyboardInterrupt and friends still print the shape
+        payload = _failure_verdict(exc, Path(args.test_root))
+    if args.record is None:
+        return payload
+    error = gvr.write_record(Path(args.test_root), args.record, "wrong_version", ids, payload, args.base_ref)
+    return payload if error is None else {**payload, "gate_passed": False, "reason": f"record: {error}"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -364,11 +386,7 @@ def main(argv: list[str] | None = None) -> int:
             payload = recover(Path.cwd())
             ok = payload["ok"]
         else:
-            ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-            try:
-                payload = run_runner(ids, Path(args.test_root), Path(args.ac_root), args.base_ref, args.alterations or None)
-            except BaseException as exc:  # noqa: BLE001 -- KeyboardInterrupt and friends still print the shape
-                payload = _failure_verdict(exc, Path(args.test_root))
+            payload = _run_and_record(args)
             ok = payload["gate_passed"]
     print(json.dumps(payload))
     return 0 if ok else 1

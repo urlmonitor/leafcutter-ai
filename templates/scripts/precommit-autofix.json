@@ -239,6 +239,17 @@
       "instruction": "A staged file has a lint violation CI's required Lint (ruff) check would reject (file, line and rule are named). Fix the violation; on RESULT: could_not_check, follow the printed fix (e.g. install the pinned ruff) instead.",
       "agent": "python-coder",
       "skills": []
+    },
+    {
+      "hook_id": "check-build-epic-gate-verdicts",
+      "category": "mechanical",
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "description": "A /build-epic ticket is about to be committed without both gate verdicts on record (or the wrong-version verdict is out of date for the staged code). Re-run the missing or out-of-date gate, or stage the marked ticket file; never edit, delete or close a record or marker by hand.",
+      "disposition": "author-clears",
+      "instruction": "A /build-epic ticket is about to be committed without both gate verdicts on record (or the wrong-version verdict is out of date for the staged code). Re-run the missing or out-of-date gate, or stage the marked ticket file; never edit, delete or close a record or marker by hand.",
+      "agent": null,
+      "skills": []
     }
   ]
 }

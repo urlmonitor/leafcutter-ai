@@ -3520,7 +3520,8 @@
                 "user",
                 "fast-lane-ship.js",
                 "build-feature.js",
-                "build-ticket.js"
+                "build-ticket.js",
+                "build-epic.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
