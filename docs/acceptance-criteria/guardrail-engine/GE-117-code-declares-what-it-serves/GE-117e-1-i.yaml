@@ -1,5 +1,5 @@
 id: GE-117e-1-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "When the component or AC cannot be inferred unambiguously, autofix prompts instead of guessing"
 component: guardrail-engine
@@ -28,11 +28,24 @@ criteria: |
   And it reports that it could not infer the component and asks the developer to
     supply one
 
-  Given a commit was blocked because a new public symbol does not reference an AC
-  And the surrounding commit context does not supply a single unambiguous AC
-  When the developer invokes the guided autofix for that symbol
+  Given a commit was blocked because a new public symbol or a new decision-history
+    entry does not reference an AC
+  And the ticket the workspace maker recorded for the current branch declares two
+    or more source ACs, for example "GE-117e-1" and "GE-117e-2"
+  When the developer invokes the guided autofix for that item
+  Then the autofix does not silently pick one AC
+  And it presents those declared ACs as the candidates for the developer to choose
+  And it inserts an AC reference only after the developer selects one
+
+  Given a commit was blocked because a new public symbol or a new decision-history
+    entry does not reference an AC
+  And either the ticket the workspace maker recorded for the current branch
+    declares no source AC, or declares one source AC that does not exist in the AC
+    store, or no ticket is recorded for the current branch, or the recorded
+    ticket file is not present in the workspace
+  When the developer invokes the guided autofix for that item
   Then the autofix does not insert a guessed AC reference
-  And it asks the developer to supply the AC the symbol satisfies
+  And it asks the developer to supply the AC the item satisfies
 depends_on:
   - GE-117e-1
 doc_links:
@@ -52,7 +65,7 @@ declared_files:
   - path: templates/scripts/commit_guardian/check_declaration_traceability.py
     state: to_be_created
 it_requirements:
-  - "PROMPT-never-fabricate is the safety floor for autofix: multi-candidate match => present every candidate and insert only after selection; no match => report inability and ask the developer to supply the value; no single confident contextual AC => ask the developer for the AC. Never invent a component name or AC id."
+  - "PROMPT-never-fabricate is the safety floor for autofix: multi-candidate match => present every candidate and insert only after selection; no match => report inability and ask the developer to supply the value. For AC references the only source is the GE-117e-1 one: the ticket the workspace maker recorded for the current branch (branch.<branch>.leafcutterTicket), then that ticket's source_ac frontmatter (single id or list). Two or more declared ids => present exactly those declared ids as the candidates and insert only after the developer selects one. No declared id, one declared id that does not resolve through the GE-124c-2-i resolver, no recorded ticket, or a recorded ticket path whose file is not present in the workspace => insert nothing and ask the developer for the AC. Never invent a component name or AC id, and never take one from the commit message or branch name."
   - "Multi-match means more than one docs/components.json component's primary_code covers the file; no-match means none does (the GE-117e-1 inference rule). index.yaml directory_patterns play no part in either."
   - "A value the developer supplies is validated before insertion: a component must be a registered components.json id and an AC must resolve through the shared GE-124c-2-i resolver; an unvalidated value is refused, not written."
   - "Without an interactive terminal (no TTY, or end of input) the autofix writes nothing and exits reporting that a choice is required; it never falls back to a default."
@@ -83,9 +96,11 @@ test_spec:
     framework: unittest
     type: integration
     angle: criterion
-    description: "With the commit context declaring zero AC ids, and in a second run two, invoke the autofix for a blocked public symbol: no AC reference is inserted in either run and the developer is asked for the AC."
+    description: "In a temp git repo with a temp AC store containing GE-117e-1 and GE-117e-2, stage a module with a blocked public symbol, confirm the real hook blocks, and run the autofix in separate runs that vary only the recorded AC source. (1) Two ids: branch.<branch>.leafcutterTicket points at a ticket whose source_ac lists GE-117e-1 and GE-117e-2; run with scripted input: the prompt lists both declared ids as candidates, the file is byte-identical before the selection, and after selecting the second id that id (only) is inserted and the re-run hook reports 'satisfied'. (2) Zero ids: the recorded ticket has an empty source_ac. (3) No recorded ticket: branch.<branch>.leafcutterTicket is unset. (4) Missing ticket file: branch.<branch>.leafcutterTicket points at a path with no file. (5) Unresolvable single id: source_ac is one id absent from the store. In runs 2-5 the file is byte-identical, no AC reference is inserted, and the developer is asked for the AC."
     must_catch:
-      - "inserts the first of several contextual AC ids"
+      - "inserts the first of several declared AC ids"
+      - "offers candidates other than the ticket's declared source_ac ids"
+      - "inserts the unresolvable single id or a fallback id when no ticket is recorded or its file is missing"
   - name: test_ge_117e_1_i_supplied_value_is_validated_before_insertion
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -109,6 +124,8 @@ origin_agent: business-analyst
 created: 2026-07-02
 amended_by:
   - "2026-10-22 [it-po]: technical enrichment for approval. Replaced 'the module-component branch always prompts until a components.json pattern field lands' with the primary_code multi/no-match rule (see GE-117e-1); added validation of developer-supplied values and the non-interactive rule; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
+  - "2026-10-22 [business-analyst, user-directed (BrainCandy)]: criteria only, to stay consistent with the GE-117e-1 amendment that names the AC source (the workspace maker's recorded ticket for the branch and its source_ac). Replaced the vague 'surrounding commit context' scenario with two: several declared ACs -> present them as candidates, insert only after selection; no declared AC, one unresolvable AC, or no recorded ticket -> insert nothing and ask. Both now cover new decision-history entries as well as public symbols, matching GE-117e-1. Component scenarios, title, depends_on, req_status and readiness unchanged."
+  - "2026-10-22 [it-po, user-approved (BrainCandy)]: aligned technical fields with the amended criteria. it_requirements[0] now names the AC source (branch.<branch>.leafcutterTicket, then that ticket's source_ac, single value or list) and the per-case behaviour. test_ge_117e_1_i_no_single_contextual_ac_inserts_nothing_and_asks now scripts the candidate-selection step for the two-id run (mirroring the component multi-match test) and adds runs for no recorded ticket, a missing ticket file and an unresolvable single id. readiness draft -> approved on the user's approval. criteria, title, depends_on and req_status untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
