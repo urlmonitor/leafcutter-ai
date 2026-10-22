@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -172,6 +172,7 @@ test_spec:
   in_scope_files:
   - scripts/build_orchestration/_cs_edits.py
   - scripts/build_orchestration/consumer_sweep.py
+  - scripts/build_orchestration/_cs_symbols.py
 - name: test_w2_complete_list_goes_on
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -183,6 +184,7 @@ test_spec:
   - any edit to an existing test stops the work
   in_scope_files:
   - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/consumer_sweep.py
 - name: test_new_test_file_not_treated_as_existing
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -194,6 +196,7 @@ test_spec:
   - new file treated as existing because it matches test_*.py
   in_scope_files:
   - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/consumer_sweep.py
 - name: test_stale_or_unaffected_entry_does_not_excuse_edit
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -218,6 +221,7 @@ test_spec:
   - test source compared without its decorators
   in_scope_files:
   - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/_cs_symbols.py
 - name: test_unlisted_fixture_edit_stops_naming_symbol
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -231,6 +235,8 @@ test_spec:
   - conftest.py excluded from the existing-test set
   in_scope_files:
   - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/consumer_sweep.py
+  - scripts/build_orchestration/_cs_symbols.py
 - name: test_sweep_check_through_finish
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -262,6 +268,10 @@ amended_by:
     by: it-po
     at: 2026-10-22
     note: "Criteria unchanged. delivers_to -iii names the per-test split and the call order; file-size layout adds _cs_asserts.py."
+  - reason: "in_scope_files follow the finished code's module split"
+    by: it-po
+    at: 2026-10-22
+    note: "Criteria and must_catch unchanged; files only added. consumer_sweep.py (check(): added-status filter, is_test_path use, list reading) added to test_w2_complete_list_goes_on, test_new_test_file_not_treated_as_existing, test_unlisted_fixture_edit_stops_naming_symbol. _cs_symbols.py (per-symbol split incl. decorators, fixtures, helpers) added to test_w1_unlisted_edit_stops_naming_file_and_tests, test_decorator_only_edit_is_an_edit, test_unlisted_fixture_edit_stops_naming_symbol."
 superseded_by: null
 covered_by: []
 implemented_by: []
