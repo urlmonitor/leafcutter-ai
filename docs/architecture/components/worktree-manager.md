@@ -7,7 +7,7 @@ status: active
 type: reference
 root: true
 created: 2026-06-08
-last_updated: 2026-10-13
+last_updated: 2026-10-22
 source_ticket: "tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md"
 components:
   - worktree_manager
@@ -165,6 +165,8 @@ deploy-manifest entry:
 | `worktree_paths.py` | Native and POSIX spellings of every path |
 | `worktree_git.py` | The git and marker primitives |
 | `worktree_ensure_state.py` | The per-work lock, setting the work aside and putting it back, and finishing half-made workspaces |
+| `worktree_ensure_steps.py` | The git steps of `ensure` (clone the main checkout, point `origin` at the hub, fetch with pruning) and the base and bootstrap fields of an ok answer |
+| `worktree_ticket_record.py` | Recording which ticket a `ticket` workspace's line is built for, and the `BUILT_FOR_OTHER_TICKET` refusal |
 | `worktree_readiness.py`, `worktree_canaries.py` | The readiness proof and the per-stage canary commits |
 | `worktree_admin.py`, `worktree_remove.py` | `locate`, `list`, `remove` and the unsent-work check |
 | `worktree_migrate.py` | `migrate-legacy` |

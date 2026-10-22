@@ -114,6 +114,7 @@ amended_by: []
 superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300b_4.py
+- unit_tests/build_orchestration/test_bo_4300b_4_links.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
 - templates/scripts/worktree.py

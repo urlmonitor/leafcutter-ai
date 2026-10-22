@@ -28,11 +28,13 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
+import workspace_root
 import worktree_answer as wa
 import worktree_git as wg
 import worktree_log_root as wlr
@@ -151,6 +153,52 @@ def hook_checks(stages: list[str], fired: dict[str, bool], kind: str) -> dict[st
     return out
 
 
+_REPARSE_POINT = 0x400  # Windows FILE_ATTRIBUTE_REPARSE_POINT (symlink or junction)
+_INSTALL_PATHS = (".leafcutter", ".pre-commit-config.yaml", os.path.join(".git", "hooks"))
+
+
+def is_link(path: Path) -> bool:
+    """True when *path* itself is a symlink or a Windows reparse point (junction); a missing path is not."""
+    try:
+        info = path.lstat()
+    except OSError:
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & _REPARSE_POINT)
+
+
+def install_paths_regular(workspace: Path) -> bool:
+    """True when nothing under the install and protection paths is a link (BO-4300b-4, lstat only)."""
+    for rel in _INSTALL_PATHS:
+        root = workspace / rel
+        if is_link(root):
+            return False
+        for here, dirs, files in os.walk(root, followlinks=False):
+            if any(is_link(Path(here, name)) for name in (*dirs, *files)):
+                return False
+    return True
+
+
+def _norm(path: Path) -> str:
+    """Resolved, case-normalised spelling of *path* for comparing two locations."""
+    return os.path.normcase(str(path.resolve()))
+
+
+def is_independent(workspace: Path) -> bool:
+    """True when the workspace owns its object store: real ``.git`` dir, own common dir, no alternates."""
+    git_dir = workspace / ".git"
+    if is_link(git_dir) or not git_dir.is_dir() or (git_dir / "objects" / "info" / "alternates").exists():
+        return False
+    common = _git(workspace, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    text = common.stdout.strip() if common.returncode == 0 else ""
+    return bool(text) and _norm(Path(text)) == _norm(git_dir)
+
+
+def same_project(workspace: Path, project_root: Path) -> bool:
+    """True when the shared resolver, run in *workspace*, names *project_root* as its project."""
+    found = workspace_root.resolve(str(workspace), None)
+    return found.get("status") == "ok" and _norm(Path(found["project_root"])) == _norm(project_root)
+
+
 def compute_checks(workspace: Path, hub: str, *, branch: str, project_root: Path, base_ref: str | None = None,
                    line_of_work: str = "new") -> dict[str, Any]:
     """Read the ingredient checks off the workspace as it now exists (no writes).
@@ -159,7 +207,7 @@ def compute_checks(workspace: Path, hub: str, *, branch: str, project_root: Path
     a resumed line holds every commit of ``origin/<branch>`` (the maker never
     resets or rebases it). *base_ref* overrides what ``origin/main`` resolves to.
     """
-    own_git = (workspace / ".git").is_dir()
+    own_git = is_independent(workspace)
     current = _git(workspace, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     head = _git(workspace, "rev-parse", "HEAD").stdout.strip()
     if line_of_work == "resumed":
@@ -173,7 +221,9 @@ def compute_checks(workspace: Path, hub: str, *, branch: str, project_root: Path
     clean = tree_is_clean(workspace)
     return {
         "is_independent_repo": own_git,
-        "not_main_checkout": own_git and workspace.resolve() != project_root.resolve(),
+        "not_main_checkout": workspace.resolve() != project_root.resolve(),
+        "same_project": same_project(workspace, project_root),
+        "install_paths_regular": install_paths_regular(workspace),
         "branch_matches": current == branch,
         "not_protected_branch": current not in PROTECTED_BRANCHES,
         "base_is_fresh": fresh,
@@ -186,7 +236,20 @@ def compute_checks(workspace: Path, hub: str, *, branch: str, project_root: Path
     }
 
 
-_STRUCTURAL = ("is_independent_repo", "not_main_checkout", "branch_matches", "not_protected_branch", "base_is_fresh")
+_SHARED = ("is_independent_repo", "not_main_checkout", "same_project", "origin_matches_hub", "gc_auto_disabled",
+           "install_paths_regular", "branch_matches", "not_protected_branch")
+_STRUCTURAL = (*_SHARED, "base_is_fresh")
+# verify judges the ingredients read-only: it never refuses on base_is_fresh or tree_clean (a moved hub and
+# uncommitted work are normal), but does on the recorded build and hook-stage proofs.
+VERIFY_REFUSALS = _SHARED
+
+
+def failed_for_verify(checks: dict[str, Any]) -> list[str]:
+    """The ingredients ``verify`` refuses on that are not true: its own set, then every false hook stage."""
+    failed = [k for k in VERIFY_REFUSALS if checks.get(k) is not True]
+    if checks.get("build_ok") is False:  # absent (a cut-over marker) is not-known, never a refusal
+        failed.append("build_ok")
+    return failed + [k for k, v in checks.items() if k.startswith("hooks_") and v is False]
 
 
 def _failed_structural(checks: dict[str, Any]) -> list[str]:
@@ -248,6 +311,12 @@ def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_ro
     return {"checks": checks, "bootstrap": boot, "hooks_stages_declared": stages}
 
 
+def with_restored_tree(checks: dict[str, Any], workspace: Path) -> dict[str, Any]:
+    """*checks* with ``tree_clean`` re-read after the work's set-aside changes were put back (one definition)."""
+    clean = tree_is_clean(workspace)
+    return {**checks, "tree_clean": clean, "working_tree_clean": clean}
+
+
 def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str, Any]:
     """Overlay the proofs only ``ensure`` can make (build, freshness, per-stage hooks) from *marker*.
 
@@ -256,7 +325,7 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
     """
     stored = marker.get("checks") or {}
     keep = {k: v for k, v in stored.items() if k.startswith("hooks_") or k in ("build_ok", "base_is_fresh")}
-    return {**computed, **keep}
+    return {**computed, "build_ok": None, **keep}  # None: no recorded build result (not-known)
 
 
 # ===========================================================================

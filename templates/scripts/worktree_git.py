@@ -28,12 +28,14 @@ import contextlib
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import workspace_root
 import worktree_answer
@@ -222,12 +224,50 @@ def git_config_get(workspace: Path, key: str) -> str | None:
     return value or None
 
 
+_REMOTE_RE = re.compile(r"^([A-Za-z][A-Za-z0-9+.-]*://|[\w.-]+@[\w.-]+:)")
+_DRIVE_URL_RE = re.compile(r"^/[A-Za-z]:")
+
+
+def _trim_location(text: str) -> str:
+    """Strip trailing separators and one ``.git`` suffix (and the separators before it)."""
+    text = text.rstrip("/\\")
+    if text.endswith(".git"):
+        text = text[: -len(".git")].rstrip("/\\")
+    return text
+
+
+def _file_url_path(text: str) -> str | None:
+    """The local path a ``file://`` URL names (``file:///C:/x`` -> ``C:/x``), else ``None``."""
+    if text[:7].lower() != "file://":
+        return None
+    path = unquote(text[7:])
+    if _DRIVE_URL_RE.match(path):
+        return path[1:]
+    return path if path.startswith("/") else "//" + path  # file://host/share -> UNC
+
+
+def _canonical_location(text: str) -> str:
+    """Comparable form of a path-or-URL: local paths normalised, remote URLs exact bar ``/`` and ``.git``."""
+    text = text.strip()
+    local = _file_url_path(text)
+    if local is None and _REMOTE_RE.match(text):
+        return _trim_location(text)
+    local = _trim_location(text if local is None else local)
+    if not Path(local).is_absolute():
+        return local  # never resolved against the cwd
+    local = os.path.normpath(local)
+    if os.name == "nt":
+        try:
+            local = str(Path(local).resolve())
+        except OSError as exc:
+            _log.warning("same_location: cannot resolve %s: %s", local, exc)
+        local = os.path.normcase(local)
+    return local
+
+
 def same_location(a: str, b: str) -> bool:
-    """Best-effort equality of two path-or-URL strings, resolving filesystem paths."""
-    try:
-        return Path(a).resolve() == Path(b).resolve()
-    except OSError:
-        return a == b
+    """Equality of two path-or-URL strings: equal text first, then their canonical forms."""
+    return a == b or _canonical_location(a) == _canonical_location(b)
 
 
 def normalize_slug(raw: str, kind: str | None = None) -> str:

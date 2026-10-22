@@ -675,6 +675,8 @@
         "templates/scripts/worktree_log_root.py",
         "templates/scripts/worktree_remove.py",
         "templates/scripts/worktree_ensure_state.py",
+        "templates/scripts/worktree_ensure_steps.py",
+        "templates/scripts/worktree_ticket_record.py",
         "templates/scripts/worktree_migrate.py"
       ]
     }
