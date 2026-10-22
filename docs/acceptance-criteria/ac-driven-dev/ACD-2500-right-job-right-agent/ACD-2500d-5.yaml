@@ -93,7 +93,12 @@ delivers_to:
 - agent: llm-expert
   contract: Agent template skeleton that ACD-2500c-1 (test design) and ACD-2500d-1/-2/-3 (file findings)
     fill with their procedures.
-expects_from: null
+expects_from:
+  ac_id: ACD-2500d-5-i
+  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+    POSIX. Non-zero exit and no report on error.'
 test_spec:
 - name: test_test_designer_registered_on_sonnet
   target_dir: unit_tests/agents/
@@ -122,6 +127,10 @@ test_spec:
 origin_agent: it-po
 created: '2026-09-25'
 amended_by:
+- reason: "expects_from contract on ACD-2500d-5-i restored after EPIC-RightJobRightAgent shipped (PR #1245); it had been removed on 2026-10-12 only so the epic could be ordered, and both records are now done"
+  date: '2026-10-15'
+  by: main-session
+  directed_by: user
 - reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (with ACD-2500d-5-i)"
   date: '2026-10-12'
   by: main-session

@@ -273,3 +273,24 @@ Crash-resume: this stage's output is already in git history.
 Recover the AC IDs from the commit body so they are included in
 allAcsWritten (and thus in the final approval set and PR body).
 ```
+
+## The structured ENOREPO marker
+
+Explains: Why the repository-resolution failure marker in `_buildRepoRootResolutionSnippet` is an errno-style code, not an English phrase (moved verbatim out of plan-feature.js, ACD-2100b-1 and ACD-2100b-2).
+
+```text
+Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
+own REGISTRYREADFAIL tags below), using an errno-style CODE rather than
+an English phrase. This command's own literal source text is dispatched
+as part of the agent() prompt on EVERY run regardless of which branch
+actually executes, so an English reason word here (e.g. "found",
+"missing", "denied") would leak into the observable report of every
+OTHER branch's run too. A code with zero lexical overlap with either
+the "not found" or "permission refused" vocabulary (ACD-2100b-1), NOR
+with the word "unreadable" itself, is what keeps those two reports —
+and this run's own report, whatever outcome it turns out to be —
+genuinely distinguishable (ACD-2100b-2: this same static command text
+is also dispatched, unconditionally, on the uninterpretable-registry
+outcome, so a tag containing "unreadable" would leak that word into
+every uninterpretable-registry report too).
+```

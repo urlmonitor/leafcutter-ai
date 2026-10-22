@@ -57,6 +57,7 @@ def test_ac3_s5b_dispositions_are_the_real_report_dispositions():
 
 def test_ac3_documentation_family_paragraph_tells_the_planner_to_add_the_missing_documentation_requirement():
     # covers: ACD-2500e-2
+    # covers: ACD-200b
     # covers: ACD-200b-1
     # angle: seam
     """ACD-200b-1 clauses 2 and 3: the template names the requirement rule check as owner of the

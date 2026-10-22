@@ -1,0 +1,181 @@
+id: ACD-2500e-1-ii
+components:
+  - ac_driven_dev
+  - build_pipeline
+readiness: approved
+priority: high
+title: "The decision history of the agent self-description check lives in the file that defines that check, not in the profile-consistency check"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the profile-consistency check's module (scripts/build_phases_profile_consistency.py)
+    carries, in its module docstring at lines 24-73, decision-history entries about the
+    agent self-description check (validate_agent_self_description), introduced by the
+    sentence "The entry below was carried here verbatim from the docstring of
+    validate_agent_self_description (build_phases_agent_validation.py) to restore headroom
+    there.",
+  When those entries are moved,
+  Then scripts/build_phases_agent_validation.py, the file that defines
+    validate_agent_self_description, carries every one of them, character for character and
+    in the same order, in its decision history for validate_agent_self_description, after the
+    entries it holds today,
+  And the profile-consistency module no longer carries them or the sentence introducing them,
+    and every other line of its docstring is unchanged,
+  And no line of code in either file changes,
+  And the profile consistency check and the build's agent validation report the same results
+    as before the move.
+depends_on:
+  - ACD-2500e-1
+  - GE-134a-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500e-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: The profile consistency check whose module currently holds the misplaced history.
+  - path: templates/skills/doc-enforcer/SKILL.md
+    relationship: related
+    status: exists
+    relevance: Decision history is append-only; a verbatim move keeps every entry.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+- The entries move verbatim (character for character, same order) and are appended after the destination's
+  existing entries, per the doc-enforcer append-only decision-history convention.
+- No line of code changes in either file; the build's agent validation and the profile consistency check
+  give identical output before and after.
+- Build after GE-134a-1. If the destination history sits in a docstring, which the measurement already
+  leaves out, the size-related reason for that dependency does not apply (logged as a caveat).
+declared_files:
+- path: scripts/build_phases_profile_consistency.py
+  state: existing
+- path: scripts/build_phases_agent_validation.py
+  state: existing
+delivers_to: null
+expects_from: null
+test_required: true
+test_intent:
+- clause: scripts/build_phases_agent_validation.py, the file that defines validate_agent_self_description,
+    carries every one of them, character for character and in the same order, in its decision history
+    for validate_agent_self_description, after the entries it holds today
+  needs_test: true
+  reason: A verbatim, in-order move is checkable text, and a dropped, reordered or retyped entry would
+    silently lose decision history.
+- clause: the profile-consistency module no longer carries them or the sentence introducing them, and
+    every other line of its docstring is unchanged
+  needs_test: true
+  reason: A half-done move would leave the entries in both files, and an over-eager one would cut the
+    module's own description.
+- clause: no line of code in either file changes
+  needs_test: false
+  reason: This is a property of this one diff that review of the diff shows, and a lasting test would
+    freeze the code of both files against every later change.
+- clause: the profile consistency check and the build's agent validation report the same results as before
+    the move
+  needs_test: true
+  reason: A slip in the docstring edit, such as a stray quote, would break the import or turn code into
+    text, and both checks are what the build runs.
+test_spec:
+- name: test_self_description_history_moved_verbatim_to_defining_file
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Expected text: lines 28-72 of scripts/build_phases_profile_consistency.py at 36e5303a9
+    (the # DECISION HISTORY heading and the five entries dated 2026-06-05 to 2026-08-25), frozen in the
+    test as a literal or a fixture file, never read from git at run time. Reads scripts/build_phases_agent_validation.py,
+    takes the raw source of the docstring of validate_agent_self_description (ast node position, not ast.get_docstring,
+    which would strip indentation), and asserts the five entries appear there as one contiguous run of
+    lines, byte for byte and in order, after a # DECISION HISTORY heading, with any entries that were
+    there before the move ahead of them and nothing but whitespace after them. Red today: the docstring
+    has no decision history.'
+  proves_clause: scripts/build_phases_agent_validation.py, the file that defines validate_agent_self_description,
+    carries every one of them, character for character and in the same order, in its decision history
+    for validate_agent_self_description, after the entries it holds today
+  code_file: scripts/build_phases_agent_validation.py
+- name: test_profile_consistency_docstring_drops_the_carried_history
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Reads the module docstring of scripts/build_phases_profile_consistency.py raw. Asserts
+    it holds none of the five entry heading lines (the "# - 2026-..." lines), no "# DECISION HISTORY"
+    line, and not the introducing sentence ("The entry below was carried here verbatim ..." after whitespace
+    is collapsed); and that lines 2-22 of the docstring at 36e5303a9 (MODULE: through template_compiler.parse_frontmatter.),
+    frozen in the test, still appear as one contiguous, unchanged run of lines at its start. Red today:
+    the sentence and the entries are still there.'
+  proves_clause: the profile-consistency module no longer carries them or the sentence introducing them,
+    and every other line of its docstring is unchanged
+  code_file: scripts/build_phases_profile_consistency.py
+- name: test_profile_check_and_agent_validation_results_unchanged_after_move
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry points: the profile-consistency CLI (main() via the script run as a subprocess with
+    real argv) and validate_agent_self_description run in a fresh interpreter, both on a tmp package built
+    the way test_acd_2500e_1_i.py builds it (yaml.safe_dump templates, json.dumps registry): one write-capable
+    agent whose mutates is none and one whose mutates names a surface. Asserts the results the check gave
+    before the move: the CLI exits 0, stderr is empty, and stdout is exactly "Profile consistency: examined
+    2, warning: 1 flagged" plus the one line naming the flagged agent; validate_agent_self_description returns
+    [0, 1] in warning mode and [0, 1] in error mode. Also imports both modules in that fresh interpreter,
+    so a docstring edit that breaks the syntax or turns code into text fails here. Does not run build.py.'
+  proves_clause: the profile consistency check and the build's agent validation report the same results
+    as before the move
+  code_file: scripts/build_phases_profile_consistency.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-21'
+test_design_opened_files:
+- scripts/build_phases_profile_consistency.py
+- scripts/build_phases_agent_validation.py
+- unit_tests/agents/test_acd_2500e_1_i.py
+file_findings:
+- file: scripts/build_phases_profile_consistency.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: Its module docstring holds the carried-over decision-history entries of validate_agent_self_description
+    that must move out.
+  decision: null
+- file: scripts/build_phases_agent_validation.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It defines validate_agent_self_description, whose decision history must receive the moved entries.
+  decision: null
+file_findings_opened_files:
+- scripts/build_phases_profile_consistency.py
+- scripts/build_phases_agent_validation.py
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: 'criteria: line reference corrected from ''about lines 24-62'' to ''lines
+    24-73'', the real range of the introducing sentence and the moved entries (checked
+    2026-10-20 at e03501092).'
+  date: '2026-10-20'
+  by: business-analyst
+- reason: 'test_required true: code AC needs tests at approval (check-ac-schema)'
+  date: '2026-10-21'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/27_TICKET-20261021-ACD-2500e-1-ii.md
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Item 8(b). Placed under ACD-2500e-1 (whose L3 ACD-2500e-1-i introduced the profile
+  consistency check that received this history). Destination chosen by the user at the BA
+  gate (2026-10-16): scripts/build_phases_agent_validation.py, which defines
+  validate_agent_self_description (L53). The entries were moved out of that file's
+  validate_agent_self_description docstring "to restore headroom". Once GE-134a-1 is done
+  decision history costs no measured lines, so they can go back. Depends on GE-134a-1 for
+  that reason.
