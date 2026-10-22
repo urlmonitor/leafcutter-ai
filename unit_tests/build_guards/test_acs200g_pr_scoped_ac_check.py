@@ -34,6 +34,7 @@ NOTE ON EXPECTED BASELINE OUTCOME: ACS-200g's `ac-store-valid` job already
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -113,9 +114,26 @@ class TestAcs200gPrScopedAcCheck(unittest.TestCase):
             bad_path = Path(tmp_dir) / "ZZTEST-999.yaml"
             bad_path.write_text(yaml.safe_dump(malformed_record), encoding="utf-8")
 
+            # HOOK_ROOT is an isolated root holding the REAL schema and an
+            # empty store, not the repository. With the repository as root the
+            # hook builds a lookup index of the whole store before validating
+            # anything: measured 15.6s with a warm index cache and 4:06 cold.
+            # Under the 30s cap below, the test then passed or timed out
+            # depending on whether an earlier test in the same CI shard had
+            # warmed that cache (PR #1288 timed out twice; main passed). The
+            # schema file is the repository's own, so the validation verdict is
+            # the one the real store gets; only the unrelated index is emptied.
+            hook_root = Path(tmp_dir) / "hook_root"
+            (hook_root / "config").mkdir(parents=True)
+            (hook_root / "docs" / "acceptance-criteria").mkdir(parents=True)
+            shutil.copyfile(
+                _REPO_ROOT / "config" / "ac_store_schema.json",
+                hook_root / "config" / "ac_store_schema.json",
+            )
+
             env = dict(os.environ)
             env["HOOK_TEST_STAGED_FILES"] = str(bad_path)
-            env["HOOK_ROOT"] = str(_REPO_ROOT)
+            env["HOOK_ROOT"] = str(hook_root)
 
             result = subprocess.run(  # noqa: S603
                 [sys.executable, str(_DEPLOYED_SCHEMA_HOOK)],
@@ -132,6 +150,14 @@ class TestAcs200gPrScopedAcCheck(unittest.TestCase):
             "Expected the real check-ac-schema entry point to fail (blocking "
             "result) on a malformed AC record, per ACS-200g. Got exit code "
             f"0. stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
+        # Non-zero for the RIGHT reason: the schema rejected the record. Without
+        # this, a crash on the isolated root would also exit non-zero and pass.
+        self.assertIn(
+            "'title' is a required property",
+            result.stdout + result.stderr,
+            "Expected the schema violation to be reported. "
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
         )
 
     def test_pr_scoped_job_covers_every_rule_family_named_in_the_ac(self) -> None:
