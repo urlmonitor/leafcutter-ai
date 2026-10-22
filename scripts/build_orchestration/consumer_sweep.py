@@ -26,6 +26,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 import _cs_edits as edits_mod
+import _cs_runs as runs_mod
 import _wvr_gate as gate_mod
 from _wvr_scope import ChangesError, DiffCache, is_test_path, path_refusal
 from _wvw_write import _plain_segment
@@ -196,19 +197,25 @@ def check(test_root: Path, base_ref: str) -> dict:
     try:
         root, git_dir, test_root_rel = _context(test_root)
         base_sha = _resolve_base(test_root, ref)
-        changed = sorted({p for st, p in DiffCache(root, ref).get() if st[:1] != "A" and is_test_path(p, test_root_rel)})
+        pairs = DiffCache(root, ref).get()
+        changed = sorted({p for st, p in pairs if st[:1] != "A" and is_test_path(p, test_root_rel)})
         found, inconclusive = _compare(root, ref, changed)
     except (gate_mod.GateError, ChangesError, OSError, UnicodeDecodeError) as exc:
         detail = f'the base ref "{ref}" or the changed files could not be read: {exc}'
         return _check_shape(applicable=True, reason="inconclusive", inconclusive=[{"file": None, "detail": detail}])
     entries = read_lists(git_dir, base_sha, root)
     unlisted = edits_mod.unlisted_edits(found, entries)
+    ran = runs_mod.run_checks(root, base_sha, pairs, test_root_rel, entries)
+    inconclusive = inconclusive + ran.inconclusive
     reason = None
     if unlisted:
         reason = "unlisted" if entries else "sweep list missing"
+    elif ran.weakened:
+        reason = "weakened"
     elif inconclusive:
         reason = "inconclusive"
-    return _check_shape(applicable=bool(found or inconclusive), reason=reason, inconclusive=inconclusive,
+    return _check_shape(applicable=bool(found or inconclusive or ran.in_scope), reason=reason,
+                        inconclusive=inconclusive, weakened=ran.weakened, removed=ran.removed,
                         unlisted=[{"file": e.file, "test": e.test} for e in unlisted])
 
 

@@ -31,6 +31,11 @@ _MOD_CASES = {
                        "except ImportError:\n    pass\n"),
     "environ_added": ("import os\n\n\n" + _T, "import os\n\nos.environ['X'] = '1'\n\n\n" + _T),
 }
+# After the edit is recorded TQ-500g-3-i is satisfied; TQ-500g-3-ii then judges the real runs: a module-level
+# skip call / pytestmark skip really skips test_a, a changed import no longer collects.
+# (a module-level skip call and a pytestmark skip both report test_a as skipped, never as removed.)
+_AFTER = {"skip_call": "weakened", "pytestmark_aug": "weakened", "import_changed": "inconclusive"}
+_WHAT_AFTER = {"skip_call": "skipped", "pytestmark_aug": "skipped"}
 
 
 @pytest.mark.parametrize("case", sorted(_MOD_CASES))
@@ -49,7 +54,16 @@ def test_h1_module_level_code_edit_is_unlisted_then_recorded(tmp_path: Path, cas
     fx.recorded(repo, [fx.entry(i["file"], i["test"]) for i in out["unlisted"]], fx.W2_KEY)
     proc2, out2 = fx.check(repo)
     fx.assert_check_shape(proc2, out2)
-    assert out2["passed"] is True and out2["unlisted"] == [], (case, out2)
+    assert out2["unlisted"] == [], (case, out2)
+    expect = _AFTER.get(case)
+    if expect is None:
+        assert out2["passed"] is True, (case, out2)
+    elif expect == "weakened":
+        assert out2["passed"] is False and out2["reason"] == "weakened", (case, out2)
+        assert {i["test"]: i["what"] for i in out2["weakened"]} == {"test_a": _WHAT_AFTER[case]}, (case, out2["weakened"])
+    else:
+        assert out2["passed"] is False and out2["reason"] == "inconclusive", (case, out2)
+        assert fx.REFRESH in {i["file"] for i in out2["inconclusive"]}, (case, out2["inconclusive"])
 
 
 @pytest.mark.parametrize("ctl", ["\x0c", "\x1c"], ids=["form_feed", "file_separator"])

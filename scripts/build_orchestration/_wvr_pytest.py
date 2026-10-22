@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -37,7 +38,8 @@ from done_proof import _PYTEST_RUN_INCOMPLETE_SENTINEL, _resolve_pytest_timeout_
 from pytest_outcome_reader import parse_pytest_outcomes
 
 _LOG = logging.getLogger("wrong_version_runner")
-_PYTEST_FLAGS = ("-v", "--tb=no", "--no-header", "-p", "no:cacheprovider", "--continue-on-collection-errors")
+_PYTEST_FLAGS = ("-v", "--tb=no", "--no-header", "-p", "no:cacheprovider", "--continue-on-collection-errors", "-rs")
+_SKIP_LINE = re.compile(r"^SKIPPED \[\d+\] (?P<file>.+?):\d+: ", re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class NodeSpec:
 
     file: Path
     chain: tuple[str, ...]
+    cwd: Path | None = None  # the directory pytest runs in (``None``: this process's); *file* is then relative to it
 
     @property
     def arg(self) -> str:
@@ -68,6 +71,11 @@ class PytestRun:
         outcome: ``{identity: PASSED|FAILED|...}`` for each test that reported.
         kind: ``{identity: absence|assertion}`` for each failed test whose kind is known.
         collection_failed: Module identities that failed to collect (absence).
+        module_skipped: Files skipped as a whole at collection time (``pytest.skip(allow_module_level=True)``,
+            ``pytest.importorskip``): a ``SKIPPED`` summary line (``-rs``) for a file that yielded no test.
+        returncode: Pytest's exit status when it finished with one that is neither 0 nor 1 (5: nothing collected).
+        by_nodeid: ``{nodeid: outcome}`` exactly as the run printed it, parametrised ids unfolded
+            (TQ-500g-3-ii compares cases one by one).
     """
 
     status: str
@@ -75,6 +83,9 @@ class PytestRun:
     outcome: dict[str, str] = field(default_factory=dict)
     kind: dict[str, str] = field(default_factory=dict)
     collection_failed: set[str] = field(default_factory=set)
+    by_nodeid: dict[str, str] = field(default_factory=dict)
+    returncode: int | None = None
+    module_skipped: set[str] = field(default_factory=set)
 
 
 def _merge_outcomes(per_nodeid: dict[str, str]) -> dict[str, str]:
@@ -108,6 +119,13 @@ def _read_kinds(kind_path: str, outcomes: dict[str, str]) -> tuple[dict[str, str
         if kinds.get(identity) != "assertion":
             kinds[identity] = kind
     return kinds, set(per_module)
+
+
+def _module_skipped(stdout: str, by_nodeid: dict[str, str]) -> set[str]:
+    """Files the ``-rs`` summary reports skipped although none of their tests reported (a collect-time skip)."""
+    reported = {n.split("::", 1)[0].replace("\\", "/") for n in by_nodeid}
+    named = {m.group("file").replace("\\", "/") for m in _SKIP_LINE.finditer(stdout)}
+    return named - reported
 
 
 def _child_env(kind_path: str) -> dict[str, str]:
@@ -152,7 +170,8 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
     cmd = [sys.executable, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
     cmd.extend(n.arg for n in nodes)
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, env=_child_env(kind_path))
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, env=_child_env(kind_path),
+                              cwd=nodes[0].cwd)
     except subprocess.TimeoutExpired:
         return PytestRun("timeout", f"pytest exceeded its {budget:.1f}s timeout budget")
     except OSError as exc:
@@ -161,9 +180,11 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
         # A module that fails to collect leaves pytest with "no collectors" (4) or
         # an interrupted collection (2); the kind plugin names that module.
         _kinds, collected = _read_kinds(kind_path, {})
+        skipped = _module_skipped(proc.stdout, {})
         if proc.returncode in (2, 4) and collected:
-            return PytestRun("ran", "", {}, {}, collected)
-        return PytestRun("crash", f"pytest crashed: returncode {proc.returncode}")
+            return PytestRun("ran", "", {}, {}, collected, module_skipped=skipped)
+        return PytestRun("crash", f"pytest crashed: returncode {proc.returncode}", returncode=proc.returncode,
+                         module_skipped=skipped)
     outcomes = parse_pytest_outcomes(proc.stdout, proc.returncode)
     kinds_path_outcomes = dict(outcomes)
     if _PYTEST_RUN_INCOMPLETE_SENTINEL in outcomes:
@@ -172,4 +193,6 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
             return PytestRun("unreadable", str(outcomes[_PYTEST_RUN_INCOMPLETE_SENTINEL]))
         kinds_path_outcomes = dict(parse_pytest_outcomes(proc.stdout, None))
     kinds, collected = _read_kinds(kind_path, kinds_path_outcomes)
-    return PytestRun("ran", "", _merge_outcomes(kinds_path_outcomes), kinds, collected)
+    by_nodeid = dict(kinds_path_outcomes)
+    return PytestRun("ran", "", _merge_outcomes(kinds_path_outcomes), kinds, collected, by_nodeid,
+                     module_skipped=_module_skipped(proc.stdout, by_nodeid))
