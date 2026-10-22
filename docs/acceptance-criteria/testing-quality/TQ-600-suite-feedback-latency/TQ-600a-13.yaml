@@ -117,6 +117,8 @@ declared_files:
     state: existing
   - path: pytest.ini
     state: existing
+  - path: .github/workflows/ci.yml
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -291,6 +293,12 @@ covered_by:
   - TQ-600a-13-xviii
   - TQ-600a-13-xix
   - TQ-600a-13-xx
+  - TQ-600a-13-xxi
+  - TQ-600a-13-xxii
+  - TQ-600a-13-xxiii
+  - TQ-600a-13-xxiv
+  - TQ-600a-13-xxv
+  - TQ-600a-13-xxvi
 implemented_by: []
 change_target:
   - pipeline
