@@ -168,6 +168,10 @@ def scenario_inputs(name: str) -> tuple[dict[str, Any], dict[str, Any]]:
         from unit_tests.workflows import _bo4000_fixtures as bfx
         labels.update(bfx.success_label_responses(ticket_paths=["tickets/00_inbox/epics/EPIC-X/01_TICKET-x.md"]))
         args["target"] = bfx.EPIC_NAME
+    elif name == "build-ticket.js":
+        # TQ-500g-1-vi: the wrong-version gate halts on a ticket path that is not a plain value (the harness
+        # default "stub user input" has spaces), so the control run is handed a plain ticket path.
+        args["ticket_path"] = "tickets/00_inbox/fixture-ticket.md"
     elif name == "fast-lane-ship.js":
         args["ac"] = "BO-4300C3-FIXTURE-1"
     return labels, args

@@ -27,7 +27,7 @@ related_docs:
   blocked until someone reruns it, and the red run is not caused by the change under review. The
   margin shrinks as the AC store grows, so this **escalates to `blocker`** once the run always
   times out.
-- **Status:** open, no AC. Not fixed here, by instruction.
+- **Status:** **RESOLVED 2026-10-21** by ACS-200g-3 (test-only): the reachability test now runs the deployed check_ac_schema.py against a git-initialised tmp fixture repo (3 valid records + ZZTEST-999); each hook run takes ~0.5 s, and new tests prove the hook read only the fixture and left the real tree and real index cache untouched. Tests: unit_tests/build_guards/test_acs200g_pr_scoped_ac_check.py, helpers in _acs200g_fixture.py.
 - **Occurrences:** on 2026-10-21, 4 of the last 6 `ci.yml` runs on main failed shard 3/8 with this
   test: runs `39597899863`, `39592669070`, `39577397350` and `39492393948`. On PR #1280 it failed
   twice and passed on rerun.

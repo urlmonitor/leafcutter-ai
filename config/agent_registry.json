@@ -3518,7 +3518,9 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "user",
-                "fast-lane-ship.js"
+                "fast-lane-ship.js",
+                "build-feature.js",
+                "build-ticket.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,

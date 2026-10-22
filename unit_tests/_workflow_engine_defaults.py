@@ -28,6 +28,7 @@ from typing import Any
 
 from _plan_feature_harness_defaults import plan_feature_default_label_responses
 from _workflow_engine_workspace import _workspace_step_default_responses
+from _wrong_version_harness_defaults import wrong_version_default_label_responses
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
             },
         }
 
-    return {**defaults, **plan_feature_default_label_responses(script_path)}
+    return {**defaults, **plan_feature_default_label_responses(script_path), **wrong_version_default_label_responses(script_path)}
 
 
 def _default_args_for_script(script_path: Path) -> dict[str, Any]:

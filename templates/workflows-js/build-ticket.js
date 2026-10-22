@@ -1403,9 +1403,61 @@ if (!resolvedTarget.worktree_path) {
   };
 }
 
+// --- Wrong-Version Runs (TQ-500g-1-vi): thin dispatch, fail-closed parses; the rules live in Python. TWIN: copy of the other route's block.
+const WV = "bt";
+const WV_RUNNER_SCHEMA = { type: "object", properties: { command: { type: "string" }, workspace: { type: "string" }, exit_status: { type: "integer" },
+  stdout: { type: "string" }, stderr: { type: "string" }, declined: { type: "boolean" }, step: { type: "string" }, agent: { type: "string" }, reason: { type: "string" } } };
+const wvRoot = () => String(resolvedTarget.worktree_path).replace(/\\/g, "/");
+const wvPy = (script, args) => `python "${wvRoot()}"/{{config.output_root}}/scripts/build_orchestration/${script}.py ${args}`;
+const wvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || !/^[A-Za-z0-9._-]+$/.test(s)).concat(/["$`\n\r]/.test(wvRoot()) ? [wvRoot()] : []);
+async function wvStep(label, command, workKey) {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: resolvedTarget.worktree_path, run_id: workKey } }),
+      { agentType: "command-step-runner", schema: WV_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
+    const out = JSON.parse(reply.stdout);
+    return out && typeof out === "object" ? out : null;
+  } catch { return null; }
+}
+async function wvRecover(workKey) {
+  const unsafe = wvBad(workKey);
+  if (unsafe.length) return { step: "input-check", detail: unsafe, message: `Wrong-version inputs are not plain values, no command was run: ${JSON.stringify(unsafe)}` };
+  const recovered = await wvStep(`${WV}-wv-recover`, wvPy("wrong_version_runner", "recover"), workKey);
+  return !recovered || recovered.ok !== true ? { step: "recover", detail: recovered, message: `Wrong-version recover step did not pass: ${JSON.stringify(recovered)}` } : null;
+}
+async function wvRuns(workKey, ids) {
+  const flags = `--ac-root "${wvRoot()}/${AC_STORE_REL_PATH}" --test-root "${wvRoot()}" --base-ref HEAD`, idArg = ids.length ? `--ac-ids "${ids.join(",")}" ` : "";
+  const halt = (step, detail) => ({ halt: { step, detail, message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}` }, outcome: null });
+  const unsafe = wvBad(workKey, ids);
+  if (unsafe.length) return halt("input-check", unsafe);
+  let reply = "";
+  if (ids.length) {
+    const listed = await wvStep(`${WV}-wv-list`, wvPy("wrong_version_writer", `list ${idArg}${flags}`), workKey);
+    if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return halt("list", listed);
+    if (listed.owed.length) {
+      try {
+        const raw = await agent(`Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: workKey, repo_root: resolvedTarget.worktree_path, requirement_ids: ids, wrong_versions: listed.owed })}`,
+          { agentType: "test-breaker", label: `${WV}-wv-test-breaker`, phase: "Wrong-Version Runs" });
+        reply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
+      } catch { reply = ""; }
+    }
+  }
+  let delim = "WV_REPLY_EOF";
+  while (reply.includes(delim)) delim += "_X";
+  const fin = await wvStep(`${WV}-wv-finish`, `${wvPy("wrong_version_gate", `finish --work-key "${workKey}" --reply - ${idArg}${flags}`)} <<'${delim}'\n${reply}${reply ? "\n" : ""}${delim}`, workKey);
+  if (!fin || typeof fin.gate_passed !== "boolean" || !fin.gate_passed) return halt("finish", fin);
+  const verdict = fin.verdict || {};
+  return { halt: null, outcome: verdict.outcome === undefined ? null : verdict.outcome };
+}
+const wvStem = (p) => String(p).replace(/\\/g, "/").split("/").filter(Boolean).pop().replace(/\.md$/i, "");
+const wvHaltFields = (h) => ({ gate: "wrong_version_gate", wrong_version_step: h.step, wrong_version_detail: h.detail });
+
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read ticket frontmatter → ordered_phases JSON
 // -------------------------------------------------------------------------
+{
+  const wvHead = await wvRecover(wvStem(ticketPath));
+  if (wvHead) return { status: "blocked", message: `${wvHead.message}. No phase agent was spawned.`, ticket_path: ticketPath, resolved_target: resolvedTarget, classification: "halt", ...wvHaltFields(wvHead) };
+}
 phase('Planner')
 const plannerResult = await agent(
   `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
@@ -1447,6 +1499,7 @@ const sourceAcIds = Array.isArray(plan.source_ac)
     : [];
 let redBaselineGateOutcome = null; // carried into the final payload below
 let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
+let wrongVersionOutcome = null; const wvKey = wvStem(ticketPath);
 // Agents that produce production code — must NOT run without Test Requirements.
 const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 
@@ -1722,6 +1775,10 @@ while (pendingPhases.length > 0) {
      *
      * TWIN: mirrors build-feature.js. Keep in sync with that file.
      */
+    if (phaseName === "commit") {
+      const wv = await wvRuns(wvKey, sourceAcIds); wrongVersionOutcome = wv.outcome;
+      if (wv.halt) return refuse(wv.halt.message, "halt", wvHaltFields(wv.halt));
+    }
     phaseResult = await agent(
       `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Fill the reply tool's fields directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.` +
       (phaseName === 'test-writer'
@@ -2082,4 +2139,4 @@ const ticketOutcome = await concludeTicket({
   noPhasesToRun: false,
 });
 // TQ-500f-3-ii: additive; surfaces the gate's recorded outcome. TWIN of build-feature.js.
-return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome };
+return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome, wrong_version_outcome: wrongVersionOutcome };

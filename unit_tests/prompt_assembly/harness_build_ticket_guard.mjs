@@ -710,7 +710,7 @@ function epicEnumerationReply(label) {
     ? read.batches
     : buildable.length === 0
       ? []
-      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo" })) }];
+      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo", source_ac: t.source_ac })) }];
 
   // What the real planner OMITS from every batch because the ticket's own
   // frontmatter already reads `status: done` — the resume set. DERIVED from
@@ -1048,11 +1048,11 @@ async function agent(prompt, opts = {}) {
     return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
   }
 
-  // --- scratch item (BO-4400f-1) --------------------------------------------
-  // Label "scratch-item": the shell step that creates the run's labelled
-  // scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
-  // ABSENT entry answers {item: null} (the workflow's fail-open path: no
-  // scratch note), so every pre-existing scenario is unchanged.
+  /* --- scratch item (BO-4400f-1) ---------------------------------------------
+   * Label "scratch-item": the shell step that creates the run's labelled
+   * scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+   * ABSENT entry answers {item: null} (the workflow's fail-open path: no
+   * scratch note), so every pre-existing scenario is unchanged. */
   if (label === "scratch-item") {
     return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
   }
@@ -1070,6 +1070,15 @@ async function agent(prompt, opts = {}) {
     return hookId
       ? Object.assign({ status: "ok" }, table[hookId])
       : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
+  /* --- wrong-version command steps (TQ-500g-1-vi) -----------------------------
+   * Labels bf-wv-* / bt-wv-* (recover, list, finish): executor replies, not phase
+   * agents. Answer with the passing report each real script prints, as
+   * {stdout: <JSON>}; scenario.wrong_version[label] replaces it per label. */
+  if (/^b[ft]-wv-(recover|list|finish)$/.test(label)) {
+    const passing = { recover: { ok: true, restored: [] }, list: { owed: [], error: null }, finish: { gate_passed: true, verdict: null } };
+    return { stdout: JSON.stringify((scenario.wrong_version || {})[label] || passing[label.slice(6)]) };
   }
 
   // --- everything else is a phase-agent dispatch ----------------------------
