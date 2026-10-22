@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   File-dependent calls are made by a step that can see the repository.
 
