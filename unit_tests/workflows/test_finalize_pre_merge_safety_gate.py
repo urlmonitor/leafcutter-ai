@@ -18,18 +18,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
 _TRIAGE_MD_PATH = _REPO_ROOT / "templates" / "agents" / "test-failure-triage.md"
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 def _js_text() -> str:
     """Return the full text of finalize-feature.js."""
@@ -74,7 +70,7 @@ class TestFin100a1BaselineCapture:
         assert "mainTestRun(" in step0, "Step 0 must run the baseline through mainTestRun"
         js = _js_text()
         run_start = js.index("async function mainTestRun(")
-        assert "worktree.py ensure --kind scratch" in js[run_start:run_start + 600], (
+        assert 'workspaceMade(' in js[run_start:run_start + 600] and 'kind: "scratch"' in js[run_start:run_start + 600], (
             "The baseline run must start by asking the workspace maker for a scratch workspace "
             "(a temp workspace, not an in-place branch switch)."
         )
@@ -114,7 +110,7 @@ class TestFin100a1BaselineCapture:
         helper = js[js.index("async function mainTestRun"):js.index("function pytestFailedIds")]
         assert "mainTestRun(" in _get_step_block(js, "Step 0", "Step 1"), "Step 0 must use the shared scratch-run helper"
         assert helper.index("python3 -m pytest") < helper.index("await cleanupBaselineWorktree()"), "scratch not removed after the run"
-        assert "scripts/worktree.py remove" in js[js.index("async function cleanupBaselineWorktree"):js.index("async function mainTestRun")]
+        assert 'workspaceRemoveCommand(' in js[js.index("async function cleanupBaselineWorktree"):js.index("async function mainTestRun")]
 
     def test_ac_fin100a1_baseline_forwarded_to_step3_triage(self):
         # covers: FIN-100a-1

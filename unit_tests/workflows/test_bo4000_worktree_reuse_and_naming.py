@@ -119,7 +119,7 @@ class TestNewLocationIsNamedByTheWorkflow(unittest.TestCase):
             workspace_calls = _workspace_calls(result)
             self.assertEqual(len(workspace_calls), 1, f"stderr={result.stderr!r}")
             commands.append(workspace_calls[0].prompt or "")
-            self.assertIn(f"--slug {_SLUG}", commands[-1])
+            self.assertIn(f'--slug "{_SLUG}"', commands[-1])
             planner = _ticket_planner_calls(result)
             self.assertTrue(planner, f"stderr={result.stderr!r}")
             self.assertIn(bfx.NAMED_LOCATION, planner[0].prompt or "")
@@ -212,7 +212,7 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         named = _run(bfx.success_label_responses(ticket_paths=[TICKET]))
         workspace_calls = _workspace_calls(named)
         self.assertTrue(workspace_calls)
-        self.assertIn(f"--slug {_SLUG}", workspace_calls[0].prompt or "")
+        self.assertIn(f'--slug "{_SLUG}"', workspace_calls[0].prompt or "")
 
 
 if __name__ == "__main__":

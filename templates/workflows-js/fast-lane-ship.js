@@ -28,8 +28,8 @@
  *
  * Gate script:   {{config.output_root}}/scripts/build_orchestration/fast_lane.py
  *                (resolved inside the freshly-created worktree, once bootstrapped)
- * Worktree tool: {{config.output_root}}/scripts/worktree.py (the workspace maker)
- *                (run from the consumer repo root, BEFORE any worktree exists)
+ * Worktree tool: the workspace maker script under the output root's scripts folder, run by its ABSOLUTE,
+ *                quoted path (resolved from the repository, BEFORE any worktree exists)
  * Done marker:   fast_lane.py's own `mark_done` subcommand (coverage-gated) —
  *                not a direct call to scripts/ac_store/mark_ac_done.py
  *
@@ -769,8 +769,7 @@ phase("Worktree");
 // WORKSPACE-ANSWER-START
 // WORKSPACE-ANSWER-END
 
-const workspace = await workspaceObtain(
-  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind fastlane --slug ${slug}`, "Worktree");
+const workspace = await workspaceEnsure("Worktree", { kind: "fastlane", slug: slug, outputRoot: "{{config.output_root}}" });
 if (!workspace.accepted) return workspaceFailure(workspace);
 
 const worktreePath = workspace.workspace_path;

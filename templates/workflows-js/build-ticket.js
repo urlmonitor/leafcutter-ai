@@ -1369,9 +1369,7 @@ const resolvedTarget = {
 
 const ticketSlug = (ticketPath.split(/[\\/]/).pop() || "ticket").replace(/\.md$/i, "")
   .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "ticket";
-const ticketWorkspace = await workspaceObtain(
-  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind ticket --slug ${ticketSlug} --ticket "${ticketPath}"`,
-  "Worktree Guard");
+const ticketWorkspace = await workspaceEnsure("Worktree Guard", { kind: "ticket", slug: ticketSlug, ticket: ticketPath, outputRoot: "{{config.output_root}}" });
 if (!ticketWorkspace.accepted) {
   return Object.assign(workspaceFailure(ticketWorkspace), { resolved_target: resolvedTarget });
 }
