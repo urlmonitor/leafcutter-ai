@@ -24,7 +24,7 @@ import workflows._tq500g1viii_fixtures as fx  # noqa: E402
 
 
 def test_build_epic_opens_marker_before_each_ticket_and_fails_closed():
-    # covers: TQ-500g-1-viii
+    # covers: TQ-500g-1-viii, TQ-500g-1-vii, TQ-500f-3-iv
     # angle: reachability
     # must_catch: marker step refused but the ticket dispatched anyway
     # must_catch: unsafe ticket key pasted into a command

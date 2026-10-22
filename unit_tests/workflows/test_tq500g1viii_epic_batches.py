@@ -39,7 +39,7 @@ def _runs_alone(result, item) -> str | None:
 
 
 def test_build_epic_serialises_batches_that_owe_runs():
-    # covers: TQ-500g-1-viii
+    # covers: TQ-500g-1-viii, TQ-500g-1-vii
     # angle: discrimination
     # must_catch: parallel chunk kept when a ticket owes wrong-version runs
     # must_catch: missing source_ac read as no source requirement

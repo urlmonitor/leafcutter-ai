@@ -140,7 +140,7 @@ def _no_record_changes_nothing(sb) -> None:
 
 
 def test_records_written_by_gate_clis_themselves(tmp_path: Path):
-    # covers: TQ-500g-1-viii
+    # covers: TQ-500g-1-viii, TQ-500g-1-vii, TQ-500f-3-iv
     # angle: seam
     # must_catch: record option ignored, so the CLI writes no record
     # must_catch: finish drops the record option instead of passing it to the runner

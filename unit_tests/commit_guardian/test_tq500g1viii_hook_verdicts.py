@@ -29,7 +29,7 @@ def _records(work: Path, key: str) -> dict[str, bytes]:
 
 
 def test_hook_verdicts_for_b1_to_b6(tmp_path: Path):
-    # covers: TQ-500g-1-viii
+    # covers: TQ-500g-1-viii, TQ-500g-1-vii, TQ-500f-3-iv
     # angle: criterion
     # must_catch: missing wrong-version record treated as a pass
     # must_catch: truncated record read as an empty pass

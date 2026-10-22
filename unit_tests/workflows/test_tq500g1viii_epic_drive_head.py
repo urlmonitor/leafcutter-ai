@@ -23,7 +23,7 @@ import workflows._tq500g1viii_fixtures as fx  # noqa: E402
 
 
 def test_build_epic_recovers_once_at_drive_head_and_fails_closed():
-    # covers: TQ-500g-1-viii
+    # covers: TQ-500g-1-viii, TQ-500g-1-vii
     # angle: failure
     # must_catch: recover ok false ignored
     # must_catch: recover dispatched per ticket instead of once at the drive head
