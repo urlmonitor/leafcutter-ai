@@ -324,8 +324,13 @@ amended_by:
   at: '2026-10-22'
   note: Timing budgets are recorded on every CI runner and fail only above 2x the budget.
 superseded_by: null
-covered_by: [BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py]
+covered_by: [BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py]
 implemented_by:
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_canaries.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_identity.py
+- templates/scripts/worktree_log_root.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01_TICKET-20260927-BO-4300a-1.md
 - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
 - docs/architecture/adrs/ADR-018-agent-isolation-topology.md

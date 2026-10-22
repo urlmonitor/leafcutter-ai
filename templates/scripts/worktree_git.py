@@ -31,9 +31,11 @@ import os
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+import workspace_root
 import worktree_answer
 
 _log = logging.getLogger(__name__)
@@ -47,6 +49,28 @@ VALID_KINDS: tuple[str, ...] = ("ticket", "feature", "ac", "fastlane", "epic", "
 _CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
 _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
+
+
+def no_prompt_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Return a copy of *base* (default ``os.environ``) with every interactive prompt disabled.
+
+    Sets ``GIT_TERMINAL_PROMPT=0`` and ``GCM_INTERACTIVE=never``; adds
+    ``GIT_SSH_COMMAND="ssh -o BatchMode=yes"`` only when none of
+    ``GIT_SSH_COMMAND``, ``GIT_SSH`` or a configured ``core.sshCommand`` is
+    present, so a caller's own ssh setup is never overridden (BO-4300c-2).
+    """
+    env = dict(os.environ if base is None else base)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    if "GIT_SSH_COMMAND" not in env and "GIT_SSH" not in env and not workspace_root.ssh_command_configured():
+        env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+    return env
+
+
+def git_env() -> dict[str, str]:
+    """Environment for every maker child process: the caller's, with prompts disabled."""
+    return no_prompt_env()
+
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
             encoding: str | None = None) -> subprocess.CompletedProcess:
@@ -74,6 +98,8 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
         proc = subprocess.run(
             ["git", *args],
             cwd=str(cwd),
+            stdin=subprocess.DEVNULL,
+            env=git_env(),
             capture_output=True,
             text=True,
             encoding=encoding,

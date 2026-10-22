@@ -105,8 +105,13 @@ amended_by:
   at: '2026-10-22'
   note: Child BO-4300e-2-iii added (clearing only ever removes one of this project's own workspaces); covered_by updated. Criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300e-2-i, BO-4300e-2-ii, BO-4300e-2-iii]
+covered_by: [BO-4300e-2-i, BO-4300e-2-ii, BO-4300e-2-iii, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py]
 implemented_by:
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_canaries.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_identity.py
+- templates/scripts/worktree_log_root.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The

@@ -187,8 +187,12 @@ amended_by:
   at: '2026-10-22'
   note: Child BO-4300f-3-iv added (retiring an old workspace reports the ignored files it deletes); covered_by updated.
 superseded_by: null
-covered_by: [BO-4300f-3-i, BO-4300f-3-ii, BO-4300f-3-iii, BO-4300f-3-iv]
+covered_by: [BO-4300f-3-i, BO-4300f-3-ii, BO-4300f-3-iii, BO-4300f-3-iv, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py]
 implemented_by:
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_canaries.py
+- templates/scripts/worktree_identity.py
+- templates/scripts/worktree_log_root.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12_TICKET-20260928-BO-4300-legacy-cut-over.md
 - templates/scripts/worktree.py
 - templates/scripts/worktree_git.py

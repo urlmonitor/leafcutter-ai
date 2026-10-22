@@ -221,8 +221,13 @@ amended_by:
   note: Contract additions (BUILT_FOR_OTHER_TICKET, recorded_ticket, failed_ingredients, three new checks, step, locate/verify field values); REFUSED is not a code; criteria and schema_version unchanged.
 superseded_by: null
 covered_by:
+- unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py
 - unit_tests/build_orchestration/test_bo_4300c_2.py
 implemented_by:
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_canaries.py
+- templates/scripts/worktree_identity.py
+- templates/scripts/worktree_log_root.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03_TICKET-20260928-BO-4300-answer-contract.md
 - templates/scripts/worktree.py
 - templates/scripts/worktree_git.py

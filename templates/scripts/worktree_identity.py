@@ -244,7 +244,8 @@ def _show_bytes(workspace: Path, ref: str, rel: Path) -> bytes | None:
     """Return the bytes of *rel* at *ref* in *workspace*, or ``None`` when absent there."""
     try:
         proc = subprocess.run(["git", "show", f"{ref}:{rel.as_posix()}"], cwd=str(workspace),
-                              capture_output=True, check=False, timeout=60)
+                              capture_output=True, check=False, timeout=60,
+                              stdin=subprocess.DEVNULL, env=wg.git_env())
     except (OSError, subprocess.SubprocessError) as exc:
         _log.warning("_show_bytes: git show failed in %s: %s", workspace, exc)
         return None
