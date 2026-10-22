@@ -201,7 +201,7 @@ amended_by:
       data edit. Added step_config_unreadable and the test proving the vocabulary is read from
       config. Retry ceilings default to 3, automated retries only.
 superseded_by: null
-covered_by: [BO-4500a-4-i, BO-4500a-4-ii, BO-4500a-4-iii, BO-4500a-4-iv, BO-4500a-4-v, BO-4500a-4-vi]
+covered_by: [BO-4500a-4-i, BO-4500a-4-ii, BO-4500a-4-iii, BO-4500a-4-iv, BO-4500a-4-v, BO-4500a-4-vi, BO-4500a-4-vii]
 implemented_by: []
 notes: |
   FRAMEWORK NEUTRALITY (L0/L1 constraint 4) is the second scenario: a harness that is not the E2
