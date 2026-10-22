@@ -9,7 +9,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c.yaml
 criteria: |
   Given the package's agent definitions mark 24 agents with signoff: true,

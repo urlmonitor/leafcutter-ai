@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
 criteria: |
   Given a freshly built installed project whose feedback sink is writable,

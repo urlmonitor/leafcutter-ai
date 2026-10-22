@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-25'
-last_updated: '2026-08-25'
+last_updated: '2026-10-22'
 components:
   - feedback_collector
 related_docs:
@@ -16,12 +16,19 @@ related_docs:
 # KI-FC-003 — `ac-validator` is in no category's `allowed_writers`, so it has never submitted a single feedback record
 
 > One known issue, split out of `docs/known-issues/feedback-collector.md` on
-> 2026-09-14. Index: [feedback-collector.md](../feedback-collector.md).
+> 2026-09-14. Index: [feedback-collector.md](../../feedback-collector.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium — silent, and it invalidates the corpus rather than just losing one record
-- **Status:** open — code and config are on `main` and live
+- **Status:** **RESOLVED** (INF-100c-5, branch `ac-authoring/feedback-collector`, 2026-10-22).
+  The two instances were fixed first: `c3a469610` (2026-09-28) registered ac-validator and
+  ac-fulfillment-gate in six categories. The class fix followed:
+  `scripts/build_phases_feedback_writers.py` runs in every build (`_validate_all`, so
+  `--validate-only` too). It fails the build, naming every agent with `signoff: true` that no
+  category admits, and it warns on a writer entry that names no registered agent. It uses the
+  same `writer_allowed` rule as submission. On its first run it caught two more drifted
+  agents, restructuring-specialist and change-scope-reviewer, which are now registered.
 - **Occurrences:** 2 (2026-08-19; 2026-09-07, where it also caught a **second** affected agent)
 - **First seen:** 2026-08-19 · **Last seen:** 2026-09-07 (re-verified against `e5bb41b6d`)
 
