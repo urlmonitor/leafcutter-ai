@@ -1779,13 +1779,12 @@ while (pendingPhases.length > 0) {
       if (!gateVerdict.gate_passed) {
         return {
           status: "blocked",
-          message: `verify_red_baseline gate failed for ticket ${ticketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.remedy || ""}`,
+          message: `verify_red_baseline gate failed for ticket ${ticketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"} (interpreter: ${gateVerdict.interpreter || "unknown"}). Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii). ${gateVerdict.refusal || ""}${gateVerdict.remedy || ""}`,
           ticket_path: ticketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: gateVerdict.halt_classification || "halt",
         };
       }
     }
   }
-
   let phaseResult;
   let retryLoop = true;
 

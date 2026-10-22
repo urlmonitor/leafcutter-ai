@@ -1,0 +1,105 @@
+id: TQ-500f-3-v
+components:
+  - testing_quality
+  - build_orchestration
+title: "The red-baseline reader judges new tests with the project's own Python, and says so loudly when that Python cannot import the project"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an adopter project whose dependencies live in a project virtual
+    environment (for example a uv-managed .venv in each worktree), so the
+    bare `python` on PATH has pytest but cannot import the project's own
+    package, and whose tests/conftest.py imports that package,
+    And a newly added test, tagged as covering the requirement, that fails
+    with an assertion when run under the project's environment,
+  When a build route runs the red-baseline gate (heavy_lane_gate on
+    /build-feature and /build-ticket, verify_red_baseline on the fast lane)
+    with the bare `python` on PATH,
+  Then the gate runs the tests with the project's interpreter, chosen in this
+      order: the command configured as testing_context.python_command in the
+      project's skills_config.json; else the worktree's .venv interpreter;
+      else `uv run` when the project is uv-managed; and only when none of
+      these applies, the interpreter running the gate,
+    And the new test is judged red and the gate passes, with the verdict's
+      interpreter naming the project interpreter that judged it,
+    And when the chosen interpreter cannot import the project's own package,
+      so every new test errors at collection with that ImportError, the gate
+      fails with its own reason, project_package_not_importable, and a
+      refusal that names the interpreter and the missing package,
+    And that case is never reported as no_red_outcome_among_new_tests.
+depends_on:
+  - TQ-500f-3
+doc_links:
+  - path: scripts/ac_store/project_python.py
+    relationship: modifies
+    status: exists
+    relevance: "New resolver for the project interpreter, plus the collection-ImportError reading the gate refuses on."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "verify_red_baseline: judges with the resolved interpreter and refuses an un-importable project package."
+  - path: scripts/ac_store/done_proof.py
+    relationship: modifies
+    status: exists
+    relevance: "_run_pytest_and_parse: the pytest child runs under the resolved interpreter."
+  - path: scripts/ac_store/done_proof_kind_support.py
+    relationship: modifies
+    status: exists
+    relevance: "_run_pytest_with_kind_plugin: the pytest child runs under the resolved interpreter."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: Hendrik Henze
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_gate_judges_new_tests_with_the_worktree_venv
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Real git fixture whose conftest imports a package installed only in the worktree's .venv. heavy_lane_gate and verify_red_baseline, launched by the bare interpreter, both pass with the new test red, and the verdict's interpreter is the .venv interpreter."
+  - name: test_gate_uses_the_configured_python_command_first
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "testing_context.python_command names an environment outside .venv. The gate judges with it and the verdict names it."
+  - name: test_gate_refuses_loudly_when_the_project_package_cannot_be_imported
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "No project environment exists, so the gate falls back to the bare interpreter and every new test errors at conftest import. The verdict's reason is project_package_not_importable, never no_red_outcome_among_new_tests, and its refusal names the interpreter and the package."
+  - name: test_resolver_order_configured_venv_uv_then_current
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The resolver returns the uv run command for a uv-managed project without a .venv, and the interpreter running the gate when nothing applies."
+notes: |
+  FOUND IN THE DIAGRAPH ADOPTER (leafcutter v15.0.9, commit dcd93781). The
+  build-feature red-baseline gate ran `python fast_lane.py heavy_lane_gate`
+  with /usr/bin/python, which has pytest but not the diagraph package (that
+  lives in the worktree's uv-managed .venv). conftest import failed with
+  ModuleNotFoundError: No module named 'diagraph', pytest exited 4, every new
+  test read ERROR, and the gate returned no_red_outcome_among_new_tests, so
+  the coder was never dispatched. Under the project venv the same tests were
+  genuinely red: 17 red, 1 green by design. The existing
+  test_interpreter_unusable check only asked whether pytest imports, so it
+  could not see this.
+
+  L3 under TQ-500f-3 beside -3-ii and -3-iv: a technical constraint on the
+  same red-baseline reader, not a new behaviour.

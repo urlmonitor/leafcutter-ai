@@ -177,6 +177,7 @@ from pathlib import Path
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-v
 from pytest_outcome_reader import (  # TQ-500g-4: the ONE shared reading of a pytest run
     _PYTEST_RUN_INCOMPLETE_SENTINEL,
     describe_subcases,
@@ -567,20 +568,13 @@ def _observe_reachability(
     }
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # Deliberately Path(tmp_dir, name) rather than Path(tmp_dir) / name:
-            # the latter's AST shape (a "/"-joined leading-underscore ".py"
-            # string literal) is exactly what BP-900h-4's declaring-files
-            # scanner (_declaring_files_scan._helper_module_declaring_files)
-            # treats as "this guardrail loads a deployed sibling module" and
-            # requires to exist under the deployed tree. This file is a
-            # runtime-only script materialised fresh inside a TemporaryDirectory
-            # and never a deployed sibling of done_proof.py, so it must not
-            # produce that declaring-file entry. Same resulting Path either way.
+            # Path(tmp_dir, name), never Path(tmp_dir) / name: BP-900h-4's declaring-files scanner reads the
+            # "/"-joined "_x.py" shape as a deployed sibling; this runtime-only temp script is not one.
             script_path = Path(tmp_dir, "_reachability_runner.py")
             script_path.write_text(_REACHABILITY_RUNNER_SCRIPT, encoding="utf-8")
             proc = subprocess.run(
                 [
-                    sys.executable,
+                    *resolve_for_files([test_file]).argv,
                     str(script_path),
                     str(test_file),
                     function_name,
@@ -1314,6 +1308,16 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     no such rootdir ancestor exists at all, so the original OS-temp-dir
     fixture motivation above is unchanged.
 
+    TQ-500f-3-v (2026-10-22): the child runs under the PROJECT's interpreter
+    (``project_python.resolve_for_files``: configured command, else the
+    worktree ``.venv``, else ``uv run``, else ``sys.executable``), not under
+    whatever launched this process — an adopter whose package lives only in
+    its venv otherwise fails every conftest import. An unfinished run's
+    sentinel dict also carries the modules it could not import
+    (``missing_modules``), so a caller can name an un-importable project
+    package instead of reporting "no red". The reachability observation's
+    child runs under the same resolved interpreter.
+
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
     :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
@@ -1343,7 +1347,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     """
     if not test_files:
         return {}
-    cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
+    cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=no", "--no-header"]
     cmd.extend(str(f) for f in test_files)
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
@@ -1372,7 +1376,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     if proc.returncode not in (0, 1):
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
+        return with_import_failures({_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, proc)
     return _parse_pytest_verbose_output(proc.stdout, proc.returncode)
 
 

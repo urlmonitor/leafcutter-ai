@@ -93,7 +93,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # one and the deployed generator dies at import -- loudly, unlike the
     # importlib try/except degradation above, because the shell imports them
     # unconditionally.
-    #
     # The shell resolves them via importlib.import_module under a prefix
     # COMPUTED from its own __name__ (it must work both package-qualified and
     # as a bare directory import). A computed name is undecidable statically,
@@ -118,10 +117,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_gtfa_frontmatter.py",         "_gtfa_frontmatter.py"),
     # _gtfa_impl_py.py owns the "implementation .py in scope" predicate that
     # gates the generated ticket's ## Test Requirements section (TKT-500f-6).
-    # _gtfa_body.py and _gtfa_tests_section.py import it at MODULE scope, so
-    # omitting it here ships a generator that dies at import with
-    # ModuleNotFoundError in the deployed layout while every unit test --
-    # importing from source -- stays green.
     ("scripts/ac_store/_gtfa_impl_py.py",             "_gtfa_impl_py.py"),
     ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
     ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
@@ -170,6 +165,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    ("scripts/ac_store/project_python.py", "project_python.py"),  # TQ-500f-3-v: imported by done_proof + fast_lane
     ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
     # done_proof_kind_support.py loads to read each test's real exception
