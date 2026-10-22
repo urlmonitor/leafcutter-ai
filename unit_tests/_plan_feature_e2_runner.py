@@ -405,6 +405,9 @@ def run_isolated_e2(
     names = list(func_names)
     if "parseAgentJson" not in names:
         names = ["parseAgentJson", *names]
+    # BO-4300a-1-ia: extracted functions quote interpolated paths with the shared makerQuote helper (consumer_drift).
+    if "makerQuote" not in names:
+        names = ["makerQuote", *names]
     snippets = [extract_js_function(source, name) for name in names]
     script = "'use strict';\n" + "\n".join(snippets) + "\n" + driver_js
     proc = _run_node(script, timeout=timeout)

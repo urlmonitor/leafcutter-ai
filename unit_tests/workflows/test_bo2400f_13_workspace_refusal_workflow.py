@@ -92,6 +92,10 @@ def _calls_with_label(result: HarnessResult, label: str) -> list:
     return [c for c in result.agent_calls if c.label == label]
 
 
+# BO-4300a-1-ia: the one maker-path probe precedes the workspace step; nothing else may be dispatched (consumer_drift).
+_MAKER_STEPS = ["resolve-maker-path", "workspace-ensure"]
+
+
 def _labels_seen(result: HarnessResult) -> list[str | None]:
     return [c.label for c in result.agent_calls]
 
@@ -137,7 +141,7 @@ class TestOccupiedWorkspaceRefusesBeforeAnyDispatch(_FixtureCase):
         labels = _labels_seen(result)
         self.assertEqual(
             labels,
-            ["workspace-ensure"],
+            _MAKER_STEPS,
             f"Only the worktree-phase dispatch may occur before/at the refusal — "
             f"the operator has paid for exactly one check. Got labels: {labels}. "
             f"stderr={result.stderr!r}",
@@ -209,7 +213,7 @@ class TestBlankOrMissingOutcomeRefuses(_FixtureCase):
             f"end the run before Resolve, never proceed to dispatch the resolver. "
             f"Labels seen: {_labels_seen(result)}. stderr={result.stderr!r}",
         )
-        self.assertEqual(_labels_seen(result), ["workspace-ensure"], f"[{case_name}] nothing may follow the step")
+        self.assertEqual(_labels_seen(result), _MAKER_STEPS, f"[{case_name}] nothing may follow the step")
         self.assertIsNotNone(result.result, f"[{case_name}] stderr={result.stderr!r}")
         self.assertEqual(
             result.result.get("status"),
@@ -268,7 +272,7 @@ class TestOwnLeftoverRefusalReachesOperator(_FixtureCase):
 
         for forbidden in _DOWNSTREAM_LABELS:
             self.assertFalse(_calls_with_label(result, forbidden))
-        self.assertEqual(_labels_seen(result), ["workspace-ensure"])
+        self.assertEqual(_labels_seen(result), _MAKER_STEPS)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
@@ -308,7 +312,7 @@ class TestForeignOccupantRefusalReachesOperator(_FixtureCase):
 
         for forbidden in _DOWNSTREAM_LABELS:
             self.assertFalse(_calls_with_label(result, forbidden))
-        self.assertEqual(_labels_seen(result), ["workspace-ensure"])
+        self.assertEqual(_labels_seen(result), _MAKER_STEPS)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result

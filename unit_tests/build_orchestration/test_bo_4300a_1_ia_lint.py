@@ -39,6 +39,7 @@ from __future__ import annotations
 import unittest
 
 from unit_tests.build_orchestration._bo_4300a_1_ia_fixtures import (
+    cwd_relative_maker_hits,
     TEMPLATE_WORKFLOWS_DIR,
     list_deployed_workflow_files,
     load_agent_registry,
@@ -156,6 +157,60 @@ class TestBO4300a1iaShellDispatchLint(unittest.TestCase):
             [],
             msg="the SAME prompts dispatched to shell-runner must report nothing against the real registry",
         )
+
+    def test_no_template_runs_the_maker_by_a_cwd_relative_path(self):
+        # covers: BO-4300a-1-ib
+        # angle: criterion
+        """A scan of EVERY text file under templates/ (.md .js .mjs .py .yaml .json; no folder is skipped) finds no
+        `python(3) scripts/worktree.py` (or .leafcutter/-prefixed) spelling, no output-root-relative maker
+        command and no unquoted maker path: every maker command is the absolute, quoted form."""
+        templates = TEMPLATE_WORKFLOWS_DIR.parent
+        files = [
+            p for p in sorted(templates.rglob("*")) if p.is_file() and p.suffix in {".md", ".js", ".mjs", ".py", ".yaml", ".json"}
+        ]
+        self.assertGreater(len(files), 0, "no template files found to scan")
+        hits = []
+        for path in files:
+            hits.extend(cwd_relative_maker_hits(path.relative_to(templates).as_posix(), path.read_text(encoding="utf-8")))
+        self.assertEqual(hits, [], msg=f"{len(hits)} cwd-relative maker spelling(s):\n" + "\n".join(hits))
+
+    def test_maker_lint_exempts_nothing_and_still_catches_relative_paths(self):
+        # covers: BO-4300a-1-ib
+        # angle: discrimination
+        """Control: a relative `python3 .leafcutter/scripts/worktree.py`, a bare `python3 worktree.py` and an
+        output-root-relative maker command are reported in ANY file (shared block included); the absolute, quoted
+        form is not."""
+        shared = "workflows-js/_shared/workspace-answer.js"
+        for rel in ("workflows-js/build-epic.js", shared, "agents/worktree-agent.md"):
+            for bad in (
+                "python3 .leafcutter/scripts/worktree.py ensure --kind epic --slug x",
+                "python3 worktree.py ensure --kind epic --slug x",
+                "python3 {{config.output_root}}/scripts/worktree.py ensure --kind epic",
+            ):
+                self.assertEqual(len(cwd_relative_maker_hits(rel, bad)), 1, msg=f"{rel}: {bad}")
+        absolute = 'python3 "/abs/proj/.leafcutter/scripts/worktree.py" ensure --kind epic --slug "x"'
+        self.assertEqual(cwd_relative_maker_hits(shared, absolute), [])
+
+    def test_maker_lint_covers_every_templates_folder_and_the_docs_absolute_forms(self):
+        # covers: BO-4300a-1-ib
+        # angle: failure
+        """Control: a cwd-relative maker command in templates/workflows/*.md (a folder the scan once missed) is
+        caught, as is an UNQUOTED absolute or placeholder maker path; the quoted absolute forms the docs use
+        (`"<absolute-install-root>/scripts/worktree.py"`, `"<project root>/.leafcutter/scripts/worktree.py"`) are not."""
+        close_worktree = "workflows/close-worktree.md"
+        for bad in (
+            "python scripts/worktree.py remove --path x",
+            "python3 .leafcutter/scripts/worktree.py remove --path x",
+            "python <absolute-install-root>/scripts/worktree.py ensure --kind ticket",
+            "python /abs/proj/.leafcutter/scripts/worktree.py ensure --kind ticket",
+            "python <project root>/.leafcutter/scripts/worktree.py ensure --kind scratch",
+        ):
+            self.assertEqual(len(cwd_relative_maker_hits(close_worktree, bad)), 1, msg=bad)
+        for good in (
+            'python "<absolute-install-root>/scripts/worktree.py" ensure --kind ac --slug "<slug>" --repo-root "<absolute-project-root>"',
+            'python "<project root>/.leafcutter/scripts/worktree.py" ensure --kind scratch --slug "base"',
+        ):
+            self.assertEqual(cwd_relative_maker_hits(close_worktree, good), [], msg=good)
 
 
 if __name__ == "__main__":
