@@ -107,6 +107,7 @@ amended_by:
 superseded_by: null
 covered_by: [BO-4300e-2-i, BO-4300e-2-ii, BO-4300e-2-iii]
 implemented_by:
+- templates/scripts/worktree_remove.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The

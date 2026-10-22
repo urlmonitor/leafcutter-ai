@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: critical
 roadmap_phase: phase_1
@@ -70,8 +70,11 @@ origin_agent: business-analyst
 created: 2026-10-22
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300e_3_ii.py
+implemented_by:
+- templates/scripts/worktree_remove.py
+- templates/scripts/worktree_ensure_state.py
 notes: |
   Hardening item M5 (push --delete failure), approved by the user 2026-10-22 as amendment A7.
   Deleting the hub line first means a refused deletion can never leave a cleared workspace whose

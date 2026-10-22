@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: critical
 roadmap_phase: phase_1
@@ -71,8 +71,11 @@ origin_agent: business-analyst
 created: 2026-10-22
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+implemented_by:
+- templates/scripts/worktree_remove.py
+- templates/scripts/worktree_ensure_state.py
 notes: |
   Hardening item M5 (remove scope), approved by the user 2026-10-22 as amendment A6. Clearing
   must never reach a workspace of another project or a folder outside the landing place, even
