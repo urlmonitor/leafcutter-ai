@@ -1,0 +1,284 @@
+id: KM-400d-4-ii
+title: "The retrieval deadline bounds the caller's wait, including a stuck lookup, connect or close"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400d-4
+criteria: |
+  Scenario: a blocking graph call outlives the deadline
+  Given a retrieve request with deadline_ms 2000
+  And the graph server name lookup blocks for 20 s in a way that cannot be cancelled (not a cancellable sleep)
+  When a fresh process runs the knowledge retrieve command
+  Then the command prints its JSON answer with status unavailable and the warning "retrieval deadline reached"
+  And the process exits with the unavailable exit code
+  And the time from the start of the retrieval to process exit is at most 3000 ms (deadline plus 1000 ms)
+  And that time is counted on the retrieval clock that stats.duration_ms uses, not from process start
+
+  Scenario: closing the graph connection also blocks
+  Given a retrieve request with deadline_ms 2000
+  And the graph transaction blocks for 20 s and closing the graph connection blocks for 20 s, neither cancellable
+  When a fresh process runs the knowledge retrieve command
+  Then the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+  And the printed answer is complete, valid JSON
+
+  Scenario: a stuck connect after a fast lookup
+  Given a retrieve request with deadline_ms 2000
+  And the name lookup returns in 0.05 s but opening the connection blocks for 20 s
+  When a fresh process runs the knowledge retrieve command
+  Then the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+
+  Scenario: useful evidence produced before the deadline is still reported
+  Given a retrieve request with deadline_ms 2000
+  And the first query returns one evidence item at 500 ms and the follow-up query then blocks for 20 s
+  When a fresh process runs the knowledge retrieve command
+  Then the answer states whether useful evidence was produced before the deadline
+  And the process exits at most 3000 ms after the start of the retrieval
+depends_on: [KM-400d-4]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-4.yaml
+    relationship: context
+    status: exists
+    relevance: Parent L2. This AC replaces its clause "cancellation or deadline exhaustion stops further work" for the real CLI.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: A deadline miss stays unavailable, distinct from an empty search; this AC must not change that status.
+  - path: docs/reference/knowledge-retrieval-answers.md
+    relationship: context
+    status: exists
+    relevance: deadline_ms is documented as the cumulative deadline; status and exit-code contract.
+  - path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+    relationship: context
+    status: exists
+    relevance: The 'unavailable' branch is the journey a deadline miss ends in.
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "Consumed by KM-400d-4-iii. When the deadline passes, the retrieval path knows which step was in progress (one of \"name lookup\", \"connect\", \"query\") and the elapsed milliseconds already spent in that step on the retrieval clock, and makes both available to the result builder before the answer is printed, even while the abandoned call is still blocked. Delivered in-process."
+expects_from: null
+declared_files:
+  - path: knowledge/__main__.py
+    state: existing
+  - path: knowledge/service.py
+    state: existing
+  - path: knowledge/adapters/neo4j_backend.py
+    state: existing
+it_requirements:
+  - "The bound (answer printed and process exited within deadline_ms + 1000 ms) must hold for every deadline_ms value from 1 to 30000, measured on the same clock as stats.duration_ms from retrieval start, and must include closing the retriever and the driver."
+  - "No blocking call left running after the deadline (name lookup, connect, transaction or close) may delay printing the answer or exiting; abandoned work must never be waited on in the exit path."
+  - "The printed answer must be complete, valid JSON, fully flushed to stdout before the process exits."
+  - "A deadline miss must keep status unavailable and the documented unavailable exit code, distinct from a no-match result (KM-400e-4)."
+  - "Abandoning work after the deadline must be logged at WARNING or higher per the project error handling policy, naming that the work was abandoned."
+  - "Process-terminating behaviour must be confined to the standalone CLI entry point; the kernel-hosted retrieval path must not block on an expired call and must never terminate its host process."
+  - "Retrievals that finish within the deadline must keep their current output and close the driver gracefully."
+  - "Must not raise default or maximum deadlines, move connect time outside the deadline, or add a background daemon or result cache."
+test_intent:
+  - clause: the command prints its JSON answer with status unavailable and the warning "retrieval deadline reached"
+    needs_test: true
+    reason: The status and warning are the caller-visible outcome of a deadline miss and must survive a non-cancellable blocked call.
+  - clause: the process exits with the unavailable exit code
+    needs_test: true
+    reason: Callers branch on the exit code, so an early exit path that returned the wrong code would mislead them.
+  - clause: the time from the start of the retrieval to process exit is at most 3000 ms (deadline plus 1000 ms)
+    needs_test: true
+    reason: The measured 32 s wall time for a 10 s deadline is the defect, so the bound itself must be proven.
+  - clause: that time is counted on the retrieval clock that stats.duration_ms uses, not from process start
+    needs_test: true
+    reason: Measuring from the wrong start point would either fail on slow interpreter start-up or hide the late exit.
+  - clause: the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+    needs_test: true
+    reason: A blocked close or a blocked connect each delays exit through a different path, so each scenario needs its own proof.
+  - clause: the printed answer is complete, valid JSON
+    needs_test: true
+    reason: Exiting early risks a truncated or unflushed answer that a caller cannot parse.
+  - clause: the answer states whether useful evidence was produced before the deadline
+    needs_test: true
+    reason: Evidence gathered before a blocked follow-up query is computed state that an abandon path could silently drop.
+  - clause: the process exits at most 3000 ms after the start of the retrieval
+    needs_test: true
+    reason: The bound must hold even when partial evidence is being reported, which is a distinct path to exit.
+test_spec:
+  - name: test_km_400d_4_ii_blocked_lookup_prints_unavailable_with_deadline_warning
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "python -m knowledge retrieve run as a fresh subprocess (real argv, real main, real KnowledgeService and Neo4jBackend._transaction) through a shared support module in the style of tests/knowledge/_km_400e_8_support.py; the subprocess installs a fake resolver as socket.getaddrinfo that blocks 20 s with time.sleep (not a cancellable asyncio sleep) and a fake neo4j driver whose session work calls it from the transaction worker thread; the request carries deadline_ms 2000"
+    description: The printed JSON has status unavailable and the warning "retrieval deadline reached" while the blocked lookup is still running.
+    proves_clause: the command prints its JSON answer with status unavailable and the warning "retrieval deadline reached"
+    code_file: knowledge/__main__.py
+    must_catch:
+      - "the answer is printed only after asyncio.run joins the abandoned worker thread, so it arrives after the blocked call ends"
+      - "the abandon path prints a different status or drops the warning text"
+  - name: test_km_400d_4_ii_blocked_lookup_exits_with_the_unavailable_exit_code
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "the same fresh-subprocess python -m knowledge retrieve run with the 20 s blocking lookup and deadline_ms 2000, reading the subprocess return code"
+    description: The subprocess return code is 2, the code main returns for an unavailable status.
+    proves_clause: the process exits with the unavailable exit code
+    code_file: knowledge/__main__.py
+    must_catch:
+      - "an early-exit path exits 0 or uses os._exit with a hard-coded wrong code"
+  - name: test_km_400d_4_ii_exit_is_within_deadline_plus_one_second_of_retrieval_start
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run; the harness entry script wraps KnowledgeService.retrieve to write time.time() at retrieval start to a record file, and the parent test takes time.time() when subprocess.run returns (child time.sleep(20) threads left running, subprocess timeout 15 s)"
+    description: The parent's exit time minus the recorded retrieval start is at most 3.0 s for deadline_ms 2000, for a second deadline_ms value as well.
+    proves_clause: the time from the start of the retrieval to process exit is at most 3000 ms (deadline plus 1000 ms)
+    code_file: knowledge/service.py
+    must_catch:
+      - "the CLI joins the abandoned default-executor thread on shutdown and exits after about 20 s"
+      - "the bound holds for deadline_ms 2000 only because of a hard-coded constant"
+  - name: test_km_400d_4_ii_the_bound_is_counted_on_the_retrieval_clock_not_process_start
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run with the harness entry script sleeping 2 s before main() so process start is far earlier than retrieval start; the test compares the exit time against the recorded retrieval start and against process start, and against stats.duration_ms in the printed JSON"
+    description: Exit minus retrieval start is at most 3.0 s although exit minus process start exceeds 3.0 s, and stats.duration_ms is the figure on that same clock.
+    proves_clause: that time is counted on the retrieval clock that stats.duration_ms uses, not from process start
+    code_file: knowledge/service.py
+    must_catch:
+      - "the early exit is scheduled from process start so it fires before the deadline on a slow start-up"
+  - name: test_km_400d_4_ii_blocked_close_does_not_delay_the_printed_answer_or_exit
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same fresh-subprocess run with deadline_ms 2000 where the fake driver's transaction and its close() both block 20 s with time.sleep in a thread; retrieval start and exit times are measured as above"
+    description: The answer is printed and the process exits at most 3.0 s after retrieval start although close() is still blocked.
+    proves_clause: the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+    code_file: knowledge/adapters/neo4j_backend.py
+    must_catch:
+      - "close() is awaited on the exit path so a blocked driver close delays exit by 20 s"
+  - name: test_km_400d_4_ii_blocked_close_answer_is_complete_valid_json
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: "the same fresh-subprocess run with the blocked transaction and blocked close(), capturing the whole of stdout"
+    description: The whole stdout parses with json.loads as one object ending in a newline, so the answer is not truncated by the early exit.
+    proves_clause: the printed answer is complete, valid JSON
+    code_file: knowledge/__main__.py
+    must_catch:
+      - "the process terminates with os._exit before stdout is flushed so the JSON is empty or cut short"
+  - name: test_km_400d_4_ii_a_blocked_connect_after_a_fast_lookup_does_not_delay_exit
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run where the fake resolver answers in 0.05 s and the fake driver's connect (inside session work) blocks 20 s with time.sleep"
+    description: The answer is printed and the process exits at most 3.0 s after retrieval start.
+    proves_clause: the answer is printed and the process exits at most 3000 ms after the start of the retrieval
+    code_file: knowledge/service.py
+    must_catch:
+      - "only the name-lookup stall is bounded so a stuck connect still delays exit"
+  - name: test_km_400d_4_ii_evidence_before_the_deadline_is_reported_when_follow_up_blocks
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: "the same fresh-subprocess run where the fake driver answers the first query with one evidence item after 0.5 s and blocks 20 s on the follow-up query, with an operation and budget that require a follow-up query and deadline_ms 2000"
+    description: The printed JSON states whether useful evidence was produced (the status partial with the evidence item present, or an explicit statement it was not) and does not drop the item gathered before the deadline.
+    proves_clause: the answer states whether useful evidence was produced before the deadline
+    code_file: knowledge/service.py
+    must_catch:
+      - "the abandon path builds a fresh unavailable result and drops evidence already gathered"
+  - name: test_km_400d_4_ii_partial_evidence_case_exits_within_the_bound
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same fresh-subprocess run as the evidence-before-deadline case, measuring exit time minus the recorded retrieval start"
+    description: The process exits at most 3.0 s after retrieval start while partial evidence is being reported.
+    proves_clause: the process exits at most 3000 ms after the start of the retrieval
+    code_file: knowledge/__main__.py
+    must_catch:
+      - "the partial-evidence path waits for the blocked follow-up query before exiting"
+  - name: test_km_400d_4_ii_deadline_bound_is_reachable_through_the_retrieve_cli
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python -m knowledge retrieve --backend neo4j run as a fresh subprocess with real argv (the harness entry script only pre-installs the blocking fake resolver and fake driver factory, then calls knowledge.__main__.main)"
+    description: Through the real CLI entry point a 20 s blocked lookup with deadline_ms 2000 ends with the unavailable answer printed and exit code 2 well before 20 s.
+    proves_clause: the command prints its JSON answer with status unavailable and the warning "retrieval deadline reached"
+    code_file: knowledge/__main__.py
+    convention_test_file: tests/knowledge/test_km_400e_8.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-22"
+test_design_opened_files:
+  - knowledge/service.py
+  - knowledge/__main__.py
+  - knowledge/adapters/neo4j_backend.py
+  - knowledge/config.py
+  - tests/knowledge/test_km_400e_8.py
+  - tests/knowledge/_km_400e_8_support.py
+  - tests/knowledge/test_core.py
+  - config/ac_store_schema.json
+  - docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xxi.yaml
+file_findings:
+  - file: knowledge/__main__.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: main prints the answer only after asyncio.run returns and run closes the retriever in a finally block, which is the exit path the deadline bound changes.
+    decision: null
+  - file: knowledge/service.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: KnowledgeService.retrieve wraps the whole retrieval in asyncio.wait_for and sets the unavailable status and the deadline warning, so it is where the abandonment decision lives.
+    decision: null
+  - file: knowledge/adapters/neo4j_backend.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It runs the blocking session work and driver close through asyncio.to_thread, the worker threads that outlive the deadline.
+    decision: null
+file_findings_opened_files:
+  - knowledge/__main__.py
+  - knowledge/service.py
+  - knowledge/adapters/neo4j_backend.py
+origin_agent: business-analyst
+created: '2026-10-22'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Supersedes the deadline-exhaustion clause of KM-400d-4 ("cancellation or deadline
+  exhaustion stops further work") for the real CLI. KM-400d-4 is marked done, but that clause
+  is false on the real CLI: its covering test's slow backend is a cancellable asyncio sleep,
+  so it cannot see a blocking worker thread outliving the deadline. Measured 2026-10-22: a
+  10 s default deadline took 32.45 s of wall time (exit 2, status unavailable, duration_ms
+  10008); in-process the result was ready at 12.33 s and the event loop returned at 22.96 s
+  because shutdown joined the abandoned worker thread, and closing the driver waited ~2.3 s
+  on the in-flight connect. The bound is stated from retrieval start, not process start,
+  because interpreter start-up alone measured 2.8-5.5 s on this host.
+  Analysis: /home/henzeh/.cache/lc_probe/cli_query_time_limit_analysis.md (B2, option a).
+  The kernel-hosted path must not block on an expired call either; that path is out of this
+  AC's test scope (CLI) but must not regress.
+  The concrete 2000 ms deadline in the scenarios is a test value; the 1000 ms margin is the
+  user's bound and applies to every deadline_ms value 1-30000.
+  The 'useful evidence' scenario restates KM-400d-4's "reports whether useful evidence was
+  produced" under a blocking call -- BA addition, confirm at review.

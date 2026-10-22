@@ -512,8 +512,12 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
-    IF next_agent == "commit": spawn it through §5.9 (lock, routing stage,
-    commit staging the manifest by name, one observe, release).
+    IF next_agent IN {"python-coder", "sql-coder"} or its produces trait is
+    "production_code", and no coder has been spawned yet in this drive: run the
+    red-baseline reader (§5.10.1) first; on a halt, spawn no coder.
+    IF next_agent == "commit": spawn it through §5.9 (lock, wrong-version gate
+    §5.10.2, routing stage, commit staging the manifest by name, one observe,
+    release), on EVERY commit spawn including after a retry, handoff or remedy agent.
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
     and updated `agents:` + `## Sign-offs` rows.
@@ -1094,7 +1098,9 @@ every `commit` spawn, inside the commit lock. Sibling tickets share the worktree
 CLI keeps one run record per worktree, so the three calls must not interleave across
 tickets. Each call below is one Bash command. It prints one JSON line and always exits 0.
 
-1. Acquire the commit lock (§5.2).
+1. Acquire the commit lock (§5.2). Then run the wrong-version gate (§5.10.2) under this
+   same lock. Only when its `finish` reports `gate_passed` true continue with steps 2 to 5;
+   on any halt release the lock (§5.3) and spawn no `commit`.
 2. Run this and keep its JSON reply (if the command cannot run, use `{"case": "did_not_run", "manifest": []}`):
    `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py stage --working-dir <worktree_root>`
 3. Spawn the `commit` agent with `{ticket_path}`. In its stage list (the ticket-supervisor
@@ -1113,6 +1119,77 @@ Fail-open: never block, fail, or retry the ticket because of these calls, and ne
 A ticket with no `commit` phase does not route, and its records wait for the next carrying
 commit. Records whose text an earlier ticket's commit already carries are not written
 again; the stage reports them as `already_on_branch`.
+
+### §5.10 Gate runs on every drive (TQ-500f-3-iv, TQ-500g-1-vii)
+
+These run on every ticket-supervisor drive, whatever started it (no route test: that would be
+a skip path). Each command is ONE Bash call from the worktree root: no `cd`, pipe or `&&`.
+`<root>` is the worktree root with forward slashes, `<ids>` the `source_ac` ids joined by
+commas, `<ticket>` the ticket file's absolute path with forward slashes. `ticket_key` and
+`runs_alone` come from the dispatch input; the CLIs write the records under
+`<git-dir>/leafcutter/gate-verdicts/`. You never write, edit, move or delete anything there, never run
+`wrong_version_runner.py recover` (the workflow runs it once at the drive head), never
+reuse an earlier list, reply or result, and never put your own account of a verdict in its place.
+When `ticket_key` is missing, use the ticket file's stem.
+
+**Input check** (before any command of §5.10.1 or §5.10.2): `ticket_key` and every `source_ac`
+id must match `^[A-Za-z0-9._-]+$`; `<root>` (and `<ticket>` for §5.10.1) must contain none of
+`"`, `$`, backtick, CR, LF. On failure run nothing and halt with step `input-check` and the rejected values.
+
+**Parse fail-closed.** A reply is valid only as one JSON object stdout with the fields named below;
+a non-zero exit with no such object, empty stdout or prose is no reply, and halts.
+
+**Halt shape.** Return `{status: "blocked", message: "Wrong-version <step> step did not pass: <parsed
+reply as JSON text, or null>", ticket_path, gate: "wrong_version_gate", wrong_version_step:
+"input-check" | "batch-serial-check" | "list" | "finish", wrong_version_detail: <parsed reply
+verbatim, or null>}`, and set the commit phase to failed through the `signoff` skill (§4) so a
+re-drive repeats the sequence. Red-baseline halts return `{status: "blocked", message naming the
+reader's reason and refused tests, ticket_path, gate: "verify_red_baseline", gate_verdict: <JSON
+verbatim, or the raw stdout / rejected values>}`.
+
+#### §5.10.1 Red-baseline reader (once per drive, outside the lock)
+
+Run it immediately before the first coder spawn of the drive (also on resume with `test-writer`
+already `signed_off`). When the drive will spawn `commit` but no coder (coders already
+`signed_off`), run it once before the first §5.10.2 sequence instead (`--ticket` reuses the pass
+recorded earlier; without one the reader halts). After the input check, exactly:
+
+`python "<root>"/{{config.output_root}}/scripts/build_orchestration/fast_lane.py heavy_lane_gate --source-ac "<ids>" --test-root "<root>" --ac-root "<root>/docs/acceptance-criteria" --ticket "<ticket>" --record "<ticket_key>"`
+
+Without `source_ac` (K3) drop the `--source-ac "<ids>"` pair; still run it. Continue to the coder
+only when `gate_passed` is the boolean true; the test-writer's sign-off or `red_baseline_verified`
+claim is never a substitute. Return `red_baseline_gate` = the verdict's `outcome` verbatim
+(K3: "red-baseline reader not applicable: no source requirement", never "verified").
+
+#### §5.10.2 Wrong-version runs (before EVERY `commit` spawn, inside the commit lock)
+
+After the last pre-commit phase, and again after any retry, handoff or remedy agent
+(for example restructuring-specialist), in this order:
+
+1. Acquire the lock (§5.2). Run the input check.
+2. **Serial check:** when `runs_alone` is false (missing counts as true only when no `ticket_key`
+   came in the dispatch input) and `source_ac` is non-empty, run no command; halt with step
+   `batch-serial-check`, `wrong_version_detail` `{source_ac: [ids]}`, message "This ticket owes
+   wrong-version runs but its batch ran in parallel; no wrong-version step ran."
+3. Red-baseline reader (§5.10.1), if this drive has not run it yet.
+4. Only with non-empty `source_ac`, the list step; `owed` must be an array and `error` null, else halt with step `list`:
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py list --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD`
+5. Only when `owed` is non-empty, spawn `test-breaker` with `{work_key: <ticket_key>, repo_root: <root>,
+   requirement_ids: [<ids>], wrong_versions: <owed, unchanged, scope included>}`. Only the list
+   step decides that nothing is owed; you never decide it yourself.
+6. Always run `finish` (K3: drop the `--ac-ids "<ids>"` pair). The reply goes in a quoted
+   here-document: `<DELIM>` starts as `WV_REPLY_EOF` and gains `_X` while the reply contains it.
+   The line is followed by the reply (byte for byte: never edited, reformatted, extracted or
+   summarised), a newline when the reply is non-empty, then `<DELIM>` on its own line. A string
+   reply goes in as is; a failed, refused or empty test-breaker spawn, or nothing owed, goes in as an empty reply.
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key "<ticket_key>" --reply - --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD --record "<ticket_key>" <<'<DELIM>'`
+7. `gate_passed` must be the boolean true, else halt with step `finish` (a writer stop,
+   `stopped_at: "write"`, is a halt; never retry by running the runner without a manifest).
+   Only then continue with §5.9 steps 2 to 5 under the same lock.
+
+Return `wrong_version_outcome` = `finish`'s `verdict.outcome` verbatim (null when no verdict;
+K3: "wrong-version runs not applicable: no source requirement", never "verified"), beside
+`red_baseline_gate`, on every ticket that reached `finish`.
 
 ---
 
