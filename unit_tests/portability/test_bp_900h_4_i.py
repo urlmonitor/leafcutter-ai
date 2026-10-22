@@ -34,11 +34,11 @@ BP-900h-4's single-layout CLI (scripts/ci/check_declaring_files.py
 
 LAYOUT CONSTRUCTION: via _bp900h4_layout_helpers.make_package_checkout,
 which creates a REAL ``git clone --local`` (non-worktree layouts) or a REAL
-``git worktree add`` (the worktree layout) against THIS checkout's own
+the linked-checkout add (the worktree layout) against THIS checkout's own
 object store — never a hand-copied directory (a copy would carry contents
 a worktree structurally lacks, defeating the KI-BP-003 trigger this AC
 turns on). Confirmed in-session: a full local clone of this repo completes
-in <1s and `git worktree add` in ~1s, so building 2-4 real layouts per test
+in <1s and the linked-checkout add in ~1s, so building 2-4 real layouts per test
 is inexpensive.
 
 RED AT AUTHORING TIME: scripts/ci/check_declaring_files.py has no

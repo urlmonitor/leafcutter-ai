@@ -33,7 +33,7 @@ related_code:
 
 | Field | Value |
 |---|---|
-| Amends | Adds A2.1–A2.7. Scopes two statements in Amendment 1 without withdrawing them: A1.1's "`emit_event.py` is not the knowledge emitter" and the Alternatives bullet "Use `agent-telemetry`'s `emit_event.py`. Rejected." Both are annotated in place. |
+| Amends | Adds A2.1–A2.8 (A2.8 added 2026-10-21). Scopes two statements in Amendment 1 without withdrawing them: A1.1's "`emit_event.py` is not the knowledge emitter" and the Alternatives bullet "Use `agent-telemetry`'s `emit_event.py`. Rejected." Both are annotated in place. |
 | Status | Accepted |
 | Date | 2026-10-21 (revised 2026-10-21 after review — see "Revision of 2026-10-21" below) |
 | Deciders | BrainCandy (the helper writes the `recorded` attempt itself, 2026-10-21) |
@@ -165,7 +165,7 @@ emit path MUST NOT contain any default, fallback, placeholder or f-string substi
   `emit_event.py` refuses the `failed` record and the helper warns on stderr that the attempt
   was not recorded. *(Revised 2026-10-21 after review.)* The agent-run `failed`
   variant (`--outcome failed --missing-target '<path>'`) is specified by `INF-700b-1-ii`, not
-  here.
+  here; A2.8 records its trigger and its `missing_target` rule.
 - **Ticketless agents.** The v3 agents (`product-owner`, `business-analyst`, `it-po`) run
   outside any ticket. Their attempt records carry a null ticket path.
 
@@ -182,6 +182,31 @@ attempt and printed nothing. The code was changed to refuse `--missing-target` o
 and `nothing-to-record`, and to warn and write one `failed` attempt when the sink append
 fails. A2.2, A2.4 and A2.6 above, and the Negative consequence below, now state what the
 code does. The decision itself is unchanged.
+
+**A2.8 — Telemetry commands live in one place, and the agent-run `failed` attempt has a fixed
+trigger.** *(Added 2026-10-21, from the `INF-700b-1-ii` architect review.)*
+
+- **One home for each command.** Each telemetry command an agent runs in the capture step
+  MUST be written out once, in a named section of the `agent-telemetry` skill:
+  `## Nothing-to-record capture attempt` and `## Failed capture attempt`. `signoff` §7 MUST
+  point to those sections by name and MUST NOT inline either command. The three v3 S9 blocks
+  keep their inline copy of the nothing-to-record command (`INF-700b-1-i`), and for the
+  failed attempt they carry only the pointer, inside their existing Yes-path "Fail open"
+  sentence. A2.3's "identical in `signoff` §7 and the three v3 S9 blocks" is read through
+  this rule: the section holds the command, and `signoff` §7 reaches it by pointer. The
+  reason is a rule clash. `BO-210c-1-iii` forbids `||` in `signoff`'s bash blocks, and
+  `INF-500d-4-vi` requires every `emit_event.py` command to end in `|| true`. BrainCandy
+  chose the pointer on 2026-10-21.
+- **Trigger.** An agent MUST record a `failed` attempt only when its Yes-path
+  `emit_knowledge.py` command exits non-zero. If that command exits 0, even with a stderr
+  warning, the helper has already handled its own failure (A2.4, A2.6), and the agent MUST
+  NOT add a second record. Each failure leaves at most one `failed` attempt.
+- **`missing_target`.** For the agent-run `failed` attempt, `missing_target` MUST be the
+  literal script path of the failing command, which is the first token after `python3`. It
+  MUST NOT be a category or a skill name.
+- **Limits.** Ticketless v3 agents leave out `--ticket`, so their records carry a null ticket
+  path. A failure where the `agent-telemetry` skill or `emit_event.py` itself is unavailable
+  cannot be recorded. Both are the limits already stated in A2.6.
 
 ## Consequences
 
@@ -232,3 +257,6 @@ unparseable.
   line on the telemetry stream has the same keys (`INF-400c-4-iii`).
 - **Record a refused text as `failed`.** Rejected. The agent had no learning to give, so
   `failed` would inflate the failure count with runs where nothing went wrong.
+- **Inline the failed command in `signoff` §7 (A2.8).** Rejected by BrainCandy on 2026-10-21.
+  The command must end in `|| true` (`INF-500d-4-vi`), and `BO-210c-1-iii` forbids `||` in
+  `signoff`'s bash blocks, so it cannot be inlined there without breaking one rule.

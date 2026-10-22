@@ -36,7 +36,9 @@
  *     "record_dir": "/tmp/...",          // the worktree root for this run
  *     "args": { ... },                   // overrides the args global wholesale
  *     "resolve": {...} | null,           // resolve-target stub reply
- *     "worktree_agent": {...} | null,    // worktree-setup stub reply
+ *     "workspace_ensure": {...} | null,  // workspace-ensure stub reply (BO-4300c-3), served verbatim;
+ *                                        // absent = ready at record_dir
+ *     "historical_replies": {...},       // label -> reply for lookups only a historical driver asks
  *     "worktree_check": {...} | null,    // build-ticket.js ambient git check reply
  *     "epic": {
  *        "path": "<abs epic folder>",
@@ -230,7 +232,23 @@ const recordMode = !!scenario.tickets;
 const ticketConfigs = scenario.tickets || {};
 const ticketPaths = Object.keys(ticketConfigs);
 
-const source = readFileSync(scriptPath, "utf8").replace(
+// BO-4300c-3: a template run straight from templates/workflows-js/ carries an EMPTY WORKSPACE-ANSWER marker
+// pair; the build phase fills it from the single tracked source. Fill it the same way here, and only when the
+// pair is empty (a deployed copy already holds the block and is left untouched).
+function fillWorkspaceAnswer(text) {
+  const startMark = "// WORKSPACE-ANSWER-START";
+  const endMark = "// WORKSPACE-ANSWER-END";
+  const start = text.indexOf(startMark);
+  if (start === -1) return text;
+  const end = text.indexOf(endMark, start);
+  if (end === -1 || text.slice(start + startMark.length, end).trim()) return text;
+  const block = readFileSync(
+    join(REPO_ROOT, "templates", "workflows-js", "_shared", "workspace-answer.js"), "utf8"
+  ).trim();
+  return text.slice(0, start + startMark.length) + "\n" + block + "\n" + text.slice(end);
+}
+
+const source = fillWorkspaceAnswer(readFileSync(scriptPath, "utf8")).replace(
   /^export const meta/m,
   "const meta"
 );
@@ -245,6 +263,7 @@ const writes = [];
 const enumerations = [];
 const planReplies = [];
 const dirtyReads = [];
+const workspaceEnsureCalls = [];
 const logs = [];
 // BO-3800e-2: every remedy-declaration read the driver made, in order (the shared
 // loader read is not a phase dispatch, so `dispatched` cannot see it). Observation only.
@@ -691,7 +710,7 @@ function epicEnumerationReply(label) {
     ? read.batches
     : buildable.length === 0
       ? []
-      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo" })) }];
+      : [{ batch_number: 1, tickets: buildable.map((t) => ({ path: t.path, status: "todo", source_ac: t.source_ac })) }];
 
   // What the real planner OMITS from every batch because the ticket's own
   // frontmatter already reads `status: done` — the resume set. DERIVED from
@@ -750,6 +769,10 @@ async function agent(prompt, opts = {}) {
   const label = opts.label || opts.agentType || "unknown";
 
   // --- infrastructure stubs -------------------------------------------------
+  // A driver materialised from git history may ask lookups the current drivers retired; a scenario answers
+  // them verbatim with `historical_replies` (label -> reply). Such a reply is never recorded as a dispatch.
+  const historical = scenario.historical_replies || {};
+  if (Object.prototype.hasOwnProperty.call(historical, label)) return historical[label];
   if (label === "worktree-check") {
     return scenario.worktree_check === undefined
       ? { git_type: "file", branch: "feat/harness" }
@@ -766,31 +789,6 @@ async function agent(prompt, opts = {}) {
     };
   }
 
-  // BO-4000: build-feature.js checks resolve-target's own worktree_path via a
-  // repo-facts call before reusing it, rather than trusting it unconditionally.
-  // Default: reusable ONLY when the queried path (read out of the prompt,
-  // which names it verbatim) equals scenario.record_dir — the harness's own
-  // notion of "the established working copy". This reproduces every
-  // pre-BO-4000 scenario whose "resolve" reports record_dir (the dominant
-  // shape) unchanged, with no worktree-setup dispatch, while still letting a
-  // scenario that deliberately reports something ELSE (e.g. the work-store
-  // epic folder, BO-1900a-4's own observed defect shape) fall through to the
-  // "name a new location" path exactly as BO-4000's second scenario requires.
-  if (label === "worktree-facts-resolved") {
-    if (scenario.worktree_facts_resolved !== undefined) {
-      return { output: JSON.stringify(scenario.worktree_facts_resolved), exit_code: 0 };
-    }
-    const queried = (/facts "([^"]*)"/.exec(String(prompt)) || [])[1] || null;
-    const reusable = queried !== null && queried === scenario.record_dir;
-    return {
-      output: JSON.stringify({
-        exists: reusable, is_git_toplevel: reusable, is_linked_worktree: reusable,
-        is_main_checkout: false, same_repository: reusable, branch: reusable ? "harness-default" : null,
-      }),
-      exit_code: 0,
-    };
-  }
-
   // BO-100e-4: the dirty-state read; absent scenario.dirty = clean, null = unreadable.
   if (label === "worktree-dirty") {
     const spec = scenario.dirty;
@@ -802,24 +800,41 @@ async function agent(prompt, opts = {}) {
     return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
   }
 
-  // BO-4000: the "name a new location" branch's own repo-facts checks. Every
-  // pre-existing scenario is indifferent to these (none asserts on them), so
-  // generic, always-succeeding defaults let the run proceed to the SAME
-  // "worktree-setup" dispatch it always reached — the one label every
-  // existing scenario already controls via scenario.worktree_agent.
-  if (label === "worktree-base") {
-    return { output: JSON.stringify({ main_checkout: "/fake/repo", worktree_base: "/fake/worktrees", layout: "dev" }), exit_code: 0 };
-  }
-  if (label === "worktree-facts-location") {
-    return { output: JSON.stringify({ exists: false }), exit_code: 0 };
-  }
-  if (label === "branch-standing") {
-    return { output: JSON.stringify({ exists: false, fetch_ok: true, behind: null, ahead: null }), exit_code: 0 };
+  // BO-4300c-3: the ONE workspace step. A scenario scripts it with `workspace_ensure` (the reply served
+  // verbatim, so a refusal, prose or no answer can be presented); absent, the shell-runner answers ready at
+  // the scenario's own working copy -- the same default the python engine harness scripts for this label.
+  if (label === "workspace-ensure") {
+    workspaceEnsureCalls.push({ prompt: String(prompt) });
+    if (scenario.workspace_ensure !== undefined) return scenario.workspace_ensure;
+    const path = scenario.record_dir || "/fake/worktree";
+    return {
+      command: "python3 worktree.py ensure (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "ensure",
+        workspace_path: path, worktree_path: path, branch: "harness-default", created: false,
+        message: "workspace ready (harness default)",
+      }),
+      stderr: "",
+    };
   }
 
-  if (label === "worktree-setup") {
-    if (scenario.worktree_agent !== undefined) return scenario.worktree_agent;
-    return { worktree_path: scenario.record_dir || "/fake/worktree", status: "reused" };
+  // BO-4300c-4-i: a location handed in (args.worktree_path / args.workspace_path) is confirmed by ONE verify
+  // request. A scenario scripts it with `workspace_verify` (served verbatim); absent, the maker answers ready
+  // for exactly the location the request names.
+  if (label === "workspace-verify") {
+    if (scenario.workspace_verify !== undefined) return scenario.workspace_verify;
+    const named = /--path "([^"]+)"/.exec(String(prompt));
+    const path = named ? named[1] : (scenario.record_dir || "/fake/worktree");
+    return {
+      command: "python3 worktree.py verify (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "verify",
+        workspace_path: path, worktree_path: path, message: "workspace ready (harness default)",
+      }),
+      stderr: "",
+    };
   }
 
   if (RE_EPIC_ENUM.test(label)) {
@@ -1033,11 +1048,11 @@ async function agent(prompt, opts = {}) {
     return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
   }
 
-  // --- scratch item (BO-4400f-1) --------------------------------------------
-  // Label "scratch-item": the shell step that creates the run's labelled
-  // scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
-  // ABSENT entry answers {item: null} (the workflow's fail-open path: no
-  // scratch note), so every pre-existing scenario is unchanged.
+  /* --- scratch item (BO-4400f-1) ---------------------------------------------
+   * Label "scratch-item": the shell step that creates the run's labelled
+   * scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+   * ABSENT entry answers {item: null} (the workflow's fail-open path: no
+   * scratch note), so every pre-existing scenario is unchanged. */
   if (label === "scratch-item") {
     return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
   }
@@ -1055,6 +1070,15 @@ async function agent(prompt, opts = {}) {
     return hookId
       ? Object.assign({ status: "ok" }, table[hookId])
       : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
+  /* --- wrong-version command steps (TQ-500g-1-vi) -----------------------------
+   * Labels bf-wv-* / bt-wv-* (recover, list, finish): executor replies, not phase
+   * agents. Answer with the passing report each real script prints, as
+   * {stdout: <JSON>}; scenario.wrong_version[label] replaces it per label. */
+  if (/^b[ft]-wv-(recover|list|finish)$/.test(label)) {
+    const passing = { recover: { ok: true, restored: [] }, list: { owed: [], error: null }, finish: { gate_passed: true, verdict: null } };
+    return { stdout: JSON.stringify((scenario.wrong_version || {})[label] || passing[label.slice(6)]) };
   }
 
   // --- everything else is a phase-agent dispatch ----------------------------
@@ -1234,6 +1258,7 @@ console.log(
     declaration_reads: declarationReads,
     plan_replies: planReplies,
     dirty_reads: dirtyReads,
+    workspace_ensure_calls: workspaceEnsureCalls,
     routing_calls: routingCalls,
     timeline,
     logs,

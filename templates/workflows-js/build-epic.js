@@ -257,10 +257,9 @@ function parseAgentJson(raw, ctx) {
 // ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
-// Read the worktree path from args if provided. If args.worktree_path is set,
-// the caller already resolved the worktree context — skip the ambient CWD check.
-// This fixes the false-halt that occurred when build-epic was invoked from
-// the session root (where CWD is the main clone, not the worktree).
+// The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check; a handed-in args.worktree_path / args.workspace_path is confirmed by the maker (verify)
+// and never trusted, and there is no fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -278,50 +277,22 @@ if (!epicPath) {
   };
 }
 
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = args && args.worktree_path;
+// BO-4300c-3 / BO-4300a-1-ia: the epic's working copy is the workspace maker's answer -- handed in as
+// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path / args.workspace_path is only a claim: the maker confirms it (verify) before any step runs, and
+// there is no ambient probe of the folder the run was started in and no fall-back to the epic folder:
+// anything but an accepted answer ends the run here, quoting what was received.
 
-let worktreeGitInfo = null;
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-if (!callerWorktreePath) {
-  // Fall back to the git info check when no worktree_path is provided in args.
-  // Use the explicit epic path context rather than session CWD.
-  const worktreeCheck = await agent(
-    `Check the git context for the epic at path "${epicPath}". ` +
-    "Run these two shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<cwd>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
+const epicSlug = (epicPath.split(/[\\/]/).filter(Boolean).pop() || "epic")
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "epic";
+const epicWorkspace = await workspaceObtain(
+  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind epic --slug ${epicSlug}`, "Worktree Guard");
+if (!epicWorkspace.accepted) return workspaceFailure(epicWorkspace);
 
-  worktreeGitInfo = worktreeCheck;
-
-  if (
-    worktreeGitInfo &&
-    (worktreeGitInfo.git_type === "directory" ||
-      worktreeGitInfo.branch === "main" ||
-      worktreeGitInfo.branch === "master")
-  ) {
-    return {
-      status: "error",
-      worktree_required: true,
-      message:
-        "build-epic.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (worktreeGitInfo.git_type || 'unknown') +
-        " (branch: " + (worktreeGitInfo.branch || 'unknown') + "). " +
-        "Create a worktree first:\n" +
-        "  /worktree create <epic-branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
-}
-
-// Resolve the worktree path: caller-provided wins, then git info, then epic path context.
-const worktreePath = callerWorktreePath ||
-  (worktreeGitInfo && worktreeGitInfo.worktree_path) ||
-  epicPath;
+const worktreePath = epicWorkspace.workspace_path;
 
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read Master_Plan.md + all ticket frontmatter → batches

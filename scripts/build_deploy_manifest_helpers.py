@@ -47,6 +47,7 @@ from build_phases import (
     AGENT_SUPPORT_SCRIPT_DIRS,
     AGENT_SUPPORT_SCRIPT_FILES,
 )
+from build_phases_script_deploy import NAMED_STANDALONE_SCRIPTS
 
 
 def _manifest_ac_store_scripts(package_root: Path) -> set[str]:  # noqa: ARG001
@@ -243,7 +244,18 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
 
     Scans the top-level ``templates/scripts/`` directory (non-recursive) for
     ``.py`` files and returns manifest entries.  These are deployed by
-    ``build_template_standalone_scripts``.
+    ``build_template_standalone_scripts``.  ``NAMED_STANDALONE_SCRIPTS`` --
+    the maker (``worktree.py``), its resolver module (``workspace_root.py``),
+    its locate/list/remove helper (``worktree_admin.py``), and the answer-table and
+    path-spelling modules (``worktree_answer.py``, ``worktree_paths.py``) and the
+    landing-place module (``worktree_layout.py``) and the readiness module
+    (``worktree_readiness.py``) and its canary module (``worktree_canaries.py``) and the identity module (``worktree_identity.py``) and the ensure-state module
+    (``worktree_ensure_state.py``) and the remove module (``worktree_remove.py``) and the cut-over module (``worktree_migrate.py``) -- is unioned
+    in explicitly (BO-4300a-1: "the matching manifest helper... [gets] its
+    own named entry") so those names appear in Set B even on a source
+    tree state where the dynamic scan would otherwise miss one, keeping this
+    helper in parity with ``_check_named_standalone_scripts()`` in
+    ``build_phases_script_deploy``.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
@@ -260,6 +272,9 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
         # GE-132a-1: the remedy-declaration seed is deployed by the same phase.
         if (templates_scripts / "precommit-autofix.json").is_file():
             result.add("scripts/precommit-autofix.json")
+    for name in NAMED_STANDALONE_SCRIPTS:
+        if (templates_scripts / name).is_file():
+            result.add(f"scripts/{name}")
     return result
 
 
@@ -353,12 +368,46 @@ def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
 
 # DECISION HISTORY
 # ================================================================================
-# - 2026-09-14 [python-coder]: Created this module, moving the ten
+# - 2026-09-14 12:00 [python-coder]: (#BP-1500g-1/extract-unrelated-headroom)
+#   Created this module, moving the ten
 #   _manifest_*_scripts helpers out of build.py (over the check-file-size
 #   ratchet) so it could shrink back under it. _get_source_deployable_scripts
 #   and _get_source_paths_for_guard stayed in build.py (see module docstring
 #   for why: a fixture assumption in unit_tests/test_bp_900g_8_ii.py counts
 #   occurrences of a text anchor inside those two functions' own physical
 #   copy in scripts/build.py) and now import these ten from here. Pure move,
-#   no behaviour change. (#BP-1500g-1/extract-unrelated-headroom)
+#   no behaviour change.
+# - 2026-09-27 23:57 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   _manifest_template_standalone_scripts() now unions in
+#   NAMED_STANDALONE_SCRIPTS (imported from build_phases_script_deploy) so
+#   the one workspace maker (worktree.py) and its resolver/helper modules
+#   (workspace_root.py, worktree_git.py, worktree_admin.py) are explicit Set B
+#   entries in parity with build_phases_script_deploy_standalone.py's own
+#   _check_named_standalone_scripts() deploy-time check.
+#   (ADR-018)
+# - 2026-09-28 02:42 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Backfilled the missing mandatory HH:MM on the two entries above (the
+#   2026-09-14 entry pre-dates this ticket and had none recorded; the
+#   2026-09-27 entry is this ticket's own and used its known 23:57 sign-off
+#   time), and moved each entry's tail-tag onto its own first line (the
+#   pr-reviewer 2026-09-28 02:15 H-1 shape: the validator only inspects an
+#   entry's first line for the tag). No functional change. (ADR-018)
+# - 2026-09-30 22:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_answer.py and
+#   worktree_paths.py, so this helper's Set B union covers them with no
+#   code change here. (ADR-018)
+# - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_layout.py (BO-4300b-2),
+#   so this helper's Set B union covers it; docstring updated. (ADR-018)
+# - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_readiness.py (BO-4300c-1),
+#   so this helper's Set B union covers it; docstring updated. (ADR-018)
+# - 2026-10-09 12:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_canaries.py, so this
+#   helper's Set B union covers it. (ADR-018)
+# - 2026-10-12 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_ensure_state.py, so this
+#   helper's Set B union covers it. (ADR-018)
+# - 2026-10-12 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_migrate.py (BO-4300f-3). (ADR-018)
 # ====================================================================

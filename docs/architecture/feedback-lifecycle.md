@@ -151,7 +151,7 @@ acceptance criterion for this section is [INF-500d-4-vii](../acceptance-criteria
 - **How the root is chosen.** `build.py --log-root <abs-dir>` records the given directory.
   A relative value is refused before anything is written. With no flag, an ordinary build
   records `<project>/debugging/logs`. `--no-log-root` records an empty declaration (`{}`),
-  so every writer refuses. A worktree bootstrap (`setup_ticket_worktree.py`) passes the
+  so every writer refuses. The former bootstrap (`setup_ticket_worktree.py`; not yet in the maker) passed the
   root the main install recorded in `<main>/.leafcutter/config/knowledge_sink.json`, or
   warns and passes `--no-log-root` when it cannot read one. If the worktree's older
   `build.py` rejects the flag (exit 2, `unrecognized arguments`), the bootstrap retries once

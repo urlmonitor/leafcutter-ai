@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -73,10 +73,29 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_4_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-4-i.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02_TICKET-20260928-BO-4300-deployed-maker-test-support.md
+- unit_tests/build_orchestration/README.md
+- unit_tests/build_orchestration/_bo2400f13_fixtures.py
+- unit_tests/build_orchestration/_bo_4300a_1_fixtures.py
+- unit_tests/build_orchestration/_developer_repo_guard.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/conftest.py
+- unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/test_bo_4300f_4_i.py
 notes: |
   F14: git worktree list in leafcutter-ai includes a worktree under the pytest temp directory;
   KI-TQ-012 wrote fixture identity into the real repository's config.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 02_TICKET-20260928-BO-4300-deployed-maker-test-support.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

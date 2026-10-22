@@ -4,8 +4,10 @@ COVERS: ACD-300c-5-i
 GOAL: Red-first specification that no /plan-feature rationale pointer comment says "Why why": each of the
     15 pointer lines reads "Why" once with the rest of its line unchanged, no line contains "why why" in
     any letter case, and the corrected workflow still loads and runs.
-ARCHITECTURE: The 15 lines are pinned with their full text as they stood at commit c73ebddc1 (line number,
-    indentation and rationale doc path included); the file's line count is pinned to that commit's 3324.
+ARCHITECTURE: The lines are pinned with their full text as they stood at commit c73ebddc1 (indentation and
+    rationale doc path included), at their line numbers after the origin/main merge that retired the
+    worktree-setup path (BO-4300), which removed 3 of the 15 pointer lines; the 12 that remain are pinned and
+    the file's line count is pinned to that merge's 3142.
     The run uses the real plan-feature.js under run_workflow_under_e2 (the harness of
     unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py).
 RED STATE: all 15 pointer lines still read "// Why why".
@@ -23,23 +25,20 @@ sys.path.insert(0, str(_STAGE_DIR))
 from _approval_step_support import BATCH, gate_record, names, prepass_for, resume, run, table  # noqa: E402
 from _design_stage_support import PLAN_FEATURE_JS  # noqa: E402
 
-_LINE_COUNT_AT_PIN = 3310
+_LINE_COUNT_AT_PIN = 3142
 _PINNED = (
-    (1647, '    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md'),
-    (1679, '    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md'),
-    (1704, '        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md'),
-    (1715, '  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md'),
-    (1785, '  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md'),
-    (2280, '// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md'),
-    (2325, '    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2346, '// Why why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2351, '// Why why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2382, '// Why why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2565, '  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2897, '    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (2942, '    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (3063, '        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md'),
-    (3172, '        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (1642, '    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md'),
+    (1674, '    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md'),
+    (1699, '        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md'),
+    (1710, '  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md'),
+    (1780, '  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md'),
+    (2188, '// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md'),
+    (2233, '    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2394, '  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2728, '    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2773, '    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (2895, '        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md'),
+    (3004, '        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md'),
 )
 _WHY_WHY = re.compile(r"why\s+why", re.IGNORECASE)
 
@@ -51,7 +50,7 @@ def _lines() -> list[str]:
 def test_rationale_pointers_read_why_once():
     # covers: ACD-300c-5-i
     # angle: discrimination
-    """Each of the 15 pinned pointer lines now equals its pinned text with "// Why why " replaced by
+    """Each of the 12 pinned pointer lines now equals its pinned text with "// Why why " replaced by
     "// Why ", character for character, and the file's line count is unchanged.
 
     Wrong versions caught: the doubled word removed by deleting "Why " (the comment reads "// why ...");

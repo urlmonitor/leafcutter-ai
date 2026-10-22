@@ -114,15 +114,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# unit_tests/ must be on sys.path so _workflow_engine_harness is importable
-# from this sub-package (unit_tests/workflows/), mirroring every other file
-# in this directory.
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import fill_workspace_answer, run_workflow_under_e2  # noqa: E402
 from unit_tests.workflows._acd_2100c_support import _cancel_answer  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -206,7 +203,7 @@ _RESOLVE_GATE_SIGNATURE = (
 
 
 def _write_forced_null_gate_script(gate_id: str) -> Path:
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     if _RESOLVE_GATE_SIGNATURE not in source:
         raise AssertionError(
             "resolveGate()'s signature in plan-feature.js changed -- update "

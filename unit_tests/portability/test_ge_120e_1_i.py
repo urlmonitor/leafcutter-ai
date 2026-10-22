@@ -40,7 +40,7 @@ WHY TWO CHECKS, NOT ONE: the AC's own doc_links name
 
 ARCHITECTURE / DEPENDENCIES:
     - Tests 1 and 2 build ONE real second working copy of this repository via
-      `git worktree add` (never a synthetic minimal repo — check_doc_frontmatter
+      the linked-checkout add (never a synthetic minimal repo — check_doc_frontmatter
       needs the real docs/FRONTMATTER.md and docs/components.json this repo
       ships), stage a real merge with `git merge --no-commit --no-ff` so
       MERGE_HEAD is set and the index reflects the merge before it is
@@ -116,6 +116,10 @@ import sys
 import unittest
 import uuid
 from pathlib import Path
+
+from unit_tests.build_orchestration._workspace_maker_fixtures import (
+    commit_base_files, new_checkout, start_merge, unlink_checkout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +203,7 @@ _NOTHING_TO_INSPECT_MISSING_MSG = (
 _GIT_ENV_OVERRIDES = {
     "PRE_COMMIT_ALLOW_NO_CONFIG": "1",
     # KI-TQ-012. This fixture builds its scenarios as worktrees OF THE REAL
-    # REPOSITORY (`git worktree add` with cwd=_REPO_ROOT). Worktrees share
+    # REPOSITORY (the linked-checkout add with cwd=_REPO_ROOT). Worktrees share
     # $GIT_COMMON_DIR/config, so a plain `git config user.email ...` inside one
     # writes to the configuration of the ENTIRE repository family and outlives
     # the fixture — teardown removes the worktree but never unsets the keys.
@@ -277,27 +281,10 @@ class _EmptyAuthoredChangeSetFixture:
         self.scratch_rel = "_ge120e1i_probe_scratch.txt"
 
     def build(self) -> None:
-        _run_git(
-            ["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT,
-        )
-        if not (self.root / ".git").exists():
-            raise RuntimeError(
-                f"Fixture setup failed: `git worktree add` did not create {self.root}"
-            )
-        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
-        # KI-TQ-012 there. Writing it here would escape into the real repo.
-
+        new_checkout(_REPO_ROOT, self.root)
         # Base commit c0 — common ancestor holding the file `theirs` will
         # delete, and the production file `theirs` will edit.
-        (self.root / self.deleted_test_rel).write_text(
-            "def test_probe():\n    assert True\n", encoding="utf-8",
-        )
-        (self.root / self.prod_file_rel).write_text(
-            "def probe_fn():\n    return 1\n", encoding="utf-8",
-        )
-        _run_git(["add", self.deleted_test_rel, self.prod_file_rel], cwd=self.root)
-        _run_git(["commit", "-q", "-m", "base: scratch fixture files"], cwd=self.root)
-        base_sha = _run_git(["rev-parse", "HEAD"], cwd=self.root).stdout.strip()
+        base_sha = commit_base_files(self.root, self.deleted_test_rel, self.prod_file_rel, _run_git)
 
         # `ours` — the author's own branch: one unrelated authored commit
         # that touches none of the content the merge will carry in.
@@ -328,19 +315,7 @@ class _EmptyAuthoredChangeSetFixture:
         # Merge theirs into ours, stopping BEFORE the merge commit so the
         # index reflects exactly what a pre-commit hook would see: staged,
         # with MERGE_HEAD set, nothing yet committed.
-        _run_git(["checkout", "-q", "-f", self._ours_branch], cwd=self.root)
-        merge_result = _run_git(
-            ["merge", self._theirs_branch, "--no-commit", "--no-ff"], cwd=self.root,
-        )
-        merge_head = _run_git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd=self.root)
-        if merge_head.returncode != 0:
-            raise RuntimeError(
-                "Fixture setup failed: MERGE_HEAD was not set after "
-                f"`git merge --no-commit --no-ff` (merge stdout: "
-                f"{merge_result.stdout!r}, stderr: {merge_result.stderr!r}). "
-                "The fixture does not stand in the commit shape this AC "
-                "describes."
-            )
+        start_merge(self.root, self._ours_branch, self._theirs_branch, _run_git)
         staged = _run_git(["diff", "--cached", "--name-only"], cwd=self.root).stdout
         for expected in (self.baddoc_rel, self.deleted_test_rel, self.prod_file_rel):
             if expected not in staged:
@@ -351,9 +326,7 @@ class _EmptyAuthoredChangeSetFixture:
                 )
 
     def teardown(self) -> None:
-        _run_git(
-            ["worktree", "remove", "--force", str(self.root)], cwd=_REPO_ROOT,
-        )
+        unlink_checkout(_REPO_ROOT, ["--force", str(self.root)], check=False)
         _run_git(["branch", "-D", self._ours_branch], cwd=_REPO_ROOT)
         _run_git(["branch", "-D", self._theirs_branch], cwd=_REPO_ROOT)
 

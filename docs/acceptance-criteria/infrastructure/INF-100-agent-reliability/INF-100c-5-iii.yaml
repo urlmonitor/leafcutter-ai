@@ -1,0 +1,118 @@
+id: INF-100c-5-iii
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: approved
+priority: high
+title: "Agents that do not sign off are not required to be feedback writers"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5.yaml
+criteria: |
+  Given the agent definition for research-agent carries no signoff: true,
+  And the agent definition for epic-supervisor carries signoff: false,
+  And the agent definition for sql-coder has no signoff field at all,
+  And research-agent appears in no category's allowed_writers,
+  When the package build runs the consistency check,
+  Then the build does not fail on account of research-agent,
+  And neither research-agent, epic-supervisor nor sql-coder is named as a missing writer,
+  And epic-supervisor and sql-coder, which are listed as writers, are not reported as
+    writers that name no registered agent.
+depends_on:
+  - INF-100c-5
+doc_links:
+  - path: templates/agents/epic-supervisor.md
+    relationship: describes
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/build_phases_feedback_writers.py
+    state: to_be_created
+  - path: unit_tests/feedback/test_inf_100c_5_iii.py
+    state: to_be_created
+it_requirements:
+  - "The required-writer set is exactly the agents whose definition frontmatter sets signoff: true. An absent field and signoff: false both mean not required, and no other field (tier, is_ticket_phase, tools) widens the set."
+  - "A signoff value that is neither true nor false must be reported naming the agent definition file, and never guessed as either."
+test_intent:
+  - clause: the build does not fail on account of research-agent
+    needs_test: true
+    reason: Requiring every agent to be a writer is the easy wrong implementation and would fail the build on research-agent.
+  - clause: neither research-agent, epic-supervisor nor sql-coder is named as a missing writer
+    needs_test: true
+    reason: The absent-field and explicit-false cases are parsed separately and either could be read as true.
+  - clause: epic-supervisor and sql-coder, which are listed as writers, are not reported as writers that name no registered agent
+    needs_test: true
+    reason: A non-signing agent that is listed must still count as a known agent, and tying the known set to signoff would wrongly flag it.
+test_spec:
+  - name: test_build_does_not_fail_on_a_non_signing_off_agent_with_no_category
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Copies scripts/, templates/ and config/ into a tmp package root, lists research-agent in no allowed_writers while every signing-off agent is listed, runs that copy's scripts/build.py --validate-only as a subprocess and asserts the check does not fail the build on research-agent's account.
+    proves_clause: the build does not fail on account of research-agent
+    code_file: scripts/build.py
+    must_catch:
+      - a check that requires every registered agent to be a writer
+  - name: test_absent_and_false_signoff_agents_are_never_named_missing
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Builds tmp agent definitions for research-agent (no signoff), epic-supervisor (signoff false) and sql-coder (no signoff field), lists none of them, and asserts none is in missing_writers while a signoff true agent listed nowhere still is; a malformed signoff value is reported naming its file.
+    proves_clause: neither research-agent, epic-supervisor nor sql-coder is named as a missing writer
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - an absent signoff field read as true
+      - signoff false read as true because the string is truthy
+      - a required set widened by is_ticket_phase, tier or tools
+  - name: test_listed_non_signing_off_agents_are_still_known_agents
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Lists epic-supervisor and sql-coder as writers, neither signing off but both registered, and asserts neither appears in unknown_writers.
+    proves_clause: epic-supervisor and sql-coder, which are listed as writers, are not reported as writers that name no registered agent
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a known-agent set built from the signing-off agents only
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build.py
+  - unit_tests/feedback/test_submit_feedback_unknown_agent.py
+delivers_to: null
+expects_from:
+  ac_id: INF-100c-5
+  contract: "The build-time consistency check from INF-100c-5, whose missing_writers (list[str]) this record bounds to agent ids whose definition sets signoff: true, and whose unknown_writers is computed against all registered agents regardless of signoff."
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Boundary record (not asked for): without it the check is satisfiable by requiring EVERY
+  registered agent to be a writer, which would force feedback permissions onto agents the
+  signoff protocol never tells to submit. Only signoff: true is the trigger; an absent
+  field and an explicit false both mean "not required".

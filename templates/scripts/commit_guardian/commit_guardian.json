@@ -1,5 +1,11 @@
 {
   "_comment": "Commit Guardian — Central Configuration. Edit this file to customize all pre-commit hook behavior.",
+  "stage_canaries": {
+    "_comment": "BO-4300c-1-ii: the known-bad input the workspace maker feeds each DECLARED git stage to show the stage's protections fire (a rejected commit that stages the reserved path, a rejected commit whose first message line is the reserved line, a merge that adds the reserved path, which the post-merge hook reports as failing). The canaries are keyed on these reserved paths / this exact line, never on file or message contents, so ordinary work that merely mentions them is never rejected. precommit_canary.py --stage <stage> is the hook that rejects it. A declared stage with no entry here cannot be shown to fire and counts as not firing.",
+    "pre-commit": {"path": "leafcutter-stage-canary/pre-commit"},
+    "commit-msg": {"message": "leafcutter-stage-canary: reserved commit-msg line"},
+    "post-merge": {"path": "leafcutter-stage-canary/post-merge"}
+  },
   "roadmap_staleness_threshold_days": 30,
   "changelogs_dir": "changelogs",
   "excluded_dirs": [
@@ -418,6 +424,34 @@
   "hooks_manifest": {
     "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
     "hooks": [
+      {
+        "id": "precommit-canary-pre-commit",
+        "tier": "judgment",
+        "name": "Stage canary (pre-commit) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage pre-commit",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the pre-commit-stage canary the workspace maker shows fires. Exits 1 only when the reserved path declared under stage_canaries[pre-commit] is staged; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
+        "id": "precommit-canary-commit-msg",
+        "tier": "judgment",
+        "name": "Stage canary (commit-msg) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage commit-msg",
+        "language": "system",
+        "stages": [
+          "commit-msg"
+        ],
+        "always_run": true,
+        "pass_filenames": true,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the commit-msg-stage canary the workspace maker shows fires. Exits 1 only when the message's first line equals the reserved line declared under stage_canaries[commit-msg]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
       {
         "id": "ensure-precommit-config",
         "tier": "transform",
@@ -1207,6 +1241,20 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
+      },
+      {
+        "id": "precommit-canary-post-merge",
+        "tier": "judgment",
+        "name": "Stage canary (post-merge) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage post-merge",
+        "language": "system",
+        "stages": [
+          "post-merge"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the post-merge-stage canary the workspace maker shows fires. Exits 1 only when the merge adds the reserved path declared under stage_canaries[post-merge]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
       },
       {
         "id": "check-hook-parity",

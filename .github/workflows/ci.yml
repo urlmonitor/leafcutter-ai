@@ -152,6 +152,9 @@
 #                add it to any required-status-checks list until that ticket
 #                lands.
 #
+#   workspace-maker-windows — BO-4300b-4 arm 1: the workspace maker's readiness and
+#                no-link proofs on a real Windows runner. INFORMATIONAL.
+#
 # Dependencies are pinned in requirements-dev.txt.
 
 name: CI
@@ -437,6 +440,32 @@ jobs:
           echo "aggregate shard result: ${{ needs.test-shard.result }}"
           test "${{ needs.test-shard.result }}" = "success"
 
+  workspace-maker-windows:
+    name: Workspace maker on Windows (BO-4300b-4, arm 1)
+    runs-on: windows-latest
+    # BO-4300b-4 arm 1: the workspace maker is ready, with every installed tool
+    # and protection a regular file/folder (no link), on a real Windows runner.
+    # INFORMATIONAL (not a required status check): a runner where the user CAN
+    # create links does not prove the no-link claim, so the test module itself
+    # reports arm 1 as not run (skip) off Windows and arm 2 (an injected
+    # os.symlink denial) carries the claim on every platform inside `test`.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run the readiness / no-link proofs
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python -m pytest unit_tests/build_orchestration/test_bo_4300b_4.py unit_tests/build_orchestration/test_bo_4300c_1.py -q
+
   done-proof:
     name: Proof-of-done coverage check (BO-2500b)
     runs-on: ubuntu-latest
@@ -580,7 +609,7 @@ jobs:
     # BLOCKING (ACS-200g). Until this job existed, NOTHING in CI read
     # docs/acceptance-criteria/ — the AC guardrails lived only in
     # .pre-commit-config.yaml, so a contributor whose local hooks were absent
-    # (see setup_ticket_worktree.py, which installs shims into the main repo
+    # (the former setup_ticket_worktree.py installed shims into the main repo
     # rather than the new worktree) could merge a structurally invalid
     # acceptance criterion with every required check green. The AC store is the
     # input to the whole build pipeline, so a bad record there propagates into

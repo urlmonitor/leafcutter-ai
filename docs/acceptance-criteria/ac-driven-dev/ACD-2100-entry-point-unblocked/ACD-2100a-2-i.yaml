@@ -102,9 +102,14 @@ expects_from:
     contract: "A repository resolver whose search step returns its full candidate set rather than a single first hit, so that 'two or more candidates' is a state this record can act on rather than one the resolver has already collapsed."
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+  - action: proof-moved
+    agent: claude_code
+    date: '2026-10-14'
+    reason: "The setup script this record describes was retired by BO-4300f-2; the deployed workspace maker that replaced it is proven against the same criteria by test_bo_4300b_3.py::test_two_candidate_projects_are_refused_as_ambiguous and test_bo_4300b_3.py::test_ambiguous_refusal_creates_nothing_in_either_project; decision dec-86d7db69b675de19."
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4300b_3.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/03_TICKET-20260826-ACD-2100a-2-i.md
 - templates/scripts/setup_ticket_worktree.py

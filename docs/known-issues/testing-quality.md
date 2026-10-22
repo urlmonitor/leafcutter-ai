@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 30** (1 blocker, 16 high, 13 low) · **Resolved: 4**
+**Open: 29** (1 blocker, 15 high, 13 low) · **Resolved: 5**
 
 ## Open
 
@@ -77,7 +77,6 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `high` | KI-TQ-20260927-windows-local-runs-disagree-with-linux-ci — a fixed set of tests fails on an unmodified Windows checkout and passes on Linux CI, so a local red run cannot tell a regression from the baseline | [open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md](testing-quality/open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md) |
 | `high` | KI-TQ-20261006-corpus-size-assertions-go-red-on-routine-authoring — six tests assert the size of this repository's own on-disk corpus against a hardcoded integer, so adding a decision record, mockup, mock dataset, changelog entry, flow or ticket turns them red with no defect present, and the failure is attributed to whatever PR is in flight | [open-high-ki-tq-20261006-corpus-size-assertions-go-red-on-routine-authoring.md](testing-quality/open-high-ki-tq-20261006-corpus-size-assertions-go-red-on-routine-authoring.md) |
 | `high` | KI-TQ-20261009-integrity-plugin-prints-clean-while-failing-the-session — the shared-layout integrity plugin prints "clean" and exits 1 when a reader produced the layout after setup, and unittest-style readers have no documented way to request the fixture at setup | [open-high-ki-tq-20261009-integrity-plugin-prints-clean-while-failing-the-session.md](testing-quality/open-high-ki-tq-20261009-integrity-plugin-prints-clean-while-failing-the-session.md) |
-| `high` | KI-TQ-20261021-acs200g-hook-run-outgrows-its-30s-timeout — the ACS-200g reachability test runs the deployed check_ac_schema.py under a hard 30 s timeout, but one staged record still makes the hook index the whole AC store, so a cold CI runner times out at random and fails the required suite | [open-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md](testing-quality/open-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md) |
 | `low` | KI-TQ-003 — The eval staleness gate asks you to stage a file that is gitignored | [open-low-ki-tq-003.md](testing-quality/open-low-ki-tq-003.md) |
 | `low` | KI-TQ-008 — A repository-global tree-purity guard false-positives under concurrent agents | [open-low-ki-tq-008.md](testing-quality/open-low-ki-tq-008.md) |
 | `low` | KI-TQ-009 — A test-local oracle that duplicated the production bug it was written to detect | [open-low-ki-tq-009.md](testing-quality/open-low-ki-tq-009.md) |
@@ -98,3 +97,4 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `high` | KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture | [resolved-high-ki-tq-012-a-test-fixture-reassigns-the-real.md](testing-quality/resolved/resolved-high-ki-tq-012-a-test-fixture-reassigns-the-real.md) |
 | `high` | KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits | [resolved-high-ki-tq-20260901-1310.md](testing-quality/resolved/resolved-high-ki-tq-20260901-1310.md) |
 | `low` | KI-TQ-20260928-subtest-failures-read-as-passed — the shared pytest outcome parser reads a test whose only failures are in subTest blocks as PASSED | [resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md](testing-quality/resolved/resolved-low-ki-tq-20260928-subtest-failures-read-as-passed.md) |
+| `high` | KI-TQ-20261021-acs200g-hook-run-outgrows-its-30s-timeout — the ACS-200g reachability test runs the deployed check_ac_schema.py under a hard 30 s timeout, but one staged record still makes the hook index the whole AC store, so a cold CI runner times out at random and fails the required suite | [resolved-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md](testing-quality/resolved/resolved-high-ki-tq-20261021-acs200g-hook-run-outgrows-its-30s-timeout.md) |

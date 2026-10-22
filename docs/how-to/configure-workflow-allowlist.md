@@ -1,17 +1,17 @@
 ---
-title: "How to configure the workflow shell-command allowlist"
+title: How to configure the workflow shell-command allowlist
 type: how-to
 status: active
 created: 2026-06-01
 last_updated: 2026-06-01
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - "docs/reference/workflow-constraints.md"
-  - "templates/settings.json"
-  - "docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md"
+- docs/reference/workflow-constraints.md
+- templates/settings.json
+- docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+description: Overview of How to configure the workflow shell-command allowlist.
 ---
-
 # How to configure the workflow shell-command allowlist
 
 Leafcutter's Claude Code Workflow scripts (`build-ticket.js`, `build-epic.js`,
@@ -57,6 +57,7 @@ The leafcutter template ships a recommended allowlist at
 `templates/settings.json`. The entries cover the commands that phase agents
 most frequently invoke:
 
+The `git worktree *` entry is for reading and cleanup only; a workspace is made by the workspace maker (see [get-a-workspace](get-a-workspace.md)), never by hand.
 ```json
 {
   "allowedTools": [

@@ -36,7 +36,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, finalize_baseline_responses, run_workflow_under_e2, workspace_ensure_reply  # noqa: E402
 from workflows._bo2300_step35_replies import STEP35_RESPONSES  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -54,11 +54,8 @@ _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 # step-4-merge-gate is intentionally absent here; tests that need to pause it
 # must add a response that returns no valid status (to force liveGateFn → null).
 _FINALIZE_PREFLIGHT_RESPONSES = {
-    "pre-flight": {
-        "found": True,
-        "branch": "feature/test-bo2300",
-        "worktree_root": "/tmp/test-wt",
-    },
+    "workspace-ensure": workspace_ensure_reply("/tmp/test-wt", branch="feature/test-bo2300"),
+    **finalize_baseline_responses(),
     "step-1-pr-probe": {
         "found": True,
         "number": 99,

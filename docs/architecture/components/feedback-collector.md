@@ -67,7 +67,7 @@ C4Component
     }
 
     Container_Boundary(wt, "Per-drive worktree (deleted after the drive)") {
-        Component(boot, "setup_ticket_worktree.py", "_inherited_log_root_args", "Reads the main install's recorded root. Never derives it from main_repo's path")
+        Component(boot, "Workspace bootstrap (former setup_ticket_worktree.py; not yet in the maker)", "_inherited_log_root_args", "Reads the main install's recorded root. Never derives it from main_repo's path")
         Component(build, "build.py --target-dir worktree", "build_log_root.py", "Records the root exactly as given. A relative --log-root is refused before anything is written. No git, no upward walk")
         ComponentDb(wtCfg, "worktree .leafcutter/config/", "rule (a): the workspace's own config", "knowledge_sink.json (the same four keys) and feedback_categories.yaml")
         Component(submit, "submit_feedback.py", "via feedback_sink.py, also used by emit_hook_finding.py", "Appends one entry to feedback_sink")

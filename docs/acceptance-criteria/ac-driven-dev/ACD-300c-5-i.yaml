@@ -104,6 +104,9 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:
+- reason: "note only, criteria unchanged: all 15 sites were corrected (e4306e299). The BO-4300 workspace epic later deleted 3 of those comments with the retired worktree-setup block, so 12 remain and unit_tests/workflows/test_acd_300c_5_i.py now pins those 12 at their merged positions."
+  date: '2026-10-22'
+  by: main-session
 - reason: 'criteria and title: premise corrected. Every ''Why why'' in plan-feature.js
     is a code comment pointing to the rationale docs (15 sites by grep on 2026-10-20),
     not a message the workflow can produce, and unit_tests/test_final_gate_and_commit_message.py

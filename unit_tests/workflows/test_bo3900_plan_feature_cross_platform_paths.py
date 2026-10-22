@@ -18,12 +18,11 @@ ARCHITECTURE: Drives templates/workflows-js/plan-feature.js's own top-level
     run_workflow_under_e2(). The Stage-0 "resolve-workspace-setup-permission"
     gate is auto-defaulted by the harness itself (see
     unit_tests/_workflow_engine_harness.py's own module docstring); only the
-    "worktree-setup" and "scan-orphans-git-status" / "scan-orphans-read-file"
+    "workspace-ensure" and "scan-orphans-git-status" / "scan-orphans-read-file"
     labels are stubbed here to reach the join site.
 """
 from __future__ import annotations
 
-import json
 import sys
 import unittest
 from pathlib import Path
@@ -32,7 +31,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests._workflow_engine_harness import run_workflow_under_e2, workspace_ensure_reply  # noqa: E402
 
 _PLAN_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 
@@ -40,14 +39,11 @@ _AUTHORING_WORKTREE = r"C:\Users\Hendrik\Code\leafcutter\worktrees\ac-authoring-
 
 
 def _run_scan(orphan_file_path: str):
-    worktree_setup_output = json.dumps(
-        {
-            "worktree_path": _AUTHORING_WORKTREE,
-            "ac_store_path": "docs/acceptance-criteria",
-        }
-    )
+    # BO-4300c-3: the authoring workspace is the maker's ok answer to the ONE workspace step.
     label_responses = {
-        "worktree-setup": {"output": worktree_setup_output, "exit_code": 0},
+        "workspace-ensure": workspace_ensure_reply(
+            _AUTHORING_WORKTREE, ac_store_path="docs/acceptance-criteria"
+        ),
         "scan-orphans-git-status": {
             "output": f"?? {orphan_file_path}\n",
             "exit_code": 0,

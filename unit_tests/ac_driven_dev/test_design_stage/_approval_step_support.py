@@ -53,12 +53,12 @@ __all__ = [
 
 def route_approval_step(monkeypatch) -> None:
     """Answer approve_acs.py dispatches by command (dry run / apply), whatever their label."""
-    needle = "__capturedCalls__.push({ prompt: promptOrOpts, opts: opts || null });"
+    needle = "__capturedCalls__.push({\n"
     assert needle in harness._BOOTSTRAP_SOURCE_JS, "harness agent mock changed shape"
     routed = (
         "if (typeof promptOrOpts === 'string' && promptOrOpts.indexOf('" + STEP_SCRIPT + "') >= 0) {"
         " var _key = promptOrOpts.indexOf('--dry-run') >= 0 ? '" + DRY_KEY + "' : '" + APPLY_KEY + "';"
-        " if (Object.prototype.hasOwnProperty.call(__labelResponses__, _key)) { response = __labelResponses__[_key]; } }\n  "
+        " if (Object.prototype.hasOwnProperty.call(__labelResponses__, _key)) { response = __labelResponses__[_key]; _unscripted = false; } }\n  "
     )
     monkeypatch.setattr(harness, "_BOOTSTRAP_SOURCE_JS", harness._BOOTSTRAP_SOURCE_JS.replace(needle, routed + needle))
 

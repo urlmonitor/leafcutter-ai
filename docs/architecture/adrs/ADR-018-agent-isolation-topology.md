@@ -4,7 +4,7 @@ description: "Records the decision to isolate each parallel coding-agent drive i
 type: "adr"
 status: "active"
 created: "2026-07-06"
-last_updated: "2026-07-06"
+last_updated: "2026-09-27"
 deciders:
   - leafcutter-engineering-team
 components:
@@ -15,9 +15,18 @@ related_docs:
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
   - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  - docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
+  - docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  - docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  - docs/analysis/2026-09-25-worktree-delivered-maker.md
+  - docs/architecture/components/worktree-manager.md
 related_code:
   - templates/skills/feature/SKILL.md
   - templates/agents/worktree-agent.md
+  - templates/scripts/worktree.py
+  - templates/scripts/commit_guardian/_resolve_root.py
+  - scripts/build_phases_script_deploy.py
+  - scripts/build_deploy_manifest_helpers.py
 ---
 
 # ADR-018: Agent Isolation Topology — Per-Feature Clones + Hub Branch-Protection, Retire Shared-Worktree Drives
@@ -26,8 +35,8 @@ related_code:
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
-| Date | 2026-07-06 |
+| Status | Accepted in part. §1 (per-feature clones) and §2 (`gc.auto=0`) were accepted by the user on 2026-09-25 (see the [decision memo](../../analysis/2026-09-25-worktree-isolation-decision-memo.md) and [consolidation analysis §8](../../analysis/2026-09-25-worktree-creation-consolidation.md#8-decisions-2026-09-25)). §3–§5 remain Proposed. [Amendment 1](#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files) is Proposed. |
+| Date | 2026-07-06 (amended 2026-09-27) |
 | Deciders | leafcutter engineering team |
 | Author | leafcutter engineering team |
 | Supersedes | The shared-`.git` git-worktree model as the isolation primitive for autonomous epic/feature drives (partially reframes ADR-031 and the BO-1600 guardrail ACs — see §Impact on in-flight ACs) |
@@ -97,6 +106,11 @@ and make `main` structurally unmodifiable except through a gated workflow.**
 ## Decision
 
 ### 1. Per-feature isolation = an independent clone with its own object store
+
+> **Amended.** The creation-strategy preference order below is replaced by
+> [Amendment 1](#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files)
+> §A1.1: a hardlinked local-path clone, no `--reference`, no reflink step. The
+> isolation principle (own object store, never a shared `.git`) is unchanged.
 
 Each autonomous drive runs in an **independent working copy that has its own
 `.git` object store** — not a worktree sharing the repository's `.git`. Concurrent
@@ -333,6 +347,19 @@ class is this ADR's topology change, not the BO-1600 prevention ACs.
   it treats a structural defect as an operational one. Recovery (BO-1600d) is
   worth keeping as a safety net, but designing the system so corruption cannot
   occur is strictly better than making it recoverable.
+
+
+## Amendment 1 — 2026-09-27 — One workspace maker, hardlinked clones, real install files
+
+| Field | Value |
+|---|---|
+| Amends | Decision §1 (creation strategy) and Migration step 3; operationalises §2; adds §A1.2–§A1.6 |
+| Status | Proposed |
+| Author | adr-author (ticket BO-4300a-1) |
+| Driven by | [`BO-4300a-1`](../../../tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01_TICKET-20260927-BO-4300a-1.md) (epic `EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace`, goal `BO-4300`); user decisions 1, 2, 3 and 7 of 2026-09-25 |
+| Supersedes this ADR? | No. Per-clone isolation, hub protection, the agents-per-feature cap and `files_touched` partitioning are unchanged. |
+
+Moved to [worktree-maker-amendment-1-2026-09-27.md](worktree-maker-amendment-1-2026-09-27.md): why the creation-strategy preference order changed, the normative A1.1-A1.7 decision points, consequences, and alternatives considered.
 
 ## References
 

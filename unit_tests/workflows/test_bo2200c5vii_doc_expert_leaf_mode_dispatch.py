@@ -21,7 +21,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, run_workflow_under_e2, workspace_ensure_reply  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _BUILD_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "build-feature.js"
@@ -30,13 +30,6 @@ _TIMEOUT = 30
 
 _TICKET_ABS_PATH = "/tmp/bo2200c5vii-worktree/tickets/01_todo/05_ticket.md"
 _WORKTREE_ABS_PATH = "/tmp/bo2200c5vii-worktree"
-_WORKTREE_FACTS_RESOLVED = {
-    "output": (
-        '{"exists": true, "is_git_toplevel": true, "is_linked_worktree": true, '
-        '"is_main_checkout": false, "same_repository": true, "branch": "fixture"}'
-    ),
-    "exit_code": 0,
-}
 
 _SPECIALISTS = (
     "how-to-author",
@@ -55,8 +48,8 @@ def _drive() -> HarnessResult:
             "ticket_path": _TICKET_ABS_PATH,
             "worktree_path": _WORKTREE_ABS_PATH,
         },
-        "worktree-facts-resolved": _WORKTREE_FACTS_RESOLVED,
-        "worktree-setup": {"worktree_path": _WORKTREE_ABS_PATH, "status": "reused"},
+        # BO-4300c-3: the workspace is the maker's answer (one workspace-ensure step), not a facts lookup.
+        "workspace-ensure": workspace_ensure_reply(_WORKTREE_ABS_PATH, branch="fixture"),
         "ticket-planner": {
             "ticket_path": _TICKET_ABS_PATH,
             "title": "BO-2200c-5-vii leaf-mode fixture ticket",

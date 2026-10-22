@@ -28,7 +28,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2
+from _workflow_engine_harness import HarnessResult, resolve_connected_reply, run_workflow_under_e2, workspace_ensure_from_opened
 
 import workflows._fast_lane_claim_fixtures as claim_fx
 
@@ -102,11 +102,9 @@ def green_labels(worktree: str = WORKTREE, ac_ids: tuple[str, ...] = (AC,), crea
     """Responses that drive the lane to the commit and PR phases, with the wrong-version steps passing."""
     slug = ac_ids[-1].lower()
     return {
-        "fastlane-worktree": {"worktree_path": worktree, "branch": f"fast-lane/{slug}", "created": created,
-                              "ac_store_path": f"{worktree}/docs/acceptance-criteria"},
-        "fastlane-worktree-verify": {"worktree_path": worktree, "raw": (
-            f"worktree {worktree}\nHEAD 0000000000000000000000000000000000000000\nbranch refs/heads/fast-lane/{slug}")},
-        "resolve-connected": {"ac_ids": list(ac_ids), "message": f"{len(ac_ids)} to build"},
+        "workspace-ensure": workspace_ensure_from_opened({"worktree_path": worktree, "branch": f"fast-lane/{slug}", "created": created,
+                                                         "ac_store_path": f"{worktree}/docs/acceptance-criteria"}),
+        "resolve-connected": resolve_connected_reply({"ac_ids": list(ac_ids), "message": f"{len(ac_ids)} to build"}),
         "claim-connected": claim_fx.claim_ran(list(ac_ids)),
         "test-writer-connected": {"status": "ok", "tests_written": ["unit_tests/test_stub.py"], "gate_passed": True,
                                   "reason": None, "green_at_baseline": [], "message": "red baseline ok"},

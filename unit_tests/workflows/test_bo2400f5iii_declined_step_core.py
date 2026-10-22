@@ -45,8 +45,6 @@ from unit_tests.workflows._bo2400f5iii_fixtures import (  # noqa: E402
     run_lane,
 )
 
-_WORKTREE_CONFIRMING_LABELS = frozenset({"fastlane-worktree", "fastlane-worktree-verify"})
-
 
 class TestDeclinedStepHaltsNamingStepAgentAndQuotedReason(unittest.TestCase):
     """test_spec[0] (angle: criterion).
@@ -99,13 +97,7 @@ class TestDeclinedStepHaltsNamingStepAgentAndQuotedReason(unittest.TestCase):
                 )
 
             target = payload.get("target")
-            if label in _WORKTREE_CONFIRMING_LABELS:
-                if target is not None:
-                    problems.append(
-                        f"[{label}] target must be null before the worktree step "
-                        f"has confirmed a workspace. Got: {payload}"
-                    )
-            elif not isinstance(target, dict):
+            if not isinstance(target, dict):
                 problems.append(f"[{label}] target must be a dict. Got: {payload}")
             else:
                 if target.get("workspace") != WORKTREE_PATH:
@@ -116,6 +108,23 @@ class TestDeclinedStepHaltsNamingStepAgentAndQuotedReason(unittest.TestCase):
                     problems.append(f"[{label}] target.ac_id mismatch. Got: {payload}")
 
         self.assertEqual(problems, [], "\n".join(problems))
+
+
+class TestDeclinedWorkspaceStepEndsTheRunBeforeAnythingElseIsDispatched(unittest.TestCase):
+    """The maker step (BO-4300c-3) is not part of the declined_step sweep above: its decline ends the run as
+    an error quoting the reply, and nothing is dispatched after it (no resolve, no claim)."""
+
+    def test_declined_workspace_step_ends_the_run_quoting_the_reply(self) -> None:
+        # covers: BO-2400f-5-iii
+        # angle: failure
+        decline_text = decline_reply_for("shell-runner")
+        result = run_lane({"workspace-ensure": decline_text})
+        payload = result.result or {}
+        self.assertEqual(payload.get("status"), "error", payload)
+        self.assertIn("I can't help with that", payload.get("message", ""), payload)
+        self.assertNotEqual(payload.get("halt_kind"), "declined_step", payload)
+        for later in ("resolve-connected", "claim-connected", "test-writer-connected"):
+            self.assertFalse(calls_with_label(result, later), f"{later} was dispatched after a declined workspace step")
 
 
 class TestDeclinedStepIsClassifiedApartFromContentionGateFailureAndUnproducible(

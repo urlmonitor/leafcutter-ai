@@ -79,11 +79,10 @@ from typing import Any
 
 _PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
 
-_WORKTREE_SETUP_SCRIPT_LABEL = "resolve-worktree-setup-script-path"
-_WORKTREE_SETUP_LABEL = "worktree-setup"
-_WORKTREE_SETUP_DEFAULT_SCRIPT_PATH = (
-    "/tmp/harness-default-repo/.leafcutter/scripts/setup_ticket_worktree.py"
-)
+_WORKSPACE_STEP_LABEL = "workspace-ensure"
+# ACD-2100a-1: the maker-path resolution's first probe (git-common-dir) answers with this repository.
+_MAKER_PATH_DEFAULT_REPLY = {"command": "git rev-parse --path-format=absolute --git-common-dir", "exit_status": 0,
+                             "stdout": "/tmp/harness-default-repo/.git\n", "stderr": ""}
 _WORKTREE_SETUP_DEFAULT_WORKTREE_PATH = "/tmp/harness-default-ac-worktree"
 _WORKTREE_SETUP_DEFAULT_BRANCH = "ac-authoring/harness-default"
 _WORKTREE_SETUP_DEFAULT_AC_STORE_PATH = (
@@ -94,7 +93,7 @@ _WORKTREE_SETUP_DEFAULT_AC_STORE_PATH = (
 # (see module docstring) that survives a small text substitution elsewhere
 # in the file -- the content-signature fallback for a source-patched temp
 # copy whose basename does not match _PLAN_FEATURE_SCRIPT_NAME.
-_PLAN_FEATURE_CONTENT_SIGNATURE = "resolveRepoAnchoredScriptPath"
+_PLAN_FEATURE_CONTENT_SIGNATURE = "scanOrphanedAcDrafts"
 
 
 def _is_plan_feature_script(script_path: Path) -> bool:
@@ -115,39 +114,52 @@ def _is_plan_feature_script(script_path: Path) -> bool:
     return _PLAN_FEATURE_CONTENT_SIGNATURE in source
 
 
-def worktree_setup_default_responses() -> dict[str, Any]:
-    """Return the two real, well-formed default responses (keyed by label)
-    for 'resolve-worktree-setup-script-path' / 'worktree-setup',
-    unconditionally -- for a caller that already knows it is talking to
-    plan-feature.js (e.g. unit_tests/_plan_feature_e2_runner.py's agent
-    shim) and only needs the payload shapes, not the `_is_plan_feature_script()`
-    gate `plan_feature_default_label_responses()` applies below for
-    run_workflow_under_e2()'s generic multi-script dispatch. The single
-    source of these two shapes -- never pasted per caller. Also carries the
-    passed `rule-check-<stage>` replies (ACD-2500a-1) so every shim caller
-    meets a well-formed check reply at stage end.
+def worktree_setup_default_responses(workspace_path: Any = None) -> dict[str, Any]:
+    """Return the real, well-formed default response (keyed by label) for the ONE workspace step
+    (``workspace-ensure``, BO-4300c-3), unconditionally -- for a caller that already knows it is talking to
+    plan-feature.js (e.g. unit_tests/_plan_feature_e2_runner.py's agent shim) and only needs the payload
+    shape, not the `_is_plan_feature_script()` gate `plan_feature_default_label_responses()` applies below
+    for run_workflow_under_e2()'s generic multi-script dispatch. The single source of this shape -- never
+    pasted per caller. Also carries the passed ``rule-check-<stage>`` replies (ACD-2500a-1) and the
+    test-design stage's script replies so every shim caller meets a well-formed reply at stage end.
+
+    The reply is the shell executor's ``{command, exit_status, stdout, stderr}`` carrying the workspace
+    maker's ok answer as the stdout STRING, exactly as the real engine delivers it. The retired
+    ``resolve-worktree-setup-script-path`` / ``worktree-setup`` labels are no longer dispatched; the
+    ``resolve-maker-path`` probe (ACD-2100a-1) that precedes the workspace step answers with a repository.
+    ``workspace_path`` names a real workspace for a real-execution caller whose shell steps enter it.
     """
     return {
         **rule_check_default_responses(),
         **design_stage_default_responses(),
-        _WORKTREE_SETUP_SCRIPT_LABEL: {
-            "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
-            "exit_code": 0,
-            "stderr": "",
-        },
-        _WORKTREE_SETUP_LABEL: {
-            "output": json.dumps(
-                {
-                    "worktree_path": _WORKTREE_SETUP_DEFAULT_WORKTREE_PATH,
-                    "branch": _WORKTREE_SETUP_DEFAULT_BRANCH,
-                    "ac_store_path": _WORKTREE_SETUP_DEFAULT_AC_STORE_PATH,
-                    "created": False,
-                }
-            ),
-            "exit_code": 0,
-            "stderr": "",
-        },
+        "resolve-maker-path": _MAKER_PATH_DEFAULT_REPLY,
+        **(workspace_step_reply_at(workspace_path) if workspace_path is not None
+           else workspace_step_reply_at(_WORKTREE_SETUP_DEFAULT_WORKTREE_PATH, _WORKTREE_SETUP_DEFAULT_AC_STORE_PATH)),
+        # BO-4300a-1-ia: the branch check is a shell-runner step whose result-less reply ends the run.
+        "detect-current-branch": {"command": "git branch --show-current", "exit_status": 0,
+                                  "stdout": "feature/harness-current-branch\n", "stderr": ""},
     }
+
+
+def workspace_answer_at(workspace_path: Any, ac_store_path: Any = None) -> dict[str, Any]:
+    """The workspace maker's ok answer naming ``workspace_path`` -- what an entry hands in as ``args.workspace``."""
+    store = ac_store_path if ac_store_path is not None else Path(workspace_path) / "docs" / "acceptance-criteria"
+    return {
+        "schema_version": 1, "status": "ok", "code": "OK", "verb": "ensure",
+        "workspace_path": str(workspace_path), "worktree_path": str(workspace_path),
+        "branch": _WORKTREE_SETUP_DEFAULT_BRANCH, "ac_store_path": str(store), "created": False,
+    }
+
+
+def workspace_step_reply_at(workspace_path: Any, ac_store_path: Any = None) -> dict[str, Any]:
+    """Return the ready ``workspace-ensure`` reply (keyed by label) naming ``workspace_path``.
+
+    For a real-execution caller whose shell steps run inside the workspace (the pause-store command
+    enters it first, BO-4300c-3): the maker's ok answer must name a directory that exists.
+    """
+    answer = workspace_answer_at(workspace_path, ac_store_path)
+    return {_WORKSPACE_STEP_LABEL: {"command": "python3 worktree.py ensure --kind ac (harness default)",
+                                    "exit_status": 0, "stdout": json.dumps(answer), "stderr": ""}}
 
 
 def rule_check_default_responses() -> dict[str, Any]:
