@@ -43,7 +43,7 @@ depends_on:
   - BO-400e-3
   - BO-400e-3-vi
 doc_links:
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+  - path: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
     relationship: describes
     status: exists
     relevance: "Remediation item 2: 'Until that lands, have Step 3.5 print the records it is about to close and require confirmation.'"
