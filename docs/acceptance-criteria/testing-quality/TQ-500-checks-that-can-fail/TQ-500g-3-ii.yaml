@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -32,43 +32,89 @@ criteria: |
       never from reading the writer's list alone.
 depends_on:
   - TQ-500g-3
+  - TQ-500g-1-v
+  - TQ-500g-1-vi
 doc_links:
-  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
-    relationship: describes
-    status: exists
-    relevance: "Incident 5: an integration test of a live procedure was skip-marked as 'retired', silently deleting production coverage."
+- path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+  relationship: describes
+  status: exists
+  relevance: 'Incident 5: an integration test of a live procedure was skip-marked as ''retired'', silently deleting
+    production coverage.'
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/reference/wrong-version-runs.md
+  relationship: describes
+  status: planned
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-3-i
+  contract: 'The weakened, removed and inconclusive fields of the check JSON (shape in TQ-500g-3-i delivers_to):
+    weakened [{file, test, nodeid, what: ''skipped''|''expected to fail''|''removed''}], removed [{file, test, nodeid,
+    reason}] (reason is the list''s note verbatim), inconclusive [{file, detail}]. Any weakened or inconclusive
+    item sets passed false; finish carries it verbatim under sweep.'
 expects_from:
-  - ac_id: TQ-500g-3
-    contract: "The sweep list, carrying a reason for each existing test removed with the code it tested."
+- ac_id: TQ-500g-3
+  contract: 'The recorded list: an entry with status ''removed'' and a non-empty note for each existing test, or
+    [param-id] case, deleted with the code it tested.'
+- ac_id: TQ-500g-3-i
+  contract: consumer_sweep.py check (the one CLI step finish calls), its list reader and fingerprint rule, and its
+    set of changed and deleted existing test files against --base-ref.
+- ac_id: TQ-500g-4
+  contract: 'The shared reading of a run (pytest_outcome_reader.parse_pytest_outcomes through _wvr_pytest): a failed
+    sub-case is a failure.'
+- ac_id: TQ-500g-4-i
+  contract: A run that reports failure with no failing test is inconclusive, never clean.
 it_requirements:
-- Reach it through the same single before-commit CLI entry that the routes call for the wrong-version
-  runs (TQ-500g-1-v, -vi, -vii). One implementation serves every route, and routes need no second dispatch.
-  Until that entry is wired, the check is not reachable and this AC is not done.
-- 'Scope of the runs: test files that existed at the base ref and were changed or deleted by the work,
-  plus every test file when a pytest config or conftest changed. Run them at the base ref and in the working
-  tree. Compare collected node ids and outcomes, read through TQ-500g-4''s shared reading.'
-- The base-ref run happens in an isolated export of the base ref, in a temp dir outside the repo that
-  is removed afterwards. Never stash or check out in the working tree.
-- Weakened means PASSED at the base and SKIPPED, XFAIL, or absent in the working tree. The only exit is
-  a sweep-list entry with status 'removed' and a reason. Such a test is reported as removed, not weakened.
-- An inconclusive run on either side (returncode 2, or a contradictory run per TQ-500g-4-i) stops the
-  work as inconclusive, never as a pass.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'Same entry as TQ-500g-3-i: the runs are part of consumer_sweep.py check, in the same JSON object and the same
+  exit code, reached through wrong_version_gate.py finish. No second CLI and no second dispatch. Until finish calls
+  the check, this AC is not done.'
+- 'Scope of the runs: the test files that existed at the base ref and that the work changed or deleted (TQ-500g-3-i''s
+  set); plus, when a conftest.py changed, every test file at or below that conftest''s folder; plus, when a pytest
+  config changed (pytest.ini, pyproject.toml, setup.cfg, tox.ini), every test file under the test root. The same
+  files are run on both sides. Nothing to run means no runs.'
+- 'The base-ref run happens in an isolated export of the base ref: git archive of the base, extracted with Python''s
+  tarfile into a temp dir outside the repo and removed afterwards, whatever happened. Never stash, check out or
+  add a worktree in the working tree. git status --porcelain is unchanged after the check.'
+- 'Run through the shared launcher _wvr_pytest.run_selected (whole files: a NodeSpec with an empty chain), extended
+  additively with an optional working-directory argument whose default keeps today''s behaviour. No second launcher.
+  The reading is pytest_outcome_reader''s, reached through _wvr_pytest, and the timeout budget is done_proof''s.
+  Each side runs with its own root as the working directory and repo-relative file arguments, so node ids compare
+  equal across the two sides.'
+- 'Weakened means: PASSED at the base, and in the working tree SKIPPED, XFAIL, XPASS, or absent (the node id was
+  not collected). That covers a new skip, skipif or xfail mark, a pytest.skip call, unittest skip or expectedFailure,
+  a deleted test or test file, and a dropped or renamed parametrize case. FAILED or ERROR in the working tree is
+  left to the green check, not reported here.'
+- The only exit is a recorded entry with status 'removed', a non-empty note and a matching fingerprint ('absent',
+  per TQ-500g-3-i) that names the function, Class::method or [param-id] case. It excuses absence only, never SKIPPED,
+  XFAIL or XPASS. Such a test is reported under removed with the note as the reason, not under weakened. An entry
+  naming the function covers all of its absent cases.
+- 'Inconclusive stops the work, never passes: a run on either side that is not ''ran'' (timeout, crash, unreadable),
+  a contradictory run per TQ-500g-4-i, or an in-scope file that fails to collect on either side. Each is reported
+  under inconclusive with the file and the detail.'
+- 'The decision comes from the runs. The list supplies only the removed exit: a ''strengthened'' or ''unaffected''
+  entry never excuses a SKIPPED, XFAIL, XPASS or absent outcome.'
+- 'Order inside check: TQ-500g-3-i''s comparison first (no pytest), then the runs. Both results are reported in
+  the one object.'
+- 'File size (count_content_lines, scripts/commit_guardian/_file_size_ratchet.py): _cs_runs.py at or under 400 counted
+  lines; _wvr_pytest.py (130) stays under 400. Do not touch done_proof.py (956) or pytest_outcome_reader.py beyond
+  what TQ-500g-4 already owns. No route JS changes.'
 test_spec:
 - name: test_skip_xfail_and_removed_tests_reported_weakened
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: criterion
-  description: In a temp git repo with real pytest, A (skip-marked), B (xfail-marked) and C (deleted)
-    are reported weakened, each with what happened to it, and the work stops.
+  description: In a temp git repo with real pytest, A (skip-marked), B (xfail-marked) and C (deleted) are reported
+    under weakened as skipped, expected to fail and removed, and the check stops.
   must_catch:
   - skip mark added to an existing test not detected
   - deleted test missed because only surviving node ids are compared
+  - XFAIL read as passed
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
 - name: test_strengthened_test_not_reported
   target_dir: unit_tests/build_orchestration/
   framework: pytest
@@ -77,30 +123,81 @@ test_spec:
   description: D, with an assertion added and still passing, is not reported.
   must_catch:
   - any change to an existing test reported as weakened
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
 - name: test_removed_with_listed_reason_is_not_weakened
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: boundary
-  description: E, deleted and listed as removed with a reason, is reported as removed in the hand-off.
-    The same deletion without a list entry is weakened.
+  description: E, deleted and recorded as removed with a reason, is reported under removed with that reason. The
+    same deletion without an entry is weakened, and a 'removed' entry does not excuse a skip mark.
   must_catch:
-  - removal exit granted without a sweep-list reason
+  - removal exit granted without a recorded reason
+  - removed entry excuses a skipped test
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
+  - scripts/build_orchestration/consumer_sweep.py
+- name: test_dropped_parametrize_case_reported_weakened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: An existing test parametrized over three cases at the base keeps two in the working tree. The dropped
+    case is reported as removed under weakened, by node id.
+  must_catch:
+  - comparison by function name hides a dropped parametrize case
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
+- name: test_inconclusive_run_stops_never_passes
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A base-side run that times out (tiny timeout budget through the env override) and a working-tree
+    file that no longer collects each stop the check as inconclusive.
+  must_catch:
+  - timed-out base run read as nothing weakened
+  - collection failure read as nothing weakened
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
+  - scripts/build_orchestration/_wvr_pytest.py
+- name: test_base_run_leaves_worktree_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: After the check, the working-tree bytes of every file, git status --porcelain and git stash list
+    are unchanged, and the export dir is gone.
+  must_catch:
+  - base run checks out or stashes in the working tree
+  - export dir left behind
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
 - name: test_decision_from_runs_not_from_list
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: the shared before-commit CLI (TQ-500g-1-i entry)
-  description: 'Through the before-commit CLI: the list says A is unaffected, but the runs show A skipped,
-    and the work stops.'
+  surface_invoked: wrong_version_gate.py finish, the single before-commit entry every route dispatches
+  description: 'Through finish as a subprocess: the recorded list says A is unaffected, but the runs show A skipped,
+    so finish prints gate_passed false and stopped_at ''sweep'' with A under sweep.weakened.'
   must_catch:
   - check reads the sweep list only
-test_rationale: Weakening is a before-and-after runtime fact, so every test runs real pytest on a real
-  base commit and a real working tree. D is the control, and E is the narrow exit.
+  in_scope_files:
+  - scripts/build_orchestration/_cs_runs.py
+  - scripts/build_orchestration/consumer_sweep.py
+test_rationale: Weakening is a before-and-after runtime fact, so every test runs real pytest on a real base commit
+  and a real working tree. D is the control, E is the narrow exit. The parametrize, inconclusive and untouched-worktree
+  tests pin the three ways a run comparison silently passes or damages the work. The finish test proves the runs
+  sit on the one entry every route calls.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "TQ-500g-3 user answers Q1-Q4 (2026-10-22)"
+    by: business-analyst
+    at: 2026-10-22
+    note: "Criteria unchanged. Added depends_on TQ-500g-1-v and TQ-500g-1-vi (IT-PO follow-up). Notes: the static gap is now covered by TQ-500g-3-iii."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -130,3 +227,20 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   Lane: python-coder, in one PR with TQ-500g-3 (prompt) and -3-i.
+
+  IT-PO ALIGNMENT (2026-10-22): AGAINST MAIN AFTER TQ-500g-1-v/-vi
+  The runs are part of TQ-500g-3-i's consumer_sweep.py check, so they ride the
+  same finish call. Narrowed parametrize is covered by comparing node ids, not
+  function names. The base run uses an exported copy, never the working tree. A
+  conftest change widens the runs to that conftest's folder only; a pytest
+  config change widens them to the whole test root.
+  NOT SEEN HERE (unchanged): a removed assertion or a loosened comparison inside
+  a test that still passes. See the open question on a static follow-up.
+
+  BA AMENDMENT (2026-10-22)
+  The static follow-up is decided (user answer Q1): TQ-500g-3-iii compares every
+  changed existing test before and after without running it, in the same check,
+  and stops on fewer assertions, a loosened comparison or a widened approx
+  tolerance. This AC still owns only what the runs see.
+  depends_on gains TQ-500g-1-v and TQ-500g-1-vi (the finish entry and its route
+  dispatch, both done on main).

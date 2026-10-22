@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -15,13 +15,21 @@ criteria: |
   Given two pieces of work, each changing three test files that existed before
     the work began — test_refresh.py, test_retry.py and test_export.py —
     and each adding a new file test_refresh_gate.py,
+    and each changing the fixture retry_state in a conftest.py that existed
+    before the work began,
       W1: its sweep list names the edits in test_refresh.py and test_retry.py
           only,
-      W2: its sweep list names the edits in all three existing files,
+      W2: its sweep list names the edits in all three existing files and the
+          fixture conftest.py::retry_state,
   When each piece of work reaches the step before commit,
-  Then W1 stops, naming test_export.py and the tests changed in it as edits to
-      existing tests that the sweep list does not name,
+  Then W1 stops, naming test_export.py and the tests changed in it, and
+      conftest.py::retry_state, as edits to existing tests and their fixtures
+      that the sweep list does not name,
     And W2 goes on,
+    And when, after W2's list is recorded, the coder or a remedy agent edits
+      test_retry.py again, W2 stops at the step before commit naming that
+      test as unlisted, because only the test writer's list excuses an edit
+      and it no longer matches the test,
     And test_refresh_gate.py, added by the work, is not treated as an existing
       test in either piece of work,
     And the decision comes from comparing the work with the code as it was
@@ -29,72 +37,231 @@ criteria: |
       writer's statement that its list is complete.
 depends_on:
   - TQ-500g-3
+  - TQ-500g-1-v
+  - TQ-500g-1-vi
 doc_links:
-  - path: templates/agents/test-writer.md
-    relationship: relates-to
-    status: exists
+- path: templates/agents/test-writer.md
+  relationship: relates-to
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/reference/wrong-version-runs.md
+  relationship: describes
+  status: planned
+  relevance: TQ-500g-5's reference page; the sweep stop is one more reason finish can halt.
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+- agent: llm-expert
+  ac_id: TQ-500g-3
+  contract: 'Record step: python <worktree>/{{config.output_root}}/scripts/build_orchestration/consumer_sweep.py
+    record --work-key <key> --test-root <absolute worktree root> --base-ref HEAD, with the list on stdin through
+    a quoted here-document whose delimiter does not occur in the list. stdin: {entries: [{file: str (repo-relative
+    POSIX path of the test file), test: str (function name, or Class::method, optionally with a [param-id] suffix
+    naming one parametrized case), status: ''strengthened''|''unaffected''|''removed'', note: str (non-empty, one
+    line: what was added, why it is unaffected, or why it was removed)}]}. Writes <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json
+    atomically as {entries: [...each entry as given, plus fingerprint: str]}, prints {recorded: bool, path: str|null,
+    error: str|null, entries: int}, exit 0 only when recorded. On a refused list nothing is written and any earlier
+    file for that key is left as it was.'
+- agent: python-coder
+  ac_id: TQ-500g-3-ii
+  contract: 'The check step (consumer_sweep.py check --test-root <root> --base-ref <ref>) and its JSON {passed:
+    bool, applicable: bool, reason: null|''unlisted''|''weakened''|''loosened''|''sweep list missing''|''inconclusive''|str,
+    unlisted: [{file: str, test: str}], weakened: [{file: str, test: str, nodeid: str, what: ''skipped''|''expected
+    to fail''|''removed''}], loosened: [{file: str, test: str, what: ''fewer assertions''|''comparison loosened''|''tolerance
+    widened'', detail: str}], removed: [{file: str, test: str, nodeid: str|null, reason: str}], inconclusive: [{file:
+    str|null, detail: str}], error: str|null}, the reader of every recorded list, and the fingerprint rule. -ii
+    adds the weakened, removed and inconclusive results of the runs to the same object and the same exit code; it
+    adds no second CLI. In unlisted, test is a test name or, for a non-test top-level symbol, the symbol name
+    (reported as <file>::<symbol>).'
+- agent: python-coder
+  ac_id: TQ-500g-3-iii
+  contract: 'The same check step and JSON object; its set of changed existing test files against --base-ref; _cs_edits''
+    per-test split: for each test (function or Class::method) present at the base and in the working tree whose
+    source with decorators differs, the parsed base and current function nodes keyed by (file, test); and _fl_red_baseline_support._read_file_at_ref
+    for base content. check calls _cs_asserts after the edit comparison and before the runs, whatever the edit comparison
+    found. -iii fills the loosened field (shape above, [] when nothing is loosened) and adds no second CLI. A file
+    that does not parse on either side stays -i''s inconclusive and is skipped by -iii.'
+- agent: llm-expert
+  ac_id: TQ-500g-1-vii
+  contract: finish's output gains the additive key sweep (the check JSON verbatim, or null) and stopped_at gains
+    the value 'sweep'. The supervisor still acts on gate_passed only and carries finish's JSON verbatim.
 expects_from:
-  - ac_id: TQ-500g-3
-    contract: "The sweep list in the hand-off: each existing test touched, by name and file."
+- ac_id: TQ-500g-3
+  contract: 'The test-writer''s list, piped into the record step: {entries: [{file: str (repo-relative POSIX path
+    of the test file), test: str (function name, or Class::method, optionally with a [param-id] suffix naming one
+    parametrized case), status: ''strengthened''|''unaffected''|''removed'', note: str (non-empty, one line: what
+    was added, why it is unaffected, or why it was removed)}]}.'
+- ac_id: TQ-500g-1-v
+  contract: 'Gate wrapper on main (PR #1280): wrong_version_gate.py finish --work-key <key> --reply - [--ac-ids
+    <ids>] --ac-root <path> --test-root <worktree root> --base-ref <ref>, stdout {gate_passed, stopped_at: null|''write'',
+    writer, verdict}, exit 0 iff gate_passed. It is called on every drive that reaches commit, also with no --ac-ids.'
+- ac_id: TQ-500g-1-vi
+  contract: bf-wv-finish (build-feature.js) and bt-wv-finish (build-ticket.js) dispatch finish before every commit
+    dispatch, read only gate_passed, and carry finish's JSON verbatim in the halt payload. fastlane-wv-finish does
+    the same on the fast lane.
 it_requirements:
-- Reach it through the same single before-commit CLI entry that the routes call for the wrong-version
-  runs (TQ-500g-1-v, -vi, -vii). One implementation serves every route, and routes need no second dispatch.
-  Until that entry is wired, the check is not reachable and this AC is not done.
-- '''Existing'' means present at the route''s base ref. The comparison is per test function. Reuse _fl_red_baseline_support''s
-  test-name extraction and newly-added partition. A test counts as changed when its function source differs
-  between the base ref and the working tree.'
-- A missing or unparseable sweep list while any existing test changed stops the work (fail closed). With
-  no existing test changed, no list is needed.
-- The decision comes from git and the list only. Any statement by the writer that the list is complete
-  is ignored.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'Placement: the check is a step of a new public module scripts/build_orchestration/consumer_sweep.py (no leading
+  underscore, own CLI, steps record and check). wrong_version_gate.py finish calls ''consumer_sweep.py check --test-root
+  <test root> --base-ref <base ref>'' through its existing _call helper, FIRST, on every finish call, including
+  one with no --ac-ids. finish is the single before-commit entry the fast lane (fastlane-wv-finish), /build-feature
+  (bf-wv-finish) and the single-ticket route (bt-wv-finish) already dispatch on main; /build-epic reaches it when
+  TQ-500g-1-vii ships. No route JS changes and no second dispatch. Until finish calls the check, this AC is not
+  done.'
+- 'finish contract, additive: stdout {gate_passed, stopped_at: null|''sweep''|''write'', sweep: <check JSON verbatim>|null,
+  writer, verdict}. When the check does not pass (passed not true, exit not 0, or no parseable JSON), finish prints
+  gate_passed false and stopped_at ''sweep'', and calls neither the writer nor the runner. Otherwise it continues
+  exactly as today, and gate_passed is true only when both passed. Existing finish tests are strengthened where
+  they need a list, never weakened.'
+- 'Record step: validates the stdin list fail closed (unknown status, empty note, a file that is not a repo-relative
+  POSIX path inside the repo, a work key that is not one plain path segment, or unparseable JSON gives recorded
+  false and writes nothing). It writes atomically under the git dir (git rev-parse --absolute-git-dir), reusing
+  _wvr_gate.git_text and _wvr_gate.atomic_write_bytes and the writer''s plain-segment rule, never a copy. It adds
+  to each entry a fingerprint it computes itself: the sha256 of the named test''s current source including its decorators,
+  or ''absent'' when the test is not there. Any fingerprint or completeness claim in the stdin is ignored. Recording
+  the same key again replaces that key''s file. The writer''s write step must keep leaving consumer_sweep.json in
+  place.'
+- '''Existing'' means present at --base-ref (routes pass HEAD). The changed files come from the one shared diff
+  reader, _wvr_scope.DiffCache (git diff --name-status --no-renames <base>), filtered by _wvr_scope.is_test_path.
+  Base content comes from _fl_red_baseline_support._read_file_at_ref. Never stash, check out or commit.'
+- 'The comparison is per test: each test function and each Class::method, with its decorators as part of its source,
+  so a new skip mark or a narrowed parametrize is an edit. A test present at the base and absent now is an edit
+  that must be listed as ''removed''. A file absent at the base is never existing. Changed top-level code in an
+  existing test file or conftest.py that is not a test (a fixture, helper, constant or pytestmark) is an edit named
+  <file>::<symbol> and must be listed as well (user answer Q2, 2026-10-22: an unlisted one stops the work). A recorded
+  entry may name such a symbol in its test field and is fingerprinted the same way (the symbol''s current source,
+  with decorators). A file that does not parse on either side stops the work as inconclusive, naming the file.'
+- 'Only the test-writer records (user answer Q3, 2026-10-22, strict). There is no record step for the coder or a
+  remedy agent and no exemption flag: an edit they make to an existing test or its fixtures after the list was
+  recorded no longer matches its fingerprint, so finish stops with stopped_at ''sweep'' and the test named under
+  unlisted. The stop is visible in finish''s JSON, which every route carries verbatim in its halt payload, and the
+  ticket is re-driven so the test-writer sweeps and records again.'
+- 'Listed means: some recorded entry in any consumer_sweep.json under <git-dir>/leafcutter/work/*/ names the same
+  file and test, has status ''strengthened'' or ''removed'', and carries a fingerprint equal to the test''s current
+  one. An ''unaffected'' entry never excuses an edit, and an entry recorded before a later edit (fingerprint differs)
+  excuses nothing. That is how the decision comes from git and the list only.'
+- 'Fail closed: a changed existing test with no readable list stops the work with reason ''sweep list missing''.
+  A base ref that does not resolve stops it as inconclusive. With no existing test changed, no list is needed: passed
+  true, applicable false.'
+- 'Output: exactly one JSON object on stdout with the shape in delivers_to, exit 0 iff passed. An internal error
+  still prints the shape with passed false. Progress logging goes to stderr only.'
+- 'Reuse, never fork: do not extend check_contract_shrinking.py. It reads the staged diff on every commit, including
+  human commits that have no list, judges only test-weakening concurrent with production changes, and is over the
+  ratchet (426 counted lines). It stays the commit-time line; this check is the route-level line.'
+- 'File size (count_content_lines, scripts/commit_guardian/_file_size_ratchet.py): pinned layout, each new file
+  at or under 400 counted lines: consumer_sweep.py (CLI, record, check output), _cs_edits.py (this AC''s comparison),
+  _cs_runs.py (TQ-500g-3-ii), _cs_asserts.py (TQ-500g-3-iii). The names are pinned because the test_spec in_scope_files name them. wrong_version_gate.py
+  (76) stays under 400. Do not touch fast_lane.py (391), done_proof.py (956), check_contract_shrinking.py (426)
+  or any route JS (fast-lane-ship.js 1692, build-feature.js 2461, build-ticket.js 1372, all over the .js limit of
+  1000). _fl_red_baseline_support.py (318) is imported from, not edited.'
+- 'Deploy and registry: build_build_orchestration_scripts copies every .py file under scripts/build_orchestration/,
+  so the new modules deploy without a deploy-map entry. No new agent, registry entry or pre-commit hook, so package_surface
+  is false.'
 test_spec:
 - name: test_w1_unlisted_edit_stops_naming_file_and_tests
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: criterion
-  description: In a temp git repo, W1's list omits test_export.py. The check stops, naming test_export.py
-    and the changed test functions in it.
+  description: In a temp git repo, W1's recorded list omits test_export.py. consumer_sweep.py check stops, naming
+    test_export.py and the changed test functions in it under unlisted.
   must_catch:
   - file-level comparison passes W1 because other files are listed
   - writer's 'list complete' claim trusted
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/consumer_sweep.py
 - name: test_w2_complete_list_goes_on
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: discrimination
-  description: W2 lists all three existing files and passes. This is the control against returning to
-    the blanket ban.
+  description: W2 records all three existing files and passes. This is the control against returning to the blanket
+    ban.
   must_catch:
   - any edit to an existing test stops the work
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
 - name: test_new_test_file_not_treated_as_existing
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: boundary
-  description: test_refresh_gate.py, absent at the base ref, is never reported as an edited existing test.
+  description: test_refresh_gate.py, absent at the base ref, is never reported as an edited existing test, in W1
+    or W2.
   must_catch:
   - new file treated as existing because it matches test_*.py
-- name: test_sweep_check_through_before_commit_cli
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
+- name: test_stale_or_unaffected_entry_does_not_excuse_edit
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: An entry recorded before a further edit to the same test, an entry with status unaffected, and an
+    entry whose stdin carries a forged fingerprint each leave the edit unlisted, and the check stops.
+  must_catch:
+  - list membership checked by file and name only
+  - writer-supplied fingerprint trusted
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
+  - scripts/build_orchestration/consumer_sweep.py
+- name: test_decorator_only_edit_is_an_edit
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Adding @pytest.mark.skip to an existing test, or dropping one case from its @pytest.mark.parametrize,
+    with the body unchanged, is reported as an unlisted edit.
+  must_catch:
+  - test source compared without its decorators
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
+- name: test_unlisted_fixture_edit_stops_naming_symbol
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: In a temp git repo, changing the fixture retry_state in a conftest.py present at the base, with no
+    list entry naming it, stops the check with conftest.py::retry_state under unlisted; the same change recorded
+    in the list (W2) passes. A helper function or a pytestmark change in an existing test file behaves the same.
+  must_catch:
+  - only test functions compared, fixtures and helpers ignored
+  - conftest.py excluded from the existing-test set
+  in_scope_files:
+  - scripts/build_orchestration/_cs_edits.py
+- name: test_sweep_check_through_finish
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: the shared before-commit CLI (TQ-500g-1-i entry)
-  description: The before-commit CLI, run as a subprocess, returns the stop for W1 in its JSON verdict,
-    and fails closed when the sweep list is missing.
+  surface_invoked: wrong_version_gate.py finish, the single before-commit entry every route dispatches
+  description: wrong_version_gate.py finish, run as a subprocess on W1 with no --ac-ids, prints gate_passed false,
+    stopped_at 'sweep' and the check JSON under sweep, and writes no manifest. With a changed existing test and
+    no recorded list it fails closed. On W2 it goes on to the writer and the runner.
   must_catch:
   - missing sweep list treated as complete
-test_rationale: Real temp git repos with a real base commit, because 'existed before the work began' is
-  a git fact. W2 is the control. The CLI test proves the check sits on the path every route calls.
+  - finish ignores the sweep verdict
+  - sweep check skipped when --ac-ids is empty
+  in_scope_files:
+  - scripts/build_orchestration/wrong_version_gate.py
+  - scripts/build_orchestration/consumer_sweep.py
+test_rationale: Real temp git repos with a real base commit, because 'existed before the work began' is a git fact,
+  and the list is recorded through the real record step so the fingerprint is the check's own. W2 is the control.
+  The stale-entry and decorator tests pin the two ways a per-name comparison would let an edit through. The finish
+  test proves the check sits on the one entry every route already calls.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "TQ-500g-3 user answers Q2/Q3 (2026-10-22)"
+    by: business-analyst
+    at: 2026-10-22
+    note: "Criteria: unlisted fixture edits (conftest.py::retry_state) stop the work (Q2); an edit by the coder or a remedy agent after the list was recorded stops the work (Q3, strict). Added depends_on TQ-500g-1-v and TQ-500g-1-vi (IT-PO follow-up). Check JSON gains the loosened field for TQ-500g-3-iii. Added test_unlisted_fixture_edit_stops_naming_symbol."
+  - reason: "IT-PO alignment with TQ-500g-3-iii (2026-10-22)"
+    by: it-po
+    at: 2026-10-22
+    note: "Criteria unchanged. delivers_to -iii names the per-test split and the call order; file-size layout adds _cs_asserts.py."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -115,3 +282,48 @@ notes: |
   GRANULARITY DECIDED: per test function (the BA left this to IT-PO).
   WIRING: through the same before-commit call as the wrong-version runs, to
   avoid more JS growth.
+
+  IT-PO ALIGNMENT (2026-10-22): AGAINST MAIN AFTER TQ-500g-1-v/-vi
+  WHERE THE CHECK LIVES: consumer_sweep.py check, called FIRST by
+  wrong_version_gate.py finish. finish is already dispatched before every commit
+  by the fast lane, /build-feature and the single-ticket route (and by /build-epic
+  once TQ-500g-1-vii ships), so no route JS changes. A sweep stop sets stopped_at
+  'sweep' and skips the writer and the runner: a weakened suite makes the
+  wrong-version verdict meaningless.
+  NOT A PRE-COMMIT HOOK: hooks see only the staged diff, run on every human
+  commit (which has no list), and the nearest hook, check_contract_shrinking.py,
+  is over the ratchet.
+  HOW 'LISTED' IS PROVEN: the record step fingerprints each entry from the
+  working tree. A stale, unaffected or forged entry excuses nothing.
+  FOLLOW-UPS OUTSIDE THIS AC: depends_on does not name TQ-500g-1-v or -vi (BA to
+  add). TQ-500g-1-v's delivers_to text says stopped_at null|"write"; it gains
+  "sweep" here (additive; no route reads stopped_at).
+
+  BA AMENDMENT (2026-10-22): USER ANSWERS Q2-Q4
+  DEPENDS_ON: TQ-500g-1-v and TQ-500g-1-vi added (both done on main). TQ-500g-1-v
+  is not edited: its finish output (stdout {gate_passed, stopped_at:
+  null|'write', writer, verdict}) gains stopped_at 'sweep' and the sweep key
+  through this AC, additively; no route reads stopped_at.
+  Q2 FIXTURES AND HELPERS: an edit to non-test top-level code in an existing
+  test file or conftest.py (fixture, helper, constant, pytestmark) must be
+  listed like a test; an unlisted one stops the work, reported as
+  <file>::<symbol>. The test-writer prompt (TQ-500g-3) tells the writer to
+  list them.
+  Q3 STRICT, ONLY THE TEST WRITER RECORDS: a coder or remedy edit to an
+  existing test is unlisted and stops the work. This is deliberate: the stop
+  is visible in finish's JSON and the ticket is re-driven so the test-writer
+  sweeps again. No exemption path.
+  Q4 ACCEPTED BEHAVIOUR, SHARED-WORKTREE PARALLEL BATCHES: in a /build-feature
+  batch where several tickets share one worktree, a sibling ticket's unlisted
+  edit to an existing test stops another ticket's finish too, because the
+  diff against the base covers the whole worktree. check reads every recorded
+  list under <git-dir>/leafcutter/work/*/, so a sibling's listed edits pass.
+  Accepted as is; not a defect.
+  WEAKENED ASSERTIONS: TQ-500g-3-iii adds a static before/after comparison of
+  every changed existing test to the same check (loosened field).
+
+  USER APPROVAL (2026-10-22): the criteria amendments Q2 (fixture, helper,
+  constant and pytestmark edits must be listed; an unlisted one stops) and Q3
+  (only the test writer records; a later coder or remedy edit stops) were
+  approved by user 2026-10-22, answered directly by the user in the main
+  session's AskUserQuestion.

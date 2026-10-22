@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -28,55 +28,112 @@ criteria: |
     And no edit to an existing test removes an assertion, widens an expected
       value, adds a skip or an expected-failure mark, or deletes the test,
     And every edit to an existing test appears in the report, including edits
-      to tests outside E1 to E4,
+      to tests outside E1 to E4 and edits to the fixtures, helpers, constants
+      and module-level marks in an existing test file or conftest.py, such as
+      the fixture that seeds refresh_due,
     And an existing test that could be made to pass only by weakening it is
       reported by name and handed back, not weakened.
 depends_on:
   - TQ-500g
 doc_links:
-  - path: templates/agents/test-writer.md
-    relationship: describes
-    status: exists
-    relevance: "Holds today's blanket ban on editing existing tests (analysis: ':949'), which this sweep replaces."
-  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
-    relationship: describes
-    status: exists
-    relevance: "Request item 6, and incident 2 (a gate input moved to a new column; one consumer suite was missed in the sweep; fixtures seeded only the old input)."
+- path: templates/agents/test-writer.md
+  relationship: describes
+  status: exists
+  relevance: Holds today's blanket ban on editing existing tests (## Constraints, line 1115 on main 2026-10-22),
+    which this sweep replaces, and Rule 2's consumer enumeration through research-agent, which the sweep extends.
+- path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+  relationship: describes
+  status: exists
+  relevance: Request item 6, and incident 2 (a gate input moved to a new column; one consumer suite was missed in
+    the sweep; fixtures seeded only the old input).
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+  relevance: The before-commit wrong-version gate (wrong_version_gate.py finish) that carries the sweep check on
+    every route.
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to:
 - agent: python-coder
   ac_id: TQ-500g-3-i
-  contract: 'JSON at <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json: {entries: [{file: str (repo-relative
-    POSIX), test: str (function name, or Class::method), status: ''strengthened''|''unaffected''|''removed'',
-    note: str (one line: what was added, or why)}]}.'
+  contract: 'The test-writer records its sweep list exactly once per hand-off, after its last edit to any existing
+    test, by running python <worktree>/{{config.output_root}}/scripts/build_orchestration/consumer_sweep.py record
+    --work-key <key> --test-root <absolute worktree root> --base-ref HEAD, with the list on stdin through a quoted
+    here-document whose delimiter does not occur in the list. stdin is one JSON object {entries: [{file: str (repo-relative
+    POSIX path of the test file or conftest.py), test: str (function name, or Class::method, optionally with a [param-id]
+    suffix naming one parametrized case, or the name of an edited top-level fixture, helper, constant or pytestmark),
+    status: ''strengthened''|''unaffected''|''removed'', note: str (non-empty, one
+    line: what was added, why it is unaffected, or why it was removed)}]}. The record step (built by TQ-500g-3-i)
+    writes <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json and prints {recorded: bool, path: str|null,
+    error: str|null, entries: int}; exit 0 only when recorded. work-key is the ticket file stem on ticket routes
+    and the first AC id of the build set on the fast lane (one plain path segment; informational, because the check
+    reads every list in the worktree''s work folder). The writer never writes the file itself and never supplies
+    a fingerprint.'
 - agent: python-coder
   ac_id: TQ-500g-3-ii
-  contract: Same file. 'removed' entries carry the reason.
-expects_from: null
+  contract: The same recorded file. A 'removed' entry names a test (or one [param-id] case) that the work deleted
+    with the code it tested, and its note is the reason.
+expects_from:
+- ac_id: TQ-500g-3-i
+  contract: 'The record step: python <worktree>/{{config.output_root}}/scripts/build_orchestration/consumer_sweep.py
+    record --work-key <key> --test-root <absolute worktree root> --base-ref HEAD, with the list on stdin through
+    a quoted here-document whose delimiter does not occur in the list. It validates the list fail-closed and prints
+    {recorded, path, error, entries}; a record exit 1 is a test-writer blocker, never a silent skip.'
 it_requirements:
-- 'Edit templates/agents/test-writer.md. Replace the blanket ban (''Do NOT modify existing test files
-  unless the ticket explicitly requires it.'') with the sweep procedure: find every existing test that
-  exercises the changed check or helper, list each one, and only strengthen. Leave the TAUGHT-TEST-ANGLES
-  anchor block untouched: it is held in lockstep by unit_tests/prompt_assembly/test_bp_1100g_1.py.'
-- The sweep list is written in machine form (the delivers_to shape) and rendered in the hand-off. A test
-  removed together with the code it tested is listed as 'removed', with the reason.
-- 'Guardrail: do not merge this without TQ-500g-3-i and -3-ii. A sweep that only asks the writer to behave
+- 'Edit templates/agents/test-writer.md only (deployed copies regenerate through build.py). Replace the blanket
+  ban in ## Constraints (''Do NOT modify existing test files unless the ticket explicitly requires it.'') with the
+  sweep procedure. Leave the TAUGHT-TEST-ANGLES anchor block untouched: it is held in lockstep by unit_tests/prompt_assembly/test_bp_1100g_1.py.'
+- 'Find consumers through the existing Rule 2 path, never a new one: test-writer has no Grep or Glob, so the sweep
+  spawns research-agent (already in its spawn_allowlist) with a blast-radius or find-references query on every existing
+  check or helper the requirement changes. The sweep applies to every work that changes an existing function, not
+  only to contract-shrinking repairs; extend Rule 2 rather than adding a parallel rule.'
+- 'Record the list in machine form through the record step (delivers_to), as one Bash invocation with a quoted here-document
+  (no cd chain, no pipe; prompt-audit). Render the same entries in the hand-off: the completion_manifest key consumer_sweep
+  on ticket routes, and the JSON reply field consumer_sweep on the fast lane (fast-lane-ship.js TEST_WRITER_SCHEMA
+  does not forbid extra properties, so no JS change). A test removed together with the code it tested is listed
+  as ''removed'', with the reason.'
+- 'Name the forbidden weakenings in the prompt: removing an assertion, widening an expected value or tolerance,
+  adding skip, skipif, xfail or expectedFailure marks or a pytest.skip call, deleting a test, and dropping or renaming
+  a parametrize case. A test that could pass only by weakening is named and handed back (status handoff or blocker),
+  never weakened. Allow running the listed existing tests'' files to confirm they still pass; the full-suite ban
+  stays.'
+- 'State in the prompt which part is mechanical: TQ-500g-3-i stops any edit to an existing test, or to a fixture,
+  helper, constant or pytestmark in an existing test file or conftest.py, that the recorded list does not name
+  (fingerprinted by the record step); TQ-500g-3-ii stops a test that passed before and is now skipped, expected
+  to fail or gone; TQ-500g-3-iii stops a changed existing test that has fewer assertions, a loosened comparison
+  or a wider pytest.approx tolerance than at the base, whether or not it is listed as strengthened. A widened expected
+  literal (for example 200 becoming 2000 under the same ==) is NOT seen by any of them; it is left to pr-reviewer.'
+- 'List fixture and helper edits too (user answer Q2, 2026-10-22): the prompt tells the writer that an edit to a
+  fixture, helper, constant or pytestmark in an existing test file or conftest.py is listed like a test, with
+  test set to the symbol name; an unlisted one stops the work, reported as <file>::<symbol>.'
+- Only the test-writer records the list (user answer Q3, 2026-10-22, strict). An edit to an existing test made
+  later (by the coder or a remedy agent) is not on the recorded fingerprint and stops the work at the before-commit
+  check; the stop is visible in finish's JSON and the ticket is re-driven. The prompt must not tell the writer to
+  pre-list edits it has not made, and must tell it to record once, after its last edit.
+- 'Guardrail: do not merge this without TQ-500g-3-i, -3-ii and -3-iii. A sweep that only asks the writer to behave
   reopens what the ban closed.'
 - 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
-  is fixed, the pre-commit done-proof path refuses to mark it done.'
+  is fixed (still open on 2026-10-22), the pre-commit done-proof path refuses to mark it done.'
 test_required: false
-test_rationale: 'Prompt-only. Finding consumer tests and choosing how to strengthen them is agent conduct,
-  and a template text search is forbidden. Deterministic backstops: TQ-500g-3-i (an unlisted edit stops
-  the work) and TQ-500g-3-ii (a weakened test stops the work). Substitute: a test-writer eval row of the
-  incident-2 shape (TQ-200d-1''s trap row), plus pr-reviewer.'
+test_rationale: 'Prompt-only. Finding consumer tests and choosing how to strengthen them is agent conduct, and a
+  template text search is forbidden. Deterministic backstops, both reached through wrong_version_gate.py finish
+  on every route: TQ-500g-3-i (an edit to an existing test missing from the recorded list stops the work) and TQ-500g-3-ii
+  (a test that passed before and is now skipped, expected to fail or gone stops the work), and TQ-500g-3-iii (a
+  changed existing test with fewer assertions, a loosened comparison or a wider approx tolerance stops the work).
+  Substitute: a test-writer eval row of the incident-2 shape (TQ-200d-1''s trap row), plus pr-reviewer for a widened
+  expected literal, which no backstop sees.'
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "TQ-500g-3 user answers Q1-Q4 (2026-10-22)"
+    by: business-analyst
+    at: 2026-10-22
+    note: "Criteria: the report also lists edits to fixtures, helpers, constants and module-level marks in existing test files and conftest.py (Q2). it_requirements: Q2 list fixture/helper edits, Q3 strict record ownership, mechanical-backstop statement now includes TQ-500g-3-iii (Q1); guardrail and test_rationale name -iii. Added covered_by TQ-500g-3-iii."
 superseded_by: null
 covered_by:
   - TQ-500g-3-i
   - TQ-500g-3-ii
+  - TQ-500g-3-iii
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
@@ -104,3 +161,36 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   llm-expert lane. Ship in the same PR as -3-i and -3-ii (the guardrail).
+
+  IT-PO ALIGNMENT (2026-10-22): AGAINST MAIN AFTER TQ-500g-1-v/-vi
+  WHERE THE LIST LIVES: <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json,
+  beside the writer's alterations manifest. Only the record step of
+  consumer_sweep.py (built by -3-i) writes it, from the list the test-writer
+  pipes in; it adds a per-entry fingerprint computed from the working tree. The
+  writer's own claims, including any fingerprint, are ignored.
+  WHO WRITES IT: the test-writer, once, after its last edit to an existing test.
+  No route JS change: the fast lane's TEST_WRITER_SCHEMA accepts the extra reply
+  field, and the check reads every list in the worktree's work folder, so the
+  work key need not match finish's.
+  BAN LOCATION: the ban moved from ':949' to the ## Constraints list (line 1115).
+
+  BA AMENDMENT (2026-10-22): USER ANSWERS Q1-Q4
+    -iii     a changed existing test with fewer assertions, a loosened
+             comparison or a wider approx tolerance stops the work, listed
+             or not                                             python-coder
+  Q1: weakened assertions get a deterministic stop (TQ-500g-3-iii), static,
+  no LLM, inside the same check. Listing a test as strengthened does not
+  exempt it. What remains for review: a widened expected literal.
+  Q2: fixture, helper, constant and pytestmark edits in existing test files and
+  conftest.py are listed; an unlisted one stops (TQ-500g-3-i).
+  Q3: strict. Only the test-writer records; a later coder or remedy edit to an
+  existing test stops the work visibly and the ticket is re-driven.
+  Q4: accepted. In a shared-worktree parallel /build-feature batch a sibling's
+  unlisted edit can stop another ticket; listed sibling edits pass because the
+  check reads every recorded list (see TQ-500g-3-i notes).
+
+  USER APPROVAL (2026-10-22): the criteria amendments Q2 (fixture, helper,
+  constant and pytestmark edits are listed in the report) and Q3 (only the
+  test writer records; a later coder or remedy edit stops) were approved by
+  user 2026-10-22, answered directly by the user in the main session's
+  AskUserQuestion.
