@@ -192,6 +192,7 @@ amended_by:
   note: Slug rule tightened to a valid line-of-work name (single dots allowed); an empty normalised identity is USAGE and writes nothing; one test added.
 superseded_by: null
 covered_by:
+  - unit_tests/build_orchestration/test_bo_4300f_3_cutover.py
   - unit_tests/build_orchestration/test_bo_4300a_2.py
   - unit_tests/build_orchestration/test_bo_4300a_2_safe_slugs.py
   - unit_tests/build_orchestration/test_bo_4300e_1_i_alias.py

@@ -213,7 +213,7 @@ def _resume_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
     branch, line_of_work, base = wes.head_state(workspace_path)
     if not ident.matches_branch(branch):
         return wes.incomplete_refusal(workspace_path, {**marker, "state": f"on line {branch!r}, not this work's"})
-    if state == "ready":  # the line already begun: its recorded start, never moved or rebased
+    if state == "ready" or marker.get("line_of_work") == "resumed":  # a begun line (also a brought-over one): its recorded start
         base, line_of_work = marker.get("base_commit") or base, "resumed"
     return _install_and_mark(repo_root, hub, ident, workspace_path, args, ticket, (branch, line_of_work, base, fetch_status),
                              action, marker)
