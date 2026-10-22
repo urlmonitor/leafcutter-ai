@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: critical
 roadmap_phase: phase_1
@@ -84,8 +84,15 @@ origin_agent: business-analyst
 created: 2026-10-22
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_3_iii.py
+- unit_tests/build_orchestration/test_bo_4300f_3_keep.py
+- unit_tests/build_orchestration/test_bo_4300f_3_states.py
+implemented_by:
+- templates/scripts/worktree_migrate.py
+- templates/scripts/worktree_migrate_guards.py
+- templates/scripts/worktree_migrate_carry.py
+- templates/scripts/worktree.py
 notes: |
   Hardening item P9 (M6 also-open), approved by the user 2026-10-22 as amendment A9. Staged changes
   are either carried over with the index kept, or listed for a decision.

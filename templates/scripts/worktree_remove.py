@@ -101,9 +101,14 @@ def parse_status_z(raw: str) -> list[tuple[str, str]]:
     return entries
 
 
-def status_entries(workspace: Path) -> tuple[list[tuple[str, str]], str | None]:
-    """Return ``([(XY, path)], failed_step)`` for every uncommitted or untracked (non-ignored) change."""
-    proc = wg.run_git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], workspace)
+def status_entries(workspace: Path, no_optional_locks: bool = False,
+                   extra: tuple[str, ...] = ()) -> tuple[list[tuple[str, str]], str | None]:
+    """Return ``([(XY, path)], failed_step)`` for every uncommitted or untracked (non-ignored) change.
+
+    *no_optional_locks* keeps a read-only caller from refreshing the index; *extra* options come last.
+    """
+    cmd = ["status", "--porcelain=v1", "-z", "--untracked-files=all", *extra]
+    proc = wg.run_git(["--no-optional-locks", *cmd] if no_optional_locks else cmd, workspace)
     if proc.returncode != 0:
         return [], "git status"
     return parse_status_z(proc.stdout), None

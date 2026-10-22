@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: critical
 roadmap_phase: phase_1
@@ -68,8 +68,14 @@ origin_agent: business-analyst
 created: 2026-10-22
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_3_iv.py
+- unit_tests/build_orchestration/test_bo_4300f_3_carry.py
+implemented_by:
+- templates/scripts/worktree_migrate.py
+- templates/scripts/worktree_migrate_guards.py
+- templates/scripts/worktree_migrate_carry.py
+- templates/scripts/worktree_remove.py
 notes: |
   Hardening item N7, approved by the user 2026-10-22 as amendment A9b, option R: the ignored
   content is deleted and reported in ignored_removed, and the preview lists the same paths.
