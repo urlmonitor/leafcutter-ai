@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-16'
+last_updated: '2026-10-23'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 85** (1 blocker, 37 high, 47 low) · **Resolved: 25** (recounted from the directory 2026-10-21)
+**Open: 83** (1 blocker, 35 high, 47 low) · **Resolved: 27** (recounted from the directory 2026-10-23)
 
 ## Open
 
@@ -115,7 +115,6 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
 | `high` | KI-CG-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart — the required `Lint (ruff)` CI check has never had a matching pre-commit hook, so a lint violation passes every local commit-time gate and fails only in CI; three in-repo texts claim the hook exists | [open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md](commit-guardian/open-high-ki-cg-20261009-required-ci-ruff-has-no-local-pre-commit-counterpart.md) |
-| `high` | KI-CG-20261009-file-size-measure-strips-from-slash-star-inside-strings — `check-file-size`'s measure strips block comments with a language-blind regex, so a `/*` inside a string, glob or line comment drops every line to the next `*/`; 16 files on main lose 870 lines, `finalize-feature.js` alone 364, and `test_native_decision.py` reads 332 against a 400 limit when it is 459 | [open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md](commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -167,6 +166,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable — RESOLVED: GE-118d added `scripts/frontmatter_path_resolver.py` as the shared entry-shape resolver and wired `validate_paths()` to it; a multi-key mapping is refused by name rather than taking all its values | [resolved-blocker-ki-cg-008.md](commit-guardian/resolved/resolved-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit — RESOLVED: EPIC-TruthfulProjectRecord's write-if-absent empty-record scaffold + fail-open "nothing-examined" outcome mean the described scenario now exits 0 | [resolved-blocker-ki-cg-005.md](commit-guardian/resolved/resolved-blocker-ki-cg-005.md) |
 | `blocker` | KI-CG-20260831-0713 — a fresh consumer install could not make its first commit because check-hook-trigger-reachability failed it (resolved by BP-100k-4-ii and BP-100k-4-iii; unreachable=0 on 2026-09-28) | [resolved-blocker-ki-cg-20260831-0713.md](commit-guardian/resolved/resolved-blocker-ki-cg-20260831-0713.md) |
+| `high` | KI-CG-20261013-file-size-measure-can-be-gamed-by-comment-style — `check-file-size` counted `//` and `#` lines but dropped `/* */` and triple-quoted content, so rewriting comments into blocks shrank the measured length while the file grew — RESOLVED 2026-10-23 (GE-127d-3..5): a line counts only if it holds code, so no comment, standalone string or blank line counts in any style, and an over-limit file whose measured length falls while its raw count rises is refused | [resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md](commit-guardian/resolved/resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md) |
+| `high` | KI-CG-20261009-file-size-measure-strips-from-slash-star-inside-strings — the measure stripped block comments with a language-blind regex, so a `/*` inside a string, glob or line comment dropped every line to the next `*/` — RESOLVED 2026-10-23 (GE-127d-3-i): each language is lexed by a tokenizer, so comment markers inside strings, globs, regex literals and here-documents are code | [resolved-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md](commit-guardian/resolved/resolved-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md) |
 | `high` | KI-CG-20261016-mermaid-parent-link-root-inside-package — `check-mermaid-parent-link` resolved the repo root inside the package (`templates/` or `.leafcutter/`), never found the staged doc and passed every commit — RESOLVED 2026-10-21 (GE-113c-4, and GE-113c-5 for `check-adr-cross-reference`, which carried the same line): both hooks now take the root from `_resolve_root.find_project_root()` and report `could_not_check` for a staged file they cannot read | [resolved-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md](commit-guardian/resolved/resolved-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [resolved-high-ki-cg-017.md](commit-guardian/resolved/resolved-high-ki-cg-017.md) |
 | `high` | KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect | [resolved-high-ki-cg-034.md](commit-guardian/resolved/resolved-high-ki-cg-034.md) |

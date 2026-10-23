@@ -135,7 +135,8 @@ def stage_single_oversized_sql_file(root: Path, sql_limit: int, name: str = "ove
     target = root / name
     target.write_text("-- placeholder\n" * 5, encoding="utf-8")
     commit_all(root, "establish under-limit file")
-    target.write_text("\n".join(f"-- line {i:05d}" for i in range(sql_limit + 50)) + "\n", encoding="utf-8")
+    # Code lines, not comments: GE-127d-3's measure does not count a comment line.
+    target.write_text("\n".join(f"SELECT {i:05d};" for i in range(sql_limit + 50)) + "\n", encoding="utf-8")
     stage_all(root)
     return target
 

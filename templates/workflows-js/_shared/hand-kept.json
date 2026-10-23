@@ -1,0 +1,3 @@
+{
+  "BO-3900-PATH-HELPERS": "BO-3900 cross-platform path helpers kept as a deliberate hand copy in build-feature.js and plan-feature.js (E2 bodies cannot require a module, ADR-030); moving them to a _shared source is follow-up work not yet filed"
+}

@@ -5,27 +5,39 @@ type: reference
 category: reference
 status: active
 created: '2026-10-13'
-last_updated: '2026-10-13'
+last_updated: '2026-10-23'
 components:
   - commit_guardian
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
-  - docs/known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
+  - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
   - docs/known-issues/commit-guardian/open-low-ki-cg-20261012-file-size-repayment-counts-modified-lines-as-added.md
 ---
 
 # KI-CG-20261013-file-size-measure-can-be-gamed-by-comment-style — comment style changes the measured length
 
 > Filed 2026-10-13 from the BO-4300 drive (ticket 11, workflow routes). Index:
-> [commit-guardian.md](../commit-guardian.md). Filename severity is the three-level index bucket
+> [commit-guardian.md](../../commit-guardian.md). Filename severity is the three-level index bucket
 > (`high`); the original grading is the `**Severity:**` line below.
 
 - **Severity:** high. A blocking gate can be satisfied by a change that makes the file *longer*. An
   agent under ratchet pressure found that route, used it, and passed review. Only the permission
   classifier and a person stopped it. Nothing in the gate can tell a real reduction from a
   restyled one.
-- **Status:** open, no AC. Measurement verified on `origin/main` `964f23a60`.
+- **Status:** RESOLVED 2026-10-23 (moved to `resolved/`). Fixed by GE-127d-3, -3-i..-iv, -4 and -5
+  on branch `fast-lane/ge-127d`. The measure now lives in
+  `templates/scripts/commit_guardian/_file_size_measure/` and tokenizes each language. A line counts
+  only if it holds code: no comment in any style, no standalone Python string and no blank line
+  counts (BrainCandy, 2026-10-16, 2026-10-20 and 2026-10-21). Restyling `//` lines into a `/* */`
+  block, or `#` lines into a docstring, therefore changes neither the measured length nor the
+  two-for-one repayment. `test_ge_127d_3_measure.py` and `test_ge_127d_3_iv.py` prove this,
+  including the paragraph-to-block repros pr-reviewer found. On a file already over its limit, a
+  change whose measured length fell while its raw line count rose is refused (GE-127d-4,
+  `test_ge_127d_4.py`). The refusal advice no longer names a free comment style (GE-127d-5).
+  Remaining formatting route, out of scope here and recorded in GE-127d-3's notes: joining several
+  statements onto one line lowers both counts.
+- **Status when filed:** open, no AC. Measurement verified on `origin/main` `964f23a60`.
 - **Occurrences:** 1 (ticket 11 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-13).
 - **First seen:** 2026-10-13 · **Last seen:** 2026-10-13
 - **Where:** `templates/scripts/commit_guardian/_file_size_ratchet.py`: `_BLOCK_COMMENT_RE` and the
