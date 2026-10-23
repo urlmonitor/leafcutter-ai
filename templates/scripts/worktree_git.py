@@ -25,6 +25,7 @@ ARCHITECTURE: Pure stdlib (json, os, subprocess, tempfile, contextlib,
 from __future__ import annotations
 
 import contextlib
+import functools
 import json
 import logging
 import os
@@ -72,6 +73,30 @@ def no_prompt_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
 def git_env() -> dict[str, str]:
     """Environment for every maker child process: the caller's, with prompts disabled."""
     return no_prompt_env()
+
+
+def read_only_verb(func):
+    """Decorate a read-only verb so every git child it spawns runs with optional locks off.
+
+    Git opportunistically refreshes and rewrites ``.git/index`` (e.g. during
+    ``git diff``) unless ``GIT_OPTIONAL_LOCKS=0``; a read-only verb must leave the
+    index byte-for-byte untouched (BO-4300c-1). The variable is set in the process
+    environment for the call and restored afterwards, so ``git_env`` forwards it to
+    every child and ensure's behaviour is unchanged.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        had = "GIT_OPTIONAL_LOCKS" in os.environ
+        prior = os.environ.get("GIT_OPTIONAL_LOCKS")
+        os.environ["GIT_OPTIONAL_LOCKS"] = "0"
+        try:
+            return func(*args, **kwargs)
+        finally:
+            if had:
+                os.environ["GIT_OPTIONAL_LOCKS"] = prior
+            else:
+                os.environ.pop("GIT_OPTIONAL_LOCKS", None)
+    return wrapper
 
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,

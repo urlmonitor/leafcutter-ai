@@ -124,6 +124,7 @@ def _locate_by_name(args: argparse.Namespace, repo_root: Path, place: Path, ctx:
     return {**ctx, **_located_answer(workspace_path, marker)}
 
 
+@wg.read_only_verb
 def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only lookup of a workspace by ``--path``, ``--kind``/``--slug``, or ``--branch``."""
     if args.path:
@@ -166,6 +167,7 @@ def _identity_mismatch(args: argparse.Namespace, marker: dict[str, Any]) -> bool
     return marker.get("kind") != args.kind
 
 
+@wg.read_only_verb
 def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only readiness re-check of the workspace at ``--path``: never fetches, builds or commits.
 
@@ -208,6 +210,7 @@ def _list_entry(path: Path, marker: dict[str, Any]) -> dict[str, Any]:
             "state": state}
 
 
+@wg.read_only_verb
 def cmd_list(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only scan of the landing place's markers -- never ``git worktree list``."""
     repo_root, place, refusal = _project_and_place(args)
