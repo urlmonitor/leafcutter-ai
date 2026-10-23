@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -42,9 +42,13 @@ doc_links:
   - path: scripts/evals/agent_eval_config.json
     relationship: describes
     status: exists
-  - path: scripts/evals/run_agent_eval.py
+  - path: scripts/evals/README.md
     relationship: describes
     status: exists
+  - path: .github/workflows/agent-evals.yml
+    relationship: describes
+    status: exists
+    relevance: "The informational CI job a local-only set must stay out of."
   - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml
     relationship: relates-to
     status: exists
@@ -52,71 +56,160 @@ doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-2.yaml
     relationship: relates-to
     status: exists
-    relevance: "Once the database test writer runs what it writes, 'observed' becomes legitimate when backed by a quoted run; the row is worded to stay correct before and after."
+    relevance: "Done. The database test writer now runs its tests through the db_check checker and the wrong-version runner, so 'observed' is legitimate when a quoted verdict row backs it. The row is worded to stay correct before and after."
   - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
     relationship: relates-to
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: TQ-200d-1
+    contract: >-
+      The produced-tests scoring_mode and modules (OQ-1 decided: scripts/evals/produced_tests_mode.py
+      and scripts/evals/produced_tests_scoring.py), the row expected object
+      ({negative, fixture, gold_output, assertions}), the git-initialised sandbox and the
+      scored-row record. Not a depends_on edge: build after TQ-200d-1 so the mode has one author.
+test_required: true
+package_surface: false
 it_requirements:
-- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
-  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
-  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
-  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
-  in the same file. Use the same test-artifact scoring type TQ-200d-1 adds. Do not add a third one.'
-- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
-  repository tree. The ''no test database'' trap sandbox leaves testing_context.db_connection_test unset.'
-- 'Score mechanically where possible: the empty-window query counts rows and non-NULL values, and at least
-  one wrong version of fn_refresh_due is named in the machine-form to-run-later list. The judge scores
-  ''observed only with a quoted run''.'
-- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
-  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
-- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
-  path, using recorded good and bad agent outputs as fixtures.
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'Join the existing harness (TQ-200c-4). Register sql-test-writer in scripts/evals/agent_eval_config.json
+  as agents["sql-test-writer"] (template templates/agents/sql-test-writer.md, model sonnet per its frontmatter,
+  tools Bash, Read, Edit, Write only; user decision 2026-10-23: no Agent or Skill in the eval, because
+  the sandbox has no sub-agents or skills), with ONE set of {id,
+  input, expected} rows at scripts/evals/sets/sql-test-writer.jsonl (OQ-2 decided: fixture projects and recorded outputs under scripts/evals/sets/sql-test-writer/, recorded test files with the suffix .py.recorded). Use the produced-tests
+  scoring_mode TQ-200d-1 adds. New assertion kinds go into that mode''s scoring module, and no third mode
+  is added. run_agent_eval.py (1087 counted lines) must not grow.'
+- 'Each row runs in the git-initialised temp sandbox of TQ-200d-1, a copy of a small fixture project
+  with a .claude/skills_config.json. The "no test database" trap sandbox leaves testing_context.db_connection_test
+  unset. The two other rows set it to the placeholder postgresql://<user>:<password>@<host>:<port>/<database>,
+  which scripts/db_check/checker.py reports as status invalid, never reachable, so no row ever reaches
+  a database (OQ-8 decided: accepted). Never the repository tree.'
+- 'sql-test-writer.md has four {{config.output_root}} placeholders. Its procedure runs {{config.output_root}}/scripts/db_check/checker.py
+  --target-dir <project root> and {{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py
+  run. Both resolve inside the sandbox: the mode renders {{config.output_root}} to the sandbox and copies scripts/db_check, scripts/build_orchestration and scripts/ac_store into it (OQ-3 decided). Otherwise every row measures a missing script,
+  not the agent.'
+- 'Machine-readable evidence the scoring reads. (1) The to-run-later file the template mandates, <git-dir>/leafcutter/to-run-later/<ac-id>.json,
+  shape {"ac_id": str, "to_run_later": [{"test": str, "wrong_version": str, "reason": str}]}, read from
+  the sandbox''s own git dir. (2) The report''s Pre-fix run / Post-fix run lines, its Three questions answers
+  labelled [observed: <quoted row>] or reasoned, and its "To run later" heading. "Names at least one wrong
+  version of fn_refresh_due to run" is checked on the to-run-later file. A must_catch name never appears
+  there by template rule, so the row hands the agent no must_catch.'
+- 'Score mechanically where possible. The trap fails any report that labels an answer observed, says
+  a test was seen to fail or pass, or omits testing_context.db_connection_test or "not run". The regression
+  row fails an observed label that carries no quoted verdict row. The empty-window query must count processed
+  rows and non-NULL buy_volume values; it is checked structurally on the produced SQL, because no database
+  is available to the eval (OQ-9 decided; an optional live run is later work). A judge rubric is optional and secondary, since gold mode never
+  calls it.'
+- The trap row sets expected.negative true, and check_eval_set_complete runs before scoring.
+- 'Local only (user decision; KI-TQ-20260907): same mechanism as TQ-200d-1 (OQ-6 decided: agents["sql-test-writer"].local_only true, run_context "local"). eval_selector.py
+  must not select sql-test-writer for the "Agent evals (affected)" job or demand a fresh result for it,
+  and every payload and report carries the local-run marker. Nothing claims TQ-200b-2. unit_tests/evals/test_agent_eval_config_triggers.py''s
+  agent list is updated, which is an existing-test edit for the TQ-500g-3 sweep list.'
+- Unit tests never call a live model. Row pickup and scoring are proven through --score-gold with recorded
+  gold outputs, and through the scoring module with recorded bad outputs.
+- 'Any database address in a row, fixture or recorded output is the placeholder above. scripts/portability/check_shipped_addresses.py
+  does not scan scripts/evals/, so the eval''s own test runs it over the set directory with --build-root.'
+- Every new or changed .py file stays at or under 400 counted lines. Files already over the limit (run_agent_eval.py,
+  1087) must not grow.
 test_spec:
 - name: test_sql_test_writer_set_registered_and_every_row_scored
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
-  description: Gold-scoring mode finds the sql-test-writer set and scores each row id without naming rows.
+  surface_invoked: python scripts/evals/run_agent_eval.py --agent sql-test-writer --score-gold --results-file
+    <tmp>
+  description: The subprocess exits 0 and scores exactly the three row ids (stored-procedure regression,
+    empty window database shape, no test database) without any --row.
+  must_catch:
+  - sql-test-writer entry missing from agent_eval_config.json
+  in_scope_files:
+  - scripts/evals/agent_eval_config.json
 - name: test_no_database_trap_fails_a_report_claiming_a_run
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: discrimination
-  description: A recorded output that claims the test was seen to fail fails the 'no test database' row.
-    The gold output (all answers reasoned, setting named, not run) passes.
+  description: On the real trap row, a recorded report that says the test was seen to fail fails, and
+    so does one that omits testing_context.db_connection_test. The gold output (every answer reasoned,
+    the setting named, both runs not run) passes.
   must_catch:
   - trap row passes a report claiming an observed run
+  - trap row passes a report that does not name testing_context.db_connection_test
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/sql-test-writer.jsonl
 - name: test_regression_row_accepts_observed_only_with_quoted_run
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: criterion
   description: The stored-procedure row passes an output that labels an answer observed with a quoted
-    run, and fails one that labels it observed without a quote.
+    verdict row and names a wrong version of fn_refresh_due in its to-run-later file. It fails one that
+    labels an answer observed without a quote, and one whose to-run-later list is empty.
   must_catch:
   - '''observed'' accepted without a quoted run'
-- name: test_local_result_never_presented_as_ci
+  - wrong version read from report prose instead of the to-run-later file
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+- name: test_empty_window_db_row_requires_row_and_non_null_counts
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A recorded query that checks only buy_volume >= 0 fails the empty-window database row,
+    and so does one that counts rows but not non-NULL values. The gold query passes.
+  must_catch:
+  - empty-window query accepted with only a one-sided buy_volume >= 0 check
+  - non-NULL count satisfied by a row count alone
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+- name: test_trap_sandbox_leaves_db_setting_unset
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: seam
+  surface_invoked: python scripts/db_check/checker.py --target-dir <sandbox>
+  description: The sandbox built for the trap row has no testing_context.db_connection_test, and the real
+    checker run on it reports not_configured. The regression row's sandbox carries only the placeholder,
+    and the checker reports invalid.
+  must_catch:
+  - trap sandbox inherits a configured setting
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+  - scripts/evals/sets/sql-test-writer.jsonl
+- name: test_sql_test_writer_local_result_never_presented_as_ci
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: failure
-  description: The local run is stamped as local, and CI does not treat the set as checked.
+  description: The score-gold payload and report carry the local-run marker, and eval_selector.py does
+    not list sql-test-writer as affected by a change to templates/agents/sql-test-writer.md.
   must_catch:
   - report omits the local marker
-test_rationale: 'As TQ-200d-1: recorded good and bad outputs through the real runner, no live model.'
+  - eval_selector lists sql-test-writer as affected
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+  - scripts/evals/eval_selector.py
+  - scripts/evals/agent_eval_config.json
+- name: test_sql_test_writer_set_carries_only_placeholder_addresses
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  surface_invoked: python scripts/portability/check_shipped_addresses.py --build-root scripts/evals/sets
+  description: The shipped-address scanner reports no finding over the sql-test-writer set directory.
+test_rationale: As TQ-200d-1, recorded good and bad outputs go through the real runner CLI and the scoring
+  module, with no live model. The trap is the strict form (no database, so no run can be observed), and
+  the regression row is keyed to evidence. The seam test proves the trap's precondition through the real
+  db_check checker, so the trap cannot pass for want of a missing setting.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
+    by: it-po
+    at: 2026-10-23
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -147,3 +240,57 @@ notes: |
   Lane: fast lane, after TQ-200d-1 (shared scoring type). Not a depends_on,
   so either order builds, but TQ-200d-1 first avoids two authors of the
   scoring type.
+  IT-PO TECHNICAL ALIGNMENT (2026-10-23, against origin/main with TQ-500g-2
+  done)
+  Criteria, title, depends_on and readiness untouched. Mismatches with the
+  earlier enrichment:
+    - "the machine-form to-run-later list" now has a real home:
+      <git-dir>/leafcutter/to-run-later/<ac-id>.json (sql-test-writer.md,
+      Hand-on). By template rule a must_catch name never goes there, so the
+      row must not hand the agent a must_catch.
+    - The template's database precheck is scripts/db_check/checker.py, with
+      statuses not_configured / invalid / config_error / unreachable /
+      reachable. The placeholder address makes it report invalid, so no row
+      can reach a database. The empty-window query is therefore scored
+      structurally (OQ-9).
+    - Four {{config.output_root}} placeholders in the template are not
+      rendered by the harness, and the agent must find the checker and the
+      wrong-version runner inside the sandbox (OQ-3).
+    - INF-1100d-4's scanner does not cover scripts/evals/sets/. The set's
+      own test runs it.
+  Module names and layout follow TQ-200d-1 (OQ-1, OQ-2 decided below).
+
+  USER DECISIONS (2026-10-23, answered in the main session; all IT-PO
+  recommendations accepted)
+    OQ-1  A: one new produced-tests scoring_mode in sibling modules
+          scripts/evals/produced_tests_mode.py, produced_tests_scoring.py and
+          (TQ-200d-1-i) produced_tests_runs.py; run_agent_eval.py dispatches
+          it and offsets the lines by moving out the unused text-assertion
+          scaffold. No test_ prefix on these modules.
+    OQ-2  Sets at scripts/evals/sets/<agent>.jsonl, fixture projects and
+          recorded outputs under scripts/evals/sets/<agent>/{projects,recorded}/,
+          recorded test files with the suffix .py.recorded; bad outputs for
+          unit tests under unit_tests/evals/fixtures/ with the same suffix.
+    OQ-3  A: render {{config.output_root}} to the sandbox and copy the scripts
+          the template names (scripts/db_check; for runner callers also
+          scripts/build_orchestration and scripts/ac_store) into it.
+    OQ-4  The scorer writes the sandbox AC record after the agent runs, from
+          its # covers: tagged tests, with the must_catch from the row. The
+          agent works on the pre-fix code; the scorer installs the fix and
+          calls the runner with base_ref at the pre-fix commit.
+    OQ-5  Deterministic report and fixture checks everywhere, the judge
+          optional and secondary; the runner-backed check for the refresh
+          gate, offered for test B.
+    OQ-6  A: config key local_only: true; eval_selector.py keeps such agents
+          out of affected and out of --check; payload run_context "local".
+    OQ-7  A: the mode's own invoker captures a stream-json transcript and
+          scores Bash tool-call inputs structurally.
+    OQ-8  Accepted: the placeholder makes the checker report invalid; no row
+          reaches a database.
+    OQ-9  Structural check of produced SQL; a live run is optional later work.
+    OQ-10 TQ-200d-1 and TQ-200d-1-i are built in one fast-lane run.
+    OQ-11 The live before-score is DEFERRED: recorded later as a separate
+          step the user triggers, after PR #1324 merges, stamped with
+          trigger_shas. No build step calls a model.
+    TOOLS (follow-up, same day): sql-test-writer runs in the eval with
+          Bash, Read, Edit, Write only, no Agent and no Skill.
