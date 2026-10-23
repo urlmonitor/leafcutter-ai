@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -124,10 +124,14 @@ test_spec:
 test_rationale: "The corpus exercise IS the evidence for this AC, so the tests must run it rather than describe it. A test that checks the exercise module exists, or that counts the shape names in a list, passes on an exercise that never runs a proof — and this repository has three recorded cases of exactly that defence, which is why the empty-corpus test is first and asserts on a non-zero result rather than on absence of output. The two arming tests are deliberately paired in one module: a disarmed assertion alone passes a hardcoded false, an armed assertion alone passes a hardcoded true, and only the pair proves arming is derived from the report. The real-store tests exist because every hand-authored fixture reproduces its author's assumptions about what a proof looks like, and the shapes that broke this rule — a fixture-argument method, a package-relative import, a pure spawn — are precisely the ones nobody would think to write."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/02_TICKET-20261022-BO-2900a-1-iii.md
 change_target: pipeline
 risk_surface: internal
 notes: |

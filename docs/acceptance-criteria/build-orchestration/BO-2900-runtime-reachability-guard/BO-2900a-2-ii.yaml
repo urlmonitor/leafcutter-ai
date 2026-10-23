@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -122,10 +122,14 @@ test_spec:
 test_rationale: "A test that hands the rule a pre-set unwatched flag proves the branch and not the detection, and detection is the hard half. Displacement in particular leaves a well-formed record that is silent about the code under proof and reads exactly like an honest not_reached, so the first test PRODUCES the eviction for real — a child that installs its own tracer — and asserts it alongside a genuinely unreached proof in the same run, because the verdicts are only distinguishable if the mechanism noticed it was blind. The absence guarantee in this AC is that no verdict is contributed, and test four states explicitly how correctly-silent is separated from never-ran: it asserts verdict equality against a not-invoked baseline AND a non-zero announcement count, so an implementation that never reached the rule fails the pair even though it would satisfy the equality alone. This repository has three recorded cases of a defence that examined nothing and reported clean; the announcement-count assertion is the guard against becoming the fourth."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/05_TICKET-20261022-BO-2900a-2-ii.md
 change_target: pipeline
 risk_surface: internal
 notes: |
