@@ -161,10 +161,10 @@ notes: |
   REQUESTED BY BRAINCANDY, 2026-10-23 ("quick-fix the several statements issue"), closing the
   route GE-127d-3's notes recorded as out of scope on 2026-10-21.
 
-  MEASURED IMPACT, 2026-10-23, over every tracked covered file: 36 of 3400 files measure
-  higher (largest +30, leafcutter-web/lib/data/types.ts, from `;`-joined type members;
-  +16 knowledge/ports.py, from one-line `def ...: ...` protocol stubs), none crosses its
-  limit.
+  MEASURED IMPACT, 2026-10-23, over every tracked covered file after merging origin/main:
+  56 of 3416 files measure higher (largest +30, leafcutter-web/lib/data/types.ts, from
+  `;`-joined type members; +16 knowledge/ports.py, from one-line `def ...: ...` protocol
+  stubs; most others +1 or +2 from one-line callback bodies), none crosses its limit.
 
   KNOWN RESIDUE, ACCEPTED. (1) A Python compound body joined onto its header (`if x: y`) keys
   with the header line's indentation, not the body's, so joining or splitting it measures the
