@@ -231,6 +231,7 @@ task, then pull only those files.
 | code smell report format | [docs/reference/code-smell-report-format.md](reference/code-smell-report-format.md) | Severity rubric (HIGH / MEDIUM / LOW), finding structure, report sections, and consolidated-merge rules for the code-smell review pipeline. |
 | commit guardian negative control liveness record | [docs/reference/commit-guardian-negative-control-liveness-record.md](reference/commit-guardian-negative-control-liveness-record.md) | Field-by-field shapes for negative_control, the acceptable-input pair, currently, demonstration, and discrimination — plus the NEGATIVE_CONTROL_RESULT stdout-line grammar check_negative_control_liveness.py produces. |
 | commit guardian negative control liveness | [docs/reference/commit-guardian-negative-control-liveness.md](reference/commit-guardian-negative-control-liveness.md) | CLI contract, hooks_manifest registration, and declaration walkthrough for check_negative_control_liveness.py — the sweep that puts a hook's declared negative_control.command AND, as of GE-120f-1-ii, its own declared acceptable-input command through a real subprocess in the same run. Field-by-field record shapes live in the companion reference doc. |
+| consumer test sweep | [docs/reference/consumer-test-sweep.md](reference/consumer-test-sweep.md) | Lookup for the consumer-test sweep: the list the test writer records, the check that runs before every commit, the reasons it stops the work, and the words of its weakened, loosened, removed and inconclusive items. |
 | decision kernel splits | [docs/reference/decision-kernel-splits.md](reference/decision-kernel-splits.md) | Short lookup for the decision kernel's routing-time outcomes for a request that may hold several questions: the four outcomes with an example each, the fewer-than-two-parts rule, what a rejected or too-small split falls back to, and gap accounting. |
 | decision record | [docs/reference/decision-record.md](reference/decision-record.md) | Every field of the decision record the kernel stages and publishes to docs/decisions/, with type, requiredness, default and meaning; consult it to read, validate or review a record. |
 | document length standard | [docs/reference/document-length-standard.md](reference/document-length-standard.md) | Lookup for the length limits the check-doc-length gate applies to docs/**/*.md, which locations are set aside from them and on what ground, and what a run reports. |
@@ -270,6 +271,7 @@ task, then pull only those files.
 | workflow authoring contract | [docs/reference/workflow-authoring-contract.md](reference/workflow-authoring-contract.md) | Copy-paste reference for workflow script authors covering the E2 canonical execution contract, E1-wrap shim pattern, primitive mapping table, and non-transparent edge handling conventions. |
 | workflow constraints | [docs/reference/workflow-constraints.md](reference/workflow-constraints.md) | Reference: Claude Code Workflow Script Constraints |
 | workspace maker answer | [docs/reference/workspace-maker-answer.md](reference/workspace-maker-answer.md) | Every field, status, exit code and outcome code of the answer the workspace maker prints, and the rules a caller must follow when acting on it. |
+| wrong version runs | [docs/reference/wrong-version-runs.md](reference/wrong-version-runs.md) | Lookup for the wrong-version runs every build route makes before it commits: which tests are in scope, which wrong versions run, every result word and stop reason, the put-back, the routes and the /build-epic backstop. |
 
 ## Explanation
 
@@ -285,9 +287,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -295,9 +297,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

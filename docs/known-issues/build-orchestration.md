@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 74** (4 blocker, 41 high, 29 low) · **Resolved: 28** (recounted from the directory 2026-10-23, after the three KI-BO-20261023 entries were filed)
+**Open: 75** (4 blocker, 41 high, 30 low) · **Resolved: 28** (recounted from the directory 2026-10-23, after KI-BO-20261023-uxp-700d-3-i-scan-timeout-flake was filed)
 
 ## Open
 
@@ -145,6 +145,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20261009-one-halted-ticket-stops-the-whole-epic-run — in practice any single ticket's handoff or blocker ends the /build-feature run, because a halting batch almost always leaves staged files and that stops the run; each manual re-run re-plans from scratch, and the end-of-run epic re-read is an unreliable agent listing | [open-low-ki-bo-20261009-one-halted-ticket-stops-the-whole-epic-run.md](build-orchestration/open-low-ki-bo-20261009-one-halted-ticket-stops-the-whole-epic-run.md) |
 | `low` | KI-BO-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire — the workspace maker's HOOKS_INACTIVE answer names the stage that did not fire but not why, and the canary's git report is captured and dropped inside the maker | [open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md](build-orchestration/open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md) |
 | `low` | KI-BO-20261023-g2-followups — PR #1316 leftovers: three mypy errors in new code (`wrong_version_runner.py`:274, `_tq500g2i_standin_pg.py`:90, `_tq500g2i_review_fixtures.py`:76), and `sql-test-writer` still declares `mutates: none` although it writes files | [open-low-ki-bo-20261023-g2-followups.md](build-orchestration/open-low-ki-bo-20261023-g2-followups.md) |
+| `low` | KI-BO-20261023-uxp-700d-3-i-scan-timeout-flake — `test_uxp_700d_3_i.py` runs `scan_ac_store.py --json` over the whole AC store in a subprocess with a 30 s timeout, and it timed out on CI shard 7 on three unrelated PRs (#1305, #1316, #1320) in two days; graded medium | [open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md](build-orchestration/open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md) |
 
 ## Resolved
 
