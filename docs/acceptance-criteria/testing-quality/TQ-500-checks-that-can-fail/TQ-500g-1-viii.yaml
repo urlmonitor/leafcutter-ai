@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -65,153 +65,354 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "The finish wrapper (wrong_version_gate.py) whose record pass-through this AC adds."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vi.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The merged twin wiring whose decisions build-epic.js mirrors: drive-head recover, executor and schema copy, quoting and id checks, fail-closed parses, halt keys, one ticket per chunk when a batch owes runs."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261021-unquoted-shell-args.md
+    relationship: relates-to
+    status: exists
+    relevance: "The defect build-epic.js's new command lines must not repeat."
+  - path: docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-8.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The check-package-surface-declaration commit-msg hook; the new hook's registration is a new entry in a watched registry, hence package_surface true here."
 assigned_agent: python-coder
 estimated_complexity: L
+package_surface: true
 delivers_to:
 - agent: llm-expert
   ac_id: TQ-500g-1-vii
   contract: >-
-    The record option --record <ticket-key> on the runner's run step, on heavy_lane_gate, and on the
-    finish wrapper (TQ-500g-1-v), which passes it to the runner's run step unchanged. The marker
-    lifecycle, which the supervisor must not touch. When finish stops at the writer, no
-    wrong-version record is written, and the hook reports the verdict as missing.
+    (1) --record <ticket-key> on wrong_version_runner.py run and on wrong_version_gate.py finish, which
+    passes it to the runner unchanged and, before calling the writer, removes an earlier
+    wrong_version.json for that key, so a writer stop leaves the record missing. (2) build-epic.js's
+    dispatch prompt to ticket-supervisor gains the plain fields "ticket_key: <ticket file stem>" (already
+    checked against ^[A-Za-z0-9._-]+$) and "runs_alone: true|false" (true when the ticket's chunk holds
+    only it). (3) build-epic.js runs recover once at the drive head, so the supervisor runs none. (4) The
+    marker files, which the supervisor never touches.
 - agent: llm-expert
   ac_id: TQ-500f-3-iv
   contract: >-
-    The record option --record <ticket-key> on fast_lane.py heavy_lane_gate (added through _fl_cli.py
-    and _fl_heavy_lane_gate.py), which writes the red_baseline.json record itself.
+    --record <ticket-key> on fast_lane.py heavy_lane_gate (flag in _fl_cli.py, one keyword in
+    fast_lane.py's dispatch, the write in _fl_heavy_lane_gate.py), with which the CLI writes its own
+    red_baseline.json for every outcome, including not-applicable and a reused --ticket pass; and the
+    ticket_key field in build-epic.js's dispatch prompt.
 expects_from:
 - ac_id: TQ-500f-3-iv
   contract: >-
-    On /build-epic the supervisor calls heavy_lane_gate with the record option for each ticket,
-    so the CLI writes <git-dir>/leafcutter/gate-verdicts/<ticket-key>/red_baseline.json: {gate:
-    'red_baseline', ids: [str], written_at: ISO-8601 UTC, verdict: <heavy_lane_gate JSON verbatim>}.
+    On /build-epic the supervisor calls heavy_lane_gate with --record "<ticket_key>" for each ticket
+    that reaches a coder or a commit, so the CLI writes <git-dir>/leafcutter/gate-verdicts/<ticket_key>/red_baseline.json:
+    {gate: "red_baseline", ticket_key: str, ids: [str], written_at: ISO-8601 UTC, verdict: <heavy_lane_gate
+    JSON verbatim>}.
 - ac_id: TQ-500g-1-vii
   contract: >-
-    On /build-epic the supervisor calls the finish wrapper with the record option before commit, for
+    On /build-epic the supervisor calls finish with --record "<ticket_key>" before every commit spawn, for
     every ticket including one with no source_ac. The runner, reached through finish, writes
-    .../wrong_version.json: {gate: 'wrong_version', ids: [str], written_at: ISO-8601 UTC,
-    code_digest: str (sha256 hex), verdict: <runner run JSON verbatim>}.
+    .../wrong_version.json: {gate: "wrong_version", ticket_key: str, ids: [str], written_at: ISO-8601 UTC,
+    base_ref: str, paths: {<worktree-relative POSIX path>: <sha256 hex of its content, null when
+    deleted>}, code_digest: str (sha256 hex over the sorted paths map), verdict: <runner run JSON
+    verbatim>}.
 - ac_id: TQ-500g-1-v
   contract: >-
-    The finish wrapper (scripts/build_orchestration/wrong_version_gate.py finish), which this AC
-    extends with the --record pass-through. The wrapper holds no rule of its own and prints the
-    runner's JSON verbatim under verdict.
+    The finish wrapper on main (scripts/build_orchestration/wrong_version_gate.py finish: --work-key,
+    --reply -, --ac-ids, --ac-root, --test-root, --base-ref; prints {gate_passed, stopped_at, writer,
+    verdict}), which this AC extends with the --record pass-through. It holds no rule of its own.
 - ac_id: TQ-500g-1-iii
   contract: >-
-    The runner's recover step: wrong_version_runner.py recover (no flags, worktree root as working
-    directory) prints {restored: [str], ok: bool, copy_dir: str|null, detail: str}.
+    The runner's recover step on main: python <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py
+    recover (no flags, worktree root as working directory) prints {restored: [str], ok: bool, copy_dir:
+    str|null, detail: str}. It closes EVERY open journal under <git-dir>/leafcutter/wrong-version-runs,
+    and every run step starts with the same recovery.
 it_requirements:
-- >-
-  PLACEMENT (IT-PO decision). The check is a blocking pre-commit hook in
-  templates/scripts/commit_guardian/, registered through the create-hook procedure
-  (commit_guardian.json config and hooks_manifest, the hook index, the pre-commit config).
-  build-epic.js gives it scope: before each ticket-supervisor dispatch, a thin dispatch to a Python
-  CLI opens a 'gates required' marker for that ticket. Dispatch the command through an executor
-  agent registered with permits_shell: true in config/agent_registry.json (for example
-  command-step-runner). Never use status-checker: it is registered read-only and has refused shell
-  steps (KI-BO-20260927, KI-BO-20260901-1620). A refused or unparseable reply means the ticket is
-  NOT dispatched and the batch halts (fail closed). After the ticket returns, the marker is closed
-  on a best-effort basis.
-- >-
-  Executor spawn reciprocity: command-step-runner's spawned_by names user and fast-lane-ship.js
-  only. Use an executor whose registry entry lists build-epic.js, or add build-epic.js to
-  command-step-runner's spawned_by, so the build's asymmetric-spawn check and the
-  check-agent-spawn-consistency hook pass. If that registry edit trips the
-  check-package-surface-declaration commit-msg hook, settle the AC's package_surface declaration
-  before the commit; never skip the hook.
-- >-
-  Resume (TQ-500g-1-iii wiring for /build-epic): before re-dispatching ticket-supervisor for a
-  resumed ticket, build-epic.js runs the runner's recover step through the same executor, from the
-  worktree root. ok must be the boolean true, otherwise the ticket is not dispatched and the batch
-  halts (fail closed). This puts back any code a cut-short run left altered before test-breaker
-  reads it.
-- >-
-  Rejected placements. build-epic.js alone: it never dispatches the commit phase, because
-  ticket-supervisor does that inside its own turn, so it could only observe a commit already made.
-  A commit-agent precondition: it is prompt text, the same instruction-following weakness this AC
-  exists to remove.
-- >-
-  Records are written only by the gate CLIs. heavy_lane_gate (red baseline) and the wrong-version
-  runner's run step each gain a record option naming the ticket. The finish wrapper (TQ-500g-1-v)
-  gains the same option and passes it to the runner unchanged. It writes no record of its own, and
-  when the writer stops it calls no runner, so no wrong-version record is written. The record holds
-  the CLI's verdict JSON verbatim, the gate name, the ids, a UTC timestamp, and (for the runner) a
-  digest of the code the runs were made against. Records live in
-  <git-dir>/leafcutter/gate-verdicts/<ticket-key>/. Per-work gate files (copies, journals,
-  manifests, lists, records) live under the worktree's own git directory (git rev-parse --git-dir,
-  subfolder leafcutter/). That keeps them outside the working tree, so git status is unchanged. It
-  also keeps them private to the worktree, unlike the shared stash, lets them survive a crash, and
-  lets a resumed drive find them. They are never committed.
-- >-
-  The ticket key is one plain path segment. It is the same value the supervisor passes to finish as
-  --work-key, so the writer's work folder and the record folder name the same ticket.
-- >-
-  Hook rules. With no open marker in this worktree, exit 0 without reading anything else, so
-  commits outside /build-epic are unaffected; this adds under 50 ms. With a marker open, the commit
-  must stage the ticket file of an open marker, and that ticket needs both records. Missing: block,
-  naming the missing verdict. Unparseable or truncated: block, naming it unreadable. gate_passed
-  false: block, naming the survivors. not_applicable: pass, never reported as verified. Runner
-  digest differs from the staged-content digest: block as out of date. Code staged while a marker
-  is open but no marked ticket file staged: block, because the commit cannot be attributed.
-- >-
-  Digest: one function, used at record time (over the working tree) and at hook time (over the
-  index). It covers every changed path except the ticket file, the AC store and changelog entries,
-  which are one exclusion constant. The red-baseline record has no staleness rule: it is taken
-  before the coder.
-- The hook reads records only, never ticket comments, sign-offs or supervisor prose.
-- >-
-  Deployment: add any module the hook imports from outside commit_guardian/ to the build deploy
-  manifest (CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'). A record
-  module imported across directories has no leading underscore. Every new or changed Python file
-  stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py). Files already
-  over the limit must not grow. Add heavy_lane_gate's record option through _fl_cli.py and
-  _fl_heavy_lane_gate.py, not fast_lane.py (387 counted lines).
-- >-
-  JS growth: build-epic.js has 537 counted lines, under the 1000 limit. Expected growth is about 30
-  to 40 lines: the open-marker dispatch, its fail-closed parse, the close, and the resume recovery
-  call with its fail-closed parse.
-- >-
-  Residual risk, recorded rather than solved: git commit --no-verify, or a supervisor that deletes
-  the marker, bypasses the hook. The threat here is an instruction-following lapse, not an
-  adversary.
-- Ship in one change with TQ-500f-3-iv and TQ-500g-1-vii, after TQ-500g-1-v's wrapper is on main.
+  config_schema_fragment:
+    build_epic_gate_verdicts:
+      type: object
+      description: "Config section of the new pre-commit hook check-build-epic-gate-verdicts (create-hook Step 3a)."
+      required: [_comment, severity]
+      properties:
+        _comment:
+          type: string
+        severity:
+          const: block
+    hooks_manifest.hooks[]:
+      id: check-build-epic-gate-verdicts
+      tier: judgment
+      entry: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_epic_gate_verdicts.py"
+      language: system
+      stages: [pre-commit]
+      pass_filenames: false
+      always_run: true
+      change_set_source: self_derived
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: "2 -- one new top-level key build_epic_gate_verdicts and one new member of hooks_manifest.hooks (id check-build-epic-gate-verdicts) in templates/scripts/commit_guardian/commit_guardian.json. No other key is added, renamed or removed."
+  required_skills:
+    - python-coder
+    - create-hook
+  post_write_commands:
+    - "python3 scripts/build.py --target-dir . --force"
+    - "python3 scripts/registry_validator.py"
+    - "python3 -m pytest unit_tests/commit_guardian unit_tests/workflows unit_tests/build_orchestration -k \"gate_verdict or build_epic\""
+  constraints:
+  - >-
+    PLACEMENT (IT-PO decision, unchanged). A blocking pre-commit hook,
+    templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py, registered through the create-hook
+    procedure: config section and hooks_manifest entry (above), the hook documentation index and
+    docs/pre-commit-hooks.md, the config constants step, and the regenerated .pre-commit-config.yaml (build.py).
+    No add-agent-to-package or add-skill-to-package step: no agent or skill is added. Rejected placements:
+    build-epic.js alone (it never dispatches the commit phase, ticket-supervisor does, so it could only observe
+    a commit already made) and a commit-agent precondition (prompt text, the weakness this AC removes).
+  - >-
+    PACKAGE SURFACE (IT-PO decision 2026-10-21): true. The hook adds a new hooks_manifest.hooks member and a
+    new top-level key to templates/scripts/commit_guardian/commit_guardian.json, a registry that
+    check-package-surface-declaration (ACS-100i-8, commit-msg stage) watches. That hook refuses a commit adding
+    a new entry unless a cited AC declares package_surface true, so the commit message of the combined change
+    must cite TQ-500g-1-viii. The command-step-runner spawned_by edit below adds no entry and needs nothing.
+  - >-
+    RECORDS, one shared module: scripts/build_orchestration/gate_verdict_records.py (public, no leading
+    underscore, because the hook in commit_guardian/ imports it). It owns the folder
+    <git-dir>/leafcutter/gate-verdicts/<ticket-key>/ (git-dir = git rev-parse --absolute-git-dir in the
+    worktree, the same root _wvr_gate uses), the record write, the record read, the marker and the code
+    digest. Files: open.json (marker) {ticket_key, ticket_path: repo-relative POSIX, source_ac: [str],
+    opened_at}, red_baseline.json and wrong_version.json in the shapes stated in expects_from. They live
+    outside the working tree, are private to the worktree, survive a crash, and are never committed.
+  - >-
+    MARKER SNAPSHOT (review finding H-1, 2026-10-22). open reads the ticket file's frontmatter source_ac
+    itself, at open time, before the supervisor runs, and stores it in open.json as source_ac ([] when the
+    ticket has none). It never takes the list from the planner's report or the supervisor's arguments. A
+    ticket whose frontmatter cannot be read, or whose source_ac is neither absent nor a list of strings,
+    is not opened: open fails and build-epic.js does not dispatch the ticket.
+  - >-
+    PATH NORMALISATION (review finding 2026-10-22). open stores ticket_path normalised exactly as the hook
+    normalises staged paths: repo-relative POSIX, backslashes turned into forward slashes, a leading "./"
+    stripped. One normalisation function in gate_verdict_records.py serves both sides, so a "./tickets/..."
+    path from the planner never causes a false unattributed-commit block.
+  - >-
+    The ticket key is one plain path segment matching ^[A-Za-z0-9._-]+$ (and not "." or ".."). Every CLI that
+    takes --record or --ticket-key refuses any other value, writes nothing, and fails closed (its usual
+    failure shape, gate_passed false where it has one). It is the ticket file's stem, the same value the
+    supervisor passes to finish as --work-key.
+  - >-
+    Writes are atomic (temporary file, then replace), so a cut-short write never leaves a truncated record
+    that parses. A record write that fails turns the CLI's own result into a failure (gate_passed false,
+    reason naming the record), never a silent pass.
+  - >-
+    Records are written only by the gate CLIs, on every outcome when --record is given: heavy_lane_gate
+    (pass, fail, not applicable, reused --ticket pass) and the runner's run step (pass, stop, not applicable,
+    internal error). finish passes --record to the run step unchanged and writes no record itself; before the
+    writer step it removes an existing wrong_version.json for that key, so when the writer stops the record is
+    missing, not stale. --record is optional everywhere: without it every CLI behaves exactly as on main, so
+    the fast lane, build-feature.js and build-ticket.js are unaffected.
+  - >-
+    Code digest: paths = every path changed against the base ref in the working tree (tracked and untracked,
+    non-ignored, the set -x's derived scope uses), minus one exclusion constant: the ticket files under
+    tickets/, the AC store (docs/acceptance-criteria/) and changelogs/. Each path maps to the sha256 of its
+    content (null when deleted). code_digest is the sha256 over the sorted map.
+  - >-
+    HOOK RULES. No open.json under gate-verdicts in this worktree: exit 0 after one git call and one directory
+    listing, reading nothing else, so commits outside /build-epic are unaffected (target under 100 ms). With
+    markers open: the commit must stage the ticket file named by an open marker, and that ticket needs both
+    records. Missing: block, naming the missing verdict. Unparseable, truncated or wrong shape: block, naming
+    it unreadable. gate_passed false in either record: block, naming the reader's reason or the survivors.
+    Requirement binding (H-1): for BOTH records, set(record.ids) must equal set(marker.source_ac), else
+    block, naming the expected and recorded ids. When marker.source_ac is non-empty, a verdict with
+    applicable false blocks (a supervisor that dropped --source-ac / --ac-ids cannot pass). When it is
+    empty, applicable false passes and is never reported as verified. A marker with no readable source_ac
+    snapshot (key missing, not a list of strings, open.json unparseable) blocks. Code staged while a marker
+    is open but no marked ticket file staged: block, because the commit cannot be attributed (H-2); the
+    message names every open marker's ticket path and tells the committer to stage that ticket file. It
+    prints no runnable close command: closing a marker is the drive's own job (be-gate-marker-close,
+    be-gate-marker-close-all) or a human's decision. An error before any marker is found exits 0 with a
+    warning; once a marker is found, any error blocks.
+  - >-
+    PRECOMMIT-AUTOFIX ROUTE (H-2). The check-build-epic-gate-verdicts entry in
+    templates/scripts/precommit-autofix.json (description and instruction) says: re-run the missing or
+    out-of-date gate for the ticket, or stage the marked ticket file the hook names; never edit, delete or
+    close a record or marker by hand. It does not say "close a stale marker with the printed command".
+  - >-
+    STALENESS (B6), only when the wrong-version verdict has applicable true: every staged CODE path must
+    appear in the record's paths with the same sha256 as its staged (index) content; a changed or unrecorded
+    one blocks as out of date. Code paths are staged paths whose extension is in commit_guardian.json
+    file_size.checked_extensions (read from that configuration, never a second hard-coded list), minus the
+    exclusion constant. So knowledge records staged by building-epics section 5.9 after the runs, a sibling's
+    leftovers that are not staged, and docs never cause a false block. The red-baseline record has no
+    staleness rule: it is taken before the coder.
+  - The hook reads records only, never ticket comments, sign-offs or supervisor prose.
+  - >-
+    BUILD-EPIC.JS, DRIVE HEAD (every drive; there is no fresh-or-resumed signal, because the worktree is
+    caller-supplied or found by the ambient check, as in build-ticket.js). After the Worktree Guard resolves
+    worktreePath and before the Planner: (1) recover, label be-wv-recover, exactly
+    python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py recover ;
+    ok must be the boolean true, else return blocked with gate "wrong_version_gate", wrong_version_step
+    "recover", wrong_version_detail = the reply, and dispatch no ticket. (2) close every stale marker, label
+    be-gate-marker-close-all, exactly
+    python "<root>"/{{config.output_root}}/scripts/build_orchestration/gate_verdict_records.py close --all --worktree "<root>" ;
+    best effort. Recover runs once here and never per ticket: recover closes every open journal in the
+    worktree, so a per-ticket recover in a parallel chunk would put back a sibling's in-flight alteration.
+  - >-
+    BUILD-EPIC.JS, PER TICKET, inside its thunk before the ticket-supervisor dispatch: ticket_key = the ticket
+    path's file stem. Input check (the twins' wvBad): ticket_key must match ^[A-Za-z0-9._-]+$; the root and
+    the ticket path must contain none of ", $, backtick, CR or LF. Then open the marker, label
+    be-gate-marker-open, exactly
+    python "<root>"/{{config.output_root}}/scripts/build_orchestration/gate_verdict_records.py open --worktree "<root>" --ticket-key "<ticket_key>" --ticket-path "<ticket path>" .
+    A failed input check, or a reply that is not {opened: true, ...}, means that ticket-supervisor is NOT
+    dispatched; the thunk returns {status: "blocked", gate: "gate_verdict_marker", marker_step:
+    "input-check" | "open", marker_detail: <reply or rejected values>} and the existing halt filter stops the
+    batch. After the supervisor returns, close the marker best effort, label be-gate-marker-close, exactly
+    python "<root>"/{{config.output_root}}/scripts/build_orchestration/gate_verdict_records.py close --worktree "<root>" --ticket-key "<ticket_key>" .
+    <root> is worktreePath with backslashes turned into forward slashes.
+  - >-
+    BUILD-EPIC.JS, ONE TICKET PER CHUNK WHEN A BATCH OWES RUNS (the user's 2026-10-21 decision for
+    TQ-500g-1-vi, applied to this route). build-epic.js today slices each batch into chunks of BATCH_SIZE (12)
+    and runs each chunk through parallel(), every ticket-supervisor in the same worktree. The commit lock
+    serialises commit phases only, and finish builds "the fix undone" and derived scope from ALL uncommitted
+    changes, so a sibling's coder in flight would be judged, reverted or overwritten. Change only the chunk
+    step: chunk size 1 for a batch that owes runs, else BATCH_SIZE, decided once per batch. PLANNER_SCHEMA's
+    ticket items gain source_ac (array of strings, ALWAYS returned, [] when the ticket has none) and the
+    epic-planner prompt gains one sentence asking for it. Fail closed: a missing key or a non-array value
+    counts as owing runs. The dispatch prompt gains "ticket_key: <ticket_key>. runs_alone: <true when the
+    chunk holds one ticket, else false>." The planner's batching rules are unchanged.
+  - >-
+    BUILD-EPIC.JS, EXECUTOR. Dispatch every command step (recover, close-all, open, close) as agentType
+    command-step-runner with the twins' request shape JSON.stringify({step: <label>, command, target:
+    {workspace: worktreePath, run_id: <ticket_key, or "drive-head">}}) and their reply schema copied as text
+    (the engine has no module loader); parse JSON.parse(reply.stdout); a decline, throw or non-object is no
+    reply. Never status-checker (read-only, has refused shell steps: KI-BO-20260927, KI-BO-20260901-1620).
+  - >-
+    BUILD-EPIC.JS, RESULTS. TICKET_RESULT_SCHEMA gains the optional keys red_baseline_gate, wrong_version_outcome
+    (string or null), gate, wrong_version_step, wrong_version_detail, marker_step and marker_detail; a
+    halted_tickets entry copies gate, wrong_version_step / marker_step and the detail unchanged. No rule logic
+    in the JS: every decision about verdicts lives in Python.
+  - >-
+    REGISTRY: command-step-runner's spawned_by becomes ["user", "fast-lane-ship.js", "build-feature.js",
+    "build-ticket.js", "build-epic.js"]; regenerate docs/agents/cards/command-step-runner.card.md; update the
+    adopter_notes sentence in templates/agents/command-step-runner.md that lists its callers. No other field,
+    no new entry.
+  - >-
+    DEPLOYMENT. build_build_orchestration_scripts (scripts/build_phases_script_deploy.py) already deploys every
+    .py in scripts/build_orchestration/, so gate_verdict_records.py ships without a manifest edit. The hook
+    must find it in the DEPLOYED layout (<output_root>/scripts/build_orchestration next to
+    <output_root>/scripts/commit_guardian), which only the deployed test proves (CLAUDE.md, 'New Hook / Gate
+    Dependencies Must Be in the Build Deploy-Manifest').
+  - >-
+    FILE SIZE (counted lines, _file_size_ratchet.measure_current_length, measured 2026-10-21 at adb0c2e61;
+    limits .py 400, .js 1000): build-epic.js 489, expected +55 to 75 (drive-head recover and close-all, the
+    executor helper and schema copy, the per-ticket input check, open and close, the chunk step with the
+    planner key and sentence, the two prompt fields, the result keys), so about 545 to 565, no skip needed.
+    fast_lane.py 391: at most +1 (the record keyword in the heavy_lane_gate dispatch), never past 400.
+    _fl_cli.py 268 (+3 to 6), _fl_heavy_lane_gate.py 277 (+8 to 15), wrong_version_runner.py 305 (+6 to 12),
+    wrong_version_gate.py 76 (+5 to 10). New gate_verdict_records.py and the new hook each at or under 400.
+    Anything well beyond that in the JS means rule logic leaked into it.
+  - >-
+    Existing build-epic.js workflow tests reach the ticket dispatch, so they now meet the new command
+    dispatches: give them passing stubs (recover ok true, close-all ok, open {opened: true}) rather than
+    weakening the fail-closed parses. The workflow tests that carry must_catch run build-epic.js as it stands
+    in templates/workflows-js/, never a deployed copy.
+  - >-
+    Residual risk, recorded rather than solved: git commit --no-verify, or a supervisor that deletes the
+    marker, bypasses the hook. The threat here is an instruction-following lapse, not an adversary.
+  - >-
+    Ship in one change with TQ-500f-3-iv and TQ-500g-1-vii. TQ-500g-1-v and -vi are on main (adb0c2e61).
 test_spec:
 - name: test_hook_verdicts_for_b1_to_b6
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: criterion
+  surface_invoked: templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
   description: >-
-    Runs the hook as a real subprocess in a temp git repo with an open marker, a staged fixture
-    ticket and B1 to B6 records. B1 and B5 pass. B2 (missing), B3 (truncated), B4 (stop, even with a
-    supervisor summary saying ready) and B6 block, each naming its reason.
+    Runs the hook as a real subprocess in a temp git repo with an open marker, a staged fixture ticket and
+    B1 to B6 records. B1 and B5 pass. B2 (missing), B3 (truncated), B4 (stop, even with a supervisor summary
+    saying ready) and B6 block, each naming its reason.
   must_catch:
   - missing wrong-version record treated as a pass
   - truncated record read as an empty pass
   - stop verdict ignored
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  - scripts/build_orchestration/gate_verdict_records.py
 - name: test_b6_code_changed_after_runs_is_out_of_date
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: discrimination
   description: >-
-    B6: a code file is changed and staged after the runner's record was written, and the commit
-    blocks as out of date. The same staged content with no change after the record passes.
+    B6: a .py file is changed and staged after the runner's record was written, and the commit blocks as out
+    of date. Controls that pass: the same staged content with no change after the record; a knowledge .md
+    file staged after the record; an unstaged leftover file that differs from the record.
   must_catch:
   - no staleness check
   - digest computed over the working tree instead of the staged content
+  - non-code files staged after the runs block the commit
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  - scripts/build_orchestration/gate_verdict_records.py
 - name: test_commit_without_open_marker_is_unaffected
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: boundary
   description: >-
-    With no open marker, a commit staging code and a ticket file passes without any record. With a
-    marker open and no marked ticket staged, a code commit blocks as unattributable.
+    With no open marker, a commit staging code and a ticket file passes without any record. With a marker
+    open and no marked ticket staged, a code commit blocks as unattributable; the message names the marked
+    ticket path and tells the committer to stage it, and contains no runnable close command.
   must_catch:
   - hook applies to every commit and blocks non-/build-epic work
   - unattributed commit passes while a marker is open
+  - unattributed-commit message prints a runnable close command
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  - scripts/build_orchestration/gate_verdict_records.py
+- name: test_records_bound_to_marker_source_ac_snapshot
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  surface_invoked: templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  description: >-
+    open is run on a fixture ticket whose frontmatter has source_ac [X-1] and stores source_ac [X-1] in
+    open.json, whatever list the caller holds. The hook then blocks when either record has applicable false
+    (the supervisor dropped --source-ac / --ac-ids), when a record's ids differ from [X-1], and when open.json
+    has no readable source_ac. Controls that pass: records with ids [X-1] and applicable true; a ticket with
+    no source_ac whose snapshot is [] and whose records are not applicable.
+  must_catch:
+  - not-applicable record passes for a ticket that has source_ac
+  - record ids not compared with the marker's source_ac snapshot
+  - marker source_ac taken from the caller instead of the ticket frontmatter
+  - marker without a readable source_ac snapshot treated as a pass
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  - scripts/build_orchestration/gate_verdict_records.py
+- name: test_marker_ticket_path_normalised_like_staged_paths
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: >-
+    open with --ticket-path "./tickets/EPIC-X/01_a.md" (and a backslash form) stores
+    "tickets/EPIC-X/01_a.md"; a commit staging that ticket with B1 records passes and is not blocked as
+    unattributable.
+  must_catch:
+  - leading ./ kept in the marker path, so a correctly staged ticket is blocked as unattributable
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
+  - scripts/build_orchestration/gate_verdict_records.py
+- name: test_build_epic_recovers_once_at_drive_head_and_fails_closed
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: failure
+  surface_invoked: templates/workflows-js/build-epic.js under unit_tests/_workflow_engine_harness.py
+  description: >-
+    be-wv-recover is the first command step, recorded once per drive, before the epic-planner dispatch and
+    never again per ticket, also with two batches. A recover reply with ok false, a declined reply or
+    unparseable stdout means no ticket-supervisor is dispatched and the drive returns blocked with
+    wrong_version_step "recover".
+  must_catch:
+  - recover ok false ignored
+  - recover dispatched per ticket instead of once at the drive head
+  in_scope_files:
+  - templates/workflows-js/build-epic.js
 - name: test_build_epic_opens_marker_before_each_ticket_and_fails_closed
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -219,25 +420,29 @@ test_spec:
   angle: reachability
   surface_invoked: templates/workflows-js/build-epic.js under unit_tests/_workflow_engine_harness.py
   description: >-
-    Drives build-epic.js under the workflow-engine harness. The open-marker execution is recorded
-    before each ticket-supervisor dispatch. A refused reply means that ticket-supervisor is never
-    dispatched and the epic halts as blocked.
+    be-gate-marker-open is recorded before each ticket-supervisor dispatch with the ticket key and path
+    quoted, and the dispatch prompt carries ticket_key and runs_alone. A refused or unparseable open reply,
+    or a ticket stem like "01_a;rm -rf x", means that ticket-supervisor is never dispatched, no command
+    carries the unsafe value, and the epic halts as blocked.
   must_catch:
   - marker step refused but the ticket dispatched anyway
+  - unsafe ticket key pasted into a command
   in_scope_files:
   - templates/workflows-js/build-epic.js
-- name: test_build_epic_resume_recovers_before_redispatching_the_ticket
+- name: test_build_epic_serialises_batches_that_owe_runs
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
-  angle: failure
+  angle: discrimination
+  surface_invoked: templates/workflows-js/build-epic.js under unit_tests/_workflow_engine_harness.py
   description: >-
-    On a resumed drive, the recover execution is recorded before ticket-supervisor is re-dispatched
-    for the resumed ticket. A recover reply with ok false, or an unparseable one, means the ticket is
-    not dispatched and the epic halts as blocked.
+    A batch of three tickets where one has source_ac ["X-1"] is dispatched one ticket per chunk, each with
+    runs_alone true; a batch item with no source_ac key is also serial. A control batch of three tickets that
+    all carry source_ac [] goes out as one parallel chunk with runs_alone false.
   must_catch:
-  - resumed ticket re-dispatched without recovery
-  - recover ok false ignored
+  - parallel chunk kept when a ticket owes wrong-version runs
+  - missing source_ac read as no source requirement
+  - every batch serialised, including one that owes no runs
   in_scope_files:
   - templates/workflows-js/build-epic.js
 - name: test_records_written_by_gate_clis_themselves
@@ -246,36 +451,58 @@ test_spec:
   type: integration
   angle: seam
   description: >-
-    heavy_lane_gate, the runner's run step and the finish wrapper, run as subprocesses with the record
-    option, write records that the hook then accepts (B1). The record finish leaves is the runner's
-    own (verdict equal to finish's verdict field). finish stopped at the writer leaves no
-    wrong-version record. A record whose verdict JSON was rewritten after the CLI wrote it, for
-    example 'passed' substituted for a stop, fails the digest or the content check.
+    heavy_lane_gate (with and without ids), the runner's run step and the finish wrapper, run as subprocesses
+    with --record, write records that the hook then accepts (B1, B5). The record finish leaves is the runner's
+    own (its verdict equals finish's verdict field). After an earlier passing finish, a second finish whose
+    writer stops leaves no wrong_version.json. A record whose verdict was rewritten after the CLI wrote it,
+    for example 'passed' substituted for a stop, still blocks. Without --record every CLI prints the same
+    JSON as before and writes nothing under gate-verdicts.
   must_catch:
   - record option ignored, so the CLI writes no record
   - finish drops the record option instead of passing it to the runner
   - finish writes a record after the writer stopped
+  - stale record from an earlier finish survives a writer stop
   in_scope_files:
   - scripts/build_orchestration/wrong_version_gate.py
   - scripts/build_orchestration/wrong_version_runner.py
+  - scripts/build_orchestration/_fl_heavy_lane_gate.py
+  - scripts/build_orchestration/_fl_cli.py
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/gate_verdict_records.py
+- name: test_record_key_and_write_fail_closed
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: >-
+    A --record or --ticket-key value of "..", "a/b" or "x;y" is refused with nothing written. A record write
+    that cannot complete turns the CLI's result into gate_passed false. A record cut off part way by an
+    interrupted write is never left behind as a parseable file.
+  must_catch:
+  - ticket key used as a path without the one-segment check
+  - failed record write reported as a pass
+  in_scope_files:
+  - scripts/build_orchestration/gate_verdict_records.py
 - name: test_deployed_hook_registered_and_blocks
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: deployed
   description: >-
-    After build.py deploys into a temp target, the hook is present in the deployed hooks manifest
-    and pre-commit config, and the deployed copy blocks B2.
+    After build.py deploys into a temp target, the hook is present in the deployed hooks manifest and
+    pre-commit config, imports gate_verdict_records from the deployed scripts/build_orchestration, and the
+    deployed copy blocks B2.
   must_catch:
   - hook module or its imports missing from the deploy manifest
+  in_scope_files:
+  - templates/scripts/commit_guardian/check_build_epic_gate_verdicts.py
 test_rationale: >-
-  The backstop exists because the two prompt ACs cannot be tested. So it must be proven at the
-  points where code actually runs: the real hook subprocess against a real git index, build-epic.js
-  under the harness (marker and resume recovery), the gate CLIs and the finish wrapper writing their
-  own records, and the deployed copy. A text search of building-epics is not a proof (CLAUDE.md).
-  The hook's entries carry no in_scope_files yet, because the hook's file name is chosen at build
-  time. Add in_scope_files naming it in the same change, or those names stay unfinished in this AC's
-  own wrong-version runs.
+  The backstop exists because the two prompt ACs cannot be tested. So it must be proven at the points where
+  code actually runs: the real hook subprocess against a real git index, build-epic.js under the harness
+  (drive-head recover, marker, the chunk rule, the dispatch-prompt fields), the gate CLIs and the finish
+  wrapper writing their own records, and the deployed copy. A text search of building-epics is not a proof
+  (CLAUDE.md). The file names of the hook and the record module are pinned here so every must_catch entry
+  carries in_scope_files; if the build renames them, update in_scope_files in the same change.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by:
@@ -286,6 +513,14 @@ amended_by:
 - reason: "User-approved amendment (2026-10-15): depends_on gains TQ-500g-1-v, whose finish wrapper carries the record option to the runner. Criteria unchanged."
   date: '2026-10-15'
   by: business-analyst
+  directed_by: user
+- reason: "Technical alignment with main at adb0c2e61 (TQ-500g-1-v #1280, TQ-500g-1-vi #1299): --record is not on main and is added here (runner run, finish pass-through that also clears a stale record, heavy_lane_gate); record folder, marker and record shapes pinned; per-path staleness on code paths only; recover moved from per-ticket to once at the build-epic.js drive head plus a stale-marker close; one ticket per chunk when a batch owes runs, with source_ac on the planner items and ticket_key/runs_alone in the dispatch prompt; quoted, checked command lines with labels; fail-closed parses and halt keys; command-step-runner spawned_by gains build-epic.js; package_surface true with the structured it_requirements object; file names of the hook and record module pinned and in_scope_files on every must_catch; measured file sizes. Criteria unchanged."
+  date: '2026-10-21'
+  by: it-po
+  directed_by: user
+- reason: "Review findings (2026-10-22). H-1: open snapshots the ticket frontmatter's source_ac into open.json; the hook requires set(record.ids) == set(marker.source_ac) for both records, blocks applicable false when the snapshot is non-empty, and blocks a marker without a readable snapshot. H-2: the unattributed-commit message tells the committer to stage the marked ticket file and prints no runnable close command; the precommit-autofix route text says the same. ticket_path in open.json is normalised like staged paths (repo-relative POSIX, leading ./ stripped). test_spec gains must_catch entries for each point, with in_scope_files on the hook and the module. Criteria unchanged."
+  date: '2026-10-22'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []
@@ -358,3 +593,61 @@ notes: |
   No clause needs the BA.
   FOLLOW-UPS OUTSIDE THIS AC: depends_on does not name TQ-500g-1-v (the
   wrapper this AC extends) (BA/user to add).
+
+  IT-PO ALIGNMENT (2026-10-21): AGAINST MAIN AT adb0c2e61
+  --RECORD. Not implemented anywhere on main: wrong_version_runner.py run,
+  wrong_version_gate.py finish and fast_lane.py heavy_lane_gate have no
+  record option (grep of scripts/ and templates/ finds none). This AC adds it,
+  per the earlier contract. Records under
+  <git-dir>/leafcutter/gate-verdicts/<ticket-key>/, beside the runner's
+  wrong-version-runs/ and the writer's work/<work-key>/ folders.
+  STALE RECORD. finish must clear an earlier wrong_version.json before the
+  writer runs; otherwise a writer stop after an earlier pass would leave a
+  stale record, and only the digest would stand between it and a commit.
+  RECOVER MOVED. The 2026-10-14 text ran recover per resumed ticket. That is
+  wrong on this route: build-epic.js runs up to 12 ticket-supervisors in one
+  worktree, and recover (and every run step) closes EVERY open journal there.
+  It now runs once at the drive head, before the Planner, on every drive,
+  as build-ticket.js does (no fresh-or-resumed signal exists here).
+  CONCURRENCY. build-epic.js (lines 413-421) runs chunks of up to 12 through
+  parallel() in one worktree. The user's -vi rule (one ticket per chunk when
+  a batch owes runs, 2026-10-21) applies; the chunk step is code, so it lives
+  in this AC with a discrimination test, and TQ-500g-1-vii's supervisor-side
+  serial check on runs_alone is the M-2 counterpart.
+  STALENESS NARROWED to code paths (extensions from file_size.checked_extensions)
+  and to staged paths, per path. A single whole-tree digest would block
+  legitimate commits: building-epics section 5.9 stages knowledge records
+  after the runs, and a halted sibling can leave unstaged files.
+  QUOTING. Every build-epic.js command quotes the root, key and ticket path
+  after the twins' checks (KI-BO-20261021 must not grow).
+  PACKAGE SURFACE: true. The hook's registration adds new entries to
+  commit_guardian.json, which ACS-100i-8 watches, so it_requirements is the
+  structured object (the earlier policy list moved under constraints).
+  create-hook is the package procedure for a hook; add-agent/add-skill-to-
+  package do not apply.
+  CAVEAT: if the user prefers the hook's name or the record module's name
+  changed, change in_scope_files with it in the same edit.
+
+  USER DECISIONS (2026-10-22)
+  Q1 (a): a resumed drive that spawns commit but no coder runs heavy_lane_gate
+  once before the wrong-version sequence (TQ-500f-3-iv), so red_baseline.json
+  exists for the hook; without a recorded pass the reader halts.
+  Q2 (a): the build-epic.js one-ticket-per-chunk rule stays in this AC as a
+  constraint, with test_build_epic_serialises_batches_that_owe_runs.
+  Q3 (a): the pinned names stand: check_build_epic_gate_verdicts.py, hook id
+  check-build-epic-gate-verdicts, gate_verdict_records.py, and
+  <git-dir>/leafcutter/gate-verdicts/<ticket-key>/. The caveat above is closed.
+
+  REVIEW FINDINGS (2026-10-22), applied to the technical fields
+  H-1 (fail-open): a record was never tied to the ticket's own requirements,
+  so a supervisor that dropped --source-ac / --ac-ids got not-applicable
+  records that passed. Now open snapshots the ticket frontmatter's source_ac
+  into open.json before the supervisor runs; the hook demands matching ids
+  on both records and refuses not-applicable when the snapshot is non-empty;
+  a marker without a readable snapshot blocks.
+  H-2: the unattributed-commit message tells the committer to stage the
+  marked ticket file. It prints no close command, because closing a marker is
+  the drive's job (be-gate-marker-close / close-all) or a human's. The
+  precommit-autofix route text changes the same way.
+  Path normalisation: open stores ticket_path as repo-relative POSIX with a
+  leading ./ stripped, matching how staged paths are compared.

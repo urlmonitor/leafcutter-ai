@@ -18,7 +18,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 AGENT = "command-step-runner"
-WANT = ["user", "fast-lane-ship.js", "build-feature.js", "build-ticket.js"]
+# TQ-500g-1-viii added build-epic.js as the fifth caller (its drive-head recover and gate-marker steps).
+WANT = ["user", "fast-lane-ship.js", "build-feature.js", "build-ticket.js", "build-epic.js"]
 HOOK = REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "hooks" / "check_agent_spawn_consistency.py"
 CARD = REPO_ROOT / "docs" / "agents" / "cards" / f"{AGENT}.card.md"
 

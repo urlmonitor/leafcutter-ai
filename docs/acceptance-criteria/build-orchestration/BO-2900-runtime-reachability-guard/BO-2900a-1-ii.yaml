@@ -58,15 +58,15 @@ estimated_complexity: M
 it_requirements:
   - "SURFACE. The suspension lives in scripts/ac_store/_done_proof_entry_point_gate.py::_apply_entry_point_reachability_gate, which is already report-only in this tree. This AC's work is (a) making the announcement countable and complete and (b) proving the pass-through executes. Do NOT relocate the rule, do NOT add a second eligibility oracle, and do NOT delete the module's DECISION HISTORY block — BO-2900a-1-iii reads its re-arm conditions."
   - "THE PASS-THROUGH MUST BE TOTAL, NOT PER-BRANCH. On every path — finding, no finding, no entry point resolved, internal error — the function must return the verdict mapping it received with no key added, removed or changed. 'Same eligibility' is an equality property of the whole verdict, not just of verdict['eligible']; a rule that leaves eligible alone while writing refusal_cause has still moved the verdict for BO-2900e-1's message layer."
-  - "EVERY FINDING MUST CARRY FOUR NAMED FACTS: the unit, the entry point that was not entered, the proof's test nodeid, and the refusal_cause the rule would have used. A finding missing any one of the four is not countable and does not satisfy this AC. The two causes in play are the ones the module already emits — proof_not_through_entry_point and observation_unavailable — and this AC must not invent a third."
-  - "THE FINDINGS MUST BE COUNTABLE WITHOUT PARSING PROSE. Emit each finding through one named function that produces BOTH the operator-facing line on stderr AND a structured finding record ({unit: str, entry_point: str, offending_test: str, refusal_cause: str}) that an in-process caller can collect. BO-2900a-1-iii's corpus exercise measures this population; a population only recoverable by regexing stderr is not a measurement, and a suspension that stops announcing removes the only evidence that can end it."
+  - "EVERY FINDING MUST CARRY FOUR NAMED FACTS: the unit, the entry point that was not entered, the proof's test nodeid, and the refusal_cause the rule would have used. A finding missing any one of the four is not countable and does not satisfy this AC. The only refusal cause this rule can put on a finding is proof_not_through_entry_point, and only from a reach record whose reached_through is the literal 'not_reached' (no_entry_point_reaches_code belongs to BO-2900a-3). An unwatched record (BO-2900a-2-ii) or an undecidable answer (BO-2900a-2-iii) is announced on the same finding channel, naming the unit, the entry point and the proof nodeid together with its unwatchable_cause or undecidable_cause, with refusal_cause null and no clearing action. It is never given a refusal cause. 'observation_unavailable' is retired as a cause, and this AC must not invent another one."
+  - "THE FINDINGS MUST BE COUNTABLE WITHOUT PARSING PROSE. Emit each finding through one named function that produces BOTH the operator-facing line on stderr AND a structured finding record ({unit: str, entry_point: str, offending_test: str, refusal_cause: 'proof_not_through_entry_point'|null, unwatchable_cause: str|null, undecidable_cause: str|null}, where exactly one of the three cause fields is non-null) that an in-process caller can collect. BO-2900a-1-iii's corpus exercise measures this population; a population only recoverable by regexing stderr is not a measurement, and a suspension that stops announcing removes the only evidence that can end it."
   - "NO SUPPRESSION SURFACE MAY EXIST. The announcement path must read no environment variable, accept no keyword argument, and consult no config key that changes whether it announces. This is a property of the code, not only of the emitted text: an emitted line that names no bypass while an undocumented env var silences the whole function still fails this AC."
   - "THE ANNOUNCEMENT MUST REACH THE OPERATOR IN ALL THREE check_done_proof MODES (precommit, ci, ci-changed) and from the DEPLOYED layout, not only from the source tree. Write to stderr directly; do not route through a logger whose level the calling context can lower to silence."
   - "ERROR HANDLING. Per the project error handling policy, a failure inside the rule must be logged at WARNING or higher and must not propagate into the eligibility decision — a rule that cannot decide must not be able to crash the gate that is ignoring it. It must equally not be swallowed silently: an inert rule and a suspended rule are indistinguishable without the log line."
   - "PERFORMANCE. The rule still runs only after the two incumbent conditions have already returned eligible: True, and must not add a second pytest or subprocess invocation of its own beyond the observation call that is already there. It must not increase the per-AC done-proof budget measurably."
 delivers_to:
   agent: python-coder
-  contract: "An eligibility evaluation in which the reachability rule contributes announcements but never an ineligibility, plus the announcement text BO-2900e-1's message layer composes. Concretely: verify_done_eligible returns a verdict mapping equal in every key to the one it would return with this rule not invoked, alongside zero or more structured findings {unit: str, entry_point: str, offending_test: str, refusal_cause: 'proof_not_through_entry_point'|'observation_unavailable'} emitted on stderr and collectable in-process. The announced findings are the population BO-2900a-1-iii's corpus is drawn from and measured against."
+  contract: "An eligibility evaluation in which the reachability rule contributes announcements but never an ineligibility, plus the announcement text BO-2900e-1's message layer composes. Concretely: verify_done_eligible returns a verdict mapping equal in every key to the one it would return with this rule not invoked, alongside zero or more structured findings {unit: str, entry_point: str, offending_test: str, refusal_cause: 'proof_not_through_entry_point'|null, unwatchable_cause: 'non_python_child'|'isolated_interpreter'|'observer_displaced'|'recorded_nothing'|'propagation_failed'|'unknown'|null, undecidable_cause: 'subject_not_named'|null}, exactly one cause field non-null, emitted on stderr and collectable in-process. An unwatched or undecidable record is announced with its own cause and refusal_cause null, never with a refusal cause (BO-2900a-2-ii, BO-2900a-2-iii). The announced findings are the population BO-2900a-1-iii's corpus is drawn from and measured against."
 expects_from: null
 test_spec:
   - name: test_report_only_finding_is_announced_and_eligibility_is_unchanged
@@ -155,3 +155,25 @@ notes: |
   already exists and covers BO-2900a-1, not this record — the filename is an
   artifact of a file-size split, predating this id. Do not read it as this AC's
   proof and do not add this AC's proof to it.
+
+  2026-10-21 (IT PO). The finding's cause vocabulary is aligned with BO-2900a-2-ii,
+  BO-2900a-2-iii and the 2026-10-21 amendment of BO-2900a-1. criteria, title,
+  req_status, depends_on, test_spec, work_status and readiness are untouched.
+    (1) it_requirements, the four-facts item. Before: "The two causes in play are
+        ... proof_not_through_entry_point and observation_unavailable". Now the
+        only refusal cause is proof_not_through_entry_point, set only from the
+        literal 'not_reached'. An unwatched or undecidable record is announced on
+        the same channel with its unwatchable_cause or undecidable_cause,
+        refusal_cause null and no clearing action. 'observation_unavailable' is
+        retired. This agrees with BO-2900a-2-ii (unwatched resolves to no refusal)
+        and BO-2900a-2-iii (undecidable never produces a refusal).
+    (2) it_requirements, the countable-findings item. The structured finding
+        record gained unwatchable_cause and undecidable_cause, and refusal_cause is
+        now 'proof_not_through_entry_point'|null, with exactly one cause non-null.
+        Same siblings.
+    (3) delivers_to.contract. Before, the finding's refusal_cause was
+        'proof_not_through_entry_point'|'observation_unavailable'. Now it has the
+        shape in (2), with the closed cause lists copied from BO-2900a-2's
+        reach_record. The new fields are additions, so BO-2900a-1-iii's
+        expects_from ({unit, entry_point, offending_test, refusal_cause}) still
+        holds.

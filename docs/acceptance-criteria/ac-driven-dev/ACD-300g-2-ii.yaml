@@ -1,0 +1,85 @@
+id: ACD-300g-2-ii
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A parent AC whose covered_by the stage updated is staged in the same stage commit"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: active
+work_status: todo
+criteria: |
+  Given a /plan-feature stage has completed and the user has approved its output,
+  And during that stage the authoring agent wrote a new child AC
+    BO-2600a-6.yaml under parent BO-2600a,
+  And the agent also edited the parent file BO-2600a.yaml to append
+    BO-2600a-6 to its covered_by list,
+  And the agent reported only BO-2600a-6 as written in its stage output,
+  And the AC store also contains a sibling file BO-2600a-5.yaml that the
+    stage did not modify,
+  And the working tree has an uncommitted change to a file outside the
+    AC store (e.g. config/commit_guardian.json),
+  When the workflow creates the stage commit,
+  Then both BO-2600a-6.yaml and BO-2600a.yaml are staged in that one commit,
+  And the commit passes the check-ac-parent-covered-by pre-commit hook
+    without the user having to stage the parent by hand,
+  And BO-2600a-5.yaml is not staged, because the stage did not modify it,
+  And config/commit_guardian.json is not staged and remains an uncommitted
+    change in the working tree after the commit completes.
+depends_on: [ACD-300g-2]
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The set of files staged by the stage commit must be derived from the AC store's actual working-tree changes made during the stage, not solely from the list of files the stage agent reports as written; the agent report is an input, not the authority"
+  - "An AC file in the AC store that the stage did not create or modify must never be staged, even if it is a sibling or ancestor of a reported file"
+  - "Must not alter the git index state of any file outside the AC store directory"
+  - "Must not re-stage AC files already committed by a previous stage of the same run"
+  - "When the stage commit is rejected by a pre-commit hook, the hook name and its output must be surfaced to the user and the workflow must not advance (per ACD-300g)"
+  - "At least one test must reproduce the defect: a stage whose agent reports only the child while the parent's covered_by edit exists on disk; this test must fail against the current reported-files-only staging behaviour"
+delivers_to: null
+expects_from:
+  ac_id: ACD-300g-2
+  contract: "The stage commit step in the /plan-feature workflow that stages AC store files for the completed stage and commits them; this AC extends its staged-file set to include modified parent AC files"
+test_spec:
+  - name: test_stage_commit_includes_parent_whose_covered_by_was_updated
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "Agent reports only the child AC as written; parent covered_by edit exists on disk; the stage commit contains both child and parent files (red against current code)"
+  - name: test_stage_commit_passes_parent_covered_by_hook
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "With the parent covered_by edit present, the stage commit is not rejected by check-ac-parent-covered-by"
+  - name: test_stage_commit_excludes_unmodified_sibling_ac
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "An AC file in the store that the stage did not modify is not staged"
+  - name: test_stage_commit_excludes_files_outside_ac_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "An uncommitted change outside the AC store is not staged and remains uncommitted after the stage commit"
+origin_agent: it-po
+created: 2026-10-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

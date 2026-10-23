@@ -471,12 +471,14 @@ def test_dispatch_order_build_epic() -> None:
     With default stub args (no `epic_path` in args, `userInput` = 'stub user input',
     no `batches` from the planner) build-epic.js:
 
-      Phase 0 (Workspace):
+      Phase 0 (Workspace and guard):
         1. shell-runner    label='resolve-maker-path' — the maker's absolute path (BO-4300a-1-ia)
         2. shell-runner    label='workspace-ensure'   — the ONE verbatim maker request
+        3. command-step-runner label='be-wv-recover' — drive-head recover (TQ-500g-1-viii)
+        4. command-step-runner label='be-gate-marker-close-all' — stale-marker close
 
       Phase 1 (Planner):
-        3. status-checker  label='epic-planner'    — reads Master_Plan.md
+        5. status-checker  label='epic-planner'    — reads Master_Plan.md
 
       → Exits early (planner stub returns no batches)
 
@@ -502,15 +504,12 @@ def test_dispatch_order_build_epic() -> None:
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    # Assert the exact ordered sequence (agentType, label) for the first two calls.
-    expected_sequence = [
-        ("shell-runner", "resolve-maker-path"),  # BO-4300a-1-ia: the one maker-path probe (consumer_drift)
-        ("shell-runner", "workspace-ensure"),
-        ("status-checker", "epic-planner"),
-    ]
-    actual_sequence = [
-        (c.agent_type, c.label) for c in result.agent_calls[:3]
-    ]
+    # Exact ordered (agentType, label) of the first five calls: maker-path probe (BO-4300a-1-ia), workspace,
+    # drive-head recover + close-all (TQ-500g-1-viii), planner.
+    expected_sequence = [("shell-runner", "resolve-maker-path"), ("shell-runner", "workspace-ensure"),
+                         ("command-step-runner", "be-wv-recover"), ("command-step-runner", "be-gate-marker-close-all"),
+                         ("status-checker", "epic-planner")]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[:5]]
 
     assert actual_sequence == expected_sequence, (
         f"build-epic.js dispatch order wrong (AC-2 / M-1).\n"
