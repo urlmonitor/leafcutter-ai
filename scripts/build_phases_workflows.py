@@ -119,12 +119,23 @@ def _workflow_source_bytes(js_file: Path, src_dir: Path) -> bytes:
     return fill_template_bytes(js_file.read_bytes(), js_file.name, src_dir, _bp.PACKAGE_ROOT)
 
 
-def _inline_all_workflow_sources(src_dir: Path) -> dict[str, bytes]:
+def _inline_all_workflow_sources(src_dir: Path, config: dict[str, Any]) -> dict[str, bytes]:
     """Return ``{filename: bytes}`` for every top-level workflow template.
 
-    Each entry has its WORKSPACE-ANSWER marker pair filled (BO-4300c-3); a
-    hand-filled pair or missing source raises ``ValueError`` before any write.
+    One validation pass first checks every route template and every ``_shared``
+    block source (unknown, empty, unused or stale-declared blocks, hand-filled,
+    nested, overlapping or unpaired markers, unresolvable ``{{config.*}}``
+    placeholders in block text) and collects all problems. If any exist it raises
+    ``SharedBlockError`` (a ``ValueError``) whose text lists each problem with
+    route path, 1-based line and block name, and nothing is filled or written.
+    Otherwise each entry has all of its shared-block marker pairs filled.
     """
+    import build_phases as _bp
+    from build_shared_validation import validate_or_fail
+
+    # BO-4500b-1-i..v: validate every template and source, collecting all failures,
+    # before any route is filled or written.
+    validate_or_fail(src_dir, _bp.PACKAGE_ROOT, config)
     return {
         js_file.name: _workflow_source_bytes(js_file, src_dir)
         for js_file in sorted(src_dir.glob("*.js"))
@@ -321,7 +332,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     # BO-4300c-3: fill every WORKSPACE-ANSWER marker pair BEFORE anything is
     # written, so a hand-filled pair or a missing source deploys nothing.
-    inlined = _inline_all_workflow_sources(workflows_js_src)
+    inlined = _inline_all_workflow_sources(workflows_js_src, config)
 
     for js_file in sorted(workflows_js_src.glob("*.js")):
         dest = output_dir / js_file.name
@@ -666,4 +677,11 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
 # - 2026-10-12 [python-coder/BP-300d-3-ii]: version probe takes the first x.y.z
 #   in `claude --version` ("2.1.294 (Claude Code)"), not the last token.
+# - 2026-10-22 [python-coder/BO-4500b-1]: Generalised the WORKSPACE-ANSWER-only fill
+#   to any shared block (_inline_shared_blocks, _workflow_source_bytes); the set of
+#   blocks and consumers is derived from _shared/ and the markers, not listed.
+# - 2026-10-23 [python-coder/BO-4500b-1]: _inline_all_workflow_sources now takes the
+#   build config and runs build_shared_validation.validate_or_fail first, so every
+#   route/source problem (including unresolvable block placeholders) is reported
+#   together and nothing is written on failure.
 # ===========================================================================
