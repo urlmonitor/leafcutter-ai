@@ -28,6 +28,7 @@ import json
 import logging
 import socket
 import time
+from collections.abc import Mapping
 from pathlib import Path
 
 from scripts.ci._flaky_window import flaky_fields
@@ -94,7 +95,7 @@ def without_targets(command: list[str]) -> list[str]:
 
 
 # --------------------------------------------------------------------------- the reachability check
-def startup_limit(environ: dict) -> float:
+def startup_limit(environ: Mapping[str, str]) -> float:
     """The seconds the lane waits for its database: ``LIVE_DB_STARTUP_LIMIT`` or the default; ValueError names the variable when it is malformed."""
     raw = environ.get("LIVE_DB_STARTUP_LIMIT", DEFAULT_STARTUP_LIMIT)
     message = f"LIVE_DB_STARTUP_LIMIT must be a number of seconds, got {raw!r}"
@@ -153,7 +154,7 @@ def check_database(address: str, limit: float) -> dict:
 
 def write_unreachable_report(path: Path, reach: dict, runner: str | None) -> None:
     """Write the report of a lane that executed no test because its database was unreachable."""
-    payload = {"runner": runner, "exitstatus": 0, "expected": 0, "ran": 0, "collection_errors": [], "results": {}, "skip_reasons": {}, "reachability": reach}
+    payload: dict[str, object] = {"runner": runner, "exitstatus": 0, "expected": 0, "ran": 0, "collection_errors": [], "results": {}, "skip_reasons": {}, "reachability": reach}
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

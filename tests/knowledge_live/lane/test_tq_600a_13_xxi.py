@@ -39,6 +39,7 @@ def _version_of(port: int, password: str) -> tuple[str, str]:
             row = session.run("CALL dbms.components() YIELD versions, edition RETURN versions[0] AS version, edition").single()
     except Exception as exc:  # noqa: BLE001 -- any driver failure is "not reachable"; the test must fail, never skip
         pytest.fail(f"disposable database on port {port} is not reachable: {exc}")
+    assert row is not None, f"the instance on port {port} returned no component row"
     return row["version"], row["edition"]
 
 

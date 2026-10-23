@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ._ending_harness import HEAD_SHA, Cases, EndingTestCase
+from ._ending_harness import HEAD_SHA, Cases, EndingService, EndingTestCase
 from ._notice_fakes import LABEL, REPO, SERVER, run_record, state_block, visible_text
 from ._live_lane_harness import (
     LIVE_DIR,
@@ -287,6 +287,8 @@ class TestTq600a13XxiLane(unittest.TestCase):
 
 
 class TestTq600a13XxiLiveNotice(EndingTestCase):
+    svc: EndingService  # set in EndingTestCase.setUpClass
+
     def _red_live_file(self, base: Path, failing: str = FAIL) -> dict:
         result = verdict_cli(
             base,

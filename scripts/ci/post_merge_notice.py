@@ -52,6 +52,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_notice.py`: make `scripts.ci` importable
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -237,7 +238,7 @@ def read_verdict_file(path: Path, run: dict) -> dict:
 def _label_names(issue: dict | None) -> set[str]:
     """Return the label names of an issue as the service reported them."""
     labels = (issue or {}).get("labels") or []
-    return {item.get("name") if isinstance(item, dict) else item for item in labels}
+    return cast("set[str]", {item.get("name") if isinstance(item, dict) else item for item in labels})
 
 
 def _send(client: GitHubClient, repo: str, write: Write, label: str = LABEL) -> None:

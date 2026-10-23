@@ -228,7 +228,7 @@ def _headline(state: dict, lane: LaneSpec = CORRECTNESS) -> str:
     stage = state.get("stage")
     cause = STAGE_CAUSES.get(stage or "")
     if cause:
-        return f"{subject} did not complete: {cause}. Stage: {code(stage)}."
+        return f"{subject} did not complete: {cause}. Stage: {code(str(stage))}."
     return f"{subject} did not complete{f' at stage {code(stage)}' if stage else ''}."
 
 
@@ -250,7 +250,7 @@ def _commit_lines(commit_range: CommitRange) -> list[str]:
     if commit_range.status == RANGE_PAGE_FULL:
         return [f"The last green run is not within the last {RUNS_PAGE_SIZE} runs, so the commits since it cannot be listed.", ""]
     if commit_range.status == RANGE_ANCHOR_MISSING:
-        return [f"The last green run tested {code(commit_range.anchor_sha)}, which is not in this checkout, so the commits since it cannot be listed.", ""]
+        return [f"The last green run tested {code(str(commit_range.anchor_sha))}, which is not in this checkout, so the commits since it cannot be listed.", ""]
     if commit_range.status == RANGE_HEAD_MISSING:
         return ["The run's head commit could not be read from this checkout, so the commits since the last green run cannot be listed.", ""]
     if not commit_range.commits:

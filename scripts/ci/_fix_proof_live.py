@@ -64,13 +64,14 @@ def live_part(verdict: dict, safe_ids, max_ids: int) -> dict[str, str]:
     option: the whole folder is the stronger proof and replaces them.
     """
     lane = verdict.get("live_database")
-    state = lane.get("verdict") if isinstance(lane, dict) else None
+    lane_fields: dict = lane if isinstance(lane, dict) else {}
+    state = lane_fields.get("verdict")
     if state not in ("red", "did_not_complete"):
         return {"live_proof": "false", "live_whole": "false", "live_ids": ""}
     ids: list[str] = []
     if state == "red":
         try:
-            ids = safe_ids(lane.get("failing"))
+            ids = safe_ids(lane_fields.get("failing"))
         except RuntimeError as exc:  # ProofInputError: the whole folder proves more and cannot deadlock the repair
             logger.warning("fix proof: %s; falling back to the whole live folder", exc)
     whole = state == "did_not_complete" or not ids or len(ids) > max_ids
@@ -148,7 +149,7 @@ def docker_commands() -> list[list[str]]:
         "-e", f"NEO4J_server_memory_pagecache_size={live.MEMORY['pagecache']}",
     ]  # fmt: skip
     return [
-        ["docker", "run", "-d", "--name", i["name"], "-p", f"{i['port']}:7687", "-e", f"NEO4J_AUTH={i['auth']}", *memory, i["image"]]
+        ["docker", "run", "-d", "--name", str(i["name"]),"-p", f"{i['port']}:7687", "-e", f"NEO4J_AUTH={i['auth']}", *memory, str(i["image"])]
         for i in live.INSTANCES
     ]
 

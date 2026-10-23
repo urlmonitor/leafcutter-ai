@@ -13,7 +13,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from ._ending_harness import CHECK, HEAD_SHA, expect_did_not_complete
+from ._ending_harness import CHECK, HEAD_SHA, EndingService, expect_did_not_complete
 from ._live_lane_harness import (
     STARTUP_STAGE,
     Listener,
@@ -49,6 +49,8 @@ def _startup_ending(base: Path, address: str, listener_mode: str | None = None):
 
 
 class TestTq600a13XxiiStartup(LiveNoticeCase):
+    svc: EndingService  # set in EndingTestCase.setUpClass
+
     def _assert_startup_verdict(self, base: Path, rep: dict, corr: dict | None = None):
         result = verdict_cli(base / "verdict", first=corr or report({CORR_OK: "passed"}), live_first=rep, env=RUN_ENV)
         file, live = need_file(result), need_live(result)
@@ -195,4 +197,5 @@ _drive = drive_verdict_job
 def need_live_of(drive) -> dict:
     live = (drive.file or {}).get("live_database")
     CHECK.assertIsInstance(live, dict, "the uploaded verdict has no live_database object")
+    assert isinstance(live, dict)  # narrows for the type checker; the assertion above already failed otherwise
     return live
