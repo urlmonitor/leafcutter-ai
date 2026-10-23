@@ -3,21 +3,30 @@
  *
  * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
- * agents (product-owner, business-analyst, it-po) in sequence with
- * user confirmation gates between stages, and writes all output exclusively
+ * agents (product-owner, business-analyst, it-po, test-designer) in sequence
+ * with user confirmation gates after the PO and BA stages (the IT PO stage is
+ * auto-gated by a rule check), and writes all output exclusively
  * to the AC store (docs/acceptance-criteria/). No ticket files are produced.
  *
- * Routing table (matches ac-triage classification):
- *   strategic  → PO v3 → gate → BA v3 → gate → IT PO v3 → final gate
- *   behavioral → BA v3 → gate → IT PO v3 → final gate
- *   technical  → IT PO v3 → final gate
+ * Routing table (matches ac-triage classification; every route ends with the
+ * IT PO stage, then test design, then the final gate):
+ *   strategic  → PO → gate → BA → gate → IT PO (auto) → test design → final gate
+ *   behavioral → BA → gate → IT PO (auto) → test design → final gate
+ *   technical  → IT PO (auto) → test design → final gate
+ *   (a product-truth flow produced for a technical request adds the BA stage)
  *   covered    → show matching ACs → prompt cancel / amend / force
  *
  * Architecture:
  *   Stage 0: ac-triage agent (Haiku-pinned, reads AC store, classifies route)
  *   Stage 1–N: authoring agents dispatched in sequence per route
- *   Gates: user confirm/edit/cancel between each stage
- *   Final gate: user sets priority; workflow writes readiness: approved
+ *   Gates: user confirm/edit/cancel after PO and BA; IT PO passes on its rule check
+ *   Test design: design pre-pass (design_prepass.py), then the test-designer
+ *     agent; its output is committed as plan-feature(TEST-DESIGN-HANDBACK)
+ *   Hand-back: up to 2 rounds returning undecided file findings to it-po; each
+ *     round runs runRuleCheck("itpo-handback") and fails closed
+ *   Final gate: user sets priority; approveBatch runs approve_acs.py --ids
+ *     (approval-holds, then approval-apply): it approves the records that
+ *     pass and reports the held ones and the failed ones
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  * No export async function run() — E2 executes the top-level body directly.

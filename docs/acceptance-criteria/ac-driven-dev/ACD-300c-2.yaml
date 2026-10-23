@@ -16,11 +16,19 @@ criteria: |
     L2/L3 decomposes,
   And it offers three actions:
     - "approve" — proceed to the technical planner's enrichment,
-    - "edit" — provide feedback text; the business analyst is re-invoked with the feedback
-      and rewrites the L2/L3 ACs (loop until approved),
+    - "edit" — provide feedback text; the business analyst is re-invoked once with the
+      feedback, rewrites the L2/L3 ACs, and gate 2 is shown again,
     - "cancel" — abort the pipeline; all ACs remain with readiness: draft,
-  And if the user approves, the workflow logs the approval timestamp
-    and proceeds to the technical planner (it-po), whose stage has no human gate of its own.
+  And if the user chooses "edit" a second time at gate 2, the run aborts with an error
+    stating that the business analyst did not produce satisfactory ACs after 2 attempts,
+    nothing from the business analyst's stage is committed, and its L2/L3 ACs remain in
+    the store with readiness: draft,
+  And if the user approves, the workflow commits the business analyst's L2/L3 ACs to the
+    authoring branch as that stage's own commit, naming the approved AC ids and the run
+    id; that commit is the record of the approval, and the technical planner (it-po),
+    whose stage has no human gate of its own, starts only after it succeeds,
+  And if that commit fails, the run stops with an error and the technical planner
+    does not start.
 depends_on: [ACD-300c]
 doc_links: []
 assigned_agent: python-coder
@@ -33,6 +41,12 @@ amended_by:
 - reason: 'pipeline refresh after #1245/#1246: BA v3 / IT PO v3 are now the business-analyst
     and it-po agents; gate 2 is the last human gate before the final gate, because the
     technical planner''s stage is auto-gated. Gate 2 behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'criteria match /plan-feature: "edit" re-invokes the business analyst once (a second
+    edit aborts without committing) instead of looping until approved; nothing logs an approval
+    timestamp, so that clause is replaced by the stage commit that records the approval.'
   date: '2026-10-23'
   by: business-analyst
   directed_by: user

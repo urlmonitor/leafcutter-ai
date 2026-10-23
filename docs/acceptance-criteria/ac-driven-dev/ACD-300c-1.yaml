@@ -15,11 +15,19 @@ criteria: |
   Then it displays: the AC ids, titles, and full criteria text of all L0/L1 ACs produced,
   And it offers three actions:
     - "approve" — proceed to the business analyst's decomposition,
-    - "edit" — provide feedback text; the product owner is re-invoked with the feedback
-      and rewrites the ACs (loop until approved),
+    - "edit" — provide feedback text; the product owner is re-invoked once with the
+      feedback, rewrites the ACs, and gate 1 is shown again,
     - "cancel" — abort the pipeline; ACs remain in store with readiness: draft,
-  And if the user approves, the workflow logs the approval timestamp
-    and proceeds to the business analyst.
+  And if the user chooses "edit" a second time at gate 1, the run aborts with an error
+    stating that the product owner did not produce satisfactory ACs after 2 attempts,
+    nothing from the product owner's stage is committed, and its ACs remain in the
+    store with readiness: draft,
+  And if the user approves, the workflow commits the product owner's ACs to the
+    authoring branch as that stage's own commit, naming the approved AC ids and the
+    run id; that commit is the record of the approval, and the business analyst
+    starts only after it succeeds,
+  And if that commit fails, the run stops with an error and the business analyst
+    does not start.
 depends_on: [ACD-300c]
 doc_links: []
 assigned_agent: python-coder
@@ -31,6 +39,12 @@ created: 2026-06-05
 amended_by:
 - reason: 'pipeline refresh after #1245/#1246: names only — PO v3 / BA v3 are now the
     product-owner and business-analyst agents. Gate 1 behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'criteria match /plan-feature: "edit" re-invokes the product owner once (a second edit
+    aborts without committing) instead of looping until approved; nothing logs an approval timestamp,
+    so that clause is replaced by the stage commit that records the approval.'
   date: '2026-10-23'
   by: business-analyst
   directed_by: user

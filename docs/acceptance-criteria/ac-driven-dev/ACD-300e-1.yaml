@@ -3,21 +3,29 @@ components:
   - ac_driven_dev
 readiness: approved
 priority: medium
-title: "Each authoring agent template declares knowledge-query in its skills_used frontmatter"
+title: "Each authoring agent template declares knowledge-query under skills, and the registry shows it in skills_invoked"
 component: ac-driven-dev
 level: L2
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the agent template files for product-owner, business-analyst,
-    and it-po each contain a YAML frontmatter block with a skills_used list,
-  When the template is loaded by the Claude Code harness at agent spawn time,
-  Then the skills_used list includes "knowledge-query" as an entry,
-  And any pre-existing entries in skills_used (such as "ac-tree-split") are preserved,
-  And the frontmatter remains valid YAML that the harness parses without error,
-  And the skill reference resolves to templates/skills/knowledge-query/SKILL.md
-    via the standard skill lookup path.
+  Given the agent templates for product-owner, business-analyst and it-po, each with a
+    YAML frontmatter block,
+  When each template's frontmatter is read,
+  Then its skills list contains an entry with skill_id "knowledge-query", mode
+    "conditional" and a non-empty condition stating when to search the knowledge graph
+    for component context,
+  And every other ability the template declares under skills is preserved (product-owner
+    and business-analyst also declare "ac-tree-split"),
+  And the frontmatter parses as valid YAML,
+  And the "knowledge-query" entry resolves to the packaged knowledge-query skill, so the
+    build accepts the declaration,
+  And given the agent registry has been regenerated from those declarations,
+  When the registry records for product-owner, business-analyst and it-po are read,
+  Then each record's skills_invoked list contains a "knowledge-query" entry with the same
+    mode and condition as its template declaration,
+  And no record carries the retired skills_used field.
 depends_on: [ACD-300e]
 doc_links:
   - path: templates/agents/product-owner.md
@@ -35,23 +43,50 @@ doc_links:
   - path: config/agent_registry.json
     relationship: describes
     status: exists
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+declared_files:
+  - path: templates/agents/product-owner.md
+    state: existing
+  - path: templates/agents/business-analyst.md
+    state: existing
+  - path: templates/agents/it-po.md
+    state: existing
 it_requirements:
-  - "Must preserve all pre-existing skills_used entries in each template"
-  - "Must not alter the agent template body content — only the frontmatter skills_used list"
-  - "Must produce valid YAML frontmatter that passes the harness parser without error"
-  - "Must also update the skills_used array in config/agent_registry.json for all three agents to include knowledge-query"
+  - "Must preserve every pre-existing entry of each template's frontmatter skills: declaration (skill_id, mode and condition unchanged); only the knowledge-query entry is added or corrected"
+  - "Must change only the frontmatter skills: declaration of the three templates; the template body is not touched by this record"
+  - "Each frontmatter must stay valid YAML and pass the build's ability-reference check, with knowledge-query resolving to the packaged skill at templates/skills/knowledge-query/SKILL.md"
+  - "skills_invoked in config/agent_registry.json is derived: it must come only from the transform-agent-registry commit hook regenerating it from the template declarations, and the regenerated registry is committed together with the template change; config/agent_registry.json is never hand-edited and no record carries skills_used (registry_validator refuses it and stops the build)"
 delivers_to:
   agent: llm-expert
-  contract: "Three agent template .md files with 'knowledge-query' present in their YAML frontmatter skills_used list, plus matching entries in agent_registry.json"
+  contract: "For the sibling llm-expert records that add the knowledge-query instructions to each template body (ACD-300e-2 product-owner.md, ACD-300e-3 business-analyst.md, ACD-300e-4 it-po.md): the frontmatter skills: list of templates/agents/<name>.md holds { skill_id: knowledge-query, mode: conditional, condition: <non-empty string> }, and the config/agent_registry.json entry with that id carries the same object in its derived skills_invoked list and no skills_used key"
 expects_from: null
+test_required: false
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by:
 - reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
   date: '2026-10-23'
   by: business-analyst
+  directed_by: user
+- reason: 'skills_used was retired by AR-400 (changelog 2026-10-15-1800): each template declares
+    its abilities under skills and the registry carries only the derived skills_invoked, regenerated
+    from that declaration. Title and criteria now describe that mechanism for knowledge-query; intent
+    unchanged. it_requirements and the delivers_to contract still name skills_used and a hand edit of
+    the registry, and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'it-po-technical-enrichment: technical fields brought in line with the amended criteria. it_requirements
+    name the skills: declaration and the derived skills_invoked (regenerated by the transform-agent-registry
+    hook, never hand-edited) instead of skills_used; the delivers_to contract names the consuming sibling
+    records ACD-300e-2, -3 and -4 (also llm-expert, so the agent is kept); declared_files and test_required
+    false (prompt-only change; the build and registry_validator are the existing gates) added.'
+  date: '2026-10-23'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []
