@@ -315,7 +315,7 @@ async function gvStep(label, command, runId) {
   try {
     const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, run_id: runId } }),
       { agentType: "command-step-runner", schema: GV_RUNNER_SCHEMA, label, phase: "Worktree Guard" });
-    const out = JSON.parse(reply.stdout);
+    const out = parseStepJson(reply.stdout);
     return out && typeof out === "object" ? out : null;
   } catch { return null; }
 }
