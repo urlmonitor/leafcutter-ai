@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
   Given the /plan-feature workflow has completed a stage and the authoring agent
     has written AC YAML files to the AC store with readiness: draft,
@@ -105,12 +105,36 @@ test_spec:
   target_dir: unit_tests/workflows/
   framework: pytest
   type: unit
-  angle: criterion
-  description: 'buildCancelMessage via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with two
-    draft ids and store docs/acceptance-criteria: each docs/acceptance-criteria/<id>.yaml path appears
-    in the message.'
+  angle: discrimination
+  description: 'buildCancelMessage via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with draft
+    ids [ACD-T-1, ACD-T-2], store docs/acceptance-criteria and the rule check''s records_to_commit list
+    [docs/acceptance-criteria/ac-driven-dev/ACD-T-feature/ACD-T-1.yaml,
+    docs/acceptance-criteria/ac-driven-dev/ACD-T-10.yaml, docs/acceptance-criteria/ac-driven-dev/ACD-T-2.yaml]:
+    each draft is listed under its real repo-relative path from that list, subfolder included; the flat
+    docs/acceptance-criteria/ACD-T-1.yaml does not appear; ACD-T-10.yaml is not listed (exact filename-stem
+    match, the rule commitStageOutput stages by); an id with no matching path is named without any invented
+    <store>/<id>.yaml path.'
   proves_clause: the workflow exits with a message listing the uncommitted file paths
   code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - flat <store>/<id>.yaml path for a record stored in a subfolder
+  - a prefix match that lists ACD-T-10.yaml for draft id ACD-T-1
+  - an id missing from records_to_commit falls back to an invented flat <store>/<id>.yaml path
+- name: test_acd_300g_4_gate_cancel_message_lists_rule_check_paths
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Real workflow body via gate_run (unit_tests/workflows/_acd_300g_support.py, run_workflow_under_e2)
+    resumed at gate-po with cancel and the PO ids, with a rule-check-po reply whose report (verdict failed,
+    exit_code 1, so the path list must be read from the report and not from the passed-only toCommit) carries
+    records_to_commit [docs/acceptance-criteria/ac-driven-dev/ACD-9300-x/ACD-9301.yaml,
+    docs/acceptance-criteria/ac-driven-dev/ACD-9302.yaml]: the cancelled outcome''s message names both paths
+    exactly and no <store>/ACD-9301.yaml flat path.'
+  proves_clause: the workflow exits with a message listing the uncommitted file paths
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - flat <store>/<id>.yaml path for a record stored in a subfolder
 - name: test_acd_300g_4_cancel_message_gives_anchored_checkout
   target_dir: unit_tests/workflows/
   framework: pytest
@@ -168,6 +192,10 @@ test_design_opened_files:
 - unit_tests/test_final_gate_and_commit_message.py
 - unit_tests/test_partial_run_recovery.py
 - unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
+- unit_tests/workflows/test_acd_300g_4.py
+- unit_tests/workflows/_acd_300g_support.py
+- unit_tests/workflows/_acd_300a_support.py
+- scripts/ac_store/requirement_rule_check.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by:

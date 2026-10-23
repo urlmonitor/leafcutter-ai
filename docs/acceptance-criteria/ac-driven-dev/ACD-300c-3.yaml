@@ -17,8 +17,11 @@ criteria: |
     its test design, and with its enriched fields (assigned_agent, estimated_complexity,
     delivers_to, expects_from),
   And it lists every held AC separately with its hold reason and no approve option,
-  And it prompts the user to set one priority (critical/high/medium/low) for the batch;
-    an answer with no valid priority is taken as medium,
+  And it prompts the user to set one priority (critical/high/medium/low) for the batch,
+  And an "approve" whose priority is present but not one of those four values (for
+    example "urgent") is applied with priority medium,
+  And an "approve" with no priority at all is not applied: no AC is approved, nothing is
+    committed, and the run stays paused at the final gate,
   And it offers four actions:
     - "approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
       the chosen priority on every AC the approval-hold report releases, held ACs stay
@@ -76,11 +79,20 @@ test_intent:
   needs_test: true
   reason: A held AC shown among the releasable ones would look approvable although the approval step
     will not promote it.
-- clause: it prompts the user to set one priority (critical/high/medium/low) for the batch; an answer
-    with no valid priority is taken as medium
+- clause: it prompts the user to set one priority (critical/high/medium/low) for the batch
   needs_test: true
-  reason: The priority feeds the approval step, and an invalid or missing answer must fall back to medium
-    rather than fail or pass an invalid value on.
+  reason: The priority the user picks is the one the approval step writes, so the gate must offer the
+    four values and pass the chosen one on unchanged.
+- clause: an "approve" whose priority is present but not one of those four values (for example "urgent")
+    is applied with priority medium
+  needs_test: true
+  reason: An invalid value passed on unchanged would make the approval step reject or write a priority
+    outside the four allowed values.
+- clause: 'an "approve" with no priority at all is not applied: no AC is approved, nothing is committed,
+    and the run stays paused at the final gate'
+  needs_test: true
+  reason: The earlier behaviour applied a missing priority as medium; a regression to that fallback would
+    approve and commit the batch without the priority BO-2300d-1-iii requires.
 - clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and the chosen
     priority on every AC the approval-hold report releases, held ACs stay reviewed; after that the batch
     is committed to the authoring branch as the final commit of the run and the branch is delivered'
@@ -155,22 +167,37 @@ test_spec:
   description: The persisted final-gate question is a priority choice that names critical, high, medium
     and low, and the approve answer's priority (low, not the medium fallback) is the one passed on to the
     approval step.
-  proves_clause: it prompts the user to set one priority (critical/high/medium/low) for the batch; an answer
-    with no valid priority is taken as medium
+  proves_clause: it prompts the user to set one priority (critical/high/medium/low) for the batch
   code_file: templates/workflows-js/plan-feature.js
-- name: test_final_gate_answer_without_valid_priority_is_taken_as_medium
+- name: test_final_gate_invalid_priority_is_taken_as_medium
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
   type: unit
   angle: discrimination
-  description: Two approve runs, one whose answer carries no priority and one whose priority is "urgent";
-    each runs the approval step once with --priority medium and returns status ok.
-  proves_clause: it prompts the user to set one priority (critical/high/medium/low) for the batch; an answer
-    with no valid priority is taken as medium
+  description: An approve run whose answer carries priority "urgent" runs the approval step once with
+    --priority medium and returns status ok. Only the present-but-invalid case is exercised here; an
+    answer with no priority is the boundary test below.
+  proves_clause: an "approve" whose priority is present but not one of those four values (for example "urgent")
+    is applied with priority medium
   code_file: templates/workflows-js/plan-feature.js
   must_catch:
   - an invalid priority is passed on to the approval step unchanged
-  - an answer without a priority makes the run fail instead of falling back to medium
+  - an invalid priority is treated like a missing one, so the run stays paused instead of applying medium
+- name: test_final_gate_approve_without_priority_stays_paused
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mirrors unit_tests/workflows/test_bo_2300d_1_iii.py::test_priority_choice_approve_still_requires_priority
+    on this file's 4-id technical-route table. Resume at final-gate with a person's approve answer whose
+    priority key is removed. No approval-step apply dispatch (approve_acs.py) happens, no commit-stage-output
+    or deliver-authoring-branch dispatch follows the answer, and the result has status paused_awaiting_input
+    with gate_id final-gate.
+  proves_clause: 'an "approve" with no priority at all is not applied: no AC is approved, nothing is committed,
+    and the run stays paused at the final gate'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - a missing priority falls back to medium and approves
 - name: test_final_gate_approve_runs_the_approval_step_with_released_ids
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
@@ -369,12 +396,14 @@ test_spec:
   - the commit failure is reported as a completed run
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-23'
 test_design_opened_files:
 - templates/workflows-js/plan-feature.js
 - unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
 - unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
 - unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_300c_3.py
+- unit_tests/workflows/test_bo_2300d_1_iii.py
 file_findings:
 - file: templates/workflows-js/plan-feature.js
   verdict: consistent
@@ -414,12 +443,26 @@ amended_by:
   date: '2026-10-23'
   by: business-analyst
   directed_by: user
+- reason: 'priority clause narrowed to agree with BO-2300d-1-iii ("approve" still requires a
+    priority), which the user ruled takes precedence on 2026-10-23: a present but invalid priority
+    is taken as medium; an approve with no priority is not applied and the run stays paused at
+    the final gate.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 - reason: 'it-po: test_intent and test_spec re-mapped to the 2026-10-23 criteria: one intent entry per
     outcome clause (11); existing tests kept where they still prove a clause; new entries for the held
     listing, the medium fallback, approve then final commit then delivery, edit showing the gate again,
     cancel, the closing report, the approval-failure report and the final-commit failure; the second-edit
     abort points at the existing ACD-300g-4 edit-exhaustion tests. Criteria, readiness and work_status
     unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'it-po: test_intent re-mapped to the narrowed priority clause (BO-2300d-1-iii precedence): the
+    single priority entry is replaced by three, one each for the priority prompt, the present-but-invalid
+    priority applied as medium, and the approve with no priority left unapplied at the paused final gate
+    (13 entries). test_spec left to the test-designer. Criteria, readiness and work_status unchanged.'
   date: '2026-10-23'
   by: it-po
   directed_by: user
