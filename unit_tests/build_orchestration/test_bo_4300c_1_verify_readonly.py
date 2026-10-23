@@ -12,10 +12,15 @@ DECISION HISTORY
 ====================================================================
 - 2026-10-22 [test-writer/EPIC-WorkspaceMakerHardening/07, BO-4300c-1]: Added after the pr-reviewer
   mediums M-1, M-2 and M-3. (#EPIC-WorkspaceMakerHardening/07)
+- 2026-10-23 [smart-bug-resolver/EPIC-WorkspaceMakerHardening/07, BO-4300c-1]: index test made
+  deterministic (README backdated so it is always stat-dirty, never racily clean) with a control
+  that a plain status does rewrite the index; it had passed only when the rewrite landed in the
+  index's own second. (#EPIC-WorkspaceMakerHardening/07)
 ====================================================================
 """
 from __future__ import annotations
 
+import os
 import time
 import unittest
 from pathlib import Path
@@ -80,17 +85,24 @@ class TestVerifyReadOnly(WorkspaceCase):
         # covers: BO-4300c-1
         # angle: discrimination
         """With a stat-dirty tracked file (rewritten, same content) a plain `git status` refreshes the
-        index; verify must leave .git/index bytes and mtime untouched."""
+        index; verify must leave .git/index bytes and mtime untouched. The file is backdated whole
+        seconds before the index so git (second-granular stat on Linux) always sees it stat-dirty and
+        never racily clean; the control proves the fixture really does provoke a refresh."""
         ws = self.ensure("x")
         readme = ws / "README.md"
-        readme.write_bytes(readme.read_bytes())  # same bytes, new stat data
-        time.sleep(1.1)
         index = ws / ".git" / "index"
+        readme.write_bytes(readme.read_bytes())  # same bytes, new stat data
+        old = index.stat().st_mtime_ns - 10 * 10**9
+        os.utime(readme, ns=(old, old))
+        time.sleep(1.1)
         before = (index.read_bytes(), index.stat().st_mtime_ns)
         res = self.verify(ws)
         self.assertEqual(res["answer"].get("status"), "ok", msg=f"{res}")
+        self.assertIs(res["answer"]["checks"].get("tree_clean"), True, msg=f"stat-only change counted: {res}")
         self.assertEqual((index.read_bytes(), index.stat().st_mtime_ns), before,
                          msg="verify rewrote the index")
+        self.git(["status", "--porcelain"], ws)  # control: a plain status refreshes this index
+        self.assertNotEqual(index.read_bytes(), before[0], msg="fixture was not stat-dirty; the check proved nothing")
 
 
 if __name__ == "__main__":

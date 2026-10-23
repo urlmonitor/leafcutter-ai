@@ -79,7 +79,7 @@ def read_only_verb(func):
     """Decorate a read-only verb so every git child it spawns runs with optional locks off.
 
     Git opportunistically refreshes and rewrites ``.git/index`` (e.g. during
-    ``git diff``) unless ``GIT_OPTIONAL_LOCKS=0``; a read-only verb must leave the
+    ``git status``) unless ``GIT_OPTIONAL_LOCKS=0``; a read-only verb must leave the
     index byte-for-byte untouched (BO-4300c-1). The variable is set in the process
     environment for the call and restored afterwards, so ``git_env`` forwards it to
     every child and ensure's behaviour is unchanged.

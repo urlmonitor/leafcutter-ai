@@ -92,8 +92,15 @@ def tracked_changes(workspace: Path) -> list[str]:
 
 
 def tree_is_clean(workspace: Path) -> bool:
-    """True only when ``git diff HEAD`` ran and named no tracked change (fails closed on a git error)."""
-    proc = wg.run_git(["diff", "--name-only", "-z", "HEAD"], workspace)
+    """True only when HEAD resolves and ``git status`` named no tracked change (fails closed on a git error).
+
+    ``git status`` with untracked files excluded, not ``git diff HEAD``: porcelain
+    ``git diff`` rewrites ``.git/index`` to refresh a stat-dirty entry even under
+    ``GIT_OPTIONAL_LOCKS=0``, while ``git status`` honours it -- verify must never write.
+    """
+    if wg.run_git(["rev-parse", "--verify", "-q", "HEAD"], workspace).returncode != 0:
+        return False  # no commit (or not a repo): unreadable, never clean
+    proc = wg.run_git(["status", "--porcelain", "-z", "--untracked-files=no"], workspace)
     return proc.returncode == 0 and not any(proc.stdout.split("\0"))
 
 
@@ -343,4 +350,8 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
 #   Split for the file-size limit: the canary-proving group moved to
 #   worktree_canaries.py and is imported here by name. No behaviour change. (ADR-018)
 # - 2026-10-16 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17) run_install_build passes the project's durable log root via worktree_log_root (INF-500d-4-iii). (ADR-018)
+# - 2026-10-23 12:00 [smart-bug-resolver/EPIC-WorkspaceMakerHardening/07]: (#EPIC-WorkspaceMakerHardening/07)
+#   tree_is_clean reads `git status --porcelain --untracked-files=no`, not `git diff HEAD`: diff's
+#   auto-refresh rewrote .git/index for a stat-dirty file even under GIT_OPTIONAL_LOCKS=0, so
+#   verify was not read-only (BO-4300c-1). (ADR-018)
 # ===========================================================================
