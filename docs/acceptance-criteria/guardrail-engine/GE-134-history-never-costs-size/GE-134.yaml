@@ -23,9 +23,9 @@ criteria: |
   already large, and the easy way out is to stop writing history down.
 
   After this goal, a file's decision history costs it nothing, so writing down why a
-  change was made never stands in the way of making the change. Everything a person
-  reads to work in the file still counts exactly as before, and the published rule
-  says plainly what is left out.
+  change was made never stands in the way of making the change. The size a file is
+  judged by is the amount of working code it holds, and the published rule says
+  plainly what is left out.
 depends_on: []
 doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
@@ -64,6 +64,32 @@ amended_by:
       its children were renumbered to GE-134a, GE-134a-1, GE-134a-1-i, GE-134a-2, GE-134a-3
       and GE-134a-4 with their criteria unchanged. This goal is done because its only
       child is done.
+  - reason: child-reopened-by-ge-127d-3
+    date: '2026-10-23'
+    by: business-analyst
+    directed_by: BrainCandy
+    entry: >-
+      work_status reset done -> todo because its only child GE-134a was reopened when
+      BrainCandy decided on 2026-10-23 that GE-127d-3 supersedes this family's rule (no
+      comment, no standalone Python string and no blank line counts, so decision history
+      is free as a case of the general rule). Criteria and title NOT edited here (L0 is
+      the Product Owner's): the goal's promise still holds, but its sentence "Everything a
+      person reads to work in the file still counts exactly as before" is contradicted by
+      GE-127d-3 and is flagged for the Product Owner to reword.
+  - reason: superseded-by-ge-127d-3
+    date: '2026-10-23'
+    by: product-owner
+    directed_by: BrainCandy
+    entry: >-
+      Criteria reworded to follow BrainCandy's decision of 2026-10-23 that GE-127d-3
+      supersedes the GE-134a rule: a file's size counts only its lines of code, so no
+      comment of any style, no standalone string and no blank line counts. The sentence
+      "Everything a person reads to work in the file still counts exactly as before" was
+      contradicted by that decision and is replaced by "The size a file is judged by is
+      the amount of working code it holds". STILL HOLDS: decision history never costs a
+      file its size, and the published rule says what is left out. Title, tagline and the
+      rest of the criteria are unchanged; the title still holds. work_status stays todo
+      until its children are proven.
 superseded_by: null
 covered_by:
   - GE-134a

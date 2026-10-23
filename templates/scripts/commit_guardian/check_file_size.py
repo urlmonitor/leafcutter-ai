@@ -112,13 +112,18 @@ from _file_description import (
     format_could_not_describe_line,
     format_description_lines,
 )
+from _file_size_measure import total_physical_lines
+from _file_size_measure.backstop import BackstopFinding, evaluate_backstop, format_backstop_block
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
     AddedLineCountUnavailableError,
     CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
     describe_measurement_rule,
+    get_previous_content,
     measure_current_length,
+    measure_previous,
+    read_current_content,
     resolve_added_measured_lines,
     resolve_head_covered_paths,
     resolve_parent_revisions,
@@ -134,17 +139,14 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 # GE-127d-2: the label the "what does this length measure" line is printed
-# under, and the dividing-advice sentences that replace the prior
-# undifferentiated "DO NOT simply delete blank lines, comments, or
-# docstrings" sentence -- which named a helpful and a useless action in one
-# breath. These two sentences are pinned, free-text guidance (not derived
-# from count_content_lines the way describe_measurement_rule() is; see that
-# function for the reproducibility-critical line).
+# under. GE-127d-5 replaced the two pinned advice sentences that used to
+# follow it (one of which told an author which comment style was free) with
+# advice generated from describe_measurement_rule(); see
+# _print_asymmetry_advice.
 _MEASURES_LABEL = "Measures:"
-_HELPS_MARKER = "blank lines and '#' comments count toward this length and removing them WILL reduce it"
-_NO_HELP_MARKER = (
-    "content inside triple-quoted strings or block comments does NOT count toward "
-    "this length and removing it will NOT reduce it"
+_NOT_REMEDIES_ADVICE = (
+    "Rewriting comments in another style, deleting comments or standalone strings, "
+    "and joining lines are not ways to bring this file within its limit."
 )
 
 
@@ -367,17 +369,18 @@ def _print_measures_line() -> None:
 
 
 def _print_asymmetry_advice() -> None:
-    """Print the shared HELPS_MARKER / NO_HELP_MARKER asymmetry guidance.
+    """Print the shared advice: the rule in force, and what is not a remedy.
 
-    Distinguishes the action that actually reduces the quoted length
-    (deleting blank lines / '#' comments) from the one that cannot
-    (deleting an already-discarded triple-quoted or block-comment
-    region). Shared by both refusal printers so an author sees identical
-    guidance regardless of which refusal path (absolute-limit crossing or
-    ratchet growth) they tripped.
+    GE-127d-5: REPLACES (never appends to) the old two-sentence guidance,
+    which said ``#`` comments count and told an author which comment style
+    was free. The first line states the rule from the generated statement
+    (``describe_measurement_rule``), naming no style as counted or free; the
+    second says rewriting, deleting and joining are not remedies, and
+    recommends nothing about blank lines. Shared by both refusal printers
+    so an author sees identical guidance on either refusal path.
     """
-    print(f"   {_HELPS_MARKER}.")
-    print(f"   {_NO_HELP_MARKER}.")
+    print(f"   A quoted length {describe_measurement_rule()}")
+    print(f"   {_NOT_REMEDIES_ADVICE}")
 
 
 def _print_grown_file(filepath: str, previous_length: int, current_length: int, limit: int) -> None:
@@ -630,6 +633,123 @@ def _classify_file(
     return "pass", lines, None
 
 
+def _print_passed_detail(filepath: str, lines: int, previous_lengths: dict[str, int]) -> None:
+    """State the previous and new length (and lines added) under a passed file's line.
+
+    GE-127d-3-iii / -iv: both numbers a completing outcome quotes were arrived
+    at by the one rule in force, so an author can see that a restyle moved
+    nothing. Printed only for a file that had a previous version; a file that
+    already stood over its limit also states the measured lines the change
+    added and is described as already over -- never as having crossed.
+
+    Args:
+        filepath: The passed file's path.
+        lines: Its measured length after the staged change.
+        previous_lengths: The ratchet's resolved previous lengths.
+    """
+    previous = previous_lengths.get(filepath)
+    if previous is None:
+        return
+    limit = get_limit_for_extension(filepath)
+    if previous > limit and lines <= limit:
+        # GE-127e-4: a file brought back under its limit is not reported on.
+        return
+    print(f"       Previous length: {previous} lines")
+    print(f"       New length: {lines} lines")
+    if previous > limit:
+        added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
+        print(f"       This change added {added} measured line(s); the file was already over its limit ({limit}).")
+
+
+def _backstop_finding(filepath: str, lines: int, previous_lengths: dict[str, int]) -> BackstopFinding | None:
+    """Evaluate the GE-127d-4 backstop for one staged, covered file.
+
+    Evaluated ONLY for a file whose previous length (under the rule in force
+    now, as the ratchet already resolved it) stands strictly over its
+    permitted length, and that still exists; a newly added file, a deleted
+    one and an under-limit one are never judged. The numbers compared are the
+    ratchet's own: the staged content already read, each parent's content as
+    ``get_previous_content`` fetches it, the measured length from the shared
+    measure and the total from the measure's own physical-line split.
+
+    Args:
+        filepath: The staged file's path.
+        lines: Its measured length, as ``_classify_file`` just computed it.
+        previous_lengths: The ratchet's resolved previous lengths.
+
+    Returns:
+        The finding when the file's measured length fell while its total
+        line count rose against every parent that has it; otherwise None.
+
+    Raises:
+        CurrentLengthUnmeasurableError: the staged content cannot be read.
+        PreviousLengthSourceError: a parent's content cannot be read or measured.
+    """
+    previous = previous_lengths.get(filepath)
+    limit = get_limit_for_extension(filepath)
+    if previous is None or previous <= limit or not Path(filepath).exists():
+        return None
+    current_total = total_physical_lines(read_current_content(filepath))
+    parents: list[tuple[int, int]] = []
+    for revision in resolve_parent_revisions():
+        content = get_previous_content(filepath, revision)
+        if content is not None:
+            parents.append((measure_previous(content, filepath, revision), total_physical_lines(content)))
+    return evaluate_backstop(limit, lines, current_total, parents)
+
+
+def _ensure_utf8_stdout() -> None:
+    """Make header output (emojis) work on Windows by forcing UTF-8 on stdout."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None and sys.stdout.encoding.lower() != "utf-8":
+        reconfigure(encoding="utf-8")
+
+
+def _print_outcome(
+    previous_lengths: dict[str, int],
+    kinds: tuple[list[str], list[str]],
+    findings: tuple[list, list, list, list],
+) -> int:
+    """Print the run's outcome and return its exit status (0, 1 or 2).
+
+    Args:
+        previous_lengths: The ratchet's resolved previous lengths.
+        kinds: ``(measured_kinds, unmeasured_kinds)`` for the scope declaration.
+        findings: ``(grown_files, failed_files, backstop_files, passed_files)``
+            as ``main()``'s classification loop collected them.
+
+    Returns:
+        1 when any file was refused (crossing, growth or the GE-127d-4
+        backstop), 2 when a refused file's added-line count could not be
+        re-established, otherwise 0.
+    """
+    grown_files, failed_files, backstop_files, passed_files = findings
+    print("\n📏 File Size Check\n")
+    _print_scope_declaration(*kinds)
+    print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
+
+    try:
+        for filepath, previous, lines in grown_files:
+            _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
+    except AddedLineCountUnavailableError as exc:
+        return _report_indeterminate(exc.reason)
+
+    for filepath, lines, limit in failed_files:
+        _print_too_large_file(filepath, lines, limit)
+
+    for filepath, finding in backstop_files:
+        print("\n".join(format_backstop_block(filepath, finding)))
+
+    if passed_files:
+        print(f"✅ PASSED: {len(passed_files)} files checked")
+        for filepath, lines, is_new in passed_files:
+            status = "new" if is_new else "modified"
+            print(f"   - {filepath} ({status}, {lines} lines - OK)")
+            _print_passed_detail(filepath, lines, previous_lengths)
+
+    return 1 if grown_files or failed_files or backstop_files else 0
+
+
 def main() -> int:
     """
     Main entry point for the pre-commit hook.
@@ -646,13 +766,7 @@ def main() -> int:
         established -- the account of the change is unreachable, or it is
         reached but its current content is uninterpretable).
     """
-    # Ensure header output (emojis) works on Windows
-    if sys.stdout.encoding.lower() != "utf-8":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-        except AttributeError:
-            # Python < 3.7 doesn't support reconfigure, but we're likely on modern Python
-            pass
+    _ensure_utf8_stdout()
 
     try:
         staged_files = get_staged_files()
@@ -672,6 +786,7 @@ def main() -> int:
     grown_files: list[tuple[str, int, int]] = []
     failed_files: list[tuple[str, int, int]] = []
     passed_files: list[tuple[str, int, bool]] = []  # (path, lines, is_new)
+    backstop_files: list[tuple[str, BackstopFinding]] = []
 
     try:
         for filepath, is_new in covered_files.items():
@@ -682,33 +797,17 @@ def main() -> int:
                 failed_files.append((filepath, lines, reference))
             else:
                 passed_files.append((filepath, lines, is_new))
-    except (CurrentLengthUnmeasurableError, AddedLineCountUnavailableError) as exc:
+            finding = _backstop_finding(filepath, lines, previous_lengths)
+            if finding is not None:
+                backstop_files.append((filepath, finding))
+    except (CurrentLengthUnmeasurableError, AddedLineCountUnavailableError, PreviousLengthSourceError) as exc:
         return _report_indeterminate(exc.reason)
 
-    # Print results
-    print("\n📏 File Size Check\n")
-    _print_scope_declaration(measured_kinds, unmeasured_kinds)
-    print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
-
-    try:
-        for filepath, previous, lines in grown_files:
-            _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
-    except AddedLineCountUnavailableError as exc:
-        return _report_indeterminate(exc.reason)
-
-    for filepath, lines, limit in failed_files:
-        _print_too_large_file(filepath, lines, limit)
-
-    if passed_files:
-        print(f"✅ PASSED: {len(passed_files)} files checked")
-        for filepath, lines, is_new in passed_files:
-            status = "new" if is_new else "modified"
-            print(f"   - {filepath} ({status}, {lines} lines - OK)")
-
-    if grown_files or failed_files:
-        return 1
-
-    return 0
+    return _print_outcome(
+        previous_lengths,
+        (measured_kinds, unmeasured_kinds),
+        (grown_files, failed_files, backstop_files, passed_files),
+    )
 
 
 if __name__ == "__main__":
@@ -980,5 +1079,23 @@ DECISION HISTORY
   crashing uncaught with a CalledProcessError.
 - 2026-05-01 17:31 [Antigravity]: Updated file size check to enforce limits on all changed files, not just new ones, to drive progressive refactoring.
 - 2026-03-01 10:00: Initial implementation.
+- 2026-10-20 15:19 [python-coder]: GE-127d-3/-4/-5. (1) The length quoted for a file now comes
+  from the comment-blind, per-language measure in _file_size_measure/ (no comment of any style,
+  no Python standalone string), so a completing outcome states Previous length / New length (and
+  the measured lines added, with "already over", for a file past its limit) through
+  _print_passed_detail. (2) New backstop: _backstop_finding evaluates, for an already-oversized
+  file only, whether the measured length fell while the total physical line count rose against
+  EVERY parent, and main() prints the finding under its own heading beside -- never instead of --
+  a crossing or growth refusal; the classification loop in main() and _classify_file's /
+  _print_grown_file's signatures are unchanged because fixtures string-replace them. (3) The two
+  pinned advice sentences (_HELPS_MARKER, which said '#' comments count, and _NO_HELP_MARKER) are
+  replaced by advice generated from describe_measurement_rule() plus one sentence saying
+  rewriting, deleting and joining are not remedies. (4) main() was split (_ensure_utf8_stdout,
+  _print_outcome) to stay under the complexity ratchet it had already crossed.
+  (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-21 [python-coder]: Blank lines never count (BrainCandy decision), so the generated
+  rule and advice list them as not counted. A file brought from over its limit to at or under it
+  prints no Previous/New length lines (GE-127e-4); _ensure_utf8_stdout no longer swallows
+  AttributeError. (#EPIC-FilesStayWorkable/GE-127d-3)
 ====================================================================
 """
