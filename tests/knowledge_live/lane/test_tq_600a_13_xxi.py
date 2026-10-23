@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]  # tests/knowledge_live/lane/<this file>
 INSTANCES = {17687: "leafcutter-local-tests", 18087: "leafcutter-domain-tests", 18088: "leafcutter-native-tests"}
 IMAGE = "neo4j:5.26-community"
 POPULATION = {
