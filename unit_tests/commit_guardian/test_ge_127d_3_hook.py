@@ -86,9 +86,9 @@ class TestRestyleThroughRegisteredHook(unittest.TestCase):
 
 def _refused_parts_file(hash_in: str, string_in: str) -> str:
     """Back-to-back top-level functions (no blank lines, so a part's range is unambiguous)."""
-    runs = {name: [] for name in ("func_a", "func_b", "func_c")}
+    runs: dict[str, list[str]] = {name: [] for name in ("func_a", "func_b", "func_c")}
     runs[hash_in] = [f"    # comment run {i}" for i in range(5)]
-    strings = {name: [] for name in runs}
+    strings: dict[str, list[str]] = {name: [] for name in runs}
     strings[string_in] = ['    """bare standalone', "    string text", '    here"""']
     lines = ["import os"]
     for name in runs:

@@ -173,7 +173,7 @@ def independent_python_length(text: str) -> int:
         lines.pop()
     tree = ast.parse(norm)
     standalone = [
-        (node.lineno, node.end_lineno)
+        (node.lineno, node.end_lineno or node.lineno)
         for node in ast.walk(tree)
         if isinstance(node, ast.Expr)
         and isinstance(node.value, ast.Constant)
