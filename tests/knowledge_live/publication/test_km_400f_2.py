@@ -76,7 +76,9 @@ def test_live_publication_reclaims_against_a_real_backend(tmp_path):
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         steps, ids, parent = [], [], sha
         try:
             for n in range(PUBLICATIONS):

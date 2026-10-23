@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -205,8 +205,11 @@ amended_by:
     today's job (its databases start for every pull request). Reworded to starts the same
     databases as before (today: on every pull request); service start-up stays unchanged."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_13_xxiv.py
+implemented_by:
+  - .github/workflows/ci.yml
+  - scripts/commit_guardian/check_done_proof.py
 change_target: pipeline
 risk_surface: internal
 notes: |

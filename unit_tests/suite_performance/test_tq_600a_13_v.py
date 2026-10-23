@@ -128,9 +128,11 @@ class TestTq600a13vEndings(_EndingBase):
                     expect_did_not_complete(drive, stage)
                 self.assert_notice_says_not_run(drive, stage, open_notice=index % 2 == 1)
                 if index == 0:
-                    # The live fixture predates -v; -v adds exactly one key, `collection_errors`, always present.
-                    expected_keys = sorted({*live_red_verdict(), "collection_errors"})
-                    CHECK.assertEqual(expected_keys, sorted(drive.file), "the file is the live verdict shape plus exactly `collection_errors`")
+                    # The live fixture predates -v and -xxi; -v adds exactly one key, `collection_errors`, and -xxi (schema 3) exactly
+                    # one more, `live_database` (None when the live lane took no part); both always present.
+                    expected_keys = sorted({*live_red_verdict(), "collection_errors", "live_database"})
+                    CHECK.assertEqual(expected_keys, sorted(drive.file), "the file is the live verdict shape plus exactly `collection_errors` and `live_database`")
+                    CHECK.assertIsNone(drive.file["live_database"], "no live lane took part in this drive")
                     CHECK.assertEqual([], drive.file["collection_errors"], "no collection error on this path: an empty list, never an absent key")
         cases.check()
 
