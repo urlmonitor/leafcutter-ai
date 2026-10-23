@@ -1,6 +1,8 @@
 # Allowlist for bypass tokens in commit-guardian scripts
 GENERIC_SECRET:scripts/commit_guardian/check_architecture_scaffolds.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
+# KM-400e-8 test fixture: a fake writer password asserted never to appear in output
+GENERIC_SECRET:tests/knowledge/_km_400e_8_support.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_mermaid_drift.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_paths_integrity.py:*
@@ -375,6 +377,7 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300c_1_path_keyed_canaries.py:*
 
 # GE-127e-3-i. A module-level constant holding the name of the outcome token this
 # gate prints when it cannot describe a file -- the third member of the same family
@@ -1024,9 +1027,28 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+
+# BO-4300e-2-ii (ticket 08, approved by the user 2026-10-12). The constant TOKEN holds a
+# marker string passed as an argument to a dummy holder process so the test can check that
+# the refusal names the running program. Not a credential; the scanner fires on the name.
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300e_2_ii.py:*
+
+# BO-4300c-3-i (ticket 10, user standing OK 2026-10-12 for BO-4300 test marker strings). _PATH_TOKEN
+# holds a marker the test feeds in as a hostile script_path reply and expects quoted back in the
+# halt message. Not a credential; the scanner fires on the name.
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300c_3_i.py:*
+
 # False positive (user-approved 2026-10-14): the rule-check tests name the family constant
 # FAMILY_DOC_TRIGGERS in findings_for(...) calls; a SCREAMING_SNAKE identifier, not a secret.
 ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2.py:*
 ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2_v.py:*
 ENTROPY_HIGH:templates/scripts/commit_guardian/_lint_scope.py:*
 ENTROPY_HIGH:tests/knowledge/test_km_400f_1_vi.py:*
+# INF-700b-1: DECISION HISTORY lines end with the mandated doc-enforcer tail tag
+# (#EPIC-ALearningAnAgentHasTodayActuallyGets/01). That token scores 4.52 against the 4.5
+# entropy threshold; it is an epic name, not a secret.
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:415
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:416
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:417
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:418
+ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:419

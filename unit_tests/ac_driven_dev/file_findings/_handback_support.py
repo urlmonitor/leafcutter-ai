@@ -98,6 +98,7 @@ def labels(prepass: dict, holds: dict, **overrides) -> dict:
         "stage-test-design-author": designer_reply(),
         "rule-check-test-design": check_reply(),
         "approval-holds": holds,
+        "rule-check-itpo-handback": check_reply(),  # each hand-back round is checked as itpo-handback (ACD-2500a-2-ix)
         "it-po-findings-round-1": planner_reply(),
         "it-po-findings-round-2": planner_reply(),
         "it-po-findings-round-3": planner_reply(),

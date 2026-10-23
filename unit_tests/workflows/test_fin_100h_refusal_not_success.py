@@ -76,6 +76,11 @@ def _get_step_block(js: str, step_label: str, next_step_label: str) -> str:
     return js[start:end]
 
 
+def workspace_answer_source() -> str:
+    """The single source of the shared shell-step helpers (BO-4300c-3)."""
+    return (_REPO_ROOT / "templates" / "workflows-js" / "_shared" / "workspace-answer.js").read_text(encoding="utf-8")
+
+
 def _get_dispatch_options(js: str, label: str) -> str:
     """Return the options-object literal `{ agentType: ..., label: "<label>", ... }`
     for the specific agent(...) call carrying this label.
@@ -308,17 +313,24 @@ class TestFin100hCapabilityStepsNotRoutedToStatusChecker:
         """AC FIN-100h: the step-0-baseline dispatch must not use agentType
         'status-checker'.
         """
-        options = _get_dispatch_options(_js_text(), "step-0-baseline")
-        assert options, (
-            "Could not locate the agent(...) dispatch labeled 'step-0-baseline' "
-            "in finalize-feature.js."
+        js = _js_text()
+        # BO-4300a-1-ia: the baseline is no longer one hand-written agent(...) prompt; it is the shared scratch-run
+        # helper, every step of which goes through the one shell executor (agentType shell-runner).
+        helper = js[js.index("async function mainTestRun"):js.index("function pytestFailedIds")]
+        assert 'mainTestRun(baselineSlug, null, "Step 0", "step-0-baseline")' in js, (
+            "Could not locate the Step 0 baseline run (label 'step-0-baseline') in finalize-feature.js."
         )
-        assert 'agentType: "status-checker"' not in options, (
-            "The step-0-baseline dispatch (git worktree add, build.py, pytest) "
-            "must not use agentType 'status-checker'. status-checker's contract "
-            "is ticket-state verification; it correctly refuses this work "
-            "('Recommend the orchestrator re-dispatch this baseline-capture "
-            "task to the correct specialist agent.'). Required by FIN-100h."
+        assert "workspaceDispatch(" in helper and "shellStepDispatch(" in helper, (
+            "The step-0-baseline run must dispatch through the shared shell-step helpers."
+        )
+        assert 'agentType: "status-checker"' not in helper, (
+            "The step-0-baseline run (scratch workspace, pytest) must not use agentType "
+            "'status-checker'. status-checker's contract is ticket-state verification; it correctly "
+            "refuses this work. Required by FIN-100h."
+        )
+        shell_step = workspace_answer_source()
+        assert 'agentType: SHELL_RUNNER_AGENT' in shell_step and 'SHELL_RUNNER_AGENT = "shell-runner"' in shell_step, (
+            "the shared shell step must be dispatched to the shell-runner agent"
         )
 
     def test_ac_fin100h_step2_merge_main_not_dispatched_to_status_checker(self):
@@ -352,15 +364,14 @@ class TestFin100hLegitimateStatusCheckerDispatchesUnaffected:
 
     def test_ac_fin100h_ticket_state_dispatches_still_use_status_checker(self):
         # covers: FIN-100h
-        """Guard: 'pre-flight' (branch/worktree detection via git commands
-        status-checker already covers) and 'step-1-pr-probe' (gh pr list, a
+        """Guard: 'gh-config' (a read-only settings probe) and 'step-1-pr-probe' (gh pr list, a
         read-only ticket/PR-state query) must remain on agentType
         'status-checker'. The FIN-100h fix must be scoped to the two
         capability-requiring dispatches (step-0-baseline, step-2-merge-main),
         not a blanket removal of status-checker from the workflow.
         """
         js = _js_text()
-        for label in ("pre-flight", "step-1-pr-probe"):
+        for label in ("gh-config", "step-1-pr-probe"):
             options = _get_dispatch_options(js, label)
             assert options, (
                 f"Could not locate the agent(...) dispatch labeled '{label}' "

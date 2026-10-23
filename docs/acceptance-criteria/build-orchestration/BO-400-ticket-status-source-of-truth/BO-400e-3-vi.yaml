@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -37,7 +37,7 @@ depends_on:
   - BO-400e-3
   - BO-400e-3-ii
 doc_links:
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+  - path: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
     relationship: describes
     status: exists
     relevance: "Remediation item 2 (print the records about to be closed). The KI notes the damage was visible only in `git show <sha> --stat`, which no finalize run prompts anyone to read."
@@ -118,8 +118,13 @@ origin_agent: BrainCandy
 created: 2026-10-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_vi_listing.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/_fcs_records.py
+  - scripts/build_orchestration/_fcs_derive.py
+  - templates/workflows-js/finalize-feature.js
 notes: |
   Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
 

@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -36,7 +36,8 @@ criteria: |
     one test helper that builds a legacy workspace for that step's tests, each
     entered with its reason in one declared exemption list,
   And records of the past -- analyses, known issues, retrospectives, changelogs,
-    tickets and acceptance criteria -- are out of scope, excluded by folder in
+    architecture decision records, tickets and acceptance criteria -- are out of
+    scope, excluded by folder in
     that same declared list and never file by file, so an old-way instruction
     added to a how-to guide is reported while the same text quoted in an
     analysis is not,
@@ -80,9 +81,20 @@ it_requirements:
 - The build deploy manifest drops entries for deleted scripts; the maker's named entry (BO-4300a-1) stays.
 - Tests and docs that exercised the deleted scripts (tests/test_setup_ticket_worktree.py's 41 mock sites)
   are removed or re-pointed at the maker, never left skipped.
-- 'Q6 (should leafcutter-ai/.leafcutter/ exist): whichever the user decides, this AC ensures no former
-  way survives in it; if the directory is kept, the deployed copy there is the maker or a shim, never
-  an old script.'
+- 'Q6 (DECIDED user 2026-09-28): leafcutter-ai/.leafcutter/, the stale install inside the package repository,
+  must NOT exist. The ticket deletes it from the developer''s main checkout (it is untracked and gitignored,
+  so the deletion is an operational step recorded in the ticket, not a tracked change), and no former way
+  can survive in it.'
+- 'Q6 BUILD REFUSAL: scripts/build.py refuses to build into the package repository itself when no explicit
+  --target-dir is given (today an implicit build targets cwd, which is how that copy was made). The refusal
+  happens before any build phase writes anything, exits non-zero and names the rule and the --target-dir
+  remedy. An explicit --target-dir is never refused -- including --target-dir . at the package root, which
+  CI uses, and the explicit workspace target the maker passes when it builds inside a workspace of the
+  package (BO-4300a-1). Recognising "the package repository" derives from the build''s own package root,
+  not from a hard-coded folder name. build-self.sh already passes --target-dir and is unaffected.'
+- 'The .leafcutter/ ignore entry stays: workspaces of the package carry their own install inside the clone
+  (decision 2), built with an explicit --target-dir. So "must not exist" is enforced by the build refusal
+  and the one-time deletion, not by a test that fails whenever a package clone holds an install.'
 - 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
   build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
   minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
@@ -101,12 +113,14 @@ it_requirements:
   each entry with its reason; each failure names the file and line.'
 - 'Census exclusion of historical records (DECIDED, user 2026-09-27): records of the past are excluded
   BY FOLDER, in the same one declared list, never file by file: docs/analysis/ (analyses), docs/known-issues/
-  (known issues), docs/retrospectives/ (retrospectives), changelogs/ (changelogs), tickets/ (tickets) and
-  docs/acceptance-criteria/ (acceptance criteria). Verified 2026-09-25: about 94 of the 157 tracked files
-  that mention the commands are in these folders. Everything that instructs or executes stays in scope --
-  templates/, scripts/, config/, unit_tests/, tests/, docs/how-to/, docs/reference/, docs/agents/, docs/architecture/components/,
-  every README.md and CLAUDE.md -- so a new record folder is in scope until it is added to the list with
-  its reason.'
+  (known issues), docs/retrospectives/ (retrospectives), changelogs/ (changelogs), docs/architecture/adrs/
+  (architecture decision records -- settled by the coordinator 2026-09-28: an ADR records a past decision
+  and may quote the old commands as context), tickets/ (tickets) and docs/acceptance-criteria/ (acceptance
+  criteria) -- seven folders. Verified 2026-09-25: about 94 of the 157 tracked files that mention the commands
+  are in the first six. Everything that instructs or executes stays in scope -- templates/, scripts/, config/,
+  unit_tests/, tests/, docs/how-to/, docs/reference/, docs/agents/, docs/architecture/components/ (and every
+  docs/architecture/ folder other than adrs/), every README.md and CLAUDE.md -- so a new record folder is
+  in scope until it is added to the list with its reason.'
 - 'Blast radius (verified 2026-09-25): besides the scripts this record already deletes, the census goes
   red on ~33 test files under unit_tests/ and tests/ that build git worktrees as fixtures, and on templates/skills,
   templates/agents, templates/workflows and templates/workflows-js sites. Making it green is in scope:
@@ -142,7 +156,7 @@ test_spec:
   angle: seam
   description: Over every tracked file of the repository, including the workspace component's own files,
     no spelling of `git worktree add` or `git worktree remove` appears outside the one declared exemption
-    list (the BO-4300f-3 cut-over verb, the one legacy_worktree test helper, and the six record folders);
+    list (the BO-4300f-3 cut-over verb, the one legacy_worktree test helper, and the seven record folders);
     each hit is reported by file and line.
 - name: test_census_reports_a_how_to_hit_but_not_the_same_text_in_an_analysis
   target_dir: unit_tests/build_orchestration/
@@ -159,9 +173,29 @@ test_spec:
   type: unit
   angle: criterion
   description: The census's exemptions come from one declared list in which every entry carries a non-empty
-    reason; the record exclusions are exactly the six folders (analyses, known issues, retrospectives,
-    changelogs, tickets, acceptance criteria) as folder entries, and there are no file-level entries other
-    than the cut-over verb and the one legacy_worktree helper.
+    reason; the record exclusions are exactly the seven folders (analyses, known issues, retrospectives,
+    changelogs, architecture decision records, tickets, acceptance criteria) as folder entries, and there
+    are no file-level entries other than the cut-over verb and the one legacy_worktree helper.
+- name: test_census_excludes_adrs_but_reports_component_docs
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: Fed a fixture tree holding the same `git worktree add` instruction in docs/architecture/adrs/<file>.md
+    and in docs/architecture/components/<file>.md, the census reports the component-doc hit by file and
+    line and does not report the ADR.
+- name: test_build_refuses_an_implicit_build_into_the_package_repository
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: In a disposable copy of the package repository under the test's temp directory (never the
+    developer's own checkout), running that copy's scripts/build.py from its root with no --target-dir exits
+    non-zero with a message naming the rule and --target-dir, before any build phase; no .leafcutter/ folder
+    is created and the copy's working tree (git status --porcelain --ignored) is unchanged. This is a build.py
+    spawn site justified in ticket 14 -- the refusal exits before any phase, and the explicit-target path
+    is already proven by the shared deployed layout and the maker's workspace builds, so no full build is
+    spawned.
 - name: test_census_detects_every_spelling_of_the_commands
   target_dir: unit_tests/build_orchestration/
   framework: unittest
@@ -216,10 +250,32 @@ amended_by:
     and the record folders); the component's own files are no longer exempt as a whole. test_spec
     renamed the census test and added a how-to-reported / analysis-not-reported test and a
     declared-list shape test. readiness stays reviewed.
+- reason: user-decision-q6-and-adr-record-folder
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Q6 DECIDED (user, 2026-09-28): leafcutter-ai/.leafcutter/ must not exist -- deleted by ticket 14,
+    and build.py refuses an implicit build into the package repository (explicit --target-dir is
+    never refused; CI and the maker pass one). Coordinator settlement (2026-09-28): docs/architecture/adrs/
+    is a record folder, excluded by folder alongside the other six. Criteria text gains "architecture
+    decision records" in the list of records of the past, to keep the criteria equal to the declared
+    list; census tests updated to seven folders; an ADR-vs-component-doc census test and the build
+    refusal test added. readiness stays approved.
 superseded_by: null
-covered_by: [BO-4300f-2-i, BO-4300f-2-ia, BO-4300f-2-ib]
+covered_by: [BO-4300f-2-ia, BO-4300f-2-ib]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md
+- scripts/setup_ticket_worktree.py
+- templates/scripts/setup_ticket_worktree.py
+- templates/scripts/worktree_repo_facts.py
+- templates/scripts/git_recovery.py
+- scripts/build.py
+- scripts/build_phases.py
+- scripts/build_phases_script_deploy.py
+- scripts/build_phases_workflows.py
+- scripts/build_helpers.py
+- scripts/worktree/check_workspace_setup_permission.py
+- templates/scripts/commit_guardian/commit_guardian.json
 notes: |
   Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and
   deployed copies of today's script already differ on purpose and a test enforces the drift
@@ -233,3 +289,17 @@ notes: |
   ticket_path_final as the only ticket location callers have. The census tests above are why no
   fifth recipe can grow back after the cut-over.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 14_TICKET-20260928-BO-4300-retire-former-ways.md.
+#   Removed the superseded BO-4300f-2-i from covered_by (status superseded_by BO-4300f-2-ia/-ib, both still listed), so check-done-proof can prove this composite from its live children.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14)
+#   Q6 DECIDED (user, 2026-09-28): delete leafcutter-ai/.leafcutter/, build.py refuses an
+#   implicit build into the package repository; docs/architecture/adrs/ added as the seventh
+#   record folder (coordinator, 2026-09-28), criteria list updated; two tests added.
+# ====================================================================

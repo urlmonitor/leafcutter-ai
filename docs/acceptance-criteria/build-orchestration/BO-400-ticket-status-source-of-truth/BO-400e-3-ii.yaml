@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -93,7 +93,7 @@ criteria: |
 depends_on:
   - BO-400e-3
 doc_links:
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+  - path: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
     relationship: describes
     status: exists
     relevance: "The defect this record closes. Remediation item 1 -- derive the set from the branch, not an inbox scan -- is this record."
@@ -340,8 +340,15 @@ origin_agent: BrainCandy
 created: 2026-10-15
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_ii_derivation.py
+  - unit_tests/build_orchestration/test_bo_400e_3_ii_deployed.py
+  - unit_tests/workflows/test_bo_400e_3_finalize_wiring.py
+implemented_by:
+  - scripts/build_orchestration/finalize_closable_set.py
+  - scripts/build_orchestration/_fcs_derive.py
+  - scripts/build_orchestration/_fcs_records.py
+  - templates/workflows-js/finalize-feature.js
 notes: |
   Requested by BrainCandy 2026-10-15 to close KI-BO-20260930. Authored by the business-analyst
   on the user's behalf; readiness draft -- the user approves before build.

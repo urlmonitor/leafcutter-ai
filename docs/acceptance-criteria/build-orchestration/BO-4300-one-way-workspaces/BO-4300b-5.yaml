@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -103,10 +103,26 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-4300b-5-i]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300b-5.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03_TICKET-20260928-BO-4300-answer-contract.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/worktree_answer.py
+- templates/scripts/worktree_paths.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
 notes: |
   BO-4300b's notes: "any platform" includes a Windows/WSL mix. Today two worktree entries made
   from WSL are stuck "locked initializing" and unusable from Windows because the gitdir file
   embeds one platform's path spelling; decision 1 (clones embed no absolute path) makes this
   achievable.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 03_TICKET-20260928-BO-4300-answer-contract.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

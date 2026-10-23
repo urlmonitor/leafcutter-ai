@@ -6,9 +6,9 @@ priority: high
 title: "When a worktree's cache-tree is poisoned, recovery rebuilds via a fresh worktree"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600d.yaml"
 criteria: |
   Given a linked worktree's index cache-tree is poisoned such that an in-place
@@ -53,9 +53,18 @@ amended_by:
     entry: "Tightened criteria to pin runtime success: the fresh worktree must be created (git worktree add --force) even though the poisoned worktree is deliberately left in place with its branch still checked out — the pre-hardening code failed here with exit 128. Wired the covering real-repo test into covered_by."
     confirmed_by: BrainCandy
     confirmed_at: 2026-07-07
-superseded_by: null
-covered_by:
-  - "tests/test_git_recovery.py::TestGitRecoveryRealRepoBehavioral::test_fresh_worktree_fallback_succeeds_on_real_linked_worktree"
+  - reason: superseded-retired-by-bo-4300
+    by: human:user
+    at: 2026-10-21
+    note: >-
+      Retired under the user's decision "re-prove, else retire" (2026-10-21). BO-4300f-2 removed
+      the fresh-worktree fallback from templates/scripts/git_recovery.py (_make_fresh_worktree_fn,
+      detect_poisoned_linked_worktrees) and its real-repo tests in tests/test_git_recovery.py:
+      every workspace is now a clone made by the one workspace maker, so recovery no longer re-adds
+      a workspace and a damaged one is replaced by asking the maker for a new one.
+superseded_by:
+- BO-4300f-2
+covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-GuidedGitRecovery/08_TICKET-20260706-BO-1600d-3-v.md
 notes: |

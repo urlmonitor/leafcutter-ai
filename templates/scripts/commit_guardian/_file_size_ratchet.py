@@ -620,8 +620,8 @@ def get_previous_length(
     return measure_previous(content, filepath, revision, measure)
 
 
-def _merge_head_path() -> Path | None:
-    """Return the on-disk path of ``MERGE_HEAD``, or None when not merging.
+def _merge_head_path() -> Path:
+    """Return the on-disk path of ``MERGE_HEAD`` (the file itself may be absent).
 
     Uses ``git rev-parse --git-path MERGE_HEAD`` rather than
     ``git rev-parse -q --verify MERGE_HEAD`` — the latter resolves only the
@@ -874,6 +874,21 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-22 [python-coder/GE-127d merge]: Merged origin/main's GE-134a work. Its
+  DECISION_HISTORY_COMMENT_PREFIXES constant and _strip_history_blocks()
+  are not kept here: the measure is now the per-language tokenizer in
+  _file_size_measure/, which leaves out every comment of every style, so a
+  line-comment DECISION HISTORY block is already never counted.
+- 2026-10-21 [python-coder/GE-134a-1..3]: A line-comment DECISION HISTORY
+  block no longer counts toward a file's measured length. Added the one
+  DECISION_HISTORY_COMMENT_PREFIXES constant ('#', '//', '--') and
+  _strip_history_blocks(), applied at the end of _strip_unmeasured_regions()
+  so count_content_lines(), count_added_measured_lines() (FILE GREW and the
+  crossing check) share one rule. Only line-comment blocks; docstring and
+  block-comment handling is unchanged, so nothing is subtracted twice.
+  describe_measurement_rule() probes it (_history_probe(), prefix taken
+  from the constant) and states start, end and the still-counted ordinary
+  comments.
 - 2026-09-29 [python-coder/GE-127f-2-i]: This module's own code is
   UNCHANGED by this ticket -- `AddedLineCountUnavailableError` and
   `resolve_added_measured_lines` were already correct and already raised

@@ -114,14 +114,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# unit_tests/ must be on sys.path so _workflow_engine_harness is importable
-# from this sub-package (unit_tests/workflows/), mirroring every other file
-# in this directory.
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
+from _workflow_engine_harness import fill_workspace_answer, run_workflow_under_e2  # noqa: E402
+from unit_tests.workflows._acd_2100c_support import _cancel_answer  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -164,7 +163,7 @@ _MUTATING_LABELS = (
     "commit-stage-output",
     "commit-stage-output-product-truth",
     "commit-flow-reconciliation",
-    "apply-approval",
+    "approval-apply",
     "deliver-authoring-branch",
 )
 
@@ -198,20 +197,13 @@ def _run_mid_gate(label_overrides=None, resume_answer=None, run_id="run"):
     )
 
 
-def _cancel_answer(gate_id, channel):
-    answer = {"gate_id": gate_id, "action": "cancel"}
-    if channel is not None:
-        answer["channel"] = channel
-    return answer
-
-
 _RESOLVE_GATE_SIGNATURE = (
     "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {"
 )
 
 
 def _write_forced_null_gate_script(gate_id: str) -> Path:
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     if _RESOLVE_GATE_SIGNATURE not in source:
         raise AssertionError(
             "resolveGate()'s signature in plan-feature.js changed -- update "
@@ -500,7 +492,7 @@ class TestWorkSurvivesAMissingGateResultOnTheRealExitPath(unittest.TestCase):
             result = run_workflow_under_e2(
                 patched_script,
                 timeout=_TIMEOUT,
-                label_responses={},
+                label_responses=approval_step_replies(),  # an approve would reach approval-apply
                 args=dict(_PERMITTED, run_id="acd2100c5-forced-null-final-gate"),
             )
         finally:

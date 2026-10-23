@@ -163,6 +163,7 @@ superseded_by: null
 covered_by:
 - unit_tests/portability/test_inf_500d_4_iii.py
 - unit_tests/portability/test_inf_500d_4_iii_older_worktree_build.py
+- unit_tests/portability/test_inf_500d_4_iii_reader.py
 - unit_tests/feedback/test_inf_500d_4_iii_harvest_inherited_root.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/01_TICKET-20261009-INF-500d-4-iii.md
@@ -171,8 +172,8 @@ implemented_by:
 - scripts/build_phases_knowledge.py
 - scripts/knowledge/sink_resolution.py
 - scripts/ci/check_sink_parity.py
-- templates/scripts/setup_ticket_worktree.py
-- scripts/setup_ticket_worktree.py
+- templates/scripts/worktree_log_root.py
+- templates/scripts/worktree_readiness.py
 change_target:
   - code
   - infrastructure

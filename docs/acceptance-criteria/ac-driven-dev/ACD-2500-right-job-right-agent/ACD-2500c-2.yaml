@@ -104,6 +104,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - ACD-2500c-2-i
+  - ACD-2500c-2-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgent/31_TICKET-20261012-ACD-2500c-2.md
 change_target: pipeline

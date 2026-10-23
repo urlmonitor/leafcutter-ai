@@ -8,7 +8,7 @@ components:
 level: L0
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -67,6 +67,26 @@ doc_links:
       prose (AR-400c). The BA must mark both records superseded explicitly.
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400_real_tree_setup_is_coherent_and_every_prompt_lists_its_declared_abilities
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    description: "Over the checked-out tree and the shared deployed layout (no build of its own): the registry validator CLI exits 0 with zero refusing ability or hand-off findings, the number of specialists it reports examining is non-zero and equals the number of definitions under templates/agents/, and every specialist's compiled prompt lists exactly the abilities its own definition declares (a project-supplied one that is not installed is stated as not installed, not listed as available)."
+    must_catch:
+      - "the checks pass because they examined no specialists"
+      - "the validator is clean but a compiled prompt offers an ability its specialist does not declare, or omits one it does"
+    covers: [AR-400]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400_epic_promise.py. Composite-closure
+  contract for the AR-400 goal: a clean build means every specialist's setup
+  is coherent. One test checks that statement against the real tree as a
+  whole -- the validator's verdict on every specialist and the deployed
+  prompt each specialist actually receives -- through the validator CLI and
+  the shared deployed layout (marker shared_layout_reader). The non-zero
+  examined count is the guard against a vacuous pass. Expected cost: zero
+  build.py runs.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -127,3 +147,8 @@ notes: |
 
   PRIORITY AND READINESS ARE AUTHORING DEFAULTS. Every record in this tree is
   draft/medium; the user sets both at the approval gate.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  goal can be proven done by a covering test of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

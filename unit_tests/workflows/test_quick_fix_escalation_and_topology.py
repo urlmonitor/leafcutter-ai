@@ -300,7 +300,7 @@ class TestBP600WorkflowFullRunTopology:
         in this order, and returns status: ok."""
         result = run_workflow_under_e2(_JS_PATH, label_responses=_full_success_responses())
         assert _labels(result) == [
-            "isolation-check",
+            "workspace-ensure",
             "guard-checks",
             "ac-creation",
             # BO-4400f-1: the shell step that creates this run's labelled scratch

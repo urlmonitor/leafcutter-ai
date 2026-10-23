@@ -1,0 +1,156 @@
+id: BO-4500b-2-ii
+title: "An identity check that inspected no copy fails; it never reports a pass on nothing"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml"
+criteria: |
+  Given the identity check is pointed at a location holding no installed routes,
+  When it runs,
+  Then it fails with a message stating that zero installed copies were inspected and naming the
+    location it looked in.
+
+  Given installed routes exist, the package holds a source for BETA-ANSWER declared as awaiting
+    adoption, and no installed route carries BETA-ANSWER,
+  When the identity check runs,
+  Then its report lists BETA-ANSWER as not inspected because it awaits adoption,
+  And BETA-ANSWER is not listed among the blocks whose copies matched.
+
+  Given installed routes exist, the package holds a source for ALPHA-ANSWER that is not declared as
+    awaiting adoption, and no installed route carries ALPHA-ANSWER,
+  When the identity check runs,
+  Then it fails naming ALPHA-ANSWER as a block with no installed copy.
+depends_on: [BO-4500b-2, BO-4500b-1-ii]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the awaiting-adoption declaration this check honours."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: scripts/shared_block_identity.py
+    state: to_be_created
+it_requirements:
+  - >-
+    Zero copies inspected is a failure, never a pass or a skip. The message names the absolute
+    location that was searched.
+  - >-
+    Whether a block awaits adoption is read from the same declaration the install reads
+    (BO-4500b-1-ii). A declared block with no installed copy is listed separately as not inspected
+    because it awaits adoption, and is never counted among the blocks whose copies matched.
+  - >-
+    A block with a source, no declaration and no installed copy fails, naming the block. That
+    holds even when the install-time unused-source check passed against a different layout.
+  - >-
+    These fixtures build their own small installed tree and source set, and spawn no real build.
+delivers_to: null
+expects_from:
+  - ac_id: BO-4500b-2
+    contract: >-
+      The identity check over installed copies, with its per-block report {block, inspected,
+      routes} and its location input.
+  - ac_id: BO-4500b-1-ii
+    contract: >-
+      The awaiting-adoption declaration: package data kept with the block sources, mapping a
+      block name to a non-empty ordered list of adopting record ids.
+test_intent:
+  - clause: it fails with a message stating that zero installed copies were inspected and naming the location it looked in
+    needs_test: true
+    reason: A parity check pointed at the wrong location must not report clean, the no-op failure this repo has hit three times.
+  - clause: its report lists BETA-ANSWER as not inspected because it awaits adoption
+    needs_test: true
+    reason: A declared block must stay visible in the report rather than vanish from it.
+  - clause: BETA-ANSWER is not listed among the blocks whose copies matched
+    needs_test: true
+    reason: Counting an uninspected block as matched would be a pass on nothing for that block.
+  - clause: it fails naming ALPHA-ANSWER as a block with no installed copy
+    needs_test: true
+    reason: A source whose consumers were all removed must be caught by the check even when the install-time check ran elsewhere.
+test_spec:
+  - name: test_zero_inspected_copies_fails_naming_the_location
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Point the check at an empty directory; it fails stating zero installed copies were inspected and naming the absolute location searched."
+    proves_clause: "it fails with a message stating that zero installed copies were inspected and naming the location it looked in"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "report a pass when nothing was inspected"
+      - "skip silently when the location holds no routes"
+  - name: test_declared_block_with_no_copy_is_listed_as_not_inspected
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "BETA source declared awaiting adoption, no installed copy; the report lists BETA-ANSWER as not inspected because it awaits adoption."
+    proves_clause: "its report lists BETA-ANSWER as not inspected because it awaits adoption"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_uninspected_block_is_not_counted_as_matched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "In the same run BETA-ANSWER is absent from the matched-blocks section of the report."
+    proves_clause: "BETA-ANSWER is not listed among the blocks whose copies matched"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "count a declared but uninspected block among the matched blocks"
+  - name: test_undeclared_block_without_copy_fails
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "ALPHA source not declared, no installed route carries it, other routes exist; the check fails naming ALPHA-ANSWER as a block with no installed copy."
+    proves_clause: "it fails naming ALPHA-ANSWER as a block with no installed copy"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+  - name: test_zero_copy_failure_is_reachable_after_a_real_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Run the real build_workflow_scripts phase into a temporary layout whose templates mark no block, then run the identity check on it and assert the zero-inspected failure."
+    proves_clause: "it fails with a message stating that zero installed copies were inspected and naming the location it looked in"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Repo CLAUDE.md records three defences that turned out to be no-ops because they examined nothing
+  and reported clean (feedback_categories.yaml path, the bare-directory AC validator, the stale-ref
+  merge audit): "a check that examined nothing must not look like a check that found nothing". A
+  parity test run against the wrong install location is exactly that shape. The third scenario
+  catches a source whose consumers were all removed after BO-4500b-1-ii's install-time check ran
+  against a different layout.

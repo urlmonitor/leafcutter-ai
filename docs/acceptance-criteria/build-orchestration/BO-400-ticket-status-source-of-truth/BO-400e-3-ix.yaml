@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -176,10 +176,20 @@ test_rationale: >-
   one branch name.
 origin_agent: BrainCandy
 created: 2026-10-15
-amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_400e_3_ix_setup_record.py
+implemented_by:
+  - templates/scripts/worktree_ticket_record.py
+  - templates/scripts/worktree.py
+amended_by:
+- reason: implementation-moved-to-workspace-maker
+  by: claude_code
+  at: '2026-10-21'
+  note: >-
+    setup_ticket_worktree.py and its _setup_ticket_branch_record.py sibling were retired by
+    BO-4300f-2; the record is now written by the workspace maker (worktree_ticket_record.py,
+    ensure --kind ticket). Ticket 20 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace.
 notes: |
   IT-PO SPLIT, 2026-10-15. BO-400e-3-ii says the ticket a single-ticket branch was built for must
   be identified, and closes nothing when it cannot be. The BA found no reliable source:

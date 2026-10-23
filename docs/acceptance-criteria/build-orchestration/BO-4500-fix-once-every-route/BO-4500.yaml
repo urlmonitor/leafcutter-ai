@@ -63,7 +63,7 @@ origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
 superseded_by: null
-covered_by: [BO-4500a]
+covered_by: [BO-4500a, BO-4500b]
 implemented_by: []
 notes: |
   ORIGIN. BrainCandy, 2026-10-12: "yes, lets plan-feature the central commit handling",

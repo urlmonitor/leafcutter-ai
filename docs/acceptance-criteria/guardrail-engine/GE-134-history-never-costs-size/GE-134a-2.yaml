@@ -1,0 +1,210 @@
+id: GE-134a-2
+components:
+  - commit_guardian
+readiness: approved
+priority: high
+title: "Adding decision-history entries never pushes a file over its limit or blocks a change to an oversized file"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a JavaScript workflow body that measures 1,400 lines against a permitted length of
+    1,000 before the change,
+  When a change that only appends 3 entry lines to its decision-history block is committed,
+  Then the commit completes, and the file's measured length before and after is 1,400,
+  And when a change appends the same 3 history entry lines and also adds 1 code line,
+  Then the commit does not complete, and the outcome states a length before of 1,400 and a
+    length after of 1,401,
+  And given a Python file that measures 399 lines against a permitted length of 400,
+  When a change appends 20 entry lines to its decision-history block and nothing else,
+  Then the commit completes, and the file is not reported as having crossed its limit.
+depends_on:
+  - GE-134a-1
+  - GE-127b-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: related
+    status: exists
+    relevance: The growth ratchet whose verdicts this record pins for history-only changes; do not restate it.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260923-ratchet-has-no-escape-for-unsplittable-files.md
+    relationship: related
+    status: exists
+    relevance: The user's position recorded there; history-only changes to over-limit workflow bodies were refused.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- 'No new mechanism: the growth ratchet (GE-127b-1), the crossing check (GE-127a-1) and the added-lines
+  count (GE-127f-2 / GE-127d-3-iv) measure before and after with GE-127d-3''s one measure (IT PO,
+  2026-10-23: GE-127d-3 supersedes this family''s rule). Appended history entries are comments (or lines
+  of a standalone string), so they add 0 measured lines and 0 added lines on both sides; one code line
+  adds 1. If either side still uses another rule, the fix lands in the shared measure, never in a
+  history-specific branch.'
+- A refusal states the before and after lengths.
+- 'Test fixtures derive their measured lengths from the content at run time. The criteria''s figures
+  (1,400 / 1,401 / 399) are the lengths the fixtures are built to measure under the rule in force; a
+  fixture that measures a different figure proves the verdicts but not the stated numbers (see the
+  2026-10-23 IT PO note on the JavaScript fixture).'
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
+delivers_to: null
+expects_from:
+  ac_id: GE-134a-1
+  contract: 'The size standard''s measured length of a file (int >= 0) is GE-127d-3''s measure: a line
+    counts only when it holds a code token, so every comment (including any decision-history block),
+    every standalone non-f Python string and every blank line is uncounted, and the added-lines count is
+    taken over the same counted lines. Before- and after-lengths use the same measure.'
+test_intent:
+- clause: the commit completes, and the file's measured length before and after is 1,400
+  needs_test: true
+  reason: A history-only change to an oversized file must commit, which is the user-visible promise.
+- clause: when a change appends the same 3 history entry lines and also adds 1 code line
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: the commit does not complete, and the outcome states a length before of 1,400 and a length after
+    of 1,401
+  needs_test: true
+  reason: A real code line must still be refused, or the exclusion would be an escape hatch.
+- clause: given a Python file that measures 399 lines against a permitted length of 400
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: the commit completes, and the file is not reported as having crossed its limit
+  needs_test: true
+  reason: The crossing check must use the same rule as the growth ratchet.
+test_spec:
+- name: test_ge_134a_2_history_only_append_to_an_oversized_js_body_commits
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: 'Fixture with checked_extensions [''.js''] and limit 1,000: commit (bypassing the hook)
+    an over-limit JavaScript body with a ''//'' history block, append 3 entry lines, stage, and run the
+    fixture copy of check_file_size.py as a subprocess; it exits 0 and the file is listed at its unchanged
+    measured length, derived at run time from the content (the rewritten fixture measures 1,120 code lines
+    under GE-127d-3, still over 1,000). Uses _ge_127d_2_fixture.build_fixture_tree (a copy of the
+    production modules in a temporary git repository, no build.py, no POSIX flock).'
+  proves_clause: the commit completes, and the file's measured length before and after is 1,400
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_134a_2_history_only_append_measures_1400_before_and_after
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: get_previous_length on the committed blob and measure_current_length on the staged file
+    give the same measured length (derived at run time; 1,120 for the rewritten fixture), and
+    resolve_added_measured_lines gives 0 for the 3 appended entry lines.
+  proves_clause: the commit completes, and the file's measured length before and after is 1,400
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - the added-lines count still diffs with the old rule, so the 3 entry lines count as added and the
+    required length falls by 3, refusing the change
+  - the previous length measured with one rule and the current length with another
+- name: test_ge_134a_2_history_plus_one_code_line_is_refused_stating_1400_and_1401
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'The same append plus 1 code line: the check exits 1 and the grew refusal states Previous
+    length: N and New length: N + 1, N the fixture''s measured length derived at run time (1,120 and 1,121
+    for the rewritten fixture).'
+  proves_clause: the commit does not complete, and the outcome states a length before of 1,400 and a length
+    after of 1,401
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+- name: test_ge_134a_2_history_append_to_a_399_line_python_file_does_not_cross_400
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Fixture with checked_extensions [''.py''] and limit 400: a committed file of 399 code lines
+    (plus ordinary comments and blank lines, which do not count) gets 20 appended entry lines; the check
+    exits 0, prints no too-large or grew refusal, and lists the file at 399 lines.'
+  proves_clause: the commit completes, and the file is not reported as having crossed its limit
+  code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - the crossing check measures the current content with a rule that counts the appended entry lines and
+    reports the file over 400
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/config.py
+- unit_tests/commit_guardian/_ge_127d_2_fixture.py
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+file_findings:
+- file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the previous-length, current-length and added-line measurements both ratchet paths
+    use, including count_added_measured_lines, which must apply the same rule.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-2 to GE-134a-2 and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-2 family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
+- reason: superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: BrainCandy
+  entry: >-
+    BrainCandy decided on 2026-10-23 that GE-127d-3 supersedes this family's rule (no
+    comment, no standalone Python string and no blank line counts). STILL HOLDS — every
+    clause: the criteria state measured lengths (1,400 / 1,401 / 399) and the verdicts of
+    history-only and history-plus-code changes, not how those lengths are reached, so they
+    hold unchanged under GE-127d-3 (appended history entries are comments and add 0
+    measured lines; one code line still adds 1). SUPERSEDED: nothing in the criteria; the
+    expects_from contract text ("every other line counts as before") and the test fixtures
+    built to measure 1,400 / 399 under the old rule describe the superseded rule and are
+    left for the IT PO and the test-writer, who is rewriting the tests to the new rule with
+    the same covers tags. Criteria, title and work_status (done) unchanged; done stands on
+    the condition that the rewritten tests are green.
+- reason: technical-enrichment-superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: it-po
+  directed_by: BrainCandy
+  entry: >-
+    criteria untouched. it_requirements: no new mechanism, every path uses GE-127d-3's one
+    measure (history entries add 0 measured and 0 added lines; a code line adds 1), and fixture
+    lengths are derived at run time. expects_from contract restated to GE-127d-3's rule (no
+    "every other line counts as before"). test_spec: names kept; descriptions and must_catch
+    aligned to the rewritten test_ge_134a_2.py. OPEN, FOR THE BA / TEST-WRITER: the rewritten
+    JavaScript fixture measures 1,120 code lines (it keeps the old 1,400-line body, whose 140
+    comment and 140 blank lines no longer count), so the tests prove the verdicts (commit
+    completes; N -> N + 1 refused) but not the criteria's stated figures 1,400 / 1,401. Either
+    the fixture gains 280 code lines so it measures 1,400, or the criteria's figures change; the
+    399-line Python fixture already measures 399.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/29_TICKET-20261021-GE-134a-2.md
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  The user-visible outcome of GE-134a ("never pushes a file over its permitted length or
+  blocks a change"), stated against both ratchet paths: growth on an already-oversized file
+  (GE-127b-1) and crossing the limit (GE-127a-1). The before-length must be measured with the
+  same rule as the after-length, so a history block present before the change is not
+  counted on either side.

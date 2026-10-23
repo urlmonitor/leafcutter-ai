@@ -135,6 +135,13 @@ def _first(steps: list[str], pattern: str) -> int:
     return matches[0]
 
 
+def _last(steps: list[str], pattern: str) -> int:
+    """Index of the LAST step matching *pattern* (the lock release; step 1 also names it for the halt path)."""
+    matches = [i for i, step in enumerate(steps) if re.search(pattern, step, re.DOTALL)]
+    assert matches, f"no step matches {pattern!r}: {steps}"
+    return matches[-1]
+
+
 class TestTheSkillConsumesTheStepAroundTheCommit(unittest.TestCase):
     def setUp(self) -> None:
         self.skill = _SKILL.read_text(encoding="utf-8")
@@ -147,7 +154,8 @@ class TestTheSkillConsumesTheStepAroundTheCommit(unittest.TestCase):
         stage = _first(self.steps, r"completion_routing_cli\.py stage --working-dir")
         commit = _first(self.steps, r"[Ss]pawn the `commit` agent")
         observe = _first(self.steps, r"completion_routing_cli\.py observe --working-dir \S+ --commit-status")
-        release = _first(self.steps, r"§5\.3")
+        # TQ-500g-1-viii: step 1 now also names §5.3 (release on a gate halt), so the release is the last step that does.
+        release = _last(self.steps, r"§5\.3")
         self.assertEqual(sorted([acquire, stage, commit, observe, release]),
                          [acquire, stage, commit, observe, release])
         self.assertEqual(len({acquire, stage, commit, observe, release}), 5)

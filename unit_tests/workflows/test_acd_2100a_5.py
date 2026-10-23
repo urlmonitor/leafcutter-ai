@@ -48,13 +48,12 @@ HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test
     takes no `cwd` parameter and never runs a real shell command). This
     file's harness ACTUALLY EXECUTES, via a real Node `child_process` with a
     real, controlled `cwd`: (1) every "Run the following command...:\\n<cmd>\\n"
-    single-line dispatch (the Pre-Stage-0 registry read, the worktree-setup
-    script-path resolution, the worktree-setup dispatch itself, and the
-    branch-detect / orphan-scan / committed-stage-scan git calls), and (2)
+    single-line dispatch (the Pre-Stage-0 registry read and the
+    orphan-scan / committed-stage-scan git calls), and (2)
     every dispatch whose prompt embeds a `pause_store.py` invocation (the
     pause-persist write and its read-back verify) -- against a REAL git
-    project, a REAL git worktree of it, and a REAL git worktree stub script
-    that performs a REAL `git worktree add` on disk. Only the ac-triage
+    project, a REAL git worktree of it, and a REAL AC-authoring workspace
+    whose maker answer is handed in as args.workspace (BO-4300a-1-ib). Only the ac-triage
     classification itself (`stage-0-triage`) is given a fixed, deterministic
     answer (`route: "covered"`) so all three runs are driven to the SAME
     named first question (`covered-route-gate`) rather than depending on
@@ -82,11 +81,9 @@ AC: ACD-2100a-5
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 from pathlib import Path
 
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
@@ -94,12 +91,16 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
+from _plan_feature_harness_defaults import workspace_answer_at  # noqa: E402
+
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
-_TIMEOUT = 60  # seconds; includes real `git worktree add` and real subprocess I/O.
+_TIMEOUT = 60  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 _HALT_LABELS = (
     "workspace-setup-registry-uninterpretable",
@@ -107,69 +108,6 @@ _HALT_LABELS = (
     "workspace-setup-mis-assignment",
     "workspace-setup-agent-not-found",
 )
-_SCRIPT_PATH_LABEL = "resolve-worktree-setup-script-path"
-_WORKTREE_SETUP_LABEL = "worktree-setup"
-
-_CMD_LINE_RE = re.compile(r"Run the following command[^\n]*:\n([^\n]+)\n")
-_WORKTREE_SETUP_PATH_RE = re.compile(
-    r'"(/[^"]*\.leafcutter/scripts/setup_ticket_worktree\.py)"'
-)
-
-# ---------------------------------------------------------------------------
-# The in-repository worktree-setup stub -- a self-contained copy of
-# test_acd_2100a_1.py's own `_IN_REPO_STUB` (that file's own convention of
-# not depending on other test files' private internals). Its own file
-# location (`Path(__file__).resolve().parents[2]`) anchors the repository it
-# belongs to, so the AC-authoring worktree it creates lands under the
-# CORRECT project regardless of the run's own starting cwd -- exactly what
-# every scenario below needs once the shared resolution snippet has located
-# this script's absolute, repository-anchored path.
-# ---------------------------------------------------------------------------
-
-_WORKTREE_SETUP_STUB = textwrap.dedent(
-    """\
-    import json
-    import subprocess
-    import sys
-    from pathlib import Path
-
-
-    def main() -> int:
-        if len(sys.argv) < 2 or sys.argv[1] != "create-ac-worktree":
-            print(json.dumps({"error": "unsupported subcommand"}), file=sys.stderr)
-            return 1
-        slug = sys.argv[2] if len(sys.argv) > 2 else "session"
-        repo_root = Path(__file__).resolve().parents[2]
-        worktree_path = repo_root.parent / f"ac-authoring-{slug}"
-        branch = f"ac-authoring/{slug}"
-        try:
-            subprocess.run(
-                [
-                    "git", "-C", str(repo_root), "worktree", "add",
-                    "-b", branch, str(worktree_path), "main",
-                ],
-                check=True, capture_output=True, text=True,
-            )
-        except subprocess.CalledProcessError as exc:
-            print(
-                json.dumps({"error": "worktree add failed", "detail": exc.stderr}),
-                file=sys.stderr,
-            )
-            return 1
-        print(json.dumps({
-            "worktree_path": str(worktree_path),
-            "ac_store_path": str(worktree_path / "docs" / "acceptance-criteria"),
-            "source_copy": "in-repo",
-        }))
-        return 0
-
-
-    if __name__ == "__main__":
-        sys.exit(main())
-    """
-)
-
-
 # ---------------------------------------------------------------------------
 # Fixture builders
 # ---------------------------------------------------------------------------
@@ -195,8 +133,7 @@ def _make_project(tmp_path: Path) -> Path:
     """Build "the project" the Given's three runs all target: a real git
     repository holding the REAL, verbatim registry from this repository
     (never a hand-authored stand-in -- 2h.2 Fixture Authenticity Rule), a
-    REAL, verbatim copy of scripts/pause_store.py, and the simplified
-    in-repo worktree-setup stub above.
+    REAL, verbatim copy of scripts/pause_store.py.
     """
     project_dir = tmp_path / "project"
     _init_git_project(project_dir)
@@ -209,26 +146,18 @@ def _make_project(tmp_path: Path) -> Path:
     pause_store_dest.parent.mkdir(parents=True, exist_ok=True)
     pause_store_dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
 
-    setup_dest = project_dir / ".leafcutter" / "scripts" / "setup_ticket_worktree.py"
-    setup_dest.write_text(_WORKTREE_SETUP_STUB, encoding="utf-8")
-
     return project_dir
 
 
 def _make_run_worktree(tmp_path: Path, project_dir: Path, branch: str) -> Path:
-    """A REAL `git worktree add` of `project_dir`, used as the STARTING cwd
-    for scenario B -- distinct from the AC-authoring worktree the workflow
-    itself creates internally via `_WORKTREE_SETUP_STUB` above. Holds NO
+    """A REAL the linked-checkout add of `project_dir`, used as the STARTING cwd
+    for scenario B -- distinct from the AC-authoring workspace the run
+    is handed (see _drive_three_scenarios). Holds NO
     `.leafcutter/` of its own (asserted below), mirroring
     test_acd_2100a_3.py / test_acd_2100a_4.py's own fixture convention.
     """
     worktree_path = tmp_path / "run-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", branch, str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", branch, str(worktree_path), "main"])
     return worktree_path
 
 
@@ -457,24 +386,6 @@ __SCRIPT_BODY__
 """
 
 
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy; see module docstring)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
     """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
     with cwd set to the given directory, and every dispatch matching this
@@ -525,14 +436,6 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     return payload
 
 
-def _calls_with_label(payload: dict, label: str) -> list:
-    calls = payload.get("calls", [])
-    return [
-        c for c in calls
-        if isinstance(c.get("opts"), dict) and c["opts"].get("label") == label
-    ]
-
-
 def _calls_with_any_label(payload: dict, labels: tuple) -> list:
     calls = payload.get("calls", [])
     return [
@@ -554,9 +457,8 @@ def _label_responses_forcing_first_question() -> dict:
     driven to the SAME named first question (the 'covered-route-gate'
     resolveGate() call at plan-feature.js ~line 2492) rather than depending
     on what a live triage agent would have said. This override does not
-    touch any of the resolution machinery under test (the registry read,
-    the worktree-setup script-path resolution, the worktree-setup dispatch,
-    or the pause-store read/write/verify), which are all real-executed on
+    touch any of the resolution machinery under test (the registry read
+    and the pause-store read/write/verify), which are real-executed on
     every scenario below.
     """
     return {"stage-0-triage": _TRIAGE_COVERED_RESPONSE}
@@ -566,34 +468,11 @@ def _collect_resolved_absolute_paths(payload: dict, project_dir: Path) -> list[s
     """Collect every absolute, repository-anchored path the run's OWN
     OBSERVED BEHAVIOUR reveals it resolved before the first question --
     never from reading the workflow source (per the AC's own reachability
-    Then clause). Three independent, structurally-identified observation
-    points:
-
-      1. The 'resolve-worktree-setup-script-path' dispatch's REAL stdout on
-         success is the literal resolved absolute path (buildRepoAnchored-
-         ResolutionCommand()'s snippet ends with `echo "$SCRIPT"`).
-      2. The 'worktree-setup' dispatch's own PROMPT TEXT embeds the resolved
-         absolute script path literally (a static JS string built from the
-         resolution above, not a shell variable) -- extracted the same way
-         test_acd_2100a_1.py's AC-4/AC-5 test already does.
-      3. Every real-executed pause_store.py write response whose parsed
-         JSON carries a "path" key (write_record()'s own success shape).
+    Then clause): every real-executed pause_store.py write response whose
+    parsed JSON carries a "path" key (write_record()'s own success shape).
+    The workspace itself is the maker's answer the entry hands in (BO-4300a-1-ib).
     """
     paths: list[str] = []
-
-    for call in _calls_with_label(payload, _SCRIPT_PATH_LABEL):
-        real = call.get("real_result")
-        if real and real.get("exit_code") == 0:
-            candidate = (real.get("output") or "").strip()
-            if candidate:
-                paths.append(candidate)
-
-    for call in _calls_with_label(payload, _WORKTREE_SETUP_LABEL):
-        prompt = call.get("prompt")
-        if isinstance(prompt, str):
-            m = _WORKTREE_SETUP_PATH_RE.search(prompt)
-            if m:
-                paths.append(m.group(1))
 
     for call in payload.get("calls", []):
         real = call.get("real_result")
@@ -620,6 +499,11 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
     _assert_not_inside_any_repository(unrelated_dir)
 
     label_responses = _label_responses_forcing_first_question()
+    # BO-4300a-1-ib: the plan-feature skill runs the workspace maker by its absolute path and hands its answer
+    # in as args.workspace; the run's working directory plays no part in where the workspace is.
+    ac_workspace = tmp_path / "ac-authoring-workspace"
+    link_checkout(project_dir, ["-b", f"ac-authoring/{run_prefix}", str(ac_workspace), "main"])
+    workspace = workspace_answer_at(ac_workspace)
 
     # Computed PER SCENARIO, from `cwd` set to that scenario's own starting
     # directory -- exactly what the plan-feature skill's real pre-flight
@@ -635,7 +519,7 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
         project_dir, label_responses,
         {
             "run_id": f"{run_prefix}-root",
-            "userInput": f"Add a feature --component {run_prefix}root",
+            "userInput": f"Add a feature --component {run_prefix}root", "workspace": workspace,
             "workspace_setup_permission": verdict_root,
         },
     )
@@ -643,7 +527,7 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
         run_worktree, label_responses,
         {
             "run_id": f"{run_prefix}-worktree",
-            "userInput": f"Add a feature --component {run_prefix}wt",
+            "userInput": f"Add a feature --component {run_prefix}wt", "workspace": workspace,
             "workspace_setup_permission": verdict_worktree,
         },
     )
@@ -651,7 +535,7 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
         unrelated_dir, label_responses,
         {
             "run_id": f"{run_prefix}-unrelated",
-            "userInput": f"Add a feature --component {run_prefix}unrel",
+            "userInput": f"Add a feature --component {run_prefix}unrel", "workspace": workspace,
             "workspace_setup_permission": verdict_unrelated,
         },
     )
@@ -727,9 +611,7 @@ def test_every_resolved_support_file_path_observed_before_the_first_question_is_
     # angle: reachability
     """AC-3: for each of the three runs, every support-file location the
     process actually resolved before the first question -- collected from
-    OBSERVED PROCESS BEHAVIOUR (the resolve-worktree-setup-script-path
-    dispatch's real stdout, the worktree-setup dispatch's own dispatched
-    command text, and every real pause_store.py write's own "path" field --
+    OBSERVED PROCESS BEHAVIOUR (every real pause_store.py write's own "path" field --
     never from reading templates/workflows-js/plan-feature.js's source) --
     resolves to a path inside the project the run was pointed at. A source
     scan for the literal string `.leafcutter` would pass on a dead code path

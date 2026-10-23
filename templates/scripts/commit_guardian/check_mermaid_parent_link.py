@@ -33,6 +33,11 @@ DECISION HISTORY:
     Created hook. Implements bidirectional parent-link enforcement for architecture
     docs, Python/SQL mermaid blocks, and ADR-diagram cross-references.
     Starts in strict mode (exit 1 on violation); use [NO-ARCH-UPDATE] to bypass.
+  - 2026-10-21 [python-coder/GE-113c-4]: REPO_ROOT was parents[2] of this file
+    (templates/ or .leafcutter/), so neither copy ever read the staged documents.
+    It is now _resolve_root.find_project_root(). A staged in-scope document that
+    cannot be read now emits check_outcome.OUTCOME_COULD_NOT_CHECK and exits 1
+    instead of passing; an empty scope still passes.
 """
 
 from __future__ import annotations
@@ -46,7 +51,10 @@ from typing import Optional
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from _resolve_root import find_project_root
+from check_outcome import OUTCOME_COULD_NOT_CHECK, emit_result
+
+REPO_ROOT = find_project_root()
 
 # ---------------------------------------------------------------------------
 # Regexes
@@ -76,7 +84,8 @@ def _bypass_active() -> bool:
             capture_output=True, text=True, check=False,
         )
         return "[NO-ARCH-UPDATE]" in result.stdout
-    except Exception:
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"[check-mermaid-parent-link] cannot read the last commit message: {exc}", file=sys.stderr)
         return False
 
 
@@ -383,6 +392,41 @@ def _check_adr_diagram_link(rel_path: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _check_staged_file(rel_path: str) -> Optional[list[str]]:
+    """Run every check that applies to one staged path.
+
+    Args:
+        rel_path: Repo-relative path of a staged file.
+
+    Returns:
+        Optional[list[str]]: Violations, or None when the path is in scope but
+        its working-tree copy cannot be read (GE-113c-4).
+    """
+    arch = ARCH_DOC_PATTERN.match(rel_path)
+    in_scope = (
+        arch or (rel_path.endswith(".py") and "unit_tests" not in rel_path)
+        or rel_path.endswith(".sql")
+    )
+    if not in_scope:
+        return []
+    if not (REPO_ROOT / rel_path).is_file():
+        return None
+    violations: list[str] = []
+    try:
+        if arch and not ADR_PATTERN.match(rel_path):
+            violations.extend(_check_arch_doc(rel_path))
+        if ADR_PATTERN.match(rel_path):
+            violations.extend(_check_adr_diagram_link(rel_path))
+        if rel_path.endswith(".py") and "unit_tests" not in rel_path:
+            violations.extend(_check_py_mermaid(rel_path))
+        if rel_path.endswith(".sql"):
+            violations.extend(_check_sql_mermaid(rel_path))
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"[check-mermaid-parent-link] cannot read '{rel_path}': {exc}", file=sys.stderr)
+        return None
+    return violations
+
+
 def main() -> int:
     """Run all parent-link checks on staged files."""
     if _bypass_active():
@@ -393,19 +437,23 @@ def main() -> int:
         return 0
 
     violations: list[str] = []
+    unread: list[str] = []
 
     for rel_path in staged:
-        if ARCH_DOC_PATTERN.match(rel_path) and not ADR_PATTERN.match(rel_path):
-            violations.extend(_check_arch_doc(rel_path))
+        found = _check_staged_file(rel_path)
+        if found is None:
+            unread.append(rel_path)
+        else:
+            violations.extend(found)
 
-        if ADR_PATTERN.match(rel_path):
-            violations.extend(_check_adr_diagram_link(rel_path))
-
-        if rel_path.endswith(".py") and "unit_tests" not in rel_path:
-            violations.extend(_check_py_mermaid(rel_path))
-
-        if rel_path.endswith(".sql"):
-            violations.extend(_check_sql_mermaid(rel_path))
+    if unread:
+        print(
+            "[check-mermaid-parent-link] could not read staged file(s): "
+            + ", ".join(unread),
+            file=sys.stderr,
+        )
+        emit_result(OUTCOME_COULD_NOT_CHECK)
+        return 1
 
     if violations:
         print("\nMermaid Parent-Link Check Failed\n")

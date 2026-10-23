@@ -86,6 +86,51 @@ def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     return raw
 
 
+def _inline_shared_blocks(text: str, name: str, src_dir: Path) -> str:
+    """Fill every empty shared-block marker pair of a template from ``_shared/``.
+
+    BO-4500b-1 (generalising BO-4300c-3): each block's single tracked source is
+    copied between its markers at build time (E2 bodies have no ``require``,
+    ADR-030). The block and consumer sets are derived, never listed. The logic
+    is in build_shared_blocks.py; this wrapper supplies the package root. Runs
+    before config injection.
+    """
+    import build_phases as _bp
+    from build_shared_blocks import inline_shared_blocks
+
+    return inline_shared_blocks(text, name, src_dir, _bp.PACKAGE_ROOT)
+
+
+# Kept under its BO-4300c-3 name for existing callers.
+_inline_workspace_answer = _inline_shared_blocks
+
+
+def _workflow_source_bytes(js_file: Path, src_dir: Path) -> bytes:
+    """Return a workflow template's bytes with its shared-block pairs filled.
+
+    The one place the build and the output-mappings manifest agree on the
+    pre-variant, pre-injection content of a workflow, so the recorded
+    ``expected_output_hash`` predicts exactly what ``build_workflow_scripts``
+    writes (BO-4300c-3). A template without markers is returned unchanged.
+    """
+    import build_phases as _bp
+    from build_shared_blocks import fill_template_bytes
+
+    return fill_template_bytes(js_file.read_bytes(), js_file.name, src_dir, _bp.PACKAGE_ROOT)
+
+
+def _inline_all_workflow_sources(src_dir: Path) -> dict[str, bytes]:
+    """Return ``{filename: bytes}`` for every top-level workflow template.
+
+    Each entry has its WORKSPACE-ANSWER marker pair filled (BO-4300c-3); a
+    hand-filled pair or missing source raises ``ValueError`` before any write.
+    """
+    return {
+        js_file.name: _workflow_source_bytes(js_file, src_dir)
+        for js_file in sorted(src_dir.glob("*.js"))
+    }
+
+
 def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                            dry_run: bool, force: bool) -> int:
     """Copy Claude Code Workflow JS scripts to ``<output_root>/workflows/``.
@@ -274,9 +319,13 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     written = 0
     unchanged = 0
 
+    # BO-4300c-3: fill every WORKSPACE-ANSWER marker pair BEFORE anything is
+    # written, so a hand-filled pair or a missing source deploys nothing.
+    inlined = _inline_all_workflow_sources(workflows_js_src)
+
     for js_file in sorted(workflows_js_src.glob("*.js")):
         dest = output_dir / js_file.name
-        content = js_file.read_bytes()
+        content = inlined[js_file.name]
 
         try:
             emitted = _emit_workflow_variant(content, engine)

@@ -2,7 +2,8 @@
 description: |
   IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates
   AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
-  fields: assigned_agent, it_requirements, estimated_complexity,
+  fields: assigned_agent, declared_files (the files the change edits or
+  creates), it_requirements, estimated_complexity,
   delivers_to/expects_from contracts, doc_links to architecture documents, and
   the test intent (test_intent / test_required): per outcome clause, whether
   a test is needed and why. It writes no test design.
@@ -45,7 +46,7 @@ outputs:
 - description: Structured completion payload or sign-off comment
   name: completion_report
   type: structured_response
-- description: the enriched requirement records (assigned_agent, it_requirements, estimated_complexity, delivers_to, expects_from, doc_links, test_intent or test_required, and the reference-file-pending marker on package-surface records)
+- description: the enriched requirement records (assigned_agent, declared_files, it_requirements, estimated_complexity, delivers_to, expects_from, doc_links, test_intent or test_required, and the reference-file-pending marker on package-surface records)
   name: requirement_records
   type: record_fields
 mutates:
@@ -288,6 +289,32 @@ Assign one of: `S`, `M`, `L`.
 | `S` | Single function or small change to one file. < 50 lines of implementation. |
 | `M` | Multiple functions or changes across 2-3 files. 50-200 lines. |
 | `L` | New module, significant refactoring, or changes across 4+ files. > 200 lines. |
+
+### 2.2b — declared_files
+
+For every record whose change edits or creates code or docs, write a top-level
+`declared_files` list placed **before** `it_requirements`. The test designer
+cannot ground `code_file` or a test directory without it, and holds the record
+as "test design pending" when it is absent. Shape (see
+[docs/reference/ac-schema.md](docs/reference/ac-schema.md), "The declared_files
+Field"; validated by `scripts/ac_store/declared_files.py`):
+
+```yaml
+declared_files:
+  - path: scripts/build_phases.py   # repo-root-relative, forward slashes
+    state: existing                 # existing | to_be_created
+```
+
+Rules:
+- Declare only files this record's own change edits or creates. A file it only
+  reads stays a `doc_link`.
+- Edit templates, never build outputs (ADR-001): name `templates/...`, not the
+  deployed `.claude/` or `scripts/` copy of a template.
+- Confirm an `existing` path is really present before writing it.
+- Never write an empty list. For a record with no files (e.g. a pure decision
+  record) leave the key out.
+- Stay consistent with `it_requirements` and the `doc_links` `modifies` links
+  (the rule check's "declared files versus modifies links" family).
 
 ### 2.3 — it_requirements
 
@@ -753,7 +780,8 @@ the new child AC files and update the original's status.
   `test_spec`, `test_design_authorship`, `test_design_opened_files`,
   `file_findings`, `file_findings_opened_files`, and any `decision` already
   recorded on a finding.
-- Add `assigned_agent`, `estimated_complexity`, `it_requirements`,
+- Add `assigned_agent`, `estimated_complexity`, `declared_files` (before
+  `it_requirements`, see 2.2b), `it_requirements`,
   `delivers_to`, `expects_from` and `doc_links` fields. Add `test_intent` (or
   `test_required: false`, see 2.7). On a package-surface record also add
   `hold_reason: reference file pending` (see 2.3).
@@ -782,7 +810,9 @@ Before presenting the confirmation gate, verify:
 [ ] 4. it_requirements are testable — no weasel words.
 [ ] 5. The criteria field is UNCHANGED in every enriched AC.
 [ ] 6. doc_links point to architecture docs only (never source files), with correct status.
-[ ] 7. estimated_complexity is set on every AC.
+[ ] 7. estimated_complexity is set on every AC, and declared_files (2.2b) on every AC
+       that changes code or docs: before it_requirements, never empty, only files the
+       change edits or creates, templates not build outputs, `existing` paths confirmed.
 [ ] 8. Split ACs have correct depends_on ordering and superseded_by on the original.
 [ ] 9. Caveats are logged for every ambiguity found.
 [ ] 10. Every enriched AC has readiness: reviewed, never approved.
@@ -812,7 +842,19 @@ your output from reaching the caller.
 > agent assignment patterns, or decomposition strategies during this run that
 > future agents working in this component would benefit from knowing?"
 
-**On "no":** Proceed — nothing to persist.
+**On "no":** run this ONE command, then proceed — nothing to persist
+(ADR-034 Amendment 2 A2.3). Do not add a `--log` or `--sink` argument:
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent it-po --event capture_attempt --phase knowledge-capture --outcome nothing-to-record || true
+```
+
+This records that you ran the capture step and had nothing to record. It
+writes a capture attempt to telemetry, not to the knowledge record, so no
+learning is created. **Fail open:** if the command prints a warning or exits
+non-zero, do not retry or work around it — proceed anyway. You do NOT write a
+`recorded` attempt yourself: the helper in the "yes" steps below does that
+after a successful capture (A2.4).
 
 **On "yes":** Execute the following steps in order. Wrap the entire block in
 best-effort handling (log a warning and proceed if any step fails):
@@ -822,17 +864,29 @@ best-effort handling (log a warning and proceed if any step fails):
    `.claude/skills/signoff/SKILL.md` §7 step 2) — the required field set below
    must match that definition exactly; this agent has no `ticket_path` in
    hand, so the optional `ticket` field defined there is omitted here. Per
-   ADR-034 (Knowledge Write Ownership), this append is this agent's entire
-   obligation — it does not classify the learning or write to any knowledge
-   surface itself. Do NOT load `route-learning` or `capture-learning`;
-   ADR-034 §2 item 3 retired both names and neither has ever existed under
-   `templates/skills/` or `.claude/skills/`. Obtain the sink by running
-   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
-   from the project root — it prints the absolute path this install declared
-   for knowledge emissions, the same path regardless of your current working
-   directory. Append the event there (create the file if it does not exist
-   yet; skip gracefully if the declaration is missing or the file is not
-   writable):
+   ADR-034 (Knowledge Write Ownership), running the helper below is this
+   agent's entire obligation — it does not classify the learning or write to
+   any knowledge surface itself. Do NOT load `route-learning` or
+   `capture-learning`; ADR-034 §2 item 3 retired both names and neither has
+   ever existed under `templates/skills/` or `.claude/skills/`. Run the emit
+   helper as ONE command, with the learning as `--text`, filling in the
+   angle-bracket values (do not add `--sink`, and do not compose or write the
+   event yourself):
+   ```bash
+   python3 {{config.output_root}}/scripts/knowledge/emit_knowledge.py --agent it-po --component <component> --destination <destination> --entry-kind <kind> --text '<learning>'
+   ```
+   Quoting rule: the learning goes inside single quotes, which stop the shell
+   from expanding backticks, `$(...)` and `$VAR`. Any single quote inside the
+   learning is written as `'\''` (close quote, escaped quote, reopen). For
+   example, the learning `don't panic` is written `'don'\''t panic'`.
+   If you cannot
+   classify the learning, pass `--entry-kind unclassified --destination
+   "(unrouted)"` (ADR-034 Amendment 1 A1.3). **Fail open:** if the helper
+   prints a warning or exits non-zero, do not retry or work around it — finish
+   your sign-off anyway; if it exited non-zero, also load the
+   `agent-telemetry` skill and record the failure as its
+   `Failed capture attempt` section directs. The JSON below documents the
+   record the helper writes; you do not produce it by hand:
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "it-po", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```
@@ -933,6 +987,9 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+declared_files:
+  - path: scripts/build_orchestration/dag_builder.py
+    state: existing
 it_requirements:
   - "Must complete in <100ms for graphs with up to 500 nodes"
   - "Must handle errors gracefully per the project error handling policy"
@@ -965,6 +1022,7 @@ implemented_by: []
 **What changed:**
 - `assigned_agent`: null -> `python-coder` (agent_registry.json: python-coder owns Python behavior)
 - `estimated_complexity`: null -> `S` (single function, < 50 lines)
+- `declared_files`: added, before `it_requirements` — the one existing file the change edits
 - `it_requirements`: added 4 policy-level constraints (no implementation prescriptions)
 - `delivers_to`: added — the error output is consumed by the build orchestrator
 - `expects_from`: made specific — described the exact data shape expected

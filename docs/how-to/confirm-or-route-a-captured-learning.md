@@ -244,7 +244,7 @@ Real result (scratch destination, after Step 5):
 
 If the destination is relative, open it from the tree root where the routing
 step ran. A wired path writes into its own worktree and its commit carries the
-file, so once that worktree is removed, look in the merged tree and check the
+file, so once that worktree is cleared (clearing and making workspaces belong to the workspace maker (see [get-a-workspace](get-a-workspace.md))), look in the merged tree and check the
 file was committed with the work:
 
 ```bash

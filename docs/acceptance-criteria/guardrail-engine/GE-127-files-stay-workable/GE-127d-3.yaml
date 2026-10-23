@@ -133,6 +133,17 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SUPERSEDED BY THIS RECORD (BrainCandy, 2026-10-23). GE-134a made a line-comment
+      DECISION HISTORY block uncounted while ordinary comments and blank lines still
+      counted. Under this record no comment, standalone Python string or blank line counts,
+      so a history block is uncounted as a case of the general rule, with no special block
+      detection. GE-134a and its children carry amended_by entries stating which of their
+      criteria still hold; GE-134a-3 (the history-block sentence in the published rule) is
+      superseded_by this record. The measure must not keep a DECISION HISTORY special case.
 assigned_agent: python-coder
 estimated_complexity: L
 package_surface: false

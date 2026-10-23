@@ -8,7 +8,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -35,6 +35,38 @@ doc_links:
     relevance: "Same shape for TOOLS. Reuse its rule: derive both sides from the specialist itself, never from a list of names."
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_ar_400b_every_deployed_instruction_is_in_the_specialists_own_grant
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "Reading the shared deployed layout (no build of its own): for every specialist, each ability its compiled prompt tells it to use is in the grant declared in that specialist's own definition under templates/agents/, and appears in the compiled prompt's delivered abilities section; the comparison side is read from the definition, never from config/agent_registry.json."
+    must_catch:
+      - "the comparison is made against the derived central registry copy instead of the specialist's own declaration"
+      - "an instruction is satisfied by a grant to a different specialist"
+    covers: [AR-400b]
+  - name: test_ar_400b_one_real_mismatch_among_non_instructions_stops_one_build_naming_both_sides
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    description: "In a copy of the package, one specialist carries one genuine instruction to use an existing ability it is not granted, beside a sentence telling it NOT to use another ungranted ability, a sentence about what another specialist uses, and a citation of an ability's file as a rule source; a single real build.py run exits non-zero with exactly one finding, naming the specialist, the ability and that the specialist's own definition does not grant it."
+    must_catch:
+      - "every mention of an ability name is treated as an instruction, giving four findings instead of one"
+      - "the mismatch is reported as a warning and the build passes"
+      - "the finding names only one side (the ability) and not the specialist's grant"
+    covers: [AR-400b]
+test_rationale: >-
+  unit_tests/prompt_assembly/test_ar_400b_parent_promise.py. Composite-closure
+  contract for AR-400b. The first test checks the promise over the deployed
+  view of every specialist (marker shared_layout_reader; zero builds), which
+  no child does -- children check named instances and fixtures through the
+  validator. The second is this parent's one real build (marker
+  shared_layout_mutator): because the notes make correct recognition part of
+  the promise, the control mixes one true instruction with three non-
+  instructions, so a check that is simply loose, or that only warns, fails.
+  Expected cost: one build.py run.
 origin_agent: BrainCandy
 created: 2026-10-12
 amended_by: []
@@ -64,3 +96,8 @@ notes: |
   WHICH WAY TO FIX A MISMATCH IS A JUDGEMENT, NOT A RULE. For research-agent the
   grant is missing; elsewhere the instruction may be the error. The fix per
   instance is decided at decomposition; the check only names the mismatch.
+
+  2026-10-21: test contract (test_spec, test_rationale) added for composite
+  closure, at the user's decision ("Add parent tests, then close"), so this
+  parent can be proven done by covering tests of its own. Criteria, readiness
+  and every requirement-defining field are unchanged.

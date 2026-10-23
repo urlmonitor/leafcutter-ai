@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 components:
   - ac_driven_dev
 related_docs:
@@ -15,6 +15,7 @@ related_docs:
   - docs/architecture/diagrams/c3-033-requirement-part-owners-components.md
   - docs/architecture/adrs/ADR-071-test-intent-is-not-a-test-contract.md
   - docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+  - docs/architecture/adrs/ADR-075-requirement-rule-check.md
 ---
 
 # AC-Driven Development
@@ -94,6 +95,21 @@ gate reads the deployed copy. See also
 [Phantom-Done Prevention](phantom-done-prevention.md) for the broader class of defect this
 closes: a gate reporting a pass it never earned.
 
+## Rule Check: Protected Fields and the Before-State
+
+The rule check ([reference](../../reference/requirement-rule-check.md); decision record
+[ADR-075](../adrs/ADR-075-requirement-rule-check.md)) holds each stage to the
+fields it owns. The `protected fields` family reports `needs a decision` when a stage changes a
+protected field it does not own on a record that already existed; it never repairs. The test-design
+stage owns the test designer's outputs. The technical planner's hand-back pass (`--stage
+itpo-handback`) may change `assigned_agent`, a file finding's `decision`, `it_requirements`,
+`declared_files`, `delivers_to` and `expects_from`. A run repairs only when given a before-state
+(`--before-ref` or `--before-snapshot`); without one it writes nothing, repairs become
+`needs a decision`, and the report carries `before_state: {given, repairs_applied}`.
+
+Trigger names for `documentation_triggers` are declared once, in the schema's enum; the schema
+check, the commit-time record check and the rule check all read that one list.
+
 ## Architecture Diagrams
 
 - [Plan-Feature Decision Gates — Where the Route Stops to Ask, and What Each Answer Costs](../diagrams/c3-008-plan-feature-decision-gate-sequence.md)
@@ -102,8 +118,9 @@ closes: a gate reporting a pass it never earned.
   (person answers, no person reachable, answer not attributable to the person).
 - [Requirement Rule Check — Component Diagram](../diagrams/c3-030-requirement-rule-check-components.md)
   — L3 component diagram of the check `/plan-feature` runs at the end of each authoring stage:
-  its rule families (which repair, which only report), the rule source, the surface-to-specialist
-  map and the store record check it calls. A failed check keeps the stage from being reported complete.
+  its rule families (which repair, which only report, including `protected fields`), the rule source,
+  the surface-to-specialist map and the store record check it calls. A failed check keeps the stage
+  from being reported complete.
 - [Code-Aware Test Design — Sequence Diagram](../diagrams/c3-032-code-aware-test-design-sequence.md)
   — L3 sequence diagram from the technical planner's test intent, through the rule check, the
   pre-pass, test-designer (test design and file findings in one step), the hold report, the

@@ -52,7 +52,7 @@ TEST STRATEGY: self-contained real-execution harness (per this directory's
     a REAL git repository ("the project") holding a REAL, verbatim copy of
     this repository's own scripts/pause_store.py under its untracked
     .leafcutter/scripts/ (matching production; ADR-001), and a REAL
-    `git worktree add` of that repository as a sibling directory holding NO
+    the linked-checkout add of that repository as a sibling directory holding NO
     .leafcutter/ of its own. Driving templates/workflows-js/plan-feature.js's
     real, on-disk top-level body via a real Node child_process with `cwd` set
     to the worktree -- TWICE (sometimes three times) per test, as independent
@@ -79,18 +79,24 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
-    _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
-    _read_via_fresh_process, _run, _strip_exports,
+    _DESIGNED_BATCH, _after_itpo_committed, _approve_ids, _init_git_project, _labels, _pause_record_path, _permitted_args,
+    _install_real_pause_store, _read_via_fresh_process, _run,
 )
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
-_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
-_REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
+_UT_DIR = Path(__file__).resolve().parent.parent
+if str(_UT_DIR) not in sys.path:
+    sys.path.insert(0, str(_UT_DIR))
+from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+_PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
+
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 # The AC-1 "drafted work" real artifact: the shim below makes every
 # "stage-itpo-author" dispatch actually WRITE this file with a fresh nonce,
@@ -108,19 +114,6 @@ _A_DIFFERENT_DECISION_GATE_ID = "gate-ba"
 # ---------------------------------------------------------------------------
 
 
-def _install_real_pause_store(project_dir: Path) -> Path:
-    """Copy the REAL, verbatim scripts/pause_store.py into the fixture
-    project's untracked `.leafcutter/scripts/` -- matching production, where
-    `.leafcutter/` is build output that is never committed (ADR-001). A
-    hand-authored stand-in would not exercise the real CLI's idempotency or
-    error-handling contract (2h.2 Fixture Authenticity Rule).
-    """
-    dest = project_dir / ".leafcutter" / "scripts" / "pause_store.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
-    return dest
-
-
 def _make_worktree_fixture(tmp_path: Path) -> dict:
     """Build the Given: a REAL git repository ("the project") holding a REAL
     `.leafcutter/scripts/pause_store.py`, and a REAL git worktree of that
@@ -132,12 +125,7 @@ def _make_worktree_fixture(tmp_path: Path) -> dict:
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-c3i-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-c3i-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 
@@ -310,12 +298,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     ticket ACD-2100c-3's own test_acd_2100c_3.py (same script, no CLI
     wrapper, no live `claude` engine available in this test environment).
 
-    `label_responses` is merged UNDER `worktree_setup_default_responses()`
-    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
-    'resolve-worktree-setup-script-path' still gets a real, confirming
-    reply for both and reaches the pause-store dispatches this file tests,
-    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
-    for either label still wins (dict merge order below).
+    `label_responses` is merged OVER the harness defaults and a ready
+    `workspace-ensure` answer naming `cwd` (BO-4300c-3: the pause-store command
+    enters the run's workspace first, so the workspace must exist) so a caller
+    reaches the pause-store dispatches this file tests instead of halting at
+    the workspace step. A caller-supplied entry for any label still wins
+    (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -323,7 +311,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(cwd), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__DRAFT_RELATIVE_PATH_JSON__", json.dumps(_DRAFT_RELATIVE_PATH))
         .replace("__SCRIPT_BODY__", body)
@@ -466,7 +454,7 @@ def test_answer_naming_a_different_decision_is_not_applied():
             f"AC-1: the answer must not be applied to the decision being waited on -- the "
             f"run must remain paused. Got result={result2!r}"
         )
-        assert "apply-approval" not in labels2, (
+        assert "approval-apply" not in labels2, (
             f"AC-1: no branch of the waiting decision must be taken on a mismatch. Labels: {labels2}"
         )
         assert "clear-pause-record" not in labels2, (
@@ -504,6 +492,18 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
     the mismatched resume still re-dispatches the authoring step, which is
     itself unwanted work having happened, even though the record on disk
     (protected by pause_store.py's own gate_id-keyed idempotency) survives.
+
+    Steps (moved here from inline comments): a FRESH, independent reader
+    process still finds the record, still naming the ORIGINAL decision point;
+    the mismatch must not have caused unwanted work (the authoring step for the
+    decision being waited on is not re-dispatched); recovery -- a THIRD,
+    independent real subprocess supplying the RIGHT answer for the decision
+    actually being waited on must still work, so the mistyped resume has not
+    turned recovery into a full re-run. Since ACD-300c-4 the recovery applies
+    the approval through the approval step (`approval-holds` dry run, then
+    `approval-apply`), and the dry run's `--ids` must be the same
+    originally-drafted AC id the resume recovered (DRAFT-8888; drafts in the
+    batch are approved too since ACD-300c-4's review fix H-1).
     """
     with tempfile.TemporaryDirectory(prefix="acd2100c3i_failure_") as tmp:
         fixture = _make_worktree_fixture(Path(tmp))
@@ -530,8 +530,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"Test construction error: run must still be paused after the mismatch. Got: {result2!r}"
         )
 
-        # AC-2: a FRESH, independent reader process still finds the record,
-        # still naming the ORIGINAL decision point.
         read_response = _read_via_fresh_process(pause_store_path, fixture["project_dir"], run_id)
         assert read_response.get("exists") is True, (
             f"AC-2: the run's record must still be on disk after a mismatched resume. "
@@ -543,8 +541,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"the one the mismatched answer supplied. Got record={record!r}"
         )
 
-        # The mismatch must not have caused unwanted work: the authoring step
-        # for the decision being waited on must not have been re-dispatched.
         assert (_labels(payload2).count("stage-itpo-author") + _labels(payload2).count("stage-test-design-author")) == 0, (
             "AC-2 read together with the Implementation Notes ('the subject binding must "
             "be checked before any part of the answer is acted on'): an intact record is "
@@ -552,9 +548,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"re-run. Labels: {_labels(payload2)}"
         )
 
-        # Recovery: a THIRD, independent real subprocess supplying the RIGHT
-        # answer for the decision actually being waited on must still work --
-        # the mistyped resume must not have turned recovery into a full re-run.
         correct_answer = {
             "gate_id": "final-gate",
             "type": "priority_choice",
@@ -572,9 +565,10 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"AC-2: the correct resume, after an earlier mismatch, must still move the run "
             f"past the decision point. Got: {result3!r}"
         )
-        assert "apply-approval" in _labels(payload3), (
+        assert "approval-apply" in _labels(payload3), (
             f"AC-2: the correct resume must actually apply the approval. Labels: {_labels(payload3)}"
         )
+        assert _approve_ids(payload3, "approval-holds") == [["DRAFT-8888"]], _labels(payload3)
 
 
 def test_mismatch_report_names_the_decision_actually_being_waited_on():
@@ -767,7 +761,7 @@ def test_acd_2100c_3_i_reachable_from_entry_point():
         # side effect of the mismatch (merely computing and discarding a
         # decision would be invisible here; an actual dispatch would not be).
         labels2 = _labels(payload2)
-        assert "apply-approval" not in labels2, (
+        assert "approval-apply" not in labels2, (
             f"The mismatched answer must not have been consumed by any downstream branch. "
             f"Labels: {labels2}"
         )

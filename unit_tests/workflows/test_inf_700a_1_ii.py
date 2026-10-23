@@ -49,9 +49,15 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+)
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+from workflows._tq500g1v_fixtures import wrong_version_passing  # noqa: E402
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _TIMEOUT = 30
@@ -78,9 +84,9 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
     command-step-runner dispatch contract, owned elsewhere and merely obeyed
     here. Restating it inline is what left seven files stale at once when the
     contract last changed."""
-    return {
-        "fastlane-worktree": _worktree_label_response(worktree_root),
-        "resolve-connected": {"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"},
+    responses: dict[str, Any] = {
+        "workspace-ensure": workspace_ensure_from_opened(_worktree_label_response(worktree_root)),
+        "resolve-connected": resolve_connected_reply({"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"}),
         "claim-connected": _claim_fx.claim_ran(
             ac_ids, message=f"claimed {len(ac_ids)} ACs"
         ),
@@ -118,6 +124,8 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
             "message": "PR opened",
         },
     }
+    responses.update(wrong_version_passing())
+    return responses
 
 
 class _BaseCase(unittest.TestCase):

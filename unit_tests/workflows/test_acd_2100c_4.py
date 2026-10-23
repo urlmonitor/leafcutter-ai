@@ -51,7 +51,7 @@ WHY final-gate: mirrors `unit_tests/workflows/test_acd_2100c_1.py`'s own
     `final_gate` SCENARIOS entry -- the ONE decision point reachable with
     completely empty `label_responses` (no stage-0-triage / pt-classify
     overrides needed), and its accept path dispatches a single, unambiguous
-    "apply-approval" advance marker (verified in that file's own red_baseline
+    "approval-apply" advance marker (verified in that file's own red_baseline
     and again directly against this branch's HEAD while authoring these
     tests). Every test below drives `args.resume_answer.gate_id ==
     "final-gate"` directly, with `label_responses={"read-pause-record":
@@ -97,6 +97,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -110,7 +111,8 @@ _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks.
 # `test_bo_2300_pause_resume.py` and `test_bo_2300a_2_cancel_status_distinct
 # .py` already use to drive a resume decision in ONE `run_workflow_under_e2`
 # call, without a separate prior headless "discover the pause" run.
-_READ_PAUSE_RECORD_OK = {"read-pause-record": {"exists": True, "stale": False}}
+# ACD-300c-4: the approve branch runs the approval step (dry run, then `approval-apply`); it releases one id.
+_READ_PAUSE_RECORD_OK = {"read-pause-record": {"exists": True, "stale": False}, **approval_step_replies()}
 
 _GATE_ID = "final-gate"
 
@@ -138,7 +140,7 @@ def _answer_with_channel(channel):
 # actually been APPLIED (see plan-feature.js's "approve" branch) -- the
 # observable "the run moved past the decision point" marker used throughout
 # this directory (test_acd_2100c_1.py's `advance_markers`).
-_ADVANCE_MARKER = "apply-approval"
+_ADVANCE_MARKER = "approval-apply"
 
 
 class TestWellFormedAnswerNotFromThePersonIsRefused(unittest.TestCase):
@@ -158,7 +160,7 @@ class TestWellFormedAnswerNotFromThePersonIsRefused(unittest.TestCase):
 
         RED today: resolveGate() has no provenance check at all, so this
         well-formed answer is applied exactly like a genuine one -- the run
-        advances past final-gate and "apply-approval" is dispatched.
+        advances past final-gate and "approval-apply" is dispatched.
         """
         refused_answer = _answer_with_channel(None)  # no channel at all
 
@@ -219,11 +221,11 @@ class TestIdenticalAnswersDifferingOnlyInOriginProduceOppositeOutcomes(unittest.
         into the REAL `resolveGate()`/`pauseAtGate()` machinery running
         inside the real, on-disk `plan-feature.js`, and asserts the
         consumer's two observable outcomes are opposite: one dispatches the
-        real "apply-approval" advance marker, the other does not.
+        real "approval-apply" advance marker, the other does not.
 
         RED today: resolveGate() applies BOTH answers identically (no
         `channel` field is read anywhere), so `refused_answer` ALSO
-        dispatches "apply-approval" -- the two halves of this comparison are
+        dispatches "approval-apply" -- the two halves of this comparison are
         not actually distinguishable yet, which is exactly the defect this
         AC exists to fix.
         """
@@ -367,14 +369,14 @@ class TestRefusedAnswerLeavesTheRunWaitingWithItsRecordOnDisk(unittest.TestCase)
           "edit"` today, must not fire for a refused answer -- clearing it
           would mean the record NO LONGER reflects that a real decision is
           still owed);
-        - no downstream, drafted-work-mutating step (the 'apply-approval'
+        - no downstream, drafted-work-mutating step (the 'approval-apply'
           advance marker, which writes readiness/priority to AC files and
           commits them) ever runs -- the strongest observable proxy this
           sandboxed harness has for "the drafted work is byte-identical"
           (nothing capable of touching it executed at all).
 
         RED today: none of this machinery exists -- the well-formed refused
-        answer is simply applied, 'apply-approval' fires, and (per
+        answer is simply applied, 'approval-apply' fires, and (per
         resolveGate()'s existing, unconditional `if (decision.action !==
         "edit")` clear) 'clear-pause-record' also fires, both of which this
         AC forbids for an answer that did not come from the person.
@@ -442,7 +444,7 @@ class TestAcd2100c4ReachableFromEntryPoint(unittest.TestCase):
         this test additionally proves the refusal's effect is CONSUMED in
         control flow, not merely computed and discarded -- an accepted
         (channel=person) answer's decision is consumed all the way through
-        to a real downstream dispatch ('apply-approval'), while a refused
+        to a real downstream dispatch ('approval-apply'), while a refused
         (channel=agent) answer's rejection is consumed by the SAME run
         never making that dispatch and instead returning control to the
         (real) caller with 'paused_awaiting_input' -- the terminal payload

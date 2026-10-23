@@ -13,6 +13,8 @@ ARCHITECTURE: Pure `evaluate_record`. The before-state is `ctx.before_state(reco
     `repair=("readiness", ("set", value))`.
 
 DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-2500a-2-viii]: A run with no before-state lists every record
+    `not evaluated: no before-state` and repairs nothing (KI-ACS-20261015: every record looked new).
   - 2026-10-14 [python-coder/ACD-2500a-2-iv]: Created (ticket 13).
 """
 
@@ -20,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from _rc_report import DISPOSITION_FIXED, FAMILY_READINESS, Finding
+from _rc_report import DISPOSITION_FIXED, DISPOSITION_NOT_EVALUATED, FAMILY_READINESS, Finding
 
 NAME = FAMILY_READINESS
 _APPROVED = "approved"
@@ -30,7 +32,12 @@ _APPROVAL_STAGE = "approval"
 
 def evaluate_record(ctx: Any, record: Any) -> list[Finding]:
     """Restore an agent-raised `approved`; the approval stage and unchanged records pass."""
-    if ctx.stage == _APPROVAL_STAGE or record.get("readiness") != _APPROVED:
+    if ctx.stage == _APPROVAL_STAGE:
+        return []
+    if not ctx.has_before_state:
+        message = "not evaluated: no before-state"
+        return [Finding.for_record(record, NAME, DISPOSITION_NOT_EVALUATED, message, subject="no-before-state")]
+    if record.get("readiness") != _APPROVED:
         return []
     existed, before = ctx.before_state(record)
     if before == _APPROVED:

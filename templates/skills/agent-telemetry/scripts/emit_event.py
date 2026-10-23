@@ -37,9 +37,16 @@ thing keeping the drive alive.
 
 Record shape (BP-400a-1):
     {"event_type": ..., "timestamp": ..., "agent_name": ..., "ticket_path": ...,
-     "payload": {"phase": ..., "outcome": ..., "retry_count": ...}}
+     "payload": {"phase": ..., "outcome": ..., "retry_count": ...,
+                 "missing_target": ...}}
 Absent optional values are written as JSON null rather than omitted, so every
 line has the same keys and a reader never needs to test for key presence.
+
+``capture_attempt`` (ADR-034 Amendment 2, A2.2) is the capture-attempt ledger
+event: its ``--outcome`` must be one of recorded, nothing-to-record, failed,
+and ``failed`` also requires ``--missing-target`` (which any other outcome must
+omit). A violation writes nothing,
+warns on stderr and still exits 0. Other event types keep free-text outcomes.
 
 NOTE: this is a different surface from ``scripts/agent-health/agent_telemetry.py``,
 which records per-invocation cost metrics (lane, duration, token counts) for
@@ -88,12 +95,13 @@ def build_record(
     phase: str | None = None,
     outcome: str | None = None,
     retry_count: int | None = None,
+    missing_target: str | None = None,
     timestamp: str | None = None,
 ) -> dict:
     """Return the telemetry record for one event.
 
     Optional values are preserved as None (serialised as JSON null) so every
-    emitted line carries an identical key set.
+    emitted line carries an identical key set, ``missing_target`` included.
     """
     return {
         "event_type": event,
@@ -104,8 +112,32 @@ def build_record(
             "phase": phase,
             "outcome": outcome,
             "retry_count": retry_count,
+            "missing_target": missing_target,
         },
     }
+
+
+CAPTURE_ATTEMPT = "capture_attempt"
+CAPTURE_OUTCOMES = ("recorded", "nothing-to-record", "failed")
+
+
+def _refusal_reason(event: str, outcome: str | None, missing_target: str | None) -> str | None:
+    """Return why a ``capture_attempt`` call must be refused, or None when it is valid.
+
+    Only ``capture_attempt`` is validated (ADR-034 A2.2): its outcome must be a
+    member of the closed set, ``failed`` must name the missing target, and any
+    other outcome must NOT carry one (``missing_target`` is null unless failed).
+    Every other event type keeps free-text outcomes. Pure function: no I/O.
+    """
+    if event != CAPTURE_ATTEMPT:
+        return None
+    if outcome not in CAPTURE_OUTCOMES:
+        return f"capture_attempt outcome {outcome!r} is not one of {list(CAPTURE_OUTCOMES)}"
+    if outcome == "failed" and not missing_target:
+        return "capture_attempt outcome 'failed' requires --missing-target"
+    if outcome != "failed" and missing_target is not None:
+        return f"capture_attempt outcome {outcome!r} must not carry --missing-target"
+    return None
 
 
 def append_record(record: dict, log_path: Path) -> bool:
@@ -215,6 +247,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--outcome", default=None, help="Outcome, e.g. ok, blocked.")
     parser.add_argument("--retry-count", type=int, default=None,
                         help="Retry attempt number, when this event is a retry.")
+    parser.add_argument("--missing-target", dest="missing_target", default=None,
+                        help="Literal path of the script that could not run "
+                             "(required for capture_attempt outcome failed).")
     parser.add_argument(
         "--log",
         default=None,
@@ -226,6 +261,12 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
+
+    refusal = _refusal_reason(args.event, args.outcome, args.missing_target)
+    if refusal is not None:
+        print(f"emit_event: WARNING: {refusal}; event dropped, nothing written",
+              file=sys.stderr)
+        return 0
 
     if args.log is not None:
         log_path = Path(args.log)
@@ -244,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
         phase=args.phase,
         outcome=args.outcome,
         retry_count=args.retry_count,
+        missing_target=args.missing_target,
     )
     append_record(record, log_path)
     return 0
@@ -255,6 +297,11 @@ if __name__ == "__main__":
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-21 15:00 [python-coder]: capture_attempt with --missing-target on an outcome other than `failed` is refused (nothing written, stderr warning, exit 0), so missing_target is null unless failed (pr-reviewer M-1). (#EPIC-ALearningAnAgentHasTodayActuallyGets/02) (ADR-034)
+# - 2026-10-21 12:00 [python-coder]: Added the capture_attempt event (closed
+#   outcome set, validated for that event only) and --missing-target, carried as
+#   payload.missing_target on every record (null by default). No new copy of the
+#   usable-stream rule: stream resolution is unchanged. (#EPIC-ALearningAnAgentHasTodayActuallyGets/02) (ADR-034)
 # - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: _declared_stream now also
 #   requires an absolute operational_log_root with the stream directly under it,
 #   so a --no-log-root or legacy two-key declaration (streams recorded under the

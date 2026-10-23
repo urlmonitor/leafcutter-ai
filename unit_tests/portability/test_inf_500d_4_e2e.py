@@ -5,10 +5,10 @@ GOAL: The composite acceptance tests for INF-500d-4 -- "a report written inside 
     per scenario of the composite's own test_spec.
 AC: INF-500d-4 (composite; its children -i .. -viii each prove one surface).
 
-WHAT IS REAL: git (``git init``, ``git worktree add``, ``git worktree remove``); a
+WHAT IS REAL: git (``git init``, plus adding and removing a linked checkout); a
     deployed install per worktree (``_inf_500d_4_helpers.deploy_install``); the
     declaration, written by the REAL build helper from the root the REAL
-    ``_inherited_log_root_args`` of the shipped bootstrap returns for the main
+    ``inherited_log_root_args`` of the maker's log-root module returns for the main
     install; the writers (``submit_feedback.py``, ``emit_event.py``, the
     ``harvest_learnings.py --print-sink`` emit instruction) as subprocesses run
     from INSIDE a worktree; the readers (``aggregate.py``, ``harvest_learnings.py
@@ -18,7 +18,7 @@ WHAT IS REAL: git (``git init``, ``git worktree add``, ``git worktree remove``);
 
 WHAT IS NOT: ``build.py`` is not spawned (one build is ~60s and the children
     already prove the build and the bootstrap's wiring of ``--log-root``); the
-    bootstrap's own ``_inherited_log_root_args`` decides the inherited root here.
+    maker's own ``inherited_log_root_args`` decides the inherited root here.
 """
 # @ac-tag: INF-500d-4
 
@@ -49,7 +49,7 @@ def test_report_filed_in_a_bootstrapped_worktree_is_readable_after_the_worktree_
     # covers: INF-500d-4
     # angle: real_artifact
     """First scenario. File a report from inside a worktree, capture the id from stdout, remove the worktree
-    with ``git worktree remove``, then read the project's DECLARED feedback_sink and find that id there.
+    (clearing its linked checkout), then read the project's DECLARED feedback_sink and find that id there.
     Wrong versions caught: the worktree's declaration names the worktree's own root (the record leaves with
     it); a writer that ignores the declaration and writes beside ``__file__`` or the cwd."""
     tmpdir = _tmpdir(tmp_path)

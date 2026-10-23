@@ -12,11 +12,11 @@ CONTRACT PINNED FOR THE CODER (none of it exists in the step yet):
   * A supervised call naming neither is refused with
     reason_code policy_unattributed_supervised_call BEFORE anything is staged;
     the reason says a supervised call must name the run or the criterion.
-  * In supervised mode the checks run with no terminal input attached; a check
-    still waiting after the wait limit is ended, nothing is committed, and the
-    answer is hook_failed / check_awaited_input naming that check.
-  * The limit is config/commit_step.json key input_wait_limit_seconds
-    (package default 60), overridable through LEAFCUTTER_COMMIT_STEP_CONFIG.
+  * In supervised mode the checks run with no terminal input attached; silence is
+    never "waiting" (BO-4500a-4-vii). A commit still running after the wall-clock
+    limit is ended, nothing is committed, and the answer is refused / step_timed_out.
+  * The limit is config/commit_step.json key commit_time_limit_seconds
+    (package default 1800), overridable through LEAFCUTTER_COMMIT_STEP_CONFIG.
 
 Every test runs the REAL step as a subprocess against a REAL scratch git
 repository and reads the result back from the answer and from git.
@@ -41,9 +41,8 @@ from _commit_step_support import STEP, StepScenario  # noqa: E402
 RUN_ID = "plan-bo-4500-20261012"
 AC_ID = "BO-4500a-1"
 WAIT_LIMIT_S = 2
+SLOW_S = 4
 HANG_CHECK = (
-    "echo 'awaits-input.......................................Running'\n"
-    "echo '- hook id: awaits-input'\n"
     "i=0\n"
     'until read line; do\n'
     "  i=$((i+1))\n"
@@ -115,10 +114,26 @@ class TestSupervisedCall(unittest.TestCase):
         self.assertEqual(sc.staged_names(), [], "refusal happens before anything is staged")
         self.assertEqual(run_count(sc), 0, "the checks must not run for a refused call")
 
-    def test_check_waiting_for_input_is_ended_and_reported(self):
+    def test_slow_silent_check_is_committed_not_reported_as_waiting(self):
         # covers: BO-4500a-4-iv
         # angle: discrimination
-        """AC: a check waiting for keyboard input is ended at the limit; hook_failed.
+        """AC (amended by BO-4500a-4-vii): a check silent for a while is slow, not waiting.
+
+        must_catch: a silence timer that ends a correct commit. The check says nothing
+        for longer than the old two-second limit, then passes; the call commits.
+        """
+        sc = scenario3(self)
+        install_checks(sc, f"sleep {SLOW_S}\nexit 0\n")
+        write_config_copy(sc, commit_time_limit_seconds=30)
+        before = sc.commit_count()
+        answer = self._call(sc, "--supervised", "--run", RUN_ID)
+        self.assertEqual(answer["status"], "committed", answer)
+        self.assertEqual(sc.commit_count(), before + 1)
+
+    def test_hung_commit_gets_no_input_and_is_ended_as_step_timed_out(self):
+        # covers: BO-4500a-4-iv
+        # angle: discrimination
+        """AC (amended by BO-4500a-4-vii): a hung commit is ended at the wall-clock limit.
 
         must_catch: inheriting the caller's terminal so the check blocks forever.
         The caller's stdin is a pipe that stays OPEN and silent for the whole call,
@@ -126,7 +141,7 @@ class TestSupervisedCall(unittest.TestCase):
         """
         sc = scenario3(self)
         install_checks(sc, HANG_CHECK)
-        write_config_copy(sc, input_wait_limit_seconds=WAIT_LIMIT_S)
+        write_config_copy(sc, commit_time_limit_seconds=WAIT_LIMIT_S)
         before = sc.commit_count()
         read_fd, write_fd = os.pipe()
         self.addCleanup(os.close, write_fd)
@@ -143,20 +158,20 @@ class TestSupervisedCall(unittest.TestCase):
             self.fail("the step blocked on a check waiting for input; the wait was never ended")
         elapsed = time.monotonic() - started
         answer = _answer(self, proc)
-        self.assertEqual(answer["status"], "hook_failed", answer)
-        self.assertEqual(answer["reason_code"], "check_awaited_input")
-        self.assertEqual(answer["hook_name"], "awaits-input")
+        self.assertEqual(answer["status"], "refused", answer)
+        self.assertEqual(answer["reason_code"], "step_timed_out")
         self.assertGreaterEqual(elapsed, WAIT_LIMIT_S - 0.5, "ended before the limit elapsed")
         self.assertLess(elapsed, 25, "the wait must end near the configured limit")
         self.assertEqual(sc.commit_count(), before, "no commit may be recorded")
         self.assertFalse((sc.scratch / "got_input").exists(), "the step must not supply input")
 
-    def test_input_wait_limit_is_config_with_a_default_of_sixty_seconds(self):
+    def test_time_limit_is_config_with_a_default_of_1800_seconds(self):
         # covers: BO-4500a-4-iv
         # angle: criterion
-        """IT req: the limit is read from project config, default 60 s, not hard-coded."""
+        """IT req: the limit is read from project config, default 1800 s, not hard-coded."""
         config = json.loads(PACKAGE_CONFIG.read_text(encoding="utf-8"))
-        self.assertEqual(config.get("input_wait_limit_seconds"), 60)
+        self.assertEqual(config.get("commit_time_limit_seconds"), 1800)
+        self.assertNotIn("input_wait_limit_seconds", config)
 
     def test_unsupervised_call_without_attribution_commits(self):
         # covers: BO-4500a-4-iv

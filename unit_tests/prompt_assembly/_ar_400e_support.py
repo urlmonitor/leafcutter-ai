@@ -98,6 +98,31 @@ def declared_ids(root: Path) -> dict[str, set[str]]:
     return {a: {e["skill_id"] for e in es} for a, es in declared(root).items()}
 
 
+def project_supplied_unshipped(root: Path) -> dict[str, set[str]]:
+    """Specialist id -> granted ids marked ``provided_by: project`` that ``root`` ships no skill for (AR-400d)."""
+    shipped = {d.name for d in (root / "templates" / "skills").iterdir() if d.is_dir()}
+    out: dict[str, set[str]] = {}
+    for path in sorted((root / "templates" / "agents").glob("*.md")):
+        fm, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+        ids = {i["skill_id"] for i in fm.get("skills") or []
+               if isinstance(i, dict) and i.get("provided_by") == "project" and i["skill_id"] not in shipped}
+        if ids and fm.get("name"):
+            out[fm["name"]] = ids
+    return out
+
+
+def expected_for_view(name: str, root: Path, decl: dict[str, set[str]]) -> dict[str, set[str]]:
+    """The declared sets a view is expected to show (AR-400d retarget).
+
+    The knowledge graph (edges only to skill nodes that exist) and the build's registry validation
+    (a ``provided_by: project`` grant is never an 'unresolvable skill') do not list a project-supplied
+    ability the package does not ship; every other view still lists the whole declaration."""
+    if name not in ("graph", "validation"):
+        return decl
+    hidden = project_supplied_unshipped(root)
+    return {a: ids - hidden.get(a, set()) for a, ids in decl.items()}
+
+
 def lean_root(base: Path, *, name: str = "pkg") -> Path:
     """A REAL (no symlink) slice: config/, templates/ (agents + skills + guides)."""
     root = base / name

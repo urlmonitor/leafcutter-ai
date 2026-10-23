@@ -42,12 +42,34 @@ it_requirements:
   - "Must not re-stage files from a previously committed stage"
 delivers_to: null
 expects_from: null
+test_spec:
+  - name: test_stage_commit_stages_only_current_stage_ac_files
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "commitStageOutput stages exactly the AC-store files the current stage's authoring agent created or modified, and no other AC-store file"
+  - name: test_stage_commit_excludes_files_outside_ac_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "With uncommitted changes outside the AC store (e.g. a modified config file), no file outside the AC store directory is in the stage commit"
+  - name: test_stage_commit_does_not_restage_previous_stage_ac_files
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "AC files committed by an earlier stage of the same run are not re-staged or included in the current stage commit"
+  - name: test_stage_commit_leaves_unrelated_changes_uncommitted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    description: "Unrelated uncommitted working-tree changes remain uncommitted and keep their index state after the stage commit completes"
 origin_agent: business-analyst-v3
 created: 2026-06-08
 amended_by: []
 superseded_by: null
 covered_by:
   - ACD-300g-2-i
+  - ACD-300g-2-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/03_TICKET-20260618-ACD-300g-2.md
 change_target: pipeline

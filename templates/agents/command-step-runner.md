@@ -21,8 +21,9 @@ adopter_notes: |
   Utility agent (registry: tier utility, is_ticket_phase false, permits_shell
   true, spawn_allowlist empty). Never appears in a ticket's agents: map and
   never counts toward a test-writer/coder invocation total. The registry's
-  spawned_by lists "user" and "fast-lane-ship.js"; the latter was added on
-  2026-09-30 together with fast-lane-ship.js in
+  spawned_by lists "user", "fast-lane-ship.js", "build-feature.js",
+  "build-ticket.js" and "build-epic.js"; fast-lane-ship.js was added on 2026-09-30 together with
+  fast-lane-ship.js in
   scripts/registry_validator.py's _EXTERNAL_CALLERS set, which is what makes
   a non-agent dispatcher nameable there at all.
 

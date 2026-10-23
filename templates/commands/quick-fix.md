@@ -1,5 +1,5 @@
 ---
-description: "Fast bug-fix pipeline. Accepts a structured diagnosis (target_file, location_hint, symptom, root_cause) and drives: worktree self-isolation (when needed) → AC creation → test-first (red) → fix (python-coder) → green phase + mutation proof → commit → changelog entry → close (push + confirmed PR). Operates in place when the cwd is already an isolated, non-default-branch worktree; otherwise creates one automatically via setup_ticket_worktree.py before doing any work. Escalates to /build-feature when scope expands beyond the target file."
+description: "Fast bug-fix pipeline. Accepts a structured diagnosis (target_file, location_hint, symptom, root_cause) and drives: worktree self-isolation (when needed) → AC creation → test-first (red) → fix (python-coder) → green phase + mutation proof → commit → changelog entry → close (push + confirmed PR). Operates in place when the cwd is already an isolated, non-default-branch worktree; otherwise gets one from the one workspace maker before doing any work. Escalates to /build-feature when scope expands beyond the target file."
 ---
 
 # /quick-fix — Fast Bug Fix, Isolated When It Needs To Be
@@ -14,9 +14,9 @@ git worktree on a branch other than `main`/`master`, quick-fix operates in
 place, exactly as it always has. If the session is not inside a git repo at
 all (common when the cwd is an untracked workspace parent), or is on
 `main`/`master` (which is PR-only in this repo — a direct commit cannot be
-pushed), quick-fix creates an isolated worktree for you via the repository's
-canonical `setup_ticket_worktree.py create-only` script before doing anything
-else, then proceeds exactly as it would have in place.
+pushed), quick-fix gets an isolated workspace for you from the one workspace
+maker (see "Get the workspace" below) before doing anything else, then
+proceeds exactly as it would have in place.
 
 ## When to use /quick-fix vs. /build-feature
 
@@ -57,9 +57,8 @@ Invokes the `quick-fix.js` workflow script (deterministic JS control flow) which
 enforces the exact phase sequence:
 
 1. **Guards and self-isolation**: determines whether the cwd is already a
-   usable, non-default-branch worktree; if not, creates one via
-   `setup_ticket_worktree.py create-only` (after a stale-local-`main`
-   pre-check), then checks the target file for uncommitted changes.
+   usable, non-default-branch worktree; if not, gets a workspace from the
+   one workspace maker, then checks the target file for uncommitted changes.
 2. **AC Creation**: writes a permanent AC YAML entry into the hierarchical
    `docs/acceptance-criteria/` store, at the correct level (L2, or an L3
    technical-constraint child when the parent's L2 slot cap is already
@@ -103,10 +102,28 @@ beyond the target file.
 
 Parse `$ARGUMENTS` into a diagnosis object. If the input is natural language, extract the four fields (target_file, location_hint, symptom, root_cause) from the sentence. If structured JSON, use directly.
 
+## Get the workspace (only when the cwd is not already usable)
+
+When the cwd is not a usable, non-default-branch worktree, derive a short
+kebab-case `<slug>` from the target file and symptom, and run the workspace
+maker as ONE command by the absolute path of the deployed `worktree.py` (the
+path `worktree.py where` prints; never a cwd-relative `python scripts/...`
+path):
+
+```bash
+python <absolute-install-root>/scripts/worktree.py ensure --kind feature --slug <slug> --repo-root <absolute-project-root>
+```
+
+If the maker exits non-zero, stop: report its answer verbatim and do NOT invoke
+the workflow. On exit 0, keep the one JSON object it printed, unchanged, as
+`<maker-answer>`. When the cwd is already usable, there is no maker answer and
+`workspace` is omitted.
+
 Then invoke the workflow:
 
 ```
-Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause })
+Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause, workspace: <maker-answer> })
+// <maker-answer>: the answer of the workspace maker (scripts/worktree.py); see docs/how-to/get-a-workspace.md
 ```
 
 If `quick-fix.js` is not available (pre-v2.1.154 install), fall back to loading

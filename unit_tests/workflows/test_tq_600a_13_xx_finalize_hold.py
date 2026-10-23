@@ -34,7 +34,9 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    finalize_baseline_responses, run_workflow_under_e2, shell_step_reply, workspace_ensure_reply,
+)
 
 _ROOT = _UNIT_TESTS_DIR.parent
 _JS = _ROOT / "templates" / "workflows-js" / "finalize-feature.js"
@@ -61,9 +63,11 @@ _FORBIDDEN_PROMPT_FRAGMENTS = (
     "gh pr edit", "post-merge-", "scripts/ci/", "post_merge_tunables",
     "ruleset", "Fixes #",
 )
-# The dispatches finalize issued BEFORE this change, on an all-green run.
+# The dispatches finalize issued BEFORE this change, on an all-green run (BO-4300: the workspace maker's
+# answer replaces the pre-flight probe; the baseline is a scratch workspace, a deploy, one pytest run, its removal).
 _PRE_CHANGE_LABELS = [
-    "pre-flight", "gh-config", "step-0-baseline", "step-1-pr-probe",
+    "workspace-ensure", "gh-config", "step-0-baseline-workspace", "step-0-baseline-deploy",
+    "step-0-baseline", _CLEANUP, "step-1-pr-probe",
     "step-2-merge-main", "step-3-test-run", "step-3.5-closure-probe",
     "pre-step-4-sync-check", "step-4-pr-state", _MERGE_GATE, _MERGE,
     "step-5-sync-main", "step-6-scope-detect", "step-7-worktree-probe",
@@ -96,10 +100,10 @@ def _all_green(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _responses(checks_reply: Any) -> dict[str, Any]:
     return {
-        "pre-flight": {"found": True, "branch": "feature/hold", "worktree_root": "/tmp/tq600a13xx-wt"},
+        "workspace-ensure": workspace_ensure_reply("/tmp/tq600a13xx-wt", branch="feature/hold"),
         "gh-config": {"gh_target_account": None, "gh_repo": None},
-        "step-0-baseline": {"status": "ok", "baseline_sha": "abc1234",
-                            "baseline_failures": [], "baseline_run_at": "2026-10-09T00:00:00Z"},
+        **finalize_baseline_responses(),
+        "step-0-baseline-deploy": shell_step_reply("", exit_status=0),
         "step-1-pr-probe": {"found": True, "number": 7, "url": "https://example.invalid/pull/7"},
         "step-2-merge-main": {"status": "merged", "merge_strategy": "merged_main"},
         "step-3-test-run": {"passed": True, "output": "ok", "failing_tests": []},

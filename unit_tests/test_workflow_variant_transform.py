@@ -47,6 +47,7 @@ from build_phases import _emit_workflow_variant, build_workflow_scripts  # noqa:
 # Canonical workflow source fixture
 # ---------------------------------------------------------------------------
 _QUICK_FIX_JS = _REPO_ROOT / "templates" / "workflows-js" / "quick-fix.js"
+_WORKSPACE_ANSWER_JS = _REPO_ROOT / "templates" / "workflows-js" / "_shared" / "workspace-answer.js"
 
 # Minimal synthetic E2 source used for tests that don't need the real file.
 _MINIMAL_E2_SRC = b"""\
@@ -304,6 +305,11 @@ class TestReachability:
         src_dir = tmp_path / "templates" / "workflows-js"
         src_dir.mkdir(parents=True)
         shutil.copy(_QUICK_FIX_JS, src_dir / _QUICK_FIX_JS.name)
+        # BO-4300c-3: quick-fix.js carries the WORKSPACE-ANSWER marker pair, which the build fills from the
+        # single tracked source next to the templates (a missing source is a build error).
+        shared_dir = src_dir / "_shared"
+        shared_dir.mkdir()
+        shutil.copy(_WORKSPACE_ANSWER_JS, shared_dir / _WORKSPACE_ANSWER_JS.name)
 
         monkeypatch.setattr(build_phases, "TEMPLATES_DIR", tmp_path / "templates")
         monkeypatch.setenv("CLAUDE_CODE_VERSION", "9.9.999")

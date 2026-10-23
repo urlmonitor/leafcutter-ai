@@ -5,17 +5,17 @@ GOAL: Build a REAL git project with a deployed install, add REAL linked worktree
     real deployed scripts against them (INF-500d-4 composite tests).
 BUSINESS CONTEXT: The composite INF-500d-4 can only close honestly if a report
     filed from inside a per-drive worktree is shown to outlive
-    ``git worktree remove``. Each child proves one surface; these helpers let
+    removing it. Each child proves one surface; these helpers let
     the composite tests prove the gap between them.
 ARCHITECTURE: No build.py is spawned (a build is ~60s). The deployed install is
     assembled by ``unit_tests.feedback._inf_500d_4_helpers.deploy_install`` and
     the declaration is written by the REAL build helper. What makes a worktree's
-    declaration "inherit" is the REAL ``_inherited_log_root_args`` of the shipped
-    bootstrap (``templates/scripts/setup_ticket_worktree.py``), run in a FRESH
+    declaration "inherit" is the REAL ``inherited_log_root_args`` of the workspace maker's
+    log-root module (``templates/scripts/worktree_log_root.py``), run in a FRESH
     subprocess against the main install's declaration; its answer (the
     ``--log-root`` value) is what ``build.py`` would be handed, and is fed to the
     same ``declare`` the build uses. Git is real: ``git init``,
-    ``git worktree add``, ``git worktree remove``.
+    adding and removing a linked checkout goes through the workspace maker's one fixture helper.
 """
 
 from __future__ import annotations
@@ -28,10 +28,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
 from unit_tests.feedback import _inf_500d_4_helpers as h
 
 REPO_ROOT = h.REPO_ROOT
-BOOTSTRAP = REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
+BOOTSTRAP = REPO_ROOT / "templates" / "scripts" / "worktree_log_root.py"
 RESOLVE_ROOT_SRC = REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "_resolve_root.py"
 RETRO_SRC = REPO_ROOT / "scripts" / "retrospective"
 
@@ -44,7 +45,7 @@ _INHERIT_DRIVER = (
     "m = importlib.util.module_from_spec(spec)\n"
     "sys.modules['swt'] = m\n"
     "spec.loader.exec_module(m)\n"
-    "print(json.dumps(m._inherited_log_root_args(Path(sys.argv[2]))))\n"
+    "print(json.dumps(m.inherited_log_root_args(Path(sys.argv[2]))[0]))\n"
 )
 
 
@@ -101,9 +102,9 @@ def _deploy_extras(out_root: Path) -> None:
 
 
 def inherited_log_root(main_project: Path, tmpdir: Path) -> Path:
-    """What the shipped bootstrap hands a worktree's build as ``--log-root`` for this main install."""
-    proc = h.run_code(_INHERIT_DRIVER, [str(BOOTSTRAP), str(main_project)], main_project, tmpdir)
-    assert proc.returncode == 0, f"_inherited_log_root_args crashed: {proc.stderr}"
+    """What the workspace maker's log-root module hands a worktree's build as ``--log-root`` for this main install."""
+    proc = h.run_code(_INHERIT_DRIVER, [str(BOOTSTRAP), str(main_project / ".leafcutter")], main_project, tmpdir)
+    assert proc.returncode == 0, f"inherited_log_root_args crashed: {proc.stderr}"
     args = json.loads(proc.stdout.strip().splitlines()[-1])
     assert args[0] == "--log-root" and len(args) == 2, (
         f"the bootstrap would not hand the worktree the main install's root: {args} ({proc.stderr!r})")
@@ -111,12 +112,12 @@ def inherited_log_root(main_project: Path, tmpdir: Path) -> Path:
 
 
 def add_worktree(main_project: Path, base: Path, name: str, tmpdir: Path) -> tuple[Path, Path]:
-    """``git worktree add`` a linked worktree, deploy an install into it, declare the INHERITED root.
+    """Add a linked worktree (checkout), deploy an install into it, declare the INHERITED root.
 
     Returns (worktree, out_root). The worktree lives beside, not inside, the main project.
     """
     worktree = base / name
-    git(main_project, tmpdir, "worktree", "add", "-q", "-b", f"drive/{name}", str(worktree))
+    link_checkout(main_project, ["-q", "-b", f"drive/{name}", str(worktree)], env=clean_env(tmpdir))
     out_root = h.deploy_install(worktree, git=False)
     _deploy_extras(out_root)
     h.declare(out_root, inherited_log_root(main_project, tmpdir))
@@ -124,9 +125,9 @@ def add_worktree(main_project: Path, base: Path, name: str, tmpdir: Path) -> tup
 
 
 def remove_worktree(main_project: Path, worktree: Path, tmpdir: Path) -> None:
-    """``git worktree remove --force`` (the deployed install is untracked), and prove it is gone."""
-    git(main_project, tmpdir, "worktree", "remove", "--force", str(worktree))
-    assert not worktree.exists(), f"git worktree remove left {worktree} behind"
+    """Force-remove the linked checkout (the deployed install is untracked), and prove it is gone."""
+    unlink_checkout(main_project, ["--force", str(worktree)], env=clean_env(tmpdir))
+    assert not worktree.exists(), f"removing the linked checkout left {worktree} behind"
 
 
 def submit(out_root: Path, worktree: Path, tmpdir: Path, note: str) -> str:

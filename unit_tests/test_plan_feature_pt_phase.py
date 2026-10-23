@@ -64,7 +64,8 @@ async function mockAgent(call) {
     if (label === 'read-pause-record') { return { exists: true, stale: false }; }
     if (label === 'clear-pause-record') { return { ok: true }; }
     if (label === 'clear-pause-record-verify') { return { exists: false }; }
-    if (label === 'approval-holds') { return { output: JSON.stringify({ approved: /--ids (\S+)/.exec(instructions)[1].split(','), held: [] }), exit_code: 0 }; }
+    // approval-holds (pre-gate report and the approval step's --dry-run) and approval-apply (ACD-300c-4) release every id they get.
+    if (label === 'approval-holds' || label === 'approval-apply') { return { output: JSON.stringify({ approved: /--ids (\S*)/.exec(instructions)[1].split(',').filter(Boolean), held: [], already_approved: [] }), exit_code: 0 }; }
   }
 
   if (agentType === 'status-checker') {
@@ -108,7 +109,6 @@ async function mockAgent(call) {
     // (pause-persist, read-pause-record, etc.) ADR-024's substrate itself
     // dispatches now arrive under agentType 'worktree-agent' (BO-2300a-1-ii)
     // -- handled in the block above, not here.
-    if (label === 'apply-approval') { return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] }; }
     return { status: 'ok' };
   }
 
@@ -207,27 +207,22 @@ _labels = labels_in
 
 class TestOutcomeToRunSet(unittest.TestCase):
     """Classifier outcome -> run-set (all 5 outcomes)."""
-
     def test_full_set_dispatches_all_three_in_order(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
         self.assertEqual(_pt_author_order(side), ["mock-data-author", "mockup-author", "flow-author"])
-
     def test_mockup_plus_data_skips_flow(self) -> None:
         cfg = {"classifier": {"outcome": "mockup+data", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
         self.assertEqual(_pt_author_order(side), ["mock-data-author", "mockup-author"])
-
     def test_mockup_only(self) -> None:
         cfg = {"classifier": {"outcome": "mockup-only", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
         self.assertEqual(_pt_author_order(side), ["mockup-author"])
-
     def test_mock_data_only(self) -> None:
         cfg = {"classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
         self.assertEqual(_pt_author_order(side), ["mock-data-author"])
-
     def test_none_dispatches_no_pt_agents_but_runs_ac_pipeline(self) -> None:
         cfg = {"classifier": {"outcome": "none", "component": "ux-prototyping"}}
         res, side = _run(cfg)
@@ -241,7 +236,6 @@ class TestOutcomeToRunSet(unittest.TestCase):
 
 class TestClassifierDegradation(unittest.TestCase):
     """Malformed / inconsistent classifier + dispatch disagreement."""
-
     def test_missing_outcome_skips_pt_and_runs_ac(self) -> None:
         cfg = {"classifier": {"component": "ux-prototyping"}}  # no outcome
         res, side = _run(cfg)
@@ -249,14 +243,12 @@ class TestClassifierDegradation(unittest.TestCase):
         self.assertNotIn("pt-store-check", _labels(side))
         self.assertIn("it-po", _agent_types(side))
         self.assertEqual(res.get("status"), "ok")
-
     def test_unparseable_classifier_string_skips_pt_and_runs_ac(self) -> None:
         cfg = {"classifierRaw": "this is not json at all", "classifier": None}
         res, side = _run(cfg)
         self.assertEqual(_pt_author_order(side), [])
         self.assertIn("it-po", _agent_types(side))
         self.assertEqual(res.get("status"), "ok")
-
     def test_unknown_outcome_enum_skips_pt(self) -> None:
         cfg = {"classifier": {"outcome": "everything", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
@@ -277,7 +269,6 @@ class TestClassifierDegradation(unittest.TestCase):
 
 class TestDeterministicOrdering(unittest.TestCase):
     """Deterministic ordering."""
-
     def test_order_is_fixed_regardless_of_dispatch_array_order(self) -> None:
         cfg = {
             "classifier": {
@@ -292,7 +283,6 @@ class TestDeterministicOrdering(unittest.TestCase):
 
 class TestPtGating(unittest.TestCase):
     """Gating: edit-then-approve; cancel."""
-
     def test_edit_then_approve_redispatches_stage(self) -> None:
         """SUPERSEDED MECHANISM, SAME PROTECTION (classification: test_drift,
         Source-of-Truth Discipline Rule 1 -- production is correct per
@@ -351,7 +341,6 @@ class TestPtGating(unittest.TestCase):
 
 class TestPtCommitFailureAborts(unittest.TestCase):
     """Commit-before-next invariant."""
-
     def test_commit_failure_aborts_before_next_agent(self) -> None:
         cfg = {
             "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
@@ -367,7 +356,6 @@ class TestPtCommitFailureAborts(unittest.TestCase):
 
 class TestStoreAbsentSelfSkip(unittest.TestCase):
     """Store-absent self-skip."""
-
     def test_store_absent_emits_signal_and_ac_proceeds(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "storePresent": False}
         res, side = _run(cfg)
@@ -383,7 +371,6 @@ class TestStoreAbsentSelfSkip(unittest.TestCase):
 
 class TestFlowToBaHandoff(unittest.TestCase):
     """Flow -> BA handoff + force-BA on technical."""
-
     def test_force_ba_on_technical_when_flow_produced(self) -> None:
         """technical route (no BA normally) BUT full-set outcome produces a
         flow -> the BA stage is forced in so the flow steps aren't orphaned.
@@ -597,9 +584,9 @@ class TestEditFeedbackThreaded(unittest.TestCase):
         }
         _res, side = _run(cfg)
         md_calls = [c for c in side["allCalls"] if c["agentType"] == "mock-data-author"]
-        self.assertEqual(len(md_calls), 2)
-        # The SECOND dispatch (post-edit) must carry the feedback text.
         self.assertIn("MAKE-THE-CART-EMPTY-STATE-EXPLICIT", md_calls[1]["instr"])
+        self.assertEqual(sum("MAKE-THE-CART-EMPTY-STATE-EXPLICIT" in c["instr"] for c in md_calls), 1, md_calls)
+        self.assertNotEqual(_res.get("status"), "error", _res)
 
     def test_ac_edit_feedback_reaches_redispatch_prompt(self) -> None:
         cfg = {
@@ -610,8 +597,9 @@ class TestEditFeedbackThreaded(unittest.TestCase):
         }
         _res, side = _run(cfg)
         ba_calls = [c for c in side["allCalls"] if c.get("label") == "stage-ba-author"]
-        self.assertEqual(len(ba_calls), 2)
         self.assertIn("SPLIT-THE-REFUND-BEHAVIOUR", ba_calls[1]["instr"])
+        self.assertEqual(sum("SPLIT-THE-REFUND-BEHAVIOUR" in c["instr"] for c in ba_calls), 1, ba_calls)
+        self.assertNotEqual(_res.get("status"), "error", _res)
 
 
 class TestResumeReconciliationSignal(unittest.TestCase):

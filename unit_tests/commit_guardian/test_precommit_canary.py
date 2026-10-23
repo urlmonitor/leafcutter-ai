@@ -15,6 +15,9 @@ DECISION HISTORY
 - 2026-07-06 [EPIC-WorktreeQualityGateGuard/02]: Initial TDD red-baseline.
   precommit_canary.py does not exist yet; commit_guardian.json has no
   canary entry.  All tests are expected to fail RED until both are created.
+- 2026-10-20 [EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/18]: the manifest
+  lookup matches the exact id precommit-canary; the BO-4300c-1-ii stage
+  canaries also contain 'canary' and sit earlier in the manifest.
 ====================================================================
 """
 
@@ -55,7 +58,10 @@ def _load_guardian_json() -> dict:
 def _find_canary_hook_entry(hooks: list) -> dict | None:
     """Search the hooks list for the precommit-canary entry.
 
-    Looks for a hook whose ``id`` contains 'canary' or 'precommit-canary'.
+    Matches the exact id ``precommit-canary``: the manual-stage probe these
+    tests pin. The stage canaries (``precommit-canary-pre-commit`` and its
+    siblings, BO-4300c-1-ii) also contain 'canary' and are registered at their
+    own stages, so a substring match would pick the wrong entry.
 
     Args:
         hooks: List of hook dicts from commit_guardian.json hooks_manifest.hooks.
@@ -65,7 +71,7 @@ def _find_canary_hook_entry(hooks: list) -> dict | None:
     """
     for hook in hooks:
         hook_id = hook.get("id", "")
-        if "canary" in hook_id:
+        if hook_id == "precommit-canary":
             return hook
     return None
 

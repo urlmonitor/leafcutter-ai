@@ -23,7 +23,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
-produces: analysis
+produces: requirement_records
 config_keys: {}
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
@@ -41,9 +41,12 @@ outputs:
   name: completion_report
   type: structured_response
 mutates:
-- description: Read-only agent — no filesystem mutations
-  name: none
-  surface: none
+- description: Authors L0/L1 requirement records, one AC YAML file each, with all their fields (id, title, component, components, level, status fields, criteria, depends_on, readiness, priority, documentation_triggers, doc_links, origin_agent, created)
+  name: requirement_records
+  surface: AC YAML store (docs/acceptance-criteria/)
+- description: Strategic-shift edits to the vision statement and roadmap, applied only after explicit user confirmation
+  name: vision_and_roadmap
+  surface: docs/vision.md and docs/roadmap.json
 behavioral_patterns:
 - behavior: reprioritization,
   name: Conditional Behavior
@@ -457,7 +460,19 @@ block your output from reaching the caller.
 > user framing preferences, or decomposition strategies during this run that
 > future agents working in this component would benefit from knowing?"
 
-**On "no":** Proceed — nothing to persist.
+**On "no":** run this ONE command, then proceed — nothing to persist
+(ADR-034 Amendment 2 A2.3). Do not add a `--log` or `--sink` argument:
+
+```bash
+python3 {{config.output_root}}/skills/agent-telemetry/scripts/emit_event.py --agent product-owner --event capture_attempt --phase knowledge-capture --outcome nothing-to-record || true
+```
+
+This records that you ran the capture step and had nothing to record. It
+writes a capture attempt to telemetry, not to the knowledge record, so no
+learning is created. **Fail open:** if the command prints a warning or exits
+non-zero, do not retry or work around it — proceed anyway. You do NOT write a
+`recorded` attempt yourself: the helper in the "yes" steps below does that
+after a successful capture (A2.4).
 
 **On "yes":** Execute the following steps in order. Wrap the entire block in
 best-effort handling (log a warning and proceed if any step fails):
@@ -467,17 +482,29 @@ best-effort handling (log a warning and proceed if any step fails):
    `.claude/skills/signoff/SKILL.md` §7 step 2) — the required field set below
    must match that definition exactly; this agent has no `ticket_path` in
    hand, so the optional `ticket` field defined there is omitted here. Per
-   ADR-034 (Knowledge Write Ownership), this append is this agent's entire
-   obligation — it does not classify the learning or write to any knowledge
-   surface itself. Do NOT load `route-learning` or `capture-learning`;
-   ADR-034 §2 item 3 retired both names and neither has ever existed under
-   `templates/skills/` or `.claude/skills/`. Obtain the sink by running
-   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
-   from the project root — it prints the absolute path this install declared
-   for knowledge emissions, the same path regardless of your current working
-   directory. Append the event there (create the file if it does not exist
-   yet; skip gracefully if the declaration is missing or the file is not
-   writable):
+   ADR-034 (Knowledge Write Ownership), running the helper below is this
+   agent's entire obligation — it does not classify the learning or write to
+   any knowledge surface itself. Do NOT load `route-learning` or
+   `capture-learning`; ADR-034 §2 item 3 retired both names and neither has
+   ever existed under `templates/skills/` or `.claude/skills/`. Run the emit
+   helper as ONE command, with the learning as `--text`, filling in the
+   angle-bracket values (do not add `--sink`, and do not compose or write the
+   event yourself):
+   ```bash
+   python3 {{config.output_root}}/scripts/knowledge/emit_knowledge.py --agent product-owner --component <component> --destination <destination> --entry-kind <kind> --text '<learning>'
+   ```
+   Quoting rule: the learning goes inside single quotes, which stop the shell
+   from expanding backticks, `$(...)` and `$VAR`. Any single quote inside the
+   learning is written as `'\''` (close quote, escaped quote, reopen). For
+   example, the learning `don't panic` is written `'don'\''t panic'`.
+   If you cannot
+   classify the learning, pass `--entry-kind unclassified --destination
+   "(unrouted)"` (ADR-034 Amendment 1 A1.3). **Fail open:** if the helper
+   prints a warning or exits non-zero, do not retry or work around it — finish
+   your sign-off anyway; if it exited non-zero, also load the
+   `agent-telemetry` skill and record the failure as its
+   `Failed capture attempt` section directs. The JSON below documents the
+   record the helper writes; you do not produce it by hand:
    ```json
    {"event": "knowledge_captured", "timestamp": "<ISO-8601>", "agent": "product-owner", "component": "<component-id>", "destination": "(unrouted)", "entry_kind": "unclassified", "text": "<the learning body, exactly as you wrote it>"}
    ```

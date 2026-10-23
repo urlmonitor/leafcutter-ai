@@ -125,7 +125,7 @@ action:
 3. Sync local main with origin
 4. Run the test suite
 5. Close tickets (move to `99_done/`)
-6. Remove the worktree
+6. Remove the worktree (via the workspace maker (see [get-a-workspace](get-a-workspace.md)))
 7. Generate a changelog entry (dispatches `changelog-agent`)
 
 You will be prompted before each merge or deletion — `/finalize-feature` never

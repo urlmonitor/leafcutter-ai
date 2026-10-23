@@ -1,0 +1,133 @@
+id: GE-134a-4
+components:
+  - commit_guardian
+  - documentation_system
+readiness: approved
+priority: high
+title: "Reference doc: how a source file's length is measured, including the decision-history exclusion"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the measurement rule in force (GE-127d-3: no comment of any style, no standalone
+    Python string and no blank line counts),
+  When the size standard's reference documentation for source files is written or updated,
+  Then it states the rule in the same words the standard publishes, and names what is left
+    out: every comment, every standalone Python string and every blank line — which is why
+    a decision-history block is left out,
+  And it shows one Python and one JavaScript example with the raw line count and the
+    measured length side by side,
+  And it states that a decision-history block costs no measured lines, so moving a file's
+    decision history into another file or document frees no measured lines,
+  And it links GE-134a and the decision-history convention in the doc-enforcer skill rather
+    than restating that convention.
+depends_on:
+  - GE-134a-1
+  - GE-127d-5
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/doc-enforcer/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+- Reference genre in docs/reference/ (a new sibling page or a section of an existing one, the author's
+  choice), within the document-length standard.
+- 'Quotes GE-127d-5''s generated measurement-rule statement verbatim (describe_measurement_rule, the text
+  of every refusal''s Measures: line), never a paraphrase or a history-specific sentence: the rule leaves
+  out every comment, every standalone Python string and every blank line, and a decision-history block is
+  left out only as a case of that. Rewrites the existing docs/reference/source-file-length-measurement.md,
+  which describes the superseded GE-134a rule.'
+- 'The page''s Python and JavaScript examples state their raw and measured counts as the measure gives
+  them under the 2026-10-21 rule (re-derive them with the measure before publishing; the old examples''
+  counts no longer hold).'
+- 'Comparison: GE-127d-5''s parity gate compares only the surfaces listed in file_size.published_rule_surfaces
+  (README.md and commit_guardian.json today), resolved relative to the deployed commit_guardian scripts
+  directory. A docs/reference page is not in that list, so a verbatim quote can go stale unnoticed. Either
+  the page points at the generated statement instead of quoting it, or adding it to the list is decided
+  with GE-127d-5''s owner -- a docs/ path does not exist relative to the deployed scripts directory in a
+  consumer install, so it cannot simply be appended.'
+- Links GE-134a and templates/skills/doc-enforcer/SKILL.md instead of restating the decision-history convention.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-5
+  contract: 'The generated measurement-rule statement (describe_measurement_rule), exactly as the size
+    standard prints it on a refusal''s Measures: line and carries it in each published rule surface, for
+    this reference doc to quote verbatim.'
+test_required: false
+test_rationale: "Documentation-only deliverable; agreement between the published rule and this doc is enforced by GE-127d-1's check, and links and frontmatter by the documentation checks at commit time."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+- reason: renumbered-out-of-ge-127
+  date: '2026-10-22'
+  by: main-session
+  directed_by: user
+  entry: >-
+    Renumbered from GE-127h-4 to GE-134a-4 and moved from GE-127-files-stay-workable/ to
+    GE-134-history-never-costs-size/. GE-127 held 8 L1 children against a cap of 7, its
+    2026-10-09 amendment rules out a child_limit_override, and the user decided on
+    2026-10-22 to give this family its own goal, GE-134. Every id and reference that
+    named the GE-127h-4 family (covered_by, depends_on, doc_links, expects_from,
+    implemented_by, test_spec names) was renamed to match. Criteria and every
+    other field are unchanged.
+- reason: superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: BrainCandy
+  entry: >-
+    BrainCandy decided on 2026-10-23 that GE-127d-3 supersedes this family's rule. STILL
+    HOLDS: the reference doc states the rule in the standard's published words, shows one
+    Python and one JavaScript example with raw and measured counts side by side, states
+    that a decision-history block costs no measured lines so moving history elsewhere
+    frees none, and links GE-134a and the doc-enforcer convention. SUPERSEDED: the Given
+    ("the measurement rule after GE-134a-1 and GE-134a-3") and the list of what is left out
+    ("decision-history blocks, and the text the rule already left out before") — the rule
+    in force is GE-127d-3's, which leaves out every comment, standalone Python string and
+    blank line. Criteria narrowed: the Given names GE-127d-3's rule and the left-out list
+    is replaced by it. Title, depends_on and req_status unchanged. work_status reset
+    done -> todo: the reference doc already written
+    (docs/reference/source-file-length-measurement.md) describes the superseded rule and
+    must be rewritten; its examples' measured counts change. it_requirements and
+    expects_from (GE-134a-3's sentence, now superseded) should be re-pointed at GE-127d-5's
+    generated statement by the IT PO.
+- reason: technical-enrichment-superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: it-po
+  directed_by: BrainCandy
+  entry: >-
+    criteria untouched. expects_from re-pointed from GE-134a-3 (superseded) to GE-127d-5's
+    generated statement. it_requirements: quote that statement verbatim and rewrite the existing
+    docs/reference/source-file-length-measurement.md; re-derive the examples' raw and measured
+    counts under the 2026-10-21 rule; and a new note that GE-127d-5's parity gate compares only
+    file_size.published_rule_surfaces (resolved relative to the deployed scripts directory), so
+    this docs/ page is not compared today and cannot simply be appended to that list. depends_on
+    still names GE-134a-3 (a BA field, left as is; GE-127d-5 is the real upstream).
+- reason: depends-on-repointed
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: BrainCandy
+  entry: >-
+    depends_on re-pointed from GE-134a-3 (superseded_by GE-127d-3 on 2026-10-23) to
+    GE-127d-5, which owns the generated published-rule statement this reference doc
+    quotes verbatim. GE-134a-1 kept. Criteria, title and req_status unchanged.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/31_TICKET-20261021-GE-134a-4.md
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Answers GE-134a's reference-doc trigger. No source-file size reference exists under
+  docs/reference/ today (document-length-standard.md covers docs/**/*.md only); the author
+  chooses whether to add a sibling page or a section, within docs/reference/.

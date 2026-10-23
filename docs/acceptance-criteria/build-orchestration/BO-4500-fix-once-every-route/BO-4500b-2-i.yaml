@@ -1,0 +1,110 @@
+id: BO-4500b-2-i
+title: "A copy that differs only by whitespace or line endings is drift, not a match"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml"
+criteria: |
+  Given three installed routes carrying ALPHA-ANSWER, where after the install route A's copy gains
+    one trailing space on its second line, route B's copy has its line endings changed from LF to
+    CRLF, and route C's copy has one blank line removed,
+  When the identity check runs,
+  Then the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first
+    line that differs,
+  And no copy is reported as a match after its whitespace or line endings were normalised.
+depends_on: [BO-4500b-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-2.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: scripts/shared_block_identity.py
+    state: to_be_created
+it_requirements:
+  - >-
+    The comparison is made on raw bytes, with no stripping, line-ending conversion or
+    trailing-newline tolerance. A trailing space, LF changed to CRLF, and a removed blank line
+    are each drift.
+  - >-
+    Line reporting must not hide line-ending drift: a copy whose only change is CRLF still
+    reports a first differing line.
+  - >-
+    Reading the installed copies and the source must not itself normalise line endings or
+    encoding before the comparison, on any platform the suite runs on.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-2
+  contract: >-
+    The identity check over installed copies: byte comparison with the rendered source, every
+    differing copy named in one run as {route, block, first_differing_line}.
+test_intent:
+  - clause: the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first line that differs
+    needs_test: true
+    reason: A compare-after-strip implementation passes all three copies, so only these fixtures catch it.
+  - clause: no copy is reported as a match after its whitespace or line endings were normalised
+    needs_test: true
+    reason: Byte identity is the stated contract, and a normalising check would report false matches.
+test_spec:
+  - name: test_trailing_space_crlf_and_removed_blank_line_are_each_named
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Private copies: A gains a trailing space on line 2, B converts LF to CRLF, C loses a blank line; the check fails naming A, B and C each with ALPHA-ANSWER and a first differing line (B reports a line too)."
+    proves_clause: "the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first line that differs"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "compare after stripping trailing whitespace"
+      - "compare after normalising line endings"
+      - "tolerate a missing blank line or trailing newline"
+  - name: test_no_whitespace_normalised_copy_is_reported_as_match
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "None of the three drifted copies appears among matched copies in the report, and files are read as bytes so no platform newline translation hides CRLF."
+    proves_clause: "no copy is reported as a match after its whitespace or line endings were normalised"
+    code_file: scripts/shared_block_identity.py
+    to_be_created: true
+    convention_test_file: unit_tests/test_build_workflow_phase.py
+    must_catch:
+      - "read the installed copy in text mode so CRLF becomes LF before comparing"
+  - name: test_whitespace_drift_is_reachable_after_a_real_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Install through the real build_workflow_scripts phase into a temporary layout, copy the installed routes, apply the whitespace edits to the copy and run the identity check; it fails on the edited copies."
+    proves_clause: "the check fails naming routes A, B and C, each with the block ALPHA-ANSWER and the first line that differs"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Discriminator for the plausible wrong version "compare after stripping whitespace": it would pass
+  every case here. The request says byte identity; this record makes that falsifiable. All three
+  routes must be named in one run (no stop-at-first).

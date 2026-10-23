@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -100,8 +100,12 @@ origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo_4500a_5_iv_finalize_commit.py
+  - unit_tests/build_orchestration/test_bo_400e_3_v_closure_commit.py
+implemented_by:
+  - templates/workflows-js/finalize-feature.js
+  - scripts/build_orchestration/_fcs_close.py
 notes: |
   SCOPE: the closing commit only. A merge commit made while catching up with main belongs to the
   future "catching up with the shared line safely" sibling of BO-4500a (C6's sync_with_main) and is

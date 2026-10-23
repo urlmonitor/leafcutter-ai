@@ -90,7 +90,7 @@ regardless of which worktree the route is started from. This is what closed
 `KI-ACD-009` cause 1: reading `config/agent_registry.json` from a worktree
 used to fail outright, because the file exists only at the workspace root's
 `.leafcutter/config/`, not inside a worktree's own (worktree-local)
-`.leafcutter/` — `git worktree add` only ever checks out tracked content, and
+`.leafcutter/` — a fresh workspace only ever holds tracked content, and
 `.leafcutter/` is untracked build output. Resolving through the shared
 git-common-dir step rather than the worktree's own directory is what makes
 the registry reachable from a worktree at all.

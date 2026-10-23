@@ -14,16 +14,23 @@ If --agent is omitted, all templates in templates/agents/ are processed.
 #   Written per INF-600 Ticket 5 Phase 1. Extracts heuristic field proposals
 #   from agent template prose. Does NOT modify templates or registry directly.
 #   (#EPIC-SelfDescribingAgents/05)
+# - 2026-10-21 [python-coder/AR-400e-3]:
+#   Abilities are proposed as `proposed_frontmatter.skills` (the specialist's own
+#   declaration), from the shared recognition rule (skill_ref_recognition.recognise);
+#   no skills_invoked edit, no default signoff. (#TICKETLESS reason=ar-400e-3)
 """
 
 from __future__ import annotations
 
 import argparse
+import functools
+import json
 import re
 import sys
 from pathlib import Path
 
 import yaml
+from skill_ref_recognition import recognise
 
 # ---------------------------------------------------------------------------
 # Path resolution
@@ -72,16 +79,13 @@ def _extract_pre_flight_reads(text: str) -> list[dict]:
     )
     if pf_match:
         section_body = pf_match.group(1)
-        # Extract bullets
         for line in section_body.splitlines():
             stripped = line.strip().lstrip("0123456789.-*").strip()
             if stripped and len(stripped) > 10:
-                # Extract file paths / source references
                 file_refs = re.findall(r"`([^`]+\.(?:md|json|yaml|py))`", stripped)
-                for ref in file_refs[:2]:  # Limit to first 2
+                for ref in file_refs[:2]:
                     reads.append({"source": ref, "required": False, "condition": "when present"})
                 if not file_refs and "read" in stripped.lower():
-                    # Generic reads
                     reads.append({"source": "project conventions", "required": False})
 
     # Look for PROJECT_CONTEXT.md patterns
@@ -98,36 +102,23 @@ def _extract_pre_flight_reads(text: str) -> list[dict]:
     return unique
 
 
-def _extract_skills_invoked(text: str) -> list[dict]:
-    """Extract skills_invoked proposals from skill references in prose."""
-    skills: list[dict] = []
-    # Look for SKILL.md references
-    skill_refs = re.findall(r"[`'\"]?\.claude/skills/([a-z][a-z0-9-]+)/SKILL\.md[`'\"]?", text)
-    skill_refs += re.findall(r"`([a-z][a-z0-9-]+)` skill", text)
-    skill_refs += re.findall(r"the `([a-z][a-z0-9-]+)` skill", text)
+@functools.cache
+def _ability_context() -> tuple[frozenset[str], frozenset[str]]:
+    """Return (ability ids shipped under templates/skills, registry agent ids) for the shared rule."""
+    known = frozenset(d.name for d in (PACKAGE_ROOT / "templates" / "skills").iterdir() if d.is_dir())
+    registry = json.loads((PACKAGE_ROOT / "config" / "agent_registry.json").read_text(encoding="utf-8"))
+    return known, frozenset(str(a["id"]) for a in registry["agents"])
 
-    # Detect conditional vs always
-    seen: set[str] = set()
-    for skill_id in skill_refs:
-        if skill_id in seen:
-            continue
-        seen.add(skill_id)
-        # Heuristically determine mode
-        pattern = re.compile(
-            rf"(?:if|when|only|conditional)\b.*\b{re.escape(skill_id)}\b|"
-            rf"\b{re.escape(skill_id)}\b.*(?:if|when|only)",
-            re.IGNORECASE,
-        )
-        mode = "conditional" if pattern.search(text) else "always"
-        skills.append({"skill_id": skill_id, "mode": mode})
 
-    # signoff is always invoked by any phase agent
-    if "signoff" not in seen:
-        fm, _ = parse_frontmatter(text)
-        if fm.get("signoff"):
-            skills.append({"skill_id": "signoff", "mode": "always"})
+def _recognised_skills(text: str, self_id: str) -> list[str]:
+    """Ability ids the instructions in ``text`` tell the agent to use, by the SAME rule the gate applies (AR-400b-2).
 
-    return skills
+    Whole recognised set, granted or not; a citation or a mention of an agent is not an instruction.
+    """
+    known, agents = _ability_context()
+    refs = recognise(text, set(known), set(agents), self_id)
+    return list(dict.fromkeys(r["canonical_id"] for r in refs
+                              if r["canonical_id"] and not r["citation"] and not r["names_agent"]))
 
 
 def _extract_behavioral_patterns(text: str) -> list[dict]:
@@ -179,7 +170,6 @@ def _extract_behavioral_patterns(text: str) -> list[dict]:
             "related_agent": None,
         })
 
-    # Default fallback
     if not patterns:
         patterns.append({
             "name": "Standard-Phase",
@@ -317,7 +307,6 @@ def _extract_knowledge_channels(text: str, fm: dict) -> list[dict]:
     """
     channels: list[dict] = []
 
-    # Channel 1: always — system prompt / template description
     channels.append({"channel": 1, "source": "template description field"})
 
     # Channel 3: Agent tool input (for phase agents receiving ticket_path)
@@ -405,10 +394,10 @@ def propose_agent(template_file: Path) -> dict:
             "outputs": _extract_outputs(full_text, fm),
             "mutates": _extract_mutates(full_text, fm),
             "behavioral_patterns": _extract_behavioral_patterns(full_text),
+            "skills": _recognised_skills(text, str(fm.get("name") or template_file.stem)),
         },
         "proposed_registry": {
             "category": _extract_category(fm),
-            "skills_invoked": _extract_skills_invoked(full_text),
             "knowledge_channels": _extract_knowledge_channels(full_text, fm),
         },
     }
@@ -442,7 +431,7 @@ def main() -> int:
             output_path.write_text(yaml.dump(proposal, default_flow_style=False, allow_unicode=True, sort_keys=False), encoding="utf-8")
             print(f"  Proposed: {agent_id} -> {output_path.name}")
             processed += 1
-        except (OSError, yaml.YAMLError, KeyError) as exc:
+        except (OSError, ValueError, yaml.YAMLError, KeyError) as exc:
             print(f"  Error processing {tf.name}: {exc}", file=sys.stderr)
 
     print(f"\nGenerated {processed} proposal files in {PROPOSALS_DIR}")

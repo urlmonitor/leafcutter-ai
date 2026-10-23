@@ -322,12 +322,19 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
             "build-feature.js no longer defines BATCH_SIZE. The planner "
             "batching logic must be preserved after the rewire (BO-2000f-5).",
         )
-        # Worktree guard must survive the rewire.
+        # The workspace guard must survive the rewire (BO-4300c-3: the old worktreeResult claim is replaced by
+        # the accepted-answer guard, which stops the run on anything but a ready workspace).
         self.assertIn(
-            "worktreeResult",
+            "workspaceObtain",
             self.source,
-            "build-feature.js no longer references worktreeResult. The worktree "
-            "quality-gate guard must be preserved after the rewire (BO-2000f-5).",
+            "build-feature.js no longer obtains its workspace through the shared helper. The workspace "
+            "guard must be preserved after the rewire (BO-2000f-5, BO-4300c-3).",
+        )
+        self.assertIn(
+            "workspaceFailure",
+            self.source,
+            "build-feature.js no longer ends the run on a workspace answer that is not accepted "
+            "(BO-2000f-5, BO-4300c-3).",
         )
         # Per-phase dispatch must now be present — this assertion fails before the fix.
         self.assertTrue(

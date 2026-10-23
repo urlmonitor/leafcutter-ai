@@ -21,14 +21,16 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _bp_1300e_lint_gate_fixture as fx  # noqa: E402
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
+
 ADOPTER_SCOPE = {"version": 1, "steps": [{"name": "adopter-rules", "paths": ["src"]}]}
 BOTH = [("kernel/y.py", 30, "BLE001"), ("unit_tests/x.py", 12, "E741")]
 
 
 def _worktree(main: fx.Repo, parent: Path, name: str = "wt") -> fx.Repo:
-    """`git worktree add`, with the same symlinked install and an untracked hook config."""
+    """A linked checkout of *main*, with the same symlinked install and an untracked hook config."""
     root = parent / name
-    added = fx.git(["worktree", "add", "-q", str(root), "-b", name], main.root)
+    added = link_checkout(main.root, ["-q", str(root), "-b", name], check=False, env=fx.envmod.base_env())
     assert added.returncode == 0, fx.out(added)
     (root / ".leafcutter").symlink_to(main.layout / ".leafcutter")
     (root / ".pre-commit-config.yaml").write_bytes((main.root / ".pre-commit-config.yaml").read_bytes())

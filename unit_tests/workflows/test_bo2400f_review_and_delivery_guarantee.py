@@ -132,7 +132,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, resolve_connected_reply, run_workflow_under_e2, workspace_answer_of, workspace_ensure_from_opened  # noqa: E402
 
 import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
@@ -153,24 +153,13 @@ _REVIEW_LABEL = "fastlane-review"
 # ---------------------------------------------------------------------------
 
 _GREEN_LABELS: dict = {
-    "fastlane-worktree": {
+    "workspace-ensure": workspace_ensure_from_opened({
         "worktree_path": "/tmp/fastlane-wt-bo2400f11",
         "branch": "fast-lane/bo-stub-1",
         "ac_store_path": "/tmp/fastlane-wt-bo2400f11/docs/acceptance-criteria",
         "created": True,
-    },
-    "fastlane-worktree-verify": {
-        "worktree_path": "/tmp/fastlane-wt-bo2400f11",
-        "raw": (
-            "worktree /tmp/fastlane-wt-bo2400f11\n"
-            "HEAD 0000000000000000000000000000000000000000\n"
-            "branch refs/heads/fast-lane/bo-stub-1"
-        ),
-    },
-    "resolve-connected": {
-        "ac_ids": ["BO-STUB-1"],
-        "message": "1 to build",
-    },
+    }),
+    "resolve-connected": resolve_connected_reply(["BO-STUB-1"]),
     "claim-connected": _claim_fx.claim_ran(["BO-STUB-1"]),
     "test-writer-connected": {
         "status": "ok",
@@ -226,8 +215,7 @@ _GREEN_LABELS: dict = {
         "status": "ok",
         "pr_url": "https://github.com/example/repo/pull/1",
         "message": "PR opened",
-    },
-}
+    }, **_claim_fx.wrong_version_passing()}
 
 _HIGH_FINDING_VERDICT = {
     "verdict_obtained": True,
@@ -500,7 +488,7 @@ def test_ac11_review_dispatch_targets_the_uncommitted_worktree_diff():
         f"Got: {type(prompt).__name__}"
     )
 
-    worktree_path = _GREEN_LABELS["fastlane-worktree"]["worktree_path"]
+    worktree_path = workspace_answer_of(_GREEN_LABELS["workspace-ensure"])["workspace_path"]
     assert worktree_path in prompt, (
         f"The review prompt must reference the run's own worktree path "
         f"({worktree_path!r}) so the reviewer reads the REAL uncommitted diff "

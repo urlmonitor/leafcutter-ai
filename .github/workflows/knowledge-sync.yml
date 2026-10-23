@@ -27,7 +27,9 @@ jobs:
       LEAFCUTTER_NEO4J_URI: ${{ secrets.LEAFCUTTER_NEO4J_URI }}
       LEAFCUTTER_NEO4J_WRITER_USERNAME: ${{ secrets.LEAFCUTTER_NEO4J_WRITER_USERNAME }}
       LEAFCUTTER_NEO4J_WRITER_PASSWORD: ${{ secrets.LEAFCUTTER_NEO4J_WRITER_PASSWORD }}
-      LEAFCUTTER_NEO4J_DATABASE: ${{ vars.LEAFCUTTER_NEO4J_DATABASE || 'neo4j' }}
+      # Instance-specific and required: no fallback. An unset value fails the job by name
+      # before any connection is attempted.
+      LEAFCUTTER_NEO4J_DATABASE: ${{ vars.LEAFCUTTER_NEO4J_DATABASE }}
       # Declared retention bound: the 3 newest generations are kept; anything older is
       # reclaimed only once it is also 7200 s (2 h) old. 7200 s is above the 3600 s
       # continuation lifetime (knowledge.cursors.CONTINUATION_LIFETIME_SECONDS), so no
@@ -35,6 +37,14 @@ jobs:
       # keeps roughly 7-8 generations (~200k relationships), under the Aura Free 400k cap.
       KNOWLEDGE_RETENTION_MAX_GENERATIONS: '3'
       KNOWLEDGE_RETENTION_MIN_AGE_SECONDS: '7200'
+      # Declared capacity ceiling (Aura Free: 200,000 nodes / 400,000 relationships per database).
+      # The backend does not report its ceiling over Bolt, so it is declared here. Publication is
+      # refused before any write when measured usage plus the snapshot exceeds 90 percent of the
+      # ceiling on either axis, and warns above 75 percent.
+      KNOWLEDGE_CAPACITY_MAX_NODES: '200000'
+      KNOWLEDGE_CAPACITY_MAX_RELATIONSHIPS: '400000'
+      KNOWLEDGE_CAPACITY_REFUSE_PERCENT: '90'
+      KNOWLEDGE_CAPACITY_WARN_PERCENT: '75'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,13 +78,15 @@ jobs:
 
           print('--- knowledge-sync resolved configuration ---')
           print(f'  database name     : {database or "(empty)"}')
-          print(f'    from            : vars.LEAFCUTTER_NEO4J_DATABASE, else the literal "neo4j"')
+          print(f'    from            : vars.LEAFCUTTER_NEO4J_DATABASE (required, no fallback)')
           print(f'  host              : {host}')
           print(f'  scheme            : {urlsplit(uri).scheme or "(none)"}')
           print(f'  repository_id     : {os.environ.get("KNOWLEDGE_REPOSITORY_ID", "")}')
           print(f'  source revision   : {os.environ.get("SOURCE_REVISION", "")}')
           print(f'  retention bound   : keep {os.environ.get("KNOWLEDGE_RETENTION_MAX_GENERATIONS", "")} newest generations;')
           print(f'                      reclaim older ones only after {os.environ.get("KNOWLEDGE_RETENTION_MIN_AGE_SECONDS", "")} s')
+          print(f'  capacity ceiling  : {os.environ.get("KNOWLEDGE_CAPACITY_MAX_NODES", "")} nodes, {os.environ.get("KNOWLEDGE_CAPACITY_MAX_RELATIONSHIPS", "")} relationships;')
+          print(f'                      refuse above {os.environ.get("KNOWLEDGE_CAPACITY_REFUSE_PERCENT", "")} %, warn above {os.environ.get("KNOWLEDGE_CAPACITY_WARN_PERCENT", "")} %')
           print('  secret presence (values never printed):')
           for name in ('LEAFCUTTER_NEO4J_URI',
                        'LEAFCUTTER_NEO4J_WRITER_USERNAME',
@@ -91,7 +103,7 @@ jobs:
         run: |
           python - <<'PY'
           import os, re
-          names = ('LEAFCUTTER_NEO4J_URI', 'LEAFCUTTER_NEO4J_WRITER_USERNAME', 'LEAFCUTTER_NEO4J_WRITER_PASSWORD')
+          names = ('LEAFCUTTER_NEO4J_URI', 'LEAFCUTTER_NEO4J_DATABASE', 'LEAFCUTTER_NEO4J_WRITER_USERNAME', 'LEAFCUTTER_NEO4J_WRITER_PASSWORD')
           missing = [name for name in names if not os.environ.get(name)]
           if missing:
               raise SystemExit('Knowledge sync writer configuration missing: ' + ', '.join(missing))
@@ -105,5 +117,5 @@ jobs:
         shell: bash
         run: |
           python -m knowledge validate --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION"
-          python -m knowledge sync --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION" --retention-max-generations "$KNOWLEDGE_RETENTION_MAX_GENERATIONS" --retention-min-age-seconds "$KNOWLEDGE_RETENTION_MIN_AGE_SECONDS"
-          python -m knowledge status --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION"
+          python -m knowledge sync --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION" --retention-max-generations "$KNOWLEDGE_RETENTION_MAX_GENERATIONS" --retention-min-age-seconds "$KNOWLEDGE_RETENTION_MIN_AGE_SECONDS" --capacity-max-nodes "$KNOWLEDGE_CAPACITY_MAX_NODES" --capacity-max-relationships "$KNOWLEDGE_CAPACITY_MAX_RELATIONSHIPS" --capacity-refuse-percent "$KNOWLEDGE_CAPACITY_REFUSE_PERCENT" --capacity-warn-percent "$KNOWLEDGE_CAPACITY_WARN_PERCENT"
+          python -m knowledge status --root "$GITHUB_WORKSPACE" --repository-id "$KNOWLEDGE_REPOSITORY_ID" --revision "$SOURCE_REVISION" --retention-max-generations "$KNOWLEDGE_RETENTION_MAX_GENERATIONS" --retention-min-age-seconds "$KNOWLEDGE_RETENTION_MIN_AGE_SECONDS" --capacity-max-nodes "$KNOWLEDGE_CAPACITY_MAX_NODES" --capacity-max-relationships "$KNOWLEDGE_CAPACITY_MAX_RELATIONSHIPS" --capacity-refuse-percent "$KNOWLEDGE_CAPACITY_REFUSE_PERCENT" --capacity-warn-percent "$KNOWLEDGE_CAPACITY_WARN_PERCENT"

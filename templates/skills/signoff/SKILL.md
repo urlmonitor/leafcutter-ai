@@ -910,18 +910,53 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 
 > "Did you discover anything during this ticket that future-you would have benefited from knowing at the start? (no / yes)"
 
-**No path**: proceed — sign-off is complete.
+**No path**: run the ONE command documented in the `agent-telemetry` skill's
+`Nothing-to-record capture attempt` section, then proceed — sign-off is complete
+(ADR-034 Amendment 2 A2.3). Fill `<agent>` with your own agent name and
+`<ticket>` with the ticket you are signing off. Run it exactly as written
+there, and do not add a `--log` or `--sink` argument.
+
+This records that you ran the capture step and had nothing to record. It
+writes a capture attempt to telemetry, not to the knowledge record, so no
+learning is created. `--ticket` is optional: include it only when you have a
+ticket path in hand, otherwise leave it out. **Fail open:** if the command
+prints a warning or exits non-zero, do not retry or work around it — finish
+your sign-off anyway. You do NOT write a `recorded` attempt yourself: the
+helper in the Yes path below does that after a successful capture (A2.4).
 
 **Yes path**:
 1. Ask: "Describe the learning in one to three sentences."
-2. Emit one `knowledge_captured` telemetry event. Obtain the sink by running
-   `python3 .leafcutter/scripts/knowledge/harvest_learnings.py --print-sink`
-   from the project root — it prints the absolute path this install declared
-   for knowledge emissions, the same path regardless of your current working
-   directory. Append the event there (create the file if it does not exist
-   yet; skip gracefully if the declaration is missing or the file is not
-   writable).
-   Per ADR-034 (Knowledge Write Ownership), this single append is the agent's
+2. Record one `knowledge_captured` event by running the emit helper as ONE
+   command, with the learning from step 1 as `--text`. Run exactly this, filling
+   in the angle-bracket values; do not add a `--sink` argument, and do not
+   compose or write the event yourself — the helper resolves the sink this
+   install declared, writes the one JSONL line, and escapes any newlines in the
+   text:
+
+   ```bash
+   python3 {{config.output_root}}/scripts/knowledge/emit_knowledge.py --agent <agent> --component <component> --destination <destination> --entry-kind <kind> --text '<learning>' --ticket <ticket>
+   ```
+
+   Quoting rule: the learning goes inside single quotes, which stop the shell
+   from expanding backticks, `$(...)` and `$VAR`. Any single quote inside the
+   learning is written as `'\''` (close quote, escaped quote, reopen). For
+   example, the learning `don't panic` is written `'don'\''t panic'`.
+
+   `--ticket` is optional: include it only when you have a ticket path in hand,
+   otherwise leave it out. If you cannot classify the learning, pass
+   `--entry-kind unclassified --destination "(unrouted)"` (ADR-034 Amendment 1
+   A1.3): the helper records that sentinel pair as it is and the harvester
+   keeps the record unrouted until it can be classified. **Fail open:** if the
+   helper prints a warning or exits non-zero (for example the install has no
+   usable sink declaration), do not retry or work around it — finish your
+   sign-off anyway. If the command exited non-zero, also record the failure
+   as the `agent-telemetry` skill's `Failed capture attempt` section directs
+   (ADR-034 Amendment 2 A2.8).
+
+   The JSON below documents the record the helper writes; you do not produce it
+   by hand.
+
+   Per ADR-034 (Knowledge Write Ownership), running the helper is the agent's
    entire obligation: the agent does not classify the learning, does not pick
    a destination knowledge surface, and does not write to one — the harvester
    (`scripts/knowledge/harvest_learnings.py`, invoked via the
@@ -970,8 +1005,9 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    **`entry_kind` and `destination` — no classification procedure is defined
    here.** Both fields used to be `route-learning`'s output; with that skill
    retired and nothing replacing it inline, this step does not ask the agent
-   to classify or route. Populate both with the literal sentinel values
-   `"unclassified"` and `"(unrouted)"`. This is a deliberate non-value, not a
+   to classify or route. Pass the literal sentinel values `unclassified` and
+   `(unrouted)` (the `--entry-kind` and `--destination` arguments above)
+   whenever you cannot classify the learning. This is a deliberate non-value, not a
    vocabulary or sink-path decision: `INF-400c-5` owns the real `entry_kind`
    vocabulary and `INF-400c-4` owns the destination/sink path, and this step
    must not pre-empt either. `route-knowledge`
@@ -1017,8 +1053,8 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
    **Scope of "normative": the record's SHAPE, not its destination.** Which
    file these events are written to was a separate question from the
    record's shape, and `INF-400c-4` has since settled it: this install's
-   build-time declaration at `config/knowledge_sink.json`, obtained via
-   `harvest_learnings.py --print-sink` (see step 2 above), is now the single
+   build-time declaration at `config/knowledge_sink.json`, which the emit
+   helper in step 2 reads for you, is now the single
    knowledge-emission sink every producer resolves against — the earlier
    mismatch, where producers appended to the telemetry stream while
    `harvest_learnings.py` read a separate emissions file in the install's
@@ -1029,12 +1065,13 @@ After the atomic sign-off write (§2) succeeds, invoke the knowledge-capture pro
 This step is **mandatory** — skipping it outright is a protocol violation.
 `route-learning` and `capture-learning` are retired and this step no longer
 asks an agent to load either, so their absence is not a condition that can
-occur here anymore. The one recognised escape hatch is a write failure on the
-append itself (e.g. the resolved sink's directory is not writable, or the
-build-time declaration is missing): log a warning and proceed — do not block
-sign-off. (What the proceed-anyway branch
-must leave behind as a countable artefact is `INF-700b-1-ii`'s obligation,
-not re-specified here.)
+occur here anymore. The one recognised escape hatch is a failure of the emit
+helper itself (it warns or exits non-zero, e.g. the build-time sink
+declaration is missing or stale): log a warning and proceed — do not block
+sign-off. When the helper exited non-zero, the proceed-anyway branch leaves
+a countable failure record: run the ONE command in the `agent-telemetry`
+skill's `Failed capture attempt` section, exactly as written there (ADR-034
+Amendment 2 A2.8). Include `--ticket` only when you have a ticket path in hand.
 
 ---
 

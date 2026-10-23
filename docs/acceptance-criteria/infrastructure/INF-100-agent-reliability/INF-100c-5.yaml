@@ -1,0 +1,216 @@
+id: INF-100c-5
+components:
+  - feedback_collector
+  - build_pipeline
+readiness: approved
+priority: high
+title: "The build fails when an agent that signs off is in no feedback category's writer list"
+component: infrastructure
+level: L2
+status: active
+req_status: active
+work_status: done
+created_by: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c.yaml
+criteria: |
+  Given the package's agent definitions mark 24 agents with signoff: true,
+    including restructuring-specialist,
+  And the feedback categories file lists restructuring-specialist in no category's
+    allowed_writers (all nine categories checked: complete, knowledge-gap,
+    quality-concern, tooling-issue, convention-ambiguity, blocker,
+    subagent-quality, success-pattern, process-finding),
+  When the package build runs,
+  Then the build fails before it reports success,
+  And the failure message names restructuring-specialist as an agent that signs off
+    but can write to no feedback category,
+  And when two such agents are missing (restructuring-specialist and
+    change-scope-reviewer) the one failure message names both, not only the first found,
+  And after restructuring-specialist and change-scope-reviewer are added to the
+    complete category's allowed_writers, the same build passes this check.
+depends_on:
+  - INF-100c
+  - INF-100c-3
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-003.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: templates/agents/ac-validator.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/build_phases_feedback_writers.py
+    state: to_be_created
+  - path: scripts/build_phases.py
+    state: existing
+  - path: scripts/build.py
+    state: existing
+  - path: templates/scripts/feedback/feedback_validation.py
+    state: existing
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_100c_5.py
+    state: to_be_created
+it_requirements:
+  - "THE CHECK GATES THE PATH EVERY PACKAGE BUILD TAKES. It must run inside build.py (including --validate-only) and fail it before success is reported. A check that runs only as an optional standalone command or only as a commit hook does not satisfy the criteria; if it is also wired into a commit-time gate, the build stays the load-bearing enforcement point."
+  - "BOTH LISTS ARE READ FROM THEIR SOURCES, NEVER RESTATED. The signing-off set comes from the signoff field in each agent definition's frontmatter (templates/agents/*.md), not from config/agent_registry.json, which carries no signoff flags. The writer lists come from the feedback categories file the build deploys. No agent name, category name or count (24 agents, nine categories) is hard-coded, so a new agent or category is checked with no edit to the check."
+  - "WRITER RESOLUTION AGREES WITH SUBMISSION. A category counts for an agent only if submit_feedback.py would accept that agent for that category, sentinels included (INF-100c-5-ii). There must be one resolution rule shared by submission and the check; a second copy that can drift from submission is a defect."
+  - "ALL VIOLATIONS IN ONE RUN. The failure names every signing-off agent with no category, in a stable sorted order, in one message, and never stops at the first."
+  - "The check is read-only and deterministic: it writes no file, and two runs on the same inputs give byte-identical output."
+  - "An unreadable or malformed agent definition or categories file must fail the build with a message naming the file, per the project error handling policy. It must never be skipped silently, which would let the check pass having checked nothing."
+  - "Every module the check imports must be in the build deploy manifest, so the check works in a deployed layout (CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Must add under 1 second to the build for the shipped roster."
+  - "Deployed/template parity (ADR-001): edit templates/ and verify the deployed copies through the build round-trip."
+  - "This record and INF-100c-5-iv must land in the same change set. restructuring-specialist and change-scope-reviewer are unregistered today, so the check alone turns every package build red until -iv's registrations land."
+test_intent:
+  - clause: the build fails before it reports success
+    needs_test: true
+    reason: Failing the build is the whole enforcement, and a check that only logs would let the two lists disagree silently again.
+  - clause: the failure message names restructuring-specialist as an agent that signs off but can write to no feedback category
+    needs_test: true
+    reason: The named agent is computed from two files, so a wrong join would name the wrong agent or none.
+  - clause: when two such agents are missing (restructuring-specialist and change-scope-reviewer) the one failure message names both, not only the first found
+    needs_test: true
+    reason: Stopping at the first violation is the easy wrong implementation and would hide every later omission.
+  - clause: after restructuring-specialist and change-scope-reviewer are added to the complete category's allowed_writers, the same build passes this check
+    needs_test: true
+    reason: A check that cannot pass once the omission is fixed would block every build, so the passing direction needs its own proof.
+test_spec:
+  - name: test_validate_only_build_exits_nonzero_when_a_signing_off_agent_has_no_category
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Copies scripts/, templates/ and config/ of the package into a tmp package root (no deploy, so no 60s build), removes restructuring-specialist from every allowed_writers list, runs that copy's scripts/build.py --validate-only as a subprocess and asserts a non-zero exit and no success line.
+    proves_clause: the build fails before it reports success
+    code_file: scripts/build.py
+  - name: test_failure_message_names_the_signing_off_agent_with_no_category
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Runs the check on a tmp agents dir and a tmp categories file in which only restructuring-specialist signs off and is listed nowhere, and asserts the failure text names restructuring-specialist as signing off but able to write to no category, and names no other agent.
+    proves_clause: the failure message names restructuring-specialist as an agent that signs off but can write to no feedback category
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a check that reads signoff from config/agent_registry.json, which carries no signoff flags, and so names nobody
+      - a check that joins the wrong way round and names a listed agent instead of the unlisted one
+      - a check with the agent names or the count of 24 hard-coded
+  - name: test_one_failure_message_names_every_missing_agent_sorted
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Runs the check with restructuring-specialist and change-scope-reviewer both missing and asserts the missing_writers result and the single failure message list both, in sorted order, and that two runs give byte-identical output.
+    proves_clause: when two such agents are missing (restructuring-specialist and change-scope-reviewer) the one failure message names both, not only the first found
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+    must_catch:
+      - a check that raises on the first missing agent and never names the second
+      - a check that emits one message per agent so the first message names only one
+      - a check that lists the agents in directory order instead of sorted order
+  - name: test_check_passes_once_both_agents_are_added_to_complete
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Runs the check on the two-missing fixture, adds restructuring-specialist and change-scope-reviewer to the complete category only, re-runs it and asserts missing_writers is empty and the check passes.
+    proves_clause: after restructuring-specialist and change-scope-reviewer are added to the complete category's allowed_writers, the same build passes this check
+    code_file: scripts/build_phases_feedback_writers.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_submit_feedback_unknown_agent.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build.py
+  - scripts/build_phases.py
+  - templates/scripts/feedback/feedback_validation.py
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/config/feedback_categories.yaml
+  - unit_tests/feedback/test_submit_feedback_unknown_agent.py
+file_findings:
+  - file: scripts/build.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It owns the validation path every build takes (main calls _run_validation_guards with _validate_all, which also runs under --validate-only), so the new check must be wired there and a non-zero return aborts before success.
+    decision: null
+  - file: scripts/build_phases.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the facade that re-exports every build_phases_* module and sibling modules must reach it by function-scoped import, so a new build_phases_feedback_writers module must follow that pattern.
+    decision: null
+  - file: templates/scripts/feedback/feedback_validation.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: validate_writer here is submission's writer rule (literal membership in allowed_writers, no sentinel expansion) and is stdlib-only, so it is the one rule the check must share rather than copy.
+    decision: null
+  - file: templates/scripts/feedback/submit_feedback.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It loads the categories file and calls validate_writer only when source is agent, so hook-source submissions bypass the writer rule and the check must not credit anything through that bypass.
+    decision: null
+file_findings_opened_files:
+  - scripts/build.py
+  - scripts/build_phases.py
+  - templates/scripts/feedback/feedback_validation.py
+  - templates/scripts/feedback/submit_feedback.py
+delivers_to:
+  agent: python-coder
+  contract: "A build-time consistency check, run by every package build, computing two result sets in one pass from the deployed feedback categories file and the agent definitions: missing_writers (list[str], sorted: agent ids whose definition has signoff: true and that no category's resolved allowed_writers admits; non-empty fails the build with one message naming all of them) and unknown_writers (list of {writer: str, categories: list[str]}, sorted by writer: writer entries that are neither a submission sentinel nor a registered agent). INF-100c-5-i, -ii and -iii constrain this check; INF-100c-5-iv runs it against the shipped files."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-21
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by:
+  - INF-100c-5-i
+  - INF-100c-5-ii
+  - INF-100c-5-iii
+  - INF-100c-5-iv
+  - INF-100c-5-v
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  KI-FC-003 fix direction: the general defect is two lists (agent definitions and the
+  feedback allowlist) that must agree with nothing checking that they do. Five agents were
+  each added by hand after the same silent rejection (user-surface-smoker, frontend-coder,
+  llm-expert, documentation-verifier, then ac-validator + ac-fulfillment-gate).
+  The concrete fixture is live, not hypothetical: measured 2026-10-21 in this worktree,
+  restructuring-specialist and change-scope-reviewer both carry signoff: true and appear in
+  no allowed_writers list, so the check as specified would fail today's build. That is the
+  class the KI warned about ("fix the instances you caught, miss the class"); INF-100c-5-iv
+  registers them so the shipped build passes.
+  The signoff flag lives in each agent definition's frontmatter, not in the agent registry
+  file (the KI's wording); the registry carries zero "signoff": true entries.

@@ -1,0 +1,127 @@
+id: BO-4500b-1-v
+title: "A start marker without its end, an end without its start, or a pair whose names disagree, fails the install"
+component: build-orchestration
+components:
+  - build_pipeline
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml"
+criteria: |
+  Given three route templates: route A marks an ALPHA-ANSWER start with no ALPHA-ANSWER end after
+    it; route B marks an ALPHA-ANSWER end with no ALPHA-ANSWER start before it; route C marks an
+    ALPHA-ANSWER start followed by a BETA-ANSWER end and no other marker,
+  When the package is installed,
+  Then the install fails with one message per route, each naming the route, the line of the
+    offending marker and what is missing or mismatched,
+  And all three routes are named in that one failed install, not only the first one found,
+  And every installed route is byte for byte as it was before that install began.
+depends_on: [BO-4500b-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500b-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: scripts/build_phases_workflows.py
+    state: existing
+it_requirements:
+  - >-
+    Validation collects every malformed marker across every route template before failing, so
+    one install reports them all. Messages appear in a deterministic order (by route path, then
+    line).
+  - >-
+    A start marker without its end is never filled to the end of the file, and a malformed route
+    is never skipped silently. Either would ship a route the identity check (BO-4500b-2) cannot
+    find a block in.
+  - >-
+    The install exits non-zero once, after it has reported everything, and writes no installed
+    route.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500b-1
+  contract: >-
+    BO-4500b-1's marker grammar (start/end lines carrying a block name) and the
+    validate-all-then-write fill that collects every failure before exiting.
+test_intent:
+  - clause: the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched
+    needs_test: true
+    reason: Unpaired and mismatched markers are the case most likely to be handled by filling to end of file or skipping the route.
+  - clause: all three routes are named in that one failed install, not only the first one found
+    needs_test: true
+    reason: A stop-at-first validator passes a single-route fixture, so only a multi-route fixture catches it.
+  - clause: every installed route is byte for byte as it was before that install began
+    needs_test: true
+    reason: A failing install must leave the installed set untouched, which a write-as-you-go fill would break.
+test_spec:
+  - name: test_malformed_markers_fail_with_one_message_per_route
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Routes A (start, no end), B (end, no start) and C (ALPHA start then BETA end) each yield one stderr message with route path, 1-based offending line and what is missing or mismatched."
+    proves_clause: "the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_all_malformed_routes_are_named_in_one_failed_install
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "A single failed install names routes A, B and C in deterministic path-then-line order and exits non-zero once."
+    proves_clause: "all three routes are named in that one failed install, not only the first one found"
+    code_file: scripts/build_phases_workflows.py
+    must_catch:
+      - "stop at the first malformed route"
+      - "fill an unpaired start marker to end of file"
+      - "silently skip a malformed route"
+  - name: test_malformed_marker_failure_leaves_installed_routes_untouched
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Snapshot installed routes before and after the failed install; byte identical."
+    proves_clause: "every installed route is byte for byte as it was before that install began"
+    code_file: scripts/build_phases_workflows.py
+  - name: test_malformed_marker_check_is_reachable_from_the_workflow_build_phase
+    target_dir: unit_tests/scripts/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: "Call the real build_workflow_scripts entry point on the three-route fixture and assert the failure surfaces from it."
+    proves_clause: "the install fails with one message per route, each naming the route, the line of the offending marker and what is missing or mismatched"
+    code_file: scripts/build_phases_workflows.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-21"
+test_design_opened_files:
+  - scripts/build_phases_workflows.py
+  - unit_tests/test_build_workflow_phase.py
+file_findings:
+  - file: scripts/build_phases_workflows.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workflow build phase where the unpaired and mismatched marker check belongs
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_workflows.py
+origin_agent: business-analyst
+created: 2026-10-20
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not in the PO's list; added by the BA. Without it, a start marker with no end is the case most
+  likely to be "handled" by filling to end of file or by skipping the route silently -- either ships
+  a route that the identity check (BO-4500b-2) cannot even locate a block in. Reporting every
+  malformed route in one run avoids a fix-one-rerun-find-the-next loop.

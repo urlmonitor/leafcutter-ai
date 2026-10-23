@@ -1568,6 +1568,18 @@
                     "skill_id": "signoff",
                     "mode": "conditional",
                     "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
+                },
+                {
+                    "skill_id": "postgres",
+                    "mode": "conditional",
+                    "condition": "For every new SQL file or non-trivial edit (Step 2), apply the postgres skill before declaring the SQL ready.",
+                    "provided_by": "project"
+                },
+                {
+                    "skill_id": "sql-test",
+                    "mode": "conditional",
+                    "condition": "After the local-DB deploy succeeds (Step 4), run the sql-test skill to run the SQL test suite.",
+                    "provided_by": "project"
                 }
             ],
             "knowledge_channels": [
@@ -2243,6 +2255,11 @@
                 {
                     "skill_id": "write-c4-diagram",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3089,7 +3106,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]
@@ -3141,7 +3158,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "ticket_creation_pipeline"
             ]
@@ -3159,7 +3176,7 @@
             "selection_criteria": null,
             "template_path": "templates/agents/it-po.md",
             "model": "opus",
-            "description": "IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, doc_links to architecture documents, and the test intent (test_intent / test_required): per outcome clause, whether a test is needed and why. It writes no test design. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
+            "description": "IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, declared_files (the files the change edits or creates), it_requirements, estimated_complexity, delivers_to/expects_from contracts, doc_links to architecture documents, and the test intent (test_intent / test_required): per outcome clause, whether a test is needed and why. It writes no test design. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
             "category": "planning",
             "skills_invoked": [
                 {
@@ -3223,7 +3240,7 @@
                     "source": "bash command output (date, git)"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]
@@ -3501,7 +3518,10 @@
             "spawn_allowlist": [],
             "spawned_by": [
                 "user",
-                "fast-lane-ship.js"
+                "fast-lane-ship.js",
+                "build-feature.js",
+                "build-ticket.js",
+                "build-epic.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -3529,6 +3549,47 @@
                 "changes_store",
                 "changes_repository",
                 "publishes"
+            ]
+        },
+        {
+            "id": "shell-runner",
+            "name": "Shell Runner",
+            "tier": "utility",
+            "role": "orchestration",
+            "permits_shell": true,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "build-epic.js",
+                "build-feature.js",
+                "build-ticket.js",
+                "create-ticket.js",
+                "fast-lane-ship.js",
+                "finalize-feature.js",
+                "plan-feature.js",
+                "quick-fix.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/shell-runner.md",
+            "model": "haiku",
+            "description": "Runs exactly one given command line, once, unchanged, and relays its exit status, stdout and stderr verbatim. The one narrow shell executor every workflow shell step (and the workspace step of every workflow) is dispatched to (ADR-070): no allow-list, no decisions, no compound or substituted command. Declines anything that is not run this one command. Holds Bash only.",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (the one dispatched command, verbatim)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "build_orchestration"
             ]
         },
         {

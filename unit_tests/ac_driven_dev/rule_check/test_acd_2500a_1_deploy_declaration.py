@@ -11,8 +11,8 @@ ARCHITECTURE (architect note, section 5):
        (build_referential_integrity.compute_intra_package_closure) finds every import
        of the entry script inside the deploy map.
     3. Parity from the deployed layout: `shared_reference_layout` (reader-declared)
-       holds .leafcutter/workflows/plan-feature.js equal to the template with only
-       `{{config.output_root}}` substituted, and the deployed script runs `--help`
+       holds .leafcutter/workflows/plan-feature.js equal to the template with only its
+       shared workspace block filled and `{{config.output_root}}` substituted, and the deployed script runs `--help`
        from its flat layout.
 """
 
@@ -82,14 +82,19 @@ def test_rule_check_import_closure_is_inside_the_deploy_map():
 def test_deployed_plan_feature_and_script_match_canonical_sources(shared_reference_layout):
     # covers: ACD-2500a-1
     # angle: deployed
-    """From the deployed layout: plan-feature.js equals the template (only
-    `{{config.output_root}}` substituted, and it carries the rule-check dispatch), and
+    """From the deployed layout: plan-feature.js equals the template (only the shared
+    workspace block filled and `{{config.output_root}}` substituted, and it carries the rule-check dispatch), and
     the deployed requirement_rule_check.py runs from the flat layout."""
     layout = Path(shared_reference_layout)
     deployed_workflow = (layout / ".leafcutter" / "workflows" / "plan-feature.js").read_text(
         encoding="utf-8"
     )
-    template = (REPO / "templates" / "workflows-js" / "plan-feature.js").read_text(encoding="utf-8")
+    sys.path.insert(0, str(SCRIPTS))
+    from build_phases_workflows import _inline_workspace_answer  # the build fills the shared block (BO-4300c-3)
+
+    src_dir = REPO / "templates" / "workflows-js"
+    raw_template = (src_dir / "plan-feature.js").read_text(encoding="utf-8")
+    template = _inline_workspace_answer(raw_template, "plan-feature.js", src_dir)
     pattern = "(?s)^" + "(?:.*?)".join(re.escape(part) for part in template.split(_PLACEHOLDER)) + "$"
     assert re.match(pattern, deployed_workflow), "deployed plan-feature.js drifted from the template"
     assert "rule-check-" in deployed_workflow  # the dispatch the template must now carry

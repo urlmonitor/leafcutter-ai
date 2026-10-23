@@ -41,7 +41,11 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 sys.path.insert(0, str(_UNIT_TESTS_DIR / "prompt_assembly"))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+)
 
 import _driver_harness  # noqa: E402
 import unit_tests.workflows._tq500f3ii_fixtures as fx  # noqa: E402
@@ -110,15 +114,15 @@ def _drive_fast_lane_to_coder():
         worktree_root = Path(tmp)
         (worktree_root / "docs" / "acceptance-criteria").mkdir(parents=True)
         label_responses = {
-            "fastlane-worktree": {
+            "workspace-ensure": workspace_ensure_from_opened({
                 "outcome": "opened",
                 "worktree_path": str(worktree_root),
                 "branch": f"fast-lane/{ac_id}",
                 "created": True,
                 "base_commit": "a" * 40,
                 "base_matches_origin_main": True,
-            },
-            "resolve-connected": {"ac_ids": [ac_id], "message": "1 to build"},
+            }),
+            "resolve-connected": resolve_connected_reply({"ac_ids": [ac_id], "message": "1 to build"}),
             "claim-connected": claim_fx.claim_ran([ac_id]),
             "test-writer-connected": {
                 "status": "ok",
