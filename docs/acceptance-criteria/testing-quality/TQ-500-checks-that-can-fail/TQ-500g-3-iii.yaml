@@ -1,0 +1,810 @@
+id: TQ-500g-3-iii
+components:
+  - testing_quality
+  - build_orchestration
+title: "An existing test the work changed that now asserts less, compares more loosely, or tolerates more stops the work, even when listed as strengthened"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given eleven tests in test_retry.py that existed before the work began, each
+    still present and passing after the work, and the work's sweep list
+    naming all eleven as strengthened —
+      F: test_backoff_caps_at_five had three assertions
+           assert delay == 5, assert attempts == 3, assert log.called
+         and after the work has two (assert log.called is gone),
+      G: test_first_delay asserted delay == 1 and now asserts delay >= 1,
+      H: test_no_result asserted result is None and now asserts
+           result in (None, ""),
+      K: test_ok_status asserted response.status == 200 and now asserts
+           response.status,
+      I: test_jitter_bounds compared jitter == pytest.approx(0.5, rel=0.01)
+         and now compares jitter == pytest.approx(0.5, rel=0.1),
+      L: test_rejects_negative_delay checked with pytest.raises(ValueError)
+         that compute_delay(-1) is refused, and the pytest.raises block is
+         gone, leaving a plain call,
+      J: test_retry_header asserted header == "Retry-After: 5" and now also
+         asserts "5" in header, keeping the first assertion,
+      M: test_retry_after_header asserted header == "Retry-After: 5" with no
+         condition around it, and now the same assertion sits under
+         if header:, so it is skipped whenever header is empty,
+      N: test_backoff_resets asserted delay == 1 and attempts == 0 with
+         nothing before them that could end the test, and now a return is
+         inserted above both assertions when not retried, leaving them in
+         place but unreachable on that path,
+      P: test_parse_header already had its only assertion
+           if raw: assert parsed == "5"
+         at the base, keeps it under the same if, and changes only the
+         input string,
+      Q: test_retry_count kept assert attempts == 3 with no condition and
+         adds if log.called: assert log.call_count == 1 beside it,
+  When the work's tests are checked before commit,
+  Then the work stops, naming each weakened test as <file>::<test> with its
+      reason:
+        test_retry.py::test_backoff_caps_at_five  fewer assertions (3 to 2),
+        test_retry.py::test_first_delay           comparison loosened
+                                                  (== became >=),
+        test_retry.py::test_no_result             comparison loosened
+                                                  (is became in),
+        test_retry.py::test_ok_status             comparison loosened
+                                                  (== removed),
+        test_retry.py::test_jitter_bounds         tolerance widened
+                                                  (rel 0.01 to 0.1),
+        test_retry.py::test_rejects_negative_delay fewer assertions (1 to 0),
+        test_retry.py::test_retry_after_header    assertion now conditional
+                                                  (under if),
+        test_retry.py::test_backoff_resets        assertion after an early
+                                                  return,
+    And J, P and Q are not reported (P's assertion was conditional before the
+      work and still is; Q's new conditional assertion sits beside the
+      unconditional one, which stays unconditional),
+    And an assertion that had no condition at the base is reported as now
+      conditional in the same way when, after the work, it sits inside a
+      while loop, inside a try (including one whose failure is swallowed by
+      except AssertionError: pass or except Exception: pass), or inside a
+      function, lambda or class nested in the test that was not there at the
+      base, naming which (for example "assertion now conditional (under
+      try)"),
+    And an assertion that nothing could cut off at the base is reported as
+      after an early return or skip in the same way when, after the work, a
+      newly added return, pytest.skip(...), pytest.xfail(...) or raise
+      SkipTest / raise unittest.SkipTest comes before it in the same test,
+      naming which (for example "assertion after an early skip"),
+    And the sweep list marking F, G, H, K, I, L, M and N as strengthened does
+      not prevent the stop,
+    And the same changes in a test that the sweep list does not name are
+      reported the same way, alongside the unlisted edit,
+    And the decision is taken from the code of each test before and after the
+      work, without running the tests and without a language model, so the
+      same work gives the same result every time.
+depends_on:
+  - TQ-500g-3
+  - TQ-500g-3-i
+doc_links:
+- path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+  relationship: describes
+  status: exists
+  relevance: Incident 2 (the probe written to fix one assertion used buy_volume >= 0, a one-sided comparison that
+    passed most reliably when the pipeline was dead) and request item 6.
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+  relevance: The before-commit wrong-version gate (wrong_version_gate.py finish) whose first step is the sweep check.
+- path: templates/agents/test-writer.md
+  relationship: relates-to
+  status: exists
+  relevance: The forbidden weakenings the prompt names (TQ-500g-3); this AC is their mechanical backstop for tests
+    that still pass.
+- path: docs/reference/wrong-version-runs.md
+  relationship: describes
+  status: planned
+  relevance: TQ-500g-5's reference page; a loosened assertion is one more reason finish can halt.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-3-i
+  contract: 'The loosened field of the check JSON (shape in TQ-500g-3-i delivers_to): loosened [{file: str (repo-relative
+    POSIX path), test: str (function name or Class::method), what: ''fewer assertions''|''comparison loosened''|''tolerance
+    widened''|''assertion now conditional''|''assertion after an early return''|''assertion after an early skip''|''assertion
+    after an early xfail'', detail: str}], where detail names the counts or operators (for example "3 to 2", "==
+    became >=", "== removed", "rel 0.01 to 0.1", "rel 0.01 to TOL"), for assertion now conditional the guard as
+    "under <if|while|for|match|try|function|lambda|class>" (several joined by ", ", e.g. "under if, under try"),
+    and for the early-exit items the exit as "return", "pytest.skip(...)", "self.skipTest(...)", "pytest.xfail(...)", "raise SkipTest"
+    or "raise unittest.SkipTest". At most one item per (file, test, what); items sorted by file, then the test''s
+    line in the working tree, then what in the order above. Any loosened item sets passed false, and reason ''loosened''
+    when no earlier reason applies; finish carries it verbatim under sweep. The field is [] when nothing is loosened,
+    never absent.'
+expects_from:
+- ac_id: TQ-500g-3-i
+  contract: 'consumer_sweep.py check (the one CLI step finish calls); its set of changed existing test files against
+    --base-ref; _cs_edits'' per-test split: for each test (function or Class::method) present at the base and in
+    the working tree whose source with decorators differs, the parsed base and current function nodes keyed by (file,
+    test); and base content read through _fl_red_baseline_support._read_file_at_ref without touching the working
+    tree. A file that does not parse on either side is already reported inconclusive by -i and is skipped here.'
+origin_agent: business-analyst
+created: 2026-10-22
+amended_by:
+  - reason: "IT-PO technical enrichment; criteria approved by the user (2026-10-22)"
+    by: it-po
+    at: 2026-10-22
+    note: "Criteria unchanged. Added package_surface, it_requirements (the pinned matching rule), test_spec, test_required, test_rationale; made delivers_to and expects_from precise; readiness approved per the user's decision."
+  - reason: "Criteria amendment: rule (d), an assertion made conditional or cut off by an early return/skip, added on the user's decision (2026-10-22/23)"
+    by: business-analyst
+    at: 2026-10-23
+    note: "Given extended from seven to eleven tests: M (assertion moved under if) and N (early return inserted before the asserts) are reported; P (already conditional at the base, still conditional) and Q (conditional assertion added beside an unconditional one) are controls and not reported. Then extended with M's and N's reasons, the other conditional forms (while, try incl. swallowed failure, new nested function/lambda/class) and the other early exits (pytest.skip, pytest.xfail, raise SkipTest / unittest.SkipTest). F, G, H, K, I, L and J unchanged. Readiness stays approved: the user approved adding the rule. it_requirements, delivers_to (what enum) and test_spec not yet updated for rule (d) - IT-PO follow-up."
+  - reason: "IT-PO technical enrichment for rule (d) and the review fixes H-1, H-2, M-4, M-5"
+    by: it-po
+    at: 2026-10-23
+    note: "Criteria unchanged. Added the rule (d) it_requirement (guards if/while/for/match/try/function/lambda/class, with excluded; early return/skip/xfail; matching by normalised assertion text in source order); folded H-1/H-2/M-4/M-5 into rules (a)-(c); extended delivers_to with the four new what values and their detail formats; added test_spec entries for M, N, the P/Q controls and the four review-fix tests; updated the two integration descriptions to eleven tests and eight items; known-gaps note set to the user's list, broadened raises(Exception) moved to a separate reviewer-noted line. Follow-up same day: self.skipTest(...) added as an early-skip exit (orchestrator decision); rule-d test_spec aligned to the twelve tests in test_tq500g3iii_rule_d.py."
+  - reason: "Pairing and keyword forms after second review"
+    by: it-po
+    at: 2026-10-23
+    note: "Criteria unchanged. Rule (d) pairing: same-text occurrences paired first by identical (guards, exits) signature, then k-th to k-th. Rule (b): keyword-argument and mixed forms of unittest assertions carry the same facts as positional ones. test_spec entries for test_tq500g3iii_review2.py and the SECOND REVIEW notes block added."
+  - reason: "Removed an uncatchable must_catch (equivalent wrong version)"
+    by: it-po
+    at: 2026-10-23
+    note: "Criteria unchanged. Dropped must_catch 'new test compared against an empty base' from test_only_changed_tests_present_on_both_sides_compared; reason in notes (EQUIVALENT WRONG VERSION REMOVED)."
+  - reason: "Moved must_catch 'output order depends on set or dict iteration' to the test that pins a fixed order"
+    by: it-po
+    at: 2026-10-23
+    note: "Criteria unchanged. From test_static_and_deterministic to test_listing_does_not_exempt_and_unlisted_reported_alongside; reason in notes (MUST_CATCH MOVED)."
+it_requirements:
+- 'Placement: new private module scripts/build_orchestration/_cs_asserts.py holds the whole comparison (pure functions,
+  no CLI of its own). consumer_sweep.py check calls it once, after _cs_edits'' comparison and before _cs_runs'' runs,
+  whatever the edit comparison found (unlisted edits, a missing list): the loosened step never reads the sweep list.
+  No second CLI, no second dispatch from finish, no route JS change. Until consumer_sweep.py check, as called by
+  wrong_version_gate.py finish, fills loosened, this AC is not done.'
+- 'Static only: Python stdlib ast over the source text of each side. Never import, execute or collect the test
+  module, never start pytest or any subprocess for this step, never call a language model. The same base ref and
+  working tree give byte-identical loosened output on every run (no set or dict iteration order in the output).'
+- 'Scope: exactly the tests in -i''s per-test split (present at --base-ref and now, source with decorators changed),
+  in existing test files and conftest.py. A test added by the work, a test gone from the working tree (TQ-500g-3-ii''s
+  case), an unchanged test and any fixture, helper, constant or pytestmark are not compared. Each test is walked
+  over its body only (decorators excluded), including nested blocks, nested functions and lambdas.'
+- 'Rule (a) FEWER ASSERTIONS. assertion count = assert statements + assertion calls, where an assertion call is
+  a call whose callee is an attribute or bare name starting with ''assert'' (self.assertEqual, mock assert_called_with,
+  np.testing.assert_allclose, assert_frame_equal) or is self.fail, pytest.fail, pytest.raises, pytest.warns or pytest.deprecated_call
+  (the last four also as bare names), counted once per call whether it is used as a with-context or in call form.
+  pytest.approx is NOT counted: it lives inside an assertion already counted, and counting it would flag replacing
+  approx by an exact == as weakening. An assert statement whose test is an and-chain counts once per conjunct
+  (review H-2: assert x == 1 / assert y == 2 merged into assert x == 1 and y == 2 is 2 to 2, not fewer; removing
+  one of the two is still ''2 to 1''). Stop when count now < count at base; what ''fewer assertions'', detail ''<base>
+  to <now>'' (F: ''3 to 2''; L: ''1 to 0'').'
+- 'Rule (b) COMPARISON LOOSENED, keyed by subject, not by position or operator multiset. A strict comparison is
+  (1) an == or is pair inside an assert statement''s test, where the test is a comparison or an and-chain of comparisons
+  (each pair of a chained comparison counts separately), and (2) a call to a strict method: assertEqual, assertEquals,
+  assertIs, assertIsNone, assertDictEqual, assertListEqual, assertTupleEqual, assertSetEqual, assertSequenceEqual,
+  assertMultiLineEqual, assertCountEqual, assertAlmostEqual, assert_called_with, assert_called_once_with, assert_awaited_with,
+  assert_awaited_once_with, assert_has_calls. Every other assertion form is non-strict: in, not in, !=, is not,
+  <, <=, >, >=, bare truthiness, not, or-chains, any comparison nested in a call, and every other assert* method
+  (assertTrue, assertFalse, assertIn, assertNotEqual, assertIsNotNone, assertGreater, assertGreaterEqual, assertLess,
+  assertLessEqual, assertRegex, assertIsInstance, assert_called, assert_called_once, assert_any_call...). The subject
+  of a strict comparison is ast.unparse of its operand that is not a literal (a constant, a negated constant, or
+  a tuple, list, set or dict of literals); if neither is a literal, the subject is order-independent (the pair of
+  both unparsed operands, so review H-1''s operand swaps assert f() == expected to assert expected == f() and
+  assertEqual(expected, actual) to assertEqual(actual, expected) are the same subject and pass); if both are literals,
+  the constant subject ''<literal>'' (accepted coder deviation, see notes). A comparison passed to assertTrue(...)
+  is classified as if it stood in an assert statement (review M-4: assertTrue(x == 1) is a strict == on x, so
+  assertTrue(x == 1) becoming assertTrue(x) is comparison loosened on x, and assertEqual(x, 1) becoming
+  assertTrue(x == 1) passes). Keyword-argument forms of unittest assertions (first=, second=, expr=, member=,
+  container=, obj=, cls=, and mixed positional + keyword) carry the same facts as the positional form (second
+  review: assertEqual(a, 1) to assertEqual(first=a, second=1) passes; assertEqual(first=a, second=1) to
+  assertGreaterEqual(first=a, second=1) is comparison loosened). For the mock
+  methods the subject is the receiver (m in m.assert_called_with). Stop when, for some subject, the working tree
+  has fewer strict comparisons on that subject than the base (multiset per subject). A strict-to-strict change on
+  the same subject (== to assertEqual, is None to == None) passes; a renamed subject stops (accepted strictness,
+  like merged asserts).'
+- 'Rule (b) detail: one fragment per lost strict comparison, in base source order, joined by '', ''. The fragment
+  is ''<base form> became <now form>'' when the working tree asserts the same subject in a non-strict form (subject found by the same
+  rule; the first such form in source order: the operator symbol for a comparison, the method name for a call), and ''<base form>
+  removed'' when the subject is now asserted only by truthiness or not at all. Base and now forms are rendered
+  as operator symbols (==, is, >=, in) or method names (assertEqual). Pinned examples: G ''== became >='', H ''is
+  became in'', K ''== removed''.'
+- 'Rule (c) TOLERANCE WIDENED. Collect pytest.approx calls (also bare approx) in each side in source order. Pair
+  each base call with the first unpaired working-tree call whose expected argument (first positional or expected=)
+  has the same ast.unparse; unpaired calls are not judged (an approx removed is caught by (a) or (b) if it weakens).
+  For each pair and each of rel and abs (keyword, or positional 2nd and 3rd argument): the value is the numeric
+  literal given (int or float constant, ast.literal_eval), else the pytest default (rel 1e-6, abs 1e-12). Stop when
+  the working-tree value exceeds the base value for either key. A tolerance that is a numeric literal (or default)
+  at the base and an expression that is not a numeric literal now is unverifiable and stops as widened, the detail
+  naming the expression''s source (review M-5: rel=0.01 to rel=TOL gives ''rel 0.01 to TOL''). A tolerance that
+  is not a numeric literal at the base makes that key unjudged for that pair (left to pr-reviewer); the same
+  expression on both sides passes. detail ''<key> <base> to <now>''
+  with the source spelling of literals and ''default'' for a default (I: ''rel 0.01 to 0.1''; added rel=0.01 where
+  the base had none: ''rel default to 0.01''); several widened keys or pairs joined by '', ''.'
+- 'Outcome against the criteria: F fewer assertions 3 to 2; G == became >=; H is became in; K == removed; I rel 0.01
+  to 0.1; L fewer assertions 1 to 0; J passes (count 1 to 2, the strict == on header is kept). The swap case (base
+  assert a == 1 and assert b >= 2, now assert a >= 1 and assert b == 2) stops with == became >= on a, which a per-test
+  operator count or multiset would miss. A loose assertion inserted before a strict one passes, which per-position
+  matching would wrongly stop.'
+- 'Rule (d) ASSERTION NOW CONDITIONAL OR CUT OFF (user decision 2026-10-22/23). Same check step (_cs_asserts, called
+  once from consumer_sweep.py check), same scope as (a)-(c), items in loosened. Assertions are exactly those rule
+  (a) counts (assert statements and assertion calls). MATCHING: per test, each side''s assertions in source order
+  keyed by normalised text (ast.unparse of the assert statement or of the assertion call). Occurrences of the same
+  text are paired first by identical (guards, exits) signature - the kinds of its enclosing guards and of the exits
+  before it - and the remainder k-th base to k-th working-tree occurrence in source order (second review: reordering
+  identical assertions that carry different guards is not loosening). A text occurrence present only in the
+  working tree is new and is not judged; one present only at the base is left to (a)/(b). GUARD: an enclosing
+  construct between the test function and the assertion that can skip it: if/elif/else (if), while (while),
+  for and async for (for, a loop can run zero times), match/case (match), any part of a try or try* statement -
+  body, except, else, finally (try, so try: ... except AssertionError: pass and except Exception: pass are covered),
+  and a def / async def (function), lambda (lambda) or class (class) nested in the test. A with / async with block
+  is NOT a guard. (d1) A pair whose base occurrence has no guard and whose working-tree occurrence has at least
+  one stops: what ''assertion now conditional'', detail ''under <if|while|for|match|try|function|lambda|class>''
+  naming the nearest guard; several affected assertions in one test give one item whose detail joins their distinct
+  ''under <kind>'' fragments in source order with '', ''. (d2) An EXIT is a return statement, a call pytest.skip(...)
+  or pytest.xfail(...), a call self.skipTest(...) (unittest''s skip call, orchestrator decision 2026-10-23: same class
+  as pytest.skip), or raise SkipTest / raise unittest.SkipTest (with or without arguments) that comes before
+  the assertion in the test body at the same or an enclosing block level: a preceding sibling statement of the
+  assertion or of any of its enclosing blocks that is, or contains, the exit; an exit inside a nested def / lambda
+  / class that does not also contain the assertion does not count. A pair whose base occurrence has no exit before
+  it and whose working-tree occurrence has at least one stops, kind taken from the first exit before it in source
+  order: what ''assertion after an early return'' (return), ''assertion after an early skip'' (pytest.skip, self.skipTest,
+  raise SkipTest, raise unittest.SkipTest) or ''assertion after an early xfail'' (pytest.xfail); detail names the exit
+  as ''return'', ''pytest.skip(...)'', ''self.skipTest(...)'', ''pytest.xfail(...)'', ''raise SkipTest'' or ''raise
+  unittest.SkipTest'' (call arguments are not part of the detail),
+  distinct exits of the same kind joined by '', ''. At most one item per (file, test, what); (d1) and (d2) can
+  both fire for one test. Rule order after (c): assertion now conditional, assertion after an early return, ...
+  early skip, ... early xfail. Pinned outcome: M ''assertion now conditional'' / ''under if''; N one item
+  ''assertion after an early return'' / ''return'' (both cut-off assertions in one item); P not judged (its base
+  occurrence is already guarded by if, and no exit is added); Q not reported (assert attempts == 3 still pairs
+  unguarded; the added if log.called: assert log.call_count == 1 is a new text, not judged). Static, deterministic,
+  no run: the same base and working tree give byte-identical items.'
+- 'Listing never exempts and is never read here: a strengthened, unaffected or missing entry gives the same loosened
+  items, and an unlisted test is reported under both unlisted (-i) and loosened.'
+- 'Fail closed through -i''s rules: an unresolvable base ref or an unparseable file is -i''s inconclusive; an internal
+  error in this step still prints the full check shape with passed false and the error named, never a pass. Progress
+  logging to stderr only.'
+- 'Performance: the step must finish in under 2 seconds for 50 changed test files of 500 lines each on a developer
+  machine (it parses each side once; it reuses -i''s parsed nodes rather than re-reading git).'
+- 'File size (count_content_lines, scripts/commit_guardian/_file_size_ratchet.py) and complexity (check_complexity.py
+  limits per function): _cs_asserts.py at or under 400 counted lines; consumer_sweep.py gains only the call and the
+  merge into the output and stays at or under 400. Do not touch _cs_edits.py beyond exposing the per-test split
+  -i already computes, _cs_runs.py, wrong_version_gate.py (finish already carries the check JSON verbatim), done_proof.py,
+  check_contract_shrinking.py or any route JS.'
+- 'Deploy and registry: build_build_orchestration_scripts copies every .py under scripts/build_orchestration/,
+  so _cs_asserts.py deploys without a deploy-map entry. No new agent, skill, hook or registry entry, so package_surface
+  is false.'
+test_required: true
+test_spec:
+- name: test_fewer_assertions_reported_with_counts
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Base and working-tree sources of F and L passed to _cs_asserts: F gives fewer assertions "3 to 2"
+    and L, whose pytest.raises block became a plain call, gives fewer assertions "1 to 0". self.assertRaises and
+    mock assert_called_once removed from other tests count the same way.'
+  must_catch:
+  - only assert statements counted, so a removed pytest.raises or self.assert* call is missed
+  - count compared per file, so an assertion added in one test hides one removed in another
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_strict_comparison_loosened_reported_with_operators
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: G, H and K give comparison loosened with details "== became >=", "is became in" and "== removed";
+    assertEqual becoming assertGreaterEqual and assertIsNone becoming assertIn on the same subject are reported
+    the same way.
+  must_catch:
+  - bare truthiness replacing == not seen as loosening because the assertion count is unchanged
+  - only assert statements classified, unittest strict methods ignored
+  - detail omits the base or the new operator
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_operator_swap_with_equal_counts_is_caught
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Base assert a == 1 and assert b >= 2, now assert a >= 1 and assert b == 2. The check reports comparison
+    loosened "== became >=" for the test, although count and operator multiset are equal.
+  must_catch:
+  - strict comparisons compared as a per-test count or operator multiset instead of per subject
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_approx_tolerance_widened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: I gives tolerance widened "rel 0.01 to 0.1". rel=0.01 added where the base had none gives "rel default
+    to 0.01"; abs narrowed passes; an approx inserted before the original one does not mis-pair; a tolerance given
+    as the same name on both sides is not judged and does not stop.
+  must_catch:
+  - approx calls paired by position, so an inserted approx mis-pairs
+  - pytest default ignored when the base gave no rel or abs
+  - non-literal tolerance crashes the check or is read as widened
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_added_assertion_beside_strict_one_passes
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Controls: J (the strict == kept, "5" in header added), a loose assertion inserted before a strict
+    one, assert x == pytest.approx(1.0) becoming assert x == 1.0, == becoming assertEqual on the same subject, and
+    a Class::method with an assertion added all give no loosened item.'
+  must_catch:
+  - any changed test reported as loosened
+  - assertions matched by position, so an inserted assertion shifts the strict one
+  - pytest.approx counted as an assertion, so replacing it by an exact == reads as fewer assertions
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_assertion_moved_under_condition_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'M: assert header == "Retry-After: 5" moved under if header: gives assertion now conditional "under if".'
+  must_catch:
+  - assertion moved under a condition not reported
+  - detail does not name the guard
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_assertion_moved_under_every_guard_kind_names_it
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'An unconditional assertion moved under if/elif/else, while, for, async for, match/case, any part of try (body, except, else, finally; except AssertionError: pass and except Exception: pass), a nested def or async def, a lambda or a nested class gives one item "under <if|while|for|match|try|function|lambda|class>".'
+  must_catch:
+  - only if guards recognised, so while, for, match, try, nested def, lambda or class pass unnoticed
+  - 'swallowed failure (except AssertionError: pass) treated as safe'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_assertion_moved_under_try_star_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'An assertion moved into try ... except* ValueError (Python 3.11+) gives "under try".'
+  must_catch:
+  - try* statement not recognised as a guard
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_nearest_guard_is_named_not_the_outer_one
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'An assertion under nested guards names the nearest enclosing guard.'
+  must_catch:
+  - outermost guard named instead of the nearest
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_two_guards_give_one_item_with_joined_detail
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'Two assertions moved under different guards give one item whose detail joins the distinct "under <kind>" fragments in source order; a repeated kind is listed once.'
+  must_catch:
+  - one item per assertion instead of one per (test, what)
+  - repeated guard kind listed twice
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_with_block_is_not_a_guard_and_pairing_is_by_text
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'An assertion moved into with or async with gives no item; an inserted assertion before the pair and a repeated assertion text pair by normalised text and k-th occurrence, so only the really guarded one is reported.'
+  must_catch:
+  - with block treated as a condition
+  - assertions paired by position, so an inserted statement mis-pairs
+  - k-th occurrence of a repeated text paired with the wrong one
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_assertion_after_early_exit_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'N: a return inserted above assert delay == 1 and assert attempts == 0 gives exactly one item assertion after an early return "return".'
+  must_catch:
+  - assertion after an early return not reported
+  - both cut-off assertions given as two items instead of one
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_every_exit_kind_is_reported_with_its_own_what_and_detail
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'return, pytest.skip(...), self.skipTest(...), raise SkipTest, raise unittest.SkipTest (with and without arguments) and pytest.xfail(...) each give their own what (early return / skip / xfail) and detail ("return", "pytest.skip(...)", "self.skipTest(...)", "raise SkipTest", "raise unittest.SkipTest", "pytest.xfail(...)").'
+  must_catch:
+  - skip or xfail not reported, or reported under the wrong what
+  - detail names a different exit than the one inserted
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_exit_in_an_enclosing_or_preceding_block_counts
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'A return before a with block holding the assertions, a return inside a preceding for loop, and a return before an if holding them all cut the assertions off (the last also gives under if).'
+  must_catch:
+  - exit nested in a preceding block not seen because only same-level statements are scanned
+  - assertion inside a with or if block not seen as cut off by an exit before that block
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_first_exit_names_the_kind_and_both_rules_can_fire
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: 'A return plus an assertion moved under if gives both the conditional and the early-return item; with pytest.skip then return before the assertions the first exit (skip) names the kind.'
+  must_catch:
+  - the conditional and early-exit rules suppress each other when both fire for one test
+  - a later exit named instead of the first exit before the assertion
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_exits_that_cannot_cut_the_assertion_off_give_no_item
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'A return inside a nested helper def or lambda, an exit after the last assertion, and an exit already before the assertions at the base give no item.'
+  must_catch:
+  - return inside a nested helper def treated as an exit of the test
+  - exit after the last assertion treated as cutting it off
+  - exit already before the assertion at the base reported as new
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_conditional_controls_not_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Controls: P (if raw: assert parsed == "5" at the base and now, only the input changed) and Q (assert attempts == 3 kept unconditional, if log.called: assert log.call_count == 1 added beside it) give no item; M in the same test still fires.'
+  must_catch:
+  - already-conditional assertion reported
+  - added conditional assertion beside an unconditional one reported
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/_cs_guards.py
+- name: test_h1_operand_swap_of_non_literals_is_not_loosened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Review fix H-1 (test_tq500g3iii_review.py): assert f() == expected to assert expected == f(),
+    assertEqual(expected, actual) to assertEqual(actual, expected), and assert f() == g() to assert g() == f()
+    give no item; control test_h1_control_comparison_still_reported keeps == becoming >= reported.'
+  must_catch:
+  - operand swap reported as loosened
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_h2_merging_asserts_into_and_chain_is_not_fewer
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Review fix H-2: assert x == 1 / assert y == 2 merged into assert x == 1 and y == 2 gives no item;
+    control test_h2_control_removing_one_assert_is_fewer keeps removing one of them as fewer assertions "2 to 1";
+    test_confirmed_ok_cases_stay_ok covers reorder, split, == to assertEqual and whitespace.'
+  must_catch:
+  - and-chain merge reported as fewer assertions
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_m4_asserttrue_with_comparison_losing_it_is_loosened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Review fix M-4: self.assertTrue(x == 1) becoming self.assertTrue(x) gives comparison loosened with
+    x in the detail; test_m4_assertequal_to_asserttrue_comparison_is_not_loosened keeps assertEqual(x, 1) to
+    assertTrue(x == 1) passing.'
+  must_catch:
+  - comparison inside assertTrue ignored
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_m5_tolerance_literal_to_name_is_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Review fix M-5: pytest.approx(0.5, rel=0.01) becoming pytest.approx(0.5, rel=TOL) gives one item
+    whose detail names TOL; test_m5_controls_unchanged_or_tightened_tolerance_is_not_reported keeps the same name
+    on both sides and a tightened literal passing.'
+  must_catch:
+  - literal tolerance replaced by a name not reported
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_reordering_identical_assertions_with_different_guards_is_not_loosening
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Second review: a guarded and a plain copy of the same assertion swapping places gives no item.'
+  must_catch:
+  - 'reordered identical assertions with different guards reported as conditional'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_guards.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_plain_assertion_made_guarded_is_still_reported_control
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Control: two plain copies where one becomes guarded still gives assertion now conditional "under if".'
+  must_catch:
+  - 'reorder tolerance that also hides a genuinely newly guarded assertion'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_guards.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_keyword_form_of_unittest_assertion_equals_positional_form
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'self.assertEqual(a, 1) becoming self.assertEqual(first=a, second=1) gives no item.'
+  must_catch:
+  - 'keyword-argument assertion form reported as removed'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_guards.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_mixed_positional_and_keyword_assertion_carries_same_facts
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'self.assertEqual(a, b) becoming self.assertEqual(a, second=b) gives no item.'
+  must_catch:
+  - 'mixed positional and keyword call loses its second operand'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_guards.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_keyword_assertion_loosened_to_non_strict_is_reported_control
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Control: self.assertEqual(first=a, second=1) becoming self.assertGreaterEqual(first=a, second=1) is reported as comparison loosened.'
+  must_catch:
+  - 'keyword assertion loosened not reported'
+  in_scope_files:
+  - scripts/build_orchestration/_cs_guards.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_only_changed_tests_present_on_both_sides_compared
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: In a temp git repo, a test added by the work with no assertions, a test deleted by the work, a fixture
+    in conftest.py whose assert was removed, and an unchanged test in a changed file give no loosened item.
+  must_catch:
+  - deleted test reported here as fewer assertions instead of left to TQ-500g-3-ii
+  - fixtures or helpers compared as tests
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/consumer_sweep.py
+- name: test_listing_does_not_exempt_and_unlisted_reported_alongside
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: In a temp git repo with test_retry.py holding F, G, H, K, I, L, J, M, N, P and Q at the base commit
+    and the changes applied, all eleven recorded as strengthened through the real record step, consumer_sweep.py
+    check prints passed false, reason loosened and exactly the eight items in the criteria (M assertion now
+    conditional under if, N assertion after an early return), J, P and Q absent. With the same changes and no entry
+    for G, G appears under unlisted and under loosened.
+  must_catch:
+  - strengthened entry exempts a test from the comparison
+  - loosened step skipped once the edit comparison found an unlisted edit
+  - reason left null when only loosened items exist
+  - output order depends on set or dict iteration
+  in_scope_files:
+  - scripts/build_orchestration/consumer_sweep.py
+  - scripts/build_orchestration/_cs_asserts.py
+- name: test_static_and_deterministic
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The changed existing test file writes a marker file at import and in each test body. Two check runs
+    on the same repo print byte-identical loosened output, and the marker file never appears.
+  must_catch:
+  - test module imported or executed to compare assertions
+  in_scope_files:
+  - scripts/build_orchestration/_cs_asserts.py
+  - scripts/build_orchestration/consumer_sweep.py
+- name: test_loosened_stops_through_finish
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: wrong_version_gate.py finish, the single before-commit entry every route dispatches
+  description: wrong_version_gate.py finish, run as a subprocess with no --ac-ids on the F-to-Q repo with a complete
+    strengthened list, prints gate_passed false, stopped_at 'sweep', and the eight items under sweep.loosened, and
+    writes no manifest.
+  must_catch:
+  - loosened step not wired into consumer_sweep.py check
+  - finish ignores a check that fails only on loosened
+  in_scope_files:
+  - scripts/build_orchestration/wrong_version_gate.py
+  - scripts/build_orchestration/consumer_sweep.py
+test_rationale: The matching rule is pure source analysis, so unit tests feed base and working-tree source straight
+  to _cs_asserts and pin each rule and its exact detail text, including the swap case that a count or multiset rule
+  misses and the controls (J, inserted assertions, approx to exact) that a position or any-change rule would wrongly
+  stop. The integration tests use a real temp git repo and the real record step, because 'existed before the work'
+  is a git fact and the list must not exempt; the marker-file test proves nothing is run; the finish test proves
+  the stop is reached on the one entry every route calls.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE STATIC HALF OF "NONE MAY BE WEAKENED" (TQ-500g criteria), added on the
+  user's answer to Q1 (2026-10-22). TQ-500g-3-ii sees weakenings a run can see
+  (skipped, expected to fail, gone). This AC sees the ones a run cannot: a test
+  that still passes but asserts less, compares more loosely, or tolerates more.
+
+  J IS THE CONTROL: adding an assertion, even a loose one, beside the existing
+  strict one is strengthening and must pass. A check that stops every changed
+  test brings back the blanket ban.
+
+  LISTING DOES NOT EXEMPT. Every changed existing test is compared, listed or
+  not; the list's 'strengthened' claim is the thing being checked.
+
+  ACCEPTED STRICTNESS: a behaviour-preserving rewrite that lowers the count
+  (for example two asserts merged into assert (a, b) == (1, 2)) also stops the
+  work. There is no exemption entry; the writer keeps the assertions as they
+  were or hands the test back. Revisit only if it proves noisy.
+
+  NOT SEEN HERE (left to pr-reviewer): a widened expected literal under the same
+  operator (== 200 becoming == 2000), a weakened helper or fixture that the test
+  calls (fixture edits must be listed under TQ-500g-3-i but are not compared),
+  and a tolerance that is not a plain number on both sides.
+
+  TECHNICAL DETAIL FOR IT-PO (user's stated design, 2026-10-22)
+  - Deterministic, static, AST-based; no pytest run, no LLM. Same check step as
+    TQ-500g-3-i, same JSON object and exit code; no second CLI. Runs after -i's
+    comparison and before -ii's runs (it needs no pytest).
+  - Scope: every test (function or Class::method) present at --base-ref and
+    in the working tree whose source changed, in the changed existing test
+    files -i already computes.
+  - Assertion count: assert statements + self.assert*(...) calls +
+    pytest.raises(...) + pytest.approx(...) calls inside the test. Stop when the
+    count drops.
+  - Loosened comparison: a strict comparison (== or is inside an assert, and
+    the strict self.assert* family such as assertEqual / assertIs) that is
+    replaced by in, >=, <=, != (or is not / assertIn / assertGreaterEqual and
+    similar) or removed. Suggested rule: per test, the count of strict
+    comparisons must not drop; IT-PO to pin the matching rule and the strict
+    and loose method lists.
+  - Tolerance: for pytest.approx calls with rel= or abs= given as numeric
+    literals on both sides, matched in source order within the test, stop when
+    either grows. Adding rel/abs where the base had none counts as widened when
+    the new value exceeds pytest.approx's default (rel 1e-6, abs 1e-12).
+  - A test whose source does not parse on either side is already inconclusive
+    under TQ-500g-3-i.
+
+  USER APPROVAL (2026-10-22): criteria approved by user 2026-10-22 as written,
+  answered directly by the user in the main session's AskUserQuestion;
+  readiness set to approved.
+
+  IT-PO ENRICHMENT (2026-10-22): THE MATCHING RULE, PINNED
+  Count (a): assert statements + assertion calls (assert*-named callees,
+  self.fail, pytest.fail/raises/warns/deprecated_call); pytest.approx is not
+  counted. Loosened (b): strict comparisons (== / is in an assert, the strict
+  assert* and mock *_with methods) are matched PER SUBJECT (the non-literal
+  operand, unparsed), as a multiset per subject; a subject with fewer strict
+  comparisons now than at the base stops. Per-subject matching catches an
+  operator swap with equal counts (a multiset or count rule would not) and lets
+  an inserted assertion pass (a per-position rule would not). Tolerance (c):
+  approx calls paired by expected argument, rel/abs literal or pytest default,
+  stop on any increase. Result: F, G, H, K, I, L stop; J passes.
+  NOT SEEN (add to the pr-reviewer list): a dropped match= on pytest.raises, a
+  widened places/delta on assertAlmostEqual, a non-strict form swapped for a
+  looser non-strict form (>= 1 becoming >= 0), and everything listed above.
+  ACCEPTED STRICTNESS (added): renaming the subject variable stops the work,
+  like merging two asserts.
+
+  USER DECISION (2026-10-22): per-subject matching stays. A renamed asserted
+  variable stopping the work is accepted strictness; revisit only if it proves
+  noisy.
+  USER DECISION (2026-10-22): a dropped match= on pytest.raises, a wider
+  places/delta on assertAlmostEqual, a looser non-strict form (>= 1 becoming
+  >= 0) and a widened expected literal stay known gaps, left to pr-reviewer.
+
+  USER DECISION (2026-10-22/23): RULE (D) ADDED TO THIS AC, built in this lane
+  before commit (answered directly by the user in the main session's
+  AskUserQuestion). An assertion that was unconditional at the base and, after
+  the work, (1) sits under an if / while / try (including try: ... except
+  AssertionError: pass and except Exception: pass) or inside a nested
+  function, lambda or class that was not there at the base, or (2) comes after
+  a newly added early return, pytest.skip(...), pytest.xfail(...), raise
+  SkipTest or raise unittest.SkipTest in the same test, is reported as
+  weakened and stops the work, even when the test is listed as strengthened.
+  Deterministic, from the code alone, no run. Reported as
+  "<file>::<test>  assertion now conditional" or "assertion after an early
+  return|skip". Controls: an assertion already conditional at the base that
+  stays so is not reported; a conditional assertion added beside the
+  unconditional one (count goes up) is not reported. Readiness stays approved:
+  the user approved adding the rule. The known-gaps list, as the user decided,
+  is unchanged by this decision: a dropped match= on pytest.raises, a wider
+  places/delta on assertAlmostEqual, a loose form made looser (>= 1 -> >= 0),
+  and a widened expected literal.
+  Reviewer-noted gap (not a user decision): broadened raises(Exception).
+
+  IT-PO ENRICHMENT (2026-10-23): RULE (D) PINNED
+  'for' and 'match' were added to the conditional forms by the orchestrator, as
+  the same class as if/while (a loop can run zero times; a match may skip a
+  case body). 'with' is excluded: a plain with block always runs its body.
+  Assertions are matched base-to-now by normalised text (ast.unparse) in source
+  order; a text present only after the work is new and not judged, which is
+  what keeps P and Q quiet. The detail names the nearest guard
+  ("under <kind>") or the exit ("return", "pytest.skip(...)", ...). The
+  review-fix behaviours H-1, H-2, M-4 and M-5 (test_tq500g3iii_review.py) are
+  folded into the rule (a)-(c) it_requirements.
+
+  ACCEPTED CODER DEVIATION (rule b): when both operands of a strict comparison
+  are literals (a tautology such as assert 1 == 1), the subject is the
+  constant "<literal>" rather than the unparsed left operand. Accepted.
+
+  SECOND REVIEW (2026-10-23)
+  (1) Fixed test-first: reordering identical assertions that carry different
+  guards is not loosening (pairing matches by guard signature first, then by
+  normalised text in source order); keyword-argument forms of unittest
+  assertions (assertEqual(first=a, second=1), mixed positional/keyword) carry
+  the same facts as the positional form. Pinned by
+  unit_tests/build_orchestration/test_tq500g3iii_review2.py.
+  (2) Accepted consequence of the user's rename strictness: since the H-1
+  symmetric subject, renaming EITHER operand of a two-non-literal comparison
+  (for example result == expected -> result == expected_value, or a renamed
+  loop variable) reports "== removed".
+  (3) Reviewer-noted gaps outside the pinned rule (not user decisions):
+  - exits beyond the closed list: sys.exit, os._exit, pytest.exit,
+    pytest.importorskip, an aliased or bare skip(), a helper that skips,
+    raise Exception;
+  - @pytest.mark.skip / skipif / xfail decorators added to the test;
+  - with contextlib.suppress(AssertionError) (with is not a guard);
+  - an already-guarded assertion gaining another guard, or a second or
+    different exit before an already cut-off assertion;
+  - a nested def that is then called is still reported "under function"
+    (false positive by rule);
+  - x == 1 -> x == pytest.approx(1, rel=0.5);
+  - assertEqual -> assertAlmostEqual, places=, nan_ok;
+  - 0 < x < 5 -> 0 < x;
+  - the symmetric subject key joined with ' | ' can collide with a BitOr
+    expression text (harmless).
+
+  EQUIVALENT WRONG VERSION REMOVED (2026-10-23): the must_catch "new test
+  compared against an empty base" was dropped from
+  test_only_changed_tests_present_on_both_sides_compared. It is an equivalent
+  wrong version: _cs_edits.compare_file never yields an Edit for a newly added
+  test (kind 'added' only for non-test names), and even an in-process 'added'
+  edit against an empty base cannot produce any loosened item (no fewer
+  assertions, no strict base facts, no base approx, no base sites), so no
+  test can catch it. The scope guard it names is enforced upstream by
+  TQ-500g-3-i.
+
+  MUST_CATCH MOVED (2026-10-23): "output order depends on set or dict
+  iteration" moved from test_static_and_deterministic to
+  test_listing_does_not_exempt_and_unlisted_reported_alongside. The wrong
+  version survived the former: it compares two runs with each other, and two
+  runs of a set-ordered output can coincide by chance. The latter pins the
+  exact file order of the eight items, so it catches the wrong order.
