@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -61,8 +61,14 @@ delivers_to:
     run in which the catalogue showed the as-written definition gives, for each in-scope requires_db test,
     {result: "invalid", blocking: true, detail: "the suite put the correct code back before the tests ran:
     <object> held the code as written"}. A run in which the catalogue could not be read, or held neither
-    version, gives result "not_run" (blocking) with the reason. Both leave the verdict unfinished
-    (gate_passed false, reason "unfinished"); neither is ever "caught".
+    version, gives result "not_run" (blocking) with the reason; neither "invalid" nor "not_run" is ever
+    "caught". An invalid run, and a not_run with no driver importable or no test-database address
+    (nothing was installed, so nothing needs putting back), leave the verdict unfinished (gate_passed
+    false, reason "unfinished"). A database put-back that cannot be verified (the re-install fails, the
+    re-read of the catalogue fails, or the definition still differs) stops the drive the way
+    PutBackFailed does: gate_passed false, later wrong versions not run, and a stop reason (not
+    "unfinished") that names the object(s) and never the address or credentials (user-approved review
+    decision 2026-10-22).
 expects_from:
 - ac_id: TQ-500g-1-i
   contract: >-
@@ -124,8 +130,12 @@ it_requirements:
   Put-back includes the database (TQ-500g-1-iii rule applied to it). After RunGate.restore has put the
   file back, the runner re-installs the as-written definitions into the same database through the
   plugin module's own entry point, run with the same interpreter the suite runs under (sys.executable),
-  then reads the catalogue again. A failed re-install or a definition that still differs stops the drive
-  the way PutBackFailed does, naming the object and never the address.
+  then reads the catalogue again. A put-back that cannot be verified stops the drive the way
+  PutBackFailed does, naming the object(s) and never the address: a failed re-install, a failed
+  re-read of the catalogue (also when the run itself already could not read it), or a definition that
+  still differs. An unverifiable put-back is never only a note with reason "unfinished" (user-approved
+  review decision 2026-10-22). Runs where nothing was installed (no driver importable, no test-database
+  address) have nothing to put back and stay not_run + unfinished.
 - >-
   No mandatory database driver for leafcutter: requirements*.txt stays unchanged. The plugin uses a
   PostgreSQL DB-API driver already importable in the suite's own interpreter (db_check accepts only
@@ -215,16 +225,34 @@ test_spec:
   - database put-back mismatch ignored
   in_scope_files:
   - scripts/build_orchestration/_wvr_db.py
-- name: test_no_driver_or_unreadable_catalogue_is_not_run
+- name: test_no_driver_is_not_run_and_unfinished
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: failure
   description: >-
-    With no PostgreSQL driver importable in the test interpreter, or a catalogue read that fails, the
-    database rows are not_run with the reason named, never caught, and the verdict is unfinished.
+    With no PostgreSQL driver importable in the test interpreter, the database row is not_run (blocking)
+    with the reason "no PostgreSQL driver importable in the test interpreter", never caught, and the
+    verdict is gate_passed false, reason unfinished. Nothing was installed, so there is nothing to put
+    back and the drive is merely unfinished.
   must_catch:
   - missing driver or unreadable catalogue read as caught
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_unreadable_catalogue_stops_after_the_first_wrong_version
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    The stand-in driver raises on every catalogue read, both in the run and in the put-back re-read. An
+    unverifiable put-back always stops (user-approved review decision 2026-10-22): the drive stops after
+    the first wrong version (baseline + one wrong version run, later wrong versions not run), with
+    gate_passed false and a stop reason (not "unfinished") that names fn_refresh_due and never the
+    address or password.
+  must_catch:
+  - a put-back whose re-read fails is only a note when the run already could not read the catalogue
   in_scope_files:
   - scripts/build_orchestration/_wvr_db_plugin.py
   - scripts/build_orchestration/_wvr_db.py
@@ -239,6 +267,21 @@ test_spec:
     output file.
   must_catch:
   - driver error text with the address copied into a row
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_transient_run_read_failure_is_not_run_not_caught
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: >-
+    Catalogue reads fail only during the run while the put-back re-read succeeds (a transient failure).
+    The database row is not_run (blocking), never caught, the drive does not stop, the verdict is
+    gate_passed false, reason unfinished, and no password, user name or address appears in the runner's
+    output or verdict. Because the put-back verifies, no stop row can mask the run's own row.
+  must_catch:
+  - missing driver or unreadable catalogue read as caught
   in_scope_files:
   - scripts/build_orchestration/_wvr_db_plugin.py
   - scripts/build_orchestration/_wvr_db.py
@@ -266,7 +309,19 @@ test_rationale: >-
   holds the listener, stand-in driver and fixture project for this AC and TQ-500g-2-ii.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "test split after review"
+    by: it-po
+    at: 2026-10-22
+    note: "test_spec entry test_no_driver_or_unreadable_catalogue_is_not_run split into test_no_driver_is_not_run_and_unfinished and test_unreadable_catalogue_stops_after_the_first_wrong_version (user-approved review decision 2026-10-22: an unverifiable put-back always stops)."
+  - reason: "contract aligned with put-back stop decision"
+    by: it-po
+    at: 2026-10-22
+    note: "delivers_to.contract and the 'Put-back includes the database' it_requirement now say an unverifiable database put-back (failed re-install, failed catalogue re-read, or differing definition) stops the drive with a reason naming the object(s); no driver / no address stay not_run + unfinished. must_catch 'missing driver or unreadable catalogue read as caught' added to test_credentials_never_in_verdict_or_logs, which asserts the not_run row under fail_read. Criteria unchanged."
+  - reason: "test added after wrong-version run"
+    by: it-po
+    at: 2026-10-22
+    note: "Added test_spec entry test_transient_run_read_failure_is_not_run_not_caught (test_tq500g2i_round3.py, angle discrimination, must_catch 'missing driver or unreadable catalogue read as caught'). The wrong version survived test_credentials_never_in_verdict_or_logs because the put-back re-read also failed there and the stop row masked the run's own row; this test fails reads only in the run so the put-back verifies and the row itself is judged. The must_catch added to test_credentials_never_in_verdict_or_logs in the previous entry was removed again for that reason. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -321,3 +376,17 @@ notes: |
          documented on the TQ-500g-5 reference page (docs/reference/wrong-version-runs.md).
          Recorded here and not in TQ-500g-5's notes, because this pass edits only the
          TQ-500g-2 tree. TQ-500g-5's author should pick it up from here.
+
+  IT-PO TEST SPLIT (2026-10-22, after review)
+  The unreadable-catalogue case now STOPS the drive instead of only giving not_run +
+  unfinished (user-approved review decision: an unverifiable put-back always stops; the
+  put-back re-read hits the same unreadable catalogue). The criteria say nothing about an
+  unreadable catalogue, so they are not in tension and were not changed. delivers_to and
+  the put-back it_requirement were brought in line in the same pass. The in-run row is
+  still not_run; only the verdict reason changes.
+  The credentials test cannot catch "missing driver or unreadable catalogue read as
+  caught" (that wrong version SURVIVED it: the put-back re-read also fails there, so the
+  stop row masks the run's own row), so it does not carry that must_catch. Hence
+  test_transient_run_read_failure_is_not_run_not_caught (round 3, angle discrimination):
+  reads fail only in the run, the put-back verifies, the drive does not stop, and the
+  run's own row must be not_run, never caught.

@@ -118,6 +118,8 @@ class Context:
     scope_error: str = ""
     undone: tuple[dict[str, bytes], str, str] | None = None
     interrupted: bool = False
+    db_names: set[str] = field(default_factory=set)  # TQ-500g-2-i: the requires_db test names
+    db_seen: tuple[db_mod.Session, dict] | None = None  # the last run's database session and findings
 
     def shared_diff(self) -> DiffCache:
         """The run's one ``git diff``, shared by the fix undone and the per-name scope check."""
@@ -192,6 +194,12 @@ def _as_written(root: Path, rel: str) -> bytes | None:
         return None
 
 
+def _run(tests: list[ScopedTest], db: db_mod.Session) -> PytestRun:
+    """One pytest run over *tests*, with the database plugin only when *db* carries it."""
+    nodes = [t.node for t in tests]
+    return run_selected(nodes) if db.child is None else run_selected(nodes, db.child)
+
+
 def _apply_run_restore(ctx: Context, wv: WrongVersion, files: dict[str, bytes], tests: list[ScopedTest]) -> PytestRun:
     """Apply *wv*, run *tests* once, and ALWAYS put the code back before returning.
 
@@ -199,9 +207,11 @@ def _apply_run_restore(ctx: Context, wv: WrongVersion, files: dict[str, bytes], 
         PutBackFailed: When the byte comparison still fails after the put-back.
     """
     run = PytestRun("crash", "the run did not start")
+    db = db_mod.Session()
     try:
+        db = db_mod.begin(ctx.root, files, tests, ctx.db_names)
         ctx.gate.apply(wv.name, files)
-        run = run_selected([t.node for t in tests])
+        run = _run(tests, db)
     except gate_mod.GateError as exc:
         run = PytestRun("crash", str(exc))
     except OSError as exc:
@@ -211,19 +221,60 @@ def _apply_run_restore(ctx: Context, wv: WrongVersion, files: dict[str, bytes], 
         run = PytestRun("interrupted", "the drive was interrupted")
     finally:
         back = ctx.gate.restore()
-        if not back.ok:
-            raise PutBackFailed("; ".join(back.failures))  # chained over any in-flight exception
+        failures = [] if back.ok else list(back.failures)
+        with db:
+            failures += _db_put_back(ctx, db)
+        if failures:
+            raise PutBackFailed("; ".join(failures))  # chained over any in-flight exception
     return run
 
 
-def _baseline(tests: list[ScopedTest]) -> tuple[list[dict], bool]:
-    """Run every in-scope test once on the code as written; return ``(rows, ok)``."""
-    run = run_selected([t.node for t in tests])
+def _db_put_back(ctx: Context, db: db_mod.Session) -> list[str]:
+    """Put the test database back too (TQ-500g-2-i); the failure (if any) that must stop the drive."""
+    try:
+        ctx.db_seen = (db, db_mod.finish(db))
+    except db_mod.DbPutBackError as exc:
+        return [str(exc)]
+    return []
+
+
+def _baseline_session(ctx: Context, versions: list[WrongVersion], tests: list[ScopedTest]) -> db_mod.Session:
+    """The database session of the baseline: the as-written SQL of every file a wrong version alters is installed."""
+    rels = sorted({rel for wv in versions if ctx.db_names for rel in _prepare(wv, ctx)[0]})
+    return db_mod.begin_baseline(ctx.root, rels, tests, ctx.db_names)
+
+
+def _baseline(tests: list[ScopedTest], db: db_mod.Session, db_names: set[str]) -> tuple[list[dict], bool]:
+    """Run every in-scope test once on the code as written (with the as-written SQL installed); return ``(rows, ok)``."""
+    with db:
+        run = _run(tests, db)
+        unfinished = db_mod.baseline_rows(tests, db, db_names)
     if run.status != "ran":
         return [row(t.label, "", "not_run", f"the run on the code as written was cut short ({run.status}): {run.detail}") for t in tests], False
     bad = [t for t in tests if run.outcome.get(t.node.identity) != "PASSED"]
     rows = [row(t.label, "", "not_run", f"failing on the code as written (outcome {run.outcome.get(t.node.identity, 'none')})") for t in bad]
-    return rows, not bad
+    rows += [] if bad else unfinished
+    return rows, not rows
+
+
+def _drive(ctx: Context, versions: list[WrongVersion], runnable: list[ScopedTest], rows: list[dict]) -> dict:
+    """Run each wrong version in turn and return the verdict; a failed put-back stops the drive."""
+    for wv in versions:
+        files, early = _files_for(wv, ctx)
+        if early:
+            rows += early
+            continue
+        try:
+            run = _apply_run_restore(ctx, wv, files, runnable if wv.is_undone else wv.holders)
+        except PutBackFailed as exc:
+            rows += [row(t.label, wv.name, "not_run", str(exc)) for t in wv.holders] or [row("", wv.name, "not_run", str(exc))]
+            return _stopped(str(exc), rows)
+        ran = runnable if wv.is_undone else wv.holders
+        new = classify_run(ran, wv.holders, run, wv.name, wv.is_undone)
+        rows += demote(db_mod.judge(new, *ctx.db_seen, ran, ctx.db_names, wv.name), wv.extra_labels)
+        if ctx.interrupted:
+            break
+    return assemble(rows)
 
 
 def _execute(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str, alterations: str | None) -> dict:
@@ -276,24 +327,13 @@ def _verdict_for(scope: Scope, out_rows: list[dict], test_root: Path, ac_root: P
     rows += blocked
     if not runnable:
         return assemble(rows)
-    base_rows, ok = _baseline(runnable)
+    ctx.db_names = scope.db_names
+    versions = _wrong_versions(runnable)
+    base_rows, ok = _baseline(runnable, _baseline_session(ctx, versions, runnable), scope.db_names)
     if not ok:
         reason = "failing on the code as written" if base_rows and "failing" in base_rows[0]["detail"] else "unfinished"
         return assemble(rows + base_rows, reason_override=reason if reason != "unfinished" else None)
-    for wv in _wrong_versions(runnable):
-        files, early = _files_for(wv, ctx)
-        if early:
-            rows += early
-            continue
-        try:
-            run = _apply_run_restore(ctx, wv, files, runnable if wv.is_undone else wv.holders)
-        except PutBackFailed as exc:
-            rows.append(row("", wv.name, "not_run", str(exc)))
-            return _stopped(str(exc), rows)
-        rows += demote(classify_run(runnable if wv.is_undone else wv.holders, wv.holders, run, wv.name, wv.is_undone), wv.extra_labels)
-        if ctx.interrupted:
-            break
-    return assemble(rows)
+    return _drive(ctx, versions, runnable, rows)
 
 
 def run_runner(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str = "HEAD", alterations: str | None = None) -> dict:
