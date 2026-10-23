@@ -399,6 +399,12 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  For example, ACD-300g.yaml must NOT match ACD-300 (stems must be\n" +
       "  identical, not merely prefix-equal; ACD-300g !== ACD-300).\n" +
       "  These are the stage-specific files to stage.\n" +
+      "  PARENT RULE: in addition, if a parent AC's YAML file (an ancestor of a written\n" +
+      "  AC, e.g. BO-2600a for BO-2600a-6) was modified on disk by this stage -- typically its\n" +
+      "  covered_by list gained the written child -- include that parent file too. A parent\n" +
+      "  that is clean (unmodified) must never be staged, and neither must an unmodified sibling AC or an AC file committed by an earlier stage.\n" +
+      `  Only paths under the AC store (${acStorePath}/) are ever eligible; any path\n` +
+      "  outside the AC store is excluded, whatever its status.\n" +
       "\n" +
       "Step 2 — If no matching files are found:\n" +
       "  Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
@@ -414,7 +420,14 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  If the output is empty (nothing staged despite Step 3 succeeding):\n" +
       "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
       "\n" +
+      "  Compare the output with the expected set (the files staged in Step 3). Files the user had\n" +
+      "  already staged (pre-staged) outside the AC store, or AC files from an earlier stage, may be\n" +
+      "  in the index. If the index holds any unexpected extra path (not in the expected set):\n" +
+      `    unstage it with 'git ${gitC} reset -q -- <extra path>'; if that fails, return an error\n` +
+      "    { \"status\": \"error\", \"message\": \"unexpected staged path <path> - aborted\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false } and do not commit.\n" +
+      "\n" +
       "Step 5 — Commit the staged files using the commit agent's standard flow.\n" +
+      "  Limit the commit to the expected set via pathspec (-- <expected paths>) so that unrelated already staged changes are never swept in.\n" +
       "  The commit message has already been provided above. Use it exactly.\n" +
       "  After committing, capture the exit code and output.\n" +
       "  If exit code is 0:\n" +
@@ -669,7 +682,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
     const readiness = readinessMatch ? readinessMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
     // Qualify as orphan: origin_agent must be an AC authoring agent AND readiness must be "draft".
     const AUTHORING_AGENTS = new Set(["product-owner", "business-analyst", "it-po"]);
-    if (!AUTHORING_AGENTS.has(originAgent)) { continue; }
+    if (!AUTHORING_AGENTS.has((originAgent || "").replace(/-v\d+$/, ""))) { continue; } // stored v3 authors map to canonical names
     if (readiness !== "draft") { continue; }
     // Extract AC ID: prefer the id field, fall back to filename stem.
     let acId;

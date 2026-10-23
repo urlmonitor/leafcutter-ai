@@ -7,7 +7,7 @@ GOAL: Red-first specification that no /plan-feature rationale pointer comment sa
 ARCHITECTURE: The lines are pinned with their full text as they stood at commit c73ebddc1 (indentation and
     rationale doc path included), at their line numbers after the origin/main merge that retired the
     worktree-setup path (BO-4300), which removed 3 of the 15 pointer lines; the 12 that remain are pinned and
-    the file's line count is pinned to that merge's 3142.
+    lines are located by content (their pinned line numbers serve only as labels).
     The run uses the real plan-feature.js under run_workflow_under_e2 (the harness of
     unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py).
 RED STATE: all 15 pointer lines still read "// Why why".
@@ -25,7 +25,6 @@ sys.path.insert(0, str(_STAGE_DIR))
 from _approval_step_support import BATCH, gate_record, names, prepass_for, resume, run, table  # noqa: E402
 from _design_stage_support import PLAN_FEATURE_JS  # noqa: E402
 
-_LINE_COUNT_AT_PIN = 3142
 _PINNED = (
     (1642, '    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md'),
     (1674, '    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md'),
@@ -50,21 +49,23 @@ def _lines() -> list[str]:
 def test_rationale_pointers_read_why_once():
     # covers: ACD-300c-5-i
     # angle: discrimination
-    """Each of the 12 pinned pointer lines now equals its pinned text with "// Why why " replaced by
-    "// Why ", character for character, and the file's line count is unchanged.
+    """Each of the 12 pinned pointer lines appears in the file exactly once as its pinned text with
+    "// Why why " replaced by "// Why ", character for character (indentation, doc path and ticket id).
+
+    Lines are located by content, not by their line number at the pin: the file keeps changing, and a
+    line-number or total-line-count pin broke every later, unrelated edit to plan-feature.js (ACD-300g-2).
 
     Wrong versions caught: the doubled word removed by deleting "Why " (the comment reads "// why ...");
-    a pointer line whose rationale doc path or ticket id changes while the word is fixed; a line added or
-    removed, which shifts the pinned sites.
+    a pointer line whose rationale doc path or ticket id changes while the word is fixed; a pointer line
+    deleted or duplicated.
     """
     lines = _lines()
-    assert len(lines) == _LINE_COUNT_AT_PIN, f"line count {len(lines)} != {_LINE_COUNT_AT_PIN}: a line was added or removed"
     wrong = {
-        number: lines[number - 1]
+        number: lines.count(pinned.replace("// Why why ", "// Why ", 1))
         for number, pinned in _PINNED
-        if lines[number - 1] != pinned.replace("// Why why ", "// Why ", 1)
+        if lines.count(pinned.replace("// Why why ", "// Why ", 1)) != 1
     }
-    assert wrong == {}, f"pointer lines not corrected exactly: {wrong}"
+    assert wrong == {}, f"pointer lines (by pinned line number) not present exactly once, corrected: {wrong}"
 
 
 def test_workflow_source_has_no_why_why():
