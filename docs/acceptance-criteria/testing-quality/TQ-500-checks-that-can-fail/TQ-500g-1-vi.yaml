@@ -209,8 +209,12 @@ it_requirements:
   red-baseline gate, which still dispatches status-checker. The request is the executor's documented
   shape, JSON.stringify({step: <label>, command, target: {workspace: <worktree root>, branch: <the
   drive's branch when the route knows it>, run_id: <work_key>}}); run_id is used because K3 has no AC id.
-  The reply is parsed as the fast lane does: JSON.parse(reply.stdout), and a decline (no stdout), a throw
-  or a non-object counts as no reply. The twins carry their own copy of the fast lane's executor reply
+  The reply's stdout is read by TQ-500f-3-v's reading rule (parseStepJson; amended by IT PO 2026-10-23,
+  replacing "parsed as the fast lane does: JSON.parse(reply.stdout)"): the whole trimmed text when it
+  parses as one JSON object, otherwise the one distinct line that is on its own a JSON object; zero or
+  two-plus such lines is no reply. A decline (no stdout), a throw or a non-object also counts as no reply,
+  and every caller still fails closed on it (the checks in the fail-closed entry below are unchanged). The
+  fast lane (fast-lane-ship.js) keeps its own strict parse; it is out of scope here. The twins carry their own copy of the fast lane's executor reply
   schema (CLAIM_RUNNER_SCHEMA), identical in content, since the engine has no module loader.
 - >-
   Registry (config/agent_registry.json), the one concrete edit: command-step-runner's spawned_by becomes
@@ -649,3 +653,13 @@ notes: |
   loop's BATCH_SIZE chunk step, from a source_ac key (always present, [] when
   none) on the epic planner's ticket items. commitLane placement and the
   drive-head recover are unchanged. No criteria clause contradicts the rule.
+
+  IT-PO NOTE (2026-10-23): STEP REPLY READING RULE MOVED TO TQ-500f-3-v
+  The executor it_requirement said the reply is "parsed as the fast lane does:
+  JSON.parse(reply.stdout)". That strict whole-text parse halted live runs
+  (wf_f982c0ab-e94): the writer's stderr log line, merged into the relayed
+  stdout ahead of the list JSON, made the list answer null. TQ-500f-3-v
+  replaces it in wvStep (recover, list, finish) with one reading rule
+  (parseStepJson); the entry now points there. The fail-closed checks are
+  unchanged. fast-lane-ship.js keeps its own parse (out of scope). Criteria,
+  work_status and readiness untouched.
