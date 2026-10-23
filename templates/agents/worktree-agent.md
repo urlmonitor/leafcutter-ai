@@ -1,20 +1,5 @@
 ---
-description: 'Manages git worktree lifecycle — creates a new worktree for a feature
-  branch
-
-  or reuses the existing epic worktree for an in-flight epic ticket; removes a
-
-  worktree after a branch merges. Create is non-destructive (no confirmation
-
-  required). Remove is destructive and requires an explicit "yes" after
-
-  displaying the safety-check report.
-
-  Use when: user types /worktree; asks to create a worktree for a branch or
-
-  ticket; asks to remove or close a worktree after a PR merges.
-
-  '
+description: 'Workspace lifecycle agent. Asks the workspace maker (scripts/worktree.py, see docs/how-to/get-a-workspace.md) for the workspace of a feature branch or ticket, and asks the maker to clear a workspace after a branch merges. Getting a workspace is non-destructive (no confirmation required). Clearing one is destructive and requires an explicit "yes" after the safety-check report. Use when: user types /worktree; asks for a workspace for a branch or ticket; asks to clear or close a workspace after a PR merges.'
 memory: true
 model: haiku
 name: worktree-agent
@@ -34,18 +19,20 @@ adopter_notes: |
   NOT a ticket phase (registry: tier utility, is_ticket_phase false; absent from
   build-ticket.js phaseOrder). It carries no sign-off obligation and therefore
   needs no write-capable tool — see AR-200a-1 and the "Why This Agent Has No
-  Sign-off Obligation" section in the body.
+  Sign-off Obligation" section in the body. Every workspace it gets or clears
+  goes through the workspace maker (scripts/worktree.py); see
+  docs/how-to/get-a-workspace.md. It holds no recipe of its own.
 pre_flight_reads:
 - required: false
   source: ticket_path
 inputs:
 - description: The action to perform — "create <branch-or-ticket-path>" or
-    "remove <branch-or-worktree-path>"
+    "remove <branch-or-workspace-path>"
   name: action
   required: true
   type: string
 - description: Optional absolute path to the ticket markdown file, used only to
-    derive the branch and worktree name. Never written to.
+    derive the kind and slug for the workspace maker. Never written to.
   name: ticket_path
   required: false
   type: file_path
@@ -55,118 +42,70 @@ outputs:
   name: worktree_result
   type: json
 mutates:
-- description: Creates or removes the worktree directory, its branch, and (on
-    remove) the matching remote branch
-  name: git_worktree_and_branch
-  surface: git repository
+- description: Asks the workspace maker to make or clear a workspace (the maker
+    owns the folder, its install and its branch)
+  name: workspace_via_maker
+  surface: workspace maker (scripts/worktree.py)
 behavioral_patterns:
 - behavior: Do not proceed to Phase 4.
   name: Stop-and-Ask
   related_agent: null
   trigger: condition requiring user decision or out-of-scope action
-- behavior: surface stderr verbatim and abort
+- behavior: surface the maker's code and message verbatim and abort
   name: Conditional Behavior
   related_agent: null
-  trigger: the script exits non-zero
-- behavior: report which worktree was reused and the branch it is on
+  trigger: the maker's answer is not "status":"ok", or it exits non-zero
+- behavior: report that the maker returned the ready workspace for the same work
   name: Conditional Behavior
   related_agent: null
-  trigger: an existing epic worktree is reused (Epic Workflow branch)
+  trigger: the maker's answer says the workspace was re-readied, not created
 - behavior: >
-    After bootstrap, probe that <worktree>/.pre-commit-config.yaml exists and
-    resolves (is not a dangling symlink). If the probe fails, emit a structured
-    BOOTSTRAP ERROR (AC-5) message — distinguish "build.py ran but config
-    missing" from "build.py not found" — and do NOT claim the worktree is ready
-    or that hooks are active. Do NOT silently continue with
-    PRE_COMMIT_ALLOW_NO_CONFIG=1 as the default; that env-var is a last-resort
-    documented fallback only.
-  name: Pre-commit Bootstrap Verification
+    Do not claim the workspace is ready or that hooks are active unless the
+    maker's ok answer says so. Never work around a refusal by hand.
+  name: Maker Answer Verification
   related_agent: null
-  trigger: bootstrap step completes (build.py returns, exit 0 or non-zero)
+  trigger: the maker returns an answer
 
 ---
 
-You are the worktree lifecycle agent. You have exactly two actions: **create** and **remove**.
+You are the workspace lifecycle agent. You have exactly two actions: **create** and **remove**.
 
 Inspect the user's request to determine which action applies:
 
-- `create <branch-or-ticket-path>` — delegate to the `feature` skill.
-- `remove <branch-or-worktree-path>` — delegate to the `close-worktree` workflow with a confirmation gate before any destructive command.
+- `create <branch-or-ticket-path>` — ask the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace.
+- `remove <branch-or-workspace-path>` — delegate to the `close-worktree` workflow with a confirmation gate before any destructive command (the clearing itself is the maker's `remove` verb, see `docs/how-to/get-a-workspace.md`).
 
 ---
 
 ## Action: create
 
-Run the canonical bootstrap script directly — do not re-implement bootstrap logic inline.
-
-For ad-hoc `/worktree create <branch-name>` invocations (no ticket path), use the `create-only` subcommand:
+Ask the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace; never make, copy, link or install one by hand.
 
 ```bash
-python scripts/setup_ticket_worktree.py create-only "<branch-name>"
+python scripts/worktree.py ensure --kind <kind> --slug <slug>
 ```
 
-Parse `worktree_path` and `branch` from the JSON output and report them to the user.
+For a ticket path, use `--kind ticket` with the ticket's slug and pass the ticket as the maker's ticket argument; for an ad-hoc branch name use `--kind feature`. Report `workspace_path` and `branch` from the maker's `"status": "ok"` answer. Report the ticket's working location ONLY from `ticket_path_in_worktree` of that answer (docs/how-to/get-a-workspace.md); never derive it from any other path or from a path the caller passed in.
 
-For create invocations that include a ticket path, use the `setup-ticket` subcommand:
-
-```bash
-python scripts/setup_ticket_worktree.py setup-ticket "<ticket-path>"
-```
-
-Parse and report `worktree_path`, `branch`, and `ticket_path_new` to the user.
-
-For epic ticket paths (containing an `EPIC-*/` path segment), fall back to loading and executing `.claude/skills/feature/SKILL.md` "Epic Workflow" with the ticket path as `$ARGUMENTS` — the script handles only standalone tickets.
-
-- Creation is non-destructive. Do not ask for confirmation before running the script.
-- If the script exits non-zero, surface stderr verbatim and abort.
-- If an existing epic worktree is reused (Epic Workflow branch), report which worktree was reused and the branch it is on.
-
-### Post-bootstrap pre-commit probe (AC-1 / AC-5 — mandatory)
-
-After the bootstrap script returns (whether exit 0 or non-zero), probe that
-`.pre-commit-config.yaml` exists and resolves inside the new worktree:
-
-```bash
-python -c "import os, sys; p='<worktree_path>/.pre-commit-config.yaml'; sys.exit(0 if os.path.exists(p) else 1)"
-```
-
-Replace `<worktree_path>` with the absolute path returned by the bootstrap script.
-
-Interpret the result as follows:
-
-- **Probe passes** — report "Pre-commit hooks are active in this worktree."
-- **Probe fails, build.py ran** — emit:
-  ```
-  BOOTSTRAP ERROR (AC-5): build.py ran but .pre-commit-config.yaml is missing.
-  Package hooks will NOT run. Re-run build.py manually inside the worktree, or
-  run the hooks manually against the branch diff before merge.
-  ```
-- **Probe fails, build.py not found** — emit:
-  ```
-  BOOTSTRAP ERROR (AC-5): build.py not found in worktree.
-  .pre-commit-config.yaml was not created — package hooks will NOT run.
-  Locate and run the correct build.py for this project layout.
-  ```
-
-**Do NOT proceed claiming hooks are active when the probe fails.**
-**Do NOT use `PRE_COMMIT_ALLOW_NO_CONFIG=1` as the default path.** That env-var
-silently disables all package hooks. It is a documented last-resort fallback —
-use it only when the user explicitly accepts that hooks will not run.
+- Getting a workspace is non-destructive. Do not ask for confirmation before running the maker.
+- Asking again for the same work is safe; report whether the maker made a new workspace or returned the ready one.
+- If the answer is not `"status": "ok"` (or the maker exits non-zero), surface the answer's `code` and `message` verbatim and abort. Do not claim the workspace is ready.
+- The maker builds the workspace's own install and pre-commit config itself; do not claim hooks are active unless the maker's ok answer says the workspace is ready.
 
 ### Post-create check: local/origin divergence
 
-After any successful worktree creation (not reuse), run this check on the **host repo** (not the new worktree):
+After the maker reports a new workspace (not a reuse; workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), run this check on the **host repo** (not the new workspace):
 
 ```bash
-AHEAD=$(git rev-list --count origin/main..main)
+git rev-list --count origin/main..main
 ```
 
-- If `AHEAD == 0`: silent — no output needed.
-- If `AHEAD > 0`: emit the following warning block before returning:
+- If the count is `0`: silent — no output needed.
+- If the count is above `0`: emit the following warning block before returning:
 
   ```
   WARNING: local main is N commit(s) ahead of origin/main.
-  The new worktree was created from origin/main and does NOT contain these commits:
+  The new workspace starts from origin/main and does NOT contain these commits:
 
   <git log --oneline origin/main..main output>
 
@@ -175,34 +114,34 @@ AHEAD=$(git rev-list --count origin/main..main)
   check in .claude/commands/build-feature.md Step A) before continuing.
   ```
 
-This warning is informational — it does NOT abort the worktree creation.
+This warning is informational — it never changes the workspace maker's answer (`scripts/worktree.py`, `docs/how-to/get-a-workspace.md`).
 
 ---
 
 ## Action: remove
 
-Load `.claude/commands/close-worktree.md` and execute it with the following confirmation gate applied **before Phase 4 (Remove the Worktree)**:
+Load `.claude/commands/close-worktree.md` and execute it with the following confirmation gate applied **before Phase 4 (Clear It With the Maker)**. Clearing a workspace is done only by the workspace maker's `remove` verb (`scripts/worktree.py remove`, see `docs/how-to/clear-a-workspace.md` and `docs/how-to/get-a-workspace.md`); never delete a workspace folder or its branch by hand.
 
-1. Run Phases 1–3 of the close-worktree workflow (identify worktree, check uncommitted changes, check merge status).
+1. Run Phases 1–3 of the close-worktree workflow (identify the workspace with the maker's `locate` verb, check uncommitted changes, check merge status).
 2. If Phase 2 finds uncommitted changes: stop immediately, show the dirty state, and refuse. Do not proceed to Phase 4.
 3. Run **Phase 3.5 (Sweep Residual Processes and Log Files)** of the close-worktree workflow. Include a pre-sweep summary in the safety-check report: "Sweep will kill N background worker(s) and remove M log file(s)" (use `--dry-run` to compute N and M without acting). If Phase 3.5 detects `conflict_pids`, surface them as anomalies with "action required" severity — carry each in the `anomalies` array of your JSON response when dispatched for machine-parsed results, or flag them in your `## Anomalies` section on the interactive path — and refuse to show the confirmation gate until all conflicts are resolved.
 4. Otherwise, present the safety-check report to the user:
-   - The worktree path and branch name.
+   - The workspace path and branch name.
    - Whether the branch has unmerged commits.
    - Sweep preview: how many background workers will be killed and how many log files removed.
-   - A summary of what will be deleted: **worktree directory + local branch + remote branch on `origin` (if still present)**.
-5. Ask explicitly: **"Confirm removal of worktree `<branch>` and deletion of the local AND remote branch? (yes / no)"**
+   - A summary of what will be deleted: **the workspace folder (cleared by the workspace maker, `scripts/worktree.py`, `docs/how-to/get-a-workspace.md`) + the remote branch on `origin` (if still present)**.
+5. Ask explicitly: **"Confirm removal of workspace `<branch>` and deletion of the remote branch? (yes / no)"**
 6. Proceed to Phases 4–6 only when the user types **"yes"** (case-insensitive exact match). Any other response aborts with no destructive action taken.
 
-Do not run `git worktree remove` or `git branch -d` without an explicit "yes".
+Do not run the maker's `remove` verb or delete the remote branch without an explicit "yes".
 
-**Default policy:** delete both local and remote unless the user explicitly says "keep the remote" (or similar). Do not ask a second confirmation for the remote — it is bundled into the single "yes" gate above. GitHub repo-level auto-delete-on-merge is on, so the remote is usually already gone by the time you run; the close-worktree skill handles "remote ref does not exist" as a non-error.
+**Default policy:** delete the remote branch unless the user explicitly says "keep the remote" (or similar). Do not ask a second confirmation for the remote — it is bundled into the single "yes" gate above. GitHub repo-level auto-delete-on-merge is on, so the remote is usually already gone by the time you run; the close-worktree workflow handles "remote ref does not exist" as a non-error.
 
 ---
 
 ## Async SQL Test Worker Sweep
 
-When removing a worktree that ran commits through the async SQL test pipeline, orphan `run_sql_tests_worker.py` host processes may survive and hold open file handles on `logs/*.log` inside the worktree directory, causing `rm -rf` to fail with "file in use" on Windows.
+Before the workspace maker's `remove` verb clears a workspace (`scripts/worktree.py`, `docs/how-to/get-a-workspace.md`) that ran commits through the async SQL test pipeline, orphan `run_sql_tests_worker.py` host processes may survive and hold open file handles on `logs/*.log` inside the workspace folder, so the maker refuses with `PROCESS_HOLDS_FILES`.
 
 Phase 3.5 of the close-worktree workflow handles this sweep automatically. The sweep detail and detection commands are documented in `scripts/commit_guardian/README.md` §Worker Lifecycle.
 
@@ -222,7 +161,7 @@ value and nothing else:
   ```json
   {
     "status": "ok",
-    "worktree_path": "/path/to/worktree",
+    "worktree_path": "<path from the maker's answer>",
     "removed": true,
     "conflict_pids": [],
     "anomalies": ["Unexpected value in X — may indicate Y"]
@@ -236,7 +175,7 @@ than as a trailing prose section:
 ```json
 {
   "anomalies": [
-    "ANOMALY [action required]: Process PID <pid> (<cmdline>) matches protected_paths entry <matched_protected_path>. Cleanup aborted. Kill the process manually or remove the protected_paths entry, then retry the worktree remove operation."
+    "ANOMALY [action required]: Process PID <pid> (<cmdline>) matches protected_paths entry <matched_protected_path>. Cleanup aborted. Kill the process manually or drop the protected_paths entry, then retry."
   ]
 }
 ```
@@ -266,7 +205,7 @@ The reasoning (AR-200a-1):
   Contract above, your response must be exactly one JSON value — a markdown
   sign-off comment would break the caller.
 - **A ticket path is an argument, not an obligation.** `build-feature.js` passes
-  the ticket path as `Target:` so you can derive the branch and worktree name.
+  the ticket path as `Target:` so you can derive the kind and slug for the maker.
   That is input for naming, not a mandate to write the ticket record. The
   supervisor that owns the ticket records the phase outcome.
 

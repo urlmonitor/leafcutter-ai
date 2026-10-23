@@ -133,7 +133,21 @@ def scenario_for(worktree: str, results: dict, decls: dict | None = None, phases
     return scenario, path
 
 
+def historical_replies(worktree: str) -> dict:
+    """The lookups the pre-capability driver made before the workspace maker existed (BO-4300 retired them
+    from the current drivers and from the harness defaults), answered as the harness answered them then:
+    the resolved working copy is reusable, so the baseline proceeds with no new location."""
+    facts = {"exists": True, "is_git_toplevel": True, "is_linked_worktree": True, "is_main_checkout": False,
+             "same_repository": True, "branch": "harness-default"}
+    return {
+        "worktree-facts-resolved": {"output": json.dumps(facts), "exit_code": 0},
+        "worktree-setup": {"worktree_path": worktree, "status": "reused"},
+    }
+
+
 def run_script(script: str, scenario: dict) -> dict:
+    if _BASELINE_DIR and Path(script).parent == Path(_BASELINE_DIR[0]):
+        scenario = dict(scenario, historical_replies=historical_replies(scenario["record_dir"]))
     return H.run_driver(script, scenario)
 
 
@@ -328,7 +342,7 @@ def mutate_eager_probe(run: Run) -> Run:
 __all__ = [
     "S", "H", "TWINS", "SPECIALIST", "NAMED_FILE", "PHASES", "Run", "BaselineUnavailable",
     "baseline_script", "current_script", "author_clears_decl", "refusal", "scenario_for",
-    "run_script", "reduce_run", "drive", "paired", "author_clearable_results",
+    "run_script", "historical_replies", "reduce_run", "drive", "paired", "author_clearable_results",
     "author_clearable_decls", "accepted_results", "median_seconds", "seed_table",
     "table_without_gating", "real_handoff", "size_refusal_output", "node_available",
     "capability_commit", "arm_nobody_extra_engaged", "arm_same_as_baseline", "arm_no_extra_work",

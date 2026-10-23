@@ -37,7 +37,7 @@ for _p in (_UNIT_TESTS, _UNIT_TESTS / "build_orchestration"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, finalize_baseline_responses, run_workflow_under_e2, workspace_ensure_reply  # noqa: E402
 
 REPO_ROOT = _UNIT_TESTS.parent
 FINALIZE_JS = REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
@@ -54,7 +54,8 @@ TIMEOUT = 60
 def base_responses(branch: str, worktree_root: str) -> dict:
     """Steer finalize through pre-flight and steps 1-3 to Step 3.5 (same shape the BO-2300 tests use)."""
     return {
-        "pre-flight": {"found": True, "branch": branch, "worktree_root": worktree_root},
+        "workspace-ensure": workspace_ensure_reply(worktree_root, branch=branch),
+        **finalize_baseline_responses(),
         "step-1-pr-probe": {"found": True, "number": 99, "url": "https://github.com/test/test/pull/99"},
         "step-2-merge-main": {"status": "already_up_to_date", "merge_strategy": "already_up_to_date"},
         "pre-step-4-sync-check": {"status": "up_to_date", "local_sha": "abc1234", "origin_sha": "abc1234",
@@ -62,6 +63,9 @@ def base_responses(branch: str, worktree_root: str) -> dict:
         # Sub-step A fails closed: only aborted | no_merge continue. A clean tree answers no_merge;
         # a test modelling an in-progress Step 2 merge overrides with {"status": "aborted"}.
         RESET_MERGE: {"status": "no_merge"},
+        # BO-4300c-3-ii: an unscripted dispatch is an error reply, no longer a generic "ok" stub, so the
+        # merge-confirmation gate the closure tests run on to is scripted as the person saying yes.
+        MERGE_GATE: {"status": "ok"},
     }
 
 

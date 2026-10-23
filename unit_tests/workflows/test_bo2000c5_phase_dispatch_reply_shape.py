@@ -68,7 +68,11 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    run_workflow_under_e2,
+    workspace_ensure_from_opened,
+)
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _BUILD_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "build-feature.js"
@@ -78,17 +82,6 @@ _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
 _TICKET_ABS_PATH = "/tmp/bo2000c5-worktree/tickets/01_todo/07_ticket.md"
 _WORKTREE_ABS_PATH = "/tmp/bo2000c5-worktree"
-# BO-4000: build-feature.js checks resolve-target's own worktree_path via a
-# repo-facts call before reusing it; this reports it reusable so the run
-# reuses _WORKTREE_ABS_PATH exactly as before that check existed.
-_WORKTREE_FACTS_RESOLVED = {
-    "output": (
-        '{"exists": true, "is_git_toplevel": true, "is_linked_worktree": true, '
-        '"is_main_checkout": false, "same_repository": true, "branch": "fixture"}'
-    ),
-    "exit_code": 0,
-}
-
 # The exact regressing sentence named in the AC. Its presence in a live
 # dispatch prompt is the bug; its absence (replaced by reply-tool-field
 # instructions) is the fix.
@@ -161,11 +154,10 @@ def test_build_feature_main_dispatch_prompt_directs_reply_tool_fields_not_json_s
             "ticket_path": _TICKET_ABS_PATH,
             "worktree_path": _WORKTREE_ABS_PATH,
         },
-        "worktree-facts-resolved": _WORKTREE_FACTS_RESOLVED,
-        "worktree-setup": {
+        "workspace-ensure": workspace_ensure_from_opened({
             "worktree_path": _WORKTREE_ABS_PATH,
             "status": "reused",
-        },
+        }),
         "ticket-planner": {
             "ticket_path": _TICKET_ABS_PATH,
             "title": "BO-2000c-5 regression fixture ticket",
@@ -254,11 +246,10 @@ def test_build_feature_redispatch_prompt_directs_reply_tool_fields_not_json_stri
             "ticket_path": _TICKET_ABS_PATH,
             "worktree_path": _WORKTREE_ABS_PATH,
         },
-        "worktree-facts-resolved": _WORKTREE_FACTS_RESOLVED,
-        "worktree-setup": {
+        "workspace-ensure": workspace_ensure_from_opened({
             "worktree_path": _WORKTREE_ABS_PATH,
             "status": "reused",
-        },
+        }),
         "ticket-planner": {
             "ticket_path": _TICKET_ABS_PATH,
             "title": "BO-2000c-5 handoff-redispatch fixture ticket",

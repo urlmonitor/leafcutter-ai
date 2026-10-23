@@ -5,9 +5,9 @@ components:
   - build_orchestration
   - worktree_manager
 level: L3
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -172,13 +172,23 @@ test_rationale: |
   entry then closes the loop on the reported symptom: the per-subcommand answers are right,
   AND the driver given those answers for a single ticket reuses its worktree instead of
   aborting — a dispatch fact visible only through the workflow harness.
-covered_by:
-  - unit_tests/workflows/test_bo4000f_repository_reference_anchor.py
+covered_by: []
 implemented_by: []
 origin_agent: BrainCandy
 created: 2026-10-02
-amended_by: []
-superseded_by: null
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). BO-4300f-2 removed
+    the facts, base and branch-standing lookups of worktree_repo_facts.py that this record pins,
+    and their tests in test_bo4000f_repository_reference_anchor.py. build-feature now asks the
+    one workspace maker, which answers where a workspace lives and hands an existing healthy one
+    back (BO-4300d-1).
+superseded_by:
+- BO-4300f-2
+- BO-4300d-1
 notes: |
   Authored by /quick-fix. Root cause: Every subcommand runs git with cwd=<given path>; for a FILE, subprocess raises NotADirectoryError (OSError), _git_output turns it into None, and the subcommand answers null. Fix: resolve the reference/start/repo arguments to their parent directory when they name an existing file (e.g. a small _anchor_dir helper: p.parent if p.is_file() else p) for base's start, facts' --reference and branch-standing's --repo (NOT for facts' own inspected path); directories and non-existent paths are unchanged. This amends BO-4000f, whose it_requirement (BO-4000f.yaml:71) says the script is not modified; the new AC should be a constraint under BO-4000f (build-orchestration). Tests: unit_tests/workflows/test_bo4000f_repository_reference_anchor.py builds a real temp repo with a linked worktree and only uses an epic-folder anchor; add ticket-.md-file cases for base, facts --reference and branch-standing --repo, run from a non-git cwd..
 

@@ -26,7 +26,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
-produces: analysis
+produces: requirement_records
 config_keys: {}
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the PO has produced L0/L1
@@ -43,9 +43,9 @@ outputs:
   name: completion_report
   type: structured_response
 mutates:
-- description: Read-only agent — no filesystem mutations
-  name: none
-  surface: none
+- description: Authors L2/L3 requirement records, one AC YAML file each, with id, title, component, components, level, criteria, depends_on, assigned_agent, delivers_to, expects_from and doc_links
+  name: requirement_records
+  surface: AC YAML store (docs/acceptance-criteria/)
 behavioral_patterns:
 - behavior: unreadable, binary, or exceeds 50 KB
   name: Conditional Behavior

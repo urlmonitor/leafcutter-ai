@@ -81,9 +81,9 @@ retrospective. This pre-flight step closes that gap.
 ### §1.0.1 Pre-Commit Hook Probe Pre-flight (runs after §1.0)
 
 Before entering the main epic loop (§1.1), verify that the pre-commit hooks
-are active and wired up in the epic worktree. This prevents the scenario where
-a hook silently skips for the entire drive because the config was lost between
-the worktree bootstrap and the drive start.
+are active and wired up in the epic workspace. This prevents the scenario where
+a hook silently skips for the entire drive. The epic workspace comes only from the
+workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`; the maker builds its install and hook config itself.
 
 **Check (POSIX):**
 
@@ -101,18 +101,16 @@ If `failing_checks` is non-empty OR the script exits non-zero:
 1. Emit the structured warning block to the user, listing each failing check:
    ```
    ## Warning: Pre-commit hook probe failed
-   Worktree: <worktree_root>
+   Workspace: <worktree_root>
    Failing checks: <list>
    Pre-commit hooks may silently skip during this drive.
    ```
 2. Offer the user **three options**:
-   a. **Fix and retry** — resolve the config/hooks issue (the probe describes what to fix), then re-invoke `/build-feature`. Typical fix: `build.py` wasn't run, or `.pre-commit-config.yaml` is absent.
-   b. **Investigate** — inspect `probe_pre_drive.txt` and the worktree hook installation manually before deciding.
-   c. **Override** — proceed despite the failing probe, accepting the risk that hooks may silently skip. This requires an explicit confirmation: "I understand hooks may skip — proceed".
-3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
-4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
+   a. **Fix and retry** — ask the workspace maker for the workspace again (`scripts/worktree.py ensure`, see `docs/how-to/get-a-workspace.md`); it finishes a half-made workspace in place. Never repair the config or hooks by hand. Then re-invoke `/build-feature`.
+   b. **Investigate** — inspect `probe_pre_drive.txt` before deciding.
+3. On either option: halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — ask the workspace maker again"}`. There is no override: a failing probe always halts the drive.
 
-Do NOT silently continue when `failing_checks` is non-empty — the warning must be surfaced.
+Do NOT continue when `failing_checks` is non-empty — the failure must be surfaced and the drive halted.
 
 If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
 ```
@@ -120,9 +118,8 @@ INFO: verify_precommit_active.py not found — probe skipped (incomplete guardia
 ```
 and continue to §1.1 without blocking.
 
-**Why this gate exists:** A worktree bootstrap can succeed (config file copied/symlinked)
-but the hooks can still fail to fire if the binary is missing, the hook is not installed,
-or the config is malformed. This probe checks all four conditions simultaneously.
+**Why this gate exists:** A workspace can be made yet the hooks can still fail to fire if
+the binary is missing, the hook is not installed, or the config is malformed. This probe checks all four conditions simultaneously.
 (Source: EPIC-WorktreeQualityGateGuard, BO-1700d-2)
 
 ---
@@ -243,8 +240,8 @@ In all other blocker scenarios, the epic continues with the remaining independen
 **Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
-`/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
-`git branch -D` until **every sub-ticket in the epic is in `done/` status**.
+`/build-feature` **MUST NOT** invoke `close-worktree`, ask the maker to clear the epic workspace (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), or
+run `git branch -D` until **every sub-ticket in the epic is in `done/` status**.
 
 Premature invocation of `close-worktree` destroys the branch ref while in-progress commits
 survive as unreachable orphan objects in the object database. This failure mode was observed
@@ -515,8 +512,12 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
-    IF next_agent == "commit": spawn it through §5.9 (lock, routing stage,
-    commit staging the manifest by name, one observe, release).
+    IF next_agent IN {"python-coder", "sql-coder"} or its produces trait is
+    "production_code", and no coder has been spawned yet in this drive: run the
+    red-baseline reader (§5.10.1) first; on a halt, spawn no coder.
+    IF next_agent == "commit": spawn it through §5.9 (lock, wrong-version gate
+    §5.10.2, routing stage, commit staging the manifest by name, one observe,
+    release), on EVERY commit spawn including after a retry, handoff or remedy agent.
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
     and updated `agents:` + `## Sign-offs` rows.
@@ -789,7 +790,7 @@ EPIC-AcPipelineDeployGaps). Re-sending "yes" via SendMessage will not resolve it
    `AskUserQuestion` answer or a direct message).
 2. The parent then performs the gated action **directly** from the main loop — e.g. the
    `commit` agent's job is done by a direct (delegated) commit; the merge gate by
-   `gh pr merge`; worktree removal by `git worktree remove`. (Note: a direct `git commit`
+   `gh pr merge`; workspace clearing by the maker's `remove` verb (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`). (Note: a direct `git commit`
    is blocked by `enforce_commit_delegation`; satisfy it by dispatching a FRESH `commit`
    agent with the user's approval stated as a pre-authorization in the initial dispatch
    prompt — gated agents accept their *initial* task, only relayed *follow-ups* deadlock.)
@@ -1017,7 +1018,7 @@ the original stash-conflict incident.
 ### §5.7 Interim Protocol: Gated-Agent Confirmation-Gate Deadlock
 
 **Problem.** Gated agents — `commit`, `worktree-agent`, and `finalize-feature` — require direct
-user authority to proceed past their confirmation gates (git commit, PR merge, worktree removal).
+user authority to proceed past their confirmation gates (git commit, PR merge, workspace clearing through the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`).
 When any of these agents is dispatched as a subagent by a coordinator or supervisor, no direct
 user-turn channel exists. A coordinator relaying "yes" via `SendMessage` is rejected ("coordinator
 message carries no user authority"), and the agent dead-ends at its gate permanently. The ticket
@@ -1097,7 +1098,9 @@ every `commit` spawn, inside the commit lock. Sibling tickets share the worktree
 CLI keeps one run record per worktree, so the three calls must not interleave across
 tickets. Each call below is one Bash command. It prints one JSON line and always exits 0.
 
-1. Acquire the commit lock (§5.2).
+1. Acquire the commit lock (§5.2). Then run the wrong-version gate (§5.10.2) under this
+   same lock. Only when its `finish` reports `gate_passed` true continue with steps 2 to 5;
+   on any halt release the lock (§5.3) and spawn no `commit`.
 2. Run this and keep its JSON reply (if the command cannot run, use `{"case": "did_not_run", "manifest": []}`):
    `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py stage --working-dir <worktree_root>`
 3. Spawn the `commit` agent with `{ticket_path}`. In its stage list (the ticket-supervisor
@@ -1116,6 +1119,77 @@ Fail-open: never block, fail, or retry the ticket because of these calls, and ne
 A ticket with no `commit` phase does not route, and its records wait for the next carrying
 commit. Records whose text an earlier ticket's commit already carries are not written
 again; the stage reports them as `already_on_branch`.
+
+### §5.10 Gate runs on every drive (TQ-500f-3-iv, TQ-500g-1-vii)
+
+These run on every ticket-supervisor drive, whatever started it (no route test: that would be
+a skip path). Each command is ONE Bash call from the worktree root: no `cd`, pipe or `&&`.
+`<root>` is the worktree root with forward slashes, `<ids>` the `source_ac` ids joined by
+commas, `<ticket>` the ticket file's absolute path with forward slashes. `ticket_key` and
+`runs_alone` come from the dispatch input; the CLIs write the records under
+`<git-dir>/leafcutter/gate-verdicts/`. You never write, edit, move or delete anything there, never run
+`wrong_version_runner.py recover` (the workflow runs it once at the drive head), never
+reuse an earlier list, reply or result, and never put your own account of a verdict in its place.
+When `ticket_key` is missing, use the ticket file's stem.
+
+**Input check** (before any command of §5.10.1 or §5.10.2): `ticket_key` and every `source_ac`
+id must match `^[A-Za-z0-9._-]+$`; `<root>` (and `<ticket>` for §5.10.1) must contain none of
+`"`, `$`, backtick, CR, LF. On failure run nothing and halt with step `input-check` and the rejected values.
+
+**Parse fail-closed.** A reply is valid only as one JSON object stdout with the fields named below;
+a non-zero exit with no such object, empty stdout or prose is no reply, and halts.
+
+**Halt shape.** Return `{status: "blocked", message: "Wrong-version <step> step did not pass: <parsed
+reply as JSON text, or null>", ticket_path, gate: "wrong_version_gate", wrong_version_step:
+"input-check" | "batch-serial-check" | "list" | "finish", wrong_version_detail: <parsed reply
+verbatim, or null>}`, and set the commit phase to failed through the `signoff` skill (§4) so a
+re-drive repeats the sequence. Red-baseline halts return `{status: "blocked", message naming the
+reader's reason and refused tests, ticket_path, gate: "verify_red_baseline", gate_verdict: <JSON
+verbatim, or the raw stdout / rejected values>}`.
+
+#### §5.10.1 Red-baseline reader (once per drive, outside the lock)
+
+Run it immediately before the first coder spawn of the drive (also on resume with `test-writer`
+already `signed_off`). When the drive will spawn `commit` but no coder (coders already
+`signed_off`), run it once before the first §5.10.2 sequence instead (`--ticket` reuses the pass
+recorded earlier; without one the reader halts). After the input check, exactly:
+
+`python "<root>"/{{config.output_root}}/scripts/build_orchestration/fast_lane.py heavy_lane_gate --source-ac "<ids>" --test-root "<root>" --ac-root "<root>/docs/acceptance-criteria" --ticket "<ticket>" --record "<ticket_key>"`
+
+Without `source_ac` (K3) drop the `--source-ac "<ids>"` pair; still run it. Continue to the coder
+only when `gate_passed` is the boolean true; the test-writer's sign-off or `red_baseline_verified`
+claim is never a substitute. Return `red_baseline_gate` = the verdict's `outcome` verbatim
+(K3: "red-baseline reader not applicable: no source requirement", never "verified").
+
+#### §5.10.2 Wrong-version runs (before EVERY `commit` spawn, inside the commit lock)
+
+After the last pre-commit phase, and again after any retry, handoff or remedy agent
+(for example restructuring-specialist), in this order:
+
+1. Acquire the lock (§5.2). Run the input check.
+2. **Serial check:** when `runs_alone` is false (missing counts as true only when no `ticket_key`
+   came in the dispatch input) and `source_ac` is non-empty, run no command; halt with step
+   `batch-serial-check`, `wrong_version_detail` `{source_ac: [ids]}`, message "This ticket owes
+   wrong-version runs but its batch ran in parallel; no wrong-version step ran."
+3. Red-baseline reader (§5.10.1), if this drive has not run it yet.
+4. Only with non-empty `source_ac`, the list step; `owed` must be an array and `error` null, else halt with step `list`:
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py list --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD`
+5. Only when `owed` is non-empty, spawn `test-breaker` with `{work_key: <ticket_key>, repo_root: <root>,
+   requirement_ids: [<ids>], wrong_versions: <owed, unchanged, scope included>}`. Only the list
+   step decides that nothing is owed; you never decide it yourself.
+6. Always run `finish` (K3: drop the `--ac-ids "<ids>"` pair). The reply goes in a quoted
+   here-document: `<DELIM>` starts as `WV_REPLY_EOF` and gains `_X` while the reply contains it.
+   The line is followed by the reply (byte for byte: never edited, reformatted, extracted or
+   summarised), a newline when the reply is non-empty, then `<DELIM>` on its own line. A string
+   reply goes in as is; a failed, refused or empty test-breaker spawn, or nothing owed, goes in as an empty reply.
+   `python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key "<ticket_key>" --reply - --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD --record "<ticket_key>" <<'<DELIM>'`
+7. `gate_passed` must be the boolean true, else halt with step `finish` (a writer stop,
+   `stopped_at: "write"`, is a halt; never retry by running the runner without a manifest).
+   Only then continue with §5.9 steps 2 to 5 under the same lock.
+
+Return `wrong_version_outcome` = `finish`'s `verdict.outcome` verbatim (null when no verdict;
+K3: "wrong-version runs not applicable: no source requirement", never "verified"), beside
+`red_baseline_gate`, on every ticket that reached `finish`.
 
 ---
 

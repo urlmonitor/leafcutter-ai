@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -112,10 +112,14 @@ test_spec:
 test_rationale: "The guarantee is about which unit a finding NAMES, so only the emitted finding can prove it. A test that patches the record loader and asserts it was called passes on an implementation that reads implemented_by and then still names the import-list unit in its message — the assertion has to be on the text the run produced. The live example is already measured: KM-KGS-100e-1, whose record names _ac_components.py, is refused today naming backfill_components:main because that import sorts first. The build-output test is separate on purpose, because the two clauses are easy to conflate and an implementer who fixes only the alphabetical sort still emits findings pointing at a copy of the file; a stem-shaped entry_point cannot express the difference, so the test asserts on the spelling as well as the resolution. The no-unit test carries the absence guarantee and distinguishes correctly silent from never ran by pairing the empty-record fixture with its populated twin in the same module."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/03_TICKET-20261022-BO-2900a-1-iv.md
 change_target: pipeline
 risk_surface: internal
 notes: |

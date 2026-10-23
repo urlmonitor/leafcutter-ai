@@ -13,11 +13,27 @@ description: |
 in your environment, this command will not work — do not attempt to run it
 manually as an LLM conversation.**
 
+## Step 1 — Get the workspace (run the maker once)
+
+Run the workspace maker as ONE command by the absolute path of the deployed
+`worktree.py` (the path `worktree.py where` prints; never a cwd-relative
+`python scripts/...` path), with the AC id as the work identity:
+
+```bash
+python <absolute-install-root>/scripts/worktree.py ensure --kind fastlane --slug <ac-id> --repo-root <absolute-project-root>
+```
+
+If the maker exits non-zero, stop: report its answer verbatim and do NOT invoke
+the workflow. On exit 0, keep the one JSON object it printed, unchanged, as
+`<maker-answer>`.
+
+## Step 2 — Invoke the workflow
+
 Invoke the `fast-lane-ship` workflow script via the Workflow tool, passing the
-single AC-id argument:
+single AC-id argument and the maker's answer word for word as `workspace`:
 
 ```
-Workflow("fast-lane-ship", { ac: $ARGUMENTS })
+Workflow("fast-lane-ship", { ac: $ARGUMENTS, workspace: <maker-answer> })
 ```
 
 `$ARGUMENTS` is one acceptance-criterion id (e.g. `BO-2400f`). That one argument

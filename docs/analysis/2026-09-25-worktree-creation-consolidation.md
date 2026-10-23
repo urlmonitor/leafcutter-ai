@@ -4,7 +4,7 @@ description: "Inventory of every place the leafcutter-ai package creates, reuses
 type: explanation
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-09-28
 components:
   - worktree_manager
   - build_orchestration
@@ -260,6 +260,10 @@ file, not `git worktree list`. There is no symlink step. And its JSON gains `mec
 `workspace_path`, `bootstrap.restored_tracked` and `checks.hooks_canary_rejected`.
 Section 6's migration order is unchanged. It gains a cut-over chore: prune and retire the 19
 registered worktrees, and set `gc.auto=0` on the main checkout in the meantime.
+
+## 9. Delivered — the one maker (2026-09-28)
+
+Moved to [2026-09-25-worktree-delivered-maker.md](2026-09-25-worktree-delivered-maker.md): how `BO-4300a-1` closed this analysis — the how-to for all five workspace routes, the component diagram, and the CLI/JSON/marker reference for `templates/scripts/worktree.py`.
 
 ## Method
 

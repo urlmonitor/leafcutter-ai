@@ -73,6 +73,8 @@ from pathlib import Path
 
 import pytest
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
+
 from ._test_helpers import _WORKTREE_ROOT
 from ._test_helpers_tq_600a_9 import (
     COLLISION_GROUP_FILE,
@@ -307,21 +309,11 @@ class TestTQ600a9BuildSubprocessReduction(unittest.TestCase):
 
         baseline_worktree = self.tmp_path / "baseline_worktree"
         try:
-            subprocess.run(
-                ["git", "worktree", "add", "--detach", str(baseline_worktree), merge_base],
-                cwd=str(_WORKTREE_ROOT),
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=True,
-            )
+            link_checkout(_WORKTREE_ROOT, ["--detach", str(baseline_worktree), merge_base])
             self.addCleanup(
-                subprocess.run,
-                ["git", "worktree", "remove", "--force", str(baseline_worktree)],
-                cwd=str(_WORKTREE_ROOT),
-                capture_output=True,
-                text=True,
-                timeout=60,
+                unlink_checkout,
+                _WORKTREE_ROOT,
+                ["--force", str(baseline_worktree)],
                 check=False,
             )
 

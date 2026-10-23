@@ -110,8 +110,13 @@ const PLANNER_SCHEMA = {
             description: "Tickets in this batch (safe for parallel execution).",
             items: {
               type: "object",
-              required: ["path", "status"],
+              required: ["path", "status", "source_ac"],
               properties: {
+                source_ac: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "source_ac ids from ticket frontmatter; [] when the ticket has none (ALWAYS returned).",
+                },
                 path: {
                   type: "string",
                   description:
@@ -154,6 +159,13 @@ const TICKET_RESULT_SCHEMA = {
     message: { type: "string" },
     ticket_path: { type: "string" },
     knowledge_routing: { type: ["object", "null"] },
+    red_baseline_gate: { type: ["string", "null"] },
+    wrong_version_outcome: { type: ["string", "null"] },
+    gate: { type: "string" },
+    wrong_version_step: { type: "string" },
+    wrong_version_detail: {},
+    marker_step: { type: "string" },
+    marker_detail: {},
   },
   required: ["status"],
 };
@@ -257,10 +269,9 @@ function parseAgentJson(raw, ctx) {
 // ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
-// Read the worktree path from args if provided. If args.worktree_path is set,
-// the caller already resolved the worktree context — skip the ambient CWD check.
-// This fixes the false-halt that occurred when build-epic was invoked from
-// the session root (where CWD is the main clone, not the worktree).
+// The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check; a handed-in args.worktree_path / args.workspace_path is confirmed by the maker (verify)
+// and never trusted, and there is no fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -278,50 +289,46 @@ if (!epicPath) {
   };
 }
 
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = args && args.worktree_path;
+// BO-4300c-3 / BO-4300a-1-ia: the epic's working copy is the workspace maker's answer -- handed in as
+// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path / args.workspace_path is only a claim: the maker confirms it (verify) before any step runs, and
+// there is no ambient probe of the folder the run was started in and no fall-back to the epic folder:
+// anything but an accepted answer ends the run here, quoting what was received.
 
-let worktreeGitInfo = null;
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-if (!callerWorktreePath) {
-  // Fall back to the git info check when no worktree_path is provided in args.
-  // Use the explicit epic path context rather than session CWD.
-  const worktreeCheck = await agent(
-    `Check the git context for the epic at path "${epicPath}". ` +
-    "Run these two shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<cwd>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
+const epicSlug = (epicPath.split(/[\\/]/).filter(Boolean).pop() || "epic")
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "epic";
+const epicWorkspace = await workspaceObtain(
+  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind epic --slug ${epicSlug}`, "Worktree Guard");
+if (!epicWorkspace.accepted) return workspaceFailure(epicWorkspace);
 
-  worktreeGitInfo = worktreeCheck;
+const worktreePath = epicWorkspace.workspace_path;
 
-  if (
-    worktreeGitInfo &&
-    (worktreeGitInfo.git_type === "directory" ||
-      worktreeGitInfo.branch === "main" ||
-      worktreeGitInfo.branch === "master")
-  ) {
-    return {
-      status: "error",
-      worktree_required: true,
-      message:
-        "build-epic.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (worktreeGitInfo.git_type || 'unknown') +
-        " (branch: " + (worktreeGitInfo.branch || 'unknown') + "). " +
-        "Create a worktree first:\n" +
-        "  /worktree create <epic-branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
+// --- Gate verdicts (TQ-500g-1-viii): thin dispatch, fail-closed parses; every rule lives in Python.
+const GV_RUNNER_SCHEMA = { type: "object", properties: { command: { type: "string" }, workspace: { type: "string" }, exit_status: { type: "integer" },
+  stdout: { type: "string" }, stderr: { type: "string" }, declined: { type: "boolean" }, step: { type: "string" }, agent: { type: "string" }, reason: { type: "string" } } };
+const gvRoot = () => String(worktreePath).replace(/\\/g, "/");
+const gvPy = (script, args) => `python "${gvRoot()}"/{{config.output_root}}/scripts/build_orchestration/${script}.py ${args}`;
+async function gvStep(label, command, runId) {
+  try {
+    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, run_id: runId } }),
+      { agentType: "command-step-runner", schema: GV_RUNNER_SCHEMA, label, phase: "Worktree Guard" });
+    const out = JSON.parse(reply.stdout);
+    return out && typeof out === "object" ? out : null;
+  } catch { return null; }
 }
-
-// Resolve the worktree path: caller-provided wins, then git info, then epic path context.
-const worktreePath = callerWorktreePath ||
-  (worktreeGitInfo && worktreeGitInfo.worktree_path) ||
-  epicPath;
+const gvStem = (p) => (String(p).replace(/\\/g, "/").split("/").filter(Boolean).pop() || "").replace(/\.md$/i, "");
+const gvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || /["$`\n\r]/.test(s)).concat(/["$`\n\r]/.test(gvRoot()) ? [gvRoot()] : []);
+{
+  const halt = (step, detail) => ({ status: "blocked", message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}. No ticket was dispatched.`,
+    epic_path: epicPath, gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail });
+  if (gvBad().length) return halt("input-check", gvBad());
+  const recovered = await gvStep("be-wv-recover", gvPy("wrong_version_runner", "recover"), "drive-head");
+  if (!recovered || recovered.ok !== true) return halt("recover", recovered);
+  await gvStep("be-gate-marker-close-all", gvPy("gate_verdict_records", `close --all --worktree "${gvRoot()}"`), "drive-head");
+}
 
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read Master_Plan.md + all ticket frontmatter → batches
@@ -330,7 +337,7 @@ const worktreePath = callerWorktreePath ||
 phase('Planner')
 
 const plannerResult = await agent(
-  `Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. Return ONLY the JSON object, no prose.`,
+  `Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. For every ticket item also return source_ac, the ticket's source_ac list from its frontmatter ([] when it has none). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'epic-planner', phase: 'Planner' }
 )
 
@@ -410,16 +417,36 @@ for (const batch of batches) {
 
   const batchResults = [];
 
-  for (let i = 0; i < tickets.length; i += BATCH_SIZE) {
-    const chunk = tickets.slice(i, i + BATCH_SIZE);
+  // One ticket per chunk when any ticket owes wrong-version runs or its source_ac cannot be read (fail closed).
+  const owesRuns = (t) => !Array.isArray(t.source_ac) || t.source_ac.length > 0;
+  const chunkSize = tickets.some(owesRuns) ? 1 : BATCH_SIZE;
+
+  for (let i = 0; i < tickets.length; i += chunkSize) {
+    const chunk = tickets.slice(i, i + chunkSize);
 
     const chunkResults = await parallel(
       chunk.map((ticket) => async () => {
-        const result = await agent(
-          `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}. ` +
-          `Around the commit phase run knowledge routing per building-epics §5.9 and return its observe reply as knowledge_routing.`,
-          { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
-        );
+        const ticketKey = gvStem(ticket.path);
+        const blockedOn = (step, detail) => {
+          const result = { status: "blocked", gate: "gate_verdict_marker", marker_step: step, marker_detail: detail,
+            message: `Gate-verdict marker ${step} did not pass for ${ticket.path}: ${JSON.stringify(detail)}. The ticket-supervisor was not dispatched.` };
+          return { ticket_path: ticket.path, status: "blocked", result, knowledge_routing: classifyTicketRouting(ticket.path, null) };
+        };
+        const unsafe = [ticketKey].filter((k) => !/^[A-Za-z0-9._-]+$/.test(k)).concat(gvBad(ticket.path));
+        if (unsafe.length) return blockedOn("input-check", unsafe);
+        const marker = await gvStep("be-gate-marker-open", gvPy("gate_verdict_records", `open --worktree "${gvRoot()}" --ticket-key "${ticketKey}" --ticket-path "${ticket.path}"`), ticketKey);
+        if (!marker || marker.opened !== true) return blockedOn("open", marker);
+        let result;
+        try {
+          result = await agent(
+            `Drive ticket to completion: ${ticket.path}. Worktree: ${worktreePath}. Execute all needed phase agents in order. worktree_path: ${worktreePath}. ` +
+            `ticket_key: ${ticketKey}. runs_alone: ${chunk.length === 1}. ` +
+            `Around the commit phase run knowledge routing per building-epics §5.9 and return its observe reply as knowledge_routing.`,
+            { agentType: "ticket-supervisor", schema: TICKET_RESULT_SCHEMA, label: `ticket:${ticket.path}`, phase: 'Batch Dispatch' }
+          );
+        } finally {
+          await gvStep("be-gate-marker-close", gvPy("gate_verdict_records", `close --worktree "${gvRoot()}" --ticket-key "${ticketKey}"`), ticketKey);
+        }
         return {
           ticket_path: ticket.path,
           // Fail CLOSED. This previously defaulted to "ok", which actively
@@ -475,6 +502,8 @@ for (const batch of batches) {
       ticket_path: r.ticket_path,
       status: r.status,
       error: r.error || (r.result && r.result.message) || "unknown error",
+      ...Object.fromEntries(["gate", "wrong_version_step", "wrong_version_detail", "marker_step", "marker_detail"]
+        .filter((k) => r.result && r.result[k] !== undefined).map((k) => [k, r.result[k]])),
     }));
 
     return {

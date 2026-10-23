@@ -4,13 +4,14 @@ description: "Lookup for the length limits the check-doc-length gate applies to 
 type: reference
 status: active
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 components:
   - commit_guardian
   - doc_compliance
   - documentation_system
 related_docs:
   - docs/pre-commit-hooks.md
+  - docs/reference/source-file-length-measurement.md
   - docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-4.yaml
 ---
 
@@ -109,6 +110,7 @@ A declaration that is readable but lists no entries is not a problem: it means n
 
 ## See Also
 
+- [Source File Length Measurement](source-file-length-measurement.md) — the counterpart rule for `.py`, `.js` and other source files.
 - [Pre-Commit Hooks](../pre-commit-hooks.md) — where `check-doc-length` sits in the hook sequence.
 - [GE-127g-4](../acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-4.yaml) — the acceptance criteria this document delivers.
 - `templates/scripts/commit_guardian/commit_guardian.json` — the `doc_length` declaration.

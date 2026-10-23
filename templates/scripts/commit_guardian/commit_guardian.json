@@ -1,5 +1,11 @@
 {
   "_comment": "Commit Guardian — Central Configuration. Edit this file to customize all pre-commit hook behavior.",
+  "stage_canaries": {
+    "_comment": "BO-4300c-1-ii: the known-bad input the workspace maker feeds each DECLARED git stage to show the stage's protections fire (a rejected commit that stages the reserved path, a rejected commit whose first message line is the reserved line, a merge that adds the reserved path, which the post-merge hook reports as failing). The canaries are keyed on these reserved paths / this exact line, never on file or message contents, so ordinary work that merely mentions them is never rejected. precommit_canary.py --stage <stage> is the hook that rejects it. A declared stage with no entry here cannot be shown to fire and counts as not firing.",
+    "pre-commit": {"path": "leafcutter-stage-canary/pre-commit"},
+    "commit-msg": {"message": "leafcutter-stage-canary: reserved commit-msg line"},
+    "post-merge": {"path": "leafcutter-stage-canary/post-merge"}
+  },
   "roadmap_staleness_threshold_days": 30,
   "changelogs_dir": "changelogs",
   "excluded_dirs": [
@@ -11,7 +17,7 @@
     "templates"
   ],
   "file_size": {
-    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit). MEASUREMENT RULE (GE-127d-2, so the quoted length a refusal states is reproducible from a published source, not only from the transient per-refusal Measures line check_file_size.py itself prints): a quoted length discards content inside triple-quoted strings, in either Python quote style, and content inside C-style block comments; every remaining line -- including blank lines and hash comment lines -- is counted. Deleting a triple-quoted or block-comment region therefore never reduces a quoted length that is already over its limit; deleting blank lines or hash comments does.",
+    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit). MEASUREMENT RULE (GE-127d-2, so the quoted length a refusal states is reproducible from a published source, not only from the transient per-refusal Measures line check_file_size.py itself prints): a quoted length discards content inside triple-quoted strings, in either Python quote style, and content inside C-style block comments; a line-comment decision-history block is not counted (GE-134a-1): it starts at a comment, prefix '#', '//' or '--', whose whole text is DECISION HISTORY, takes a '=' rule line directly above it if there is one, and ends at the first line that is not a comment line of that prefix; every remaining line -- including blank lines and ordinary comment lines -- is counted. Deleting a triple-quoted, block-comment or decision-history region therefore never reduces a quoted length that is already over its limit; deleting blank lines or ordinary comments does.",
     "line_limits": {
       ".py": 400,
       ".sql": 600,
@@ -418,6 +424,34 @@
   "hooks_manifest": {
     "_comment": "build_precommit_config() uses this to generate/update .pre-commit-config.yaml. Each entry describes one hook. Package-managed entries are identified by the '@package-managed' marker and are replaced on each build. Project-specific entries (no marker) are preserved.",
     "hooks": [
+      {
+        "id": "precommit-canary-pre-commit",
+        "tier": "judgment",
+        "name": "Stage canary (pre-commit) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage pre-commit",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the pre-commit-stage canary the workspace maker shows fires. Exits 1 only when the reserved path declared under stage_canaries[pre-commit] is staged; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
+        "id": "precommit-canary-commit-msg",
+        "tier": "judgment",
+        "name": "Stage canary (commit-msg) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage commit-msg",
+        "language": "system",
+        "stages": [
+          "commit-msg"
+        ],
+        "always_run": true,
+        "pass_filenames": true,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the commit-msg-stage canary the workspace maker shows fires. Exits 1 only when the message's first line equals the reserved line declared under stage_canaries[commit-msg]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
       {
         "id": "ensure-precommit-config",
         "tier": "transform",
@@ -1209,6 +1243,20 @@
         "_comment": "EPIC-WorktreeQualityGateGuard/02: Manual-stage-only canary hook. Emits PRECOMMIT_CANARY_OK to stdout and exits 0. Invoked by verify_precommit_active.py check D to confirm pre-commit hooks can fire in the worktree environment. stages: [manual] means it never runs automatically on git commit."
       },
       {
+        "id": "precommit-canary-post-merge",
+        "tier": "judgment",
+        "name": "Stage canary (post-merge) - rejects only the declared known-bad input",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/precommit_canary.py --stage post-merge",
+        "language": "system",
+        "stages": [
+          "post-merge"
+        ],
+        "always_run": true,
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BO-4300c-1-ii / pr-reviewer H-1 (decided 2026-10-09): the post-merge-stage canary the workspace maker shows fires. Exits 1 only when the merge adds the reserved path declared under stage_canaries[post-merge]; inert (exit 0) for every ordinary commit/merge. Without this registration the generated .pre-commit-config.yaml declares no canary-rejecting hook for the stage and a real ensure refuses HOOKS_INACTIVE."
+      },
+      {
         "id": "check-hook-parity",
         "tier": "judgment",
         "name": "Check Hook Parity (leafcutter)",
@@ -1309,6 +1357,20 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "_comment": "KI-1 (BO-2200 retrospective, 2026-08-10): Blocks commits when a staged ticket has status:done but its source_ac is not yet work_status:done in the AC store. Fail-closed only on the specific mismatch; warn-only when the source_ac file is absent (epics/composites have no source_ac and are silently skipped). Scoped to staged tickets only."
+      },
+      {
+        "id": "check-build-epic-gate-verdicts",
+        "tier": "judgment",
+        "name": "Check Build-Epic Gate Verdicts (TQ-500g-1-viii)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_build_epic_gate_verdicts.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "always_run": true,
+        "change_set_source": "self_derived",
+        "_comment": "TQ-500g-1-viii: on /build-epic, blocks a ticket commit unless the red-baseline and wrong-version records written by the gate CLIs are on record, readable, passing and (wrong-version) fresh for the staged code. Inert when no gate-verdict marker is open in the worktree."
       },
       {
         "id": "check-file-size",
@@ -1657,6 +1719,10 @@
     ],
     "_removed_fixture_exempt_paths": "REMOVED. A `fixture_exempt_paths` key was added here so this guard would not block its own test file, justified on the grounds that a `# presence-only:` waiver placed inside a fixture would be consumed by the scanner under test. That justification does not hold: the scanner only ever receives the `diff` STRING argument, so a waiver comment in the test module's own Python source is invisible to it and works normally — verified. The exemption was therefore unnecessary, and it was strictly worse than the waiver it replaced: an exempt path skips scan_file_block entirely and emits NO output at all, whereas the waiver route prints the accepted exception and its reason. The AC requires accepted exceptions to be readable in one place precisely so they cannot become a silent suppression list. Use the waiver marker.",
     "waiver_marker": "presence-only"
+  },
+  "build_epic_gate_verdicts": {
+    "_comment": "check_build_epic_gate_verdicts.py (TQ-500g-1-viii): severity of the /build-epic gate-verdict commit check. Only block is defined; the checked code extensions are read from file_size.checked_extensions.",
+    "severity": "block"
   },
   "done_proof": {
     "_comment": "check_done_proof.py — Mechanical proof-of-done gate (BO-2500b). Pre-commit mode: static covers-tag presence check for staged done ACs (fast, no pytest). CI mode: full verify_done_eligible run over every done AC in the store (authoritative). Hook is bypassable via SKIP=check-done-proof or --no-verify; CI backstop (BO-2500b-1-i) then catches bypassed proofs.",

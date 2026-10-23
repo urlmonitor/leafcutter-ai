@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-10-14'
+last_updated: '2026-10-21'
 status: active
 components:
 - documentation_system
@@ -91,5 +91,8 @@ python scripts/adr_refs.py --index --write
 | [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Active | Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part | 2026-10-02 |
 | [ADR-066](ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md) | Active | The Kernel Resolves Named Terms by Research and Finds Its Own Repository Root | 2026-10-02 |
 | [ADR-067](ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | Active | The Kernel Splits a Bundled Request into Parts a Person Approves | 2026-10-05 |
+| [ADR-068](ADR-068-drift-exempt-gets-its-own-result-column.md) | Active | A Drift-Exempt Recorded Output Gets Its Own RESULT Column | 2026-10-09 |
+| [ADR-069](ADR-069-durable-log-root-for-workspaces.md) | Active | One Durable Log Root for Every Workspace, Declared as a Build Input | 2026-10-09 |
 | [ADR-071](ADR-071-test-intent-is-not-a-test-contract.md) | Active | Test Intent Is Not a Test Contract | 2026-10-14 |
-| [ADR-072](ADR-072-code-aware-test-designer-may-read-source.md) | Proposed | The Code-Aware Test Designer May Read Source | 2026-10-14 |
+| [ADR-072](ADR-072-code-aware-test-designer-may-read-source.md) | Active | The Code-Aware Test Designer May Read Source | 2026-10-14 |
+| [ADR-075](ADR-075-requirement-rule-check.md) | Active | Mechanical Requirement Rules Are Checked by One Fail-Closed Rule Check | 2026-10-21 |

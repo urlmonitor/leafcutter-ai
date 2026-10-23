@@ -14,6 +14,9 @@ ARCHITECTURE: Pure `evaluate_record`, L1 records only. The trigger-to-specialist
     is reported; an absent or null key (legacy L1) is not. A trigger absent from the map is `failed` (never silent). Deployed flat.
 
 DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-200b-2]: `parity_errors(names, specialists)` added: the names
+    are declared once (the schema's documentation_triggers enum); this map keeps one entry per
+    name and a test fails naming the trigger and the side it is missing from.
   - 2026-10-14 [python-coder/ACD-2500a-2-v]: Created (ticket 14). The map is kept in this
     module (decision D1 allowed a schema annotation only if the tests read it; they do not).
 """
@@ -35,6 +38,25 @@ TRIGGER_SPECIALISTS = {
     "state-diagram": _DIAGRAM_AGENT,
     "component-diagram": _DIAGRAM_AGENT,
 }
+
+
+def parity_errors(names: Any, specialists: Any) -> list[str]:
+    """One message per trigger name on only one side of the list/map pair (ACD-200b-2).
+
+    `names` is the one list (the schema's documentation_triggers enum), `specialists` the
+    trigger-to-specialist map. A name in the list with no map entry is "missing from the
+    map"; a map key not in the list is "missing from the list". Sorted, so deterministic.
+    """
+    listed, mapped = set(names), set(specialists)
+    errors = [
+        f"documentation trigger {name!r} is in the schema list but missing from the map TRIGGER_SPECIALISTS"
+        for name in sorted(listed - mapped)
+    ]
+    errors += [
+        f"documentation trigger {name!r} is in the map TRIGGER_SPECIALISTS but missing from the schema list"
+        for name in sorted(mapped - listed)
+    ]
+    return errors
 
 
 def evaluate_record(ctx: Any, record: Any) -> list[Finding]:

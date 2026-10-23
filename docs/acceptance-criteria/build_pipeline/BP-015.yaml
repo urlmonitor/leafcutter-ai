@@ -3,10 +3,10 @@ components:
   - build_pipeline
 component: build-pipeline
 level: L2
-status: active
+status: superseded_by
 readiness: reviewed
 priority: high
-work_status: done
+work_status: todo
 title: "Worktree bootstrap provisions .env even when the checkout already contains one"
 origin_agent: BrainCandy
 created: 2026-08-14
@@ -33,8 +33,7 @@ doc_links:
   - path: templates/scripts/setup_ticket_worktree.py
     relationship: modifies
     status: exists
-covered_by:
-  - "unit_tests/test_setup_ticket_worktree.py"
+covered_by: []
 implemented_by:
   - scripts/setup_ticket_worktree.py
   - templates/scripts/setup_ticket_worktree.py
@@ -47,3 +46,15 @@ notes: >-
   SameFileError because env_dst resolved to env_src — so every fresh worktree
   failed to bootstrap. Observed 2026-08-13 while bootstrapping a scratch
   worktree during the AC-store scanner work.
+superseded_by:
+- BO-4300f-2
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). The _bootstrap() of
+    setup_ticket_worktree.py that this record describes, and its proving tests in
+    unit_tests/test_setup_ticket_worktree.py, were removed by BO-4300f-2. The one workspace maker
+    copies .env best-effort (worktree_git.copy_optional_files) and deliberately never replaces an
+    entry already in the workspace, so the remove-then-recreate clause is not carried over.

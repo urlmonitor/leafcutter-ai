@@ -32,7 +32,7 @@ workflow (remove). Owns the `/worktree` slash command.
 - **Start of work**: `/worktree create <branch-or-ticket-path>` — creates a
   new worktree, or reuses the existing epic worktree if the path is a ticket
   under `tickets/01_todo/EPIC-<NAME>/`.
-- **After PR merges**: `/worktree remove <branch-or-worktree-path>` — runs
+- **After PR merges**: the `/worktree` command's clear action on `<branch-or-worktree-path>` — runs
   safety checks, requires explicit "yes" confirmation, then removes the
   worktree and deletes the local branch.
 
@@ -89,7 +89,7 @@ on `main`. The `feature` skill honours this automatically — it checks
 
 | Action | Confirmation required |
 |---|---|
-| `create` | No — fully reversible (`git worktree remove`) |
+| `create` | No — fully reversible (the workspace maker clears it) |
 | `remove` | Yes — explicit "yes" after safety-check report |
 
 The gate covers the entire remove path (worktree removal + branch deletion).

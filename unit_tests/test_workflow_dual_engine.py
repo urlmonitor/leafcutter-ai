@@ -39,10 +39,7 @@ from pathlib import Path
 
 import pytest
 
-from _workflow_engine_harness import (
-    HarnessResult,
-    run_workflow_under_e2,
-)
+from _workflow_engine_harness import HarnessResult, run_workflow_under_e2, workspace_ensure_reply
 
 # ---------------------------------------------------------------------------
 # Path constants
@@ -484,9 +481,11 @@ def test_dispatch_order_build_epic() -> None:
 
       Phase 0 (Worktree Guard):
         1. status-checker  label='worktree-check'  — git context check
+        2. command-step-runner label='be-wv-recover' — drive-head recover (TQ-500g-1-viii)
+        3. command-step-runner label='be-gate-marker-close-all' — stale-marker close
 
       Phase 1 (Planner):
-        2. status-checker  label='epic-planner'    — reads Master_Plan.md
+        4. status-checker  label='epic-planner'    — reads Master_Plan.md
 
       → Exits early (planner stub returns no batches)
 
@@ -505,23 +504,17 @@ def test_dispatch_order_build_epic() -> None:
         f"build-epic.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    # build-epic.js must dispatch at least 2 agents (worktree-check + epic-planner)
-    # before the no-batches early exit.
     assert result.dispatch_count >= 2, (
         f"build-epic.js must dispatch >= 2 agents with default args "
-        f"(worktree-check + epic-planner before no-batches early exit). "
+        f"(workspace-ensure + epic-planner before no-batches early exit). "
         f"Got {result.dispatch_count}.\n"
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    # Assert the exact ordered sequence (agentType, label) for the first two calls.
-    expected_sequence = [
-        ("status-checker", "worktree-check"),
-        ("status-checker", "epic-planner"),
-    ]
-    actual_sequence = [
-        (c.agent_type, c.label) for c in result.agent_calls[:2]
-    ]
+    # Exact ordered (agentType, label) of the first four calls: workspace guard, drive-head recover + close-all (TQ-500g-1-viii), planner.
+    expected_sequence = [("shell-runner", "workspace-ensure"), ("command-step-runner", "be-wv-recover"),
+                         ("command-step-runner", "be-gate-marker-close-all"), ("status-checker", "epic-planner")]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[:4]]
 
     assert actual_sequence == expected_sequence, (
         f"build-epic.js dispatch order wrong (AC-2 / M-1).\n"
@@ -541,18 +534,15 @@ def test_dispatch_order_plan_feature() -> None:
     Pre-Stage-0 here):
 
       Pre-Stage-0:
-        1. status-checker   label='detect-current-branch'
-        2. worktree-agent   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
-           resolves .leafcutter/scripts/setup_ticket_worktree.py to an absolute,
+        1. shell-runner     label='detect-current-branch'
+        2. shell-runner     label='resolve-maker-path' (ACD-2100a-1: resolves the
+           workspace maker .leafcutter/scripts/worktree.py to an absolute,
            repository-anchored path at runtime instead of trusting the cwd-relative
            {{config.output_root}} placeholder, which resolved against the parent
-           copy when the cwd was not the repo root — KI-ACD-004. BO-2300a-1-ii:
-           dispatched to worktree-agent, the registry's shell-permitted executor
-           — never status-checker, permits_shell: false — reusing the same
-           workspaceSetupAgentId the worktree-setup dispatch below already used.)
-        3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
-           permission-gate's resolved target agent, no longer hardcoded to
-           'status-checker'. ACD-2100b-5 moved the workspace-setup permission
+           copy when the cwd was not the repo root — KI-ACD-004. One single plain
+           command per probe; the harness default answers the first probe.)
+        3. shell-runner     label='workspace-ensure' (BO-4300c-3: the ONE verbatim
+           maker dispatch, naming that absolute path. ACD-2100b-5 moved the workspace-setup permission
            gate itself OUT of this workflow body entirely -- it no longer makes
            a 'resolve-workspace-setup-permission' agent() dispatch at all. The
            verdict now arrives via `args.workspace_setup_permission`, which the
@@ -576,7 +566,8 @@ def test_dispatch_order_plan_feature() -> None:
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
         8. it-po           label='stage-itpo-author'
            then worktree-agent label='rule-check-itpo' (ACD-2500a-1: the
-           requirement rule check runs at the end of the authoring stage).
+           requirement rule check runs at the end of the authoring stage; the
+           stage-end script steps stay on worktree-agent, scriptStepAgentId).
            itpo is auto-approved (ACD-2500c-2), so its output is committed
            (status-checker 'branch-check', commit 'commit-stage-output') before
            the test-design stage: worktree-agent 'design-prepass', then
@@ -616,17 +607,7 @@ def test_dispatch_order_plan_feature() -> None:
     result = run_workflow_under_e2(
         plan_feature,
         label_responses={
-            "resolve-worktree-setup-script-path": {
-                "output": "/tmp/fake-repo/.leafcutter/scripts/setup_ticket_worktree.py",
-                "exit_code": 0,
-            },
-            "worktree-setup": {
-                "output": (
-                    '{"worktree_path": "/tmp/fake-ac-worktree", '
-                    '"ac_store_path": "/tmp/fake-ac-worktree/docs/acceptance-criteria"}'
-                ),
-                "exit_code": 0,
-            },
+            "workspace-ensure": workspace_ensure_reply("/tmp/fake-ac-worktree", ac_store_path="/tmp/fake-ac-worktree/docs/acceptance-criteria"),
         },
     )
 
@@ -634,10 +615,10 @@ def test_dispatch_order_plan_feature() -> None:
         f"plan-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    expected_sequence = [
-        ("status-checker", "detect-current-branch"),
-        ("worktree-agent", "resolve-worktree-setup-script-path"),
-        ("worktree-agent", "worktree-setup"),
+    expected_sequence = [  # the docstring above gives each step's rationale
+        ("shell-runner", "detect-current-branch"),
+        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path
+        ("shell-runner", "workspace-ensure"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
@@ -658,10 +639,7 @@ def test_dispatch_order_plan_feature() -> None:
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    actual_sequence = [
-        (c.agent_type, c.label)
-        for c in result.agent_calls[: len(expected_sequence)]
-    ]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[: len(expected_sequence)]]
 
     assert actual_sequence == expected_sequence, (
         f"plan-feature.js dispatch order wrong (AC-2 / M-1).\n"
@@ -679,32 +657,22 @@ def test_dispatch_order_plan_feature() -> None:
 
 
 def test_dispatch_order_build_feature() -> None:
-    """build-feature.js dispatches worktree-agent before ticket-supervisor (ticket 12).
+    """build-feature.js dispatches its workspace step before the ticket planner (ticket 12).
 
-    With label_responses driving a "no worktree resolved yet, name and open a
-    new one" run (BO-4000), build-feature.js must dispatch, in order:
+    With label_responses driving a "target resolved, no workspace handed in" run, build-feature.js must
+    dispatch, in order (BO-4300c-3 replaced BO-4000's worktree facts / worktree-setup chain with the ONE
+    workspace step):
 
       Phase Resolve Target:
-        1. status-checker  label='resolve-target'          — determines target type
-        2. status-checker  label='worktree-base'            — BO-4000: repository facts
-        3. status-checker  label='worktree-facts-location'  — BO-4000: repository facts
-        4. status-checker  label='branch-standing'          — BO-4000: repository facts
-        5. worktree-agent  label='worktree-setup'           — opens the NAMED worktree
+        1. status-checker  label='resolve-target'     -- determines target type
+        2. shell-runner    label='workspace-ensure'   -- the workspace maker's command, run once, verbatim
 
       Phase Build (single-ticket path with default stub args):
-        6. status-checker  label='ticket-planner'  — flattened per-phase driver
+        3. status-checker  label='ticket-planner'     -- flattened per-phase driver
            (ADR-019 / BO-2000f: replaces the old inline ticket-supervisor dispatch)
 
-    BO-4000 supersedes ticket 12's original AC-3 sequence (worktree-agent no
-    longer immediately follows resolve-target — it follows the new repo-facts
-    checks that make the workflow, not the agent, decide reuse/open/refuse).
-    This test's own regression-guard intent is preserved: worktree-agent must
-    still appear, still before ticket-planner, and never dropped (AC-3).
-
-    The worktree-setup agent is now told the EXACT location; its reported
-    path must equal that instructed location or the run refuses.
-    "worktree-base" plus the ticket_path's own last segment deterministically
-    name that location, so the stubbed "worktree-setup" report below matches.
+    This test's own regression-guard intent is preserved: the workspace dispatch must still appear, still
+    before ticket-planner, and never be dropped (AC-3).
     """
     build_feature = _WORKFLOWS_DIR / "build-feature.js"
     if not build_feature.exists():
@@ -712,9 +680,7 @@ def test_dispatch_order_build_feature() -> None:
 
     label_responses = {
         "resolve-target": {"target_type": "ticket", "ticket_path": "tickets/00_inbox/07_TICKET-x.md", "worktree_path": None},
-        "worktree-base": {"output": '{"main_checkout": "/tmp/repo", "worktree_base": "/tmp/wtbase", "layout": "dev"}', "exit_code": 0},
-        "worktree-facts-location": {"output": '{"exists": false}', "exit_code": 0},
-        "worktree-setup": {"worktree_path": "/tmp/wtbase/07_TICKET-x.md", "status": "reused"},
+        "workspace-ensure": workspace_ensure_reply("/tmp/wtbase/07_TICKET-x", branch="feature/07-ticket-x"),
     }
 
     result = run_workflow_under_e2(build_feature, label_responses=label_responses)
@@ -723,22 +689,21 @@ def test_dispatch_order_build_feature() -> None:
         f"build-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    # Must dispatch at least 3 agents: resolve-target, worktree-setup, ticket-planner.
     assert result.dispatch_count >= 3, (
-        f"build-feature.js must dispatch >= 3 agents with valid worktree-setup response "
-        f"(resolve-target + worktree-setup + ticket-planner). "
+        f"build-feature.js must dispatch >= 3 agents with a ready workspace answer "
+        f"(resolve-target + workspace-ensure + ticket-planner). "
         f"Got {result.dispatch_count}.\n"
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
     actual_labels = [(c.agent_type, c.label) for c in result.agent_calls]
     resolve_idx = actual_labels.index(("status-checker", "resolve-target"))
-    worktree_idx = actual_labels.index(("worktree-agent", "worktree-setup"))
+    worktree_idx = actual_labels.index(("shell-runner", "workspace-ensure"))
     planner_idx = actual_labels.index(("status-checker", "ticket-planner"))
 
     assert resolve_idx < worktree_idx < planner_idx, (
-        f"build-feature.js dispatch order wrong (ticket 12 / AC-3, superseded by BO-4000).\n"
-        f"Expected resolve-target < worktree-setup < ticket-planner.\n"
+        f"build-feature.js dispatch order wrong (ticket 12 / AC-3, superseded by BO-4300c-3).\n"
+        f"Expected resolve-target < workspace-ensure < ticket-planner.\n"
         f"Full sequence: {actual_labels}"
     )
 

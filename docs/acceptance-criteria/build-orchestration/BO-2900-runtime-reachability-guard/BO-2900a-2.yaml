@@ -109,7 +109,7 @@ it_requirements:
     - "AMENDMENT 2026-09-30 (IT PO) — THE OBSERVATION SPANS THE PROCESS TREE AND CARRIES A THIRD STATE. observe_test_run's signature grows accordingly: the *targets* argument is replaced by the declared unit whose code set is derived from the run (no '<module>:<callable>' may be required from any caller or any store field), and the return records carry the amended shape above. Details and their tests: BO-2900a-2-i (span), BO-2900a-2-ii (unwatched), BO-2900a-2-iii (question well-formedness)."
 delivers_to:
   agent: python-coder
-  contract: "list[ReachRecord] in the AMENDED shape stated in it_requirements.config_schema_fragment above, one per (proof test, declared unit) — carrying reached_code as a set, reached_through as one of reached/not_reached/undecidable, observation as watched/unwatched with its cause, and a processes list spanning every program the test reached into. Consumed by BO-2900a-1 (the direct-import refusal), BO-2900a-1-i (the reached-through distinction) and BO-2900a-3 (the no-way-in refusal). NOTE FOR THE IMPLEMENTER: BO-2900a-1's expects_from still quotes the pre-amendment shape (one target, two booleans, observation_ok) and its refusal_cause vocabulary still spells the third state 'observation_unavailable'; both need the same amendment before that AC is built, and this contract is the authoritative one."
+  contract: "list[ReachRecord] in the AMENDED shape stated in it_requirements.config_schema_fragment above, one per (proof test, declared unit) — carrying reached_code as a set, reached_through as one of reached/not_reached/undecidable, observation as watched/unwatched with its cause, and a processes list spanning every program the test reached into. Consumed by BO-2900a-1 (the direct-import refusal), BO-2900a-1-i (the reached-through distinction) and BO-2900a-3 (the no-way-in refusal). This contract is the authoritative one; BO-2900a-1, BO-2900a-1-i, BO-2900a-1-ii and BO-2900a-5 were aligned to it on 2026-10-21 and none of them carries an 'observation_unavailable' cause any more."
 expects_from: null
 test_spec:
   - name: test_entry_point_proof_and_direct_import_proof_get_opposite_verdicts_in_one_run
@@ -173,6 +173,12 @@ notes: |
   fixture pair in the criteria is the minimum viable check, and both verdicts must be
   asserted in the same run — asserting only the rejection lets a
   reject-everything implementation pass.
+
+  2026-10-21. delivers_to.contract: removed the "NOTE FOR THE IMPLEMENTER" saying
+  BO-2900a-1 still quoted the pre-amendment shape. It no longer does — BO-2900a-1,
+  -1-i, -1-ii and -5 were aligned to this record's reach_record the same day — so the
+  note had become false and would have sent a coder looking for an amendment that
+  already happened. delivers_to is not a protected field; no amended_by entry.
 
   2026-09-30 (BA). Three L3 children added: BO-2900a-2-i (the observation spans
   the tree of programs a proof launches, not only the process it runs in),

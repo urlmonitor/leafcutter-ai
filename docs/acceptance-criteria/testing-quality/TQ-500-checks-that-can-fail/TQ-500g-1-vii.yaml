@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -46,7 +46,11 @@ doc_links:
   - path: templates/skills/building-epics/SKILL.md
     relationship: describes
     status: exists
-    relevance: "ticket-supervisor's runbook: the per-ticket phase sequence where the runner call is added, before the commit phase."
+    relevance: "ticket-supervisor's runbook: the per-ticket phase sequence (section 2.1) and the commit lock with knowledge routing (sections 5 and 5.9), where the wrong-version sequence goes, before the commit spawn."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "The agent that runs the sequence. It restates the commit-lock and section 5.9 order around the commit spawn; that restatement changes with the skill."
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: describes
     status: exists
@@ -63,102 +67,174 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "The writer's list and write steps the route calls, and their JSON contracts in delivers_to."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vi.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The merged /build-feature and build-ticket.js wiring (PR #1299) whose decisions this route mirrors: quoting and id checks, fail-closed parses, halt shape, wrong_version_outcome, recover once at the drive head, one ticket per chunk when a batch owes runs."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261021-unquoted-shell-args.md
+    relationship: relates-to
+    status: exists
+    relevance: "The defect the pinned command lines must not repeat: paths and ids pasted into a shell line unquoted and unchecked."
 assigned_agent: llm-expert
-estimated_complexity: S
+estimated_complexity: M
+package_surface: false
 delivers_to:
 - agent: python-coder
   ac_id: TQ-500g-1-viii
   contract: >-
-    On /build-epic, for every ticket including one with no source_ac, ticket-supervisor calls the
-    finish wrapper with --record <ticket-key> before dispatching commit, so the runner itself writes
-    <git-dir>/leafcutter/gate-verdicts/<ticket-key>/wrong_version.json. The supervisor never writes,
-    edits or deletes a record or the marker. When the writer stops, no record is written and the
-    supervisor has already reported the ticket blocked.
+    On /build-epic, for every ticket whose commit phase is dispatched, including one with no
+    source_ac, ticket-supervisor runs the finish wrapper with --record "<ticket_key>" immediately
+    before each commit spawn. ticket_key is the value build-epic.js put in the dispatch prompt,
+    never one the supervisor derives. The runner itself then writes
+    <git-dir>/leafcutter/gate-verdicts/<ticket_key>/wrong_version.json (git-dir = git rev-parse
+    --absolute-git-dir of the worktree). The supervisor never writes, edits or deletes a record or the
+    marker (open.json). When the writer stops, no record is written and the supervisor has already
+    reported the ticket blocked.
 expects_from:
 - ac_id: TQ-500g-1-v
   contract: >-
-    Gate wrapper CLI: python scripts/build_orchestration/wrong_version_gate.py finish --work-key
-    <key> --reply - --ac-ids <ids> --ac-root <path> --test-root <worktree root> --base-ref <ref>,
-    with the raw test-breaker reply on stdin. It prints {gate_passed, stopped_at, writer, verdict}
-    (verdict = the runner's JSON verbatim) and exits 0 if and only if gate_passed. The full contract
-    is in TQ-500g-1-v delivers_to.
+    Gate wrapper CLI (merged, PR #1280): python <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py
+    finish --work-key <key> --reply - [--ac-ids <comma-separated ids>] --ac-root <path> --test-root
+    <worktree root> --base-ref <ref>, with the raw test-breaker reply on stdin (empty when nothing was
+    owed). --ac-ids is omitted when the ticket has no source_ac. stdout is exactly one JSON object
+    {gate_passed: bool, stopped_at: null|"write", writer: <writer write JSON>|null, verdict: <runner run
+    JSON verbatim>|null}; exit 0 if and only if gate_passed. An internal error still prints the shape with
+    gate_passed false.
 - ac_id: TQ-500g-1-ix
   contract: >-
-    Writer list step: wrong_version_writer.py list --ac-ids <ids> --ac-root <path> --test-root <path>
-    prints {owed: [{name, files}], error}. The route passes owed to test-breaker unchanged. Shape in
-    TQ-500g-1-ix delivers_to.
+    Writer list step (merged): python <worktree>/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py
+    list --ac-ids <ids> --ac-root <path> --test-root <path> --base-ref <ref>. It prints {owed: [{name,
+    files, scope}], error: str|null}; exit 0 when printed (also when owed is []), 1 when the AC store or
+    test root cannot be read. The route passes owed to test-breaker unchanged.
+- ac_id: TQ-500g-1-x
+  contract: >-
+    list and finish both take --base-ref (default HEAD). Owed items carry scope ("declared" | "derived"),
+    passed to test-breaker unchanged. With --base-ref HEAD the derived scope is the worktree's uncommitted
+    changes, tracked and untracked, which is why the batch must run one ticket at a time when it owes runs.
 - ac_id: TQ-500g-1-iv
   contract: >-
-    Dispatch of agent test-breaker (already in ticket-supervisor's spawn_allowlist): inputs
-    {work_key, repo_root (absolute worktree root), requirement_ids, wrong_versions: [{name, files}]};
-    one JSON reply, which the supervisor hands to finish unchanged and never reads as an outcome.
+    Dispatch of agent test-breaker (already in ticket-supervisor's spawn_allowlist; its registry
+    spawned_by already names ticket-supervisor): inputs {work_key: str, repo_root: str (absolute worktree
+    root), requirement_ids: [str], wrong_versions: [{name, files, scope}]}. One JSON reply, which the
+    supervisor hands to finish unchanged and never reads as an outcome.
 - ac_id: TQ-500g-1-i
-  contract: The runner's JSON verdict carried in finish's verdict field (shape in TQ-500g-1-i delivers_to).
+  contract: >-
+    The runner's JSON verdict carried in finish's verdict field ({gate_passed, applicable, verified,
+    outcome, reason, results, survivors, unfinished}). With no ids its outcome is "wrong-version runs not
+    applicable: no source requirement".
 - ac_id: TQ-500g-1-viii
   contract: >-
-    The runner's record option (--record <ticket-key>), which finish passes to the runner unchanged.
-    The runner writes its own verdict record.
+    (a) The record option --record <ticket-key> on the runner's run step and on finish, which passes it
+    to the runner unchanged; NOT on main as of adb0c2e61, added by TQ-500g-1-viii in this same change.
+    (b) build-epic.js's dispatch prompt to ticket-supervisor carries two new plain fields:
+    ticket_key: <the ticket file's stem, already checked against ^[A-Za-z0-9._-]+$> and runs_alone:
+    true|false (true when the ticket's chunk holds only this ticket). (c) build-epic.js runs the runner's
+    recover step once at the drive head, so the supervisor runs no recover of its own.
 it_requirements:
 - >-
-  Edit the ticket-level phase algorithm in templates/skills/building-epics/SKILL.md. Change
-  templates/agents/ticket-supervisor.md only where it restates that algorithm. Make this one
-  llm-expert change with TQ-500f-3-iv.
+  Where: edit the ticket-level algorithm in templates/skills/building-epics/SKILL.md (section 2.1 step
+  2, where the commit spawn goes through section 5.9, and section 5.9 itself) and add one subsection
+  holding the gate steps of TQ-500f-3-iv and this AC. Change templates/agents/ticket-supervisor.md
+  only where it restates that algorithm (its commit-lock / section 5.9 paragraph and its inputs list,
+  which gains ticket_key and runs_alone). One llm-expert change with TQ-500f-3-iv.
 - >-
-  Instruction: immediately before dispatching the commit phase, every time, including on re-entry
-  after a retry, run this sequence and never reuse an earlier result. (1) When the ticket has
-  source_ac ids: run the writer's list step for them. (2) When owed is non-empty: dispatch
-  test-breaker with work_key, repo_root (the absolute worktree root), requirement_ids (the source_ac
-  ids) and wrong_versions = the list's owed array unchanged. (3) Run the finish wrapper with the
-  reply on stdin and --record <ticket-key>. (4) Dispatch commit only when finish's own stdout JSON
-  has gate_passed true. On gate_passed false, report the ticket as blocked with finish's JSON
-  verbatim, and do not dispatch commit.
+  When: immediately before EVERY commit spawn, after the last pre-commit phase (review included). Every
+  means: the first commit spawn, a re-spawn after a retry, after a handoff, and after a remedy agent
+  (for example restructuring-specialist after a file-size refusal), because the code may have changed.
+  Never reuse an earlier list, reply or finish result. A ticket whose commit phase is not dispatched in
+  this drive gets no runs.
 - >-
-  Inputs: the same as the other routes. The ticket's source_ac ids, the worktree root as
-  --test-root, the AC store root as --ac-root, and --base-ref HEAD. The work key is the ticket key
-  TQ-500g-1-viii uses for its gate-verdicts folder, one plain path segment.
+  Order inside the commit lock (section 5): (a) acquire the lock (section 5.2); (b) run the input check,
+  the serial check and the sequence below; (c) when finish's gate_passed is true, continue with section
+  5.9 steps 2 to 5 under the SAME lock (do not acquire it twice); (d) on any halt, release the lock
+  (section 5.3), dispatch no commit, and return blocked. finish alters files in the worktree that
+  sibling tickets share, so the sequence never runs outside the lock.
 - >-
-  The reply reaches finish byte for byte. The supervisor puts test-breaker's reply on finish's stdin
-  through a quoted here-document whose delimiter does not occur in the reply. It never edits,
-  reformats, extracts, summarises or completes the reply. A failed or empty test-breaker dispatch is
-  passed on as it came; the writer then stops. The supervisor never decides by itself that nothing
-  is owed: only the list step says so.
+  Input check, before any command (mirrors TQ-500g-1-vi's wvBad). ticket_key and every source_ac id
+  must match ^[A-Za-z0-9._-]+$; the worktree root must contain none of the characters ", $, backtick,
+  CR or LF. When ticket_key is missing from the dispatch input (ticket-supervisor started by the user,
+  not by build-epic.js), use the ticket file's stem and check it the same way. On a failed check run
+  no command and return blocked with wrong_version_step "input-check" and wrong_version_detail = the
+  list of rejected values.
 - >-
-  Writer stop: finish reports gate_passed false with stopped_at "write" and never calls the runner.
-  The supervisor reports the ticket as blocked with that JSON and does not retry by running the
-  runner without a manifest.
+  Serial check (TQ-500g-1-vi M-2, user decision 2026-10-21). When runs_alone is false and the ticket's
+  source_ac is non-empty, run no wrong-version command and return blocked with wrong_version_step
+  "batch-serial-check", wrong_version_detail {source_ac: [ids]}, message "This ticket owes
+  wrong-version runs but its batch ran in parallel; no wrong-version step ran." A missing runs_alone
+  counts as true only when the ticket was not dispatched by build-epic.js (no ticket_key in the input).
 - >-
-  Serialization: hold the commit-phase lock (building-epics section 5) from the list step through
-  the commit phase. finish alters working files in the worktree the sibling tickets share. On
-  gate_passed false the lock is released as on any other pre-commit halt.
+  Sequence, the same as the merged twins (build-feature.js wvRuns). Each command is ONE Bash call, run
+  from the worktree root, no cd, no pipe, no && chain. <root> is the worktree root with backslashes
+  turned into forward slashes; <ids> is the source_ac ids joined by commas.
+  (1) Only when source_ac is non-empty, the list step, exactly:
+  python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py list --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD
+  (2) Only when owed is non-empty: spawn test-breaker with the input JSON {work_key: <ticket_key>,
+  repo_root: <root>, requirement_ids: [<ids>], wrong_versions: <owed, unchanged, scope included>}.
+  (3) Always, the finish step, exactly (for K3 drop the --ac-ids "<ids>" pair):
+  python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key "<ticket_key>" --reply - --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD --record "<ticket_key>" <<'<DELIM>'
+  followed by the reply, a newline when the reply is non-empty, and <DELIM> on its own line.
+  (4) Spawn commit only when finish's own stdout JSON has gate_passed true.
 - >-
-  Call finish with the record option TQ-500g-1-viii adds, naming this ticket. The runner ITSELF
-  then writes its verdict to the ticket's record under the worktree's git directory. The supervisor
-  never writes, edits, paraphrases or summarises that record, and never substitutes its own account
-  of the verdict.
+  Reply transport. <DELIM> starts as WV_REPLY_EOF and gains _X while the reply contains it. The quoted
+  delimiter means no $, backtick or quote in the reply is expanded. The supervisor never edits,
+  reformats, extracts, summarises or completes the reply. A string reply goes in as is; a failed,
+  refused or empty test-breaker spawn goes in as an empty reply (the writer then stops). Nothing owed:
+  test-breaker is not spawned and finish runs with an empty here-document. The supervisor never decides
+  by itself that nothing is owed: only the list step says so.
 - >-
-  K3 (no source_ac): skip the list step and test-breaker, and still call finish with no ids and the
-  record option, so the runner writes the not-applicable record the backstop requires.
+  Fail closed on every reply. list: stdout must parse as one JSON object with owed an array and error
+  null, else halt with step "list". finish: gate_passed must be a boolean and true, else halt with step
+  "finish". A non-zero exit, an empty stdout or prose counts as no reply. A writer stop (stopped_at
+  "write") is a halt like any other; never retry by running the runner without a manifest.
 - >-
-  Resume: build-epic.js runs the runner's recover step before it re-dispatches ticket-supervisor
-  for a resumed ticket (TQ-500g-1-viii). That puts back any code a cut-short run left altered
-  before test-breaker reads it. The supervisor adds no recover call of its own.
+  Halt shape (the fast lane's keys): return {status: "blocked", message: "Wrong-version <step> step did
+  not pass: <the parsed reply as JSON text, or null>", ticket_path, gate: "wrong_version_gate",
+  wrong_version_step: "input-check" | "batch-serial-check" | "list" | "finish", wrong_version_detail:
+  <the parsed reply verbatim, or null>}. Set the commit phase to failed through the signoff skill
+  (section 4) so a re-drive repeats the sequence.
 - >-
-  Ship in ONE change together with TQ-500f-3-iv (the paired prompt) and TQ-500g-1-viii (the
-  backstop). Without -1-viii the instruction names a record option that does not exist. Without the
-  instruction, -1-viii blocks every /build-epic commit. TQ-500g-1-v's wrapper must be on main first.
+  Outcome: on every ticket that reached finish, return wrong_version_outcome = finish's verdict.outcome
+  verbatim (null when finish gave no verdict) in the result payload, beside red_baseline_gate from
+  TQ-500f-3-iv. K3's value is "wrong-version runs not applicable: no source requirement". Never record
+  or report "verified" for it.
 - >-
-  The edit passes prompt-audit: no compound bash (each command is one invocation run from the
-  worktree root, with no cd chain or pipe), and the spawn_allowlist covers every dispatch
-  (test-breaker is already listed).
+  The record is the runner's. finish is called with --record "<ticket_key>"; the supervisor never
+  writes, edits, moves or deletes anything under <git-dir>/leafcutter/ and never substitutes its own
+  account of the verdict.
+- >-
+  No recover call. build-epic.js runs the runner's recover step once at the drive head
+  (TQ-500g-1-viii). recover closes every open journal in the worktree, so a supervisor-side recover in
+  a parallel chunk could put back a sibling's in-flight alteration. Do not add one.
+- >-
+  These steps run on every ticket-supervisor drive, not only when dispatched by build-epic.js: the
+  supervisor cannot reliably tell routes apart, and a route condition would be a skip path. Outside
+  /build-epic no marker is open, so the backstop hook ignores the records.
+- >-
+  Size: templates/skills/building-epics/SKILL.md (1343 lines) and templates/agents/ticket-supervisor.md
+  (736 lines) are outside check-file-size (.md is not a checked extension) and outside check-doc-length
+  (docs/ only), so no ratchet applies. Expected growth with TQ-500f-3-iv: SKILL.md about +70 to 100
+  lines (one new subsection plus the section 2.1 and 5.9 edits), ticket-supervisor.md about +10 to 20.
+  Much more than that means rule logic leaked into the prompt.
+- >-
+  Ship in ONE change with TQ-500f-3-iv and TQ-500g-1-viii. Without -viii the record option and the
+  ticket_key / runs_alone fields do not exist. Without this instruction, -viii's hook blocks every
+  /build-epic commit. TQ-500g-1-v and -vi are on main (adb0c2e61).
+- >-
+  The edit passes prompt-audit: each command is a single invocation (a here-document on the finish call
+  is part of that one command), and the spawn_allowlist covers every spawn (test-breaker is already
+  listed). No template text search is used as a test.
 test_required: false
 test_rationale: >-
-  Prompt-only. Whether the supervisor follows a runbook instruction cannot be unit-tested without
-  a template text search (forbidden). The rule is tested in TQ-500g-1-i, the owed list in
-  TQ-500g-1-ix, and the wrapper (verdict verbatim, writer stop never reaches the runner, reply byte
-  for byte on stdin) in TQ-500g-1-v. Mechanical backstop: TQ-500g-1-viii blocks the commit when the
-  runner's record is missing, unreadable, stop or out of date. So a skipped instruction, a writer
-  stop, or a reply the supervisor altered until the runs failed is visible and blocking. Substitutes:
-  pr-reviewer against the Then clauses, and a live /build-epic drive of a fixture epic with K1 to K3.
+  Prompt-only (change_target: prompt). Whether the supervisor follows a runbook instruction cannot be
+  unit-tested without a template text search, which CLAUDE.md forbids. The rule is tested in
+  TQ-500g-1-i, the owed list in TQ-500g-1-ix, the wrapper (verdict verbatim, writer stop never reaches
+  the runner, reply byte for byte) in TQ-500g-1-v. The parts that are code are tested in
+  TQ-500g-1-viii: the ticket_key and runs_alone fields in the dispatch prompt, the one-ticket-per-chunk
+  rule and the drive-head recover in build-epic.js under the workflow-engine harness, the record the
+  runner writes through finish, and the hook that blocks the commit when that record is missing,
+  unreadable, stop or out of date. So a skipped or altered instruction is visible and blocking.
+  Substitutes for the prompt itself: pr-reviewer against the Then clauses, and a live /build-epic
+  drive of a fixture epic with K1 to K3.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by:
@@ -169,6 +245,10 @@ amended_by:
 - reason: "User-approved criteria amendment (2026-10-15), from the IT-PO's clauses for the BA: the runs now follow asking the writer what is owed and, when anything is, having test-breaker prepare it from that list unchanged; the verdict clause gains that the supervisor hands the preparer's reply on unchanged. depends_on gains TQ-500g-1-v, TQ-500g-1-iv, TQ-500g-1-ix and TQ-500g-1-x. All other clauses kept."
   date: '2026-10-15'
   by: business-analyst
+  directed_by: user
+- reason: "Technical alignment with main at adb0c2e61 (TQ-500g-1-v #1280, TQ-500g-1-vi #1299): pinned quoted command lines with --base-ref HEAD and the -viii record option; input check against ^[A-Za-z0-9._-]+$ and unsafe root characters; serial check on runs_alone (the user's one-ticket-per-chunk rule, applied to /build-epic); fail-closed parses; the fast lane's halt keys; wrong_version_outcome; re-run before every commit spawn incl. after a remedy agent; sequence inside the commit lock with section 5.9 under the same lock; no supervisor-side recover. expects_from gains TQ-500g-1-x and states that --record is not on main yet. package_surface false. estimated_complexity raised from S to M. Criteria unchanged."
+  date: '2026-10-21'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []
@@ -214,3 +294,30 @@ notes: |
       preparer's reply on unchanged".
   FOLLOW-UPS OUTSIDE THIS AC: depends_on does not name TQ-500g-1-v (the
   wrapper), -iv or -ix (BA/user to add).
+
+  IT-PO ALIGNMENT (2026-10-21): AGAINST MAIN AT adb0c2e61
+  What is real on main: wrong_version_gate.py finish (no --record),
+  wrong_version_writer.py list/write with --base-ref and scope,
+  wrong_version_runner.py run/recover (no --record; every run starts with
+  recover_all, which closes EVERY open journal in the worktree), and the
+  merged wvRuns blocks in build-feature.js / build-ticket.js (TQ-500g-1-vi).
+  --record exists nowhere on main; TQ-500g-1-viii adds it in this change.
+  CONCURRENCY. build-epic.js (lines 413-421 at adb0c2e61) dispatches
+  ticket-supervisor for up to 12 tickets at once through parallel(), all in
+  one shared worktree. The commit lock serialises commit phases only, not a
+  sibling's coder or test runner, and finish builds "the fix undone" and any
+  derived scope from ALL uncommitted changes. So the user's 2026-10-21 rule
+  for -vi applies here unchanged: one ticket per chunk when a batch owes runs.
+  The chunking is code in build-epic.js and belongs to TQ-500g-1-viii (it is
+  testable there under the harness); this AC carries only the supervisor-side
+  serial check on runs_alone, the counterpart of -vi's M-2 belt.
+  RECOVER stays at the drive head in build-epic.js (TQ-500g-1-viii), never
+  in the supervisor, for the same reason as -vi.
+  QUOTING. The supervisor composes its own Bash lines, so the instruction
+  pins them, quoting every path and the ticket key and the ids, after
+  checking ids and key against ^[A-Za-z0-9._-]+$ and the root against ", $,
+  backtick, CR, LF. This is the -vi pattern; KI-BO-20261021 names the sites
+  that still lack it, and this AC must not add another.
+  PACKAGE SURFACE: false. Template-only edits; no registry entry is added
+  (test-breaker is already in spawn_allowlist and its spawned_by already
+  names ticket-supervisor).

@@ -65,11 +65,21 @@ expects_from:
     [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
     reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
     POSIX. Non-zero exit and no report on error.'
+- ac_id: ACD-2500d-3-i
+  contract: 'File-findings record on the AC (schema-declared, closed): list of {file: str, verdict: ''consistent''|''describes,
+    does not implement''|''absent, not to-be-created''|''behaviour found elsewhere'', line_range: str|null,
+    found_in: str|null, reason: str (one sentence), decision: null|{choice: ''reassign''|''split''|''assignment
+    stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
+    (decision null); decision filled only by the technical planner''s next pass.'
 test_required: false
 test_rationale: "Prompt-only deliverable (the file-findings procedure in templates/agents/test-designer.md) whose behaviour is an LLM following instructions; the structural tests under unit_tests/ (paragraph-scoped rules, the prompt's examples validated against the real schema, the real render CLI) pin the instructions, and the requirement rule check enforces what the agent writes."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "expects_from contract on ACD-2500d-3-i restored after EPIC-RightJobRightAgent shipped (PR #1245); it had been removed on 2026-10-12 only so the epic could be ordered, and both records are now done"
+  date: '2026-10-15'
+  by: main-session
+  directed_by: user
 - reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (d-1 -> d-3-i -> d-3 -> d-1)"
   date: '2026-10-12'
   by: main-session

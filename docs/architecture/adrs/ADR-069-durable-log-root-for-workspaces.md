@@ -32,8 +32,7 @@ related_code:
   - templates/skills/agent-telemetry/scripts/emit_event.py
   - templates/hooks/inline_work_guard.py
   - scripts/ci/check_sink_parity.py
-  - templates/scripts/setup_ticket_worktree.py
-  - scripts/setup_ticket_worktree.py
+  - templates/scripts/worktree_readiness.py
   - unit_tests/portability/test_inf_500d_4_iii.py
 ---
 

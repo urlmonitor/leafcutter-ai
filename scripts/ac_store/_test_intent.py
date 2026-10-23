@@ -59,7 +59,7 @@ def outcome_clauses(criteria: Any) -> list[str]:
         collecting = bool(text) and collecting
         if word in ("Given", "When"):
             in_then = collecting = header = False
-        elif word == "Then" or (word in ("And", "But") and in_then):
+        elif match is not None and (word == "Then" or (word in ("And", "But") and in_then)):
             in_then = collecting = True
             clauses.append([match.group(2)])
             header = match.group(2).endswith(":")

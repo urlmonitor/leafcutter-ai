@@ -38,7 +38,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 import pytest  # noqa: E402
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
+from _workflow_engine_harness import run_workflow_under_e2, shell_step_reply  # noqa: E402
 
 _WORKFLOWS_DIR = _UNIT_TESTS_DIR.parent / "templates" / "workflows-js"
 
@@ -76,24 +77,19 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
     if not plan_feature.exists():
         pytest.skip(f"plan-feature.js not found at {plan_feature}")
 
-    # Inject a worktree-setup response that returns unparseable output (exit_code 0
-    # but output is empty/unparseable JSON) — simulates a broken worktree payload.
-    # BO-1500a-5-i: this is non-confirming shape (3), "no_workspace_named".
+    # Inject a workspace-ensure reply that returns an empty stdout (exit status 0 but no maker answer to
+    # parse) -- simulates a broken workspace payload. BO-1500a-5-i: non-confirming shape (3).
     label_responses = {
-        "worktree-setup": {
-            "exit_code": 0,
-            "output": "",  # unparseable — wtPayload will be null
-            "stderr": "",
-        },
-        # The scan-orphans / scan-committed-stages / final-gate / apply-approval
+        "workspace-ensure": shell_step_reply("", exit_status=0),
+        # The scan-orphans / scan-committed-stages / final-gate / approval-step
         # responses below are retained from the ORIGINAL test even though the
-        # fixed Pre-Stage-0 halt now returns before any of those steps run —
+        # fixed Pre-Stage-0 halt now returns before any of those steps run --
         # removing them would silently narrow this test's coverage if a future
         # change ever moved the halt later again.
         "scan-orphans-git-status": {"exit_code": 0, "output": ""},
         "scan-committed-stages": {"exit_code": 0, "output": ""},
         "final-gate": {"action": "approve", "priority": "medium"},
-        "apply-approval": {"status": "ok", "updated": []},
+        **approval_step_replies(),  # ACD-300c-4: approval-holds / approval-apply
     }
 
     result = run_workflow_under_e2(plan_feature, label_responses=label_responses)
@@ -102,33 +98,31 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
         f"Harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    # BO-1500a-5-i: the run must halt with a structured error naming WHICH of
-    # the four non-confirming shapes occurred, before any authoring agent —
-    # and, a fortiori, before commit-stage-output — is ever dispatched.
+    # BO-1500a-5-i: the run must halt with a structured error naming the reason, before any authoring
+    # agent -- and, a fortiori, before commit-stage-output -- is ever dispatched.
     assert isinstance(result.result, dict), (
         f"Expected a structured halt payload. Got: {result.result!r}"
     )
     assert result.result.get("status") == "error", (
         f"M-2 / BO-1500a-5-i: expected the run to halt (status='error') on an "
-        f"unparseable worktree-setup reply. Got terminal payload: {result.result!r}"
+        f"unparseable workspace reply. Got terminal payload: {result.result!r}"
     )
-    assert result.result.get("setup_failure_kind") == "no_workspace_named", (
-        f"BO-1500a-5-i: expected setup_failure_kind='no_workspace_named' for a "
-        f"success-shaped (exit_code: 0) reply naming no worktree_path. "
-        f"Got terminal payload: {result.result!r}"
+    assert "no valid answer" in str(result.result.get("message")), (
+        f"BO-1500a-5-i: the halt must say no valid answer was received for a success-shaped "
+        f"(exit status 0) reply naming no workspace. Got terminal payload: {result.result!r}"
     )
 
-    # The halt happens at Pre-Stage-0, so exactly these three calls precede it —
+    # The halt happens at Pre-Stage-0, so exactly these calls precede it --
     # never scan-orphans-git-status, scan-committed-stages, any authoring agent,
     # or commit-stage-output.
     actual_calls = [(c.agent_type, c.label) for c in result.agent_calls]
     assert actual_calls == [
-        ("status-checker", "detect-current-branch"),
-        ("worktree-agent", "resolve-worktree-setup-script-path"),
-        ("worktree-agent", "worktree-setup"),
+        ("shell-runner", "detect-current-branch"),
+        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path
+        ("shell-runner", "workspace-ensure"),
     ], (
         f"M-2 / BO-1500a-5-i: expected the run to halt immediately after the "
-        f"'worktree-setup' dispatch, with no later step (scan-orphans, "
+        f"'workspace-ensure' dispatch, with no later step (scan-orphans, "
         f"scan-committed-stages, any authoring agent, or commit-stage-output) "
         f"ever dispatched. Got: {actual_calls}"
     )

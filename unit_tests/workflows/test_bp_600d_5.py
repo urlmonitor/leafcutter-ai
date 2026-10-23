@@ -42,7 +42,10 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    run_workflow_under_e2,
+    workspace_ensure_reply,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -60,13 +63,7 @@ def _full_success_responses(**overrides: Any) -> dict[str, Any]:
     keyword arguments keyed by label name.
     """
     responses: dict[str, Any] = {
-        "isolation-check": {
-            "status": "ok",
-            "is_repo": True,
-            "session_cwd": "/repo",
-            "initial_branch": "fix/some-branch",
-            "needs_isolation": False,
-        },
+        "workspace-ensure": workspace_ensure_reply("/repo", branch="fix/some-branch"),
         "guard-checks": {"status": "ok", "target_file_dirty": False, "dirty_files": []},
         "ac-creation": {
             "status": "ok",

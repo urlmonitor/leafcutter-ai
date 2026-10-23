@@ -45,7 +45,6 @@ TICKET: none (ad-hoc fix task; KI-ACD-007). AC: ACD-2400.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -56,7 +55,11 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    run_workflow_under_e2,
+    shell_step_reply,
+    workspace_ensure_reply,
+)
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -85,17 +88,12 @@ def _label_responses() -> dict:
             "rationale": "test fixture — route straight past the covered-route gate",
         },
         # KI-ACD-007's whole mechanism hinges on a real authoring worktree
-        # having been created -- mirrors the real setup_ticket_worktree.py
-        # create-ac-worktree JSON payload shape (worktree_path, ac_store_path).
-        "worktree-setup": {
-            "output": json.dumps(
-                {
-                    "worktree_path": _FAKE_AUTHORING_WORKTREE,
-                    "ac_store_path": _FAKE_AUTHORING_WORKTREE + "/docs/acceptance-criteria",
-                }
-            ),
-            "exit_code": 0,
-        },
+        # having been made -- the workspace maker's ok answer to the ONE workspace step
+        # (BO-4300c-3), carrying workspace_path and ac_store_path.
+        "workspace-ensure": workspace_ensure_reply(
+            _FAKE_AUTHORING_WORKTREE,
+            ac_store_path=_FAKE_AUTHORING_WORKTREE + "/docs/acceptance-criteria",
+        ),
         "pt-classify": {
             "outcome": "mock-data-only",
             "component": "test-comp",
@@ -190,24 +188,20 @@ def test_pt_authoring_dispatch_carries_an_explicit_anchor_warning():
 # reply naming no directory, and a no-failure-reported reply naming neither directory
 # nor branch.
 _UNREACHABLE_WORKTREE_SETUP_SHAPES = {
-    # wtParsed === null (raw reply is a plain string with no parseable JSON at all,
-    # and carries none of isAgentRefusal()'s AGENT_REFUSAL_MARKERS) -> "uninterpretable".
+    # A plain-prose reply with no parseable JSON at all and no refusal wording -> "uninterpretable".
     "uninterpretable": "The setup step could not determine what to do with this request.",
-    # wtParsed === null AND the free text matches an AGENT_REFUSAL_MARKERS phrase
-    # ("outside my scope") -> "refused".
-    "refused": "I'm sorry, but creating a worktree is outside my scope of responsibility.",
-    # wtParsed is a real object with an explicit non-zero exit_code -> fails hard
-    # before the no-worktree-path check is even reached.
-    "non_zero_exit": {"output": "", "exit_code": 1, "stderr": "fatal: unable to create worktree"},
-    # wtParsed.output parses to a real JSON object with an explicit exit_code but no
-    # worktree_path -> "no_workspace_named".
-    "success_no_directory": {
-        "output": json.dumps({"ac_store_path": "docs/acceptance-criteria"}),
-        "exit_code": 0,
+    # A decline of the work as outside the responder's scope -> "refused".
+    "refused": {
+        "declined": True,
+        "agent": "shell-runner",
+        "reason": "creating a worktree is outside my scope of responsibility",
     },
-    # wtParsed.output parses to `{}` -- no worktree_path AND no exit_code at all,
-    # i.e. no failure reported either -> "silent_success".
-    "no_failure_no_directory": {"output": json.dumps({}), "exit_code": None},
+    # A real result with an explicit non-zero exit status and nothing on stdout -> not an answer.
+    "non_zero_exit": shell_step_reply("", exit_status=1, stderr="fatal: unable to create worktree"),
+    # A zero-exit result whose stdout is a JSON object naming no workspace_path -> "no_workspace_named".
+    "success_no_directory": shell_step_reply({"status": "ok", "ac_store_path": "docs/acceptance-criteria"}),
+    # A zero-exit result whose stdout is `{}` -- no failure and no directory either -> "silent_success".
+    "no_failure_no_directory": shell_step_reply({}),
 }
 
 
@@ -226,7 +220,7 @@ def test_pt_phase_is_unreachable_without_an_authoring_worktree():
     """
     for shape_name, wt_response in _UNREACHABLE_WORKTREE_SETUP_SHAPES.items():
         label_responses = _label_responses()
-        label_responses["worktree-setup"] = wt_response
+        label_responses["workspace-ensure"] = wt_response
 
         result = run_workflow_under_e2(
             _PLAN_FEATURE_JS,
@@ -240,7 +234,7 @@ def test_pt_phase_is_unreachable_without_an_authoring_worktree():
         assert "pt-mockdata-author" not in captured_labels, (
             f"[{shape_name}] The PT phase's pt-mockdata-author dispatch was reached "
             "despite no usable authoring worktree being reported for this run -- "
-            "BO-1500a-5-i's worktree-setup gate should have halted before Stage 0. "
+            "BO-1500a-5-i's workspace-step gate should have halted before Stage 0. "
             f"Captured labels: {captured_labels}"
         )
         assert isinstance(result.result, dict) and result.result.get("status") == "error", (

@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 85** (1 blocker, 37 high, 47 low) · **Resolved: 24** (recounted from the directory 2026-10-16)
+**Open: 85** (1 blocker, 37 high, 47 low) · **Resolved: 25** (recounted from the directory 2026-10-21)
 
 ## Open
 
@@ -167,6 +167,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable — RESOLVED: GE-118d added `scripts/frontmatter_path_resolver.py` as the shared entry-shape resolver and wired `validate_paths()` to it; a multi-key mapping is refused by name rather than taking all its values | [resolved-blocker-ki-cg-008.md](commit-guardian/resolved/resolved-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit — RESOLVED: EPIC-TruthfulProjectRecord's write-if-absent empty-record scaffold + fail-open "nothing-examined" outcome mean the described scenario now exits 0 | [resolved-blocker-ki-cg-005.md](commit-guardian/resolved/resolved-blocker-ki-cg-005.md) |
 | `blocker` | KI-CG-20260831-0713 — a fresh consumer install could not make its first commit because check-hook-trigger-reachability failed it (resolved by BP-100k-4-ii and BP-100k-4-iii; unreachable=0 on 2026-09-28) | [resolved-blocker-ki-cg-20260831-0713.md](commit-guardian/resolved/resolved-blocker-ki-cg-20260831-0713.md) |
+| `high` | KI-CG-20261016-mermaid-parent-link-root-inside-package — `check-mermaid-parent-link` resolved the repo root inside the package (`templates/` or `.leafcutter/`), never found the staged doc and passed every commit — RESOLVED 2026-10-21 (GE-113c-4, and GE-113c-5 for `check-adr-cross-reference`, which carried the same line): both hooks now take the root from `_resolve_root.find_project_root()` and report `could_not_check` for a staged file they cannot read | [resolved-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md](commit-guardian/resolved/resolved-high-ki-cg-20261016-mermaid-parent-link-root-inside-package.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [resolved-high-ki-cg-017.md](commit-guardian/resolved/resolved-high-ki-cg-017.md) |
 | `high` | KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect | [resolved-high-ki-cg-034.md](commit-guardian/resolved/resolved-high-ki-cg-034.md) |
 | `high` | KI-CG-20260826-package-surface-refuses-merge-commits — merging `origin/main` into a branch is refused as if the branch had added every registry entry landed upstream since it forked | [resolved-high-ki-cg-20260826-package-surface-refuses-merge-commits.md](commit-guardian/resolved/resolved-high-ki-cg-20260826-package-surface-refuses-merge-commits.md) |

@@ -7,9 +7,9 @@ priority: high
 title: "The authoring-worktree command's stdout holds only its JSON answer; child-process progress goes to stderr"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 roadmap_phase: phase_1
 criteria: |
   Given an AC-authoring run invokes `setup_ticket_worktree.py create-ac-worktree`,
@@ -133,10 +133,20 @@ expects_from:
     as its single JSON payload"
 origin_agent: BrainCandy
 created: 2026-10-06
-amended_by: []
-superseded_by: null
-covered_by:
-  - unit_tests/build_orchestration/test_bootstrap_child_stdout_to_stderr.py
+amended_by:
+- reason: superseded-retired-by-bo-4300
+  by: human:user
+  at: 2026-10-21
+  note: >-
+    Retired under the user's decision "re-prove, else retire" (2026-10-21). The command it
+    describes, setup_ticket_worktree.py create-ac-worktree, and its proving test
+    (test_bootstrap_child_stdout_to_stderr.py) were removed by BO-4300f-2. The same stdout-only
+    rule now holds for the one workspace maker /plan-feature runs instead (BO-4300c-2: one answer
+    on the answer channel, tool progress kept separate).
+superseded_by:
+- BO-4300c-2
+- BO-4300f-2
+covered_by: []
 implemented_by:
   - scripts/setup_ticket_worktree.py
   - templates/scripts/setup_ticket_worktree.py

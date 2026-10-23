@@ -37,7 +37,7 @@ depends_on:
   - BO-400e-3
   - BO-400e-3-ii
 doc_links:
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+  - path: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
     relationship: describes
     status: exists
     relevance: "Remediation item 2 (print the records about to be closed). The KI notes the damage was visible only in `git show <sha> --stat`, which no finalize run prompts anyone to read."

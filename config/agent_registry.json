@@ -3106,7 +3106,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]
@@ -3158,7 +3158,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "ticket_creation_pipeline"
             ]
@@ -3240,7 +3240,7 @@
                     "source": "bash command output (date, git)"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]
@@ -3520,7 +3520,8 @@
                 "user",
                 "fast-lane-ship.js",
                 "build-feature.js",
-                "build-ticket.js"
+                "build-ticket.js",
+                "build-epic.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
@@ -3548,6 +3549,47 @@
                 "changes_store",
                 "changes_repository",
                 "publishes"
+            ]
+        },
+        {
+            "id": "shell-runner",
+            "name": "Shell Runner",
+            "tier": "utility",
+            "role": "orchestration",
+            "permits_shell": true,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "build-epic.js",
+                "build-feature.js",
+                "build-ticket.js",
+                "create-ticket.js",
+                "fast-lane-ship.js",
+                "finalize-feature.js",
+                "plan-feature.js",
+                "quick-fix.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/shell-runner.md",
+            "model": "haiku",
+            "description": "Runs exactly one given command line, once, unchanged, and relays its exit status, stdout and stderr verbatim. The one narrow shell executor every workflow shell step (and the workspace step of every workflow) is dispatched to (ADR-070): no allow-list, no decisions, no compound or substituted command. Declines anything that is not run this one command. Holds Bash only.",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (the one dispatched command, verbatim)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "build_orchestration"
             ]
         },
         {

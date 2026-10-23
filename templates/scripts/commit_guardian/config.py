@@ -313,10 +313,17 @@ TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
 )
 
 
+# ---------------------------------------------------------------------------
+# check_build_epic_gate_verdicts
+# ---------------------------------------------------------------------------
+BUILD_EPIC_GATE_VERDICTS_SEVERITY: str = _get("build_epic_gate_verdicts", "severity", "block")
+
+
 """
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-22 12:00 [python-coder]: Added BUILD_EPIC_GATE_VERDICTS_SEVERITY constant for check_build_epic_gate_verdicts.
 - 2026-10-12 [GE-127g-1]: Replaced DOC_LENGTH_EXCLUDED_FILES with
   DOC_LENGTH_SET_ASIDE_LOCATIONS, read from doc_length.set_aside_locations:
   a list of {path, ground} objects rather than a list of basenames. The old

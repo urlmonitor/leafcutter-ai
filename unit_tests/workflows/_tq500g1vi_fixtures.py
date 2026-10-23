@@ -36,7 +36,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 import _workflow_engine_harness as harness  # noqa: E402
 import workflows._tq500g1v_fixtures as v  # noqa: E402
-from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
+from _workflow_engine_workspace import workspace_ensure_reply  # noqa: E402
 
 JS_DIR = v.REPO_ROOT / "templates" / "workflows-js"
 WT = "/tmp/wv-vi-worktree"
@@ -125,32 +125,21 @@ def green(route: Route, *, wt: str = WT, phases=DEFAULT_PHASES, source_ac=(AC,),
     }
     if route.key == "bf":
         labels["resolve-target"] = {"target_type": "ticket", "ticket_path": ticket, "worktree_path": wt}
-        labels["worktree-facts-resolved"] = bfx.envelope(bfx.facts())
+        labels["workspace-ensure"] = workspace_ensure_reply(wt, workspace_action="re-readied")
     return labels
 
 
 def worktree_case(kind: str) -> tuple[str, dict]:
-    """``(worktree root, label overrides)`` for how build-feature.js comes by its worktree.
+    """``(worktree root, label overrides)`` for how build-feature.js comes by its workspace (BO-4300).
 
-    resolved / occupied / setup_reused are RESUMED drives (an existing worktree is reused); created is fresh.
+    The workspace is the maker's answer (``workspace-ensure``). resolved / occupied / setup_reused are RESUMED
+    drives (the maker answers ``workspace_action`` re-readied / completed); created is fresh (``created``).
     """
-    if kind == "resolved":
-        return WT, {}
-    base = "/tmp/wv-vi-wtbase"
-    identity = f"{STEM}.md"  # the last segment of the ticket target, which names the worktree
-    root = f"{base}/{identity}"
-    out: dict[str, Any] = {"resolve-target": {"target_type": "ticket", "ticket_path": ticket_path(root), "worktree_path": None},
-                           "worktree-base": bfx.base_response(base),
-                           "worktree-facts-location": bfx.envelope({"exists": False}),
-                           "branch-standing": bfx.branch_standing(exists=False),
-                           "worktree-setup": bfx.open_worktree_response(root, "created")}
-    if kind == "occupied":  # scenario 2: the location holds a worktree of this repo on the target's own branch
-        out["worktree-facts-location"] = bfx.envelope(bfx.facts(branch=identity))
-    elif kind == "setup_reused":
-        out["worktree-setup"] = bfx.open_worktree_response(root, "reused")
-    elif kind != "created":
+    actions = {"resolved": "re-readied", "occupied": "re-readied", "setup_reused": "completed", "created": "created"}
+    if kind not in actions:
         raise ValueError(kind)
-    return root, out
+    root = WT if kind == "resolved" else f"/tmp/wv-vi-wtbase/{STEM}.md"
+    return root, {"workspace-ensure": workspace_ensure_reply(root, workspace_action=actions[kind])}
 
 
 def epic_labels(items: list[dict], *, phases=DEFAULT_PHASES, ticket_source_ac=(), wt: str = WT) -> dict:

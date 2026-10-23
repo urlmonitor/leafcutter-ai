@@ -34,6 +34,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -41,7 +42,7 @@ _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature
 _TIMEOUT = 30
 
 _GATE_ID = "final-gate"
-_ADVANCE_MARKER = "apply-approval"
+_ADVANCE_MARKER = "approval-apply"
 _ANSWER = {"gate_id": _GATE_ID, "action": "approve", "priority": "high", "channel": "person"}
 
 _PROSE = (
@@ -56,7 +57,7 @@ def _run(label_responses, run_id):
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses=label_responses,
+        label_responses={**approval_step_replies(), **label_responses},  # ACD-300c-4 approval step
         args={"run_id": run_id, "resume_answer": dict(_ANSWER)},
     )
     assert result.error == "", f"Harness error: {result.error}"
@@ -73,7 +74,7 @@ class TestPauseRecordReadRetry(unittest.TestCase):
         # covers: ACD-2100c-3-ii
         # angle: criterion
         """First read reply is prose; the retry returns a valid record. The
-        person's approval must be applied (apply-approval dispatched), not
+        person's approval must be applied (approval-apply dispatched), not
         lost as nothing_to_resume.
 
         RED today: no retry exists, prose -> recCheck=null -> nothing_to_resume.
