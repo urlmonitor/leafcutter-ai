@@ -10,7 +10,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Each AC-authoring agent (PO v3, BA v3, IT PO v3) queries the cross-surface
+  Each AC-authoring agent (product owner, business analyst, technical planner) queries the cross-surface
   knowledge graph via the knowledge-query skill during its knowledge-acquisition
   phase, before producing or enriching any AC YAML. The query results inform
   deduplication checks, cross-component awareness, and agent/skill discovery
@@ -30,7 +30,11 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300e-1, ACD-300e-2, ACD-300e-3, ACD-300e-4, ACD-300e-5]
 implemented_by: []

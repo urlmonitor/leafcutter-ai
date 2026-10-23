@@ -10,8 +10,8 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the agent template files for product-owner-v3, business-analyst-v3,
-    and it-po-v3 each contain a YAML frontmatter block with a skills_used list,
+  Given the agent template files for product-owner, business-analyst,
+    and it-po each contain a YAML frontmatter block with a skills_used list,
   When the template is loaded by the Claude Code harness at agent spawn time,
   Then the skills_used list includes "knowledge-query" as an entry,
   And any pre-existing entries in skills_used (such as "ac-tree-split") are preserved,
@@ -48,7 +48,11 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -20,7 +20,8 @@ criteria: |
     "These existing ACs already cover your request. Would you like to proceed
     anyway (force new), amend an existing AC, or cancel?",
   And if the user selects "cancel" no authoring agents are invoked,
-  And if the user selects "amend" the IT PO v3 route is used on the specified AC,
+  And if the user selects "amend" the technical route is used on the specified AC
+    (technical planner, then test designer and the final gate),
   And if the user selects "force new" the triage re-evaluates as "strategic"
     and proceeds with the full pipeline.
 depends_on: [ACD-300a]
@@ -31,7 +32,11 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: "the IT PO v3 route" is now the technical route (technical planner, then test designer and the final gate). Covered-route behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -10,13 +10,13 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given a prior /create-ac session wrote AC YAML files to disk but the session
+  Given a prior /plan-feature session wrote AC YAML files to disk but the session
     ended before the stage commit occurred (e.g. the user's terminal closed,
     the agent timed out, or a network interruption killed the process),
   And the uncommitted AC files remain in the working tree with
-    origin_agent set to one of the AC-authoring agents (product-owner-v3,
-    business-analyst-v3, or it-po-v3) and readiness: draft,
-  When the user invokes /create-ac again,
+    origin_agent set to one of the AC-authoring agents (product-owner,
+    business-analyst, or it-po) and readiness: draft,
+  When the user invokes /plan-feature again,
   Then the workflow detects the uncommitted AC files in the working tree
     by scanning the AC store directory for files with unstaged or staged
     but uncommitted changes,
@@ -30,7 +30,7 @@ criteria: |
     that uncommitted AC files must be resolved before a new run can begin.
 depends_on: [ACD-300g-2]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -51,12 +51,146 @@ it_requirements:
   - "Must handle errors from the git status operation gracefully per the project error handling policy"
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the workflow detects the uncommitted AC files in the working tree by scanning the AC store directory
+    for files with unstaged or staged but uncommitted changes
+  needs_test: true
+  reason: The orphan scan parses git status lines and qualifies each file by origin_agent and readiness,
+    and a wrong filter would miss or invent orphans.
+- clause: 'it warns the user: "Found N uncommitted AC files from a prior session: [list of AC IDs]. Commit
+    them before starting new work? (yes/no/discard)"'
+  needs_test: true
+  reason: The warning is assembled from the scan's count and ids, and a wrong count or list would misinform
+    the user before a destructive choice.
+- clause: if the user chooses "yes", the workflow commits the orphaned files before beginning the new
+    triage
+  needs_test: true
+  reason: The yes branch must commit the orphans before triage, and a missing or reordered commit would
+    start new work on top of them.
+- clause: if the user chooses "discard", the workflow reverts the uncommitted files and proceeds with
+    a clean working tree
+  needs_test: true
+  reason: The discard branch must restore tracked files and delete untracked ones, and handling only one
+    kind leaves the tree dirty.
+- clause: if the user chooses "no", the workflow aborts with a message explaining that uncommitted AC
+    files must be resolved before a new run can begin
+  needs_test: true
+  reason: The no branch must abort before triage with an explanation, and falling through would start
+    a run over unresolved drafts.
+test_spec:
+- name: test_acd_300g_2_i_scan_finds_uncommitted_authoring_drafts
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'scanOrphanedAcDrafts via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with
+    mocked git status lines ('' M'', ''A '', ''??'') and file reads: drafts from product-owner, business-analyst
+    and it-po with readiness draft are returned; a reviewed record and a record from another origin_agent
+    are not.'
+  proves_clause: the workflow detects the uncommitted AC files in the working tree by scanning the AC
+    store directory for files with unstaged or staged but uncommitted changes
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the scan ignores untracked files
+  - the scan flags records whose readiness is not draft
+- name: test_acd_300g_2_i_orphans_pause_with_count_and_ids_before_triage
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Drives the real workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py)
+    with two orphan drafts in the mocked git status: the run pauses at gate resolve-orphans-choice before
+    any ac-triage dispatch, and the gate prompt names the count 2, both AC ids and the yes/no/discard
+    choices.'
+  proves_clause: 'it warns the user: "Found N uncommitted AC files from a prior session: [list of AC IDs].
+    Commit them before starting new work? (yes/no/discard)"'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_2_i_yes_commits_orphans_before_triage
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) resumed
+    with the answer yes: a commit-stage-output dispatch naming the orphan ids precedes the ac-triage dispatch;
+    a failing commit aborts with status error and no triage.'
+  proves_clause: if the user chooses "yes", the workflow commits the orphaned files before beginning the
+    new triage
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_2_i_discard_restores_tracked_and_deletes_untracked
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'resolveOrphanedDrafts via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with
+    one tracked modified and one untracked orphan and the choice discard: a git restore is dispatched
+    for the tracked file, a delete for the untracked file, and the action is continue.'
+  proves_clause: if the user chooses "discard", the workflow reverts the uncommitted files and proceeds
+    with a clean working tree
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - discard runs git restore only, so untracked drafts stay on disk
+  - discard deletes tracked files instead of restoring them
+- name: test_acd_300g_2_i_no_aborts_before_triage
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) resumed
+    with the answer no: the run returns status error with a message saying uncommitted AC files must be
+    resolved first, and no ac-triage dispatch is recorded.'
+  proves_clause: if the user chooses "no", the workflow aborts with a message explaining that uncommitted
+    AC files must be resolved before a new run can begin
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - an unrecognised or no answer falls through to triage
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/test_commit_stage_output_behavioral.py
+- unit_tests/test_commit_stage_output_staging.py
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/test_partial_run_recovery.py
+- unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: names only — /plan-feature, not /create-ac;
+    the authoring agents whose origin_agent marks an orphaned draft are product-owner,
+    business-analyst and it-po (no -v3); doc_links point at the plan-feature skill.
+    Behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_intent recorded,
+    one entry per Then/And outcome clause, each with needs_test and a one-sentence reason. Criteria and
+    readiness unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_spec written
+    for every needs_test clause (with a reachability entry through the real workflow body), grounded in
+    templates/workflows-js/plan-feature.js and the existing plan-feature E2 tests. No declared files,
+    so no file findings. Criteria and readiness unchanged.'
+  date: '2026-10-23'
+  by: test-designer
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/04_TICKET-20260618-ACD-300g-2-i.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

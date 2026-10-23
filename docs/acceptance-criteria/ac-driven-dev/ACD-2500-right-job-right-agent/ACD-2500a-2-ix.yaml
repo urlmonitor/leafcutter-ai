@@ -226,3 +226,14 @@ notes: |
   run the check after the hand-back pass, so the family would never be called. The step goes
   in templates/workflows-js/plan-feature.js, which is over its size limit and must not grow
   (GE-127b-1).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: handback
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

@@ -206,3 +206,14 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/15_TICKET-20261021-ACD-300c-3.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

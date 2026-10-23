@@ -149,3 +149,15 @@ notes: |
   declared files" the store's vocabulary for every check that needs declared files, and
   forbids counting such a record as passed. For S every 'modifies' link IS the derived file
   list, so there is nothing to compare against.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

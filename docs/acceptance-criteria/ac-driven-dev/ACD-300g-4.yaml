@@ -10,7 +10,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the /create-ac workflow has completed a stage and the authoring agent
+  Given the /plan-feature workflow has completed a stage and the authoring agent
     has written AC YAML files to the AC store with readiness: draft,
   When the user chooses "cancel" at the confirmation gate,
   Then the workflow does NOT create a git commit for that stage's output,
@@ -19,8 +19,8 @@ criteria: |
   And the user can inspect the files, manually commit them, or discard them
     with a standard git checkout.
 
-  Given the /create-ac workflow has completed stage 1 (PO v3, committed)
-    and stage 2 (BA v3, not yet approved),
+  Given the /plan-feature workflow has completed stage 1 (product owner, committed)
+    and stage 2 (business analyst, not yet approved),
   When the user chooses "cancel" at gate 2,
   Then the stage 1 commit remains in git history (it was already committed),
   And only the stage 2 draft files remain uncommitted on disk,
@@ -28,7 +28,7 @@ criteria: |
     prior stages" and "uncommitted draft ACs from the canceled stage".
 depends_on: [ACD-300g]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -48,12 +48,162 @@ it_requirements:
   - "Exit message must clearly distinguish between committed prior-stage ACs and uncommitted current-stage ACs"
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the workflow does NOT create a git commit for that stage's output
+  needs_test: true
+  reason: Cancel must return before any commit call, and a commit placed ahead of the action check would
+    commit the cancelled stage.
+- clause: the draft AC YAML files remain on disk as uncommitted working-tree changes
+  needs_test: true
+  reason: The workflow must issue no restore, checkout or delete on cancel, and any such call would remove
+    the drafts the user wants to inspect.
+- clause: the workflow exits with a message listing the uncommitted file paths
+  needs_test: true
+  reason: The exit message lists paths built from the stage's ids and the store path, and a wrong list
+    points the user at the wrong files.
+- clause: the user can inspect the files, manually commit them, or discard them with a standard git checkout
+  needs_test: true
+  reason: The message carries the git checkout command anchored to the authoring worktree, and a wrong
+    anchor would discard files in the wrong checkout.
+- clause: the stage 1 commit remains in git history (it was already committed)
+  needs_test: true
+  reason: Cancel at gate 2 must not reset or revert the stage 1 commit, and committed_acs must still name
+    its ids.
+- clause: only the stage 2 draft files remain uncommitted on disk
+  needs_test: true
+  reason: Which ids count as uncommitted drafts is computed per stage, and mixing in stage 1 ids would
+    tell the user to discard committed work.
+- clause: the workflow exit message distinguishes between "committed ACs from prior stages" and "uncommitted
+    draft ACs from the canceled stage"
+  needs_test: true
+  reason: The message builds the committed and uncommitted sections from two lists, and swapping or merging
+    them hides what is safe.
+test_spec:
+- name: test_acd_300g_4_cancel_at_gate_makes_no_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Drives the real workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py)
+    on the strategic route with a gate-po cancel resume answer: no commit-stage-output dispatch is recorded
+    and the run returns status cancelled.'
+  proves_clause: the workflow does NOT create a git commit for that stage's output
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the stage output is committed before the gate action is read
+- name: test_acd_300g_4_cancel_leaves_drafts_untouched
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Same cancel run via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py): no dispatch
+    after the gate carries git restore, git checkout, git reset or rm, and acs_as_drafts lists the product-owner
+    ids.'
+  proves_clause: the draft AC YAML files remain on disk as uncommitted working-tree changes
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_4_cancel_message_lists_draft_paths
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'buildCancelMessage via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with two
+    draft ids and store docs/acceptance-criteria: each docs/acceptance-criteria/<id>.yaml path appears
+    in the message.'
+  proves_clause: the workflow exits with a message listing the uncommitted file paths
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_4_cancel_message_gives_anchored_checkout
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'buildCancelMessage via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with an
+    authoring worktree path: the message carries git -C "<worktree>" checkout -- <store>/ and the commit
+    hint, and warns that untracked files need an explicit delete.'
+  proves_clause: the user can inspect the files, manually commit them, or discard them with a standard
+    git checkout
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_4_gate2_cancel_keeps_stage1_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) resumed
+    at gate-ba with cancel, the PO commit present in the mocked git log: committed_acs holds the PO ids
+    and no git reset or git revert dispatch is recorded.'
+  proves_clause: the stage 1 commit remains in git history (it was already committed)
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - cancel at gate 2 reverts or resets the stage 1 commit
+- name: test_acd_300g_4_gate2_cancel_drafts_are_stage2_only
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Same gate-ba cancel run via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py):
+    acs_as_drafts holds exactly the business-analyst ids and none of the committed PO ids.'
+  proves_clause: only the stage 2 draft files remain uncommitted on disk
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_4_cancel_message_separates_committed_and_drafts
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'buildCancelMessage via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with committed
+    [ACD-T-1] and drafts [ACD-T-1a]: the ''Committed ACs from prior stages'' line names only ACD-T-1 and
+    the uncommitted-drafts section names only ACD-T-1a.'
+  proves_clause: the workflow exit message distinguishes between "committed ACs from prior stages" and
+    "uncommitted draft ACs from the canceled stage"
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - committed and draft ids are merged into one list
+  - the committed ids are listed under the uncommitted-drafts heading
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/test_commit_stage_output_behavioral.py
+- unit_tests/test_commit_stage_output_staging.py
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/test_partial_run_recovery.py
+- unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: names only — the /plan-feature workflow,
+    not /create-ac; PO v3 / BA v3 are the product-owner and business-analyst agents;
+    doc_links point at the plan-feature skill. Behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_intent recorded,
+    one entry per Then/And outcome clause, each with needs_test and a one-sentence reason. Criteria and
+    readiness unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_spec written
+    for every needs_test clause (with a reachability entry through the real workflow body), grounded in
+    templates/workflows-js/plan-feature.js and the existing plan-feature E2 tests. No declared files,
+    so no file findings. Criteria and readiness unchanged.'
+  date: '2026-10-23'
+  by: test-designer
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/06_TICKET-20260618-ACD-300g-4.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'
