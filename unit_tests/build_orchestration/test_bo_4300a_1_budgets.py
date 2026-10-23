@@ -47,6 +47,17 @@ class TestVerbTimingsAreRecorded(unittest.TestCase):
             tmp = Path(d)
             made = make_project(tmp)
             project = Path(made["project"])
+            # The bulk commit below writes ~8,600 loose objects, over git's gc.auto
+            # threshold (6,700), so it would start a DETACHED `gc --auto` that packs
+            # and prunes those objects while the timed ensure hardlink-clones them
+            # (`failed to create link ... No such file or directory`, CI run
+            # 39945745604). Hold auto-gc off on the fixture project only and pack
+            # it ONCE, synchronously, after the push: the timed clone then always
+            # hardlinks a settled, packed repository (what a real 8,500-file
+            # project is, and what the passing runs measured). ensure must still
+            # set gc.auto 0 on the workspace itself (git clone copies no config).
+            _run_git(["config", "gc.auto", "0"], project)
+            _run_git(["config", "maintenance.auto", "false"], project)
             bulk = project / "bulk"
             for i in range(TRACKED_FILES):
                 sub = bulk / f"d{i // 100:03d}"
@@ -55,6 +66,7 @@ class TestVerbTimingsAreRecorded(unittest.TestCase):
             _run_git(["add", "-A"], project)
             _run_git(["commit", "-q", "-m", "bulk tracked tree"], project)
             _run_git(["push", "-q", "origin", "main"], project)
+            _run_git(["gc", "-q"], project)
 
             timings: dict[str, float] = {}
 
