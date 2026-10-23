@@ -7,7 +7,7 @@ diagram_type: sequence
 status: draft
 parent: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-22
 source_ticket: "tickets/00_inbox/epics/EPIC-RightJobRightAgent/33_TICKET-20261012-ACD-2500c-4.md"
 components:
   - ac_driven_dev
@@ -65,7 +65,7 @@ sequenceDiagram
     participant PP as design_prepass.py
     participant TD as test-designer
     participant HR as approval_hold_report.py
-    participant SC as status-checker
+    participant AA as approve_acs.py
     participant TW as test-writer (build)
 
     PF->>ITPO: stage itpo (gate auto)
@@ -89,9 +89,14 @@ sequenceDiagram
     PF->>HR: approval-holds (all ids)
     HR-->>PF: approved ids, held [id, file, reason]
     loop round 1 to 2, while the check passed and a record is held as file finding undecided
+        opt round 1
+            PF->>PF: commit test-design-handback (the test design, before-state of the hand-back check)
+        end
         PF->>ITPO: it-po-findings-round-N (undecided ids)
         ITPO-->>PF: acs_written (decision per finding: reassign, split or assignment stands)
-        PF->>RC: rule-check-test-design
+        PF->>RC: rule-check-itpo-handback --stage itpo-handback
+        RC-->>PF: verdict
+        Note over PF: failed commit or failed check: the run stops before the final gate (fail-closed)
         PF->>HR: approval-holds
         HR-->>PF: held
     end
@@ -102,10 +107,16 @@ sequenceDiagram
         PF->>TD: re-dispatch once with the check summary as feedback
     else approve
         User-->>PF: approve with priority
-        PF->>HR: approval-holds again, right before the write
-        HR-->>PF: held
-        PF->>SC: apply-approval, approvable ids only
-        Note over SC: sets readiness approved. Held records stay reviewed
+        PF->>AA: approval-holds: approve_acs.py --ids (all ids) --dry-run --json, right before the write
+        AA-->>PF: approved, already_approved, held
+        PF->>AA: approval-apply: approve_acs.py --ids (released ids only) --priority p --json
+        Note over AA: sets readiness approved. Held records stay reviewed. Skipped when no id is released
+        AA-->>PF: approved, already_approved, failed
+        alt approval failed
+            Note over PF: returns an error before the commit. Nothing is committed
+        else approval ok
+            PF->>PF: commit plan-feature(TEST-DESIGN, final)
+        end
     end
     Note over PF,TW: build: /build-ac takes approved records only
     TW->>TW: reads test_spec, writes one test per entry, named by the entry
@@ -119,7 +130,7 @@ Parent: [AC Authoring Pipeline — Sequence Diagram](c2-002-ac-authoring-pipelin
 See also: [Requirement Part Owners — Component Diagram](c3-033-requirement-part-owners-components.md)
 (who writes each field shown here, and who may read source),
 [Requirement Rule Check — Component Diagram](c3-030-requirement-rule-check-components.md) (the
-check in steps 3, 9 and 15) and [AC-Driven Development](../components/ac-driven-dev.md).
+check in steps 3, 9 and 16) and [AC-Driven Development](../components/ac-driven-dev.md).
 
 ## Steps that need a note
 
@@ -130,8 +141,9 @@ check in steps 3, 9 and 15) and [AC-Driven Development](../components/ac-driven-
 | alt after 6 | No report means no designer dispatch. A report with no records passes the stage with "nothing to design" | `dispatchTestDesign` |
 | 7 to 8 | One dispatch writes both groups to separate fields. The agent's JSON only routes the stage. A `blocked` status fails it | `test-designer.md`; ADR-072 §2 |
 | 9 to 10 | The stage check judges the written design and the findings against the tree | `requirement-rule-check.md` |
-| 11 to 17 | An undecided finding is an approval hold, not a rule-check failure. Only `it-po` records the decision. A `split` creates records with intent and no design, and they are held as `test design pending` | `handBackFindings`; `_file_findings.undecided_findings` |
-| 18 to 24 | The hold report is read twice: once before the gate is shown, and again right before `apply-approval`, because records on disk may change during a pause. An unreadable report holds every id | `approvalHolds`; `_approval_holds.APPROVAL_HOLD_CHECKS` |
+| 11 to 19 | An undecided finding is an approval hold, not a rule-check failure. Only `it-po` records the decision. A `split` creates records with intent and no design, and they are held as `test design pending`. Before round 1 the test design is committed as `test-design-handback`, so each round's check (`--stage itpo-handback`) compares against it. A failed commit or a failing check stops the run before the gate | `handBackFindings`; `_file_findings.undecided_findings` |
+| 20 to 23 | The gate shows the holds from `approval_hold_report.py`. An unreadable report holds every id | `approvalHolds`; `_approval_holds.APPROVAL_HOLD_CHECKS` |
+| 24 to 28 | Approval is one deterministic step, `approve_acs.py`. Its `--dry-run` reads the holds again right before the write, because records on disk may change during a pause. The apply gets only the ids it released. A failed run returns before the commit | `approveBatch` |
 
 ## When the gate is reached
 
@@ -139,12 +151,19 @@ The gate is always shown. A record is offered for approval only when all of its 
 recorded planner decision, it carries a design, and it has no `reference file pending` marker.
 A record still undecided after round 2 appears at the gate as held, with its reason. It is never
 offered for approval. The hand-back runs only on the live path, after a passing
-`rule-check-test-design`. A failed hand-back dispatch or a failing re-check ends the loop and
-leaves the records held.
+`rule-check-test-design`. A failed hand-back dispatch ends the loop and leaves the records held.
+A failing `itpo-handback` check stops the run before the gate.
 
 ## Test design pending in the build
 
-`apply-approval` never writes `readiness: approved` on a held record, so `/build-ac` does not
+The approval step (`approve_acs.py`) never writes `readiness: approved` on a held record, so `/build-ac` does not
 pick it up. If a record with intent and no design reaches the test writer anyway, the test
 writer writes no test. It halts with `test design pending`, names the AC id, and reports
 `(status: blocker)`.
+
+## Decision history
+
+- 2026-10-22: ACD-300c-4 replaced the `status-checker` edit (`apply-approval`) with
+  `approve_acs.py` (`approval-holds` dry run, then `approval-apply`), and the commit runs
+  only after a successful approval. ACD-2500a-2-ix added the `test-design-handback` commit
+  before hand-back round 1 and the fail-closed `itpo-handback` check after each round.

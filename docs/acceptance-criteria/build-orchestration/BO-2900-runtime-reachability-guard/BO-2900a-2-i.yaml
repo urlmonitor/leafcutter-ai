@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -138,10 +138,14 @@ test_spec:
 test_rationale: "A judgement over hand-fed reach records proves the arithmetic and not the observation, and the observation is the entire content of this AC — which is why every entry executes real proofs under the real observation hosted in the real pytest invocation. The three cases belong in one exercise because each alone is satisfied by a degenerate mechanism: S alone passes an answer-reached-for-everything observer, B alone passes an answer-not-reached-for-everything one, and the argv-plus-zero-exit shortcut passes both S and H while accepting B, which the prototype measured as a real defect. The environment-replacement and re-entrancy tests are not edge-case garnish: both are measured prototype failures that produce a PLAUSIBLE wrong answer — a false not_reached and a 245-deep recursion — and neither is visible to any assertion about the S/H/B verdicts. The per-test test exists because a tree of programs makes run-level attribution the path of least resistance, and a file-level record would make the direct-import proof in the same file read as reached."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/04_TICKET-20261022-BO-2900a-2-i.md
 change_target: pipeline
 risk_surface: internal
 notes: |

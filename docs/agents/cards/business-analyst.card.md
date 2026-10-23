@@ -76,7 +76,7 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `none` | — | Read-only agent — no filesystem mutations |
+| `requirement_records` | — | Authors L2/L3 requirement records, one AC YAML file each, with id, title, component, components, level, criteria, depends_on, assigned_agent, delivers_to, expects_from and doc_links |
 ---
 
 ## Tools Available

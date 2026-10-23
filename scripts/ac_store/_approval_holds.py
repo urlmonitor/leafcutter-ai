@@ -12,8 +12,7 @@ ARCHITECTURE: Pure functions, no I/O. ``APPROVAL_HOLD_CHECKS`` is the tuple of c
     The reference-file check reads the explicit ``hold_reason`` marker (ACD-2500d-2-i), never the
     absence of a key; the file-finding check is computed from ``file_findings`` (_file_findings),
     never carried (ACD-2500d-3-i). The test-design check is "design pending, or a needs_test clause no test_spec entry links to
-    through the per-entry clause key" (_test_intent). Deployed flat beside approval_hold_report.py (scripts/build_phases_ac_store_rc.py);
-    approve_acs.py is not.
+    through the per-entry clause key" (_test_intent). Deployed flat beside approval_hold_report.py and approve_acs.py (scripts/build_phases_ac_store_rc.py).
 """
 
 from __future__ import annotations

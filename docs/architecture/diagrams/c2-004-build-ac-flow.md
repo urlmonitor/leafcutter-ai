@@ -1,21 +1,21 @@
 ---
-title: "/build-ac Execution Flow — Sequence Diagram"
+title: /build-ac Execution Flow — Sequence Diagram
 type: architecture
 status: active
 created: 2026-06-05
-last_updated: 2026-06-05
-flight_level: L2
-parent: agent_delivery_workflows.md
+last_updated: 2026-10-21
+flight_level: L2-Container
+parent: docs/architecture/diagrams/c1-001-command-map.md
 components:
-  - ac_store
-  - build_orchestration
+- ac_store
+- build_orchestration
 related_docs:
-  - docs/architecture/diagrams/ac-authoring-pipeline.md
-  - docs/architecture/diagrams/ac-readiness-states.md
-  - docs/architecture/diagrams/ac-driven-pipeline.md
-  - docs/how-to/ac-driven-development.md
+- docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+- docs/architecture/diagrams/c2-003-ac-readiness-states.md
+- docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+- docs/how-to/ac-driven-development.md
+description: Overview of /build-ac Execution Flow — Sequence Diagram.
 ---
-
 # /build-ac Execution Flow — Sequence Diagram
 
 This diagram shows the end-to-end execution path when a developer invokes
@@ -74,6 +74,8 @@ sequenceDiagram
         BAC-->>User: "AC store is empty — no unblocked todo ACs found."
     end
 ```
+
+Parent: [Leafcutter Command Map — User-Facing Slash Commands](c1-001-command-map.md)
 
 ---
 

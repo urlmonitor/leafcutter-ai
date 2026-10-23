@@ -38,6 +38,10 @@ AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
 
 DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-200b-2]: the documentation-trigger names live ONLY in the
+    documentation_triggers enum of config/ac_store_schema.json; ``_DOC_TRIGGER_VALUES`` and its
+    explicit check are deleted; with no schema passed, `_trigger_names` reads the shipped schema's enum. main() reads the schema of the RECORD's repo (``_repo_schema``),
+    falling back to this repo's, so a repo's own list decides its records.
   - 2026-10-07 [python-coder/TQ-600a-11, moved here 2026-10-15]: the single-slot
     ``_schema_validator_cache`` holds (schema_object, compiled_validator).
     TQ-600a-11 measured that once YAML parsing is no longer the bottleneck,
@@ -60,6 +64,7 @@ DECISION HISTORY:
 
 from __future__ import annotations
 
+import functools
 import json
 import sys
 from pathlib import Path
@@ -107,6 +112,34 @@ def _default_schema_path() -> Path:
     return repo_root / _SCHEMA_REL
 
 
+@functools.lru_cache(maxsize=None)
+def _repo_schema(root: Path) -> dict[str, Any] | None:
+    """The parsed config/ac_store_schema.json of the repo at `root`; None when that repo has none."""
+    candidate = root / _SCHEMA_REL
+    return load_ac_store_schema(candidate)[0] if candidate.is_file() else None
+
+
+def _trigger_names(schema: dict[str, Any] | None) -> list[str]:
+    """The documentation_triggers enum: the ONE list of trigger names (ACD-200b-2).
+
+    Read from `schema`, or from this repo's config/ac_store_schema.json when none is passed.
+    """
+    schema = schema or load_ac_store_schema()[0] or {}
+    return schema.get("properties", {}).get("documentation_triggers", {}).get("oneOf", [{}])[0].get("items", {}).get("enum", [])
+
+
+def _trigger_value_errors(path: Path, triggers: list[Any], schema: dict[str, Any] | None) -> list[str]:
+    """Invalid documentation_triggers values; a passed schema owns the enum (jsonschema reports it).
+
+    With no schema and no loadable list there is nothing to check against, so nothing is reported.
+    """
+    names = _trigger_names(schema)
+    invalid = [] if schema is not None or not names else [t for t in triggers if t not in names]
+    if not invalid:
+        return []
+    return [f"{path}: Field 'documentation_triggers' contains invalid values: {invalid}. Valid values: {sorted(names)}."]
+
+
 def _infer_repo_root(ac_path: Path) -> Path:
     """Repo root for an AC file: the ancestor of its docs/acceptance-criteria/.
 
@@ -131,13 +164,6 @@ _PRIORITY_VALUES = {"critical", "high", "medium", "low"}
 _LEVEL_VALUES = {"L0", "L1", "L2", "L3"}
 _STATUS_VALUES = {"active", "deprecated", "superseded", "superseded_by"}  # ACS-900d-4-ii: agrees with the JSON schema
 _WORK_STATUS_VALUES = {"todo", "in_progress", "done"}
-_DOC_TRIGGER_VALUES = {
-    "how-to",
-    "sequence-diagram",
-    "state-diagram",
-    "component-diagram",
-    "reference-doc",
-}
 
 # Field-level help text for missing fields
 _FIELD_HELP: dict[str, str] = {
@@ -317,12 +343,7 @@ def _validate_file(
                 f"got {type(triggers).__name__}."
             )
         else:
-            invalid = [] if schema is not None else [t for t in triggers if t not in _DOC_TRIGGER_VALUES]  # a passed schema owns the enum
-            if invalid:
-                errors.append(
-                    f"{path}: Field 'documentation_triggers' contains invalid values: "
-                    f"{invalid}. Valid values: {sorted(_DOC_TRIGGER_VALUES)}."
-                )
+            errors.extend(_trigger_value_errors(path, triggers, schema))
             # L1-only constraint: documentation_triggers is permitted only on L1 ACs.
             # BO-2200a-5: reject the field on L0, L2, L3 with a message that names
             # the offending AC id and its level.
@@ -485,7 +506,8 @@ def main(argv: list[str] | None = None) -> int:
 
     declared_files_reports: list[str] = []
     for path in paths:
-        errors = _validate_file(path, registry_ids, schema, declared_files_reports)
+        record_schema = schema and (_repo_schema(_infer_repo_root(path)) or schema)  # the record's own repo owns the lists
+        errors = _validate_file(path, registry_ids, record_schema, declared_files_reports)
         all_errors.extend(errors)
         files_checked += 1
 
