@@ -34,6 +34,7 @@ _IGNORED = frozenset(
 _PREFIX = re.compile(r"[A-Za-z]*")
 _OPENERS = frozenset("([{")
 _CLOSERS = frozenset(")]}")
+_COMPOUND = frozenset("if elif else for while try except finally with def class async".split())
 
 
 def _is_plain_string(token: tokenize.TokenInfo) -> bool:
@@ -47,8 +48,11 @@ def _is_plain_string(token: tokenize.TokenInfo) -> bool:
     return not {"f", "t"} & set(_PREFIX.match(token.string).group(0).lower())
 
 
-def _statements(tokens: list[tokenize.TokenInfo]) -> Iterator[list[tokenize.TokenInfo]]:
-    """Yield the significant tokens of each statement, split at NEWLINE and top-level ';'."""
+def _statements(
+    tokens: list[tokenize.TokenInfo], body_starts: frozenset[tuple[int, int]] = frozenset()
+) -> Iterator[list[tokenize.TokenInfo]]:
+    """Yield the significant tokens of each statement, split at NEWLINE, top-level ';' and
+    before a compound header's same-row body (*body_starts*, token start positions)."""
     pending: list[tokenize.TokenInfo] = []
     depth = 0
     for token in tokens:
@@ -59,6 +63,9 @@ def _statements(tokens: list[tokenize.TokenInfo]) -> Iterator[list[tokenize.Toke
             continue
         if token.type in _IGNORED:
             continue
+        if token.start in body_starts and pending:
+            yield pending
+            pending = []
         if token.type == tokenize.OP:
             depth += (token.string in _OPENERS) - (token.string in _CLOSERS)
             if token.string == ";" and depth <= 0:
@@ -99,6 +106,70 @@ def _tokenize(text: str) -> list[tokenize.TokenInfo]:
         raise UnmeasurableContentError("Python", detail) from exc
 
 
+def _statement_breaks(tokens: list[tokenize.TokenInfo]) -> list[tuple[int, int]]:
+    """Start positions of statements that begin on the row of the one before them.
+
+    A statement ends at a top-level ``;`` and at the ``:`` ending a compound
+    header (``if x: y``); a lambda's own ``:`` is skipped. The next statement
+    is a break only when its first token sits on the separator's row.
+    """
+    breaks: list[tuple[int, int]] = []
+    statement = _Statement()
+    pending_row: int | None = None
+    for token in tokens:
+        if token.type == tokenize.NEWLINE:
+            statement, pending_row = _Statement(), None
+            continue
+        if token.type in _IGNORED:
+            continue
+        if pending_row == token.start[0]:
+            breaks.append(token.start)
+        pending_row = None
+        if statement.ends_with(token):
+            statement, pending_row = _Statement(depth=statement.depth), token.end[0]
+    return breaks
+
+
+class _Statement:
+    """The state of the statement being read: bracket depth, open lambdas, first token."""
+
+    __slots__ = ("depth", "first", "lambdas")
+
+    def __init__(self, depth: int = 0) -> None:
+        self.depth = depth
+        self.lambdas = 0
+        self.first: tokenize.TokenInfo | None = None
+
+    def ends_with(self, token: tokenize.TokenInfo) -> bool:
+        """Feed one significant token; True when it is a top-level ``;`` or a compound header's ``:``."""
+        self.first = self.first or token
+        if token.type == tokenize.NAME and token.string == "lambda" and self.depth <= 0:
+            self.lambdas += 1
+        if token.type != tokenize.OP:
+            return False
+        self.depth += (token.string in _OPENERS) - (token.string in _CLOSERS)
+        if self.depth > 0 or token.string not in (":", ";"):
+            return False
+        if token.string == ";":
+            return True
+        if self.lambdas:
+            self.lambdas -= 1
+            return False
+        return self.first.string in _COMPOUND
+
+
+def python_lex(text: str) -> tuple[list[Range], list[int]]:
+    """Return the uncounted ranges and the statement breaks of Python *text*.
+
+    Raises:
+        UnmeasurableContentError: the running interpreter's tokenizer rejects *text*.
+    """
+    tokens = _tokenize(text)
+    starts = line_starts(split_physical_lines(text)) or [0]
+    breaks = _statement_breaks(tokens)
+    return _uncounted(tokens, starts, frozenset(breaks)), [_offset(starts, start) for start in breaks]
+
+
 def python_ranges(text: str) -> list[Range]:
     """Return the uncounted ranges of Python *text*: comments and standalone strings.
 
@@ -111,10 +182,23 @@ def python_ranges(text: str) -> list[Range]:
     Raises:
         UnmeasurableContentError: the running interpreter's tokenizer rejects *text*.
     """
-    tokens = _tokenize(text)
-    starts = line_starts(split_physical_lines(text)) or [0]
-    spans = [token for token in tokens if token.type == tokenize.COMMENT]
-    for group in _statements(tokens):
+    return python_lex(text)[0]
+
+
+def _uncounted(
+    tokens: list[tokenize.TokenInfo], starts: list[int], body_starts: frozenset[tuple[int, int]]
+) -> list[Range]:
+    """The comment, standalone-string and ``;`` ranges of an already tokenized file.
+
+    A ``;`` is only a separator, so it is cut from the key: ``a = 1; b = 2``
+    keys exactly like the same two statements on two lines.
+    """
+    spans = [
+        token
+        for token in tokens
+        if token.type == tokenize.COMMENT or (token.type == tokenize.OP and token.string == ";")
+    ]
+    for group in _statements(tokens, body_starts):
         if _is_standalone(group):
             # Only the string literals are uncounted: a wrapping parenthesis is a
             # token like any other, so a parenthesised multi-line standalone
@@ -131,4 +215,8 @@ DECISION HISTORY
   parenthesised standalone string uncounts only its string tokens (the wrapping parentheses stay
   code), matching ast's Constant span; verified against ast+tokenize over all 2854 tracked .py
   files with zero disagreements. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-23 [GE-127d-3-v]: python_lex also returns statement breaks from the same token stream: a
+  statement after a top-level `;` or after a compound header's `:` on the same row (`x = 1; y = 2`,
+  `if x: y`) counts as its own line. `match`/`case` are left out because they are soft keywords
+  (`match: int = 1` is an annotation). (#EPIC-FilesStayWorkable/GE-127d-3)
 """

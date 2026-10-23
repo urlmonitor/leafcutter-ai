@@ -621,12 +621,22 @@ amended_by:
     .py over 400 194 (pre-2026-10-16 rule) -> 98 (current rule), 97 drop under, 1 crosses
     over (test_final_gate_and_commit_message.py 399 -> 485); self-measure _file_size_ratchet.py
     215, check_file_size.py 274, check_file_size_rule_parity.py 163, _file_description.py 145.
+- reason: add-child-statement-joining
+  by: BrainCandy
+  at: '2026-10-23'
+  note: >-
+    covered_by gained GE-127d-3-v (a line holding several statements counts once per
+    statement, Python and the JavaScript family), closing the statement-joining route the
+    notes recorded as out of scope on 2026-10-21. The child lands done with its tests in the
+    same commit, so this record stays done. Criteria, title, depends_on and req_status
+    unchanged.
 superseded_by: null
 covered_by:
   - GE-127d-3-i
   - GE-127d-3-ii
   - GE-127d-3-iii
   - GE-127d-3-iv
+  - GE-127d-3-v
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -685,6 +695,9 @@ notes: |
   count, so neither this measure nor GE-127d-4's backstop (which needs raw to rise) catches
   it. Closing it needs a measure that counts statements or tokens rather than lines, or a
   separate rule against statement-joining; neither is specified here.
+  CLOSED 2026-10-23 BY GE-127d-3-v for Python and the JavaScript family: a line holding several
+  statements counts once per statement. SQL and shell lines are still counted once each; see
+  that record's known residue.
 
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.

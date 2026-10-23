@@ -2,7 +2,9 @@
 MODULE: commit_guardian._file_size_measure
 GOAL: The ONE measure of a covered file's length: no comment of any style and
     no Python string standing alone as a statement counts, and blank lines
-    never count anywhere. Every other line of code and of a used string does.
+    never count anywhere. Every other line of code and of a used string does,
+    once per statement it holds (GE-127d-3-v), so joining statements onto one
+    line shortens nothing.
 BUSINESS CONTEXT: GE-127d-3 (BrainCandy, 2026-10-16 and 2026-10-20). The
     quoted length must be a number a formatting choice cannot move: rewriting
     ``//`` runs as ``/* */`` once cleared a growth ratchet on five workflow
@@ -25,9 +27,9 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
-from .c_family_lines import js_ranges
+from .c_family_lines import js_lex
 from .errors import UnmeasurableContentError
-from .python_lines import python_ranges
+from .python_lines import python_lex
 from .shell_lines import shell_ranges
 from .spans import Range, counted_keys, normalise, split_physical_lines
 from .sql_lines import sql_ranges
@@ -42,16 +44,22 @@ __all__ = [
     "total_physical_lines",
 ]
 
-_Lexer = Callable[[str], list[Range]]
+_Lexer = Callable[[str], tuple[list[Range], list[int]]]
+
+
+def _without_breaks(ranges: Callable[[str], list[Range]]) -> _Lexer:
+    """Adapt a comments-only lexer (SQL, shell) to the (ranges, breaks) shape."""
+    return lambda text: (ranges(text), [])
+
 
 _LEXERS: dict[str, tuple[str, _Lexer]] = {
-    ".py": ("Python", python_ranges),
-    ".sql": ("SQL", sql_ranges),
-    ".sh": ("shell", shell_ranges),
-    ".js": ("JavaScript", partial(js_ranges, jsx=True, language="JavaScript")),
-    ".mjs": ("JavaScript", partial(js_ranges, jsx=True, language="JavaScript")),
-    ".ts": ("TypeScript", partial(js_ranges, jsx=False, language="TypeScript")),
-    ".tsx": ("TypeScript", partial(js_ranges, jsx=True, language="TypeScript")),
+    ".py": ("Python", python_lex),
+    ".sql": ("SQL", _without_breaks(sql_ranges)),
+    ".sh": ("shell", _without_breaks(shell_ranges)),
+    ".js": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript")),
+    ".mjs": ("JavaScript", partial(js_lex, jsx=True, language="JavaScript")),
+    ".ts": ("TypeScript", partial(js_lex, jsx=False, language="TypeScript")),
+    ".tsx": ("TypeScript", partial(js_lex, jsx=True, language="TypeScript")),
 }
 
 SUPPORTED_EXTENSIONS = tuple(_LEXERS)
@@ -89,7 +97,8 @@ def counted_line_keys(content: str, extension: str) -> list[str]:
         detail = "no tokenizer is registered for this kind"
         raise UnmeasurableContentError(extension or "(no extension)", detail)
     text = normalise(content)
-    return counted_keys(text, entry[1](text))
+    ranges, breaks = entry[1](text)
+    return counted_keys(text, ranges, breaks)
 
 
 def measure_lines(content: str, extension: str) -> int:
@@ -112,4 +121,7 @@ DECISION HISTORY
 - 2026-10-21 [python-coder]: Blank lines never count anywhere (BrainCandy decision); the module
   docstring and the counting in spans.counted_keys were updated to match.
   (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-23 [GE-127d-3-v]: Each lexer returns (ranges, statement breaks); a line holding several
+  statements counts once per statement (Python and the JavaScript family; SQL and shell have no
+  breaks). (#EPIC-FilesStayWorkable/GE-127d-3)
 """
