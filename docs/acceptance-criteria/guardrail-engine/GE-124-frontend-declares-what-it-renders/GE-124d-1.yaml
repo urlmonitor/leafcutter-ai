@@ -103,7 +103,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124d-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/26_TICKET-20261023-GE-124d-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -124,3 +125,4 @@ notes: |
   leak that actually happens is a sibling directory sharing a prefix
   (`components/` matching `components-legacy/`), so that case is added to the
   test contract rather than to the criteria.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs
