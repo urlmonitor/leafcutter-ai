@@ -402,8 +402,7 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  PARENT RULE: in addition, if a parent AC's YAML file (an ancestor of a written\n" +
       "  AC, e.g. BO-2600a for BO-2600a-6) was modified on disk by this stage -- typically its\n" +
       "  covered_by list gained the written child -- include that parent file too. A parent\n" +
-      "  that is clean (unmodified) must never be staged, and neither must an unmodified\n" +
-      "  sibling AC or an AC file committed by an earlier stage.\n" +
+      "  that is clean (unmodified) must never be staged, and neither must an unmodified sibling AC or an AC file committed by an earlier stage.\n" +
       `  Only paths under the AC store (${acStorePath}/) are ever eligible; any path\n` +
       "  outside the AC store is excluded, whatever its status.\n" +
       "\n" +
@@ -428,8 +427,7 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "    { \"status\": \"error\", \"message\": \"unexpected staged path <path> - aborted\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false } and do not commit.\n" +
       "\n" +
       "Step 5 — Commit the staged files using the commit agent's standard flow.\n" +
-      "  Limit the commit to the expected set via pathspec (-- <expected paths>) so that unrelated\n" +
-      "  already staged changes are never swept in.\n" +
+      "  Limit the commit to the expected set via pathspec (-- <expected paths>) so that unrelated already staged changes are never swept in.\n" +
       "  The commit message has already been provided above. Use it exactly.\n" +
       "  After committing, capture the exit code and output.\n" +
       "  If exit code is 0:\n" +
@@ -683,8 +681,8 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
     const originAgent = originAgentMatch ? originAgentMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
     const readiness = readinessMatch ? readinessMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
     // Qualify as orphan: origin_agent must be an AC authoring agent AND readiness must be "draft".
-    const AUTHORING_AGENTS = new Set(["product-owner", "business-analyst", "it-po", "product-owner-v3", "business-analyst-v3", "it-po-v3"]);
-    if (!AUTHORING_AGENTS.has(originAgent)) { continue; }
+    const AUTHORING_AGENTS = new Set(["product-owner", "business-analyst", "it-po"]);
+    if (!AUTHORING_AGENTS.has((originAgent || "").replace(/-v\d+$/, ""))) { continue; } // stored v3 authors map to canonical names
     if (readiness !== "draft") { continue; }
     // Extract AC ID: prefer the id field, fall back to filename stem.
     let acId;
