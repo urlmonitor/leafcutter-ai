@@ -36,7 +36,9 @@ related_docs:
   change whose measured length fell while its raw line count rose is refused (GE-127d-4,
   `test_ge_127d_4.py`). The refusal advice no longer names a free comment style (GE-127d-5).
   Remaining formatting route, out of scope here and recorded in GE-127d-3's notes: joining several
-  statements onto one line lowers both counts.
+  statements onto one line lowers both counts. Closed 2026-10-23 for Python and the JavaScript
+  family by GE-127d-3-v (`test_ge_127d_3_v.py`): a line counts once per statement it holds. SQL and
+  shell lines still count once each.
 - **Status when filed:** open, no AC. Measurement verified on `origin/main` `964f23a60`.
 - **Occurrences:** 1 (ticket 11 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-13).
 - **First seen:** 2026-10-13 · **Last seen:** 2026-10-13
