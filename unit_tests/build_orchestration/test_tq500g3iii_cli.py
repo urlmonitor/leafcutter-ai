@@ -97,7 +97,7 @@ def test_static_and_deterministic(tmp_path: Path):
 
 
 def test_loosened_stops_through_finish(tmp_path: Path):
-    # covers: TQ-500g-3-iii
+    # covers: TQ-500g-3-iii, TQ-500g-3
     # angle: reachability
     # must_catch: loosened step not wired into consumer_sweep.py check
     # must_catch: finish ignores a check that fails only on loosened

@@ -14,7 +14,7 @@ import unit_tests.build_orchestration._tq500g3i_fixtures as fx
 
 
 def test_sweep_check_through_finish(tmp_path: Path):
-    # covers: TQ-500g-3-i
+    # covers: TQ-500g-3-i, TQ-500g-3
     # angle: reachability
     # must_catch: missing sweep list treated as complete
     # must_catch: finish ignores the sweep verdict
