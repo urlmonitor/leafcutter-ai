@@ -1,5 +1,5 @@
 id: GE-117c-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "How-to guide: the extended decision-history tail-tag with ticket and AC references"
 component: guardrail-engine
@@ -34,6 +34,8 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "Document the EXTENDED tail-tag (existing ticket ref + new AC ref); do NOT re-document the existing ticket-tag mechanics — layer the AC dimension on top, consistent with the GE-117c-1 implementation."

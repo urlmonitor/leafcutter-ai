@@ -1,5 +1,5 @@
 id: GE-117d-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "A commit is blocked by default when any in-scope declaration is missing or invalid"
 component: guardrail-engine
@@ -38,27 +38,88 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
     relationship: parent
     status: exists
-  - path: "scripts/commit_guardian/commit_guardian.json"
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
     relationship: configures
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/run_hook.py"
+    relationship: related
+    status: exists
+    relevance: "The dispatcher every registered commit-guardian hook runs through from the deployed layout."
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
   - "Aggregate the verdicts from ALL THREE surface producers — module-component (GE-117a-1), symbol-ac (GE-117b-1), and decision-history-ac (GE-117c-1) — into one block/proceed decision. expects_from names GE-117a-1 as the primary upstream (single-valued field); GE-117b-1 and GE-117c-1 are equally-required secondary upstreams, carried here via depends_on and this requirement. The aggregator must consume all three verdict shapes uniformly."
-  - "DEFAULT action on any missing/invalid in-scope verdict is BLOCK (fail-closed) — this is user-confirmed and must NOT be relaxed to a warn/advisory default; a warn tier exists only as the deliberate opt-in in GE-117d-3."
-  - "Enumerate ALL offending items across all three surfaces (never stop at the first); the block report lists per item {file, surface, missing|invalid, declared_value-when-invalid}."
+  - "DEFAULT action on any missing/invalid in-scope verdict is BLOCK (fail-closed, non-zero exit) — this is user-confirmed and must NOT be relaxed to a warn/advisory default; a warn tier exists only as the deliberate opt-in in GE-117d-3."
+  - "Enumerate ALL offending items across all three surfaces (never stop at the first); the block report lists per item {file, surface, missing|invalid, declared_value-when-invalid}, with one item per offending entry and a stable order so repeated runs on the same index produce identical output."
   - "The block report is the single actionable payload consumed by the developer and by GE-117e-1 (autofix) / GE-117e-2 (opt-out); keep its item shape stable so those consumers can act on file+surface+missing/invalid+declared-value."
   - "Scope of what triggers the block is diff-only, inherited from GE-117a/b/c — do not redefine scope here."
-  - "Register/aggregate within the same commit_guardian.json hook wiring (config section + hooks_manifest entry, tier: judgment); fail-open on INTERNAL error (exit 0, stderr advisory, clean stdout) so an internal fault never masquerades as a violation. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Register within the same templates/scripts/commit_guardian/commit_guardian.json hook wiring as GE-117a-1 (config section + hooks_manifest entry, tier: judgment); fail-open on INTERNAL error (exit 0, stderr advisory, clean stdout) so an internal fault never masquerades as a violation."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify by running the deployed hook through a real git commit after a build.py round-trip, not only source-tree tests."
 delivers_to:
   agent: python-coder
-  contract: "The block/proceed decision plus the aggregated actionable report (file + surface + missing|invalid + declared value per item) consumed by the developer and by GE-117e's message/route rendering"
+  contract: "The block/proceed decision (non-zero exit = block) plus the aggregated actionable report, one item per offender: {file, surface: 'module-component'|'symbol-ac'|'decision-history-ac', kind: 'missing'|'invalid', declared_value: str|null (set when invalid)}; consumed by the developer and by GE-117e's autofix and opt-out routes"
 expects_from:
   ac_id: GE-117a-1
   contract: "The per-file/per-symbol/per-entry declaration verdicts (satisfied|missing|invalid) that the enforcement action consumes"
+test_spec:
+  - name: test_ge_117d_1_single_missing_declaration_blocks_with_no_mode_configured
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo whose commit_guardian config has no enforcement mode, stage one public function with no AC reference and run the hook as pre-commit does: non-zero exit, and the report names the file, the symbol-ac surface and 'missing'."
+  - name: test_ge_117d_1_invalid_declaration_report_names_the_unresolved_value
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a module docstring naming an unregistered component: non-zero exit, and the report item says 'invalid' and quotes the declared component name."
+  - name: test_ge_117d_1_report_enumerates_every_offender_across_all_three_surfaces
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage one commit with two module-component violations, one symbol-ac violation and one decision-history-ac violation: non-zero exit and the report holds exactly four items covering all three surfaces."
+    must_catch:
+      - "returns after the first offending item"
+      - "aggregates only the module-component and symbol-ac verdicts and drops the decision-history-ac surface"
+  - name: test_ge_117d_1_real_git_commit_is_rejected_through_the_deployed_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    surface_invoked: "git commit in a temp repo with the deployed check_declaration_traceability.py registered via run_hook.py"
+    description: "Marked shared_layout_reader: with the deployed hook from the shared reference layout installed as a pre-commit hook in a temp repo, run a real 'git commit' whose staged file lacks a declaration: the commit is refused, HEAD does not move, and the block report is printed."
+  - name: test_ge_117d_1_internal_error_never_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Force an unexpected exception in the aggregation step: exit 0, stderr advisory, empty stdout — an internal fault is not reported as a declaration violation."
+test_rationale: |
+  This record is the gate itself, so by the repo rule it is proven by running it. The tests
+  exit through the hook process and, once, through a real git commit, never by inspecting the
+  source. The criteria tests assert the exit code and the named report fields. The
+  enumerate-all test stages violations on all three surfaces in one commit, because the two
+  likely wrong versions are a first-hit early return and an aggregator that forgets the third
+  producer. Each passes a single-violation test. The e2e test uses the shared deployed layout,
+  so it proves the hook is registered and actually refuses a commit; a hook can pass every
+  unit test and still never run. The failure test pins the fail-open boundary so a crash is not
+  reported as a block.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Pinned the block-report item shape in delivers_to, required stable ordering, pointed configuration at the real templates/scripts/commit_guardian/commit_guardian.json, and added change_target, declared_files, test_spec and test_rationale. Corrected the source path (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

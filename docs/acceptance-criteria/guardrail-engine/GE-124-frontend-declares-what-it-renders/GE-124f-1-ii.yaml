@@ -72,7 +72,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made outside-the-chain an explicit recorded state reachable by GE-124g-3 rather than silence, and forbade inferring a design name from the route or file name — likely in a Next.js app where route paths and design names coincide by convention, and a manufactured link is exactly what GE-124g exists to prevent. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/40_TICKET-20261023-GE-124f-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -85,3 +86,4 @@ notes: |
   things: outside-the-chain is fine, resolves-to-nothing is a defect. GE-124g-3
   needs them apart for the same reason — a chain-completeness figure that counts
   pages with no design as failures would be a number that mixes two things.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

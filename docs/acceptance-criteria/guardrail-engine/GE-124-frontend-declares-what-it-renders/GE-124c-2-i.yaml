@@ -94,7 +94,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Raised complexity S->M and recorded why: the shared entry point does not exist yet and this AC is a refactor of GE-111's and GE-117's existing private resolution paths, not a greenfield call. Scoped the migration to AC-id resolution only (GE-117's components.json namespace stays put), required a three-valued answer so GE-124c-2-ii is implementable, and added the monkeypatch-the-resolver test that actually detects a surviving private path. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/20_TICKET-20261022-GE-124c-2-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -120,3 +121,4 @@ notes: |
   actually exists. Complexity raised from S to M on that basis. If GE-111's and
   GE-117's own trees are built before this one, they will each have shipped a
   private path that this AC then has to unpick — worth sequencing deliberately.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

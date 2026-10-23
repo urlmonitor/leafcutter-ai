@@ -84,7 +84,8 @@ amended_by:
   - "2026-08-25 [BrainCandy]: reworded one Given from \"whose comment is written inside its <template> block\" to \"whose comment sits inside its <template> block\". Wording only — the scenario, its When and its Then are unchanged. The Given describes where a comment already is, and \"sits\" says that more accurately. It also stops the BO-2900g-2 declares_side_effect derivation matching \"is written\" here: that derivation scans from the FIRST Then to the end of the criteria, so in a multi-scenario record it swallows every later Given and When and marked this AC as asserting a durable effect it does not assert. The derivation bug is real and recorded separately; this record does not work around it beyond saying what it meant."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/05_TICKET-20261022-GE-124a-2-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -103,3 +104,4 @@ notes: |
   GE-124a-1-ii forbids feeding into declares[]. The two are compatible only if
   the rescan's output is confined to message text — stated in it_requirements
   and asserted in the first test.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

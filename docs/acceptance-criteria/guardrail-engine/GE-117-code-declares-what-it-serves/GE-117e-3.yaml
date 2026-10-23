@@ -1,5 +1,5 @@
 id: GE-117e-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "How-to guide: fixing a missing declaration or deliberately opting out"
 component: guardrail-engine
@@ -34,10 +34,12 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "Document the exact opt-out wire-format `AC-EXEMPT: <reason>` (inline, in the item's own docstring/entry, non-empty reason, visible in diff) as implemented in GE-117e-2, and that a reason-less marker or a global disable is rejected (GE-117e-2-i)."
-  - "Document that the autofix PROMPTS rather than guessing when inference is ambiguous (GE-117e-1-i), and — reflecting the GE-117e-1 prerequisite — that component auto-inference is currently prompt-based until a components.json pattern-inference lands; keep the guide consistent with the implemented autofix behavior."
+  - "Document that the autofix PROMPTS rather than guessing when inference is ambiguous (GE-117e-1-i), and that component inference reads each docs/components.json component's primary_code paths (single match = auto-insert; several or none = prompt), never docs/acceptance-criteria/index.yaml; keep the guide consistent with the implemented autofix behavior."
 delivers_to: null
 expects_from:
   ac_id: GE-117e-1

@@ -90,7 +90,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Placed the diagram under docs/architecture/diagrams/ as a c3 sequence with a sequence number from next_diagram_seq.py (GE-122's drift shape), named the real participant modules, and required not-reported to be drawn as an early exit rather than a pass arrow. Tests derive participants from the filesystem and the verdict set from the check's enum so the diagram goes red on drift; the two non-checkable drawing decisions are pinned in it_requirements for review. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/25_TICKET-20261023-GE-124c-5.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -111,3 +112,4 @@ notes: |
   useful, but its participant-existence test cannot pass until those modules
   exist — schedule it after GE-124c-1, or accept a red test in the interim and
   say so.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

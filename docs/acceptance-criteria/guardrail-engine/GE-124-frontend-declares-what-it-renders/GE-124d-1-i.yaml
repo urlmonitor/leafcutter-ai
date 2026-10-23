@@ -83,7 +83,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Enumerated the refused set and added the case that matters most — a NEW enforcement-shaped config key, which is the form a blanket escape actually arrives in and which a list-only validator cannot see. Required the run to continue blocking (and honouring valid entries) after a refusal, so rejecting bad config cannot itself become the bypass. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/27_TICKET-20261023-GE-124d-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -103,3 +104,4 @@ notes: |
   so the config loader has to reject unknown enforcement-shaped keys — a
   validator that only inspects warn_paths entries would pass the very case this
   AC exists to stop.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

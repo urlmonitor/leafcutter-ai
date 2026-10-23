@@ -5,6 +5,7 @@ ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers
 
 DECISION HISTORY
 ========================================
+- 2026-10-23 12:00 [python-coder]: IPv4-first lookups, abandonable daemon-thread calls and step timing in the transaction worker. (#KM-400d-4)
 - 2026-10-20 14:00 [python-coder]: Forward the declared capacity ceiling into publication, expose its report, and let one statement address the system database. (#KM-400f-3)
 - 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
 - 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
@@ -22,13 +23,24 @@ if TYPE_CHECKING:
     from knowledge.adapters.retention.capacity import CapacityCeiling
     from knowledge.config import RetentionBound
 
-import asyncio
+from contextlib import ExitStack
 import hashlib
 import json
+import logging
 from pathlib import Path
 
+from knowledge.adapters.connection.daemon_call import run_in_daemon
+from knowledge.adapters.connection.lookup_policy import (
+    forget_scope_lookups,
+    lookup_scope,
+    read_family_setting,
+)
 from knowledge.contracts import Entity, ProjectionSnapshot, Relation
 from knowledge.errors import BackendUnavailable
+from knowledge.step_timing import StepRecorder, recorder_var, timed
+
+logger = logging.getLogger(__name__)
+_CLOSE_WAIT_SECONDS = 0.4
 
 
 def scope_key(repository_id: str, generation_id: str) -> str:
@@ -71,6 +83,10 @@ class Neo4jBackend:
     publication_reclamation: dict | None = None
     # Capacity headroom report of the last publication (None before usage was measured), set by neo4j_projection.publish.
     publication_capacity: dict | None = None
+    # Lookup policy for the adapter's own calls; __init__ reads LEAFCUTTER_NEO4J_ADDRESS_FAMILY.
+    address_family: str = "ipv4"
+    # True once verify_connectivity() succeeded on this backend's driver (set per instance).
+    _connected: bool = False
 
     def __init__(
         self,
@@ -95,7 +111,10 @@ class Neo4jBackend:
             uri, auth=(username, password), max_transaction_retry_time=3.0, connection_timeout=3.0
         )
         self.database = database
+        self._connected = False
         self.query_timeout = min(max(query_timeout, 0.1), 30.0)
+        self.address_family, warning = read_family_setting()
+        self.config_warnings: list[str] = [warning] if warning else []
 
     async def _run(
         self,
@@ -134,6 +153,28 @@ class Neo4jBackend:
         """
         return [record.data() for record in tx.run(statement, parameters)]
 
+    def _open_connection(self, recorder: StepRecorder | None) -> None:
+        """Open the driver's connection once, timed as the "connect" step (worker thread).
+
+        ``driver.session()`` is lazy: the TCP/TLS/Bolt handshake would otherwise happen inside the
+        first query and be billed to it. The public ``verify_connectivity()`` forces it up front;
+        it runs once per driver, so later transactions reuse the pooled connection at no cost.
+
+        Args:
+            recorder: Step recorder fed with the connect time, if any.
+        """
+        from neo4j.exceptions import DriverError
+
+        if self._connected:
+            return
+        with timed(recorder, "connect"):
+            try:
+                self.driver.verify_connectivity()
+            except (OSError, TimeoutError, DriverError):
+                forget_scope_lookups()  # a remembered address that does not connect must be asked again
+                raise
+        self._connected = True
+
     async def _transaction(
         self,
         callback: Callable[[ManagedTransaction], TransactionResult],
@@ -155,15 +196,19 @@ class Neo4jBackend:
         from knowledge.deadlines import remaining_seconds
 
         timeout = remaining_seconds(self.query_timeout)
+        recorder = recorder_var.get()
 
         def execute() -> TransactionResult:
             """Own the synchronous session within its worker-thread lifetime."""
-            with self.driver.session(database=database or self.database) as session:
+            with lookup_scope(recorder, self.address_family), ExitStack() as stack:
+                self._open_connection(recorder)
+                session = stack.enter_context(self.driver.session(database=database or self.database))
                 runner = session.execute_write if write else session.execute_read
-                return runner(unit_of_work(timeout=timeout)(callback))
+                with timed(recorder, "query"):
+                    return runner(unit_of_work(timeout=timeout)(callback))
 
         try:
-            return await asyncio.to_thread(execute)
+            return await run_in_daemon(execute)
         except (OSError, TimeoutError, DriverError, Neo4jError) as error:
             raise BackendUnavailable(describe_failure(error)) from error
 
@@ -458,8 +503,11 @@ class Neo4jBackend:
         return await entity_node_counts(self, repository_id)
 
     async def close(self) -> None:
-        """Close the configured driver's pool."""
-        await asyncio.to_thread(self.driver.close)
+        """Close the configured driver's pool, abandoning a close that blocks past a short bound."""
+        try:
+            await run_in_daemon(self.driver.close, timeout=_CLOSE_WAIT_SECONDS)
+        except TimeoutError:
+            logger.warning("Neo4j driver close did not finish in %.1fs; abandoned", _CLOSE_WAIT_SECONDS)
 
 
 # - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)
