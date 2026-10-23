@@ -13,7 +13,7 @@ import unit_tests.build_orchestration._tq500g2ii_fixtures as fx
 
 
 def test_writer_list_shows_extras_like_runner(tmp_path):
-    # covers: TQ-500g-2-ii
+    # covers: TQ-500g-2-ii, TQ-500g-2
     # angle: seam
     # Catches: 'writer list and runner read different extras'. Producer: writer list
     # output; consumer: the runner's rows. Control: the named version is owed and run too.

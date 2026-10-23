@@ -63,7 +63,7 @@ def _assert_db_not_run(proj, proc, verdict, expect_in_detail: list[str], raw_val
 
 
 def test_p2_not_configured_reports_not_run_and_unfinished(tmp_path):
-    # covers: TQ-500g-2-ii
+    # covers: TQ-500g-2-ii, TQ-500g-2
     # angle: reachability
     # Entry point: python scripts/build_orchestration/wrong_version_runner.py run (subprocess).
     # Catches: 'not-configured database runs reported as passed', 'runner falls back to a
