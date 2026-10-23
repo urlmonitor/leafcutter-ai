@@ -1,8 +1,9 @@
 """
 MODULE: test_acd_1600c_1_i_reachability
 GOAL: Reachability proof for ACD-1600c-1-i: the real scan_ac_store.py CLI, run as a
-    subprocess with --enforce-impl-readiness, holds the real ACs ACD-300c-3 and
-    TQ-200a-1 (no declared files) out of the ready/dispatch set.
+    subprocess with --enforce-impl-readiness, holds the real ACs ACD-300c-1 and
+    TQ-200a-1 (no declared files) out of the ready/dispatch set. ACD-300c-1 replaces
+    ACD-300c-3, which gained declared_files in EPIC-RightJobRightAgentFollowUps.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ import yaml
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCAN = _REPO_ROOT / "scripts" / "ac_store" / "scan_ac_store.py"
 _STORE = _REPO_ROOT / "docs" / "acceptance-criteria"
-_IDS = ("ACD-300c-3", "TQ-200a-1")
+_IDS = ("ACD-300c-1", "TQ-200a-1")
 
 
 def _real_record(ac_id: str) -> dict:

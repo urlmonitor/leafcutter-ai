@@ -64,8 +64,8 @@ def test_workflow_hands_undecided_finding_to_planner(prepass, monkeypatch):
     Entry point: the plan-feature.js workflow dispatch (harness). The hold report says R is undecided
     until the planner has run once, then clean. Exact: one `it-po-findings-round-1`, no round 2; the
     prompt names R and neither S (decided) nor T (held for its design); the dispatch comes after the
-    design step's rule check and before the gate; the check is re-run once (2 in all) and the hold
-    report is re-read after the planner; the gate then holds only T and offers R and S.
+    design step's rule check and before the gate; the check is re-run once after the round, as the
+    hand-back stage (`rule-check-itpo-handback`, ACD-2500a-2-ix), and the hold report is re-read after the planner; the gate then holds only T and offers R and S.
     """
     by_round(monkeypatch)
     result = run(labels(prepass, {"__by_round__": [_holds(undecided=True), _holds(undecided=False)]}))
@@ -77,7 +77,9 @@ def test_workflow_hands_undecided_finding_to_planner(prepass, monkeypatch):
     prompt = rounds[0].prompt
     assert R in prompt and S not in prompt and T not in prompt, prompt[:600]
     assert position(result, "rule-check-test-design") < position(result, "it-po-findings-round-1") < position(result, "pause-persist")
-    assert len(calls(result, "rule-check-test-design")) == 2, names(result)
+    assert len(calls(result, "rule-check-test-design")) == 1, names(result)
+    assert len(calls(result, "rule-check-itpo-handback")) == 1, names(result)
+    assert position(result, "rule-check-itpo-handback") > position(result, "it-po-findings-round-1")
     assert position(result, "approval-holds", 1) > position(result, "it-po-findings-round-1")
 
     context = gate_context(result)
@@ -110,7 +112,8 @@ def test_handback_stops_after_two_rounds_and_shows_the_record_held(prepass, monk
     """If R is still undecided after round 2, the gate shows R as held; there is no round 3.
 
     The planner never records a decision (the hold report keeps saying so). Exact: rounds 1 and 2 are
-    dispatched once each, round 3 never; the check runs 3 times (design step + one per round); the
+    dispatched once each, round 3 never; the check runs 3 times (the design step's, then one itpo-handback
+    check per round, ACD-2500a-2-ix); the
     gate context lists R held with the reason, and R is NOT approvable (never silently approved).
     """
     by_round(monkeypatch)
@@ -118,7 +121,8 @@ def test_handback_stops_after_two_rounds_and_shows_the_record_held(prepass, monk
     _stage_ran(result)
 
     assert [len(calls(result, f"it-po-findings-round-{n}")) for n in (1, 2, 3)] == [1, 1, 0], names(result)
-    assert len(calls(result, "rule-check-test-design")) == 3, names(result)
+    assert len(calls(result, "rule-check-test-design")) == 1, names(result)
+    assert len(calls(result, "rule-check-itpo-handback")) == 2, names(result)
     assert position(result, "it-po-findings-round-2") < position(result, "pause-persist")
     context = gate_context(result)
     held = {h["id"]: h["reason"] for h in context["held"]}

@@ -125,7 +125,7 @@ def _schema() -> dict:
 # AC-1 .. AC-3: which clauses get entries
 # --------------------------------------------------------------------------
 def test_ac1_one_entry_per_needs_test_clause_naming_the_clause_it_proves():
-    # covers: ACD-2500c-1
+    # covers: ACD-2500c-1, ACD-2500c
     # angle: criterion
     """AC-1 and AC-2: the record carries at least one test_spec entry per needs_test: true clause,
     and each entry names the outcome clause it proves in `proves_clause`, copied verbatim from

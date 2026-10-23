@@ -41,13 +41,15 @@ from _rule_check_fixtures import (  # noqa: E402
     FAMILY_READINESS,
     FIVE_FAMILIES,
     SCRIPTS_DIR,
-    check_store,
+    # The protected-fields family's 'not evaluated' entries (ACD-2500a-2-vi / -vii)
+    # are not this file's subject; every other finding is kept.
+    check_store_other_families as check_store,
     cli_argv,
     finding_text,
     findings_for,
     hierarchy,
     make_store,
-    run_cli_subprocess,
+    run_cli_subprocess_other_families as run_cli_subprocess,
     snapshot_tree,
     valid_record,
     write_snapshot,
@@ -104,6 +106,7 @@ def test_every_record_evaluated_against_all_five_families(tmp_path):
 
 def test_repair_families_fix_and_report_file_and_value(tmp_path):
     # covers: ACD-2500a-2
+    # covers: ACD-2500a
     """Back-link, unambiguous component list and approved-by-agent readiness are each
     repaired on disk (only the one field changes) and reported 'fixed' naming the file
     and the value changed; a second run changes nothing and reports no 'fixed' entry."""
@@ -142,6 +145,7 @@ def test_repair_families_fix_and_report_file_and_value(tmp_path):
 
 def test_report_only_families_never_modify_records(tmp_path):
     # covers: ACD-2500a-2
+    # covers: ACD-2500a
     """Contract symmetry and documentation mapping findings leave every file
     byte-identical and are 'needs a decision'."""
     records = hierarchy(

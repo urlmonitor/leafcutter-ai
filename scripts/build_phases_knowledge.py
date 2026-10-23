@@ -231,6 +231,41 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     return written
 
 
+_DECLARATION_NAME = "knowledge_sink.json"
+
+
+def _ensure_declaration_gitignored(config_dir: Path, dry_run: bool) -> None:
+    """Ensure ``<config_dir>/.gitignore`` lists the per-machine declaration once.
+
+    Creates the file when absent, appends ``knowledge_sink.json`` when no line
+    already equals it, and leaves every other line untouched. Writes nothing in
+    dry-run mode. An I/O failure is logged at WARNING and swallowed on purpose:
+    the ignore rule is a safeguard, and losing it must not abort the build.
+
+    Args:
+        config_dir: The ``config`` directory holding the declaration.
+        dry_run: When True, writes nothing.
+
+    # DECISION HISTORY
+    # - 2026-10-22 [python-coder/INF-500d-4-x]: Added so the absolute-path
+    #   declaration never reaches git in repos that track .leafcutter/.
+    #   (#INF-500d-4-x)
+    """
+    if dry_run:
+        return
+    ignore_path = config_dir / ".gitignore"
+    try:
+        existing = ignore_path.read_text(encoding="utf-8") if ignore_path.is_file() else ""
+        if _DECLARATION_NAME in (ln.strip() for ln in existing.splitlines()):
+            return
+        prefix = "" if not existing or existing.endswith("\n") else "\n"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        with ignore_path.open("a", encoding="utf-8") as fh:
+            fh.write(f"{prefix}{_DECLARATION_NAME}\n")
+    except OSError as exc:
+        _log.warning("build_knowledge_sink_declaration: could not update %s: %s", ignore_path, exc)
+
+
 def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
                                       dry_run: bool, force: bool) -> int:
     """Declare this install's absolute knowledge-emission sink path.
@@ -332,6 +367,14 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   an empty declaration (no worktree-local stream/sink survives to be trusted)
     #   and the build NOTE says plainly that no durable root is declared and
     #   writers refuse, instead of the misleading "SECOND sink" text.
+    # - 2026-10-22 [python-coder/INF-500d-4-x]: The declaration holds per-machine
+    #   absolute paths, but repos that track .leafcutter/ committed it, so other
+    #   checkouts received a stale one. The build now also ensures
+    #   config/.gitignore carries one ``knowledge_sink.json`` line (created or
+    #   appended, never duplicated, other lines untouched, skipped in dry-run),
+    #   independent of whether the declaration itself was rewritten. A failed
+    #   ignore write only logs a WARNING; it does not abort the build.
+    #   Declaration content is unchanged. (#INF-500d-4-x)
     """
     import build_phases as _bp
     from build_log_root import declaration_values
@@ -340,6 +383,7 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     content = json.dumps(values, indent=2) + "\n"
     output_path = target_root / "config" / "knowledge_sink.json"
 
+    _ensure_declaration_gitignored(output_path.parent, dry_run)
     if _bp._write(output_path, content, dry_run, force):
         if not values:
             print(

@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: in_progress
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
@@ -150,11 +150,19 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Declared package_surface: true — the hook entry lands in templates/scripts/commit_guardian/commit_guardian.json, one of the four registries the AC schema enumerates as package surfaces, so the structured it_requirements form is obligatory and check-package-surface-declaration would otherwise refuse the landing commit. Named all three enforcement points and identified the required-status-check as the only one that satisfies 'refused rather than merely reported'. Dispositioned the three research-agent references that are unrelated to this feature but block the gate's activation, and forbade closing the gap with an allowlist. Corrected the notes' count of 43 references across 11 files: the checker reports 13 imperative references to 5 targets, of which 10 across 6 files are this feature's."
     by: it-po
     at: 2026-08-26
+  - reason: "AC store fulfillment gate, 2026-10-23. The ticket's original scope (a registry validator reached by build and CI) was largely already delivered on main: ability_reference_verdict runs inside registry_validator.py, reached by build.py in the ci.yml test-shard step and by the check-agent-registry hook. This change widened the commit hook (check_agent_registry.py) from templates/agents/ to any package templates/**/*.md and fixed the standalone CLI (scripts/check_skill_refs.py) to use the same verdict. Ruleset membership of 'Test suite (pytest)' among main's required checks was verified via gh api repos/urlmonitor/leafcutter-ai/rules/branches/main on 2026-10-23, not by a test. AC-5 ('the checking script is present but not reached') is read as the shared verdict reached by both runs; the standalone CLI is a manual diagnostic wired into neither run. Appended the real test files carrying `# covers: INF-700b-2` to covered_by and the real implementation files to implemented_by (append-only; child AC id -i kept, so this AC remains composite). Criteria, readiness and the parent INF-700b are unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-23
 superseded_by: null
 covered_by:
   - INF-700b-2-i
+  - unit_tests/commit_guardian/test_inf_700b_2.py
+  - unit_tests/commit_guardian/test_inf_700b_2_followup.py
+  - unit_tests/commit_guardian/test_inf_700b_2_ci.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/04_TICKET-20261016-INF-700b-2.md
+- templates/scripts/commit_guardian/check_agent_registry.py
+- scripts/check_skill_refs.py
 notes: |
   Evidence this exists to close (verified 2026-08-26): scripts/check_skill_refs.py
   is written, has unit tests, and appears in no CI workflow, no pre-commit

@@ -111,7 +111,7 @@ def test_id_missing_from_the_hold_report_is_neither_offered_nor_approved(prepass
     assert sorted(ds.gate_context(live).get("approvable", [])) == ["TDG-1", "TDG-2"], ds.gate_context(live)
 
     resumed = ds.run(labs, ds.resume_args())
-    apply_calls = ds.calls(resumed, "apply-approval")
+    apply_calls = ds.calls(resumed, "approval-apply")  # the approval step's apply run (ACD-300c-4)
     assert len(apply_calls) == 1, ds.names(resumed)
     for rid in ("TDG-3", "TDG-4"):
         assert rid not in apply_calls[0].prompt, f"unlisted {rid} was approved:\n{apply_calls[0].prompt[:600]}"

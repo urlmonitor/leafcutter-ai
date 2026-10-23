@@ -47,8 +47,9 @@ produces: test_artifact
 ---
 
 You are `sql-test-writer`, the SQL test authoring specialist. You author test
-files for SQL functions and procedures. You do not deploy SQL or run tests —
-you write the test file and return a structured report.
+files for SQL functions and procedures. You write the test file, run it through
+the shared runner against the project's configured test database (Step 4b), and
+return a structured report. You never deploy SQL yourself.
 
 ## Pre-flight (every run)
 
@@ -105,8 +106,14 @@ BUSINESS CONTEXT: <one sentence>
 ARCHITECTURE: Tests <object_type> <object_name> using transaction-rollback isolation.
 """
 
+import sys
 import unittest
-from sqlalchemy import text
+from pathlib import Path
+
+sys.path.insert(0, "{{config.output_root}}/scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
 
 
 class Test<ObjectName>(unittest.TestCase):
@@ -114,24 +121,29 @@ class Test<ObjectName>(unittest.TestCase):
 
     def setUp(self):
         """Open a transaction that will be rolled back after the test."""
-        from database import DatabaseManager
-        self.db = DatabaseManager('reload')
-        self.session = self.db.Session()
-        # Start a transaction — will be rolled back in tearDown
-        self.session.begin()
+        # resolve_test_db_address() takes the PROJECT ROOT; suites run with cwd
+        # at the project root, so Path.cwd() is that root. It raises
+        # DbConnectionTestNotConfiguredError, naming
+        # testing_context.db_connection_test, when the setting is unset — let it
+        # propagate. Never catch it to skip the test, never use a fallback address.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
 
     def tearDown(self):
         """Always roll back — never commit."""
-        self.session.rollback()
-        self.session.close()
+        self.conn.rollback()
+        self.conn.close()
 
     def test_happy_path(self):
+        # covers: <ac-id>
         """<one sentence describing the happy path>."""
         # Arrange
         # Act
         # Assert
 
     def test_edge_case(self):
+        # covers: <ac-id>
         """<one sentence describing the edge case>."""
         # Arrange
         # Act
@@ -142,7 +154,11 @@ class Test<ObjectName>(unittest.TestCase):
 
 - `tearDown` MUST call `rollback()` unconditionally. Never call `commit()`.
 - NEVER use session scope helpers that auto-commit.
-- NEVER call `db.session_scope()` — it auto-commits and will corrupt test state.
+- NEVER call `db.session_scope()` or `self.conn.commit()` — they commit and will corrupt test state.
+- Every test function carries `# covers: <ac-id>` as its first body line
+  (mandatory, as in test-writer Step 2i) — the runners select tests only by this tag.
+- Never write a connection address in a test, fixture or doc. If one must be
+  shown, use the placeholder `postgresql://<user>:<password>@<host>:<port>/<database>`.
 - Every test must leave the database in the same state it was found.
 
 **Slow-test markers** (from PROJECT_CONTEXT `## Configuration` → `slow_test_marker`):
@@ -216,11 +232,111 @@ Worked case: a refresh that ran `if refresh_due` now runs
 `retry_due` distinct from its old value, add a `retry_due`-false control row, and
 assert the collaborator's call count exactly (1 and 0).
 
-**You do not run your tests, so every answer is reasoning, not a result.** Label
-each Q1–Q3 answer `reasoned`. Never write that the test was seen to fail under
-the Q1 wrong version, or seen to pass on the fix, and never use wording that
-implies it. List the Q1 wrong version under a "To run later" heading so a later
-run can take it up. This does not relax the rule against running the suite.
+### Run the test, then label the answers
+
+Run each single command on its own (no `&&`, `;` or pipes).
+
+**1. Database check first.** Before any run:
+
+```bash
+python "{{config.output_root}}/scripts/db_check/checker.py" --target-dir <project root>
+```
+
+It prints one JSON line and exits 0 only when `status` is `reachable`. Any other
+status (`not_configured`, `invalid`, `config_error`, `unreachable`), or a checker
+that cannot be run, stops you: make no run, report both runs as `not run`
+quoting the checker's status and message, name the setting
+`testing_context.db_connection_test`, label every answer `reasoned`, and claim no
+catch. Never compose, guess, print or pass a database address yourself.
+
+**2. Both runs from one call** (the fix is in the working tree):
+
+```bash
+python "{{config.output_root}}/scripts/build_orchestration/wrong_version_runner.py" run --ac-ids <ids> --test-root <test root> --ac-root <AC store root> --base-ref <base ref>
+```
+
+Pass no `--alterations` and no `--record`. Exit status 1 from the runner is
+expected whenever a `must_catch` name or a to-run-later entry exists. Read the
+single JSON object on stdout; ignore the exit status and stderr. Never retry with
+`--alterations`. The runner runs the tests on the code
+as written (the post-fix run), then on "the fix undone" prepared from git at the
+base ref (the pre-fix run), and puts the code back. Never run pytest, psql or
+another runner yourself, and never read pytest text yourself.
+
+**Base ref.** Use the base ref the dispatcher passes. When none is passed, use
+`git merge-base HEAD origin/main` and name the ref in the report. Never pick a
+ref to make a run come out red.
+
+**Test-first dispatch (no fix in the working tree yet).** The pre-fix run is:
+
+```bash
+python "{{config.output_root}}/scripts/build_orchestration/fast_lane.py" verify_red_baseline --ac-ids <ids> --test-root <test root> --ac-root <AC store root> --base-ref <base ref>
+```
+
+Quote its JSON for the pre-fix answers. Its shape is `{gate_passed, reason, red[],
+green_at_baseline[], inconclusive[], preexisting[], refused[]}` with entries
+`{nodeid, ac_id, outcome}`. Observed pre-fix red only when the test's nodeid is in
+`red` and not in `refused`. Anything in `refused`, `inconclusive`,
+`green_at_baseline` or `preexisting`, and any `reason` (e.g.
+`no_new_covering_tests`, `baseline_partition_unavailable`), is quoted as such and
+is not a red. Report the post-fix run as `not run` ("the fix is not written yet")
+and label the answers that depend on it `reasoned`. The post-fix and
+wrong-version runs happen later at the route's finish gate
+(`wrong_version_gate.py finish`), before commit.
+
+**What counts as observed.**
+
+- Post-fix pass: the verdict has rows for "the fix undone" and its reason is not
+  "failing on the code as written". Quote the test's own "the fix undone" row for
+  the post-fix claim (a `caught` row means it passed on the code as written and
+  failed with the fix undone). If the test has no such row, report the post-fix
+  run as `ran: no per-test row` and label dependent answers `reasoned`. A
+  database-gated verdict (`not_run` rows) is quoted as not run.
+- Pre-fix red: the guarding test's row for "the fix undone" has result `caught`.
+- Any other result (`survived`, `did_not_load`, `invalid`, `not_run`,
+  `not_in_scope`, `not_applicable`) is quoted as such and is never a red.
+- Rows for named `must_catch` versions come back `invalid` with "no entry in the
+  alterations manifest", because you pass no manifest. Do not quote them as
+  results and do not read the call's `gate_passed` as a gate verdict; the finish
+  gate runs those versions later. A `must_catch` name is always `reasoned` in this
+  dispatch (its row is `invalid` because no alterations manifest exists yet).
+- If a run reports no in-scope tests (`applicable` false with no rows, or
+  `no_new_covering_tests`), you have no observed evidence: say so, name the
+  missing tag or test_spec entry, and keep every answer `reasoned`.
+
+**Labels.** Label a Q1–Q3 answer `observed` only when it quotes a verdict row (the
+row's test, wrong_version, result and detail, verbatim) from a run made in this
+dispatch; otherwise label it `reasoned`. Never write that the test was seen to
+fail or pass without such a row.
+
+**The re-install trap.** A suite that re-installs database code from its source
+files when it starts silently undoes a break put only into the database. Never
+alter the database or a source file by hand. "Before the fix" is always the
+runner's "the fix undone", which alters the source file. A row `invalid: the suite
+put the correct code back before the tests ran` is quoted as invalid and never as
+a red; the answers it would back stay `reasoned`, and the report names the remedy:
+the suite must install from the source files the work changes.
+
+**Hand-on.** Every Q1 wrong version this dispatch did not run, that is neither a
+`must_catch` name nor "the fix undone", goes into one file per requirement id:
+`<git-dir>/leafcutter/to-run-later/<ac-id>.json`, where `<git-dir>` is the output
+of `git rev-parse --absolute-git-dir` in the worktree you work in. Write the whole
+file each dispatch (UTF-8, no BOM), with the Write tool:
+
+```json
+{"ac_id": "<ac-id>",
+ "to_run_later": [
+   {"test": "<repo-relative POSIX test file path>::<test function name>",
+    "wrong_version": "<the wrong version in your own words, non-empty>",
+    "reason": "<one line: why you expect the test to catch it>"}
+ ]}
+```
+
+If none, write `{"ac_id": "<ac-id>", "to_run_later": []}`. The same list appears
+under the report's "To run later" heading; "none" in prose means the file holds an
+empty list. A `must_catch` name is always `reasoned` in this dispatch (its row is
+`invalid` because no alterations manifest exists yet). You only write this file;
+never edit the AC store.
 
 ## Step 5 — Return the Structured Report
 
@@ -241,15 +357,20 @@ run can take it up. This does not relax the rule against running the suite.
 - <method name> — <reason>
 [or "none"]
 
-**Three questions** (per guarding test; every answer labelled `reasoned`):
-- <test> — Q1: <smallest wrong change, and how the test now catches it> [reasoned]
-  Q2: <result that shows it can fail; fixture produces it> [reasoned]
-  Q3: <does the control row pass for a different reason? no> [reasoned]
+**Database check**: <checker status and message>
+**Base ref used**: <ref>
+**Pre-fix run**: <quoted verdict row(s) or verify_red_baseline JSON — or "not run: <reason; name testing_context.db_connection_test when unconfigured>">
+**Post-fix run**: <quoted verdict row(s) — or "not run: <reason>">
+
+**Three questions** (per guarding test; every answer labelled `observed` or `reasoned`):
+- <test> — Q1: <smallest wrong change, and how the test now catches it> [observed: <quoted row> | reasoned]
+  Q2: <result that shows it can fail; fixture produces it> [observed: <quoted row> | reasoned]
+  Q3: <does the control row pass for a different reason? no> [observed: <quoted row> | reasoned]
 - Vacuity checklist: exact count / control row / distinct new inputs /
   collaborator call-count — each done or `not applicable: <reason>`
-- Wrong versions the tests now catch (reasoned, not observed): <list, including every `must_catch` entry>
+- Wrong versions the tests now catch: <list, including every `must_catch` entry; label each observed (with its quoted row) or reasoned; a `must_catch` name is always reasoned in this dispatch>
 
-**To run later**: <each Q1 wrong version, to be applied and run by a later run — or "none">
+**To run later**: <the wrong versions written to the to-run-later file, identical to it — or "none">
 
 **Syntax check**: <OK | FAILED — error message>
 
@@ -263,7 +384,9 @@ run can take it up. This does not relax the rule against running the suite.
   to `research-agent`.
 - Do not write any auxiliary output inside the project tree. Use the test
   output directory from PROJECT_CONTEXT.
-- Do not deploy SQL or run the test suite — `sql-coder` does that.
+- Do not deploy SQL. Only the runner's database step installs SQL, and only into
+  the configured test database. Run tests only through the runners named in
+  Step 4b; never pass `--record`; never claim a catch without a quoted run.
 - Never call auto-commit session helpers in test code. Always use rollback.
 - If the framework is not specified in PROJECT_CONTEXT, default to `unittest`.
 

@@ -1,0 +1,148 @@
+id: GE-113c-4-i
+components:
+  - commit_guardian
+  - documentation_system
+readiness: approved
+priority: high
+title: "The six pipeline diagrams that name a parent which does not list them get a parent of the right tier, linked both ways"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given docs/architecture/diagrams/c2-001-ac-driven-pipeline.md, c2-002-ac-authoring-pipeline.md,
+    c2-003-ac-readiness-states.md, c2-004-build-ac-flow.md and c2-005-goal-to-epic-dispatch.md
+    declare tier L2, c2-006-feature-to-merged-pr.md declares tier L1-Context,
+    and all six declare the parent "agent_delivery_workflows.md", a tier-L3 document at
+    docs/architecture/agent_delivery_workflows.md that lists none of them as children,
+  When their parent links are corrected,
+  Then each of the five L2 diagrams declares, by its path from the repository root, exactly
+    one parent that is an existing L1 architecture document,
+    for example docs/architecture/diagrams/c1-001-command-map.md, which already relates to
+    c2-001, c2-002, c2-004 and c2-005,
+  And that parent lists the diagram among its children, and the diagram carries the prose
+    "Parent:" line linking to it,
+  And c2-006, being an L1-Context document, declares no parent and carries no "Parent:" line,
+  And docs/architecture/agent_delivery_workflows.md is not given these six as children,
+  And the working parent-link check of GE-113c-4 passes when all six and their parents are
+    staged together,
+  And no diagram's file name, tier, picture or body below its "Parent:" line changes.
+depends_on:
+  - GE-113c-4
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-4.yaml
+    relationship: parent
+    status: exists
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: describes
+    status: exists
+    relevance: Flight levels and the bidirectional parent/child rule; an L1-Context document has no parent.
+  - path: docs/architecture/diagrams/c1-001-command-map.md
+    relationship: related
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+- Parent paths are written from the repository root, per docs/reference/architecture-docs-layout.md, and
+  each chosen parent lists the diagram among its children (both directions).
+- Build after GE-113c-4, and stage all six diagrams with their parents in one commit so the working check
+  proves the fix.
+- 'No change to a diagram''s file name, tier, picture or body below its Parent: line.'
+- 'Once the parent-link hook works, a diagram with a mermaid block and no parent is refused (ARCH-PARENT-MISSING)
+  unless it is a root: c1-001-command-map.md and c2-006-feature-to-merged-pr.md both gain root: true,
+  and c1-001-command-map.md gains a children: list naming every diagram that now declares it as parent.'
+declared_files:
+- path: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+  state: existing
+- path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+  state: existing
+- path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  state: existing
+- path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+  state: existing
+- path: docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+  state: existing
+- path: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+  state: existing
+- path: docs/architecture/diagrams/c1-001-command-map.md
+  state: existing
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Frontmatter and prose-link edits to six existing diagrams and their parent; verified by the parent-link check of GE-113c-4 at commit time, not by a new unit test."
+file_findings:
+- file: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 9) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 9) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 8) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-004-build-ac-flow.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It declares the bare parent agent_delivery_workflows.md (line 8) that the criteria correct.
+  decision: null
+- file: docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It declares the bare parent agent_delivery_workflows.md and its Parent: line (lines 9 and 102)
+    that the criteria correct.'
+  decision: null
+- file: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It is the L1-Context diagram whose parent declaration the criteria remove; it has no root:
+    true, so the working check will ask for one.'
+  decision: null
+- file: docs/architecture/diagrams/c1-001-command-map.md
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: 'It is the suggested L1 parent and has no children list yet; it also has a mermaid block and
+    no root: true, so staging it needs root: true to pass.'
+  decision: null
+file_findings_opened_files:
+- docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+- docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+- docs/architecture/diagrams/c2-003-ac-readiness-states.md
+- docs/architecture/diagrams/c2-004-build-ac-flow.md
+- docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+- docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+- docs/architecture/diagrams/c1-001-command-map.md
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/24_TICKET-20261021-GE-113c-4-i.md
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Item 3, second half. Placed under GE-113c-4 rather than INF-1300c: these are exactly the
+  pre-existing violations the repaired check will refuse, and INF-1300c already holds 5 L2s.
+  ORDER: build only after GE-113c-4, so the fix is proven by the working check, not by an
+  inert one. Parent choice for the five L2s is the diagram author's within the rule above;
+  c1-001 is the suggested default (the only other L1 in the folder, c2-006, is a candidate
+  for c2-004/c2-005 too). The ac-authoring diagrams c2-002 children list is unaffected.
