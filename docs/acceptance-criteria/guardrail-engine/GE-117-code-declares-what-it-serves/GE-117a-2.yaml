@@ -1,5 +1,5 @@
 id: GE-117a-2
-readiness: draft
+readiness: approved
 priority: medium
 title: "How-to guide: naming your file's component in the module docstring"
 component: guardrail-engine
@@ -33,6 +33,8 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the guide under docs/how-to/ as a Markdown file with the frontmatter fields check_doc_frontmatter requires for docs/** (title, type: how-to, status, created, last_updated, components); keep the doc body within the doc-length hook budget."
   - "The registered component id the guide teaches developers to write is a docs/components.json id (e.g. 'commit_guardian') — the same registry GE-117a-1 validates against; do NOT point developers at docs/acceptance-criteria/index.yaml ids."
