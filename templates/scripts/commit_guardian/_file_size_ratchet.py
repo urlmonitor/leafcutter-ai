@@ -57,25 +57,23 @@ ARCHITECTURE: Sibling module to check_file_size.py, inside
 from __future__ import annotations
 
 import difflib
-import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
+
+from _file_size_measure import UnmeasurableContentError, counted_line_keys, extension_of, measure_lines
+from _file_size_measure.rule_statement import describe
 
 _SUBPROCESS_TIMEOUT_SECONDS = 15
 
 # A measurement rule: full file text in, line count out. Passed explicitly by
 # callers whose notion of "a line that counts" differs from this module's own
 # code-oriented default (check_doc_length.py strips YAML frontmatter where
-# count_content_lines strips docstrings and block comments). The parameter
+# count_content_lines strips comments and standalone strings). The parameter
 # exists so the before/after comparison is ALWAYS made with one rule applied
 # twice -- the invariant count_content_lines' docstring describes -- rather
 # than by each caller reimplementing the git plumbing around its own counter.
 Measure = Callable[[str], int]
-
-_TRIPLE_DOUBLE_QUOTE_RE = re.compile(r'""".*?"""\r?\n?', re.DOTALL)
-_TRIPLE_SINGLE_QUOTE_RE = re.compile(r"'''.*?'''\r?\n?", re.DOTALL)
-_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/\r?\n?", re.DOTALL)
 
 
 class PreviousLengthSourceError(Exception):
@@ -170,89 +168,8 @@ EMPTY_HISTORY_REASON = (
 )
 
 
-# GE-134a-1: the line-comment prefixes of the languages this gate measures
-# ('#' for .py/.sh, '//' for .js/.mjs/.ts/.tsx, '--' for .sql). Held ONCE:
-# the measurement below and describe_measurement_rule() both read it at call
-# time, so editing it moves what is measured and what is published together.
-DECISION_HISTORY_COMMENT_PREFIXES = ("#", "//", "--")
-
-_HISTORY_HEADING = "DECISION HISTORY"
-
-
-def _comment_text(line: str, prefix: str) -> str | None:
-    """Return the text after *prefix* when *line* is a *prefix* comment, else None."""
-    stripped = line.strip()
-    return stripped[len(prefix) :].strip() if stripped.startswith(prefix) else None
-
-
-def _history_heading_prefix(line: str) -> str | None:
-    """Return the prefix whose whole comment text on *line* is the heading, else None."""
-    for prefix in DECISION_HISTORY_COMMENT_PREFIXES:
-        if _comment_text(line, prefix) == _HISTORY_HEADING:
-            return prefix
-    return None
-
-
-def _is_rule_line(line: str, prefix: str) -> bool:
-    """Return True when *line* is a *prefix* comment made only of '=' characters."""
-    text = _comment_text(line, prefix)
-    return text is not None and set(text) == {"="}
-
-
-def _strip_history_blocks(text: str) -> str:
-    """Drop every line-comment DECISION HISTORY block from *text* (GE-134a-1).
-
-    A block starts at a comment whose whole text is DECISION HISTORY, takes a
-    '=' rule line of the same prefix directly above it, and runs over the
-    consecutive lines carrying the heading's own prefix.
-    """
-    kept: list[str] = []
-    lines = text.splitlines(keepends=True)
-    index = 0
-    while index < len(lines):
-        prefix = _history_heading_prefix(lines[index])
-        if prefix is None:
-            kept.append(lines[index])
-            index += 1
-            continue
-        if kept and _is_rule_line(kept[-1], prefix):
-            kept.pop()
-        index += 1
-        while index < len(lines) and _comment_text(lines[index], prefix) is not None:
-            index += 1
-    return "".join(kept)
-
-
-def _strip_unmeasured_regions(content: str) -> str:
-    """Strip *content*'s docstring and block-comment regions.
-
-    THE SHARED STRIPPING TRANSFORM (GE-127f-2): this is the exact stripping
-    logic ``count_content_lines`` applied inline before this record, now
-    factored out so BOTH the file's overall length (``count_content_lines``)
-    and what a change PUT INTO the file (``count_added_measured_lines``) are
-    denominated in the same unit, by construction, via one function -- never
-    two independently-written line-classifiers that happen to agree on
-    today's fixtures. See ``count_content_lines``'s own docstring for the
-    "a discarded region contributes ZERO lines, trailing newline included"
-    guarantee this transform provides; nothing about that guarantee changes
-    by being called from a second place.
-
-    Args:
-        content: The file's full text content, unmodified.
-
-    Returns:
-        *content* with every triple-quoted string and block-comment region
-        removed entirely, trailing newline included, and then every
-        line-comment DECISION HISTORY block (GE-134a-1) removed.
-    """
-    stripped = _TRIPLE_DOUBLE_QUOTE_RE.sub("", content)
-    stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
-    stripped = _BLOCK_COMMENT_RE.sub("", stripped)
-    return _strip_history_blocks(stripped)
-
-
-def count_content_lines(content: str) -> int:
-    """Count *content*'s lines after stripping docstrings and block comments.
+def count_content_lines(content: str, extension: str = ".py") -> int:
+    """Count *content*'s lines under the ONE measurement rule, by *extension*'s language.
 
     This is the SINGLE measurement rule used everywhere a line count is
     needed: the file's current (staged/working) content and its previous
@@ -260,22 +177,29 @@ def count_content_lines(content: str) -> int:
     ratchet's before/after comparison is built without risking two
     implementations of the counting rule drifting apart by even one line.
 
+    GE-127d-3 (BrainCandy, 2026-10-16 and 2026-10-20): no comment of any
+    style counts, no Python string standing alone as a statement counts,
+    blank lines never count (BrainCandy, 2026-10-21), and every line of a
+    used string or f-string that holds a token does. The strip is done by a per-language tokenizer in the
+    ``_file_size_measure`` sub-package -- never a delimiter regex.
+
     Args:
         content: The file's full text content.
+        extension: The file's extension, dot included; selects the language.
+            Defaults to ``".py"``, this module's code-oriented default.
 
     Returns:
-        The number of lines remaining after stripping docstring and
-        block-comment regions. A discarded region contributes ZERO lines,
-        including the newline that terminated its own closing delimiter
-        (see this module's 2026-09-22 GE-127d-2 DECISION HISTORY entry) --
-        every one of the three patterns ``_strip_unmeasured_regions`` applies
-        consumes that trailing newline as part of the matched, discarded
-        span, so a stripped region never leaves a phantom blank line behind.
+        The measured length: the number of counted physical lines.
+
+    Raises:
+        UnmeasurableContentError: no tokenizer exists for *extension*, or
+            *content* cannot be read as that language. Callers route this to
+            INDETERMINATE; it is never turned into a raw count or a zero.
     """
-    return len(_strip_unmeasured_regions(content).splitlines())
+    return measure_lines(content, extension)
 
 
-def count_added_measured_lines(previous_content: str, current_content: str) -> int:
+def count_added_measured_lines(previous_content: str, current_content: str, extension: str = ".py") -> int:
     """Count the MEASURED lines a change PUT INTO the file -- gross, never net.
 
     GROSS, NEVER NET, AND NEVER THE SUBTRACTION ALREADY IN HAND (GE-127f-2's
@@ -287,17 +211,16 @@ def count_added_measured_lines(previous_content: str, current_content: str) -> i
     measured lines with N different measured lines nets to zero there and
     would wrongly register as having added nothing.
 
-    Both *previous_content* and *current_content* are stripped through the
-    exact SAME transform ``count_content_lines`` applies
-    (``_strip_unmeasured_regions`` -- the identical function, never a
-    second, independently-written line-classifier), so a line inside a
-    triple-quoted or block-comment region on either side never counts as
-    added, mirroring precisely what ``count_content_lines`` already excludes
-    from a file's own length -- an addition confined entirely to such a
-    region (a docstring-only change) is free at any size, by construction,
-    on both functions at once.
+    GE-127d-3-iv: both sides are reduced, by the SAME tokenizer pass that
+    produces the measured length, to the ordered list of their COUNTED lines
+    (``counted_line_keys`` -- ``len(list) == count_content_lines``), each
+    keyed by its text with every comment and standalone string removed and
+    trailing whitespace stripped. A line inside a comment or standalone
+    string on either side never counts as added, and rewriting a comment
+    from one style to another (or a trailing ``// note`` into ``/* note */``
+    on a code line) leaves every key unchanged, so it adds nothing.
 
-    The two stripped line lists are then diffed with
+    The two counted-line lists are then diffed with
     ``difflib.SequenceMatcher`` (the standard library's Ratcliff/Obershelp
     implementation, ``autojunk=False`` so no line is ever silently treated
     as "popular" and excluded from matching regardless of repeat count) and
@@ -312,152 +235,47 @@ def count_added_measured_lines(previous_content: str, current_content: str) -> i
             (typically the HEAD blob), BEFORE stripping.
         current_content: The file's full text after the staged change,
             BEFORE stripping.
+        extension: The file's extension, dot included; selects the language
+            for BOTH sides (a rename that changes it is out of scope).
 
     Returns:
         The gross count of measured lines the change inserted. Zero is an
         ordinary, valid result (a pure deletion, or a change touching only
         unmeasured content) -- never conflated with a failure to establish
         the count; see ``AddedLineCountUnavailableError`` for the failure
-        case, which this pure function never raises itself.
+        case, which this function never raises itself.
+
+    Raises:
+        UnmeasurableContentError: either side cannot be read as its language;
+            ``resolve_added_measured_lines`` converts it.
     """
-    previous_lines = _strip_unmeasured_regions(previous_content).splitlines()
-    current_lines = _strip_unmeasured_regions(current_content).splitlines()
+    previous_lines = counted_line_keys(previous_content, extension)
+    current_lines = counted_line_keys(current_content, extension)
     matcher = difflib.SequenceMatcher(a=previous_lines, b=current_lines, autojunk=False)
     return sum(j2 - j1 for tag, _i1, _i2, j1, j2 in matcher.get_opcodes() if tag in ("replace", "insert"))
-
-
-# ---------------------------------------------------------------------------
-# GE-127d-2: the published measurement-rule statement, GENERATED FROM
-# count_content_lines() by probing its actual behaviour, rather than
-# maintained as a separately-written sentence. See describe_measurement_rule()
-# below for the reproducibility guarantee this buys.
-# ---------------------------------------------------------------------------
-
-# Each probe is a SELF-CONTAINED block of only one category's own content --
-# no anchor line, no other content for the count to fall back on -- so a rule
-# that fully discards the category reduces its measured length to exactly
-# zero, and a rule that counts it leaves the measured length unchanged from
-# the probe's own raw physical line count. This is what lets
-# _probe_discarded_categories() read "does this rule discard triple-quoted
-# strings/block comments/hash comments" from the rule's own behaviour, for
-# WHATEVER function is currently bound to the module-level name
-# count_content_lines, without inspecting that function's source.
-_PROBE_TRIPLE_QUOTED = '"""\nprobe body line one\nprobe body line two\n"""'
-_PROBE_BLOCK_COMMENT = "/*\nprobe body line one\nprobe body line two\n*/"
-_PROBE_HASH_COMMENT = "# probe body line one\n# probe body line two\n# probe body line three"
-
-_CATEGORY_PROBES: dict[str, str] = {
-    "triple_quoted": _PROBE_TRIPLE_QUOTED,
-    "block_comment": _PROBE_BLOCK_COMMENT,
-    "hash_comment": _PROBE_HASH_COMMENT,
-}
-
-
-def _history_probe() -> str:
-    """Build a probe block from the FIRST prefix in the prefix constant (GE-134a-1)."""
-    prefix = DECISION_HISTORY_COMMENT_PREFIXES[0]
-    return f"{prefix} {_HISTORY_HEADING}\n{prefix} probe entry one\n{prefix} probe entry two"
-
-
-def _probe_discarded_categories(measure: Measure) -> set[str]:
-    """Empirically determine which content categories *measure* discards.
-
-    Never hardcodes which categories the rule in force discards: applies
-    *measure* to synthetic, single-category probe content and reads the
-    result rather than inspecting *measure*'s source. A category is
-    DISCARDED when its own probe measures to zero (the whole probe was
-    stripped); it is COUNTED when *measure* leaves it as-is. This is the
-    mechanism that lets ``describe_measurement_rule`` move automatically
-    when the rule in force changes -- including a rebinding of the
-    module-level ``count_content_lines`` name to a different function
-    entirely (see this module's own DECISION HISTORY, GE-127d-2 entry) --
-    rather than being maintained as a separately-written sentence.
-
-    Args:
-        measure: The counting rule to probe. Callers pass
-            ``count_content_lines`` resolved as an ordinary module-global
-            reference AT CALL TIME (never captured into a default
-            argument or a local alias bound once at import/definition
-            time), so a later rebinding of that name is reflected here
-            without this function's own definition changing.
-
-    Returns:
-        The set of category keys (a subset of "triple_quoted",
-        "block_comment", "hash_comment", "decision_history") *measure* discards.
-    """
-    discarded = {category for category, probe in _CATEGORY_PROBES.items() if measure(probe) == 0}
-    if measure(_history_probe()) == 0:
-        discarded.add("decision_history")
-    return discarded
-
-
-def _join_with_and(items: list[str]) -> str:
-    """Join *items* with commas and a trailing "and", English-list style.
-
-    Args:
-        items: The phrases to join. Must be non-empty.
-
-    Returns:
-        A single string, e.g. ``"a, b and c"`` for three items, or just
-        ``"a"`` for one.
-    """
-    if len(items) == 1:
-        return items[0]
-    return ", ".join(items[:-1]) + " and " + items[-1]
-
-
-def _describe_history_clause() -> str:
-    """State the GE-134a-1 history exclusion, naming the prefixes from the constant."""
-    prefixes = _join_with_and([f"'{p}'" for p in DECISION_HISTORY_COMMENT_PREFIXES])
-    return (
-        f"a decision-history block is not counted: it starts at a comment (prefix {prefixes}) whose whole "
-        f"text is DECISION HISTORY, takes a '=' rule line directly above it if there is one, and ends at "
-        f"the first line that is not a comment line of that prefix"
-    )
 
 
 def describe_measurement_rule() -> str:
     """Describe, from the rule actually in force, what a quoted length counts.
 
-    GENERATED FROM ``count_content_lines`` by probing its behaviour
-    (``_probe_discarded_categories``) every time this is called, never
-    maintained as a separately-written sentence -- the GE-127d-2
-    reproducibility requirement this function exists to satisfy: a
-    hand-written description would pass every check on the day it is
-    written and silently drift the moment the rule in force changes.
+    GENERATED FROM ``count_content_lines`` by probing its behaviour on
+    every language's comment forms, on every Python string role and on blank
+    lines (``_file_size_measure.rule_statement.describe``) every time this is
+    called, never maintained as a separately-written sentence -- the
+    GE-127d-2 reproducibility requirement, restated per language by
+    GE-127d-5: a hand-written description would pass every check on the day
+    it is written and silently drift the moment the rule in force changes.
     ``count_content_lines`` is referenced here as an ordinary, unqualified
-    module-global name, so Python resolves it fresh on every call
-    (ordinary late binding) -- a rule change that rebinds that name
-    changes what this function reports in the very same call that changes
-    the quoted length, without this function needing to change.
+    module-global name, so Python resolves it fresh on every call (ordinary
+    late binding) -- a rule change that rebinds that name changes what this
+    function reports in the very same call that changes the quoted length.
 
     Returns:
-        A one-line description naming which content categories are
-        discarded (never counted toward a quoted length) and confirming
-        blank lines and any surviving categories are counted. Suitable for
-        appending, verbatim, after a ``Measures:`` label.
+        A one-line description naming what is not counted and what is.
+        Suitable after a ``Measures:`` label and, behind the
+        ``MEASUREMENT RULE:`` marker, on every published surface.
     """
-    discarded = _probe_discarded_categories(count_content_lines)
-
-    discard_fragments = []
-    if "triple_quoted" in discarded:
-        discard_fragments.append("triple-quoted strings")
-    if "block_comment" in discarded:
-        discard_fragments.append("block comments")
-
-    hash_discarded = "hash_comment" in discarded
-    counted_fragments = ["blank lines"] if hash_discarded else ["blank lines", "ordinary '#' comments"]
-
-    sentences = []
-    if discard_fragments:
-        sentences.append(f"discards content inside {_join_with_and(discard_fragments)}")
-    if "decision_history" in discarded:
-        sentences.append(_describe_history_clause())
-    sentences.append(f"counts every remaining line, including {_join_with_and(counted_fragments)}")
-    if hash_discarded:
-        sentences.append("'#' comments are discarded")
-
-    return "; ".join(sentences) + "."
+    return describe(count_content_lines)
 
 
 def read_current_content(filepath: str) -> str:
@@ -526,14 +344,22 @@ def measure_current_length(filepath: str) -> int:
 
     Returns:
         The file's current length via the shared ``count_content_lines``
-        measurement rule.
+        measurement rule, applied with the file's own language (its
+        extension) -- the same selection the previous-length lookup makes.
 
     Raises:
         CurrentLengthUnmeasurableError: the file could not be opened at all,
-            or its content could not be decoded as UTF-8, the encoding the
-            standard reads.
+            its content could not be decoded as UTF-8, the encoding the
+            standard reads, or (GE-127d-3-ii) its content could not be read
+            as its language. Never a zero and never a raw count.
     """
-    return count_content_lines(read_current_content(filepath))
+    content = read_current_content(filepath)
+    try:
+        return count_content_lines(content, extension_of(filepath))
+    except UnmeasurableContentError as exc:
+        raise CurrentLengthUnmeasurableError(
+            f"the length of {filepath!r} could not be established: {exc.reason}"
+        ) from exc
 
 
 def _run_git(args: list[str]) -> subprocess.CompletedProcess:
@@ -726,8 +552,40 @@ def get_previous_content(filepath: str, revision: str = "HEAD") -> str | None:
         ) from exc
 
 
+def measure_previous(content: str, filepath: str, revision: str, measure: Measure | None = None) -> int:
+    """Measure a previous version's *content* by the rule in force now.
+
+    ONE MEASURE ON BOTH SIDES (GE-127d-3-iii): with no *measure* given, the
+    previous content is measured by ``count_content_lines`` with the file's
+    own extension -- the very selection ``measure_current_length`` makes for
+    the staged content -- resolved as a module global at call time.
+
+    Args:
+        content: The previous version's decoded text.
+        filepath: Repository-relative path (selects the language).
+        revision: The revision the content came from (for the reason text).
+        measure: Optional caller-owned rule (check_doc_length passes its own).
+
+    Returns:
+        The previous length.
+
+    Raises:
+        PreviousLengthSourceError: the content could not be read as its
+            language ("could not be interpreted", GE-127b-1-i's vocabulary).
+    """
+    try:
+        if measure is None:
+            return count_content_lines(content, extension_of(filepath))
+        return measure(content)
+    except UnmeasurableContentError as exc:
+        raise PreviousLengthSourceError(
+            f"the previous length for {filepath!r} at {revision!r} could not "
+            f"be interpreted: {exc.reason}"
+        ) from exc
+
+
 def get_previous_length(
-    filepath: str, revision: str = "HEAD", measure: Measure = count_content_lines
+    filepath: str, revision: str = "HEAD", measure: Measure | None = None
 ) -> int | None:
     """Return the line count *filepath* had at *revision*, or None if absent there.
 
@@ -741,10 +599,11 @@ def get_previous_length(
             ``"HEAD"`` — the ordinary, non-merge case. During a merge, callers
             pass each parent revision in turn (see ``resolve_previous_lengths``).
         measure: The counting rule to apply to the blob's decoded text.
-            Defaults to ``count_content_lines``, this module's code-oriented
-            rule. A caller passing its own rule here MUST apply that same
-            rule to the file's current content, or the ratchet compares two
-            different measurements and reports growth that did not happen.
+            Defaults to None, meaning the path-aware code measure
+            (``count_content_lines`` with the file's own extension). A caller
+            passing its own rule here MUST apply that same rule to the
+            file's current content, or the ratchet compares two different
+            measurements and reports growth that did not happen.
 
     Returns:
         The previous length, or None when the file has no blob at *revision*
@@ -753,12 +612,12 @@ def get_previous_length(
     Raises:
         PreviousLengthSourceError: the blob exists at *revision* but its
             content cannot be decoded as UTF-8, the encoding the standard
-            reads.
+            reads, or cannot be read as its language.
     """
     content = get_previous_content(filepath, revision)
     if content is None:
         return None
-    return measure(content)
+    return measure_previous(content, filepath, revision, measure)
 
 
 def _merge_head_path() -> Path:
@@ -852,7 +711,7 @@ def resolve_parent_revisions() -> list[str]:
 def resolve_previous_lengths(
     paths: list[str],
     parent_revisions: list[str] | None = None,
-    measure: Measure = count_content_lines,
+    measure: Measure | None = None,
 ) -> dict[str, int]:
     """Resolve each path's permitted previous length across every parent.
 
@@ -880,9 +739,9 @@ def resolve_previous_lengths(
             Defaults to ``["HEAD"]`` when omitted, matching the pre-merge
             -aware behaviour exactly.
         measure: The counting rule applied to every parent blob, forwarded
-            unchanged to ``get_previous_length``. Defaults to
-            ``count_content_lines``; see that function's ``measure`` note for
-            the obligation a caller takes on by overriding it.
+            unchanged to ``get_previous_length``. Defaults to None -- the
+            path-aware code measure; see that function's ``measure`` note
+            for the obligation a caller takes on by overriding it.
 
     Returns:
         Mapping of path to its permitted previous line count, for every path
@@ -993,8 +852,14 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
                 f"the measured lines added to {filepath!r} could not be established: "
                 f"the previous content at {revision!r} is unreachable ({exc.reason})"
             ) from exc
-        if previous_content is not None:
-            added_counts.append(count_added_measured_lines(previous_content, current_content))
+        if previous_content is None:
+            continue
+        try:
+            added_counts.append(count_added_measured_lines(previous_content, current_content, extension_of(filepath)))
+        except UnmeasurableContentError as exc:
+            raise AddedLineCountUnavailableError(
+                f"the measured lines added to {filepath!r} could not be established: {exc.reason}"
+            ) from exc
 
     if not added_counts:
         raise AddedLineCountUnavailableError(
@@ -1009,6 +874,11 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-22 [python-coder/GE-127d merge]: Merged origin/main's GE-134a work. Its
+  DECISION_HISTORY_COMMENT_PREFIXES constant and _strip_history_blocks()
+  are not kept here: the measure is now the per-language tokenizer in
+  _file_size_measure/, which leaves out every comment of every style, so a
+  line-comment DECISION HISTORY block is already never counted.
 - 2026-10-21 [python-coder/GE-134a-1..3]: A line-comment DECISION HISTORY
   block no longer counts toward a file's measured length. Added the one
   DECISION_HISTORY_COMMENT_PREFIXES constant ('#', '//', '--') and
@@ -1122,6 +992,25 @@ DECISION HISTORY
   `.gitattributes`'s `* text=auto eol=lf` still means CRLF is not expected to
   reach this function in practice; this closes the gap for the case where it
   does.
+- 2026-10-20 15:19 [python-coder/GE-127d-3]: Replaced the delimiter-regex measure
+  (_strip_unmeasured_regions and its three regexes) with a per-language
+  tokenizer in the new _file_size_measure/ sub-package: no comment of any
+  style and no Python string standing alone as a statement counts, blank lines
+  outside them do, used strings and f-strings do. count_content_lines and
+  count_added_measured_lines gained a trailing ``extension`` parameter
+  (default ".py"); measure_current_length, get_previous_length (via the new
+  measure_previous), resolve_previous_lengths (default measure now None = the
+  path-aware code measure, one selection on both sides, MERGE_HEAD parents
+  included) and resolve_added_measured_lines pass the file's own extension.
+  A tokenizer failure (UnmeasurableContentError) is routed to the existing
+  carriers -- CurrentLengthUnmeasurableError, PreviousLengthSourceError
+  ("could not be interpreted") and AddedLineCountUnavailableError -- so it is
+  INDETERMINATE and never a raw count or zero. describe_measurement_rule()
+  delegates to rule_statement.describe(count_content_lines) and still resolves
+  that name at call time. No second measure was added, and the plumbing
+  check_complexity / _complexity_ratchet / _ac_governance_baseline /
+  _doc_length_ratchet use keeps its signatures and return shapes (doc-length
+  still passes its own measure positionally). (#EPIC-FilesStayWorkable/GE-127d-3)
 - 2026-09-01 [python-coder/GE-127b-1 + GE-127b-1-i]: Initial authoring.
   Shared count_content_lines() measurement function, HEAD-blob previous
   -length resolution via `git show HEAD:<path>` (no persisted baseline, no

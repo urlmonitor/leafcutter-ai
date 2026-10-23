@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -32,7 +32,7 @@ estimated_complexity: S
 package_surface: false
 declared_files:
   - path: scripts/shared_block_identity.py
-    state: to_be_created
+    state: existing
 it_requirements:
   - >-
     The comparison is made on raw bytes, with no stripping, line-ending conversion or

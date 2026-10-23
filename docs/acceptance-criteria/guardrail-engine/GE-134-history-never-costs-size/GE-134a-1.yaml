@@ -3,7 +3,7 @@ components:
   - commit_guardian
 readiness: approved
 priority: high
-title: "A file's decision-history block is left out of its measured length, in every covered language, and nothing else changes"
+title: "A file's decision-history block adds nothing to its measured length, in every covered language"
 component: guardrail-engine
 level: L2
 status: active
@@ -11,24 +11,20 @@ req_status: draft
 work_status: done
 roadmap_phase: phase_1
 criteria: |
-  Given a Python file that measures 80 lines under the measurement rule in force before this
-    change, made of code, ordinary "#" comments and blank lines,
+  Given a Python file made of code, ordinary "#" comments and blank lines, and a copy of it
     followed by a decision-history block of 25 comment lines: a rule line of "=" characters,
     the heading "# DECISION HISTORY", a second rule line, and 22 entry lines each starting
     "# - " or "#   ",
-    and a JavaScript file that measures 120 lines before this change, whose header carries a
-    decision-history block of 15 "//" comment lines (the heading "// DECISION HISTORY" with
-    no rule lines, then 14 entry lines),
+    and a JavaScript file and a copy of it whose header carries a decision-history block of
+    15 "//" comment lines (the heading "// DECISION HISTORY" with no rule lines, then 14
+    entry lines),
   When the length of each file is measured,
-  Then the Python file measures 80 and the JavaScript file measures 120,
+  Then each copy carrying a block measures exactly the same as the same file without it,
   And the same holds for the line-comment form of every other language the standard covers
     (for example "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell),
-  And every line outside the block is measured exactly as it was before this change,
-    including ordinary comments, docstrings, JSDoc and blank lines,
-  And a file with no decision-history block measures the same length as before this change,
-  And a decision-history block that sits inside text the rule in force already leaves out (a
-    module docstring or a block comment) is not subtracted a second time, so that file
-    measures what it measured before this change.
+  And the same holds when the decision-history text sits inside a standalone Python string
+    (for example a trailing module-level string) or a block comment, so no line is
+    subtracted twice and the file with the block measures the same as the file without it.
 depends_on:
   - GE-134a
   - GE-127c
@@ -46,50 +42,53 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-- Changed in the one measurement function of the size standard (templates/scripts/commit_guardian/_file_size_ratchet.py).
-  Every gate that measures length (crossing, growth ratchet, published-rule agreement) picks the change
-  up; there is no second implementation.
-- Lands in the same change as GE-134a-3, so the published rule and the measurement change together; otherwise
-  the rule-agreement check of GE-127d-1 fails.
-- A file whose measured length drops because of this change is not reported as a violation, and no stored
+- 'NO HISTORY-SPECIFIC MECHANISM (IT PO, 2026-10-23, BrainCandy: GE-127d-3 supersedes this rule). A
+  decision-history block is uncounted because GE-127d-3''s one measure (the shared measure behind
+  _file_size_ratchet.py, with its per-language lexers in templates/scripts/commit_guardian/_file_size_measure/)
+  counts a line only when it holds a code token: every comment, every standalone non-f Python string and
+  every blank line is uncounted, in every checked extension. There is no DECISION HISTORY heading
+  detection, no rule-line attachment, no block-end scan and no DECISION_HISTORY_COMMENT_PREFIXES (or any
+  other prefix) constant; reintroducing one is a second rule beside the measure and is a defect, even
+  if it changes no count today. Exemption is by syntactic role only, never by the words DECISION HISTORY.'
+- Every gate that measures length (crossing refusal, growth ratchet, added-lines count, published-rule
+  agreement) uses that one measure on both the previous and the staged content (GE-127d-3-iii); a file
+  whose measured length drops because of the rule change is not reported as a violation, and no stored
   baseline needs a hand edit.
-- 'IT PO decision on the comment-prefix source: the measurement takes no language, and the config holds
-  only checked_extensions and limits, so the line-comment prefixes (#, //, --) are held once as a constant
-  in templates/scripts/commit_guardian/_file_size_ratchet.py. A block starts at a line whose text after
-  one of those prefixes is exactly DECISION HISTORY and continues over lines that start with the same
-  prefix as its heading, so no per-extension mapping is needed and every checked extension is covered.
-  The published rule names the three prefixes.'
-- 'A block does not need ''='' rule lines: about 50 of the headings in the repository have none.'
+- 'The published rule is GE-127d-5''s generated statement; this record adds no sentence of its own to it
+  (GE-134a-3 is superseded by GE-127d-3).'
+- 'Tests derive every expected length from the content at run time (an independent counter or the
+  with-block/without-block equality the criteria state), never from figures pinned under the
+  pre-2026-10-16 rule; a pre-change count may appear only as a contrast showing the fixture still tells
+  the two rules apart.'
 - Measuring stays linear in file length.
 declared_files:
 - path: templates/scripts/commit_guardian/_file_size_ratchet.py
   state: existing
 delivers_to:
   agent: python-coder
-  contract: 'The size standard''s measured length of a file (int >= 0) leaves out each line-comment DECISION
-    HISTORY block: a comment whose whole text is DECISION HISTORY, an optional ''='' rule line directly
-    above it, through the last consecutive comment line. Every other line counts as before; before- and
-    after-lengths use the same rule.'
-expects_from: null
+  contract: 'The size standard''s measured length of a file (int >= 0) is GE-127d-3''s measure: a line
+    counts only when it holds a code token, so every comment (including any decision-history block in
+    line-comment or block-comment form), every standalone non-f Python string (including a trailing
+    DECISION HISTORY string) and every blank line is uncounted. A file with a decision-history block
+    therefore measures exactly what the same file without it measures. Before- and after-lengths use the
+    same measure.'
+expects_from:
+  ac_id: GE-127d-3
+  contract: 'The single shared measure (content, extension) -> int under the 2026-10-21 rule, with no
+    history-specific exclusion.'
 test_intent:
-- clause: the Python file measures 80 and the JavaScript file measures 120
+- clause: each copy carrying a block measures exactly the same as the same file without it
   needs_test: true
-  reason: The exclusion is computed by the measurement, and both the Python and JavaScript forms must
-    be proven.
+  reason: The user-visible promise; both the Python ruled '#' form and the JavaScript unruled '//' header
+    form must be proven, and through the size check's own output.
 - clause: the same holds for the line-comment form of every other language the standard covers (for example
     "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell)
   needs_test: true
-  reason: Every covered language must get the same exclusion, and a missed comment syntax would go unnoticed.
-- clause: every line outside the block is measured exactly as it was before this change, including ordinary
-    comments, docstrings, JSDoc and blank lines
-  needs_test: true
-  reason: Lines outside the block must keep their old count, or the exclusion would widen silently.
-- clause: a file with no decision-history block measures the same length as before this change
-  needs_test: true
-  reason: Files without a block must measure as before, which guards against a broken scanner.
-- clause: a decision-history block that sits inside text the rule in force already leaves out (a module
-    docstring or a block comment) is not subtracted a second time, so that file measures what it measured
-    before this change
+  reason: Every covered language must get the same result, and a lexer that misses one comment syntax would
+    go unnoticed.
+- clause: the same holds when the decision-history text sits inside a standalone Python string (for example
+    a trailing module-level string) or a block comment, so no line is subtracted twice and the file with
+    the block measures the same as the file without it
   needs_test: true
   reason: Double subtraction is a computed edge case that would under-count files.
 test_spec:
@@ -98,21 +97,25 @@ test_spec:
   framework: pytest
   type: unit
   angle: criterion
-  description: Write the 80-line Python file plus its 25-line '#' history block (rule, heading, rule,
-    22 entries) and the 120-line JavaScript file whose header carries a 15-line '//' block with no rule
-    lines; measure_current_length gives 80 and 120.
-  proves_clause: the Python file measures 80 and the JavaScript file measures 120
+  description: 'The 80-line Python body plus its 25-line ruled ''#'' history block (rule, heading, rule,
+    22 entries) and the 120-line JavaScript body whose header carries a 15-line unruled ''//'' block:
+    measure_current_length gives each file''s code-line count (64 and 96 for the shared fixture, derived
+    by an independent counter at run time), and the Python body without its block measures the same 64.
+    The pre-change counts (105, 135) are asserted only as a contrast that the fixture still separates
+    the two rules.'
+  proves_clause: each copy carrying a block measures exactly the same as the same file without it
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
 - name: test_ge_134a_1_history_block_is_left_out_of_the_length_the_size_check_quotes
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: integration
   angle: reachability
-  description: 'Stage the 80-line Python file with its 25-line block under a limit of 80 and run the fixture
-    copy of check_file_size.py as a subprocess: it exits 0 and lists the file at 80 lines; the same file
-    with one more code line exits 1 quoting Lines: 81. Uses _ge_127d_2_fixture.build_fixture_tree (a copy
-    of the production modules in a temporary git repository, no build.py, no POSIX flock).'
-  proves_clause: the Python file measures 80 and the JavaScript file measures 120
+  description: 'Stage the Python example (with its history block) under a limit equal to its independently
+    derived length (64) and run the fixture copy of check_file_size.py as a subprocess: it exits 0 and
+    lists the file at that length; the same file with one more code line exits 1 quoting Lines: 65 against
+    Limit: 64. Uses _ge_127d_2_fixture.build_fixture_tree (a copy of the production modules in a temporary
+    git repository, no build.py, no POSIX flock).'
+  proves_clause: each copy carrying a block measures exactly the same as the same file without it
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
 - name: test_ge_134a_1_line_comment_block_is_left_out_in_every_covered_language
   target_dir: unit_tests/commit_guardian/
@@ -120,54 +123,62 @@ test_spec:
   type: unit
   angle: discrimination
   description: 'Parametrised over every extension in the shipped file_size.checked_extensions, each with
-    its line-comment prefix from the one prefix constant in _file_size_ratchet.py (''#'' for .py and .sh,
-    ''//'' for .js, .mjs, .ts and .tsx, ''--'' for .sql): a file of N measured lines plus a history block
-    whose heading is ''<prefix> DECISION HISTORY'' measures N. The constant is exactly (''#'', ''//'',
-    ''--''). A ''#'' heading followed by ''//'' lines ends the block at the first ''//'' line, which is
-    counted.'
+    that language''s own line-comment prefix (''#'' for .py and .sh, ''//'' for .js, .mjs, .ts and .tsx,
+    ''--'' for .sql, held in the test fixture, not in production code): a 10-line body (8 code lines, one
+    ordinary comment, one blank) plus a block headed ''<prefix> DECISION HISTORY'' with 4 entries measures
+    8, and the same body without the block measures 8. A shipped extension with no known prefix fails the
+    test rather than being skipped.'
   proves_clause: the same holds for the line-comment form of every other language the standard covers
     (for example "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell)
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
   must_catch:
-  - only the '#' form recognised, so '-- DECISION HISTORY' in a .sql file is still counted
-  - a per-extension prefix mapping that leaves out a checked extension such as .mjs
-  - the block continued over lines with any comment prefix instead of its heading's prefix
-  - a second copy of the prefixes kept beside the constant (for example in the published rule text)
+  - the .sql lexer misses '--' comments, so '-- DECISION HISTORY' in a .sql file is still counted
+  - a checked extension such as .mjs falls back to a raw or regex count instead of its lexer
+  - a history-specific prefix constant or heading scan reintroduced beside the per-language lexers
 - name: test_ge_134a_1_lines_outside_the_block_measure_as_before
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
   angle: criterion
-  description: A file with ordinary '#' and '//' comments, a docstring, a JSDoc /** */ block, blank lines
-    and a history block measures exactly its pre-change count (pinned) minus the block's lines.
-  proves_clause: every line outside the block is measured exactly as it was before this change, including
-    ordinary comments, docstrings, JSDoc and blank lines
+  description: 'NAME KEPT, PROMISE CHANGED (GE-127d-3, 2026-10-21). The lines around a history block are
+    not counted either: a Python file with ordinary ''#'' comments, a docstring, blank lines, a ''#''
+    comment directly above the block''s rule line and a ruled block measures its 2 code lines, and a
+    JavaScript file with ''//'' comments, a JSDoc /** */ block, blank lines and a ''//'' block measures its
+    2 code lines (the Python figure re-derived by the independent counter).'
+  proves_clause: each copy carrying a block measures exactly the same as the same file without it
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
+  must_catch:
+  - a comment directly above a rule line treated as code because a block-boundary rule claimed the rule line
 - name: test_ge_134a_1_file_without_a_history_block_measures_as_before
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
   angle: criterion
-  description: Representative Python, SQL and JavaScript files without a block measure the same pinned
-    length the pre-change rule gives (the existing GE-127d-2 counts stay green).
-  proves_clause: a file with no decision-history block measures the same length as before this change
+  description: 'NAME KEPT, PROMISE CHANGED. Python, SQL and JavaScript files without a block but with rule
+    lines, comments that mention DECISION HISTORY, near-miss headings, docstrings, block comments and
+    blank lines measure their code-line count (3, 1 and 2; the Python one re-derived by the independent
+    counter) -- the mention and near-miss lines add nothing because they are comments, and the code line
+    LABEL = ''DECISION HISTORY'' counts. Their pre-change lengths (8, 5, 6) are asserted only as a contrast.'
+  proves_clause: each copy carrying a block measures exactly the same as the same file without it
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
 - name: test_ge_134a_1_block_inside_a_docstring_or_block_comment_is_not_subtracted_twice
   target_dir: unit_tests/commit_guardian/
   framework: pytest
   type: unit
   angle: discrimination
-  description: A module whose history sits inside a trailing triple-quoted string (the form _file_size_ratchet.py
-    itself uses) and a JavaScript file whose history sits inside a /* */ header each measure what they
-    measured before this change.
-  proves_clause: a decision-history block that sits inside text the rule in force already leaves out (a
-    module docstring or a block comment) is not subtracted a second time, so that file measures what it
-    measured before this change
+  description: 'A module whose history sits inside a trailing standalone triple-quoted string (the form
+    _file_size_ratchet.py itself uses), a module whose ''#'' history lines sit inside a standalone string
+    followed by ''#'' comments after its closing delimiter, and a JavaScript file whose ''//'' history lines
+    sit inside a /* */ header followed by ''//'' comments each measure exactly their 1 code line -- never
+    below it. Control row: the same block as plain line comments also measures 1.'
+  proves_clause: the same holds when the decision-history text sits inside a standalone Python string (for
+    example a trailing module-level string) or a block comment, so no line is subtracted twice and the
+    file with the block measures the same as the file without it
   code_file: templates/scripts/commit_guardian/_file_size_ratchet.py
   must_catch:
-  - the block scan run on the raw text before docstrings and block comments are stripped, so the embedded
-    block's lines are subtracted a second time
-  - '''# DECISION HISTORY'' text inside a docstring treated as a line-comment block'
+  - an uncounted region's lines subtracted a second time, so the file measures below its code-line count
+  - a block comment or standalone string closed early by a '#' or '//' marker inside it, so the code line
+    after it is lost or a comment after it is counted
 test_design_authorship:
   step: test-designer
   date: '2026-10-20'
@@ -183,8 +194,9 @@ file_findings:
   verdict: consistent
   line_range: null
   found_in: null
-  reason: It holds count_content_lines and _strip_unmeasured_regions, the one measurement function whose
-    rule the criteria change.
+  reason: '[SUPERSEDED 2026-10-23, BrainCandy: the mechanism below was replaced by GE-127d-3''s per-language
+    measure; kept for the record.] It holds count_content_lines and _strip_unmeasured_regions, the one
+    measurement function whose rule the criteria change.'
   decision: null
 file_findings_opened_files:
 - templates/scripts/commit_guardian/_file_size_ratchet.py
@@ -206,6 +218,47 @@ amended_by:
     named the GE-127h-1 family (covered_by, depends_on, doc_links, expects_from,
     implemented_by, test_spec names) was renamed to match. Criteria and every
     other field are unchanged.
+- reason: superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: BrainCandy
+  entry: >-
+    BrainCandy decided on 2026-10-23 that GE-127d-3 supersedes this rule. Under GE-127d-3
+    every comment, every standalone Python string and every blank line is uncounted, so a
+    decision-history block is uncounted as a case of the general rule; no special block
+    detection is needed. STILL HOLDS: a block adds nothing to a file's measured length, in
+    every covered language's line-comment form, and a block inside already-uncounted text
+    is not subtracted twice. SUPERSEDED: the pinned "measures 80 / measures 120" figures
+    (both files contain ordinary comments and blank lines, which no longer count), "every
+    line outside the block is measured exactly as before, including ordinary comments,
+    docstrings, JSDoc and blank lines", and "a file with no decision-history block measures
+    the same length as before this change". Criteria narrowed to the still-true promise,
+    stated as with-block equals without-block so it holds under any rule. Title changed
+    from "... is left out of its measured length, in every covered language, and nothing
+    else changes" (the rest of the file's measure did change) to "A file's decision-history
+    block adds nothing to its measured length, in every covered language".
+    The test_intent clauses, test_spec descriptions (80/120, pinned pre-change counts) and
+    the it_requirements / delivers_to text ("every other line counts as before", the
+    DECISION HISTORY prefix constant) describe the superseded rule and are left for the
+    test-writer and IT PO, who are rewriting the tests to the new rule with the same covers
+    tags. work_status reset done -> todo: the narrowed criteria are proven only once those
+    rewritten tests are green.
+- reason: technical-enrichment-superseded-by-ge-127d-3
+  date: '2026-10-23'
+  by: it-po
+  directed_by: BrainCandy
+  entry: >-
+    criteria untouched. it_requirements rewritten: no history-specific mechanism (no heading
+    detection, rule-line attachment, block-end scan or DECISION_HISTORY_COMMENT_PREFIXES
+    constant); the block is uncounted by GE-127d-3's one measure; published rule is GE-127d-5's
+    generated statement; expected lengths are derived, pre-change counts only as contrast.
+    delivers_to restated to GE-127d-3's rule; expects_from now GE-127d-3. test_intent replaced
+    by the three outcome clauses of the narrowed criteria. test_spec: all six names kept (the
+    test-writer is rewriting unit_tests/commit_guardian/test_ge_134a_1.py in place);
+    descriptions, proves_clause and must_catch aligned to that file (64/96 code lines, 64/65
+    through the hook, 8 per language, 2 and 2 with comments around the block, 3/1/2 without a
+    block, 1 each with the block inside a string or block comment). The two "measures as
+    before" names no longer describe their tests; renaming them is the test-writer's call.
 superseded_by: null
 covered_by:
   - GE-134a-1-i
@@ -215,6 +268,10 @@ change_target:
   - code
 risk_surface: contract_boundary
 notes: |
+  [2026-10-23, BrainCandy] SUPERSEDED: the mechanism described below (a special
+  line-comment DECISION HISTORY block scan on top of the old rule) was superseded by
+  GE-127d-3. Kept for the record.
+
   Item 7, user decision D1. Measured by the BA on 2026-10-16 with the rule in force
   (_file_size_ratchet.count_content_lines): it ALREADY discards triple-quoted strings and
   block comments and counts every other line, including "#" and "//" comments. So a history
