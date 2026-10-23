@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-23'
 components:
   - commit_guardian
 related_docs:
@@ -20,7 +20,13 @@ related_docs:
   reports it. A file over its limit can read as compliant. An edit that only touches a glob
   string can change the measured length by tens of lines in either direction, so the growth
   ratchet can refuse a shrink or wave through a growth.
-- **Status:** open, no AC. It affects the GE-127a-1 crossing refusal and the GE-127b-1 growth
+- **Status:** RESOLVED 2026-10-23 (moved to `resolved/`). Fixed by GE-127d-3-i on branch
+  `fast-lane/ge-127d`. The block-comment regex is gone. Each language is lexed by a tokenizer in
+  `templates/scripts/commit_guardian/_file_size_measure/`, so a `/*`, `*/`, `#`, `//` or `"""`
+  inside a string, glob, template literal, regex literal or here-document is code and is counted.
+  `test_ge_127d_3_i_literals.py` carries the glob repro, and `test_ge_127d_3_i_real.py` checks
+  every tracked JS/TS file against the TypeScript compiler.
+- **Status when filed:** open, no AC. It affects the GE-127a-1 crossing refusal and the GE-127b-1 growth
   ratchet, and also `count_added_measured_lines` (GE-127f-2), which uses the same transform.
 - **Occurrences:** 1 (reported by an agent on PR #1082, 2026-10-09, for
   `templates/workflows-js/finalize-feature.js`).

@@ -56,7 +56,7 @@ doc_links:
       Owns the two-for-one repayment: lines added are read from what the change put into
       the file, and content the rule does not measure adds nothing. This record does not
       change that rule; it pins its consequence under the new measure for the restyle case.
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
     relationship: context
     status: exists
     relevance: >-

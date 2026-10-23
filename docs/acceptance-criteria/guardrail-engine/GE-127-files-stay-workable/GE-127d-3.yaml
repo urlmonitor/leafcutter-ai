@@ -75,7 +75,7 @@ doc_links:
       superseded by BrainCandy's 2026-10-16 decision recorded here; GE-127d-2 carries
       an amended_by entry saying so. That descriptor must be rewritten, not defended,
       when this record is built.
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
     relationship: context
     status: exists
     relevance: >-
@@ -84,7 +84,7 @@ doc_links:
       (build-feature.js raw 3652 -> 3667, measured 2548 -> 2529). Its first fix
       direction — strip every comment form with a tokenizer per language — is the
       one BrainCandy chose.
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
     relationship: context
     status: exists
     relevance: >-
