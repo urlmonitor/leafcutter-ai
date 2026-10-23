@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -46,39 +46,415 @@ doc_links:
   - path: docs/reference/wrong-version-runs.md
     relationship: describes
     status: planned
-    relevance: "The reference page this AC produces (name is IT-PO's call)."
+    relevance: "The reference page this AC produces. Every sibling AC (TQ-500g-1, -1-ix, -1-x, -2-i, -2-ii, -3-i, -3-ii, -3-iii) already links this exact path, so the name is fixed."
+  - path: docs/reference/consumer-test-sweep.md
+    relationship: describes
+    status: planned
+    relevance: "Companion page for the consumer-test sweep's full tables, created per the OQ-1 split (user decision 2026-10-23). The main page keeps a short sweep section and links here."
   - path: docs/testing/test-angles.md
     relationship: relates-to
     status: exists
-    relevance: "The discrimination angle; the new page is linked from it rather than folded into it."
+    relevance: "The discrimination angle. The new page is linked from it rather than folded into it. 297 lines after frontmatter on 2026-10-23, so the pointer may add at most 3 net lines."
   - path: docs/how-to/fast-lane-build.md
     relationship: relates-to
     status: exists
-    relevance: "Gains a pointer to the new step between verify_green_and_coverage and commit."
+    relevance: "Gains a one-line pointer to the wrong-version runs at Step 6 (commit staging). 461 lines after frontmatter, over the 300 limit, so the pointer is offset in the same file. The how-to is stale about the phases (OQ-2, user decision 2026-10-23: pointer now, rewrite tracked separately)."
+  - path: docs/reference/README.md
+    relationship: relates-to
+    status: exists
+    relevance: "Hand-written index of docs/reference/. Gains one line per new page (121 lines after frontmatter, room to spare)."
+  - path: docs/how-to/documentation/write-reference.md
+    relationship: relates-to
+    status: exists
+    relevance: "Genre rules, frontmatter and skeleton the page follows."
+  - path: docs/reference/document-length-standard.md
+    relationship: relates-to
+    status: exists
+    relevance: "The 300-line and 25-section limits of check-doc-length that the page must meet."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: relates-to
+    status: exists
+    relevance: "Home of the runner, writer, gate wrapper and sweep CLIs the page describes."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Section 5.10.2: the /build-epic instruction text for the runs (list, test-breaker, finish --record inside the commit lock)."
 assigned_agent: documentation-expert
-estimated_complexity: M
-delivers_to: null
-expects_from: null
+estimated_complexity: L
+delivers_to:
+  - agent: architecture-diagram-author
+    ac_id: TQ-500g-5-i
+    contract: >-
+      The page's names, used verbatim in the component diagram: the CLI steps
+      (wrong_version_writer.py list / write, wrong_version_gate.py finish,
+      wrong_version_runner.py run / recover, consumer_sweep.py record / check,
+      gate_verdict_records.py open / close), the agent test-breaker, the
+      executor command-step-runner, the gate-file folders under
+      <git-dir>/leafcutter/ (wrong-version-runs/<run-id>/, work/<work-key>/,
+      to-run-later/, gate-verdicts/<ticket-key>/) and the route labels
+      (fastlane-wv-*, bf-wv-*, bt-wv-*, be-wv-recover, be-gate-marker-*).
+      The diagram links the page and restates no rule.
+  - agent: architecture-diagram-author
+    ac_id: TQ-500g-5-ii
+    contract: >-
+      The page's result words (caught, survived, did_not_load, not_applied,
+      invalid, not_run, not_in_scope, not_applicable, plus could_not_prepare in
+      unfinished[]), its stop reasons (survivor, unfinished, failing on the code
+      as written, the put-back stop message, stopped_at "sweep" and "write") and
+      the put-back folder name, used verbatim as the sequence diagram's message
+      and branch labels.
+expects_from:
+  - ac_id: TQ-500g-1
+    contract: >-
+      The runner, writer, gate wrapper, test-breaker and the four routes as merged
+      on main (ae3a1591c): the verdict JSON {gate_passed, applicable, verified,
+      outcome, reason, results[{test, wrong_version, result, blocking, detail}],
+      survivors, unfinished, non_blocking_survivors}; finish's JSON {gate_passed,
+      stopped_at, sweep, writer, verdict}; and the /build-epic records and hook.
+  - ac_id: TQ-500g-2
+    contract: >-
+      The database gate (check_test_db statuses), the catalogue check
+      (_wvr_db / _wvr_db_plugin), the to-run-later files and
+      non_blocking_survivors, as merged on main.
+  - ac_id: TQ-500g-3
+    contract: >-
+      consumer_sweep.py record / check and the check JSON {passed, applicable,
+      reason, unlisted, weakened, loosened, removed, inconclusive, error}, as
+      merged on main, and the test-writer's Existing-Test Sweep section.
+  - ac_id: TQ-500g-4
+    contract: >-
+      The one shared reading of a run (pytest_outcome_reader): a failed sub-case
+      makes the test FAILED, and exit 1 with no parsed failure is inconclusive.
 it_requirements:
-- 'Create the reference page docs/reference/wrong-version-runs.md, at 300 lines or fewer after frontmatter.
-  Write it from what shipped: the verdict vocabulary exactly as the runner prints it, the fix-undone alias
-  list, the new-file rule, where copies and records live under the git directory, and the known limit
-  of the kind rule.'
-- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
-  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
-  there is offset in the same file.
-- Link it from docs/testing/test-angles.md (discrimination angle) and docs/how-to/fast-lane-build.md,
-  within those files' current length.
-- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
-- If the page ships through templates/docs/, update both copies.
-- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
-  is fixed, the pre-commit done-proof path refuses to mark it done.'
+  - >-
+    Write from the code on main, never from AC prose. The sources are
+    scripts/build_orchestration/ wrong_version_runner.py, _wvr_*.py,
+    wrong_version_writer.py, _wvw_*.py, wrong_version_gate.py,
+    consumer_sweep.py, _cs_*.py and gate_verdict_records.py;
+    scripts/commit_guardian/check_build_epic_gate_verdicts.py;
+    scripts/ac_store/pytest_outcome_reader.py; templates/agents/test-breaker.md,
+    test-writer.md (Existing-Test Sweep) and sql-test-writer.md; the four route
+    files in templates/workflows-js/; and templates/skills/building-epics/SKILL.md
+    section 5.10. Every result word, reason, flag, label and folder name on the
+    page is copied verbatim from those files. Where an AC says something else, the
+    code wins and the difference goes to the hand-off as a finding. The page never
+    states what an AC intended in place of what the code does.
+  - >-
+    Size and shape (blocking gate check-doc-length): at most 300 lines after
+    frontmatter and at most 25 '##' sections per page. Follow
+    docs/how-to/documentation/write-reference.md (type reference, title
+    'Reference: Wrong-Version Runs', components testing_quality and
+    build_orchestration, related_docs). The IT-PO estimate for one page holding
+    everything below is about 360 to 400 lines. So, per OQ-1 (user decision 2026-10-23), split: the
+    consumer-test sweep's full tables go to docs/reference/consumer-test-sweep.md.
+    The main page keeps a sweep section of at most 20 lines (what must be listed,
+    what counts as weakening, the one removed exit, the five reasons) and links
+    the companion, so a reader of the main page still finds the sweep. Add one
+    line per new page to docs/reference/README.md.
+  - >-
+    Scope section. In scope are the covers-tagged tests of the given --ac-ids
+    whose own test_spec entry carries must_catch or angle: discrimination,
+    matched by test function name. criteria, title and notes prose are never
+    read. Any other covering test is reported not_in_scope with the detail "not in
+    scope for the runs: its test_spec entry names no wrong version and does not
+    declare the discrimination angle". A declared entry with no covers-tagged test
+    is invalid with "declared test not found: ...". An AC record that cannot be
+    read stops the run with reason "declared_ac_record_unavailable: <ids>".
+    Only in-scope tests run, selected by node id: one pytest run per wrong
+    version, never the full suite. Before any wrong version, the in-scope tests
+    run once on the code as written. A test that is not PASSED there is not_run
+    with "failing on the code as written (outcome <X>)", and the reason is
+    "failing on the code as written".
+  - >-
+    Which wrong versions run. A test runs each must_catch name of its own entry,
+    and "the fix undone" always runs. The alias constant ALIASES in _wvr_scope.py
+    is {"revert the fix", "the fix undone"}. Names are compared after trimming
+    and case-folding, and an alias denotes the fix undone and is never sent to
+    test-breaker. The fix undone is prepared from git, never by an agent: the
+    non-test files changed against --base-ref (git diff --name-status
+    --no-renames). M and D paths go back to their base content. A paths (files
+    the work created) are left in place, because deleting them would be an
+    absence red. AC-store files are excluded. Any other status makes the row
+    invalid with "the change of <path> has status <S>, which cannot be undone".
+    With no file to restore the result is not_applicable, with detail "every
+    changed non-test file is new (<n> created); the fix undone does not apply".
+    The same text appears when n is 0; the page documents both cases (OQ-5, user decision 2026-10-23). Run order: named versions
+    in declaration order, then to-run-later extras, then the fix undone.
+    The test-file rule (is_test_path) treats these as test files, which no wrong
+    version may alter: anything under the test root or a tests/, unit_tests/,
+    test/ or __tests__/ folder; test_*; *_test.py, *.test.ts, *.test.tsx and
+    *.spec.ts; and conftest.py.
+  - >-
+    Each test answers for its own names. A named version is held per test: a
+    sibling's catch never covers another test. The fix undone runs every
+    in-scope test and is held to a group rule. When no test fails under it, a
+    row with test "" is survived with "no test in scope failed under 'the fix
+    undone'". A test whose entry names an alias also answers for the fix undone
+    on its own. A test with angle: discrimination and no must_catch answers only
+    for the fix undone. "Caught" means the test failed under that wrong version
+    by an assertion (the kind rule of done_proof_kind_support / _kind_plugin)
+    and PASSED on the code as written.
+  - >-
+    Preparation section. Steps: the list step (wrong_version_writer.py list
+    --ac-ids --ac-root --test-root --base-ref) prints {owed: [{name, files,
+    scope: "declared"|"derived"}], error}; to-run-later extras also carry
+    blocking: false and origin: "to_run_later". Then agent test-breaker (Read
+    only, never runs tests, never says what would be caught) replies with
+    {work_key, entries: [{name, status: prepared|could_not_prepare, reason,
+    replacements: [{path, old, new}]}], anomalies}. Then the write step
+    (wrong_version_writer.py write --work-key --reply -) writes
+    <git-dir>/leafcutter/work/<work-key>/alterations.json and copies/. Scope per
+    name: "declared" is the union of in_scope_files over the entries naming it,
+    minus test files. "derived" is the A and M paths plus the untracked,
+    non-ignored files against the base ref, minus test files and the AC store,
+    sorted. A missing base ref stops the list with 'the base ref "<ref>" does
+    not exist, so the files the work changed cannot be worked out'. List the
+    writer's could-not-prepare reasons verbatim: "no alteration returned", "more
+    than one alteration returned", "old text found <n> times in <file>", "old
+    text not found in <file>", "old text is empty in <file>", "<path> is a test
+    file", "<path> is outside the repository", "<path> is inside the
+    version-control folder", '<path> is not in scope for "<name>"', "<path> not
+    found", "<path> is not UTF-8 text", "malformed reply entry: <field>" and "no
+    reason given". List its two stops: "the preparer's reply could not be read:
+    <detail>" and "the preparer reported failure: <blocker_summary>". In the
+    runner, a could_not_prepare entry, a name with no manifest entry ("no entry in
+    the alterations manifest") and a manifest file outside the name's scope ('not
+    prepared: <path> is not in scope for "<name>"') are each result invalid. The
+    first two carry the prefix "wrong version could not be prepared:", and their
+    unfinished[] entry says could_not_prepare.
+  - >-
+    Result words table: exactly the eight result values in _wvr_verdict.py, with
+    blocking, meaning and the fixed detail texts. caught (non-blocking).
+    survived ("passed under '<wv>': the test did not notice it"). did_not_load
+    ("wrong version did not load: not a valid run", suffixed "(the test file failed
+    to collect)" or "(the failure was an import, name or attribute lookup)").
+    not_applied ("wrong version not applied: it changes nothing", never run).
+    invalid (the causes in the requirements above and below, including "the kind
+    of the failure could not be determined from the run"). not_run (a cut-short
+    run "the run was cut short (<timeout|crash|interrupted|unreadable>): ...", "the
+    test produced no result in this run", "the test ended <OUTCOME>, neither
+    passed nor failed", and the database rows). not_in_scope (non-blocking).
+    not_applicable (non-blocking). did_not_load, not_applied, invalid and not_run
+    are unfinished. could_not_prepare is not a row result: it appears only in
+    unfinished[].result. The criteria's list leaves out not_in_scope, and its
+    "invalid" names only the re-deploy cause, so the page lists every cause (see
+    the mismatches in notes).
+  - >-
+    Verdict and stop reasons. Runner JSON keys: gate_passed, applicable,
+    verified, outcome, reason, results, survivors, unfinished and
+    non_blocking_survivors. Exit 0 if and only if gate_passed is true. verified
+    means every owed run was validly made, and it can be true while survivors
+    stop the work; the page must not present it as "passed". The outcome texts,
+    verbatim: "wrong-version runs passed: every wrong version was caught",
+    "wrong-version runs stopped the work: <reason>", "wrong-version runs not
+    applicable: no source requirement" and "wrong-version runs not applicable: no
+    covering test declares a wrong version or the discrimination angle". The
+    reason values: null, "survivor" (it outranks unfinished), "unfinished",
+    "failing on the code as written", the put-back stop message,
+    "declared_ac_record_unavailable: ...", "internal error: ..." and "record:
+    ...". A not-applicable verdict is never reported as verified.
+  - >-
+    The finish wrapper. Command: wrong_version_gate.py finish --work-key --reply
+    - [--ac-ids] --ac-root --test-root --base-ref [--record]. It prints
+    {gate_passed, stopped_at: null|"sweep"|"write", sweep, writer, verdict}. The
+    order is consumer_sweep.py check, then the writer's write step, then the
+    runner's run step. When the sweep check fails, stopped_at is "sweep" and
+    neither the writer nor the runner is called. When the writer stops,
+    stopped_at is "write" and the runner is not called. With --record, an
+    invalid ticket key, or a failure to remove the earlier wrong_version.json,
+    gives gate_passed false with stopped_at null and sweep, writer and verdict all
+    null; documented as it is (OQ-4, user decision 2026-10-23). Route halts, verbatim: the halt payload carries gate
+    "wrong_version_gate", wrong_version_step and wrong_version_detail (the parsed
+    reply verbatim), and the message "Wrong-version <step> step did not pass:
+    <json>". The steps are "input-check" (not on the fast lane), "recover",
+    "list", "finish" and "batch-serial-check" (/build-feature and /build-epic).
+    /build-epic also has the marker halts, with gate "gate_verdict_marker" and
+    marker_step "input-check" or "open". The fast lane releases its claimed ACs
+    on a halt.
+  - >-
+    Put-back section. Per run, copies and journal.json live in
+    <git-dir>/leafcutter/wrong-version-runs/<run-id>/. The run-id is
+    <YYYYMMDDTHHMMSS>-<pid>, and copies are named copy-<n>-<file name>. The
+    journal is written durably before any file is altered. After each run every
+    file is put back and byte-compared, the journal is closed as journal.done,
+    and the folder is cleared. git stash, git checkout and git restore are never
+    used. Every run step starts with the same recovery. wrong_version_runner.py
+    recover prints {restored, ok, copy_dir, detail}, and a closed run folder is
+    never restored. A timeout, crash or interruption puts the code back first
+    and gives not_run. A hard kill leaves the journal open for the next
+    invocation. A failed put-back stops the run, and no later wrong version
+    runs. Its message is "the code may still be altered: <path> <why>; the copy
+    of the code as written is kept at <absolute path>". Give the reader's steps
+    for that stop: commit nothing, run the recover step, compare the file with
+    the named copy, never delete the run folder while ok is false, then re-drive.
+    For the database, the stop is "the database was not put back: <objects>
+    still differs from the code as written" or "... could not be verified against
+    the code as written". It names objects, never an address.
+  - >-
+    Database section. A test is a database test only when its test_spec entry
+    says requires_db: true. The runner calls check_test_db(<repo root>) once per
+    run, only when some in-scope test is a database test. For any status other
+    than reachable (not_configured, invalid, config_error, unreachable, or
+    check_failed when the check cannot run), every row of the database tests is
+    not_run with "<status>: <message>". unreachable reads "unreachable: the
+    configured database could not be reached (testing_context.db_connection_test)".
+    Non-database tests still run. The catalogue check applies only when an
+    alteration changes a .sql file and an in-scope database test runs. The plugin
+    _wvr_db_plugin, loaded into the same single pytest run, installs the altered
+    CREATE [OR REPLACE] FUNCTION / PROCEDURE definitions at session start, before
+    any setUpClass. After each database test's call phase it reads pg_proc.prosrc
+    on its own connection and compares the whitespace-normalised body. The wrong
+    version gives a valid row. The code as written gives invalid with "the suite
+    put the correct code back before the tests ran: <object> held the code as
+    written" (the setUpClass re-deploy trap, documented under invalid, with the
+    remedy: install from the source files the work changes). Neither, unreadable
+    or no capture gives not_run, as do the indistinguishable case ("the wrong
+    version and the code as written are indistinguishable in the catalogue"),
+    unidentifiable objects ("the database objects of <file> cannot be identified
+    unambiguously") and no driver ("no PostgreSQL driver importable in the test
+    interpreter (tried psycopg2, psycopg, pg8000)"). The baseline installs the
+    as-written definitions. The address comes only from resolve_test_db_address
+    and never appears on the page except as the placeholder.
+  - >-
+    To-run-later extras. The file is <git-dir>/leafcutter/to-run-later/<ac-id>.json,
+    written by sql-test-writer, with the shape {ac_id, to_run_later: [{test,
+    wrong_version, reason}]}. Extras are run and reported, but every row has
+    blocking false, and a surviving extra goes into non_blocking_survivors, never
+    into survivors. An extra spelled like a must_catch name of the same test, or
+    like the fix undone, stays the blocking named version. An unreadable file or
+    entry, or an extra whose test is not a resolved in-scope test, gives one
+    non-blocking not_in_scope row; it is never dropped silently.
+  - >-
+    Reading of runs. One reader, pytest_outcome_reader, is shared by done_proof,
+    the red-baseline reader (fast_lane.py verify_red_baseline / heavy_lane_gate),
+    the runner (_wvr_pytest) and the sweep's runs. A SUBFAILED line makes the
+    test FAILED. Exit 1 with no parsed failing test is inconclusive. Name what
+    inconclusive becomes at each reader: in the runner, a not_run row "the run
+    was cut short (unreadable): ..." (unfinished); at done proof, not eligible;
+    at red baseline, neither red nor green; in the sweep, the reason
+    "inconclusive". The runner folds parametrised cases per test, worst wins.
+  - >-
+    Routes table: one row per route, with labels, placement and recover, as on
+    main. Fast lane (fast-lane-ship.js): phase "Wrong-Version Runs" after Review,
+    Changelog and Knowledge Routing, immediately before Commit. Labels
+    fastlane-wv-recover (only when the workspace was reused), fastlane-wv-list,
+    fastlane-wv-test-breaker and fastlane-wv-finish; work key = the target AC id.
+    /build-feature (build-feature.js): bf-wv-*. Recover runs once at the drive
+    head when the worktree was reused. List, test-breaker and finish run before
+    every commit dispatch, inside the commitLane turn. A batch runs one ticket
+    per chunk when any ticket has source_ac or its source_ac cannot be read.
+    Single ticket (build-ticket.js): bt-wv-*. Recover runs on every drive,
+    after the Worktree Guard, and the sequence runs before every commit dispatch.
+    /build-epic: build-epic.js runs be-wv-recover and be-gate-marker-close-all at
+    the drive head and be-gate-marker-open / be-gate-marker-close around each
+    ticket-supervisor. It runs one ticket per chunk when a batch owes runs and
+    passes ticket_key and runs_alone in the prompt. ticket-supervisor runs list,
+    test-breaker and finish --record "<ticket_key>" per building-epics SKILL
+    section 5.10.2, inside the commit lock, before every commit spawn. Every
+    route uses the same CLIs with --base-ref HEAD through the executor
+    command-step-runner. The rule lives once, in Python; the JS files and the
+    skill copy only a thin dispatch.
+  - >-
+    /build-epic backstop. Records live in <git-dir>/leafcutter/gate-verdicts/<ticket-key>/
+    as open.json (the marker, with a source_ac snapshot), red_baseline.json and
+    wrong_version.json. They are written only by the gate CLIs with --record. The
+    pre-commit hook check-build-epic-gate-verdicts blocks on each of these, with
+    the hook's own words: a missing or unreadable verdict; a verdict that did
+    not pass; a verdict that says not applicable while the ticket has a
+    source_ac; a record whose ids differ from the snapshot; a wrong-version
+    verdict that is out of date for a staged code path; a marker with no readable
+    source_ac; and staged code with no marked ticket file staged. Remedy: re-run
+    the gate, or stage the marked ticket file. Records and markers are never
+    edited by hand. git commit --no-verify bypasses the hook (residual risk).
+  - >-
+    Consumer-test sweep (short section on the main page; the full tables on the
+    companion page if OQ-1 splits). Record: consumer_sweep.py record --work-key
+    --test-root --base-ref HEAD, with stdin {entries: [{file, test, status:
+    strengthened|unaffected|removed, note}]}. It is stored with a fingerprint per
+    entry and the base commit in <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json.
+    Only the test-writer records, once, after its last edit. Check:
+    consumer_sweep.py check --test-root --base-ref, first inside finish on every
+    route, also with no --ac-ids. JSON: {passed, applicable, reason, unlisted,
+    weakened, loosened, removed, inconclusive, error}. Reasons in precedence
+    order: "unlisted" (lists exist) or "sweep list missing" (no honoured entry at
+    all), then "weakened", "loosened" and "inconclusive". An internal error sets
+    error, and passed is false. weakened.what is "skipped", "expected to fail"
+    (XFAIL or XPASS) or "removed". A module skipped at collection reads as skipped.
+    loosened.what is one of the seven values: "fewer assertions", "comparison
+    loosened", "tolerance widened", "assertion now conditional", "assertion after
+    an early return", "assertion after an early skip" and "assertion after an
+    early xfail", each with its detail form. The one exit is a "removed" entry
+    with a note and an 'absent' fingerprint. It excuses absence only, never a
+    skip or an xfail. "Existing" means present at --base-ref. Name forms:
+    function, Class::method, [param-id], fixture / helper / constant name,
+    import:<name>, call:<func>, if:<header>. An "unaffected" entry and a stale
+    fingerprint excuse nothing. A list recorded at an earlier base is still
+    honoured after HEAD moves on, for entries whose file no commit in between
+    touched; documented as it is (OQ-6, user decision 2026-10-23).
+  - >-
+    Strengthening section: what to do for each stop, never how to silence it.
+    Survivor: strengthen the named test so it fails under that wrong version
+    (assert the distinguishing value, use distinct fixture values such as
+    retry_due distinct from refresh_due, add a control row), then re-drive.
+    could_not_prepare: the name describes code that does not exist or is too
+    vague, so amend the AC's must_catch name or in_scope_files through the AC
+    authoring path. did_not_load: re-drive so the version is prepared again.
+    failing on the code as written: fix the code or the test first. Database
+    not_run: configure testing_context.db_connection_test or install a driver.
+    Sweep stop: undo the weakening or hand the test back. Say plainly that no flag
+    turns the runs off. Deleting must_catch names, narrowing in_scope_files,
+    adding skip or xfail marks, or editing a manifest, list or record are all
+    weakenings, never fixes.
+  - >-
+    Known limits section, each with its source AC. The kind rule classifies by
+    exception type, so a wrong version that makes a test raise
+    AttributeError reads did_not_load; this errs safe (TQ-500g-1-i). A re-deploy
+    inside a test's own uncommitted transaction cannot be seen from the plugin's
+    separate connection (TQ-500g-2-i, OQ-5 (A)). A wrong version caught only in
+    setUpClass or setup has no call-phase capture and reads not_run (_wvr_db_plugin
+    docstring). The real PostgreSQL catalogue query is not tested in CI, only
+    against stand-in drivers (TQ-500g-2-i, OQ-2 (A)). Only PostgreSQL CREATE
+    FUNCTION / PROCEDURE objects are identified. The sweep's gaps left to
+    pr-reviewer (TQ-500g-3, -3-iii user decisions and reviewer notes): a widened
+    expected literal under the same operator; a dropped match= on pytest.raises;
+    a wider places or delta on assertAlmostEqual; a non-strict form made looser
+    (>= 1 to >= 0); a weakened fixture or helper (listed but not compared); a
+    tolerance that is not a plain number at the base; exits outside the closed
+    list (sys.exit, pytest.exit, pytest.importorskip, a helper that skips);
+    with contextlib.suppress(AssertionError); an already guarded assertion
+    gaining another guard; and broadened raises(Exception). Accepted strictness:
+    merged asserts and a renamed asserted variable also stop the work. In a
+    shared-worktree parallel batch, a sibling's unlisted edit can stop another
+    ticket's finish (TQ-500g-3 Q4). On /build-epic, --no-verify bypasses the
+    backstop.
+  - >-
+    Pointers within the doc-length ratchet. docs/testing/test-angles.md is now
+    297 lines after frontmatter, not the 325 stated earlier, so the
+    discrimination-angle pointer may add at most 3 net lines. docs/how-to/fast-lane-build.md
+    is 461, over the limit, so its one pointer at Step 6 (commit staging) is
+    offset in the same file. Rewriting that stale how-to's phase list is out of
+    scope and tracked separately (OQ-2, user decision 2026-10-23).
+  - 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+  - >-
+    Any database address in a template, fixture or doc is the placeholder
+    postgresql://<user>:<password>@<host>:<port>/<database>. INF-1100d-4 scans
+    shipped files.
+  - >-
+    Not shipped. templates/docs/reference/ holds only ac-schema.md, so the page
+    lives in docs/ only. If it is ever shipped through templates/docs/, update
+    both copies in the same change.
+  - >-
+    Composite done-proof: this L2 is test_required: false and has children. Until
+    KI-CG-20260914-done-proof-precommit-ignores-test-required is fixed (still open
+    on 2026-10-23), the pre-commit done-proof path refuses to mark it done.
 test_required: false
-test_rationale: Documentation only. Its truth depends on the behaviour it describes, which the behavioural
-  ACs prove. A test that searches the page for words would be the prose-presence proxy the firewall forbids.
-  documentation-verifier and pr-reviewer check it.
+test_rationale: >-
+  Documentation only. Its truth depends on the behaviour it describes, which the
+  behavioural ACs TQ-500g-1 to -4 prove with real runs. A test that searches the
+  page for words would be the prose-presence proxy the firewall forbids.
+  documentation-verifier and pr-reviewer check every result word, reason, flag,
+  label and path on the page against the code named in it_requirements, and
+  check the page length with check-doc-length.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -109,3 +485,63 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   documentation-expert lane, last in the build order (after -1, -2, -3, -4).
+
+  IT-PO ALIGNMENT (2026-10-23): AGAINST MAIN AT ae3a1591c
+  All of TQ-500g-1, -2, -3 and -4 are on main. The technical fields were
+  rewritten from the code (criteria, title, depends_on and readiness
+  unchanged). The page name docs/reference/wrong-version-runs.md stands: every
+  sibling AC already links it.
+  MISMATCHES BETWEEN THE CRITERIA AND THE CODE (the page follows the code):
+    M1 The criteria's verdict list omits not_in_scope, a row result the runner
+       prints for out-of-scope tests and for unusable to-run-later notes.
+       could_not_prepare is not a row result; it appears only in unfinished[].
+    M2 The criteria tie "invalid" to the re-deploy trap only. The code also
+       gives invalid for a wrong version that could not be prepared, a name with
+       no manifest entry, a manifest file outside the name's scope, a declared
+       test with no covers-tagged test, an undeterminable failure kind, a fix
+       undone with an unundoable git status, and a bad --record key.
+    M3 "Inconclusive" exists as a word only in the sweep. In the runner a
+       contradictory run is not_run "the run was cut short (unreadable)".
+    M4 The finish wrapper's stop values are "sweep" and "write" (not "writer").
+       A refused --record key gives gate_passed false with stopped_at null and
+       every other key null, which no AC's finish shape describes (OQ-4).
+    M5 The fast lane runs the wrong-version runs after Review, Changelog AND
+       Knowledge Routing, not just after verify_green_and_coverage and Review.
+    M6 The fix undone reads not_applicable, with "(0 created)", also when the
+       work changed no non-test file at all (OQ-5).
+    M7 The sweep list stores its base commit and is honoured at a later base
+       that descends from it, for entries whose file no commit in between
+       touched. No AC states this (OQ-6).
+    M8 verified can be true while survivors stop the work (it means every
+       owed run was validly made).
+    M9 The it_requirement figure "test-angles.md (325)" is stale: it is 297
+       lines after frontmatter, under the limit, with 3 lines of room.
+       fast-lane-build.md is 461 as stated.
+  OPEN QUESTIONS (recommendations in the IT-PO report):
+    OQ-1 One page would run to about 360 to 400 lines. Recommended: split the
+         sweep's full tables into docs/reference/consumer-test-sweep.md and keep
+         a short sweep section plus a link on the main page. Decided below.
+    OQ-2 docs/how-to/fast-lane-build.md is stale about the fast lane's phases
+         (no Review, Changelog or Wrong-Version Runs, "the workflow itself does
+         not commit"). Recommended: add only the one-line pointer here and track
+         the rewrite as its own documentation work. Decided below.
+    OQ-4, OQ-5, OQ-6: document the code as it is; follow-ups are optional.
+         Decided below.
+
+  USER DECISIONS (2026-10-23, answered directly by the user in the main
+  session's AskUserQuestion): every IT-PO recommendation accepted.
+    OQ-1 Split. docs/reference/wrong-version-runs.md is the main page, with a
+         sweep section of at most 20 lines and a link to
+         docs/reference/consumer-test-sweep.md, which holds the sweep's full
+         tables. Each page stays at or under 300 lines after frontmatter.
+    OQ-2 Add the one-line pointer to docs/how-to/fast-lane-build.md now, offset
+         in the same file. The rewrite of that stale how-to is tracked
+         separately, outside this AC.
+    OQ-4 Document finish's refusal of a bad --record key as it is
+         (gate_passed false, stopped_at null, sweep, writer and verdict null).
+    OQ-5 Document both not_applicable cases of the fix undone: every changed
+         non-test file is new, and no non-test file changed at all (the same
+         "(0 created)" text).
+    OQ-6 Document that a sweep list recorded at an ancestor base is still
+         honoured for entries whose file no commit since then touched
+         (recorded in TQ-500g-3-i's notes too).

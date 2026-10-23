@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -29,25 +29,108 @@ depends_on:
   - TQ-500g-5
   - TQ-500g-1
 doc_links:
+  - path: docs/architecture/diagrams/c3-036-wrong-version-run-sequence.md
+    relationship: describes
+    status: planned
+    relevance: "The sequence diagram this AC produces. 036 assumes TQ-500g-5-i takes 035; allocate with scripts/next_diagram_seq.py 3 at write time (OQ-3, user decision 2026-10-23)."
   - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
     relationship: relates-to
     status: exists
     relevance: "The existing done-proof sequence diagram, the house style to follow."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: relates-to
+    status: planned
+    relevance: "TQ-500g-5's reference page; the diagram's message and branch labels are its result words and stop reasons, verbatim."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: relates-to
+    status: exists
 assigned_agent: architecture-diagram-author
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: TQ-500g-5
+    contract: >-
+      The reference page's result words, stop reasons and put-back folder name,
+      used verbatim as labels; see TQ-500g-5 delivers_to.
+  - ac_id: TQ-500g-1
+    contract: >-
+      The runner's cycle as on main (ae3a1591c): wrong_version_runner.py run,
+      _wvr_gate (copies, journal, put-back, recovery), _wvr_pytest (one run),
+      _wvr_verdict (rows, verdict), _wvr_db / _wvr_db_plugin (database
+      branch), and finish's JSON returned to the route.
 it_requirements:
-- Follow the house style of docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md. The branches
-  mirror -1-i (happy path, survivor), -1-ii (did not load, not applied), -1-iii (cut short, and the recovery
-  on resume) and -2-i (re-deploy trap, invalid).
-- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
-  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
-  there is offset in the same file.
-- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+  - >-
+    File and conventions. Create
+    docs/architecture/diagrams/c3-<seq>-wrong-version-run-sequence.md through the
+    write-c4-diagram skill. Allocate <seq> with "python scripts/next_diagram_seq.py
+    3" after TQ-500g-5-i's file exists (036 expected). Follow the house style of
+    docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md: Mermaid
+    sequenceDiagram, diagram_type sequence, flight_level L3-Component,
+    related_docs (including docs/reference/wrong-version-runs.md) and
+    related_code. At most 300 lines after frontmatter (check-doc-length,
+    blocking). If one diagram cannot hold every branch legibly, split it into a
+    main sequence and one continuation, as c3-done-proof-evaluation-sequence.md
+    does with c3-011.
+  - >-
+    Participants, named as in the code: the route (through command-step-runner),
+    wrong_version_gate.py finish, wrong_version_runner.py run, RunGate
+    (_wvr_gate) with the working tree and
+    <git-dir>/leafcutter/wrong-version-runs/<run-id>/ (copies, journal.json), the
+    pytest child (with _kind_plugin, and _wvr_db_plugin on a database run), the
+    shared reading (pytest_outcome_reader with the kind rule), _wvr_verdict, and
+    the test database.
+  - >-
+    The order on main, which the main path must show. (0) recover_all (every
+    run step begins by putting back any file with an open journal). (1) The
+    scope is resolved. (2) A baseline run on the code as written; a test not
+    PASSED there stops the run with reason "failing on the code as written". (3)
+    For each wrong version (named versions, then extras, then the fix undone):
+    prepare, then compare bytes with the code as written. Then copy the file and
+    write the journal durably before it is altered. Then apply, make one pytest
+    run of the tests that answer for it (all in-scope tests for the fix undone),
+    and read outcomes and failure kinds. Then put the file back and byte-compare
+    it (on a database run, re-install the as-written definitions and re-read the
+    catalogue), and classify the rows. (4) The verdict JSON goes to finish and
+    is printed verbatim to the route. The criteria's ordering clause starts at
+    "the copy is taken"; steps 0 to 2 are drawn as the precondition block.
+  - >-
+    Branches, mirroring the code paths. Not applied: the alteration is
+    byte-identical, so no copy is taken, nothing is applied or run, and the row is
+    not_applied ("wrong version not applied: it changes nothing"). Could not be
+    prepared: nothing is applied and the row is invalid. Did not load: the run is
+    made and the failure is absence (an import, name or attribute lookup, or the
+    file failed to collect), so the row is did_not_load and never caught.
+    Re-deploy trap: the plugin's capture after the call phase shows the as-written
+    body in pg_proc, so the row is invalid "the suite put the correct code back
+    before the tests ran: <object> held the code as written". Cut short: a
+    timeout, crash or interruption puts the code back before anything else, and
+    the rows are not_run. A hard kill leaves the journal open, and the next run
+    step, or the route's recover step on a resumed drive, puts the code back
+    first. Put-back failed: the run stops, no later wrong version runs, and the
+    message names the kept copy ("the code may still be altered: ... the copy of
+    the code as written is kept at <absolute path>"); the database stop is "the
+    database was not put back: ...". Survivor: reason "survivor", gate_passed
+    false. finish returns it, and the route halts before its commit dispatch
+    (the fast lane also releases its claimed ACs; on /build-epic no commit is
+    spawned and the hook backstop would block one).
+  - >-
+    Optionally, finish's two early exits as one alt block before the runner:
+    stopped_at "sweep" (consumer_sweep.py check failed) and stopped_at "write"
+    (the writer stopped). In both the runner is never called. Keep it to one
+    block, because the preparation is TQ-500g-5-i's subject.
+  - >-
+    docs/**.md is under the blocking doc-length ratchet (300 lines after
+    frontmatter). docs/how-to/fast-lane-build.md (461) is over the limit and
+    must not grow; docs/testing/test-angles.md is at 297, so any pointer there
+    adds at most 3 net lines. Any pointer added to either is offset in the same
+    file.
+  - 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
 test_required: false
-test_rationale: 'Documentation only: a sequence diagram. Firewall as in TQ-500g-5. It is reviewed, not
-  tested.'
+test_rationale: >-
+  Documentation only: a sequence diagram. Firewall as in TQ-500g-5. It is
+  reviewed against wrong_version_runner.py and its _wvr_* siblings, not tested;
+  a test searching the diagram for labels would be the prose-presence proxy the
+  firewall forbids.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -64,3 +147,29 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   architecture-diagram-author lane, with TQ-500g-5.
+
+  IT-PO ALIGNMENT (2026-10-23): AGAINST MAIN AT ae3a1591c
+  Technical fields rewritten from the code; criteria, title, depends_on and
+  readiness unchanged. Complexity raised from S to M: seven branches plus the
+  precondition block may need a continuation diagram.
+  MISMATCHES BETWEEN THE CRITERIA AND THE CODE (the diagram follows the code):
+    M1 The criteria's order starts at "the copy of the code as written is taken".
+       On main every run step first runs recover_all, resolves the scope and
+       makes a baseline run on the code as written; a test not passing there
+       stops the run before any wrong version.
+    M2 "does not load or changes nothing, and is not run or not counted": a
+       version that changes nothing is never run (it is compared before any
+       copy is taken). A version that does not load IS run and then not counted.
+    M3 The put-back also covers the test database on a database run. A failed
+       database put-back stops the drive with its own message, beside the file
+       put-back stop.
+    M4 The survivor branch stops in the route, not in the runner: the runner
+       reports gate_passed false with reason "survivor", and each route halts
+       before its commit dispatch.
+  OQ-3, decided (see below): as in TQ-500g-5-i (level 3, numbering at write
+  time).
+
+  USER DECISIONS (2026-10-23, answered directly by the user in the main
+  session's AskUserQuestion): OQ-3 accepted as recommended. Level 3, parent
+  docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md, and the sequence
+  number allocated with scripts/next_diagram_seq.py 3 at write time.
