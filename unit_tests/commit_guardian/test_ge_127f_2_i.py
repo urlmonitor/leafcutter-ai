@@ -147,6 +147,25 @@ def resolve_added_measured_lines(filepath, parent_revisions=None):  # noqa: F811
         return 0
 '''
 
+# GE-127d-4 added a SECOND reader of the same previous/current content (the backstop
+# reads each parent blob and the staged file again after the added-line count). The
+# fall-back-to-zero POLICY under test is "on any failure to establish the account of
+# a change, degrade and carry on", so the mutant must degrade at that reader too, or
+# the second reader's own refusal (exit 2) would mask the mutant's wrong outcome.
+_BACKSTOP_FALLBACK = r'''
+_REAL_BACKSTOP_FINDING = _backstop_finding
+
+
+def _backstop_finding(filepath, lines, previous_lengths):  # noqa: F811
+    try:
+        return _REAL_BACKSTOP_FINDING(filepath, lines, previous_lengths)
+    except (PreviousLengthSourceError, CurrentLengthUnmeasurableError):
+        return None
+'''
+_FALLBACK_ZERO_UNREACHABLE_INJECTION += _BACKSTOP_FALLBACK
+_FALLBACK_ZERO_UNINTERPRETABLE_INJECTION += _BACKSTOP_FALLBACK
+_FALLBACK_ZERO_PASSTHROUGH_INJECTION += _BACKSTOP_FALLBACK
+
 
 def _extract_indeterminate_reason(output: str) -> str | None:
     match = _INDETERMINATE_RE.search(output)
