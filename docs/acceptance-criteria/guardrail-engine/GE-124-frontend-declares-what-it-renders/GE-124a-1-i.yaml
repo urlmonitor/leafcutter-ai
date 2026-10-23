@@ -74,7 +74,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Pinned declaration_block to null (not the prose header) so the mock-data if-and-only-if holds, forbade inferring criteria from filename or export name, and added an entry-point must-block test — a 'missing' verdict that never blocks is inert. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/02_TICKET-20261022-GE-124a-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -89,3 +90,4 @@ notes: |
   leaving declares empty. That passes both scenarios as written and silently
   breaks the invariant every downstream null-check relies on, so it is pinned in
   it_requirements and asserted as a conjunction in the test contract.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

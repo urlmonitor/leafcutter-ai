@@ -101,7 +101,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made reachability an obligation on the THREE CHECKS (each must link here from its docstring or help output) and asserted it from their side, mapped the four evidence kinds onto the four real store fields with a schema-existence ratchet tying this doc to GE-124g-1's change, and required the four blocked places to be described by their mechanism with the owning AC id cited. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/49_TICKET-20261023-GE-124g-5.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -123,3 +124,4 @@ notes: |
   is a small edit in three files, but it is edit work in GE-111's and GE-117's
   code as well as GE-124's, and it is the clause most likely to be quietly
   dropped because it lives outside the deliverable.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs
