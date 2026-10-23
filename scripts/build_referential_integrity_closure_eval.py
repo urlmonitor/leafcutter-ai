@@ -65,7 +65,10 @@ def _iter_same_scope(node: ast.AST) -> Iterator[ast.AST]:
 
 
 def _annotate_parents(tree: ast.AST) -> None:
-    """Attach a ``_closure_parent`` back-reference to every node in *tree*."""
+    """Attach a ``_closure_parent`` back-reference to every node in *tree* (once per tree)."""
+    if getattr(tree, "_closure_parents_annotated", False):
+        return
+    tree._closure_parents_annotated = True  # type: ignore[attr-defined]  # noqa: SLF001
     for node in ast.walk(tree):
         for child in ast.iter_child_nodes(node):
             child._closure_parent = node  # type: ignore[attr-defined]  # noqa: SLF001
