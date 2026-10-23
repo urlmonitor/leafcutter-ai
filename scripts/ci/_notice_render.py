@@ -38,6 +38,7 @@ ZERO_WIDTH_SPACE = chr(0x200B)  # defuses HTML comment markers; the same charact
 RUNS_PAGE_SIZE = 100
 MAX_COMMITS = 50
 MAX_FAILING_SHOWN = 100
+LIVE_FAILING_TITLE = "Failing live-database tests"
 GIT_TIMEOUT_SECONDS = 30
 
 # Plain-words cause per stage, shown outside code spans so a reader can tell "the tests never ran" from
@@ -50,6 +51,8 @@ STAGE_CAUSES = {
     "cancelled_or_timed_out": "the run was cancelled or timed out",
     "startup_failure": "the run could not start",
     "result_unreadable": "the run's test result could not be read",
+    "live_database_startup": "the live-database tests never ran, because their database did not become reachable",
+    "live_database_unreachable": "the live-database tests never ran against a database: some skipped because none was reachable",
 }
 
 RANGE_LISTED = "listed"
@@ -127,8 +130,10 @@ def build_state(verdict: dict, commit_range: CommitRange, red_since: str, lane: 
     """Return the state-block fields (delivers_to of TQ-600a-13-iii) for this run.
 
     A lane that does not list commits (timing) carries ``head_sha: None``: the run link names the head.
+    ``live_failing`` (TQ-600a-13-xxi) is present only when the live-database lane has failing tests, so the state block of a
+    correctness-only run is unchanged.
     """
-    return {
+    state = {
         "run_id": verdict["run_id"],
         "verdict": verdict["verdict"],
         "stage": verdict.get("stage"),
@@ -140,6 +145,17 @@ def build_state(verdict: dict, commit_range: CommitRange, red_since: str, lane: 
         "commits_omitted": commit_range.omitted,
         "red_since": red_since,
     }
+    live_failing = live_failing_ids(verdict)
+    if live_failing:
+        state["live_failing"] = live_failing
+    return state
+
+
+def live_failing_ids(verdict: dict) -> list[str]:
+    """The sorted node ids the verdict's ``live_database`` object names as failing (``[]`` when it has none or is absent)."""
+    lane = verdict.get("live_database")
+    ids = lane.get("failing") if isinstance(lane, dict) else None
+    return sorted(ids) if isinstance(ids, list) else []
 
 
 # --------------------------------------------------------------------------- the commit walk
@@ -216,11 +232,11 @@ def _headline(state: dict, lane: LaneSpec = CORRECTNESS) -> str:
     return f"{subject} did not complete{f' at stage {code(stage)}' if stage else ''}."
 
 
-def _failing_lines(failing: list[str]) -> list[str]:
+def _failing_lines(failing: list[str], title: str = "Failing tests") -> list[str]:
     """Bullet lines naming each failing node id, capped; the state block keeps the full list."""
     if not failing:
         return []
-    lines = [f"Failing tests ({len(failing)}):", ""]
+    lines = [f"{title} ({len(failing)}):", ""]
     lines += [f"- {code(node_id)}" for node_id in failing[:MAX_FAILING_SHOWN]]
     if len(failing) > MAX_FAILING_SHOWN:
         lines.append(f"- ... and {len(failing) - MAX_FAILING_SHOWN} more, listed in the run's log")
@@ -258,6 +274,7 @@ def render_description(state: dict, commit_range: CommitRange, lane: LaneSpec = 
         lines.append(f"Head commit: {code(state['head_sha'])}")
     lines += [f"{since}: {code(state['red_since'])}", ""]
     lines += _failing_lines(state["failing"])
+    lines += _failing_lines(state.get("live_failing") or [], LIVE_FAILING_TITLE)
     lines += _commit_lines(commit_range) if lane.lists_commits else []
     lines += [*entrants, ""] if entrants else []
     lines += ["This notice is for people. It does not decide whether a pull request is held.", "", encode_state(state)]
@@ -268,6 +285,7 @@ def render_history_comment(state: dict, lane: LaneSpec = CORRECTNESS) -> str:
     """Return the comment that records one run in the streak's history."""
     lines = [f"{_headline(state, lane)} Run: {state['run_url']}", ""]
     lines += _failing_lines(state["failing"])
+    lines += _failing_lines(state.get("live_failing") or [], LIVE_FAILING_TITLE)
     lines += [encode_state(state)]
     return "\n".join(lines) + "\n"
 

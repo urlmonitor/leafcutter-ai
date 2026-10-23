@@ -42,6 +42,12 @@ ARCHITECTURE: Three workflow-step subcommands plus one internal one.
     ``prove`` prints ``proving against red run N`` first and the outcome last. The
     ``_child`` process imports nothing from ``scripts.ci``: the head's own ``scripts``
     package must be the one its tests import. Nothing here writes to the hosting service.
+    TQ-600a-13-xxv: ``verify`` also reads the artifact's ``live_database`` object (``_fix_proof_live.live_part``) and emits
+    ``live_proof`` / ``live_whole`` / ``live_ids`` / ``run_correctness``. Two more subcommands run in the same job only
+    when ``live_proof`` is true: ``start-live`` (the lane's three databases, started by main's script because service
+    containers cannot be conditional) and ``prove-live`` (reachability first, then the live ids or the whole live folder
+    under the live lane's ``-m`` override, judged by ``judge_live``: a skip is never a pass; a database that never
+    answers is NOT PROVEN). Both fail the one job named `Post-merge fix proof`.
 """
 
 from __future__ import annotations
@@ -68,7 +74,6 @@ WHOLE_LANE_TARGETS = ("tests/", "unit_tests/")
 PLUGIN_FILE = Path(__file__).with_name("_lane_report_plugin.py")
 MAX_IDS = 200
 IDS_FILE = "collected-ids.json"  # next to the lane report: the ids a collect-only session selected
-MAX_SHOWN = 20  # how many missing baseline ids the log names
 ISSUE_PAGE = 100
 REPO_RE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 SAFE_ID = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./-]*\.py(?:::[\x20-\x7e]+)?")
@@ -82,7 +87,6 @@ class ProofInputError(RuntimeError):
     """An input of the proof (environment, artifact, id list) is missing or unsafe; nothing is proved."""
 
 
-# --------------------------------------------------------------------------- pure helpers
 def _digits(text: str | None, what: str) -> str:
     """``text`` when it is a plain decimal run id, else ProofInputError."""
     if not (text and text.isascii() and text.isdigit()):
@@ -114,6 +118,9 @@ def verify(candidate: str, red_run_id: str, whole_lane: bool, verdict: dict | No
     if not isinstance(verdict, dict) or verdict.get("run_id") != int(red):
         message = f"the downloaded verdict is not the verdict of run {red}"
         raise ProofInputError(message)
+    from scripts.ci._fix_proof_live import ended_in_live_stage, live_outputs  # noqa: PLC0415 -- after _put_root_on_path
+
+    whole_lane = whole_lane and not ended_in_live_stage(verdict)  # a live-lane ending says nothing about the correctness lane
     try:
         ids = [] if whole_lane else _safe_ids(verdict.get("failing"))
     except ProofInputError as exc:  # an id that is not a safe node id never reaches argv; the whole lane proves more, and cannot deadlock the repair
@@ -126,6 +133,7 @@ def verify(candidate: str, red_run_id: str, whole_lane: bool, verdict: dict | No
         "whole_lane": "true" if whole else "false",
         "failing_ids": "" if whole else "\n".join(ids),
         "collected_ids": "\n".join(_lane_ids(verdict)) if whole else "",
+        **live_outputs(verdict, _safe_ids, MAX_IDS),  # TQ-600a-13-xxv: live_proof / live_whole / live_ids / run_correctness, from the artifact's live_database object
     }
 
 
@@ -142,6 +150,13 @@ def _lane_ids(verdict: dict) -> list[str]:
     return lane if len(lane) <= MAX_IDS else []
 
 
+def judge_live(report: dict | None, wanted: list[str] | None, baseline: list[str] | None = None) -> list[str]:
+    """The live-database judge (TQ-600a-13-xxv): why the proof failed, an empty list is a pass; any skip is a problem line."""
+    from scripts.ci._fix_proof_live import judge_live as judge_live_tests  # noqa: PLC0415 -- after _put_root_on_path
+
+    return judge_live_tests(report, wanted, baseline)
+
+
 def judge(report: dict | None, wanted: list[str] | None, baseline: list[str] | None = None) -> list[str]:
     """Why the proof failed (an empty list is a pass). ``wanted`` None is the whole lane.
 
@@ -152,32 +167,21 @@ def judge(report: dict | None, wanted: list[str] | None, baseline: list[str] | N
     """
     if report is None:
         return ["no readable lane report: pytest did not finish a session"]
+    from scripts.ci._fix_proof_live import missing_baseline, session_problems  # noqa: PLC0415 -- after _put_root_on_path
     from scripts.ci._post_merge_stages import FAILED_STATES, report_stage  # noqa: PLC0415 -- stdlib-only, but kept out of the _child process
 
     results = report.get("results") or {}
-    problems = []
-    if report.get("collection_errors"):
-        problems.append(f"{len(report['collection_errors'])} collection error(s)")
-    if report.get("exitstatus") != 0:
-        problems.append(f"pytest exited with status {report.get('exitstatus')}")
-    if not results:
-        problems.append("nothing was selected or run")
-    if report.get("ran", len(results)) < report.get("expected", 0):
-        problems.append("the session was cut short")
+    problems = session_problems(report)
     if wanted is None:
         problems += [f"{results[i]}: {i}" for i in sorted(results) if results[i] in FAILED_STATES | MASKED_STATES]
         stage = report_stage(report) if results else None
         problems += [f"the lane did not finish cleanly ({stage})"] if stage else []
-        missing = [i for i in baseline or [] if i not in results]
-        if missing:
-            shown = ", ".join(missing[:MAX_SHOWN])
-            problems.append(f"head lane is missing {len(missing)} of {len(baseline)} baseline tests (first {min(len(missing), MAX_SHOWN)}: {shown}); {SHRUNK_ADVICE}")
+        problems += missing_baseline(results, baseline, "lane", f"; {SHRUNK_ADVICE}")
     else:
         problems += [f"not passed ({results.get(i, 'not run')}): {i}" for i in wanted if results.get(i) != "passed"]
     return problems
 
 
-# --------------------------------------------------------------------------- the I/O edges
 def _emit(outputs: dict[str, str]) -> None:
     """Append the step outputs to GITHUB_OUTPUT (a multi-line value as a heredoc with a random delimiter)."""
     target = os.environ.get("GITHUB_OUTPUT")
@@ -281,23 +285,23 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-# --------------------------------------------------------------------------- prove
-def _lane_command(args: argparse.Namespace, report: Path, targets: list[str], tree: Path, *, collect_only: bool = False) -> list[str]:
+def _lane_command(args: argparse.Namespace, report: Path, targets: list[str], tree: Path, *, collect_only: bool = False, selection: str = LANE_SELECTION) -> list[str]:
     """The child interpreter's command line: this very file (main's), a fresh process, ``tree`` first on its path.
 
     ``Path.resolve`` touches the file system (symlinks); the caller (``_run_session``) wraps this in its OSError handling.
+    ``selection`` is the ``-m`` expression: the correctness lane's, or the live lane's whole-folder override.
     """
-    own = ["--head", str(tree.resolve()), "--ini", str(Path(args.ini).resolve()), "--report", str(report)]
+    own = ["--head", str(tree.resolve()), "--ini", str(Path(args.ini).resolve()), "--report", str(report), "--selection", selection]
     return [sys.executable, str(Path(__file__).resolve()), "_child", *own, *(["--collect-only"] if collect_only else []), "--", *targets]
 
 
-def _run_session(args: argparse.Namespace, targets: list[str], *, tree: Path | None = None, collect_only: bool = False) -> tuple[int, dict | None]:
+def _run_session(args: argparse.Namespace, targets: list[str], *, tree: Path | None = None, collect_only: bool = False, selection: str = LANE_SELECTION) -> tuple[int, dict | None]:
     """Run the child session over ``targets`` in ``tree`` (default: the head); ``(its exit status, its lane report or None)``."""
     where = tree or Path(args.head)
     try:
         with tempfile.TemporaryDirectory(prefix="fix-proof-") as scratch:
             report_path = Path(scratch) / "lane-report.json"
-            completed = subprocess.run(_lane_command(args, report_path, targets, where, collect_only=collect_only), cwd=where, check=False)  # noqa: S603
+            completed = subprocess.run(_lane_command(args, report_path, targets, where, collect_only=collect_only, selection=selection), cwd=where, check=False)  # noqa: S603
             report = _read_json(report_path)
             if report is not None and collect_only:  # the selected ids travel in a file next to the report, never in argv or env
                 report["collected_ids"] = _read_json(report_path.with_name(IDS_FILE), list) or []
@@ -315,32 +319,12 @@ def baseline_ids(verdict_ids: list[str], main_collected) -> list[str]:
     return verdict_ids if verdict_ids else main_collected()
 
 
-def _main_lane_ids(args: argparse.Namespace) -> list[str]:
-    """Collect-only of MAIN's correctness lane, in main's tree under main's ini and plugins; the ids it selected.
-
-    The ids come back through a file in the session's scratch directory (never argv or env). A collection error leaves a
-    partial list, which is used and logged as partial; no report, or an empty lane, is an error (the baseline is never
-    silently skipped).
-    """
-    main_tree = Path(args.ini).resolve().parent
-    targets = [t for t in WHOLE_LANE_TARGETS if (main_tree / t).is_dir()]
-    _status, report = _run_session(args, targets, tree=main_tree, collect_only=True) if targets else (EXIT_BAD_INPUT, None)
-    if report is None:
-        message = "main's lane could not be collected, so there is no baseline to hold the head's lane to"
-        raise ProofInputError(message)
-    if report.get("collection_errors"):
-        logger.warning("main's lane baseline is partial: %d collection error(s)", len(report["collection_errors"]))
-        print("baseline is partial: main's own collection had errors; using what it collected")
-    ids = report.get("collected_ids")
-    if not isinstance(ids, list) or not ids:
-        message = "main's correctness lane collected no tests, so there is no baseline to hold the head's lane to"
-        raise ProofInputError(message)
-    return [i for i in ids if isinstance(i, str)]
-
-
 def cmd_prove(args: argparse.Namespace) -> int:
     """``prove``: execute the selection against the head and exit non-zero unless every selected id passed."""
     red = _digits(os.environ.get("RED_RUN_ID"), "RED_RUN_ID")
+    if os.environ.get("RUN_CORRECTNESS") == "false":  # TQ-600a-13-xxv: the red run's correctness lane had nothing to prove; only live tests did
+        print(f"proving against red run {red}: no correctness-lane test failed there, so nothing to prove in this step")
+        return EXIT_OK
     whole = os.environ.get("WHOLE_LANE") == "true"
     wanted = None if whole else _safe_ids([line.strip() for line in os.environ.get("FAILING_IDS", "").splitlines() if line.strip()])
     if wanted is not None and not wanted:
@@ -351,18 +335,30 @@ def cmd_prove(args: argparse.Namespace) -> int:
     baseline: list[str] = []
     if wanted is None:  # only a whole-lane proof is held to the lane's identity
         verdict_lane = _lane_ids({"collected_ids": [line.strip() for line in os.environ.get("COLLECTED_IDS", "").splitlines() if line.strip()]})
-        baseline = baseline_ids(verdict_lane, lambda: _main_lane_ids(args))
+        baseline = baseline_ids(verdict_lane, lambda: _toolbox("main_lane_ids", args))
         print(f"baseline: the head lane must contain all of the {len(baseline)} tests of {'the red run' if verdict_lane else 'main'}'s lane")
     status, report = _run_session(args, list(WHOLE_LANE_TARGETS) if wanted is None else wanted)
     problems = judge(report, wanted, baseline)
     print(f"pytest session exited with status {status}")
+    return conclude(problems, red, "FAILED", what)
+
+
+def conclude(problems: list[str], red: str, failure_word: str, what: str) -> int:
+    """Print the proof's outcome against red run ``red`` and return the exit status (non-zero when any problem)."""
     if problems:
-        print(f"fix proof FAILED against red run {red}:")
+        print(f"fix proof {failure_word} against red run {red}:")
         for problem in problems[:50]:
             print(f"  - {problem}")
         return EXIT_FAILED
     print(f"fix proof PASSED against red run {red}: {what} passed on the head")
     return EXIT_OK
+
+
+def _toolbox(name: str, *args):
+    """Call ``name`` of ``_fix_proof_live`` (``start_live``, ``prove_live``, ``main_lane_ids``) with this module as its first argument."""
+    from scripts.ci import _fix_proof_live  # noqa: PLC0415 -- after _put_root_on_path
+
+    return getattr(_fix_proof_live, name)(sys.modules[__name__], *args)
 
 
 def ini_plugins(addopts: str) -> tuple[list[str], str]:
@@ -454,11 +450,10 @@ def run_child(args: argparse.Namespace, targets: list[str]) -> int:
     except (OSError, ImportError, AttributeError, configparser.Error, ValueError) as exc:
         logger.warning("cannot prepare the head's pytest session: %s", exc)
         return EXIT_BAD_INPUT
-    argv = ["-c", args.ini, "-o", f"addopts={addopts}", "--rootdir", head, "-m", LANE_SELECTION, "-p", "no:cacheprovider", "--lane-report", args.report, *(["--collect-only"] if args.collect_only else []), "--", *targets]
+    argv = ["-c", args.ini, "-o", f"addopts={addopts}", "--rootdir", head, "-m", args.selection, "-p", "no:cacheprovider", "--lane-report", args.report, *(["--collect-only"] if args.collect_only else []), "--", *targets]
     return int(pytest.main(argv, plugins=plugins))
 
 
-# --------------------------------------------------------------------------- CLI
 def build_parser() -> argparse.ArgumentParser:
     """One subcommand per workflow step (``_child`` is internal to ``prove``)."""
     parser = argparse.ArgumentParser(description="Post-merge fix proof: prepare, verify, prove.")
@@ -466,13 +461,15 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("prepare", help="decide whether a proof runs, against which red run")
     verify_cmd = sub.add_parser("verify", help="take the failing ids from the verdict artifact")
     verify_cmd.add_argument("--verdict", required=True)
-    for name in ("prove", "_child"):
-        step = sub.add_parser(name, help="run the selection against the head" if name == "prove" else argparse.SUPPRESS)
+    sub.add_parser("start-live", help="start the live lane's three disposable databases")
+    for name in ("prove", "prove-live", "_child"):
+        step = sub.add_parser(name, help=argparse.SUPPRESS if name == "_child" else "run the selection against the head")
         step.add_argument("--head", required=True)
         step.add_argument("--ini", required=True)
         if name == "_child":
             step.add_argument("--report", required=True)
             step.add_argument("--collect-only", action="store_true")
+            step.add_argument("--selection", default=LANE_SELECTION)
     return parser
 
 
@@ -486,7 +483,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_child(opts, targets)
     try:
         _put_root_on_path()
-        return {"prepare": cmd_prepare, "verify": cmd_verify, "prove": cmd_prove}[opts.command](opts)
+        steps = {"prepare": cmd_prepare, "verify": cmd_verify, "prove": cmd_prove, "start-live": lambda o: _toolbox("start_live", o), "prove-live": lambda o: _toolbox("prove_live", o)}
+        return steps[opts.command](opts)
     except ProofInputError as exc:
         logger.warning("fix proof: %s", exc)
         print(f"fix proof could not run: {exc}")

@@ -140,8 +140,8 @@ def _plan_update(
     (run_id, verdict, stage, failing set), so a corrected re-apply of the same run still updates.
     """
     previous = render.parse_state(canonical.get("body")) or {}
-    recorded = (previous.get("run_id"), previous.get("verdict"), previous.get("stage"), previous.get("failing"))
-    if recorded == (verdict["run_id"], verdict["verdict"], verdict.get("stage"), sorted(verdict.get("failing") or [])):
+    recorded = (previous.get("run_id"), previous.get("verdict"), previous.get("stage"), previous.get("failing"), previous.get("live_failing") or [])
+    if recorded == (verdict["run_id"], verdict["verdict"], verdict.get("stage"), sorted(verdict.get("failing") or []), render.live_failing_ids(verdict)):
         return []
     since = previous.get("red_since")
     state = render.build_state(verdict, commit_range, since if isinstance(since, str) and since else now, lane)
