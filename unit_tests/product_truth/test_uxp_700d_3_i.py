@@ -185,7 +185,10 @@ class TestSetAsideCountUnchangedByTheRename(unittest.TestCase):
             cwd=str(_REPO_ROOT),
             capture_output=True,
             text=True,
-            timeout=30,
+            # A whole-store scan (about 5,300 records) measures 44-58 s on a loaded host and
+            # timed out at 30 s on CI shard 7, including on main (KI-UXP-20261022). 300 s
+            # keeps a real hang a failure without failing a slow-but-correct scan.
+            timeout=300,
         )
         self.assertEqual(
             result.returncode,
