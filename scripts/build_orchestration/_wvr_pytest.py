@@ -46,6 +46,7 @@ class NodeSpec:
 
     file: Path
     chain: tuple[str, ...]
+    cwd: Path | None = None  # the child's working directory (the repo root); None inherits
 
     @property
     def arg(self) -> str:
@@ -110,12 +111,18 @@ def _read_kinds(kind_path: str, outcomes: dict[str, str]) -> tuple[dict[str, str
     return kinds, set(per_module)
 
 
-def _child_env(kind_path: str) -> dict[str, str]:
-    """Environment of the pytest child: strict AC mode, the kind plugin, no bytecode."""
+def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None) -> dict[str, str]:
+    """Environment of the pytest child: strict AC mode, the kind plugin, no bytecode.
+
+    *extra* (TQ-500g-2-i) is ``(plugin module, its environment)``; this directory joins the import path for it.
+    """
     plugin_dir = str(Path(kind_support.__file__).resolve().parent)
+    if extra is not None:
+        plugin_dir += os.pathsep + str(Path(__file__).resolve().parent)
     existing = os.environ.get("PYTHONPATH", "")
     return {
         **os.environ,
+        **(extra[1] if extra else {}),
         "AC_ENFORCE_STRICT": "1",
         kind_support._KIND_OUTPUT_ENV_VAR: kind_path,
         "PYTHONPATH": plugin_dir + os.pathsep + existing if existing else plugin_dir,
@@ -123,11 +130,17 @@ def _child_env(kind_path: str) -> dict[str, str]:
     }
 
 
-def run_selected(nodes: list[NodeSpec]) -> PytestRun:
+def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
     """Run pytest once over *nodes* (selected by node id) and read it.
+
+    The child runs in the nodes' ``cwd`` (the repo root, so tests that resolve the test database
+    setting from ``Path.cwd()`` see the one the gate checked); the process's own when it is ``None``.
+
+    All nodes of one run share one ``cwd`` (the repo root); the first node's is used for the child.
 
     Args:
         nodes: The in-scope tests to run; nothing else is selected.
+        extra: ``(plugin module, environment)`` of a second plugin loaded into this same single run, or ``None``.
 
     Returns:
         The :class:`PytestRun`. Never raises for a timeout, a crash or an OSError.
@@ -137,7 +150,7 @@ def run_selected(nodes: list[NodeSpec]) -> PytestRun:
     fd, kind_path = tempfile.mkstemp(suffix=".json", prefix="leafcutter_wvr_kind_")
     os.close(fd)
     try:
-        return _run_and_read(nodes, kind_path)
+        return _run_and_read(nodes, kind_path, nodes[0].cwd, extra)
     finally:
         try:
             os.unlink(kind_path)
@@ -145,14 +158,30 @@ def run_selected(nodes: list[NodeSpec]) -> PytestRun:
             pass
 
 
-def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
+def _file_against(nodeid: str, base: Path | None) -> str:
+    """Return *nodeid* with its file part spelled absolute against *base* (unchanged for ``None``)."""
+    file_part, sep, rest = nodeid.partition("::")
+    if base is None or not (sep or file_part.endswith(".py")):
+        return nodeid
+    return str(base / file_part) + sep + rest
+
+
+def _rooted(outcomes: dict, cwd: Path | None) -> dict:
+    """Spell each nodeid's file against *cwd* (the child's directory), not this process's."""
+    return {_file_against(k, cwd): v for k, v in outcomes.items()}
+
+
+def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None,
+                  extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
     """Launch pytest, classify how it ended, and read a finished run."""
     files = sorted({n.file for n in nodes})
     budget = _resolve_pytest_timeout_seconds(files)
     cmd = [sys.executable, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
-    cmd.extend(n.arg for n in nodes)
+    if extra is not None:
+        cmd.extend(["-p", extra[0]])
+    cmd.extend(n.arg if cwd is None else _file_against(n.arg, Path.cwd()) for n in nodes)
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, env=_child_env(kind_path))
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=budget, env=_child_env(kind_path, extra), cwd=cwd)
     except subprocess.TimeoutExpired:
         return PytestRun("timeout", f"pytest exceeded its {budget:.1f}s timeout budget")
     except OSError as exc:
@@ -164,12 +193,12 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str) -> PytestRun:
         if proc.returncode in (2, 4) and collected:
             return PytestRun("ran", "", {}, {}, collected)
         return PytestRun("crash", f"pytest crashed: returncode {proc.returncode}")
-    outcomes = parse_pytest_outcomes(proc.stdout, proc.returncode)
+    outcomes = _rooted(parse_pytest_outcomes(proc.stdout, proc.returncode), cwd)
     kinds_path_outcomes = dict(outcomes)
     if _PYTEST_RUN_INCOMPLETE_SENTINEL in outcomes:
         _kinds, collected = _read_kinds(kind_path, {})
         if not collected:
             return PytestRun("unreadable", str(outcomes[_PYTEST_RUN_INCOMPLETE_SENTINEL]))
-        kinds_path_outcomes = dict(parse_pytest_outcomes(proc.stdout, None))
+        kinds_path_outcomes = _rooted(dict(parse_pytest_outcomes(proc.stdout, None)), cwd)
     kinds, collected = _read_kinds(kind_path, kinds_path_outcomes)
     return PytestRun("ran", "", _merge_outcomes(kinds_path_outcomes), kinds, collected)

@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -43,77 +43,285 @@ doc_links:
   - path: templates/agents/sql-test-writer.md
     relationship: relates-to
     status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Home of the shared wrong-version runner and its _wvr_* siblings that this AC extends."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; documents the database validity check and its known limit (a re-deploy inside the test's own uncommitted transaction)."
 assigned_agent: python-coder
-estimated_complexity: M
-delivers_to: null
+estimated_complexity: L
+delivers_to:
+- agent: llm-expert
+  ac_id: TQ-500g-2
+  contract: >-
+    No new verdict field and no new result word. The runner's JSON stays TQ-500g-1-i's shape. A database
+    run in which the catalogue showed the as-written definition gives, for each in-scope requires_db test,
+    {result: "invalid", blocking: true, detail: "the suite put the correct code back before the tests ran:
+    <object> held the code as written"}. A run in which the catalogue could not be read, or held neither
+    version, gives result "not_run" (blocking) with the reason; neither "invalid" nor "not_run" is ever
+    "caught". An invalid run, and a not_run with no driver importable or no test-database address
+    (nothing was installed, so nothing needs putting back), leave the verdict unfinished (gate_passed
+    false, reason "unfinished"). A database put-back that cannot be verified (the re-install fails, the
+    re-read of the catalogue fails, or the definition still differs) stops the drive the way
+    PutBackFailed does: gate_passed false, later wrong versions not run, and a stop reason (not
+    "unfinished") that names the object(s) and never the address or credentials (user-approved review
+    decision 2026-10-22).
 expects_from:
-  - ac_id: TQ-500g-1-i
-    contract: "The shared runner's apply / run / put-back cycle, extended here with a check of what the database actually held."
+- ac_id: TQ-500g-1-i
+  contract: >-
+    The shared runner's cycle in scripts/build_orchestration/wrong_version_runner.py: recover, baseline on
+    the code as written, then per wrong version apply (_wvr_gate.RunGate.apply), one pytest run
+    (_wvr_pytest.run_selected) and put-back (RunGate.restore, byte compare, PutBackFailed stops the drive).
+    Verdict shape per its delivers_to.
+- ac_id: TQ-500g-2-ii
+  contract: >-
+    Which tests are database tests (test_spec requires_db: true, read through _wvr_records) and the
+    check_test_db gate in the new sibling scripts/build_orchestration/_wvr_db.py. This AC's catalogue
+    step runs only for runs that passed that gate with status "reachable".
+- ac_id: TQ-500g-4
+  contract: >-
+    pytest_outcome_reader.parse_pytest_outcomes and done_proof_kind_support / _kind_plugin, reached only
+    through _wvr_pytest; this AC adds a second plugin to the same single pytest run and reads nothing
+    from pytest text itself.
 it_requirements:
-- 'Detection is part of the shared runner''s cycle, not a database-specific fork. After each database
-  run and before the put-back, read from the configured test database''s catalogue the installed definition
-  of every database object the wrong version altered. Compare it, normalised, with the wrong version and
-  with the code as written. Equal to the code as written: invalid, ''the suite put the correct code back
-  before the tests ran''. Equal to the wrong version: a valid run. Neither, or unreadable: not_run, never
-  valid.'
-- The put-back restores the source file AND re-installs the as-written definition into the test database,
-  then reads the catalogue again to confirm. If they still differ, stop and name the object (the TQ-500g-1-iii
-  rule, applied to the database).
-- Connect only to the address resolve_test_db_address in scripts/db_check/checker.py resolves. There is
-  no second reader of the setting. Credentials are never logged or reported.
-- 'Leafcutter must not gain a mandatory database-driver dependency: requirements*.txt has none today.
-  Catalogue access uses a driver or client present in the adopter environment. If none is present, the
-  result is not_run, with the reason named.'
-- invalid and not_run keep the work unfinished (gate_passed false, reason unfinished).
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
+- >-
+  Placement. Detection is part of the shared runner's cycle (`wrong_version_runner.py run`, so every
+  route and `wrong_version_gate.py finish` get it unchanged); no database-specific runner, subcommand or
+  CLI flag. Runner-side logic goes in the new sibling scripts/build_orchestration/_wvr_db.py (shared with
+  TQ-500g-2-ii). The in-suite part goes in the new pytest plugin
+  scripts/build_orchestration/_wvr_db_plugin.py. wrong_version_runner.py, _wvr_pytest.py and
+  _wvr_verdict.py get wiring only. Renaming either new file means updating every in_scope_files entry in
+  this AC and TQ-500g-2-ii in the same change.
+- >-
+  When it applies. Only a run whose alteration (a named wrong version or "the fix undone") changes at
+  least one .sql file, over in-scope tests of which at least one has requires_db: true, after TQ-500g-2-ii's
+  gate reported "reachable". Every other run behaves exactly as today: all existing TQ-500g-1 tests stay
+  green unchanged.
+- >-
+  One pytest run, read one way. The plugin is loaded with `-p` into the same single pytest command
+  _wvr_pytest builds, beside _kind_plugin. It is never a second pytest run and never a second outcome
+  parser. It hands its findings back through a temporary JSON file named by an environment variable, as
+  _kind_plugin does with LEAFCUTTER_KIND_PLUGIN_OUTPUT. The child's import path gains the plugin's
+  directory the way _child_env already adds scripts/ac_store.
+- >-
+  Putting the wrong version into the database. At session start, before any test or setUpClass runs, the
+  plugin installs the definitions from the altered .sql files (already altered on disk by the runner's
+  gate) into the database that resolve_test_db_address(<repo root>) names. The baseline run installs the
+  as-written definitions of the same files the same way, so a database left altered by an earlier
+  cut-short run never decides the baseline. Database objects are identified from the CREATE [OR REPLACE]
+  FUNCTION / PROCEDURE statements in the altered file. A file whose objects cannot be identified
+  unambiguously gives not_run, naming the file.
+- >-
+  Capture point (setUpClass trap, alignment question 3). After the call phase of each in-scope
+  requires_db test and before its teardown, the plugin reads, on its own connection, the installed
+  definition of every identified object from the database catalogue. That reading, not the file on disk,
+  decides validity. Compared on a whitespace-insensitive normal form of the stored body: equal to the
+  wrong version gives a valid run, read by the existing _wvr_verdict.read_one; equal to the code as
+  written gives invalid with the delivers_to detail; neither, unreadable, or no capture recorded (crash,
+  timeout, interruption) gives not_run. A row is caught only when that test's own capture was valid. When
+  the wrong version and the code as written share one normal form, the result is not_run ("indistinguishable
+  in the catalogue"), never valid. Known limit: a re-deploy inside the test's own uncommitted transaction
+  is invisible to a separate connection; accepted as a documented known limit (user decision OQ-5 (A),
+  2026-10-22).
+- >-
+  Put-back includes the database (TQ-500g-1-iii rule applied to it). After RunGate.restore has put the
+  file back, the runner re-installs the as-written definitions into the same database through the
+  plugin module's own entry point, run with the same interpreter the suite runs under (sys.executable),
+  then reads the catalogue again. A put-back that cannot be verified stops the drive the way
+  PutBackFailed does, naming the object(s) and never the address: a failed re-install, a failed
+  re-read of the catalogue (also when the run itself already could not read it), or a definition that
+  still differs. An unverifiable put-back is never only a note with reason "unfinished" (user-approved
+  review decision 2026-10-22). Runs where nothing was installed (no driver importable, no test-database
+  address) have nothing to put back and stay not_run + unfinished.
+- >-
+  No mandatory database driver for leafcutter: requirements*.txt stays unchanged. The plugin uses a
+  PostgreSQL DB-API driver already importable in the suite's own interpreter (db_check accepts only
+  postgres/postgresql addresses). None importable gives not_run "no PostgreSQL driver importable in the
+  test interpreter", naming the modules tried.
+- >-
+  One address reader. The plugin and the put-back connect only to the address resolve_test_db_address in
+  scripts/db_check/checker.py returns (imported the way templates/agents/test-writer.md Step 2b does).
+  The runner never reads the setting, never builds or defaults an address, and never passes one through
+  an environment variable. Credentials, user names and full addresses never appear in a row, a log line
+  or the plugin's output file. Driver exception text is never copied, because it can echo the DSN; only
+  the exception class name is reported.
+- >-
+  Verdict shape unchanged: TQ-500g-1-i's JSON, result words and blocking rule. "invalid" and "not_run"
+  are already blocking and unfinished, so gate_passed is false with reason "unfinished". No route,
+  workflow or wrong_version_gate.py change is needed.
+- >-
+  File size (alignment question 5; scripts/commit_guardian/_file_size_ratchet.py count_content_lines,
+  .py limit 400). wrong_version_runner.py is 305 counted lines on main and 318 with PR #1305's --record,
+  so it gets wiring only (at most about 25 added lines); all database logic lives in the two new siblings.
+  _wvr_pytest.py (130) and _wvr_verdict.py (85) have room. Every new file stays at or under 400. Do not
+  touch scripts/ac_store/done_proof.py (956 counted, already over the limit and ratcheted) or
+  fast_lane.py (391). Reuse _kind_plugin.py and done_proof_kind_support.py unchanged.
+- >-
+  Deployment. The new files ship with the rest of scripts/build_orchestration/. If the deploy map
+  (scripts/build_phases_*.py) lists that directory's files one by one, add both, and the closure guard
+  must stay green.
+- >-
+  Any database address in a template, fixture or doc is the placeholder
+  postgresql://<user>:<password>@<host>:<port>/<database>. INF-1100d-4 scans shipped files. Test
+  fixtures build any concrete loopback address at run time and never hold a literal one.
 test_spec:
 - name: test_d1_suite_redeployed_correct_code_reported_invalid
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: criterion
-  description: A catalogue-reader double reports the as-written definition after D1's run. The run is
-    reported invalid with the re-deploy reason, is neither caught nor survived, and the verdict is unfinished.
+  surface_invoked: wrong_version_runner.py run (subprocess)
+  description: >-
+    D1. A fixture suite's setUpClass re-installs fn_refresh_due from an unaltered copy of the source. The
+    runner CLI applies "drop the retry_due condition" to the source file. The catalogue held the code as
+    written while the test ran, so the row is invalid with the re-deploy detail, neither caught nor
+    survived, and the verdict is gate_passed false, reason unfinished.
   must_catch:
   - runner trusts the source-file alteration without reading the catalogue
   - invalid run counted as caught
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_verdict.py
 - name: test_d2_database_held_wrong_version_is_valid
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: discrimination
-  description: 'D2: the catalogue reports the wrong version, so the run is valid and its per-test outcomes
-    count.'
+  surface_invoked: wrong_version_runner.py run (subprocess)
+  description: >-
+    D2. The suite installs from the altered source file, the catalogue holds the wrong version during the
+    call phase, the run is valid, and the per-test outcome counts (caught by an assertion).
   must_catch:
   - every database run marked invalid
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+  - scripts/build_orchestration/_wvr_db_plugin.py
 - name: test_put_back_restores_source_file_and_database
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: failure
-  description: After each run, both the source file and the catalogue hold the code as written. A catalogue
-    that still holds the wrong version after the re-install stops the drive, naming the object.
+  description: >-
+    After each of D1 and D2, the source file is byte-identical to the code as written and the catalogue
+    holds the as-written definition again.
   must_catch:
   - put-back restores the file but leaves the database holding the wrong version
-- name: test_live_redeploy_trap_detected_on_configured_database
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+  - scripts/build_orchestration/wrong_version_runner.py
+- name: test_database_put_back_mismatch_stops_naming_object
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
-  angle: reachability
-  surface_invoked: the shared runner CLI
-  description: Against the configured test database (skipped with a stated reason when none is configured),
-    the runner CLI is run on a fixture suite that re-installs from a different source in setUpClass, and
-    it reports invalid.
-  requires_db: true
-test_rationale: D1 and D2 are proven deterministically with an injected catalogue reader, because CI has
-  no database. The one requires_db test shows that the real catalogue read works where a test database
-  is configured. The D2 control carries the must_catch that stops a detector which invalidates everything.
+  angle: failure
+  description: >-
+    The stand-in database refuses the as-written re-install. The drive stops with gate_passed false and a
+    reason naming fn_refresh_due, and later wrong versions are not run.
+  must_catch:
+  - database put-back mismatch ignored
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_no_driver_is_not_run_and_unfinished
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    With no PostgreSQL driver importable in the test interpreter, the database row is not_run (blocking)
+    with the reason "no PostgreSQL driver importable in the test interpreter", never caught, and the
+    verdict is gate_passed false, reason unfinished. Nothing was installed, so there is nothing to put
+    back and the drive is merely unfinished.
+  must_catch:
+  - missing driver or unreadable catalogue read as caught
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_unreadable_catalogue_stops_after_the_first_wrong_version
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    The stand-in driver raises on every catalogue read, both in the run and in the put-back re-read. An
+    unverifiable put-back always stops (user-approved review decision 2026-10-22): the drive stops after
+    the first wrong version (baseline + one wrong version run, later wrong versions not run), with
+    gate_passed false and a stop reason (not "unfinished") that names fn_refresh_due and never the
+    address or password.
+  must_catch:
+  - a put-back whose re-read fails is only a note when the run already could not read the catalogue
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_credentials_never_in_verdict_or_logs
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    The stand-in driver raises an error whose text contains the configured password. The password, the
+    user name and the full address appear nowhere in the runner's stdout, its stderr, or the plugin's
+    output file.
+  must_catch:
+  - driver error text with the address copied into a row
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_transient_run_read_failure_is_not_run_not_caught
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: >-
+    Catalogue reads fail only during the run while the put-back re-read succeeds (a transient failure).
+    The database row is not_run (blocking), never caught, the drive does not stop, the verdict is
+    gate_passed false, reason unfinished, and no password, user name or address appears in the runner's
+    output or verdict. Because the put-back verifies, no stop row can mask the run's own row.
+  must_catch:
+  - missing driver or unreadable catalogue read as caught
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db_plugin.py
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_run_without_sql_alteration_is_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: >-
+    A wrong version that alters only a .py file, over tests without requires_db, gives the same verdict
+    JSON as before this AC: no plugin finding is read and no database is contacted.
+test_rationale: >-
+  CI has no database (alignment question 4), so every test here runs without one, on real fixtures. Each
+  test runs the real runner CLI as a subprocess on a temp git project with a real .claude/skills_config.json
+  (json.dump). The address is built at run time and points at a loopback TCP listener the test opens, so
+  db_check's real check_test_db probe reports "reachable". A real fixture suite's setUpClass installs from
+  either an unaltered copy (D1) or the altered file (D2). The pytest child, the plugin, the kind rule and
+  the verdict are all the shipped code. The one stand-in is the third-party driver: a PostgreSQL DB-API
+  module, backed by a JSON file, placed first on the child's import path. It is needed because
+  leafcutter ships no driver and CI has no server. Nothing is skipped. Residual risk: the real PostgreSQL
+  catalogue query is not exercised in CI, and no live-database test is added (user decision OQ-2 (A),
+  2026-10-22: risk accepted). D2 is the
+  control that stops a detector which invalidates everything, and the put-back-mismatch test pins the
+  database half of TQ-500g-1-iii. A shared helper unit_tests/build_orchestration/_tq_500g_2_db_harness.py
+  holds the listener, stand-in driver and fixture project for this AC and TQ-500g-2-ii.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "test split after review"
+    by: it-po
+    at: 2026-10-22
+    note: "test_spec entry test_no_driver_or_unreadable_catalogue_is_not_run split into test_no_driver_is_not_run_and_unfinished and test_unreadable_catalogue_stops_after_the_first_wrong_version (user-approved review decision 2026-10-22: an unverifiable put-back always stops)."
+  - reason: "contract aligned with put-back stop decision"
+    by: it-po
+    at: 2026-10-22
+    note: "delivers_to.contract and the 'Put-back includes the database' it_requirement now say an unverifiable database put-back (failed re-install, failed catalogue re-read, or differing definition) stops the drive with a reason naming the object(s); no driver / no address stay not_run + unfinished. must_catch 'missing driver or unreadable catalogue read as caught' added to test_credentials_never_in_verdict_or_logs, which asserts the not_run row under fail_read. Criteria unchanged."
+  - reason: "test added after wrong-version run"
+    by: it-po
+    at: 2026-10-22
+    note: "Added test_spec entry test_transient_run_read_failure_is_not_run_not_caught (test_tq500g2i_round3.py, angle discrimination, must_catch 'missing driver or unreadable catalogue read as caught'). The wrong version survived test_credentials_never_in_verdict_or_logs because the put-back re-read also failed there and the stop row masked the run's own row; this test fails reads only in the run so the put-back verifies and the row itself is judged. The must_catch added to test_credentials_never_in_verdict_or_logs in the previous entry was removed again for that reason. Criteria unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -146,3 +354,39 @@ notes: |
   the report's open questions. Lane: python-coder after TQ-500g-2 (prompt) is
   done. Otherwise the fast lane pulls the prompt L2 into a python-coder build
   set.
+
+  IT-PO TECHNICAL ALIGNMENT (2026-10-22, lane fast-lane/tq-500g-2)
+  RESOLVES the 2026-09-28 OPEN item. The catalogue is read by a pytest plugin
+  (_wvr_db_plugin.py) loaded into the suite's own pytest process, in the same single run
+  _wvr_pytest already makes with _kind_plugin. It uses the PostgreSQL driver that the
+  suite's own interpreter can already import, so leafcutter gains no driver dependency;
+  none importable gives not_run. The same plugin installs the wrong version at session
+  start, captures after each requires_db test's call phase, and (through its own entry
+  point) re-installs the code as written for the put-back. The runner-side comparison and
+  gate live in _wvr_db.py, shared with TQ-500g-2-ii.
+  The caller's brief said these notes already named the plugin design. They did not (they
+  said OPEN); this paragraph records it as the aligned design.
+  Build after TQ-500g-2-ii in this lane: the catalogue step sits behind -ii's
+  check_test_db gate and requires_db scope.
+  USER DECISIONS (2026-10-22, all the recommended options):
+    OQ-2 (A) no live-database test. Accepted risk: the real PostgreSQL catalogue query is
+         not tested in CI; the stand-in driver fixtures are the proof.
+    OQ-5 (A) accepted. A re-deploy inside the test's own uncommitted transaction cannot be
+         seen from the plugin's separate connection. It is a known limit and is to be
+         documented on the TQ-500g-5 reference page (docs/reference/wrong-version-runs.md).
+         Recorded here and not in TQ-500g-5's notes, because this pass edits only the
+         TQ-500g-2 tree. TQ-500g-5's author should pick it up from here.
+
+  IT-PO TEST SPLIT (2026-10-22, after review)
+  The unreadable-catalogue case now STOPS the drive instead of only giving not_run +
+  unfinished (user-approved review decision: an unverifiable put-back always stops; the
+  put-back re-read hits the same unreadable catalogue). The criteria say nothing about an
+  unreadable catalogue, so they are not in tension and were not changed. delivers_to and
+  the put-back it_requirement were brought in line in the same pass. The in-run row is
+  still not_run; only the verdict reason changes.
+  The credentials test cannot catch "missing driver or unreadable catalogue read as
+  caught" (that wrong version SURVIVED it: the put-back re-read also fails there, so the
+  stop row masks the run's own row), so it does not carry that must_catch. Hence
+  test_transient_run_read_failure_is_not_run_not_caught (round 3, angle discrimination):
+  reads fail only in the run, the put-back verifies, the drive does not stop, and the
+  run's own row must be not_run, never caught.
