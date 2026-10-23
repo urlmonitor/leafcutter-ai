@@ -1,5 +1,5 @@
 id: GE-117b-1-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "A private symbol is never required to declare an AC, and __all__ overrides the underscore rule"
 component: guardrail-engine
@@ -38,19 +38,61 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117b-1.yaml"
     relationship: parent
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "Determine __all__ membership from the staged blob via ast: read the module-level __all__ assignment (list/tuple of string literals). When __all__ is present it is authoritative for BOTH inclusion (underscore-named name in __all__ => public) and exclusion (public-named name absent from __all__ => not public). When __all__ is absent, fall back to the underscore-name rule. No MCP."
+  - "Determine __all__ membership from the staged blob via ast: read the module-level __all__ assignment (list or tuple of string literals). When __all__ is present it is authoritative for BOTH inclusion (underscore-named name in __all__ => public) and exclusion (public-named name absent from __all__ => not public). When __all__ is absent, fall back to the underscore-name rule. No MCP."
   - "Non-public symbols produce NO verdict at all (not a satisfied verdict) so they never reach GE-117d-1's block set — private/internal helpers must never be forced to carry an AC."
-  - "Same shared public/private classification used by GE-117b-1; do not re-derive it. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Same shared public/private classification used by GE-117b-1; do not re-derive it. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117b-1
   contract: "The public/private classification rule (underscore, __all__ authoritative) whose boundary this edge case pins"
+test_spec:
+  - name: test_ge_117b_1_i_underscore_helper_without_all_gets_no_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a module without __all__ that adds '_helper' with an AC-less docstring: the verdict set contains no entry for '_helper' (no missing verdict, and no satisfied verdict either)."
+    must_catch:
+      - "emits a satisfied verdict instead of no verdict for a non-public symbol"
+  - name: test_ge_117b_1_i_public_name_absent_from_all_is_not_public
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a module whose __all__ omits 'widget' and which adds an AC-less 'widget': no verdict for 'widget'. Run once with __all__ as a list and once as a tuple."
+    must_catch:
+      - "treats __all__ as additive only, honouring inclusion but ignoring exclusion"
+      - "recognises __all__ only when written as a list literal"
+  - name: test_ge_117b_1_i_underscore_name_listed_in_all_is_public_and_missing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage a module whose __all__ lists '_public_api' and which adds an AC-less '_public_api': a 'missing' symbol-ac verdict naming '_public_api' is produced."
+    must_catch:
+      - "applies only the underscore rule and ignores __all__"
+test_rationale: |
+  Each of the three criteria scenarios is one edge of the public-symbol rule, and each has its
+  own plausible wrong version. Emitting 'satisfied' for private names looks harmless, but it
+  puts private symbols into GE-117d-1's aggregate. Honouring __all__ only for inclusion passes
+  the third scenario and fails the second. Ignoring __all__ entirely passes the first two and
+  fails the third. The list-versus-tuple variant exists because both spellings are common in
+  real modules, and an ast check keyed on ast.List alone would silently fall back to the
+  underscore rule.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

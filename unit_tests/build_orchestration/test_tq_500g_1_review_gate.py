@@ -27,7 +27,7 @@ import pytest
 import unit_tests.build_orchestration._tq500g1_fixtures as fx
 import unit_tests.build_orchestration._tq500g1_review_fixtures as rv
 
-SHAPE = {"gate_passed", "applicable", "verified", "outcome", "reason", "results", "survivors", "unfinished"}
+SHAPE = {"gate_passed", "applicable", "verified", "outcome", "reason", "results", "survivors", "unfinished", "non_blocking_survivors"}
 
 
 def _one_wv_sandbox(root):

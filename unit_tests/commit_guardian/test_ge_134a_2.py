@@ -33,18 +33,31 @@ _PY_PATH = "src/near_limit.py"
 
 
 def _js_body(extra_entries: int = 0, extra_code: bool = False) -> str:
-    """A JavaScript body measuring 1,400 lines plus a trailing '//' block of
+    """A JavaScript body measuring 1,400 code lines (1,750 physical) plus a trailing '//' block of
     a heading and 5 entries (+ *extra_entries* appended entries)."""
     code = ["const extra = 1;"] if extra_code else []
-    body = fx.body_lines(1400, "//", "const value_{i} = {i};")
+    body = fx.body_lines(1750, "//", "const value_{i} = {i};")
     block = ["// DECISION HISTORY", *fx.history_entries("//", 5 + extra_entries)]
     return "\n".join([*code, *body, *block]) + "\n"
 
 
+# Under GE-127d-3 (2026-10-21) comments and blanks do not count, so the 1,750-line body
+# (175 blank + 175 comment lines as decoration) measures its 1,400 code lines, matching
+# the AC's figures. Derived independently of production, then pinned.
+_JS_MEASURED = fx.line_rule_count(_js_body())
+assert _JS_MEASURED == 1400
+
+
 def _py_body(extra_entries: int = 0) -> str:
-    """A Python file measuring 399 lines plus a trailing '#' block of a
-    heading and 1 entry (+ *extra_entries* appended entries)."""
-    body = fx.body_lines(399, "#")
+    """A Python file measuring 399 code lines (plus ordinary comments and blanks, which
+    do not count) and a trailing '#' block of a heading and 1 entry (+ *extra_entries*)."""
+    body = []
+    for i in range(399):
+        body.append(f"value_{i} = {i}")
+        if i % 10 == 4:
+            body.append(f"# ordinary comment {i}")
+        if i % 10 == 9:
+            body.append("")
     block = ["# DECISION HISTORY", *fx.history_entries("#", 1 + extra_entries)]
     return "\n".join([*body, *block]) + "\n"
 
@@ -71,8 +84,8 @@ def test_ge_134a_2_history_only_append_measures_1400_before_and_after(tmp_path, 
     # covers: GE-134a-2
     # angle: discrimination
     """get_previous_length on the committed blob and measure_current_length
-    on the staged file both give 1,400, and resolve_added_measured_lines
-    gives 0 for the 3 appended entry lines."""
+    on the staged file both give 1,400, and
+    resolve_added_measured_lines gives 0 for the 3 appended entry lines."""
     _committed_js_repo(tmp_path)
     d2.write_and_stage(tmp_path, _JS_PATH, _js_body(extra_entries=3))
     ratchet = fx.load_ratchet()

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-21'
+last_updated: '2026-10-23'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 71** (4 blocker, 41 high, 26 low) · **Resolved: 28** (recounted from the directory 2026-10-22, after KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide moved to resolved)
+**Open: 74** (4 blocker, 41 high, 29 low) · **Resolved: 28** (recounted from the directory 2026-10-23, after the three KI-BO-20261023 entries were filed)
 
 ## Open
 
@@ -117,6 +117,8 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20261014-fast-lane-build-targets-the-shared-install — the fast lane leaves any rebuild to an agent's choice of `--target-dir`, and in the GE-127g-2-i lane the coder built into the workspace parent, deploying an unmerged `check_doc_length.py` over the shared install every session's hooks run for about 20 minutes | [open-high-ki-bo-20261014-fast-lane-build-targets-the-shared-install.md](build-orchestration/open-high-ki-bo-20261014-fast-lane-build-targets-the-shared-install.md) |
 | `high` | KI-BO-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children — the connected-set walk adds a not-done L2 prerequisite alone, never its children, then marks it done and reports `all_done`, so GE-127g-2 went done over an unbuilt GE-127g-2-i | [open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md](build-orchestration/open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md) |
 | `high` | KI-BO-20261021-unquoted-shell-args — the fast lane's wrong-version and claim commands, and the red-baseline gate in /build-feature and build-ticket.js, paste paths and ids into shell lines unquoted, so a path with a space halts every fast-lane drive and an id with shell metacharacters runs extra commands | [open-high-ki-bo-20261021-unquoted-shell-args.md](build-orchestration/open-high-ki-bo-20261021-unquoted-shell-args.md) |
+| `low` | KI-BO-20261023-test-breaker-no-op-alterations — test-breaker can prepare a wrong version that changes text but not behaviour (a setting nothing reads, a change to a discarded copy), and the runner only refuses alterations that do not load or change nothing, so a sound test reads as a blocking survivor; graded medium | [open-low-ki-bo-20261023-test-breaker-no-op-alterations.md](build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md) |
+| `low` | KI-BO-20261023-gate-verdicts-sensitive-to-machine-load — with two heavy pytest lanes on one Windows machine, `mark_done` reported ACs stale and `wrong_version_gate.py finish` stopped on failures and timeouts for tests that pass alone, and `mark_done` prints no reason; graded medium | [open-low-ki-bo-20261023-gate-verdicts-sensitive-to-machine-load.md](build-orchestration/open-low-ki-bo-20261023-gate-verdicts-sensitive-to-machine-load.md) |
 | `low` | KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — mostly fixed 2026-10-14 (was blocker): a failed or skipped phase now blocks the done write (BO-400a-2-v, PR #1201) and agent templates no longer write level-2 headings into Comments (BO-400a-2-vi); still open: the latest sign-off entry is the last one in file order | [open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md](build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
@@ -142,6 +144,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20260925-commit-agent-pkill-kills-parallel-test-runs — commit.md Step 0 runs 'pkill -f pytest', which kills every pytest on the machine, and its failure path uses the shared git stash that quick-fix forbids | [open-low-ki-bo-20260925-commit-agent-pkill-kills-parallel-test-runs.md](build-orchestration/open-low-ki-bo-20260925-commit-agent-pkill-kills-parallel-test-runs.md) |
 | `low` | KI-BO-20261009-one-halted-ticket-stops-the-whole-epic-run — in practice any single ticket's handoff or blocker ends the /build-feature run, because a halting batch almost always leaves staged files and that stops the run; each manual re-run re-plans from scratch, and the end-of-run epic re-read is an unreliable agent listing | [open-low-ki-bo-20261009-one-halted-ticket-stops-the-whole-epic-run.md](build-orchestration/open-low-ki-bo-20261009-one-halted-ticket-stops-the-whole-epic-run.md) |
 | `low` | KI-BO-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire — the workspace maker's HOOKS_INACTIVE answer names the stage that did not fire but not why, and the canary's git report is captured and dropped inside the maker | [open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md](build-orchestration/open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md) |
+| `low` | KI-BO-20261023-g2-followups — PR #1316 leftovers: three mypy errors in new code (`wrong_version_runner.py`:274, `_tq500g2i_standin_pg.py`:90, `_tq500g2i_review_fixtures.py`:76), and `sql-test-writer` still declares `mutates: none` although it writes files | [open-low-ki-bo-20261023-g2-followups.md](build-orchestration/open-low-ki-bo-20261023-g2-followups.md) |
 
 ## Resolved
 

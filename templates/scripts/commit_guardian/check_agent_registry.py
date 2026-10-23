@@ -4,8 +4,8 @@ GOAL: Pre-commit hook that validates agent_registry.json for bidirectional
     consistency, in whatever layout the package actually ships.
 BUSINESS CONTEXT: The agent registry is the single source of truth for which
     agents exist and their spawn relationships. This hook runs when the
-    registry, its schema, or an agent template is staged, validating that the
-    registry is consistent before the commit lands. Catches orphan templates,
+    registry, its schema, or a Markdown template of THIS package is staged,
+    validating that the registry is consistent before the commit lands. Catches orphan templates,
     orphan registry entries, and spawn_allowlist / spawned_by mismatches early
     rather than at runtime.
 ARCHITECTURE: Thin wrapper around registry_validator.validate_agent_registry()
@@ -13,13 +13,24 @@ ARCHITECTURE: Thin wrapper around registry_validator.validate_agent_registry()
     verdict and the build-time verdict always agree on the same registry
     (GE-113c-1-vi).
 
-    SCOPE (decided first, independently of any package lookup): a staged path
-    is in scope when it is the agent registry (config/agent_registry.json),
-    its schema (config/agent_registry.schema.json), or an agent template
-    (templates/agents/**), under whatever prefix that path carries in this
-    layout. Nothing in scope staged means an ordinary pass, whether or not a
-    package root can be found (the empty-scope rule of GE-120a-4) — see
-    ``_in_scope`` / ``_is_registry_related``. The registry/schema filenames
+    SCOPE: a staged path is a CANDIDATE when it is the agent registry
+    (config/agent_registry.json), its schema (config/agent_registry.schema.json),
+    or any Markdown template (templates/**/*.md), under whatever prefix that
+    path carries in this layout (``_in_scope``). Registry/schema candidates are
+    always in scope. A templates/ Markdown candidate is in scope only when it
+    lies under the RESOLVED package root's ``templates/`` (package_root
+    "leafcutter-ai" -> ``leafcutter-ai/templates/**``; "" -> ``templates/**``):
+    a consumer project's own ``templates/*.md`` is not the package's and exits 0
+    without running the validator (``_package_template_paths``). The wider
+    template scope exists because the same validator also checks every ability
+    (skill) reference written in template prose, so a dangling reference in a
+    skill or command template is refused at commit time, not only by the build
+    (INF-700b-2). No candidate staged means an ordinary pass whether or not a
+    package root can be found (the empty-scope rule of GE-120a-4); the
+    candidate test is decided before the package lookup, but the final
+    templates/ narrowing needs the resolved root, and while a candidate
+    templates/ path is staged an unresolved root still fails closed
+    (CANNOT LOCATE PACKAGE) — see ``_in_scope`` / ``_is_registry_related``. The registry/schema filenames
     are matched via SPLIT path-segment tuples (``_SCOPE_EXACT_PARTS``),
     deliberately never joined into one "dir/file.ext"-shaped string literal:
     a standalone literal in that shape which also names a real on-disk data
@@ -86,7 +97,7 @@ from _resolve_root import resolve_package_root as _resolve_package_root
 _GATE_NAME = "check-agent-registry"
 _HOOK_FILE = Path(__file__).resolve()
 
-# In-scope staged paths (GE-113c-1-vi): the registry, its schema, or an agent
+# Candidate staged paths (GE-113c-1-vi): the registry, its schema, or a Markdown
 # template, under WHATEVER prefix this layout gives them — never anchored to
 # a hardcoded package-directory segment. Filenames are kept as SPLIT path
 # segments (never joined into one literal "dir/file.ext" string) — see the
@@ -95,7 +106,8 @@ _HOOK_FILE = Path(__file__).resolve()
 _SCOPE_REGISTRY_PARTS = ("config", "agent_registry.json")
 _SCOPE_SCHEMA_PARTS = ("config", "agent_registry.schema.json")
 _SCOPE_EXACT_PARTS = (_SCOPE_REGISTRY_PARTS, _SCOPE_SCHEMA_PARTS)
-_SCOPE_INFIX = "templates/agents/"
+_SCOPE_INFIX = "templates/"
+_SCOPE_SUFFIX = ".md"
 
 
 def _get_staged_files() -> list[str] | None:
@@ -146,14 +158,49 @@ def _in_scope(path: str) -> bool:
     Returns:
         True for the registry or its schema at any prefix (e.g.
         "config/agent_registry.json" or "leafcutter-ai/config/agent_registry
-        .json"), or any agent template under a "templates/agents/" directory
-        at any prefix.
+        .json"), or any Markdown template under a "templates/" directory at
+        any prefix (agents, skills, commands, rules, ...).
     """
     normalized = path.replace("\\", "/")
     parts = tuple(normalized.split("/"))
     if len(parts) >= 2 and parts[-2:] in _SCOPE_EXACT_PARTS:
         return True
-    return normalized.startswith(_SCOPE_INFIX) or f"/{_SCOPE_INFIX}" in normalized
+    in_templates = normalized.startswith(_SCOPE_INFIX) or f"/{_SCOPE_INFIX}" in normalized
+    return in_templates and normalized.endswith(_SCOPE_SUFFIX)
+
+
+def _is_package_template(path: str, package_root: Path) -> bool:
+    """Return True when a templates/ Markdown path lies under the package's ``templates/``.
+
+    Args:
+        path: A staged path (relative to the working directory the hook runs in).
+        package_root: The resolved package root.
+
+    Returns:
+        True when ``path`` resolves inside ``<package_root>/templates``.
+    """
+    candidate = (Path.cwd() / path.replace("\\", "/")).resolve()
+    return candidate.is_relative_to((package_root / _SCOPE_INFIX).resolve())
+
+
+def _package_scope(candidates: list[str], package_root: Path) -> list[str]:
+    """Narrow candidates to those the validator covers under this package root.
+
+    Registry/schema paths always stay; a ``templates/`` Markdown path stays only
+    when it is under ``<package_root>/templates/`` (INF-700b-2 M-3).
+
+    Args:
+        candidates: Staged paths matching ``_in_scope``.
+        package_root: The resolved package root.
+
+    Returns:
+        The staged paths in scope for validation.
+    """
+    normalized = [c.replace("\\", "/") for c in candidates]
+    return [
+        c for c in normalized
+        if tuple(c.split("/")[-2:]) in _SCOPE_EXACT_PARTS or _is_package_template(c, package_root)
+    ]
 
 
 def _is_registry_related(staged: list[str]) -> bool:
@@ -182,7 +229,7 @@ def _report_could_not_check_staged_files() -> None:
         f"[{_GATE_NAME}] COULD NOT CHECK STAGED FILES — `git diff --cached` "
         "could not be queried (see the WARNING above), so this hook cannot "
         "tell whether any file in its scope (the agent registry, its "
-        "schema, or an agent template) was staged. This is neither a "
+        "schema, or a package Markdown template) was staged. This is neither a "
         "located-and-invalid registry nor a confirmed empty scope — it is "
         "an inspection failure, and per GE-113c-1-vi's no-silent-pass rule "
         "a check that could not inspect what it was given must not report "
@@ -223,14 +270,16 @@ def _report_validation_failed(package_root: Path, errors: list[str]) -> None:
     """
     registry_path = package_root.joinpath(*_SCOPE_REGISTRY_PARTS)
     print(
-        f"[{_GATE_NAME}] agent_registry.json validation failed: "
+        f"[{_GATE_NAME}] agent_registry.json / skill reference validation failed: "
         f"{registry_path}",
         file=sys.stderr,
     )
     for err in errors:
         print(f"  - {err}", file=sys.stderr)
     print(
-        f"\nFix the registry errors above before committing. See {registry_path}.",
+        "\nFix the registry or skill-reference errors above before committing "
+        "(each skill-reference line names the template file and the skill that "
+        f"does not resolve). Registry: {registry_path}.",
         file=sys.stderr,
     )
 
@@ -252,14 +301,17 @@ def main() -> int:
         _report_could_not_check_staged_files()
         return 1
 
-    staged_in_scope = [f for f in staged if _in_scope(f)]
-    if not staged_in_scope:
+    candidates = [f for f in staged if _in_scope(f)]
+    if not candidates:
         return 0  # Nothing in this hook's scope staged (GE-120a-4).
 
     package_root, tried = _resolve_package_root(_HOOK_FILE)
     if package_root is None:
-        _report_cannot_locate(tried, staged_in_scope)
+        _report_cannot_locate(tried, candidates)
         return 1
+
+    if not _package_scope(candidates, package_root):
+        return 0  # Only a consumer project's own templates/ was staged.
 
     scripts_dir = package_root / "scripts"
     if str(scripts_dir) not in sys.path:
@@ -291,6 +343,25 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-23 14:30 [python-coder/AC INF-700b-2, pr-reviewer M-3]: The widened
+#   templates/**/*.md scope matched ANY ``*/templates/*.md`` at any prefix, so
+#   staging a consumer project's own templates/notes.md ran full package
+#   validation (and could block an unrelated commit). A templates/ Markdown
+#   path is now in scope only under the resolved package root's templates/
+#   (``_package_scope``); other templates/ paths exit 0 without the validator.
+#   Registry/schema scope is unchanged, and an unresolvable package root with a
+#   candidate staged still fails closed (CANNOT LOCATE PACKAGE).
+#   (#EPIC-ALearningAnAgentHasTodayActuallyGets/04)
+# - 2026-10-22 12:00 [python-coder/AC INF-700b-2]: Widened ``_in_scope`` from
+#   templates/agents/** to any staged templates/**/*.md. The validator this hook
+#   wraps already runs ability_reference_verdict over every templates/**/*.md,
+#   but the narrow scope meant a dangling skill reference in templates/skills/**
+#   or templates/commands/** was caught only by CI's build, not at commit time.
+#   Widened here rather than adding a separate check-skill-refs hook (no manifest
+#   or deploy-manifest change; the stanza has no files: filter). The failure banner
+#   now names "skill reference" validation so a reference finding is not headlined
+#   only as a registry failure; per-error lines still carry template path and skill.
+#   (#EPIC-ALearningAnAgentHasTodayActuallyGets/04)
 # - 2026-09-28 16:00 [python-coder/AC INF-600k-1, pr-reviewer HIGH-3]: Moved
 #   this file's own ``_resolve_package_root`` to ``_resolve_root.py`` as
 #   ``resolve_package_root()`` (pure move, no behaviour change) so

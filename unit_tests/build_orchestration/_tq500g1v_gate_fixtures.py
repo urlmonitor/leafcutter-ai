@@ -22,7 +22,7 @@ import unit_tests.build_orchestration._tq500g1ix_fixtures as ix
 import unit_tests.build_orchestration._tq500g1x_fixtures as x
 
 GATE = ix.REPO_ROOT / "scripts" / "build_orchestration" / "wrong_version_gate.py"
-KEYS = {"gate_passed", "stopped_at", "writer", "verdict"}
+KEYS = {"gate_passed", "stopped_at", "writer", "verdict", "sweep"}
 NO_SOURCE_OUTCOME = "wrong-version runs not applicable: no source requirement"
 NO_FLAG = x.NO_FLAG
 
@@ -62,7 +62,7 @@ def run_finish(sb: x.XSandbox, stdin: str, *, timeout: int = 600, **kw):
 
 
 def assert_shape(proc, out: dict) -> None:
-    """The one-object contract: exactly the four keys, and exit 0 if and only if gate_passed."""
+    """The one-object contract: exactly the five keys (TQ-500g-3-i adds sweep), and exit 0 if and only if gate_passed."""
     assert set(out) == KEYS, f"keys are {sorted(out)}, expected {sorted(KEYS)}"
     assert isinstance(out["gate_passed"], bool), out["gate_passed"]
     assert (proc.returncode == 0) == out["gate_passed"], (proc.returncode, out["gate_passed"])

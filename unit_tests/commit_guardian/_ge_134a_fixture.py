@@ -9,43 +9,22 @@ GOAL: Shared builders and helpers for the GE-134a suite: a file's
     modules in a temporary git repository -- no build.py, no POSIX flock) for
     every subprocess test, and adds:
 
-    - loaders for the REAL production _file_size_ratchet.py (and for a
-      disposable copy whose prefix constant has been rewritten);
+    - a loader for the REAL production _file_size_ratchet.py;
     - the GE-134a-1 worked examples (80-line Python + 25-line ruled block,
       120-line JavaScript + 15-line unruled header block);
-    - an INDEPENDENT counter implementing the rule as the GE-134a-3 statement
-      publishes it, never importing production, so agreement with the
-      quoted length is a genuine reproducibility proof (the same discipline
-      _ge_127d_2_fixture.independent_count_content_lines follows).
-
-TEST-WRITER DESIGN DECISIONS (python-coder must honour these names):
-
-    1. PREFIX_CONSTANT_NAME = "DECISION_HISTORY_COMMENT_PREFIXES": the ONE
-       module-level constant in _file_size_ratchet.py holding the
-       line-comment prefixes, exactly ("#", "//", "--"). GE-134a-1's IT PO
-       note requires one such constant but names none; this pins the name.
-       It must be a plain module-level assignment (``NAME = (...)`` or
-       ``NAME: tuple[str, ...] = (...)``) that the measurement AND the
-       published rule both read at call time, so rewriting it in a copy of
-       the module changes both.
-    2. The published rule (describe_measurement_rule) states the history
-       exclusion in a clause matched by ``HISTORY_EXCLUSION_RE``: the words
-       "decision history" / "decision-history" in the same clause as
-       "not counted" / "discard" / "left out".
-    3. The GE-127d-2 category vocabulary gains the key "decision_history"
-       (``parse_discard_categories_with_history``), extending
-       _ge_127d_2_fixture.parse_discard_categories without editing the
-       GE-127d-2 suite's own fixture.
+    - INDEPENDENT counters implementing the 2026-10-21 rule (GE-127d-3
+      supersedes GE-134a: no comment, standalone string or blank line counts),
+      never importing production.
 
 DECISION HISTORY
 - 2026-10-21 [test-writer/GE-134a-1..3]: Initial authoring.
+- 2026-10-23 [test-writer/GE-127d-3]: Rewritten for GE-127d-3 superseding GE-134a; the
+  history-block stripper, prefix-constant loader and category helpers were removed.
 """
 
 from __future__ import annotations
 
-import ast
 import importlib.util
-import re
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -58,7 +37,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RATCHET_SRC = REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "_file_size_ratchet.py"
 SHIPPED_CONFIG = REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "commit_guardian.json"
 
-PREFIX_CONSTANT_NAME = "DECISION_HISTORY_COMMENT_PREFIXES"
 EXPECTED_PREFIXES: tuple[str, ...] = ("#", "//", "--")
 
 # The line-comment prefix each shipped checked extension uses (GE-134a-1
@@ -73,12 +51,6 @@ PREFIX_BY_EXTENSION: dict[str, str] = {
     ".sql": "--",
 }
 
-HISTORY_EXCLUSION_RE = re.compile(
-    r"(?:not\s+count\w*|discard\w*|left\s+out)[^;]*decision[- ]history"
-    r"|decision[- ]history[^;]*(?:not\s+count\w*|discard\w*|left\s+out)",
-    re.IGNORECASE,
-)
-
 _RULE = "=" * 68
 
 
@@ -91,7 +63,8 @@ def _load_from(path: Path, module_name: str) -> ModuleType:
     """Import the module file at *path* under *module_name*, fresh."""
     spec = importlib.util.spec_from_file_location(module_name, str(path))
     if spec is None or spec.loader is None:
-        raise ImportError(f"cannot build an import spec for {path}")
+        message = f"cannot build an import spec for {path}"
+        raise ImportError(message)
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -99,39 +72,15 @@ def _load_from(path: Path, module_name: str) -> ModuleType:
 
 
 def load_ratchet() -> ModuleType:
-    """Load the REAL production templates/.../_file_size_ratchet.py."""
-    return _load_from(RATCHET_SRC, "ge_134a_file_size_ratchet")
+    """Load the REAL production templates/.../_file_size_ratchet.py.
 
-
-def prefix_constant(module: ModuleType) -> tuple[str, ...] | None:
-    """Return the pinned prefix constant's value, or None when absent."""
-    value = getattr(module, PREFIX_CONSTANT_NAME, None)
-    return tuple(value) if value is not None else None
-
-
-def load_ratchet_with_prefixes(tmp_dir: Path, prefixes: tuple[str, ...], tag: str) -> ModuleType | None:
-    """Load a disposable copy of the ratchet whose prefix constant is *prefixes*.
-
-    The constant's module-level assignment is located with ``ast`` and its
-    whole line span replaced, so the copy reads *prefixes* wherever the real
-    module reads the constant. Returns None when the constant does not exist
-    (the caller turns that into an assertion failure, never an import error).
+    The module imports its sibling ``_file_size_measure`` package (GE-127d-3), so the
+    template directory must be importable the way a deployed layout makes it.
     """
-    source = RATCHET_SRC.read_text(encoding="utf-8")
-    span = None
-    for node in ast.parse(source).body:
-        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
-        if any(isinstance(t, ast.Name) and t.id == PREFIX_CONSTANT_NAME for t in targets):
-            span = (node.lineno, node.end_lineno)
-            break
-    if span is None:
-        return None
-    lines = source.splitlines(keepends=True)
-    replacement = f"{PREFIX_CONSTANT_NAME} = {prefixes!r}\n"
-    rewritten = "".join(lines[: span[0] - 1]) + replacement + "".join(lines[span[1] :])
-    dest = tmp_dir / f"_file_size_ratchet_{tag}.py"
-    dest.write_text(rewritten, encoding="utf-8")
-    return _load_from(dest, f"ge_134a_ratchet_copy_{tag}")
+    guardian_dir = str(RATCHET_SRC.parent)
+    if guardian_dir not in sys.path:
+        sys.path.insert(0, guardian_dir)
+    return _load_from(RATCHET_SRC, "ge_134a_file_size_ratchet")
 
 
 def measure_text(module: ModuleType, tmp_dir: Path, name: str, content: str) -> int:
@@ -229,71 +178,23 @@ def pre_change_count(content: str) -> int:
     return len(_strip_regions(content).splitlines())
 
 
-def _comment_text(line: str, prefix: str) -> str | None:
-    """The text after *prefix* when *line* is a *prefix* comment, else None."""
-    stripped = line.strip()
-    return stripped[len(prefix) :].strip() if stripped.startswith(prefix) else None
-
-
-def _heading_prefix(line: str) -> str | None:
-    """The prefix of *line* when it is a whole-text DECISION HISTORY heading."""
-    for prefix in EXPECTED_PREFIXES:
-        if _comment_text(line, prefix) == "DECISION HISTORY":
-            return prefix
-    return None
-
-
-def _is_rule_line(line: str, prefix: str) -> bool:
-    text = _comment_text(line, prefix)
-    return text is not None and bool(text) and set(text) == {"="}
-
-
-def strip_history_blocks(lines: list[str]) -> list[str]:
-    """Drop every line-comment DECISION HISTORY block, as the rule states it:
-    a heading whose whole comment text is DECISION HISTORY, a '=' rule line
-    directly above it, through the last consecutive same-prefix comment line.
-    """
-    kept: list[str] = []
-    index = 0
-    while index < len(lines):
-        prefix = _heading_prefix(lines[index])
-        if prefix is None:
-            kept.append(lines[index])
-            index += 1
-            continue
-        if kept and _is_rule_line(kept[-1], prefix):
-            kept.pop()
-        index += 1
-        while index < len(lines) and _comment_text(lines[index], prefix) is not None:
-            index += 1
-    return kept
-
-
 def independent_count(content: str) -> int:
-    """The published post-change rule, coded independently of production."""
-    return len(strip_history_blocks(_strip_regions(content).splitlines()))
+    """The 2026-10-21 rule (GE-127d-3 supersedes GE-134a), coded independently of production.
+
+    No comment of any style, no standalone string and no blank line counts; a line counts
+    only if it holds a code token. Python goes through the stdlib tokenizer
+    (``_ge_127d_2_fixture.independent_python_measure``); the other languages' content built
+    here uses whole-line ``//`` / ``--`` / ``#`` comments only, so a non-blank line that does
+    not start with a comment prefix is a code line.
+    """
+    return d2.independent_python_measure(content)
 
 
-def parse_discard_categories_with_history(measures_text: str | None) -> set[str]:
-    """_ge_127d_2_fixture.parse_discard_categories plus "decision_history"."""
-    categories = d2.parse_discard_categories(measures_text)
-    if measures_text and HISTORY_EXCLUSION_RE.search(measures_text):
-        categories.add("decision_history")
-    return categories
-
-
-def count_by_categories(content: str, categories: set[str]) -> int:
-    """Re-derive a length from *content* driven only by parsed *categories*."""
-    text = content
-    if "triple_quoted" in categories:
-        text = d2._INDEPENDENT_TRIPLE_DOUBLE_RE.sub("", text)
-        text = d2._INDEPENDENT_TRIPLE_SINGLE_RE.sub("", text)
-    if "block_comment" in categories:
-        text = d2._INDEPENDENT_BLOCK_COMMENT_RE.sub("", text)
-    lines = text.splitlines()
-    if "decision_history" in categories:
-        lines = strip_history_blocks(lines)
-    return len(lines)
+def line_rule_count(content: str) -> int:
+    """Non-Python content built from whole-line comments, blanks and code lines only."""
+    return sum(
+        1 for ln in content.splitlines() if ln.strip() and not ln.strip().startswith(EXPECTED_PREFIXES)
+    )
 
 
 # ---------------------------------------------------------------------------

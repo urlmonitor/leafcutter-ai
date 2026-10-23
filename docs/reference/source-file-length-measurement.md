@@ -1,18 +1,20 @@
 ---
 title: "Reference: Source File Length Measurement"
-description: "Lookup for how the file-size standard measures a source file's length: the published rule, what it leaves out, Python and JavaScript raw-versus-measured examples, and why moving decision history frees no lines."
+description: "Lookup for how the file-size standard measures a source file's length: the published rule, what counts and what does not, Python, JavaScript, shell and used-string raw-versus-measured examples, the INDETERMINATE outcome, and the backstop for an over-limit file."
 type: reference
 status: active
 created: 2026-10-21
-last_updated: 2026-10-21
+last_updated: 2026-10-23
 components:
   - commit_guardian
   - documentation_system
 related_docs:
   - docs/reference/document-length-standard.md
   - docs/architecture/components/commit-guardian.md
+  - docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
   - docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
   - templates/skills/doc-enforcer/SKILL.md
+  - templates/scripts/commit_guardian/_file_size_measure/rule_statement.py
   - templates/scripts/commit_guardian/_file_size_ratchet.py
   - templates/scripts/commit_guardian/README.md
 ---
@@ -23,87 +25,124 @@ Lets an author who is about to change a `.py`, `.sql`, `.js`, `.mjs`, `.ts`, `.t
 
 ## The rule
 
-The size standard publishes its measurement rule on the `Measures:` line of every refusal, and `describe_measurement_rule()` in `_file_size_ratchet.py` generates that sentence from the counting function in force. Verbatim:
+A line counts only if it holds a code token. The size standard publishes its measurement rule on the `Measures:` line of every refusal, and `describe_measurement_rule()` in `_file_size_ratchet.py` generates that sentence (through `_file_size_measure/rule_statement.py`) from what the measure actually does with probe content. Verbatim:
 
-> discards content inside triple-quoted strings and block comments; a decision-history block is not counted: it starts at a comment (prefix '#', '//' and '--') whose whole text is DECISION HISTORY, takes a '=' rule line directly above it if there is one, and ends at the first line that is not a comment line of that prefix; counts every remaining line, including blank lines and ordinary '#' comments.
+> does not count comments of every style (line and block comments in every language measured), standalone strings (Python strings standing alone as statements: docstrings, bare strings and trailing blocks) and blank lines; counts every line of a used string (a Python string that is assigned, passed, returned or part of a larger expression), every line of an f-string and every other line of code; a line holding several statements counts once per statement (Python, JavaScript and TypeScript), so joining statements onto one line shortens nothing.
 
-If the function's output and this quotation ever differ, the function is right: it is the rule in force.
+If the function's output and this quotation ever differ, the function is right: it is the rule in force. The same sentence follows `MEASUREMENT RULE:` in the `check_file_size.py` row of the [commit_guardian README](../../templates/scripts/commit_guardian/README.md).
+
+This rule replaced the GE-134a rule, under which a line-comment DECISION HISTORY block was uncounted while ordinary comments and blank lines counted. The requirement now in force is [GE-127d-3](../acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml) and its children.
 
 ## What is left out, and what is counted
 
-| Content | Measured | Notes |
+Measurement is per language, by a tokenizer (`templates/scripts/commit_guardian/_file_size_measure/`), not by a delimiter pattern. The language is chosen from the file's extension.
+
+| Content | Counted | Notes |
 |---|---|---|
-| Triple-quoted strings (`"""` or `'''`) | No | Docstrings included. The region and its closing newline contribute zero lines. |
-| Block comments (`/* ... */`) | No | JSDoc included. Same zero-line rule. |
-| Decision-history block | No | Line-comment form only; see below. Added by GE-134a-1. |
-| Blank lines | Yes | |
-| Ordinary comment lines (`#`, `//`, `--`) | Yes | A comment that merely mentions the words `DECISION HISTORY` is an ordinary comment. |
-| Code | Yes | |
+| Comment, any style (`#`, `//`, `--`, `/* ... */`) | No | A line holding only comment text is dropped. Code before a trailing comment still counts the line. JSDoc is a block comment. |
+| Python string standing alone as a statement | No | Docstrings, bare strings, and a trailing DECISION HISTORY string block. |
+| Python string that is used | Yes | Assigned, passed, returned or part of an expression; every line of it counts. |
+| Standalone f-string | Yes | Every line counts. |
+| Blank line | No | Anywhere, including inside a used string. |
+| Comment marker inside a string, glob, regex literal or here-document | Yes | It is code, not a comment. |
+| Several statements on one line | Once per statement | Python: after a top-level `;`, and a compound header with its body on the same line (`if x: y`). JavaScript and TypeScript: after a `;` that is not inside a parenthesis opened since the innermost brace, so a `for (;;)` header is one statement and a callback body written on one line is not. SQL and shell lines count once. |
+| Any other code line | Yes | |
 
-The same rule applies to every covered extension; it does not look at the file's language.
+A DECISION HISTORY block is not special: in a line-comment form it is comments, and in a Python string form it is a standalone string, so it is uncounted either way. A file whose whole content is uncounted measures `0`.
 
-### The decision-history block
+The block's heading, underline and entry form are defined by the decision-history convention in the [doc-enforcer skill](../../templates/skills/doc-enforcer/SKILL.md) and are not repeated here. The requirement that first made history free is [GE-134a](../acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml); its mechanism was superseded by GE-127d-3, which leaves history free as a consequence of leaving all comments and standalone strings out.
 
-- It starts at a line comment whose whole text is `DECISION HISTORY`. `# DECISION HISTORY notes are below` starts none.
-- A rule line of `=` characters directly above the heading, with the same prefix, belongs to the block. One separated from the heading by any other line is counted.
-- It ends at the first line that is not a comment line with the heading's own prefix. The code line directly after it is counted.
-- A block inside text the rule already leaves out (a module docstring or a block comment) is not subtracted a second time.
-- A file whose whole content is one block measures `0` and is not refused as empty or unreadable.
+### INDETERMINATE
 
-The block's heading, underline and entry form are defined by the decision-history convention in the [doc-enforcer skill](../../templates/skills/doc-enforcer/SKILL.md) and are not repeated here. The requirement behind the exclusion is [GE-134a](../acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml).
+A file the tokenizer cannot read as its language (for example an unterminated string or block comment), or whose extension has no tokenizer, is INDETERMINATE. The gate reports that it could not measure the file; it never falls back to a raw line count and never reports `0`.
 
 ## Examples
 
-Raw count is the physical line count; measured length is what the gate quotes.
+Raw count is the physical line count; measured length is what the gate quotes. Each figure below was produced by the deployed measure.
 
-### Python: 15 raw lines, 8 measured
+### Python: 18 raw lines, 5 measured
 
 ```python
 """Parse the config file."""                       # not counted (docstring)
 import json                                        # counted
-                                                   # counted (blank)
-# Load the file and return its mapping.            # counted (ordinary comment)
+                                                   # not counted (blank)
+# Load the file and return its mapping.            # not counted (comment)
+DEFAULTS = {"mode": "strict"}  # fallback          # counted (code before comment)
+                                                   # not counted (blank)
+                                                   # not counted (blank)
 def load(path):                                    # counted
+    """Read path."""                               # not counted (docstring)
     with open(path) as handle:                     # counted
         return json.load(handle)                   # counted
-                                                   # counted (blank)
-                                                   # counted (blank)
-# ==============                                   # not counted (rule line above heading)
-# DECISION HISTORY                                 # not counted
-# ==============                                   # not counted
-# - 2026-10-01 [python-coder/X-1]: Created.        # not counted
-# - 2026-10-05 [python-coder/X-2]: Added errors.   # not counted
-# - 2026-10-09 [python-coder/X-3]: Empty file -> {}.  # not counted
+                                                   # not counted (blank)
+                                                   # not counted (blank)
+# ==============                                   # not counted (comment)
+# DECISION HISTORY                                 # not counted (comment)
+# ==============                                   # not counted (comment)
+# - 2026-10-01 [python-coder/X-1]: Created.        # not counted (comment)
+# - 2026-10-05 [python-coder/X-2]: Added errors.   # not counted (comment)
 ```
 
-15 raw - 1 (docstring) - 6 (block) = 8 measured.
+18 raw - 13 uncounted = 5 measured.
 
-### JavaScript: 12 raw lines, 5 measured
+### Python: used strings and markers inside strings, 10 raw lines, 9 measured
+
+```python
+BANNER = """                                       # counted (assigned string, every line)
+usage: tool                                        # counted
+  --help                                           # counted
+"""                                                # counted
+f"""                                               # counted (standalone f-string)
+{BANNER}                                           # counted
+"""                                                # counted
+"""bare string"""                                  # not counted (standalone string)
+print("# not a comment")                           # counted (marker inside a string)
+PATTERN = "/* not a comment */"                    # counted (marker inside a string)
+```
+
+10 raw - 1 (standalone string) = 9 measured. Annotations on the right are for reading only; they are not part of the measured sample.
+
+### JavaScript: 10 raw lines, 4 measured
 
 ```javascript
-// DECISION HISTORY                  // not counted (no rule lines in this form)
-// - 2026-10-01 [coder/X-1]: Created.   // not counted
-// - 2026-10-05 [coder/X-2]: Retries once.   // not counted
-                                     // counted (blank; the block ended at it)
-/* Build the request. */             // not counted (block comment)
-/**                                  // not counted
- * Fetch one record.                 // not counted
- */                                  // not counted
+// Build the request.                    // not counted (comment)
+/**                                      // not counted (block comment)
+ * Fetch one record.                     // not counted
+ */                                      // not counted
 export async function fetchRecord(id) {  // counted
-  // retry once                      // counted (ordinary comment)
-  return get(id);                    // counted
-}                                    // counted
+  // retry once                          // not counted (comment)
+                                         // not counted (blank)
+  const note = "// not a comment";       // counted (marker inside a string)
+  return get(id); /* inline */           // counted (code before block comment)
+}                                        // counted
 ```
 
-12 raw - 3 (block) - 4 (block comment and JSDoc) = 5 measured.
+10 raw - 6 uncounted = 4 measured.
+
+### Shell: 6 raw lines, 4 measured
+
+```bash
+#!/bin/sh                 # not counted (comment, shebang included)
+# header comment          # not counted
+cat <<EOF                 # counted
+# inside here-document    # counted (here-document body is not a comment)
+EOF                       # counted
+echo "a # b"   # trailing # counted (code before comment)
+```
+
+6 raw - 2 uncounted = 4 measured.
 
 ## Moving history out of a file frees no lines
 
-A decision-history block costs no measured lines. Moving a file's decision history into another file or document therefore removes nothing from its measured length, and it cannot bring an over-limit file under its limit or make room to add code. Only measured lines count: deleting blank lines or ordinary comments reduces the length; deleting a docstring, a block comment or a decision-history block does not.
+A decision-history block costs no measured lines. Moving a file's decision history into another file or document therefore removes nothing from its measured length, and it cannot bring an over-limit file under its limit or make room to add code.
 
-The same holds for growth. The ratchet judges the measured lines a change puts into a file, so a change that only appends entries to a decision-history block adds none and is not refused for size.
+The same holds for restyling and for every other uncounted form. No comment style and no standalone string counts, so converting `//` runs to `/* */`, adding or deleting docstrings, or moving a DECISION HISTORY block elsewhere changes nothing in the measured length. Only code-token lines move it. Deleting blank lines does not either: they never count. Nor does joining statements: `a(); b();` measures 2, exactly like the same two statements on two lines.
+
+## Over-limit files: the backstop
+
+For a file whose previous version already stood over its limit, a change is refused when its measured length falls while its total physical line count rises. That shape is the signature of moving content into forms the measure does not count (comments, standalone strings) instead of shortening the file. Example: a 520-line (measured) file over a 500-line limit that is edited to 510 measured while its raw count goes from 700 to 705 is refused; make the reduction and the added commenting in separate commits and each passes on its own. A file under its limit, or a change in which the raw count does not rise, is not affected. The refusal block is rendered by `_file_size_measure/backstop.py`.
 
 ## Related
 
 - Limits per extension and the refusal behaviour: `file_size` in [commit_guardian README](../../templates/scripts/commit_guardian/README.md) and [commit-guardian.md](../architecture/components/commit-guardian.md).
-- Known gap: a `/*` inside a string literal is read as a block-comment start, see [the open known issue](../known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md).
+- Requirement: [GE-127d-3](../acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml).
