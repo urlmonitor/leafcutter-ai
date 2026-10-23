@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -117,10 +117,14 @@ test_spec:
 test_rationale: "Both halves must execute in one run. The unnamed-question half is what fails on today's code — the gate passes an empty subject and the answer is structurally negative for every proof ever judged — and the named-question half is what stops the fix being 'always answer undecidable', which would satisfy the first half perfectly while leaving the rule inert. A test handed pre-computed answers proves neither; it is the same shape of evidence that let the empty question ship in the first place. The second entry is the decisive one because it executes the measured pair directly: a ritual proof the gate ACCEPTS today and an honest proof it REFUSES today, asserted to swap. The fourth entry exists because the durable repair is on the answering side but the observable damage is on the consuming side, and a three-valued answer read with `if not x:` reproduces the defect exactly while every test of the observation still passes."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/06_TICKET-20261022-BO-2900a-2-iii.md
 change_target: pipeline
 risk_surface: internal
 notes: |

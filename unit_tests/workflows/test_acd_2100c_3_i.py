@@ -84,7 +84,7 @@ import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
-    _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
+    _DESIGNED_BATCH, _after_itpo_committed, _approve_ids, _init_git_project, _labels, _pause_record_path, _permitted_args,
     _install_real_pause_store, _read_via_fresh_process, _run,
 )
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -454,7 +454,7 @@ def test_answer_naming_a_different_decision_is_not_applied():
             f"AC-1: the answer must not be applied to the decision being waited on -- the "
             f"run must remain paused. Got result={result2!r}"
         )
-        assert "apply-approval" not in labels2, (
+        assert "approval-apply" not in labels2, (
             f"AC-1: no branch of the waiting decision must be taken on a mismatch. Labels: {labels2}"
         )
         assert "clear-pause-record" not in labels2, (
@@ -492,6 +492,18 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
     the mismatched resume still re-dispatches the authoring step, which is
     itself unwanted work having happened, even though the record on disk
     (protected by pause_store.py's own gate_id-keyed idempotency) survives.
+
+    Steps (moved here from inline comments): a FRESH, independent reader
+    process still finds the record, still naming the ORIGINAL decision point;
+    the mismatch must not have caused unwanted work (the authoring step for the
+    decision being waited on is not re-dispatched); recovery -- a THIRD,
+    independent real subprocess supplying the RIGHT answer for the decision
+    actually being waited on must still work, so the mistyped resume has not
+    turned recovery into a full re-run. Since ACD-300c-4 the recovery applies
+    the approval through the approval step (`approval-holds` dry run, then
+    `approval-apply`), and the dry run's `--ids` must be the same
+    originally-drafted AC id the resume recovered (DRAFT-8888; drafts in the
+    batch are approved too since ACD-300c-4's review fix H-1).
     """
     with tempfile.TemporaryDirectory(prefix="acd2100c3i_failure_") as tmp:
         fixture = _make_worktree_fixture(Path(tmp))
@@ -518,8 +530,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"Test construction error: run must still be paused after the mismatch. Got: {result2!r}"
         )
 
-        # AC-2: a FRESH, independent reader process still finds the record,
-        # still naming the ORIGINAL decision point.
         read_response = _read_via_fresh_process(pause_store_path, fixture["project_dir"], run_id)
         assert read_response.get("exists") is True, (
             f"AC-2: the run's record must still be on disk after a mismatched resume. "
@@ -531,8 +541,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"the one the mismatched answer supplied. Got record={record!r}"
         )
 
-        # The mismatch must not have caused unwanted work: the authoring step
-        # for the decision being waited on must not have been re-dispatched.
         assert (_labels(payload2).count("stage-itpo-author") + _labels(payload2).count("stage-test-design-author")) == 0, (
             "AC-2 read together with the Implementation Notes ('the subject binding must "
             "be checked before any part of the answer is acted on'): an intact record is "
@@ -540,9 +548,6 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"re-run. Labels: {_labels(payload2)}"
         )
 
-        # Recovery: a THIRD, independent real subprocess supplying the RIGHT
-        # answer for the decision actually being waited on must still work --
-        # the mistyped resume must not have turned recovery into a full re-run.
         correct_answer = {
             "gate_id": "final-gate",
             "type": "priority_choice",
@@ -560,9 +565,10 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
             f"AC-2: the correct resume, after an earlier mismatch, must still move the run "
             f"past the decision point. Got: {result3!r}"
         )
-        assert "apply-approval" in _labels(payload3), (
+        assert "approval-apply" in _labels(payload3), (
             f"AC-2: the correct resume must actually apply the approval. Labels: {_labels(payload3)}"
         )
+        assert _approve_ids(payload3, "approval-holds") == [["DRAFT-8888"]], _labels(payload3)
 
 
 def test_mismatch_report_names_the_decision_actually_being_waited_on():
@@ -755,7 +761,7 @@ def test_acd_2100c_3_i_reachable_from_entry_point():
         # side effect of the mismatch (merely computing and discarding a
         # decision would be invisible here; an actual dispatch would not be).
         labels2 = _labels(payload2)
-        assert "apply-approval" not in labels2, (
+        assert "approval-apply" not in labels2, (
             f"The mismatched answer must not have been consumed by any downstream branch. "
             f"Labels: {labels2}"
         )

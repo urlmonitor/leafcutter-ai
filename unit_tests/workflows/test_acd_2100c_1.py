@@ -47,7 +47,7 @@ BACKGROUND (KI-ACD-005, docs/known-issues/ac-driven-dev.md; ADR-024
         (covered-route-gate resolves to `status: "ok"`; gate-po and
         pt-gate-mockdata dispatch "branch-check" trying to commit;
         resolve-orphans-choice drives the ENTIRE rest of the pipeline all
-        the way to final-gate; final-gate dispatches "apply-approval").
+        the way to final-gate; final-gate dispatches "approval-apply").
       - A synthetic SIXTH gate id, driven directly against the real
         `resolveGate()` extracted from this file's own source (never a
         hand-typed stand-in), makes the exact same live dispatch attempt as
@@ -98,7 +98,9 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import fill_workspace_answer, run_workflow_under_e2  # noqa: E402
+from unit_tests.workflows._acd_2100c_support import _extract_const_array  # noqa: E402
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -222,9 +224,9 @@ SCENARIOS: list[dict] = [
         "description": "giving final approval",
         "gate_id": "final-gate",
         "label_responses": {},
-        "direct_answer_label_responses": {"final-gate": {"action": "approve", "priority": "high"}},
-        # Empirically: an "approve" answer dispatches "apply-approval".
-        "advance_markers": ["apply-approval"],
+        "direct_answer_label_responses": {"final-gate": {"action": "approve", "priority": "high"}, **approval_step_replies()},
+        # Empirically: an "approve" answer runs the approval step, which dispatches "approval-apply".
+        "advance_markers": ["approval-apply"],
     },
 ]
 
@@ -458,28 +460,6 @@ def _extract_function(source: str, name: str) -> str:
                 return source[start : i + 1]
         i += 1
     raise AssertionError(f"could not extract function {name}: unbalanced braces")
-
-
-def _extract_const_array(source: str, name: str) -> str:
-    """Extract a top-level `const <name> = [ ... ];` by bracket-counting."""
-    marker = f"const {name} = ["
-    start = source.index(marker)
-    open_idx = source.index("[", start)
-    depth = 0
-    i = open_idx
-    while i < len(source):
-        ch = source[i]
-        if ch == "[":
-            depth += 1
-        elif ch == "]":
-            depth -= 1
-            if depth == 0:
-                end = i + 1
-                if end < len(source) and source[end] == ";":
-                    end += 1
-                return source[start:end]
-        i += 1
-    raise AssertionError(f"could not extract const array {name}: unbalanced brackets")
 
 
 def _assemble_gate_machinery_source() -> str:

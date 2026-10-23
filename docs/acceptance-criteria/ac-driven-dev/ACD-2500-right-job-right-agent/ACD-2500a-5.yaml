@@ -58,7 +58,10 @@ amended_by:
   date: '2026-09-25'
   by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-2500a-5-i
+  - ACD-2500a-5-ii
+  - ACD-2500a-5-iii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgent/19_TICKET-20261012-ACD-2500a-5.md
 change_target: docs

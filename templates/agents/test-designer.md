@@ -18,7 +18,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
-produces: analysis
+produces: requirement_records
 config_keys: {}
 adopter_notes: |
   Internal. Spawned by the plan-feature.js workflow after the IT PO has written

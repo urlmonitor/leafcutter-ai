@@ -61,6 +61,7 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+from unit_tests._plan_feature_harness_defaults import approval_apply_reply, approval_step_replies
 from unit_tests.workflows.test_acd_2100c_2 import (  # noqa: F401 -- shared real-execution helpers
     _init_git_project, _install_real_pause_store, _parsed_real_result, _real_calls, _run,
     _run_plan_feature_real, _write_shaped_calls,
@@ -79,16 +80,11 @@ _DRAFT_CONTENT = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Fixture builders (self-contained copy of test_acd_2100c_2.py's conventions)
-# ---------------------------------------------------------------------------
-
-
 def _make_worktree_fixture(tmp_path: Path) -> dict:
     """Build the Given: a REAL git repository ("the project") holding a REAL
     `.leafcutter/scripts/pause_store.py`, and a REAL git worktree of that
     repository, created as a sibling directory, holding NO `.leafcutter/` of
-    its own.
+    its own. (Fixture builders: a self-contained copy of test_acd_2100c_2.py's conventions.)
     """
     project_dir = tmp_path / "project"
     _init_git_project(project_dir)
@@ -148,13 +144,20 @@ _DESIGNED_BATCH = {
 def _after_itpo_committed(ids: list[str]) -> dict:
     """Label replies of a RESUMED run under the G4 pipeline (ACD-2500c-2): itpo is auto-approved and
     committed before the test-design stage, so a real resume finds it in git log and does not re-author it;
-    the approval-hold report approves the run's ids."""
+    the approval step (ACD-300c-4: dry run `approval-holds`, then `approval-apply`) approves the run's ids."""
     body = "plan-feature(IT-PO): test-component\n\nAC IDs: " + (", ".join(ids) or "(none)") + "\nrun-id: r\n"
+    holds = {"output": json.dumps({"approved": ids, "held": []}), "exit_code": 0}
     return {
         "scan-committed-stages": {"output": "abc1234 plan-feature(IT-PO): test-component\n", "exit_code": 0},
         "resume-log": {"output": body, "exit_code": 0},
-        "approval-holds": {"output": json.dumps({"approved": ids, "held": []}), "exit_code": 0},
+        "approval-holds": holds, "approval-apply": approval_apply_reply(holds),
     }
+
+
+def _approve_ids(payload: dict, label: str) -> list:
+    """The --ids list of each approve_acs.py dispatch under `label` (ACD-300c-4's approval step)."""
+    prompts = [c.get("prompt") or "" for c in payload.get("calls", []) if c.get("label") == label]
+    return [p.split("--ids ", 1)[1].split()[0].split(",") for p in prompts if "approve_acs.py" in p]
 
 
 def _labels(payload: dict) -> list:
@@ -400,12 +403,12 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
 
         payload_approve = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id_approve, resume_answer=approve_answer),
         )
         payload_cancel = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),
             args=_permitted_args(run_id=run_id_cancel, resume_answer=cancel_answer),
         )
         assert not payload_approve.get("error"), f"Approve resume must not crash: {payload_approve.get('error')}"
@@ -428,11 +431,11 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
 
         labels_approve = _labels(payload_approve)
         labels_cancel = _labels(payload_cancel)
-        assert "apply-approval" in labels_approve, (
-            f"The approve branch must dispatch apply-approval. Labels: {labels_approve}"
+        assert "approval-apply" in labels_approve, (
+            f"The approve branch must dispatch approval-apply. Labels: {labels_approve}"
         )
-        assert "apply-approval" not in labels_cancel, (
-            f"The cancel branch must NOT dispatch apply-approval. Labels: {labels_cancel}"
+        assert "approval-apply" not in labels_cancel, (
+            f"The cancel branch must NOT dispatch approval-apply. Labels: {labels_cancel}"
         )
 
 
@@ -466,12 +469,12 @@ def test_no_waiting_record_remains_after_the_resumed_run_passes_the_gate():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), f"Resumed run must not crash. error={payload2.get('error')}"
         labels2 = _labels(payload2)
-        assert "apply-approval" in labels2, (
+        assert "approval-apply" in labels2, (
             f"Test construction error: the resumed run must actually move past the "
             f"gate before the 'record cleared' assertion is meaningful. Labels: {labels2}"
         )
@@ -527,7 +530,7 @@ def test_acd_2100c_3_reachable_from_entry_point():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), (
@@ -547,9 +550,9 @@ def test_acd_2100c_3_reachable_from_entry_point():
             "invocation paused at) must actually occur -- the run must be observed, "
             f"via its own terminal result, to have moved past the gate. Got: {result2!r}"
         )
-        assert "apply-approval" in _labels(payload2), (
+        assert "approval-apply" in _labels(payload2), (
             "The paused-then-resumed outcome must be CONSUMED in control flow (the "
-            "apply-approval dispatch that only fires once the gate resolves), not "
+            "approval-apply dispatch that only fires once the gate resolves), not "
             f"merely computed and discarded. Labels: {_labels(payload2)}"
         )
 
@@ -567,8 +570,8 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
     crash-resume mechanism (`committedStageKeys`, ~2850-2937, pushed at
     ~2911) a few dozen lines earlier in the SAME `for (const step of
     pipeline)` loop. Every already-committed stage's AC id is therefore
-    counted twice -- corrupting the `apply-approval` dispatch prompt, the
-    terminal success message's "N AC(s) approved" count, and the terminal
+    counted twice -- corrupting the approval step's `--ids` list (ACD-300c-4), the
+    terminal success message's "N approved" count, and the terminal
     `acs_approved` array.
 
     None of the four pre-existing tests in this file can reach this: they all
@@ -592,6 +595,32 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
 
     Expected to be RED against current production code: `acs_approved` will
     contain the "ba" stage's AC id twice.
+
+    Fixture notes (moved here from inline comments):
+    - The seeded record is what a genuine pre-pause run would have left: the
+      "ba" stage already committed (its AC is already inside context.all_acs),
+      and this run paused at the FINAL gate while authoring "itpo".
+    - `stage-0-triage` forces the multi-stage "behavioral" route (ba -> itpo),
+      the smallest route with an earlier stage to duplicate against.
+    - The "ba" stage already committed in a PRIOR process. This fresh process's
+      own crash-resume reconstruction (real production code) recovers its AC id
+      from `git log` output shaped exactly as the real `scanCommittedStages()`
+      parser expects -- only the underlying `git log` execution is stubbed,
+      matching this file's convention of stubbing every non-pause_store.py
+      dispatch.
+    - commitStageOutput()'s internal branch-check + commit dispatch are forced
+      to succeed so the run reaches its real "approve" success path and returns
+      a real `acs_approved` terminal field (an early commit error would make the
+      duplication this test targets unobservable).
+    - Since ACD-300c-4 the approval is the approval step: `approval-holds` is
+      approve_acs.py --dry-run with the run's own id list (`--ids`), and
+      `approval-apply` approves what the dry run released. Both replies are
+      stubbed, so `acs_approved` and the "N approved" count echo the stub; the
+      dry run's `--ids` list is the run's own record of what it asked to
+      approve, so that list is where a double-counted id shows. H-2: the "ba"
+      stage's AC id, reconstructed once from git log, must NOT also be
+      re-pushed from the persisted `_resumedContext.all_acs` snapshot, and the
+      user-facing count must match the distinct ACs approved.
     """
     with tempfile.TemporaryDirectory(prefix="acd2100c3_h2_dup_") as tmp:
         fixture = _make_worktree_fixture(Path(tmp))
@@ -602,10 +631,6 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         ba_ac_id = "H2DUP-BA-1"
         itpo_ac_id = "H2DUP-ITPO-1"
 
-        # Seed the durable record a genuine pre-pause run would have left: the
-        # "ba" stage already committed (its AC is already inside
-        # context.all_acs), and this run paused at the FINAL gate while
-        # authoring "itpo".
         _write_pause_record_via_real_process(
             pause_store_path, fixture["project_dir"], run_id,
             {
@@ -627,21 +652,12 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         )
 
         label_responses = {
-            # Force the multi-stage "behavioral" route (ba -> itpo) -- the
-            # smallest route with an earlier stage to duplicate against.
             "stage-0-triage": {
                 "route": "behavioral",
                 "existing_acs": [],
                 "parent_l1_id": "H2DUP-L1",
                 "rationale": "forced for H-2 regression test",
             },
-            # The "ba" stage already committed in a PRIOR process. This fresh
-            # process's own crash-resume reconstruction (real production
-            # code, ~2850-2937) recovers its AC id from `git log` output
-            # shaped exactly as the real `scanCommittedStages()` parser
-            # expects -- only the underlying `git log` execution itself is
-            # stubbed, matching this file's existing convention of stubbing
-            # every non-pause_store.py dispatch.
             "scan-committed-stages": {
                 "output": "abc1234 plan-feature(BA): test-component\ndef5678 plan-feature(IT-PO): test-component\n",
                 "exit_code": 0,
@@ -659,11 +675,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                 "exit_code": 0,
             },
             "approval-holds": {"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id], "held": []}), "exit_code": 0},
-            # commitStageOutput()'s internal branch-check + commit dispatch --
-            # forced to succeed so the run reaches its real "approve" success
-            # path and returns a real `acs_approved` terminal field (rather
-            # than aborting early with a commit error, which would make the
-            # duplication this test targets unobservable).
+            "approval-apply": approval_apply_reply({"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id]})}),
             "branch-check": {"output": "ac-authoring/h2-dup-test", "exit_code": 0},
             "commit-stage-output": {"status": "ok", "message": "committed successfully"},
         }
@@ -694,10 +706,6 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
         acs_approved = result.get("acs_approved")
         assert isinstance(acs_approved, list), f"Expected a list. Got: {acs_approved!r}"
 
-        # H-2: the "ba" stage's AC id was reconstructed once from git log
-        # (crash-resume) and must NOT ALSO be re-pushed from the persisted
-        # `_resumedContext.all_acs` snapshot -- it must appear exactly once
-        # in the run's own terminal record of what was approved.
         assert acs_approved.count(ba_ac_id) == 1, (
             f"AC {ba_ac_id!r} (the already-committed 'ba' stage) must appear "
             f"exactly once in the resumed run's own acs_approved record -- it "
@@ -709,24 +717,17 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
             f"acs_approved must contain no duplicate AC ids at all. Got: {acs_approved!r}"
         )
 
-        # The user-facing terminal count must match the real number of
-        # distinct ACs approved, not an inflated double-counted total.
         expected_message_count = len(set(acs_approved))
-        assert f"{expected_message_count} AC(s) approved" in (result.get("message") or ""), (
+        assert f"{expected_message_count} approved," in (result.get("message") or ""), (
             f"Terminal message must report the true distinct AC count "
             f"({expected_message_count}), not an inflated double-counted one. "
             f"Got message={result.get('message')!r}"
         )
 
-        # The apply-approval dispatch must name each AC exactly once too -- a
-        # duplicate there means the same AC would be presented twice in the
-        # prompt that updates readiness/priority on the real AC YAML files.
-        approval_calls = [c for c in payload.get("calls", []) if c.get("label") == "apply-approval"]
-        assert approval_calls, "Test construction error: apply-approval must have been dispatched."
-        approval_prompt = approval_calls[0].get("prompt") or ""
-        assert approval_prompt.count(ba_ac_id) == 1, (
-            f"The apply-approval dispatch must name {ba_ac_id!r} exactly once, not "
-            f"duplicate it. Prompt: {approval_prompt!r}"
+        dry_run_ids = _approve_ids(payload, "approval-holds")
+        assert dry_run_ids, "Test construction error: the approval step's dry run must have been dispatched."
+        assert dry_run_ids[0].count(ba_ac_id) == 1 and len(dry_run_ids[0]) == len(set(dry_run_ids[0])), (
+            f"The approval step must name {ba_ac_id!r} exactly once, not duplicate it. --ids: {dry_run_ids[0]!r}"
         )
 
 

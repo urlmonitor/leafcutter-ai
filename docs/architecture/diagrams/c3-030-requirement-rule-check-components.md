@@ -7,7 +7,7 @@ diagram_type: component
 status: draft
 parent: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-21
 source_ticket: "tickets/00_inbox/epics/EPIC-RightJobRightAgent/18_TICKET-20261012-ACD-2500a-4.md"
 components:
   - ac_driven_dev
@@ -30,6 +30,7 @@ related_code:
   - scripts/ac_store/_rc_contracts.py
   - scripts/ac_store/_rc_doc_triggers.py
   - scripts/ac_store/_rc_declared.py
+  - scripts/ac_store/_rc_protected_fields.py
   - scripts/ac_store/validate_ac_schema.py
   - scripts/ac_store/assignment_quality.py
   - templates/workflows-js/plan-feature.js
@@ -64,10 +65,10 @@ C4Component
 
     Container_Boundary(chk, "Requirement rule check - scripts/ac_store") {
         Component(cli, "requirement_rule_check.py", "Python CLI", "FAMILIES registry; pass 1, repairs, reload, pass 2; exit 0 passed, 1 failed")
-        Component(load, "_rc_records and _rc_changed", "Python", "Loads the checked records, the store id index and the readiness before-state")
+        Component(load, "_rc_records and _rc_changed", "Python", "Loads the checked records, the store id index and the before-state (readiness and committed field values)")
         Component(repair, "Repairing families - REPAIRS", "_rc_backlinks, _rc_components, _rc_readiness", "Back-link, component list, readiness; needs a decision when no single right answer")
-        Component(report, "Report-only families - REPORT ONLY", "_rc_record_schema, _rc_contracts, _rc_doc_triggers, _rc_declared", "needs a decision, failed or not evaluated; never write")
-        Component(edit, "_rc_edit", "Python, the only writer", "Edits one of covered_by, components, readiness; proves every other field unchanged")
+        Component(report, "Report-only families - REPORT ONLY", "_rc_record_schema, _rc_contracts, _rc_doc_triggers, _rc_declared, _rc_protected_fields", "needs a decision, failed or not evaluated; never write")
+        Component(edit, "_rc_edit", "Python, the only writer", "Edits one of covered_by, components, readiness, only when the run has a before-state; proves every other field unchanged")
         Component(rep, "_rc_report", "Python", "Dedupe, sort, verdict, family_counts; one JSON document on stdout")
     }
 
@@ -126,11 +127,12 @@ Green in the diagram is the repairing node and brown is the report-only node. Th
 | documentation trigger to documentation requirement mapping | `_rc_doc_triggers.py` | **Report only.** L1 records only. An unmapped trigger is `failed` |
 | specialist versus surface | `_rc_declared.py` | **Report only.** Uses the surface-to-specialist map. An unmapped path, or a record with no declared files, is `not evaluated` |
 | declared files versus modifies links | `_rc_declared.py` | **Report only** |
+| protected fields | `_rc_protected_fields.py` | **Report only.** A field the running stage does not own, changed on a record that already existed, is `needs a decision`. Owners: `test-design` its own outputs; `itpo-handback` `assigned_agent`, a file finding's `decision`, `it_requirements`, `declared_files`, `delivers_to` and `expects_from`. A stage not in the owner map, or a run with no before-state, is `not evaluated` |
 
 A family never writes. A repairing family attaches `repair=(field, how)` to a `fixed` finding.
 `requirement_rule_check.py` hands that repair to `_rc_edit`. `_rc_edit` refuses any field
 outside `covered_by`, `components` and `readiness`. It also refuses an edit that changes
-anything else in the record. A refused repair becomes a `failed` finding. One more name, `record
+anything else in the record. A refused repair becomes a `failed` finding. A run with no usable before-state (none given, an unresolvable ref, an unreadable snapshot) writes nothing: each repair becomes `needs a decision` and the report carries `before_state: {given, repairs_applied}`. One more name, `record
 readable`, is not in `FAMILIES`: `_rc_records` reports it when a record file cannot be read.
 
 ## What the check reads

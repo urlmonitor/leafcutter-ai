@@ -1,0 +1,88 @@
+id: GE-134
+title: "Keeping an honest record of why a file changed never costs that file its room"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The written record of why a file was changed never counts against how big that
+  file is allowed to be.
+
+  Every file in this project may only grow so large, and that limit exists so that a
+  person can still read and work in it. A file's record of its own decisions is
+  different: it is there to be looked up when someone needs to know why, not read
+  every time someone works in the file. When that record counts against the file's
+  size, the people who keep it honest are punished for doing so: adding one more line
+  of history can push a file over its limit or block a change to a file that is
+  already large, and the easy way out is to stop writing history down.
+
+  After this goal, a file's decision history costs it nothing, so writing down why a
+  change was made never stands in the way of making the change. Everything a person
+  reads to work in the file still counts exactly as before, and the published rule
+  says plainly what is left out.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING GOAL THIS WAS SPLIT OUT OF. GE-127 ("The codebase stays a size a person can
+      still work in") owns the size standard itself. This goal owns one promise about what
+      that standard measures: the decision history is free. Its only feature began as GE-127h
+      and was moved here on 2026-10-22 because GE-127 had no room for an eighth L1. The size
+      standard, its ratchet and its published rule stay GE-127's; nothing here restates them.
+  - path: templates/skills/doc-enforcer/SKILL.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines what a decision-history block looks like in each language. This goal relies on
+      that convention and does not restate it.
+  - path: docs/reference/source-file-length-measurement.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-22
+amended_by:
+  - reason: split-out-of-ge-127
+    date: '2026-10-22'
+    by: main-session
+    directed_by: user
+    entry: >-
+      Created to hold the decision-history feature that was GE-127h. GE-127 held 8 L1
+      children against the store's cap of 7, so the whole-store tree-limit check refused
+      it. GE-127's own amendment of 2026-10-09 says no child_limit_override may be used and
+      that the next record in its family needs a new L0 or a split. The user decided on
+      2026-10-22 to give this family its own goal rather than raise the cap. GE-127h and
+      its children were renumbered to GE-134a, GE-134a-1, GE-134a-1-i, GE-134a-2, GE-134a-3
+      and GE-134a-4 with their criteria unchanged. This goal is done because its only
+      child is done.
+superseded_by: null
+covered_by:
+  - GE-134a
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  WHY A SEPARATE GOAL. The feature this goal holds was first written as GE-127h, the
+  eighth feature under GE-127. The store allows a goal at most seven features, GE-127's
+  own record says its cap must not be raised, and the subject is narrow enough to stand
+  on its own: GE-127 says how large a file may be, this goal says what is not counted
+  toward that size. Moving it changed ids only; no criterion was rewritten.
+
+  The sparse-tree advisory (fewer than three children) applies on day one and is
+  accepted: the promise is a single one and is already delivered.
+
+  IDENTIFIER. GE-134 was checked free on 2026-10-22: `git ls-tree` over every remote ref
+  and every local branch shows GE-133 as the highest GE root, `git grep GE-13[4-9]` over
+  every remote ref has no hits, and a grep of every worktree under the workspace has no
+  uncommitted claim. Re-verify at merge time; id allocation in this store is known to be
+  unreliable.

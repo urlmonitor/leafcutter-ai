@@ -74,7 +74,8 @@ flowchart TD
 
 | Name | Type | Description |
 |------|------|-------------|
-| `none` | — | Read-only agent — no filesystem mutations |
+| `requirement_records` | — | Authors L0/L1 requirement records, one AC YAML file each, with all their fields (id, title, component, components, level, status fields, criteria, depends_on, readiness, priority, documentation_triggers, doc_links, origin_agent, created) |
+| `vision_and_roadmap` | — | Strategic-shift edits to the vision statement and roadmap, applied only after explicit user confirmation |
 ---
 
 ## Tools Available

@@ -50,7 +50,7 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: BO-2900a-1
-  contract: "The ordered evaluation contract the diagram depicts: conditions 1 and 2 (linked proof exists; it passes) then the reachability condition, with refusal_cause values 'proof_not_through_entry_point', 'no_entry_point_reaches_code' and 'observation_unavailable' as the distinguishable outcomes."
+  contract: "The ordered evaluation contract the diagram depicts: conditions 1 and 2 (linked proof exists; it passes) then the reachability condition. The three terminal outcomes are eligible and the two refusals, refusal_cause 'proof_not_through_entry_point' (reached only on reached_through 'not_reached') and 'no_entry_point_reaches_code'. The reachability step also has a no-verdict path: an unwatched run (BO-2900a-2-ii) or an undecidable answer (BO-2900a-2-iii) is announced with its cause and leaves the verdict exactly as conditions 1 and 2 decided it. It is drawn as a pass-through to that verdict, not as a fourth terminal state and never as a refusal."
 test_required: false
 test_rationale: "The artifact is a Mermaid sequence diagram embedded in an architecture page; it has no executable surface for a test to drive. Its correctness gates are the repository's diagram hooks (check-mermaid-drift, check-mermaid-parent-link, check-diagram-naming, check-mermaid-complexity), which run at commit time rather than as unit tests. The behaviours depicted are covered by the executing tests on BO-2900a-1, BO-2900a-2 and BO-2900a-3."
 origin_agent: BrainCandy
@@ -89,3 +89,13 @@ notes: |
   ticket-phase agent, and the BA recorded the same intent. The task brief's
   "all eight documentation ACs go to documentation-expert" is deliberately deviated
   from for this AC and BO-2900b-5 only, and the deviation is reported.
+
+  2026-10-21 (IT PO). expects_from.contract is aligned with BO-2900a-2-ii,
+  BO-2900a-2-iii and the 2026-10-21 amendment of BO-2900a-1. Before, it listed
+  'observation_unavailable' as a third distinguishable refusal_cause outcome. Now
+  the outcomes are eligible and the two refusals. An unwatched or undecidable
+  observation is a no-verdict path: it is announced and passes through to the
+  verdict that conditions 1 and 2 reached. It is drawn neither as a refusal nor as
+  a fourth terminal state, so the criteria's "three terminal outcomes" clause and
+  the matching it_requirement still hold unchanged. criteria, title, req_status,
+  depends_on, work_status, readiness and test_required are untouched.
