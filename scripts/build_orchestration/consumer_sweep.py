@@ -25,6 +25,7 @@ import re
 import sys
 from pathlib import Path, PurePosixPath
 
+import _cs_asserts as asserts_mod
 import _cs_edits as edits_mod
 import _cs_runs as runs_mod
 import _wvr_gate as gate_mod
@@ -205,6 +206,7 @@ def check(test_root: Path, base_ref: str) -> dict:
         return _check_shape(applicable=True, reason="inconclusive", inconclusive=[{"file": None, "detail": detail}])
     entries = read_lists(git_dir, base_sha, root)
     unlisted = edits_mod.unlisted_edits(found, entries)
+    loosened = asserts_mod.loosened_of(found)
     ran = runs_mod.run_checks(root, base_sha, pairs, test_root_rel, entries)
     inconclusive = inconclusive + ran.inconclusive
     reason = None
@@ -212,10 +214,12 @@ def check(test_root: Path, base_ref: str) -> dict:
         reason = "unlisted" if entries else "sweep list missing"
     elif ran.weakened:
         reason = "weakened"
+    elif loosened:
+        reason = "loosened"
     elif inconclusive:
         reason = "inconclusive"
     return _check_shape(applicable=bool(found or inconclusive or ran.in_scope), reason=reason,
-                        inconclusive=inconclusive, weakened=ran.weakened, removed=ran.removed,
+                        inconclusive=inconclusive, weakened=ran.weakened, loosened=loosened, removed=ran.removed,
                         unlisted=[{"file": e.file, "test": e.test} for e in unlisted])
 
 
