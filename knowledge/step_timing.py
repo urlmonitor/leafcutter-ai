@@ -100,10 +100,10 @@ class StepRecorder:
                     step = step or STEP_NAMES[name]
             if all(value is None for value in values.values()):
                 return None
-            fields = {
-                f"{name}_ms": None if values[name] is None else round(values[name] * 1000)
-                for name in STEPS
-            }
+            fields: dict[str, int | bool | str | None] = {}
+            for name in STEPS:
+                seconds = values[name]
+                fields[f"{name}_ms"] = None if seconds is None else round(seconds * 1000)
             fields["resolve_from_memory"] = self._from_memory
             fields["deadline_step"] = step
             return fields

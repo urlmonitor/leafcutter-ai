@@ -10,7 +10,7 @@ from __future__ import annotations
 from .retrieval_steps import load_generation, fetch_candidates, disclose_candidates
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from .ports import SourceResolver, EmbeddingProvider, KnowledgeBackend, RetrievalTelemetry
 
@@ -24,7 +24,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 # Retrieval status for a KnowledgeError code that left no evidence; any other code is "error".
-_FAILURE_STATUS = {"unavailable": "unavailable", "unsupported": "unsupported", "stale": "stale"}
+_FAILURE_STATUS: dict[str, Literal["unavailable", "unsupported", "stale"]] = {
+    "unavailable": "unavailable",
+    "unsupported": "unsupported",
+    "stale": "stale",
+}
 import secrets
 import time
 from .disclosure import finalize
