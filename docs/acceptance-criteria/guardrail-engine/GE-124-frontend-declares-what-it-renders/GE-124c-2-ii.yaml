@@ -75,7 +75,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Tied the behaviour to the three-valued answer GE-124c-2-i must expose (without it this AC is unimplementable), separated it explicitly from the other two degrade paths, and required that missing-declaration findings still block when the store is unreachable so a resolver outage cannot become a global bypass. Recorded an IT-PO recommendation on the open block-versus-announce question (announce at commit, block at CI) for the user to confirm. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/21_TICKET-20261022-GE-124c-2-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -97,3 +98,4 @@ notes: |
   run that could not read the store produced no evidence and must not be merged
   on. Left open for the user at the final gate; the test contract asserts
   visibility only, so it holds either way.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

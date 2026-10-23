@@ -128,15 +128,16 @@ def establish_baseline(root: Path, content: str, filename: str = "big.py") -> Pa
 
 
 def function_lines(n_lines: int, tag: str = "v", start: int = 0) -> str:
-    """n_lines one-line function definitions, each a genuine constituent.
+    """n_lines one-statement assignments, each a genuine constituent.
 
     No blank line, no '#' comment, no triple-quote or block-comment
-    delimiter appears anywhere -- so the measured (count_content_lines)
-    length of the result is EXACTLY n_lines, and deleting or replacing any
-    subset removes/changes whole constituent definitions, never the
-    cheap-route content this AC's Implementation Notes forbid.
+    delimiter appears anywhere, and each line holds exactly one statement
+    (GE-127d-3-v counts `def f(): return 1` as two) -- so the measured
+    (count_content_lines) length of the result is EXACTLY n_lines, and
+    deleting or replacing any subset removes/changes whole constituents,
+    never the cheap-route content this AC's Implementation Notes forbid.
     """
-    return "\n".join(f"def {tag}_{i:06d}(): return {i}" for i in range(start, start + n_lines)) + "\n"
+    return "\n".join(f"{tag}_{i:06d} = {i}" for i in range(start, start + n_lines)) + "\n"
 
 
 def replace_leading_lines(base_content: str, count: int, new_tag: str) -> str:

@@ -100,7 +100,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124a-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/04_TICKET-20261022-GE-124a-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -126,3 +127,4 @@ notes: |
   implementer therefore has a declared enum value with no worked example. That
   is recorded in it_requirements rather than papered over; the .html fixtures
   are purpose-written for the test contract.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

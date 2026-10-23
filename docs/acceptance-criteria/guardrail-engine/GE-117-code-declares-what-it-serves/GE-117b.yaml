@@ -1,5 +1,5 @@
 id: GE-117b
-readiness: draft
+readiness: approved
 priority: medium
 title: "Each public function and class states the requirement it satisfies"
 component: guardrail-engine
