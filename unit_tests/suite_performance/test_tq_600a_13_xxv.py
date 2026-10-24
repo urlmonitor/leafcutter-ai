@@ -50,6 +50,19 @@ class TestTq600a13XxvLiveProof(EndingTestCase):
             self.assertEqual(FAILS_WITNESS, live_ran(proof), "exactly the live failure of the red run must execute, under the whole-folder marker expression")
             self.assertIn(f"proving against red run {proof.red['id']}", proof.prove.log_text())
 
+    def test_tq_600a_13_xxvii_the_proofs_live_session_carries_the_live_lane_marker(self):
+        # covers: TQ-600a-13-xxvii
+        # angle: seam
+        """The fix proof's live session sets the live lane's marker, so a live-lane-only test runs there instead of skipping.
+
+        The head's fix-me live test passes only when its session carries POST_MERGE_LIVE_LANE=1. Wrong versions caught: only the
+        post-merge lane sets the marker (the proof's live session fails the test); the marker is set before the database check
+        or in the job's env (it would also reach the correctness proof).
+        """
+        with Listener() as db, driven_live(self.svc, db.address, head_live="lane_marker") as proof:
+            self.assertEqual("success", proof.prove.conclusion, proof.prove.log_text()[-2000:])
+            self.assertEqual(FAILS_WITNESS, live_ran(proof))
+
     def test_tq_600a_13_xxv_a_did_not_complete_live_lane_is_proved_by_the_whole_folder(self):
         # covers: TQ-600a-13-xxv
         # angle: discrimination

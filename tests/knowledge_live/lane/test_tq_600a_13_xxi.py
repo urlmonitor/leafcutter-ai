@@ -2,7 +2,9 @@
 
 Needs the three disposable Neo4j instances of the Proof-of-done check (17687, 18087, 18088). Unlike the other tests of
 this folder it NEVER skips for an unreachable database: the live lane exists to supply one, so an unreachable
-instance is a failure here.
+instance is a failure here. It runs only inside the live-database lane, which marks its own pytest session after its
+database check passed; the correctness lane also selects `manual` tests but starts no database, so there it skips
+(TQ-600a-13-xxvii). That skip depends on the lane, never on whether a database answers.
 """
 
 from __future__ import annotations
@@ -69,6 +71,10 @@ def test_tq_600a_13_xxi_the_live_lane_runs_against_the_same_real_databases_as_pr
     Wrong version caught: an instance on a drifted port or image tag from the Proof-of-done check's (the workflow's live_run
     services are compared to the literal ports and image, then each instance is asked for its version).
     """
+    from scripts.ci._live_lane import LANE_MARKER  # noqa: PLC0415 -- the lane owns the marker's name
+
+    if os.environ.get(LANE_MARKER) != "1":
+        pytest.skip("runs only inside the live-database lane, which starts the databases it needs (TQ-600a-13-xxvii)")
     suite = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "post-merge-suite.yml").read_text(encoding="utf-8"))
     live_run = (suite.get("jobs") or {}).get("live_run")
     assert live_run is not None, "post-merge-suite.yml has no live_run job"

@@ -49,6 +49,15 @@ logger = logging.getLogger("post_merge_suite")
 
 UNREACHABLE = "live database unreachable"  # a no-database skip reason STARTS with this; owned here, used by the tests
 SELECTION = "manual or not manual"  # every test of the live folder, the default `-m` deselection overridden
+# Set to "1" only in a live-lane pytest session, after its database check passed (TQ-600a-13-xxvii): a test that needs the
+# lane's databases skips without it, instead of failing in the correctness lane, which selects `manual` tests too.
+LANE_MARKER = "POST_MERGE_LIVE_LANE"
+
+
+def lane_environ(environ: Mapping[str, str]) -> dict[str, str]:
+    """The environment of a live-lane pytest session: ``environ`` plus the lane marker."""
+    return {**environ, LANE_MARKER: "1"}
+
 DEFAULT_ADDRESS = "127.0.0.1:17687"
 DEFAULT_STARTUP_LIMIT = 300.0
 SECOND_CONNECTION_LIMIT = 3.0
