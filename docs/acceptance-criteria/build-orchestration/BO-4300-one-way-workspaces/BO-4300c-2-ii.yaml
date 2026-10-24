@@ -1,0 +1,220 @@
+id: BO-4300c-2-ii
+title: "A refusal names the step that failed and never repeats the tools' own words"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given underlying tools that write their own error text when they fail, such as
+    a line beginning "fatal:",
+  And three requests that each fail at a tool step: a new workspace whose shared
+    project cannot be reached, clearing a workspace together with its line on a
+    shared project that refuses to delete that line, and the cut-over bringing
+    over an old-style workspace whose shared project cannot be reached,
+  When the maker answers each request,
+  Then each answer's message names the step that failed,
+  And no answer's message, and no reason in the cut-over's report, contains any
+    line the tool wrote,
+  And the tool's own text is still available on the maker's separate diagnostics
+    channel.
+depends_on: [BO-4300c-2, BO-4300e-2-iii]
+doc_links:
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-2.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: message is one sentence naming the cause; bootstrap.failure_excerpt is the one sanctioned excerpt.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+  - path: templates/scripts/worktree_migrate.py
+    state: existing
+  - path: templates/scripts/worktree_ticket_record.py
+    state: existing
+it_requirements:
+  - >-
+    ONE RULE FOR EVERY MESSAGE: the answer's message (and the cut-over report's per-workspace reason) is
+    composed by the maker from what it knows -- the verb, the step it was running and the command it ran
+    (for example "git fetch origin main failed while checking out the line of work; git's messages are on
+    stderr") -- and never interpolates a child process's stdout or stderr. This holds at every site that
+    reports a failed child process today: starting, checking out and resuming the line, creating the
+    workspace, clearing it, the cut-over's reason, and locating the ticket in the workspace.
+  - >-
+    The one sanctioned excerpt stays where it is: bootstrap.failure_excerpt on BOOTSTRAP_FAILED carries the
+    build's tail (BO-4300c-2). No other field becomes a second excerpt.
+  - >-
+    Child output stays visible: everything a child wrote is forwarded to the maker's stderr, unchanged, as
+    BO-4300c-2 already requires, so the diagnosis is not lost by keeping it out of the message.
+  - >-
+    The contract does not change shape: codes, exit codes and field names are as BO-4300c-2 states; only
+    the wording of message and reason changes. Any existing test that asserts tool text inside message is
+    a test of the defect and is rewritten, not kept.
+  - >-
+    Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, the
+    status/code/exit mapping, workspace_path absent on every non-ok answer).
+  - >-
+    Proof runs the DEPLOYED maker as a separate process against real temporary repositories, and asserts on
+    the parsed answer and on stderr: the message holds none of the lines found on stderr (a "fatal:" line in
+    particular) and stderr holds the tool's line. No mock of git, no import of the maker module, no grep of
+    its source.
+  - >-
+    Tests must not spawn the package's own scripts/build.py; fixture projects carry the minimal stub build
+    entry point (CLAUDE.md 'Tests must not spawn their own build.py').
+  - >-
+    All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, KI-TQ-012).
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: >-
+    Result contract: message is one sentence naming the cause; all child-process output goes to stderr;
+    bootstrap.failure_excerpt is the only field that carries tool text.
+test_intent:
+  - clause: each answer's message names the step that failed
+    needs_test: true
+    reason: Removing the tool text without adding the step would leave a message that names nothing, which only an assertion on the step wording catches.
+  - clause: no answer's message, and no reason in the cut-over's report, contains any line the tool wrote
+    needs_test: true
+    reason: Several call sites copy git's stderr into the message today, and only comparing each message with the forwarded stderr lines shows a site was missed.
+  - clause: the tool's own text is still available on the maker's separate diagnostics channel
+    needs_test: true
+    reason: A fix that swallows the child's stderr would pass the message checks while losing the diagnosis.
+test_spec:
+  - name: test_each_failed_tool_step_answer_names_the_step
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      New unit_tests/build_orchestration/test_bo_4300c_2_ii.py, a WorkspaceCase subclass (test_bo_4300e_2.py), run
+      against the deployed worktree.py as real subprocesses. Request 1: ensure --kind feature --slug alpha with the
+      main copy's origin on an https URL at a closed local port; expect refused FETCH_FAILED, exit 2, and a message
+      that names the step (contains 'fetch' or 'clone', case-insensitive, and the verb or word 'failed'). Request 2:
+      a ready workspace, a bare hub whose pre-receive hook refuses deletions, remove --path <ws>
+      --delete-remote-branch; expect refused GIT_FAILED naming the remote line delete step (contains 'delete').
+      This request only produces its answer once BO-4300e-2-iii is built. Request 3: legacy_worktree(project,
+      'EPIC-Legacy', unsent=True) with the project's origin on the dead https URL, then migrate-legacy
+      --repo-root <project>; expect needs_decision to hold one entry whose reason names the fetch step.
+    proves_clause: each answer's message names the step that failed
+    code_file: templates/scripts/worktree.py
+  - name: test_no_message_or_cutover_reason_contains_a_line_the_tool_wrote
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same three requests. For each, split the maker's captured stderr into non-blank stripped lines, require that
+      it holds at least one line beginning 'fatal:' for the unreachable-hub requests and the hook's own distinctive
+      refusal sentence for the delete request, then assert that no stderr line is a substring of the answer message
+      (and, for the cut-over, of every reason in needs_decision). Comparing against the live stderr, not a fixed
+      string, is what catches a site that was missed.
+    proves_clause: no answer's message, and no reason in the cut-over's report, contains any line the tool wrote
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - a fix that cleans only worktree.py and still interpolates git's stderr in worktree_remove.py's unsent-work fetch refusal
+      - a fix that cleans the answers but leaves the cut-over report reason carrying the fetch refusal text (worktree_migrate.handle copies that message)
+      - a fix that keeps only the first line of the tool's stderr in the message
+  - name: test_cutover_reason_for_unreachable_hub_names_step_without_tool_text
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      migrate-legacy as a real subprocess with an old-style workspace holding unsent work and an unreachable
+      origin. The report is one JSON object with status ok; the workspace sits in needs_decision with a reason that
+      names the step that failed; neither the reason nor the report message holds a stderr line; the old workspace
+      folder and its registration are unchanged. Note the unsent-work fetch in worktree_remove.unsent_work fails
+      before the clone in worktree_migrate._git_steps is ever reached, so the cut-over reason text originates in
+      worktree_remove.py.
+    proves_clause: no answer's message, and no reason in the cut-over's report, contains any line the tool wrote
+    code_file: templates/scripts/worktree_migrate.py
+  - name: test_tool_text_is_still_forwarded_unchanged_to_stderr
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same three requests. Assert stderr still holds git's own error line for each (a 'fatal:' line for the two
+      unreachable-hub requests and the remote-rejected line carrying the pre-receive hook's sentence for the delete
+      request) and that stdout is exactly one JSON object.
+    proves_clause: the tool's own text is still available on the maker's separate diagnostics channel
+    code_file: templates/scripts/worktree_git.py
+    must_catch:
+      - a fix that stops forwarding the child's stderr in order to keep it out of the message
+      - a fix that swallows the child's stderr by running git with stderr redirected to the null device
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-23"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_migrate.py
+  - templates/scripts/worktree_ticket_record.py
+  - templates/scripts/worktree_git.py
+  - templates/scripts/worktree_answer.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _start_line, _checkout_line, _create_workspace and _resume_workspace interpolate proc.stderr.strip() into the message of GIT_FAILED and FETCH_FAILED answers.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: unsent_work and its helpers interpolate git's stderr into the FETCH_FAILED and GIT_FAILED messages, and cmd_migrate_legacy reuses that message as the cut-over reason.
+    decision: null
+  - file: templates/scripts/worktree_migrate.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _git_steps returns a reason carrying proc.stderr.strip() and handle copies the unsent-work refusal message into needs_decision.
+    decision: null
+  - file: templates/scripts/worktree_ticket_record.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: conflict_refusal and _record put proc.stderr.strip() into GIT_FAILED messages.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_migrate.py
+  - templates/scripts/worktree_ticket_record.py
+origin_agent: it-po
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BY IT-PO on the /plan-feature technical route (no BA stage ran): a technical-constraint
+  sibling of BO-4300c-2 for defect M4 of disk-cleanup/compare/HANDOVER-v2.md. BO-4300c-2's criteria
+  say the tools' own messages "never appear in the answer", but on main git's stderr text is copied
+  into message at several sites (worktree.py, worktree_remove.py, worktree_ticket_record.py) and
+  into the cut-over report's reason (worktree_migrate.py). depends_on BO-4300e-2-iii because one of
+  the three failing requests (a refused remote-line delete) only produces an answer once that record
+  is built. BA to review the wording at the final gate.

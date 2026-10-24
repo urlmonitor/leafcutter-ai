@@ -1,0 +1,266 @@
+id: BO-4300a-1-iii
+title: "A workspace is cloned from the main copy on this machine, never fetched whole from the shared project"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a shared project whose main line is at commit S,
+  And a main copy of it on this machine whose own main line is behind S and
+    which holds a line of work "feature/x" that exists only on this machine,
+  When a workspace for "alpha" is requested from the workspace maker,
+  Then the workspace's history is shared on disk with the main copy rather than
+    copied over the network,
+  And the workspace's shared project is the main copy's shared project, not the
+    main copy itself,
+  And the ready answer states that the line of work for "alpha" was newly
+    started at S,
+  And a request for the work whose line is "feature/x" starts that line afresh
+    at S rather than resuming the copy that exists only on this machine,
+  And a workspace brought over from the old way by the cut-over is made the same
+    way as the workspace for "alpha".
+depends_on: [BO-4300a-1, BO-4300d-4]
+doc_links:
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-1.yaml
+  relationship: parent
+  status: exists
+- path: docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
+  relationship: constrains
+  status: exists
+  relevance: A1.1 -- hardlinked local-path clone of the main checkout, origin then re-pointed at the hub.
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: constrains
+  status: exists
+  relevance: Per-clone isolation (decision 1); no --shared, no --reference.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: describes
+  status: exists
+  relevance: Clone timings and the different-volume flip case that loses hardlinks.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: templates/scripts/worktree_migrate.py
+    state: existing
+it_requirements:
+  - >-
+    CLONE SOURCE (ADR-018 Amendment 1 A1.1): every workspace the maker makes -- by ensure and by the
+    cut-over (migrate) alike -- is a local-path clone whose source is the resolved main checkout's own
+    path, never the hub URL. No network access and no credentials are needed to make the clone; only
+    the later fetch of the hub touches the network. The --no-checkout, no --shared, no --reference rules
+    of A1.1 still hold.
+  - >-
+    ORIGIN RE-POINTED: after the clone, the workspace's origin is set to the hub URL read from the main
+    checkout's origin, and every later git step that talks to the shared project goes to that hub. The
+    marker's hub field and the answer's hub field equal it.
+  - >-
+    NO LOCAL-ONLY LINE MISTAKEN FOR A HUB LINE: a clone of the main checkout starts with the main
+    checkout's local branches under refs/remotes/origin/. Before any decision that reads hub lines (the
+    BO-4300d-4 resume decision, the BO-4300a-2 AMBIGUOUS_LINE check), the workspace's
+    refs/remotes/origin/ must hold exactly the hub's heads -- the outcome a full `git fetch --prune
+    origin` gives. A line present only in the main checkout is never resumed and never counted as a hub
+    line. This keeps BO-4300d-4's "only the hub's refs are consulted" requirement true under the new
+    clone source.
+  - >-
+    FRESH BASE UNCHANGED: base_commit is the hub's main tip read after that
+    fetch, never the main checkout's own (possibly stale) main. A fetch failure still ends in
+    FETCH_FAILED unless --allow-stale-base was passed (A1.1).
+  - >-
+    HARDLINK PROOF: on the same volume, at least one object file (pack or loose) in the workspace's
+    object store shares its inode with the main checkout's (link count above 1). A --landing-root on a
+    different volume, where git falls back to copying, is out of scope (A1.1 flip case) and must not be
+    treated as an error.
+  - >-
+    The cut-over's later step that copies the legacy workspace's own branches into the new clone stays
+    correct after the change of clone source; whether it is kept or dropped as redundant is the coder's
+    call, but no legacy branch is lost (BO-4300f-3).
+  - >-
+    Must not lengthen ensure beyond BO-4300a-1's budget (30 s excluding the install build on a
+    leafcutter-ai-sized project); the full fetch is of the hub's heads only, never tags-only or
+    history-deepening work beyond what a normal fetch does.
+  - >-
+    Proof runs the DEPLOYED maker as a separate process against real temporary git repositories: a bare
+    hub, and a main checkout cloned from it whose local main is then left behind the hub and which holds
+    a local-only branch. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md
+    'Gate / Workflow ACs -- Verify Behaviorally, Not by Grep').
+  - >-
+    Tests must not spawn the package's own scripts/build.py; the deployed maker comes from the shared
+    deployed layout and fixture projects carry the minimal stub build entry point (CLAUDE.md 'Tests must
+    not spawn their own build.py').
+  - >-
+    All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, KI-TQ-012).
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: >-
+    The ensure sequence of BO-4300a-1 (resolve main checkout, read hub from its origin, compute landing
+    place, clone, re-point origin, fetch, check out or resume the line, build, canary, marker, answer)
+    and the BO-4300c-2 ok-answer fields hub, base_commit and line_of_work
+    ('new'|'resumed'|'existing').
+test_intent:
+  - clause: the workspace's history is shared on disk with the main copy rather than copied over the network
+    needs_test: true
+    reason: Cloning from the hub URL still yields a working workspace, so only an inode link-count check on the object files shows the clone came from the main copy.
+  - clause: the workspace's shared project is the main copy's shared project, not the main copy itself
+    needs_test: true
+    reason: A clone of the main copy leaves origin pointing at the main copy unless it is re-pointed, which a later push would silently send to the wrong place.
+  - clause: the ready answer states that the line of work for "alpha" was newly started at S
+    needs_test: true
+    reason: With a stale local main in the source, a missing or partial fetch would root the line on the old commit while the answer still says ready.
+  - clause: a request for the work whose line is "feature/x" starts that line afresh at S rather than resuming the copy that exists only on this machine
+    needs_test: true
+    reason: The main copy's local branches arrive as remote-tracking refs in the clone, so without a pruning fetch the resume decision would wrongly treat them as hub lines.
+  - clause: a workspace brought over from the old way by the cut-over is made the same way as the workspace for "alpha"
+    needs_test: true
+    reason: The cut-over has its own clone call, so fixing ensure alone would leave brought-over workspaces as full network clones.
+test_spec:
+  - name: test_workspace_objects_share_inodes_with_the_main_copy_not_the_hub
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      New unit_tests/build_orchestration/test_bo_4300a_1_iii.py, a WorkspaceCase subclass (the real-subprocess
+      convention of test_bo_4300e_2.py). Fixture world from make_project; advance the hub to commit S with a
+      throwaway clone (advance_hub pattern of _bo_4300a_1_fixtures.py) WITHOUT fetching in the main copy, so its
+      local main stays behind S, then create local-only branch feature/x with one commit in the main copy. Run
+      the deployed maker as a subprocess, ensure --kind feature --slug alpha. Assert the local-only commit's loose
+      object exists in the workspace and has the same st_ino and st_nlink above 1 as the main copy's file. A clone
+      from a local bare hub is ALSO hardlinked, so a bare any-object-shares-an-inode check cannot tell the clone
+      source apart; the main-copy-only object can, because the hub does not hold it.
+    proves_clause: the workspace's history is shared on disk with the main copy rather than copied over the network
+    code_file: templates/scripts/worktree.py
+  - name: test_workspace_origin_is_the_hub_and_never_the_main_copy
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same fixture. After ensure, read the workspace's own `git remote get-url origin`, the answer's hub field and
+      the marker's hub field (resolved against the workspace); all three are the hub location (same_location) and
+      none is the main copy's path. Then run `git fetch origin` inside the workspace and see it succeed against
+      the hub.
+    proves_clause: the workspace's shared project is the main copy's shared project, not the main copy itself
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a maker that clones from the main copy but never re-points origin, leaving origin at the main copy path
+      - a maker that re-points origin but writes the main copy path into the marker or answer hub field
+  - name: test_ensure_answer_says_new_line_started_at_the_hub_tip
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      Runs the deployed worktree.py ensure as a real subprocess on the stale-main fixture and asserts exit 0,
+      status ok, line_of_work 'new', base_commit equal to S (the hub main tip, not the main copy's older main),
+      and the workspace HEAD equal to S. No new answer field is added; base_commit is the one that states the
+      hub main tip (decided at the plan-feature gate, 2026-10-24).
+    proves_clause: the ready answer states that the line of work for "alpha" was newly started at S
+    code_file: templates/scripts/worktree.py
+  - name: test_main_copy_only_line_is_started_afresh_not_resumed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same fixture, request ensure --kind feature --slug x (line feature/x, which exists only in the main copy
+      with a local-only commit). Assert status ok, line_of_work 'new', workspace HEAD equal to S, the local-only
+      commit is not an ancestor of HEAD, and refs/remotes/origin/ in the workspace lists exactly the hub's heads
+      (compared with `git for-each-ref refs/heads` run on the bare hub) with no origin/feature/x. Also assert the
+      hub's refs are identical before and after.
+    proves_clause: a request for the work whose line is "feature/x" starts that line afresh at S rather than resuming the copy that exists only on this machine
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a fetch without pruning that leaves origin/feature/x behind, so the main copy's local line is resumed
+      - a fetch limited to origin main that never refreshes the remote-tracking refs the clone inherited
+  - name: test_cutover_brought_over_workspace_is_cloned_from_the_main_copy_like_ensure
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Register a legacy worktree with legacy_worktree(project, 'EPIC-Legacy', unsent=True) (its unsent commit is
+      a loose object in the main copy's object store), then run `worktree.py migrate-legacy --repo-root <project>`
+      as a subprocess. Assert the report lists the workspace under brought_over, the brought-over clone's copy of
+      that commit object shares an inode with the main copy's file (st_nlink above 1), its origin url is the hub,
+      refs/remotes/origin/ holds exactly the hub's heads (no origin/EPIC-Legacy), and the branch has no upstream
+      pointing at a hub line that does not exist. The migrate verb has no origin re-point step today, so this
+      test is red on both the clone source and the re-point.
+    proves_clause: a workspace brought over from the old way by the cut-over is made the same way as the workspace for "alpha"
+    code_file: templates/scripts/worktree_migrate.py
+    must_catch:
+      - a cut-over that still clones from the hub URL, so its objects are copied and not shared with the main copy
+      - a cut-over that clones from the main copy but leaves origin at the main copy path
+      - a cut-over that keeps the inherited origin/EPIC-Legacy ref and sets an upstream on a hub line that does not exist
+  - name: test_marker_and_origin_config_read_back_from_the_real_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Lets ensure write the real workspace and marker under the temp landing root, then reads the artifacts back
+      from disk in the test: <ws>/.leafcutter/workspace.json (hub field resolved against the workspace, base_commit
+      equal to S, branch feature/alpha, state ready) and `git config --get remote.origin.url` in the workspace.
+      Both name the hub, not the main copy.
+    proves_clause: the workspace's shared project is the main copy's shared project, not the main copy itself
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-23"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_migrate.py
+  - templates/scripts/worktree_identity.py
+  - templates/scripts/worktree_git.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/test_bo_4300d_4.py
+  - unit_tests/build_orchestration/_bo_4300a_1_fixtures.py
+  - unit_tests/build_orchestration/_workspace_maker_fixtures.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _create_workspace clones from the hub URL with --local and _checkout_line fetches only origin main without pruning, so it holds the ensure clone source and fetch behaviour the criteria change.
+    decision: null
+  - file: templates/scripts/worktree_migrate.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _git_steps clones ctx.hub for a brought-over workspace and has no origin re-point or pruning fetch, so it holds the cut-over clone the criteria change.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_migrate.py
+origin_agent: it-po
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BY IT-PO on the /plan-feature technical route (no BA stage ran): a technical-constraint
+  sibling of BO-4300a-1 for defect M2 of disk-cleanup/compare/HANDOVER-v2.md, confirmed on main
+  after PR #1274 (1d7c61b94). ensure (_create_workspace) and the cut-over (_git_steps) clone from the
+  hub URL, so against a real git@github.com origin every workspace is a full network clone with no
+  shared objects that needs SSH -- violating A1.1 and BO-4300a-1. The criteria are the technical
+  constraint restated as observable behaviour; BA to review the wording at the final gate.
+  Every existing fixture uses a local bare hub, which is why no existing test saw the defect.
