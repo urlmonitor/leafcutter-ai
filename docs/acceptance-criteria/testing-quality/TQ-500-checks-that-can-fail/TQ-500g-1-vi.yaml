@@ -24,8 +24,8 @@ criteria: |
   When each ticket's code is green and it reaches the step before commit,
   Then the route makes the wrong-version runs through the one shared runner,
       with the same inputs the fast lane passes, after asking the writer
-      what is owed and, when anything is, having test-breaker prepare it
-      from that list unchanged,
+      what is owed and, when anything needs preparing, having test-breaker
+      prepare those names from that list unchanged,
     And K1 goes on to commit,
     And K2 does not reach commit: the drive stops that ticket with the
       runner's report naming the test and the surviving wrong version,
@@ -133,6 +133,11 @@ expects_from:
     with owed [] and error set when an owed name has no declared scope and the changed files cannot be
     worked out against the base ref. With --base-ref HEAD the derived scope is the worktree's uncommitted
     changes, tracked and untracked (non-ignored).
+- ac_id: TQ-500g-1-xi
+  contract: >-
+    List step with --work-key "<ticket stem>" printing {owed, to_prepare, decisions, error}; the route
+    sends to_prepare (never owed) to test-breaker unchanged and only when it is non-empty; finish gains
+    pins and the "pin" stop. Built under TQ-500g-1-xi in templates/workflows-js/_shared/wrong-version-runs.js.
 it_requirements:
 - >-
   Placement: immediately before every commit dispatch, after the last pre-commit phase (review
@@ -145,10 +150,13 @@ it_requirements:
 - >-
   Sequence, the same as fast-lane-ship.js's wrong-version block, in this order. (0) Recover on a
   resumed drive (placement and signal in the next requirement). (1) When the ticket has source_ac
-  ids: the list step for those ids, run fresh immediately before the dispatch. (2) When owed is
-  non-empty: dispatch test-breaker with work_key, repo_root (absolute worktree root), requirement_ids
-  (the source_ac ids) and wrong_versions = the list's owed array unchanged. (3) One finish dispatch
-  with the reply on stdin. (4) Reach the commit dispatch only when finish's own gate_passed is true.
+  ids: the list step for those ids, with --work-key "<ticket stem>" (amended 2026-10-23,
+  TQ-500g-1-xi), run fresh immediately before the dispatch. (2) When to_prepare is non-empty
+  (amended 2026-10-23; before: when owed is non-empty): dispatch test-breaker with work_key, repo_root
+  (absolute worktree root), requirement_ids (the source_ac ids) and wrong_versions = the list's
+  to_prepare array unchanged; with to_prepare [] no test-breaker dispatch at all; a missing or
+  non-array to_prepare halts with step "list". (3) One finish dispatch with the reply on stdin.
+  (4) Reach the commit dispatch only when finish's own gate_passed is true.
 - >-
   Resumed-drive signal and recover placement, per route. build-feature.js: the drive is resumed when
   it reuses an existing worktree, that is when realWorktreePath is established by the resolved-worktree
@@ -196,6 +204,10 @@ it_requirements:
   its JSON text; a dispatch that throws, is refused or returns nothing goes in as an empty reply. With
   names owed, the writer then stops and the ticket halts. The JS never decides that an empty reply means
   nothing is owed.
+- >-
+  Nothing to prepare (amended 2026-10-23): when to_prepare is [] (owed [] included), test-breaker is not
+  dispatched and finish still runs with an empty stdin; finish's JSON may carry the additive key pins and
+  stop at "pin", which halts like any other gate_passed false.
 - >-
   Nothing owed: test-breaker is not dispatched, and finish still runs with an empty stdin. K3 (no
   source_ac): the list step and test-breaker are skipped, and finish runs with no --ac-ids, so the runner
@@ -316,7 +328,15 @@ it_requirements:
   per-batch chunk step), build-ticket.js about 45 to 60 (the block, the schema copy and the recover after
   the Worktree Guard). Anything well beyond that means rule logic leaked into the JS.
   The user will approve a one-time check-file-size skip for these two files at commit (the BO-3900 and
-  TQ-500g-1-v precedent); record the measured growth in the commit message.
+  TQ-500g-1-v precedent); record the measured growth in the commit message. SUPERSEDED for the next
+  change (amended 2026-10-23, TQ-500g-1-xi): no size skip. Counted lines are now build-feature.js 1810
+  and build-ticket.js 1138, and the ratchet accepts a change only when the new length is at most the
+  previous length minus the counted lines it added (a replaced line counts as added). The twins'
+  identical wrong-version block (WV_RUNNER_SCHEMA through wvHaltFields) therefore moves into
+  templates/workflows-js/_shared/wrong-version-runs.js, inlined by the build between an empty
+  "// WRONG-VERSION-RUNS-START" / "// WRONG-VERSION-RUNS-END" pair in each twin; const WV and
+  build-feature.js's wvParallelTickets stay outside the markers. Any later wrong-version route logic is
+  written in that shared source, never in the twins.
 - >-
   Existing build-feature.js and build-ticket.js workflow tests reach the commit dispatch, so after this
   change they meet the new executor dispatches. Give them passing wrong-version stubs (recover ok true,
@@ -563,6 +583,14 @@ amended_by:
   date: '2026-10-21'
   by: it-po
   directed_by: user
+- reason: "Reconciled with the pinning ACs (IT-PO pass 2026-10-23): list called with --work-key, test-breaker dispatched only for to_prepare and not at all when it is [], wrong_versions = to_prepare unchanged, a missing to_prepare halts with step list; finish gains pins and the 'pin' stop; the twins' wrong-version block moves into templates/workflows-js/_shared/wrong-version-runs.js so the change needs no size skip. expects_from gains TQ-500g-1-xi. Built under TQ-500g-1-xi. Criteria unchanged."
+  date: '2026-10-23'
+  by: it-po
+  directed_by: orchestrator (wrong-version pinning IT-PO brief); not yet user-approved
+- reason: "Criteria wording follows TQ-500g-1-xi/-xii (user-approved decision set, BrainCandy, 2026-10-24): 'when anything is, having test-breaker prepare it from that list unchanged' now reads 'when anything needs preparing, having test-breaker prepare those names from that list unchanged', because with pins names can be owed while nothing is prepared and test-breaker is not dispatched. The behaviour is built under TQ-500g-1-xi. Only that clause changed; work_status and readiness unchanged."
+  date: '2026-10-24'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -663,3 +691,20 @@ notes: |
   (parseStepJson); the entry now points there. The fail-closed checks are
   unchanged. fast-lane-ship.js keeps its own parse (out of scope). Criteria,
   work_status and readiness untouched.
+
+  IT-PO RECONCILIATION (2026-10-23): PINNING (TQ-500g-1-xi, -xii)
+  Before: wvRuns dispatched test-breaker whenever listed.owed was non-empty,
+  with owed. After: the list command carries --work-key "<ticket stem>",
+  test-breaker is dispatched only when listed.to_prepare is non-empty, with
+  to_prepare unchanged, and not at all when it is []. The "to prepare" list is
+  an output of the shared list step (wrong_version_writer.py list --work-key,
+  decided in _wvp_plan), never computed in JS.
+  FILE SIZE: the change cannot be made in the twins (both over the 1000-line
+  cap; a replaced line counts as added). The twins' identical block moves to
+  templates/workflows-js/_shared/wrong-version-runs.js (marker pair
+  WRONG-VERSION-RUNS), which shrinks each twin by about 44 counted lines, and
+  the to_prepare change is made only there. Labels (bf-wv-*, bt-wv-*) and the
+  twin parity are unchanged because WV stays per twin.
+  This record is done; the change is built under TQ-500g-1-xi, whose
+  declared files include both twins and the shared source. The existing
+  route tests' list stubs gain to_prepare in that change.
