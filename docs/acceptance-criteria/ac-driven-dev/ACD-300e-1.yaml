@@ -65,6 +65,22 @@ delivers_to:
   contract: "For the sibling llm-expert records that add the knowledge-query instructions to each template body (ACD-300e-2 product-owner.md, ACD-300e-3 business-analyst.md, ACD-300e-4 it-po.md): the frontmatter skills: list of templates/agents/<name>.md holds { skill_id: knowledge-query, mode: conditional, condition: <non-empty string> }, and the config/agent_registry.json entry with that id carries the same object in its derived skills_invoked list and no skills_used key"
 expects_from: null
 test_required: false
+test_rationale: >-
+  No test is written: this is a prompt-only change to three template skills: declarations, and
+  each outcome is already enforced by existing gates. The transform-agent-registry pre-commit hook
+  (scripts/commit_guardian/transform_agent_registry.py) regenerates each record's skills_invoked
+  from the template's skills: declaration with the same skill_id, mode and condition, and drops
+  skills_used; the build's first phase, self-description validation
+  (validate_agent_self_description in scripts/build_phases_agent_validation.py, run by
+  scripts/build.py with self_description_enforcement error), stops the build when a skills_invoked
+  skill_id does not resolve to templates/skills/<id>/ or config/skill_registry.json. Before the
+  build phases, scripts/build.py runs registry_validator.validate_agent_registry, which refuses any
+  record carrying skills_used (_check_skills_used) and runs
+  check_skill_refs.ability_reference_verdict, which reads each definition's own skills:
+  frontmatter (a malformed declaration is an error) and refuses any skill named in the template
+  prose that is not packaged under templates/skills/ or not granted by that declaration; either
+  finding aborts the build. That the other declared entries are preserved is a one-time content
+  fact confirmed at review, with no executable behaviour for a test to guard.
 origin_agent: business-analyst-v3
 created: 2026-06-05
 amended_by:
@@ -86,6 +102,14 @@ amended_by:
     records ACD-300e-2, -3 and -4 (also llm-expert, so the agent is kept); declared_files and test_required
     false (prompt-only change; the build and registry_validator are the existing gates) added.'
   date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'test_rationale added so the done record closes through the done-proof waiver (BO-2500a-1-ii,
+    is_covers_tag_waived: test_required false and a non-empty test_rationale) instead of a placeholder
+    test. The rationale names the gates that enforce the criteria today: the transform-agent-registry
+    pre-commit hook, the build''s self-description validation phase, and registry_validator with
+    check_skill_refs.ability_reference_verdict. Criteria unchanged.'
+  date: '2026-10-24'
   by: it-po
   directed_by: user
 superseded_by: null
