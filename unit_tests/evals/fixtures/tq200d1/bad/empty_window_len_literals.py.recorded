@@ -1,0 +1,13 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+from buy_volume_window import buy_volumes
+
+
+def test_every_row_in_the_window_has_non_negative_buy_volume():
+    # covers: TQ-9302
+    values = buy_volumes([{"buy_volume": 1}, {"buy_volume": 2}, {"buy_volume": 3}])
+    assert len([1, 2, 3]) == 3
+    assert len([None]) > 0

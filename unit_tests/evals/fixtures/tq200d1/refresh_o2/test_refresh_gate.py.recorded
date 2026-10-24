@@ -1,0 +1,12 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+from refresh_gate import should_refresh
+
+
+def test_gate_needs_both_conditions():
+    # covers: TQ-9201
+    assert should_refresh(True, True) is True
+    assert should_refresh(False, False) is False

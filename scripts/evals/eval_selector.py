@@ -15,6 +15,8 @@ BUSINESS CONTEXT: Each agent in scripts/evals/agent_eval_config.json declares a
 
 ARCHITECTURE: Single importable module + CLI.
     - Default action: print the affected/unaffected split as JSON, exit 0.
+    - Agents with ``local_only: true`` (TQ-200d-1) are kept out of ``affected`` and out of
+      `--check` by main(); they are listed under ``local_only``. compute_affected stays pure.
     - `--check`: for every affected agent require a FRESH result at
       scripts/evals/results/<agent>.json. FRESH = the result's recorded
       `trigger_shas` map (repo-relative path -> sha256 of the file's bytes)
@@ -200,6 +202,27 @@ def compute_affected(
         else:
             unaffected.append(agent)
     return {"affected": affected, "unaffected": unaffected, "matched": matched}
+
+
+def local_only_agents(config: dict[str, Any]) -> list[str]:
+    """Sorted names of the agents the config marks ``local_only: true``. Pure function."""
+    agents = config.get("agents") or {}
+    return sorted(n for n, e in agents.items() if isinstance(e, dict) and e.get("local_only") is True)
+
+
+def exclude_local_only(split: dict[str, Any], local_only: list[str]) -> dict[str, Any]:
+    """Move local-only agents out of the affected/unaffected split into ``local_only``. Pure function.
+
+    A local-only agent's eval runs by hand on one machine (TQ-200d-1), so CI neither runs it nor
+    demands a fresh result for it. ``compute_affected`` itself stays a pure glob match.
+    """
+    skip = set(local_only)
+    return {
+        "affected": [a for a in split["affected"] if a not in skip],
+        "unaffected": [a for a in split["unaffected"] if a not in skip],
+        "matched": {a: g for a, g in split["matched"].items() if a not in skip},
+        "local_only": sorted(skip),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -402,7 +425,7 @@ def main(argv: list[str] | None = None) -> int:
             logger.exception("Could not compute changed files from git")
             return 2
 
-    split = compute_affected(changed, triggers)
+    split = exclude_local_only(compute_affected(changed, triggers), local_only_agents(config))
 
     if not args.check:
         print(json.dumps(split, indent=2))
@@ -415,6 +438,7 @@ def main(argv: list[str] | None = None) -> int:
         "affected": split["affected"],
         "unaffected": split["unaffected"],
         "matched": split["matched"],
+        "local_only": split["local_only"],
         "status": status,
     }
     print(json.dumps(output, indent=2))

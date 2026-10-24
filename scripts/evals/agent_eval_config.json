@@ -1,5 +1,5 @@
 {
-  "$comment": "Shared agent-eval registry. Each key is a pipeline agent; the value declares WHERE its gold eval set lives, HOW to score it (label | artifact), which field of a row feeds the agent, and the pass threshold used as a CI gate. LABEL mode invokes the agent headless with tools disabled and exact-matches routing booleans. ARTIFACT mode copies the product-truth store and its bounded declared contract dependencies into a throwaway /tmp sandbox, invokes the WRITE-capable agent there (cwd=sandbox, LEAFCUTTER_REPO_ROOT=sandbox, so all writes stay contained), then scores the produced *.mock.json / *.flow.json with the deterministic assertions of TQ-200a-2-ii (schema-valid, entities-in-registry, extend-not-duplicate, referenced-records-exist, one acceptance_scenario per step/branch, id path-stable) plus an optional per-row LLM-judge rubric. All paths are relative to the repo root.",
+  "$comment": "Shared agent-eval registry. Each key is a pipeline agent; the value declares WHERE its gold eval set lives, HOW to score it (label | artifact | produced_tests), which field of a row feeds the agent, and the pass threshold used as a CI gate. LABEL mode invokes the agent headless with tools disabled and exact-matches routing booleans. ARTIFACT mode copies the product-truth store and its bounded declared contract dependencies into a throwaway /tmp sandbox, invokes the WRITE-capable agent there (cwd=sandbox, LEAFCUTTER_REPO_ROOT=sandbox, so all writes stay contained), then scores the produced *.mock.json / *.flow.json with the deterministic assertions of TQ-200a-2-ii (schema-valid, entities-in-registry, extend-not-duplicate, referenced-records-exist, one acceptance_scenario per step/branch, id path-stable) plus an optional per-row LLM-judge rubric. All paths are relative to the repo root.",
   "agents": {
     "pt-classifier": {
       "template": "templates/agents/pt-classifier.md",
@@ -117,6 +117,35 @@
         "scripts/evals/cli_envelope.py"
       ],
       "notes": "INF-800f-1 arms 2 and 3. Label mode: the report's machine-readable skills_applied object (skill id -> bool) is scored on the complexity-reduction axis. The complexity row (scripts/planner.py, plan_batches, complexity 31, 30 allowed) expects true; the file-size row (120 measured lines to leave scripts/planner.py) expects false, so the skill is chosen by the demand and not applied on every engagement. Triggers are limited to the agent's own files (owner decision 2026-10-06). A live run needs model credentials; CI holds none, so the live run is the informational gate and the offline --self-test is the deterministic one."
+    },
+    "test-writer": {
+      "template": "templates/agents/test-writer.md",
+      "eval_set": "scripts/evals/sets/test-writer.jsonl",
+      "scoring_mode": "produced_tests",
+      "local_only": true,
+      "input_field": "input",
+      "expected_field": "expected",
+      "model": "sonnet",
+      "tools": "Read,Write,Edit,Bash",
+      "support_scripts": [
+        "scripts/db_check",
+        "scripts/build_orchestration",
+        "scripts/ac_store"
+      ],
+      "timeout": 900,
+      "threshold": 1.0,
+      "triggers": [
+        "templates/agents/test-writer.md",
+        "scripts/evals/sets/test-writer.jsonl",
+        "scripts/evals/sets/test-writer/**",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/produced_tests_mode.py",
+        "scripts/evals/produced_tests_scoring.py",
+        "scripts/evals/produced_tests_runs.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "TQ-200d-1 / TQ-200d-1-i. PRODUCED-TESTS mode: the agent writes tests and a completion report in a per-row git sandbox (the row's fixture project plus the scripts the template names, {{config.output_root}} rendered to the sandbox); the output is scored deterministically (fixture seeds the moved input, exact row and non-NULL counts, a seeded known value, test B red on a wrong result not at import) and the refresh-gate row's test half comes from the shared wrong-version runner (halves.test, halves.report). LOCAL ONLY (user decision 2026-09-28, KI-TQ-20260907): local_only true keeps this agent out of eval_selector's affected set and --check, and every payload carries run_context 'local'. --score-gold replays the recorded gold outputs under scripts/evals/sets/test-writer/recorded/ and makes no model call. A live run (python scripts/evals/run_agent_eval.py --agent test-writer) needs model credentials; the live before-score is deferred (OQ-11)."
     }
   }
 }
