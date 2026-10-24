@@ -1,0 +1,593 @@
+id: TQ-500g-1-xi
+components:
+  - testing_quality
+  - build_orchestration
+title: "Once a named wrong version is prepared and passes its checks for a piece of work, every later run of that work applies the same replacement to the current code instead of asking the preparer again"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the work 07_TICKET-refresh-gate guards requirement TQ-9101, whose
+    test T1 names must_catch ["drop the retry_due condition",
+    "the gate always allows"],
+    and a first run of the wrong-version gate for that work prepared both
+    names, each of which passed every check of TQ-500g-1-xiii, with
+    "drop the retry_due condition" prepared as one replacement in
+    refresh_config.py: "if refresh_due and retry_due" becomes "if refresh_due",
+    and after that run a coder changed refresh_config.py elsewhere: the line
+    "log.info('refresh')" now reads "log.info('refresh starting')", and the
+    gate line was not touched,
+  When the gate runs again for the same work in a new workflow run, not a
+    resume of the first one,
+  Then neither name is sent to the preparer, and because no owed name needs
+      preparing the preparer is not dispatched at all,
+    And "drop the retry_due condition" is applied as the same replacement to
+      refresh_config.py as it now stands, so the altered code reads
+      "if refresh_due" and still carries "log.info('refresh starting')",
+    And no altered copy made by the first run is applied, or used to build the
+      second run's altered copy; only the replacement (file, old text, new
+      text) is reused,
+    And the replacements of both names are persisted for the work
+      07_TICKET-refresh-gate after the first run, so a third run applies them
+      again in the same way,
+    And a run for another piece of work never applies the replacements pinned
+      for 07_TICKET-refresh-gate, even when it guards the same requirement and
+      names the same wrong versions,
+    And "the fix undone" is never pinned: on every run it is the changed code
+      as it stood before the work began,
+    And the pins are private to the workspace the work is built in: they are
+      never committed, and when that workspace is removed they are lost, so the
+      next run for 07_TICKET-refresh-gate in a new workspace sends both names to
+      the preparer and pins them again,
+    And when the pins of a run cannot be saved, the gate does not pass: the
+      work stops at the pin step, and the failure is never reported only as a
+      warning.
+declares_side_effect: true
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+  - TQ-500g-1-ix
+doc_links:
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Measured evidence (6 of 13 preparable names got behaviourally different code across three rounds), invariants 1, 4 and 5 for a pin, and recommendation item 1 (reuse) and 3 (rebuilt from current code)."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: relates-to
+    status: exists
+    relevance: "A pin locks in whatever the first preparation produced, including a no-op; the effect check (TQ-500g-1-xiv) and the reset (TQ-500g-1-xvi) are the answers."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The writer that turns the preparer's reply into the manifest. Today it removes the earlier manifest and copies first and keeps no replacement, so nothing is reused."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Keeps the as-written copies for put-back after a cut-short run; a different thing from a pin, and not changed here."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The component the writer, runner and gate CLIs belong to; decision logic stays in Python, the workflow JS only dispatches and parses fail-closed."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "E2 workflow bodies cannot require a module, which is why the shared route block is inlined from templates/workflows-js/_shared/ at build time."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Edit templates/ and scripts/ sources only; the deployed copies regenerate through build.py."
+  - path: templates/workflows-js/_shared/README.md
+    relationship: describes
+    status: exists
+    relevance: "The marker grammar (// <NAME>-START / -END), the one-source rule and the derived block/consumer sets used for the new WRONG-VERSION-RUNS block."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "Reference page of TQ-500g-5; the pin store, the to_prepare list and the source wording of a row are documented there."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: scripts/build_orchestration/_wvp_store.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvp_plan.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvw_list.py
+    state: existing
+  - path: scripts/build_orchestration/_wvw_write.py
+    state: existing
+  - path: scripts/build_orchestration/wrong_version_writer.py
+    state: existing
+  - path: scripts/build_orchestration/wrong_version_gate.py
+    state: existing
+  - path: templates/workflows-js/_shared/wrong-version-runs.js
+    state: to_be_created
+  - path: templates/workflows-js/build-feature.js
+    state: existing
+  - path: templates/workflows-js/build-ticket.js
+    state: existing
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  - >-
+    Pin store (new private module scripts/build_orchestration/_wvp_store.py). It owns reading,
+    writing and clearing pins and the alteration identity. One location rule, in one function
+    (pin_path): <git-dir>/leafcutter/pins/<work-key>.json, git-dir from the same
+    git rev-parse --absolute-git-dir the writer already uses (_wvw_write.run_write). Pins are kept
+    OUTSIDE <git-dir>/leafcutter/work/<work-key>/, so no step that cleans or moves that folder
+    (_wvw_write._clean today, the move into history of TQ-500g-1-xv) can reach them. Shape, fixed key
+    order: {work_key: str, pins: {<pin key>: {name: str (the spelling when pinned), replacements:
+    [{path: str, old: str, new: str}], alteration_id: str, failed_check: null | {check: str,
+    files_sha256: str}, reset: bool, cleared_alteration_id: str | null}}}. The pin key is
+    _wvr_scope.norm_name(name) (trim and case-fold, the alias rule's normalisation); never a second
+    normaliser. Written atomically (temporary file in the same folder, then os.replace); a crash never
+    leaves a partial pin file. Deterministic: same pins give a byte-identical file. USER DECISION
+    (BrainCandy, 2026-10-24): this location is decided, not a default. Pins are private to the
+    workspace, never committed, and lost when the workspace is removed; the next run then prepares and
+    pins again. It is NOT a durable location. The decision is revisitable; changing it changes only
+    _wvp_store.pin_path and nothing else.
+  - >-
+    Alteration identity (one function in _wvp_store, alteration_id, reused by TQ-500g-1-xv, -xvi and
+    -xvii): "sha256:" plus the first 16 hex characters of the SHA-256 of the canonical JSON of the
+    ordered replacement list [{path, old, new}] (sort_keys true, separators "," and ":", UTF-8, no
+    ASCII escaping). Computed from the replacements alone, never from an altered copy or a diff, so a
+    change elsewhere in the file leaves the identity unchanged.
+  - >-
+    Plan (new private module scripts/build_orchestration/_wvp_plan.py). For each owed name of the shared
+    reading (_wvw_list.derive_owed, unchanged as the one source of owed names and files) it decides
+    exactly one of: use the pin, use a declaration (TQ-500g-1-xvii), or prepare. Under this AC a name
+    is prepared when the work holds no usable pin for its key; TQ-500g-1-xii and -xiii add the other
+    triggers inside this same module. "The fix undone" and its aliases are never planned, never
+    pinned and never read from the pin store: they stay prepared from git by the runner on every run.
+  - >-
+    List step (wrong_version_writer.py list, logic in _wvw_list.list_payload and _wvp_plan). It gains
+    an optional --work-key <key>. Without it the output is today's plus to_prepare equal to owed and
+    decisions [] (back-compatible for every caller, including the TQ-500g-1-v list-speed test). With
+    it, stdout is exactly one JSON object, fixed key order: {owed: [...unchanged...], to_prepare:
+    [the owed items that need preparation, each item byte-identical to its owed item (name, files,
+    scope and any additive keys), in owed order], decisions: [{name: str, source: str, reason:
+    str|null, alteration_id: str|null}], error: str|null}, one decision per owed name in owed order.
+    On error owed, to_prepare and decisions are all [] and the exit is 1, as today. With --work-key
+    the list writes exactly one file, the plan record <git-dir>/leafcutter/work/<work-key>/plan.json
+    (atomic write), and nothing in the working tree; without --work-key it writes nothing anywhere.
+  - >-
+    Plan record and the write step. plan.json holds {work_key, fingerprint, decisions: [{name, source,
+    reason, alteration_id, replacements: [{path, old, new}] | null}]}. fingerprint is a SHA-256 over
+    the owed list JSON, the pin file's bytes (or "" when absent) and the bytes of every file a planned
+    replacement names. The write step (_wvw_write) reads the plan only when its fingerprint matches the
+    current state; otherwise it recomputes the plan in-process with the same _wvp_plan function. It
+    never takes the plan, the to_prepare list or any scope from the route or from the reply. Names
+    whose decision is "pinned" are rebuilt by applying the pinned replacements to the files AS THEY
+    NOW STAND through _wvw_prepare.alter (same path refusals, same exactly-once rule, same CRLF rule),
+    never by reusing or copying an earlier altered copy. Names whose decision is prepare are taken
+    from the reply as today (TQ-500g-1-ix name matching, all or nothing per name); a pinned or
+    declared name the reply also answers is listed in ignored_reply_names and the answer is never
+    used.
+  - >-
+    Manifest entries gain three additive keys, so every later step reads the replacements and not only
+    the copies: replacements ([{path, old, new}] actually applied; [] when could_not_prepare),
+    alteration_id (null when could_not_prepare) and source (the row wording of TQ-500g-1-xii, -xiii,
+    -xv and -xvii; under this AC "pinned" or "prepared: not pinned"). name, status, reason, files and
+    diff keep their TQ-500g-1-ix meaning; the runner still applies files[].altered_copy.
+  - >-
+    Pin step (new third step of wrong_version_writer.py, logic in _wvp_store): wrong_version_writer.py
+    pin --work-key <key> --manifest <path> --test-root <path>, with the runner's run JSON on stdin.
+    stdout: exactly one JSON object {pinned: [{name, alteration_id}], kept: [str], error: str|null};
+    exit 0 when the store was written or left unchanged, 1 otherwise. A manifest entry whose source is
+    a preparation (source starting "prepared" or "re-prepared") becomes the name's pin only when every
+    verdict row for that name has result caught or survived (no did_not_load, not_applied,
+    not_executed, invalid or not_run row, and no cut-short run). A survivor is still pinned: survival
+    judges the test, not the alteration. Entries with source "pinned" or "declared" never rewrite the
+    pin; a declaration is never pinned. Compare-and-swap: a name's pin is replaced only when the stored
+    entry still equals what this run's plan read (or there was none), so a reset made while the run
+    was in progress is never overwritten by that run.
+  - >-
+    finish (wrong_version_gate.py) gains one call, after the runner and only when the runner ran: the
+    writer's pin step with the same --work-key, the manifest path the writer printed, the same
+    --test-root and the runner's JSON on stdin. Its JSON goes verbatim under a new additive key pins
+    (null when not called). When the pin step exits 1 or prints no parseable JSON, gate_passed is false
+    and stopped_at is "pin" (the -viii record-write precedent: bookkeeping that the next run relies on
+    is fail-closed; USER DECISION 2026-10-24: a pin-write failure always fails the gate and is never
+    only a warning). finish keeps holding no rule of its own: the promotion rule lives in _wvp_store.
+    wrong_version_gate.py stays at or under 400 counted lines (it is at 75).
+  - >-
+    Route side: the routes dispatch test-breaker only for to_prepare, and not at all when to_prepare is
+    []. The list command every route builds passes --work-key "<work key>" (the same key it passes to
+    finish), checks to_prepare fail-closed (an array, else halt with step "list", like owed today),
+    dispatches test-breaker only when to_prepare is non-empty, and sends wrong_versions =
+    listed.to_prepare unchanged (same items, order, spellings, files and scope keys). finish still
+    always runs, with an empty here-document when nothing was prepared.
+  - >-
+    WHERE THE ROUTE LOGIC LIVES (file-size ratchet, no check-file-size skip). build-feature.js (1810
+    counted lines) and build-ticket.js (1138) are over the 1000-line .js limit, and the ratchet refuses
+    a change unless the new length is at most the previous length minus the counted lines the change
+    added (lines <= max(limit, previous - added), check_file_size.py with
+    _file_size_ratchet.count_added_measured_lines; a replaced line counts as added). So the twins'
+    identical wrong-version block (today from const WV_RUNNER_SCHEMA through const wvHaltFields:
+    build-feature.js lines ~1809-1854 without the wvParallelTickets line, build-ticket.js lines
+    ~1408-1452) MOVES into one new shared source, templates/workflows-js/_shared/wrong-version-runs.js,
+    and each twin keeps only an empty marker pair "// WRONG-VERSION-RUNS-START" /
+    "// WRONG-VERSION-RUNS-END" in its place (comments are not counted). The to_prepare change is
+    made in the shared source only. Outside the markers each twin keeps its own const WV ("bf" / "bt"),
+    and build-feature.js its wvParallelTickets line; the block reads WV, resolvedTarget and
+    AC_STORE_REL_PATH, which both twins already declare under those names. Net effect: each twin
+    shrinks by about 44 counted lines and adds none. The shared file holds the {{config.output_root}}
+    placeholder unchanged (the fill runs before config injection and build_shared_validation checks
+    it resolves). The block is consumed by both twins, so the build's unused-block check passes.
+  - >-
+    fast-lane-ship.js (1342 counted lines, also over the limit) keeps its own block, because its
+    variables (worktreePath, targetAc, wvDir, batchIdsCsv) and its top-level halt-and-release flow
+    differ from the twins'. Its change (--work-key ${targetAc} on the fastlane-wv-list command, the
+    fail-closed to_prepare check, the dispatch condition and wrong_versions = listed.to_prepare) must
+    be paid for inside the same file: the new length must be at most previous minus the counted lines
+    added, i.e. delete at least twice what is added (for example by folding its wvStep/wvHalt helpers).
+    Measure with count_added_measured_lines before commit. No check-file-size skip is used for any of
+    the three routes; if the fast-lane offset cannot be found, stop and report rather than skip.
+  - >-
+    Deploy manifest. Every new Python module of this AC (_wvp_store.py, _wvp_plan.py) sits in
+    scripts/build_orchestration/, which build_build_orchestration_scripts deploys by directory glob
+    (build_phases_script_deploy.py, BP-900g-4) and _manifest_build_orchestration_scripts lists by the
+    same scan, so no deploy-list edit is needed; prove it by running the deployed writer and gate from a
+    shared deployed layout (the shared_reference_layout fixture), not only the source tree. Do not
+    import anything from scripts/ac_store/ that is not already in build_phases_ac_store.py's deploy
+    map; if a new ac_store module is needed, add it to that map in the same change.
+  - >-
+    Existing route tests that stub the list reply (unit_tests/workflows/_tq500g1v_fixtures.py and the
+    -vi route-sequence tests) gain to_prepare in their stubs (equal to owed where they mean "prepare
+    everything") in the same change; the new fail-closed to_prepare check is never weakened to keep an
+    old stub green.
+  - >-
+    Size and reuse: every new or changed Python file stays at or under 400 counted lines
+    (_file_size_ratchet.count_content_lines); wrong_version_runner.py is at 309, so no pin logic is
+    added there. Reuse _wvr_scope.norm_name, _wvw_prepare.alter, _wvr_gate.git_text and
+    _wvr_gate.atomic_write_bytes; never fork them. Logging to stderr only; one JSON object on stdout per
+    step; errors handled per the project error handling policy (external I/O wrapped, nothing
+    swallowed silently).
+  - >-
+    Performance: list with --work-key and no pin file adds under 0.5 s to today's list for 50 owed
+    names; the pin step finishes within 1 s for 50 names. Neither runs pytest under this AC.
+  - >-
+    The route tests that carry must_catch exercise the templates as they stand in
+    templates/workflows-js/ with their shared-block marker pairs filled from _shared/ by the harness,
+    never a deployed copy left from an earlier build.
+test_spec:
+  - name: test_second_new_run_reapplies_pinned_replacement_to_current_code
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: python scripts/build_orchestration/wrong_version_gate.py finish
+    description: >-
+      Temp git repo with refresh_config.py ("if refresh_due and retry_due", "log.info('refresh')"), a temp
+      AC store whose T1 entry owes "drop the retry_due condition" and "the gate always allows", and a
+      reply fixture. Run 1: list --work-key 07_TICKET-refresh-gate, then finish with the reply. Then edit
+      the log line to "log.info('refresh starting')". Run 2, in fresh processes: list --work-key prints
+      to_prepare [] and both decisions "pinned"; finish with an empty reply writes a manifest whose entry
+      for the name has source "pinned" and an altered copy reading "if refresh_due" that still carries
+      "log.info('refresh starting')". Run 3 applies both pins again in the same way.
+    must_catch:
+      - the altered copy of an earlier run applied instead of the replacement rebuilt from the current file
+      - the pin written into the work folder the write step clears, so run 2 finds no pin
+      - the pin taken from the preparer's raw reply rather than from the replacements the writer applied
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/_wvw_list.py
+  - name: test_pins_never_cross_work_keys
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      After run 1 pins both names for 07_TICKET-refresh-gate, list --work-key 08_TICKET-refresh-retry for
+      the same requirement and the same names prints both names in to_prepare with decisions
+      "prepared: not pinned", and its finish applies no replacement pinned for the other key.
+    must_catch:
+      - pins keyed by requirement id or by name alone instead of by work key
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_fix_undone_is_never_pinned
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      An entry naming "revert the fix" beside a named wrong version. After two runs the pin file holds no
+      key for "the fix undone" or its alias, the list never puts it in owed, to_prepare or decisions, and
+      run 2's verdict still judges the fix undone built from the base ref.
+    must_catch:
+      - the fix undone pinned and reused instead of rebuilt from the base ref
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_list_without_work_key_is_unchanged_and_writes_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py list
+    description: >-
+      With a pin file present, list without --work-key prints to_prepare equal to owed and decisions [],
+      and creates no file under the git directory; with --work-key it writes only work/<key>/plan.json,
+      and git status --porcelain is unchanged in both cases.
+    must_catch:
+      - pins read without a work key, so another caller's list shrinks
+      - list writing inside the working tree
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_list.py
+      - scripts/build_orchestration/wrong_version_writer.py
+  - name: test_stale_plan_is_recomputed_never_trusted
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      list --work-key plans a name as pinned; then the pinned old text is edited away in the file before
+      finish. The write step sees the fingerprint mismatch, recomputes the plan, and records the name as
+      could_not_prepare "no alteration returned" (it was not sent to the preparer), never applying the
+      stale pin.
+    must_catch:
+      - the write step trusting plan.json after the code changed
+      - the write step taking the plan from the route
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_pin_step_promotes_only_passing_preparations
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py pin
+    description: >-
+      The pin step is fed a manifest and a runner verdict where one prepared name was caught, one survived
+      and one is not_applied. The first two are pinned with their alteration_id; the not_applied one is
+      not. A pinned entry and a declared entry rewrite nothing.
+    must_catch:
+      - a survivor left unpinned
+      - a not_applied (no-op) preparation pinned
+      - a declared replacement written into the pin store
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/wrong_version_writer.py
+  - name: test_pin_write_failure_fails_the_gate
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      With the pins folder made unwritable, finish runs the runner and then the pin step, which exits 1;
+      finish prints gate_passed false, stopped_at "pin" and the pin step's JSON under pins.
+    must_catch:
+      - a failed pin write reported as a passed gate
+    in_scope_files:
+      - scripts/build_orchestration/wrong_version_gate.py
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_nothing_to_prepare_dispatches_no_test_breaker
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-feature.js under unit_tests/_workflow_engine_harness.py
+    description: >-
+      For build-feature.js, build-ticket.js and fast-lane-ship.js, the list executor returns two owed names
+      and to_prepare []. No *-wv-test-breaker dispatch is recorded, the list command carries --work-key
+      with the same key finish gets, and finish runs with an empty here-document before commit.
+    must_catch:
+      - test-breaker dispatched whenever owed is non-empty
+      - list command built without --work-key
+    in_scope_files:
+      - templates/workflows-js/_shared/wrong-version-runs.js
+      - templates/workflows-js/build-feature.js
+      - templates/workflows-js/build-ticket.js
+      - templates/workflows-js/fast-lane-ship.js
+  - name: test_to_prepare_reaches_test_breaker_unchanged
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      The list executor returns three owed names and to_prepare holding two of them (one with two files
+      and scope "declared", one "derived"). Each route's test-breaker input carries wrong_versions equal to
+      that to_prepare array exactly, never the owed array.
+    must_catch:
+      - owed sent to test-breaker instead of to_prepare
+      - to_prepare items filtered, reordered or stripped of keys
+    in_scope_files:
+      - templates/workflows-js/_shared/wrong-version-runs.js
+      - templates/workflows-js/fast-lane-ship.js
+  - name: test_list_reply_without_to_prepare_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      A list reply with owed but no to_prepare array (or a non-array) halts each route as blocked with
+      wrong_version_step "list"; no test-breaker, finish or commit dispatch follows.
+    must_catch:
+      - a missing to_prepare read as nothing to prepare
+    in_scope_files:
+      - templates/workflows-js/_shared/wrong-version-runs.js
+      - templates/workflows-js/fast-lane-ship.js
+test_required: true
+test_rationale: >-
+  Every Python clause is deterministic, so the entries drive the real writer, runner and gate CLIs as
+  subprocesses on a temp git repo with a temp AC store and hand-written reply fixtures (the
+  _tq500g1ix_fixtures.py pattern), in fresh processes per run so a cross-workflow pin is proven rather
+  than an in-memory one. The "log.info" edit between runs is what proves the replacement, not the copy, is
+  pinned. The route entries drive the three route templates under unit_tests/_workflow_engine_harness.py
+  with the shared block filled from _shared/, and assert on the recorded dispatches (no test-breaker when
+  to_prepare is [], to_prepare passed unchanged, fail-closed on a missing to_prepare); no entry greps a
+  source. Red baseline: _wvp_store and _wvp_plan are new modules, so follow the convention TQ-500g-1-i
+  used for its new module, so the entries go red on behaviour rather than on ImportError.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-xii
+    contract: >-
+      Pin store <git-dir>/leafcutter/pins/<work-key>.json read through _wvp_store (pin_path, load, entry
+      by _wvr_scope.norm_name key): {work_key, pins: {<norm name>: {name, replacements: [{path, old,
+      new}], alteration_id, failed_check: null|{check, files_sha256}, reset: bool,
+      cleared_alteration_id: str|null}}}, and the plan module _wvp_plan where the re-prepare triggers are
+      added.
+  - agent: python-coder
+    ac_id: TQ-500g-1-xiii
+    contract: >-
+      The same pin store, the plan module (decision per owed name: source, reason, alteration_id,
+      replacements) and the pin step's promotion rule, to which the five checks are added before any
+      decision "pinned" is made.
+  - agent: python-coder
+    ac_id: TQ-500g-1-xv
+    contract: >-
+      Manifest entries carrying replacements [{path, old, new}], alteration_id ("sha256:" + 16 hex) and
+      source; _wvp_store.alteration_id as the one identity function.
+  - agent: python-coder
+    ac_id: TQ-500g-1-xvi
+    contract: >-
+      The pin store, addressable by work key and norm_name key, written atomically; the reset entry shape
+      {name, reset: true, cleared_alteration_id, replacements: [], alteration_id: null}.
+  - agent: python-coder
+    ac_id: TQ-500g-1-xvii
+    contract: >-
+      The plan module's precedence slot (declared > pinned > prepared) and the pin store, which a
+      declaration overrides without clearing.
+  - agent: python-coder
+    ac_id: TQ-500g-1-v
+    contract: >-
+      List step with --work-key: python <root>/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py
+      list --work-key <key> [--ac-ids <ids>] --ac-root <path> --test-root <path> --base-ref <ref>. stdout
+      exactly one JSON object {owed: [...], to_prepare: [owed items needing preparation, unchanged, owed
+      order], decisions: [{name, source, reason, alteration_id}], error: str|null}; exit 0 when printed
+      (also when both arrays are []), 1 on error with all arrays []. The route sends to_prepare to
+      test-breaker unchanged and dispatches it only when to_prepare is non-empty. finish's JSON gains
+      pins (writer pin JSON or null) and stopped_at may be "pin".
+  - agent: python-coder
+    ac_id: TQ-500g-1-vi
+    contract: Same list step, the same to_prepare rule and the same finish JSON as for TQ-500g-1-v.
+  - agent: llm-expert
+    ac_id: TQ-500g-1-vii
+    contract: Same list step, the same to_prepare rule and the same finish JSON as for TQ-500g-1-v.
+expects_from:
+  - ac_id: TQ-500g-1-ix
+    contract: >-
+      The writer's list and write steps (wrong_version_writer.py, _wvw_list.derive_owed as the one reading
+      of owed names and files, _wvw_prepare.alter for exact-once application and path refusals,
+      _wvw_reply for the reply), extended in place; manifest at
+      <git-dir>/leafcutter/work/<work-key>/alterations.json.
+  - ac_id: TQ-500g-1-i
+    contract: >-
+      The runner's run JSON (results rows {test, wrong_version, result, blocking, detail}, reason,
+      unfinished), read by the pin step to decide promotion.
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+  - reason: "User decisions (BrainCandy, 2026-10-24, approved) recorded as two new criteria clauses: (a) pins are private to the workspace, never committed, and lost when the workspace is removed, after which the next run prepares and pins again; (b) a failure to save the pins fails the gate (stopped at the pin step), never only a warning. it_requirements (pin store, finish) and notes state the decisions; the pin location is a revisitable decision whose change touches only the pin-path function. All other clauses unchanged."
+    date: '2026-10-24'
+    by: business-analyst
+    directed_by: user
+  - action: approved
+    agent: approve_acs
+    date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/02_TICKET-20261024-TQ-500g-1-xi.md
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY. docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md:
+  every run dispatches test-breaker afresh, the writer removes the previous
+  manifest before writing, and on BO-2900a-2-i 6 of 13 preparable names got
+  behaviourally different code across three rounds. A test proven to catch
+  one round's guess was judged against another guess in the next, so the gate
+  could not converge, and each round cost 0.34-0.60M tokens of gate steps.
+
+  PIN THE REPLACEMENTS, NEVER THE COPIES (analysis invariant 1). The runner
+  writes a whole altered copy over the file. A stored copy from an earlier run
+  would also revert every code change made since. So the pin holds the
+  replacements, and every run rebuilds the altered copy from the current file.
+  The "log.info" clause in the criteria is what proves this.
+
+  PIN KEY. Per work key and per owed name, the name compared after the gate's
+  existing trim and case-fold (the alias rule of TQ-500g-1-i). Not shared
+  across work keys, even for the same requirement: two pieces of work may have
+  different code. BA assumption; IT-PO to confirm.
+
+  NEW WORKFLOW, NOT ONLY RESUME. A resumed workflow can already replay a
+  journalled agent result; the failure was across workflow runs (runs 3 and 4
+  of drive 344eaa23 were new workflows). The When clause pins the new-workflow
+  case.
+
+  "NOT DISPATCHED AT ALL" is route-visible behaviour. The routes (TQ-500g-1-v,
+  -vi, -vii) dispatch test-breaker whenever the list step reports anything
+  owed; after this AC they dispatch it only when something needs preparing.
+  Their next IT-PO pass must add that to their contracts; the shared list step
+  is the natural place to report "to prepare" separately from "owed".
+
+  OPEN FOR IT-PO / USER. Where the pin lives. TQ-500g-1-i keeps per-work gate
+  files under the worktree's own git directory, so a pin there is lost when the
+  workspace is removed and a new workspace for the same ticket starts with no
+  pin. The BA's default: keep it with the other per-work gate files (loss on
+  workspace removal is acceptable; the next run prepares afresh and pins
+  again). If pins must outlive the workspace, that is a decision for the user.
+
+  CONFLICT TO RESOLVE IN THE IT-PO PASS. TQ-500g-1-ix it_requirements
+  ("Stale and unreadable", decision 2f) removes the earlier manifest and the
+  copies before reading the reply. The pin must not be held in anything that
+  step removes; earlier manifests move to history instead (TQ-500g-1-xv). The
+  -ix criteria clause (no earlier manifest remains to be read in place of the
+  current one) still holds.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  PIN KEY CONFIRMED: per work key and per _wvr_scope.norm_name(name).
+  CONFLICT WITH -ix RESOLVED: pins live in <git-dir>/leafcutter/pins/, a sibling
+  of work/, so neither _clean nor its replacement (the move into history,
+  TQ-500g-1-xv) reaches them. -ix's it_requirements are amended to say so.
+  WHO DECIDES "TO PREPARE": the shared list step, when given --work-key, prints
+  to_prepare beside owed and records its plan in work/<key>/plan.json; the write
+  step re-derives or re-reads (fingerprint) that plan and never takes it from
+  the route. The routes only read to_prepare.
+  WHO PINS: a new pin step of the writer, called by finish after the runner, so
+  a preparation is pinned only after the run shows it loaded, changed bytes and
+  reached a line (TQ-500g-1-xiii, -xiv). Promotion ignores caught vs survived.
+  ROUTE SIZE: the twins' wrong-version block moves into
+  templates/workflows-js/_shared/wrong-version-runs.js (marker pair
+  WRONG-VERSION-RUNS) and the to_prepare change is made there; fast-lane-ship.js
+  pays for its in-file change by deleting at least twice what it adds. No
+  check-file-size skip.
+  /build-epic: the supervisor's list and test-breaker instruction lives in
+  templates/skills/building-epics/SKILL.md (llm-expert, TQ-500g-1-vii). It is
+  NOT in this AC's declared files, because one AC has one agent; a follow-up
+  llm-expert requirement must change that instruction to --work-key and
+  to_prepare (see TQ-500g-1-vii notes). Until it lands, /build-epic keeps
+  dispatching every owed name, which is safe (pins unused, no loss) but slow.
+
+  WHERE PINS LIVE (was open; DECIDED 2026-10-24, option (a), see below).
+  (a) Under the worktree's git directory, <git-dir>/leafcutter/pins/ (this AC's
+      default, with every other per-work gate file, TQ-500g-1-i): private to the
+      workspace, never committed, gone when the workspace is removed, so a new
+      workspace for the same ticket prepares afresh and pins again.
+  (b) A durable location that outlives the workspace (for example under the
+      install's declared operational_log_root, ADR-069, or committed beside the
+      requirement): pins survive workspace removal, but must then be keyed by
+      something stable across workspaces, and a committed pin becomes reviewable
+      state.
+  The choice changes one function (_wvp_store.pin_path) and nothing else; the
+  build may start with (a).
+
+  USER DECISIONS (BrainCandy, 2026-10-24, "approved")
+  a. WHERE PINS LIVE: option (a). Pins live under the workspace's git
+     directory, <git-dir>/leafcutter/pins/<work-key>.json. They are private to
+     the workspace, never committed, and lost when the workspace is removed;
+     the next run then prepares and pins again. This is NOT a durable location.
+     It is a decision, not a law: it may be revisited, and changing it touches
+     only the pin-path function (_wvp_store.pin_path). Now a criteria clause.
+  b. PIN-WRITE FAILURE FAILS THE GATE. When the pin step cannot write the pins,
+     finish reports gate_passed false and stopped_at "pin". It is never only a
+     warning. Now a criteria clause.

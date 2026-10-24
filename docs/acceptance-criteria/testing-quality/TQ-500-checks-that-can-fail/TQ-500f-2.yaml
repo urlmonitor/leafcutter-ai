@@ -140,6 +140,7 @@ superseded_by: null
 covered_by:
   - TQ-500f-2-i
   - TQ-500f-2-ii
+  - TQ-500f-2-iii
 implemented_by: []
 change_target:
   - schema
