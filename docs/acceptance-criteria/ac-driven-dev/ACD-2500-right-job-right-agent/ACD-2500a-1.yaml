@@ -154,3 +154,15 @@ notes: |
   Named alteration for the implementer: make the check return passed whenever the
   finding list is empty regardless of records checked -> ACD-2500a-1-i must go red;
   parent clauses here stay green. That asymmetry is why -i is its own record.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

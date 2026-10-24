@@ -290,14 +290,14 @@
       "id": "leafcutter/ac-lifecycle",
       "type": "flow",
       "title": "How an acceptance criterion is born, built & retired",
-      "summary": "The data flow of an acceptance criterion through the AC-driven pipeline: a plain-language request is triaged, the authoring agents (PO → BA → IT PO) write the AC records into the store, you approve…",
+      "summary": "The data flow of an acceptance criterion through the AC-driven pipeline. A plain-language request is triaged; the product owner and business analyst each write their part into the store and you…",
       "kind": "data",
       "source": "real",
       "component": "ac-driven-dev",
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Request",
         "Ac",
@@ -305,11 +305,11 @@
         "AcStore"
       ],
       "impl_summary": {
-        "done": 2,
+        "done": 6,
         "in_progress": 4,
         "not_started": 4,
-        "total": 10,
-        "asof": "2026-08-18"
+        "total": 14,
+        "asof": "2026-10-23"
       },
       "tags": [
         "ac-driven-dev",
@@ -329,7 +329,7 @@
       "path": "flows/leafcutter/how-acs-are-built.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Ticket",
         "Ac",
@@ -1816,11 +1816,11 @@
       "path": "flows/leafcutter/ac-lifecycle.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 2,
+        "done": 6,
         "in_progress": 4,
         "not_started": 4,
-        "total": 10,
-        "asof": "2026-08-18"
+        "total": 14,
+        "asof": "2026-10-23"
       },
       "expands": [],
       "parents": []
@@ -2334,6 +2334,744 @@
     }
   },
   "by_ac": {
+    "ACD-200b-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-1-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-1-ii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-ii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-iii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-iv": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-ix": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "handback",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-v": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-vi": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-vii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "handback",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      },
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-2-viii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-3-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500a-3-ii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "ruleCheck",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500b": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500b-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500b-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500b-2-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "generate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      },
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "scan",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500b-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "scan",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c-1-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c-2-i": [
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "test",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Test",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500c-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-1-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-2-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "handback",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-3-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      },
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "handback",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-5": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500d-5-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "testDesign",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "AcStore"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500e": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500e-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500e-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      },
+      {
+        "flow": "leafcutter/how-acs-are-built",
+        "node": "itpo",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Ticket"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500f": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-2500f-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "author",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac",
+          "Request"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
     "ACD-300": [
       {
         "flow": "leafcutter/deliver-a-feature",
@@ -2396,7 +3134,7 @@
     "ACD-300c": [
       {
         "flow": "leafcutter/ac-lifecycle",
-        "node": "approve",
+        "node": "stageGate",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
@@ -2405,7 +3143,157 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-4": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-4-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-4-ii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-4-iii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-4-iv": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-5": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300c-5-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "finalGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
       }
     ],
     "ACD-300d": [
@@ -2427,7 +3315,7 @@
     "ACD-300g": [
       {
         "flow": "leafcutter/ac-lifecycle",
-        "node": "approve",
+        "node": "stageGate",
         "node_kind": "step",
         "flow_kind": "data",
         "screen": null,
@@ -2436,7 +3324,112 @@
           "Ac"
         ],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-1": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-1-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-2": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-2-i": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-2-ii": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-3": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
+      }
+    ],
+    "ACD-300g-4": [
+      {
+        "flow": "leafcutter/ac-lifecycle",
+        "node": "stageGate",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [
+          "Ac"
+        ],
+        "source": "real",
+        "asof": "2026-10-23"
       }
     ],
     "ACD-400a": [

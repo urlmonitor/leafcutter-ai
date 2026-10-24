@@ -3,21 +3,30 @@
  *
  * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
- * agents (product-owner, business-analyst, it-po) in sequence with
- * user confirmation gates between stages, and writes all output exclusively
+ * agents (product-owner, business-analyst, it-po, test-designer) in sequence
+ * with user confirmation gates after the PO and BA stages (the IT PO stage is
+ * auto-gated by a rule check), and writes all output exclusively
  * to the AC store (docs/acceptance-criteria/). No ticket files are produced.
  *
- * Routing table (matches ac-triage classification):
- *   strategic  → PO v3 → gate → BA v3 → gate → IT PO v3 → final gate
- *   behavioral → BA v3 → gate → IT PO v3 → final gate
- *   technical  → IT PO v3 → final gate
+ * Routing table (matches ac-triage classification; every route ends with the
+ * IT PO stage, then test design, then the final gate):
+ *   strategic  → PO → gate → BA → gate → IT PO (auto) → test design → final gate
+ *   behavioral → BA → gate → IT PO (auto) → test design → final gate
+ *   technical  → IT PO (auto) → test design → final gate
+ *   (a product-truth flow produced for a technical request adds the BA stage)
  *   covered    → show matching ACs → prompt cancel / amend / force
  *
  * Architecture:
  *   Stage 0: ac-triage agent (Haiku-pinned, reads AC store, classifies route)
  *   Stage 1–N: authoring agents dispatched in sequence per route
- *   Gates: user confirm/edit/cancel between each stage
- *   Final gate: user sets priority; workflow writes readiness: approved
+ *   Gates: user confirm/edit/cancel after PO and BA; IT PO passes on its rule check
+ *   Test design: design pre-pass (design_prepass.py), then the test-designer
+ *     agent; its output is committed as plan-feature(TEST-DESIGN-HANDBACK)
+ *   Hand-back: up to 2 rounds returning undecided file findings to it-po; each
+ *     round runs runRuleCheck("itpo-handback") and fails closed
+ *   Final gate: user sets priority; approveBatch runs approve_acs.py --ids
+ *     (approval-holds, then approval-apply): it approves the records that
+ *     pass and reports the held ones and the failed ones
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  * No export async function run() — E2 executes the top-level body directly.
@@ -533,6 +542,7 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
   return (
     `Commit of ${agentLabel} AC output failed. ` +
     `${hookLabel} rejected the staged files.` +
+    (commitOutcome.message && !/rejected (the )?staged files/i.test(commitOutcome.message) ? "\n  " + commitOutcome.message : "") + // the hook's own error; a message that only repeats the rejection adds nothing
     fileList + "\n" +
     "Fix the validation errors listed above, then re-run /plan-feature. " +
     "All AC files from this stage remain on disk as uncommitted changes so you can inspect and correct them."
@@ -548,15 +558,16 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * @param {string}   cancelledAt          - Human label for where the cancel occurred.
  * @param {string}   acStorePath          - Absolute path to the AC store directory.
  * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
+ * @param {string[]} [recordPaths]        - Repo-relative record paths (the rule check's records_to_commit); a draft id is matched to the path whose filename stem equals it exactly. Without any path the flat <store>/<id>.yaml is shown (legacy).
  * @returns {string} Formatted exit message for the user.
  */
-function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, authoringWorktreePath) {
+function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, authoringWorktreePath, recordPaths) {
   const store = acStorePath || "docs/acceptance-criteria";
   // Use the -C anchor in user-facing git instructions so cleanup targets the authoring worktree. (AC BO-1500a-2)
   const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
   const gitCheckoutCmd = `git ${gitC} checkout -- ${store}/`.trim();
   const draftFilePaths = draftAcs.map(
-    (id) => `  ${store}/${id}.yaml`
+    (id) => !Array.isArray(recordPaths) || recordPaths.length === 0 ? `  ${store}/${id}.yaml` : "  " + (recordPaths.find((p) => p.split(/[\/]/).pop().replace(/\.yaml$/, "") === id) || id + " (no record path known)")
   );
 
   const parts = [`Pipeline cancelled at ${cancelledAt}.`];
@@ -840,6 +851,7 @@ async function scanCommittedStages(authoringWorktreePath) {
     "ba": "ba",
     "it-po": "itpo",
     "test-design": "test-design",
+    "test-design-handback": "test-design-handback",
     "mock-data": "mockdata",
     "mockup": "mockup",
     "flow": "flow",
@@ -2034,8 +2046,9 @@ async function runStageScript(label, script, ids, acStoreDir, worktreePath, agen
 }
 
 // ACD-2500c-2: the test-design step. No pre-pass report, no designer dispatch. Returns {ruleCheck} to stand in for the stage check, or {ruleCheck: null} to run it.
-async function dispatchTestDesign(agentType, ids, feedback, acStoreDir, worktreePath, shellAgent) {
+async function dispatchTestDesign(agentType, ids, feedback, acStoreDir, worktreePath, shellAgent, fromHandback) {
   const stop = (passed, why) => ({ ruleCheck: { passed: passed, toCommit: [], report: { verdict: passed ? "passed" : "failed", reason: why }, summary: "Test-design step: " + why } });
+  if (fromHandback) { log("[plan-feature] resumed from the hand-back design commit (TEST-DESIGN-HANDBACK); continuing with the hand-back round and the final gate."); return stop(true, "resumed from the hand-back design commit (its test-design check passed before it was made)."); }
   const pre = await runStageScript("design-prepass", "design_prepass.py", ids, acStoreDir, worktreePath, shellAgent);
   if (!pre.ok) { return stop(false, "the pre-pass produced no report: " + pre.why); }
   if (!Array.isArray(pre.report.records) || pre.report.records.length === 0) { return stop(true, "nothing to design (no record needs a design)."); }
@@ -2075,12 +2088,29 @@ async function approveBatch(ids, priority, acStoreDir, worktreePath, shellAgent)
   return done.ok ? { ok: true, held: held, approved: got, already: part.already_approved || [] } : { ...done, held: held, approved: got, failed: failed, untouched: released.filter((id) => !got.includes(id) && !failed.includes(id)) };
 }
 
+/** ACD-2500a-2-ix-a: add the AC ids of the hand-back design commit (exact subject label TEST-DESIGN-HANDBACK, never TEST-DESIGN) to `acs`, read from its `AC IDs:` body line. Returns true only when ids were recovered; otherwise logs why and returns false so the caller runs the stage normally (fail closed). */
+async function recoverHandbackIds(acs, worktreePath) {
+  const cmd = worktreePath ? `git -C "${worktreePath}" log --format=%B origin/main..HEAD` : "git log --format=%B origin/main..HEAD";
+  try {
+    const reply = parseAgentJson(await agent("Run the following command and return ONLY the raw stdout:\n" + cmd + "\nReturn JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }", { agentType: "status-checker", label: "resume-log" }), { stage: "resume-log", agent: "status-checker" });
+    const commit = String(reply && reply.exit_code === 0 ? reply.output : "").split(/\n(?=plan-feature\()/).find((c) => /^plan-feature\(TEST-DESIGN-HANDBACK\):/i.test(c));
+    const found = commit && commit.match(/^AC IDs:\s*(.+)$/m);
+    const ids = (found ? found[1].split(",").map((x) => x.trim()) : []).filter((id) => id && id !== "(none)");
+    for (const id of ids) { if (!acs.includes(id)) { acs.push(id); } }
+    if (ids.length === 0) { log("[plan-feature] no AC ids recovered from the hand-back commit (git log exit " + (reply && reply.exit_code) + "); running the test-design stage normally."); }
+    return ids.length > 0;
+  } catch (err) {
+    log("[plan-feature] could not read the hand-back commit's AC ids: " + (err && err.message ? err.message : String(err)));
+    return false;
+  }
+}
+
 // ACD-2500d-3-i / ACD-2500a-2-ix: hand undecided file findings back to it-po (max 2 rounds, docs/reference/code-aware-step.md); what stays undecided is shown held. Round 1 first commits the test-design output as test-design-handback (the check's before-state; why that label: docs/reference/plan-feature-workflow-rationale-gates.md); each round is checked as itpo-handback and a failure is `stopped`.
-async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent, commitDesign) {
+async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent, commitDesign, resumed) {
   const undecided = (list) => list.filter((h) => h.reason === "file finding undecided").map((h) => h.id);
-  let stopped = null;
+  let stopped = null, checked = false;
   for (let round = 1; round <= 2 && ruleCheck.passed && undecided(held).length > 0; round++) {
-    if (round === 1) { const done = await commitDesign(ruleCheck); if (done.status === "error") { stopped = formatCommitError("test-design", "test-design", done, allAcs); break; } }
+    if (round === 1 && !resumed) { const done = await commitDesign(ruleCheck); if (done.status === "error") { stopped = formatCommitError("test-design", "test-design", done, allAcs); break; } }
     try {
       const raw = await agent(
         "You are the technical planner (it-po). These requirements carry file findings with no recorded decision: " + undecided(held).join(", ") + ".\n" +
@@ -2094,10 +2124,27 @@ async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePat
       break;
     }
     ruleCheck = await runRuleCheck("itpo-handback", acStoreDir, worktreePath, shellAgent);
+    checked = true;
     if (!ruleCheck.passed) { stopped = "The hand-back stage (itpo-handback) is not complete, so the run stops before the final gate.\n" + ruleCheck.summary; }
     held = await approvalHolds(allAcs, acStoreDir, worktreePath, shellAgent);
   }
+  if (resumed && !checked && ruleCheck.passed) { ruleCheck = await runRuleCheck("itpo-handback", acStoreDir, worktreePath, shellAgent); if (!ruleCheck.passed) { stopped = "The hand-back stage (itpo-handback) is not complete, so the run stops before the final gate.\n" + ruleCheck.summary; } }
   return { held: held, ruleCheck: ruleCheck, stopped: stopped };
+}
+
+/** ACD-300a-3: read the title of each covering AC through ONE shell dispatch (label read-covering-ac-titles; the body has no file access). Returns {id: title}; a failed read returns {} so the ids are still listed. */
+async function readCoveringTitles(ids, acStoreDir) {
+  if (ids.length === 0 || ids.some((id) => !/^[A-Za-z0-9._-]+$/.test(id))) { log("[plan-feature] covering AC titles not read (an id is unsafe or none given); listing ids only."); return {}; }
+  const py = "import sys,json,glob,yaml; d={}; [d.__setitem__(i,yaml.safe_load(open(p,encoding=\"utf-8\")).get(\"title\")) for i in sys.argv[2:] for p in glob.glob(sys.argv[1]+\"/**/\"+i+\".yaml\",recursive=True)]; print(json.dumps(d))";
+  try {
+    const reply = parseAgentJson(await agent("Run the following command and return ONLY the raw stdout:\npython -c '" + py + "' \"" + acStoreDir + "\" " + ids.join(" ") + "\nReturn JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }", { agentType: scriptStepAgentId, label: "read-covering-ac-titles" }), { stage: "read-covering-ac-titles", agent: scriptStepAgentId });
+    if (reply.exit_code !== 0) { log("[plan-feature] covering AC titles not read (command exit " + reply.exit_code + "); listing ids only."); }
+    const titles = reply.exit_code === 0 ? JSON.parse(reply.output) : {};
+    return titles && typeof titles === "object" && !Array.isArray(titles) ? titles : {};
+  } catch (err) {
+    log("[plan-feature] could not read the covering AC titles: " + (err && err.message ? err.message : String(err)));
+    return {};
+  }
 }
 
 /**
@@ -2373,14 +2420,16 @@ try {
 const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage;
 
 // Handle "covered" route: show existing ACs + prompt user
+let _amendIds = []; // ACD-300a-3: the covering ids an "amend" answer hands to the it-po stage
 if (route === "covered" && !force && !_resumedCtx) {
+  const _covTitles = args.resume_answer ? {} : await readCoveringTitles(existing_acs, acStoreDir);
+  const _covQuestion = "These existing ACs already cover your request. Would you like to proceed anyway (force new), amend an existing AC, or cancel?" + existing_acs.map((id) => "\n  " + id + (typeof _covTitles[id] === "string" && _covTitles[id] ? ": " + _covTitles[id] : "")).join("");
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
   const _covGateResult = await resolveGate(
     "covered-route-gate",
     async () => {
       const raw = await agent(
-        "Present the following to the user and ask them to choose one option:\n\n" +
-        `The request appears to already be covered by these existing ACs:\n${existing_acs.join(", ")}\n\n` +
+        "Present the following to the user and ask them to choose one option:\n\n" + _covQuestion + "\n\n" +
         "Options:\n" +
         "  1. cancel  — the existing ACs are sufficient; exit without creating new ACs.\n" +
         "  2. amend   — add constraints/details to the existing ACs (routes as 'technical').\n" +
@@ -2398,7 +2447,7 @@ if (route === "covered" && !force && !_resumedCtx) {
     },
     args,
     { route: "covered", existing_acs },
-    { type: "single_choice", options: ["cancel", "amend", "force"] },
+    { type: "single_choice", options: ["cancel", "amend", "force"], prompt: _covQuestion },
     args.run_id || "default-run"
   );
   if (_covGateResult && TERMINAL_GATE_STATUSES.includes(_covGateResult.status)) {
@@ -2428,13 +2477,14 @@ if (route === "covered" && !force && !_resumedCtx) {
   }
 
   if (choice === "amend") {
-    triage.route = "technical";
+    triage.route = "technical"; _amendIds = existing_acs;
   } else {
     // force → strategic
     triage.route = "strategic";
   }
 }
 
+if (route === "covered" && force) { triage.route = "strategic"; } // ACD-300a-3: --force on a covered request is the force answer
 _runRouteCtx = { route: triage.route, existing_acs, parent_l1_id };
 // Why the always-on Product-Truth phase: docs/reference/plan-feature-workflow-rationale-gates.md
 phase('Product-Truth Phase')
@@ -2780,6 +2830,7 @@ for (const step of pipeline) {
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
   let skipAuthorOnResume = isPausedAtThisStep; // BO-2300d-1-iii: an edit resume also skips the pre-gate author run; the edit re-authors once
+  let resumedHandback = false; // ACD-2500a-2-ix-a: the test-design step resumes from the hand-back design commit
   let reapprove = false; // approval was consumed, then the check forced a re-author: a rewrite that passes needs a NEW pause (never the old answer); one that still fails skips the gate and retries
 
   while (!approved) {
@@ -2788,8 +2839,10 @@ for (const step of pipeline) {
     if (skipAuthorOnResume) {
       written = [];
     } else if (step.stage === "test-design") {
+      resumedHandback = committedStageKeys.has("test-design-handback") && editRetries === 0;
+      if (resumedHandback) { resumedHandback = await recoverHandbackIds(allAcsWritten, authoringWorktreePath); }
       written = [...allAcsWritten];
-      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, scriptStepAgentId);
+      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, scriptStepAgentId, resumedHandback);
     } else {
       // Dispatch the authoring agent, directing AC writes to the dedicated
       // authoring worktree's AC store path (AC BO-1500a-1).
@@ -2825,6 +2878,7 @@ for (const step of pipeline) {
         `component: ${JSON.stringify(component)}\n` +
         `parent_l1_id: ${JSON.stringify(parent_l1_id)}\n` +
         `route: ${JSON.stringify(effectiveRoute)}\n` +
+        (step.stage === "itpo" && _amendIds.length > 0 ? `amend_acs: ${JSON.stringify(_amendIds)}\nThese existing records already cover the request: amend them (edit those records) rather than authoring new ones.\n` : "") +
         `ac_store_path: ${JSON.stringify(acStoreDir)}`,
         { agentType: step.agent, label: `stage-${step.stage}-author` }
       );
@@ -2910,7 +2964,7 @@ for (const step of pipeline) {
           status: "cancelled",
           cancelled_at: `gate-${step.stage}`,
           cancelled_by: "person",
-          message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath),
+          message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath, ruleCheck && ruleCheck.report && ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -2925,7 +2979,7 @@ for (const step of pipeline) {
           status: "error",
           message:
             `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-            buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir, authoringWorktreePath),
+            buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -2962,7 +3016,7 @@ for (const step of pipeline) {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
       // ADR-024: resolveGate checks args.resume_answer before the live agent call.
       let heldPre = skipAuthorOnResume ? [] : await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId);
-      if (!skipAuthorOnResume) { let stopped; ({ held: heldPre, ruleCheck, stopped } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId, (rc) => commitStageOutput(allAcsWritten, "test-design-handback", component, false, runId, acStoreDir, authoringWorktreePath, rc.toCommit))); written = [...new Set(allAcsWritten)]; if (stopped) { return { status: "error", message: stopped, stage: "itpo-handback", committed_acs: committedAcs, acs_as_drafts: written }; } }
+      if (!skipAuthorOnResume) { let stopped; ({ held: heldPre, ruleCheck, stopped } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId, (rc) => commitStageOutput(allAcsWritten, "test-design-handback", component, false, runId, acStoreDir, authoringWorktreePath, rc.toCommit), resumedHandback)); written = [...new Set(allAcsWritten)]; if (stopped) { return { status: "error", message: stopped, stage: "itpo-handback", committed_acs: committedAcs, acs_as_drafts: written }; } }
       const approvablePre = allAcsWritten.filter((id) => !heldPre.some((h) => h.id === id));
       const _finalGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         "final-gate",
@@ -2987,7 +3041,7 @@ for (const step of pipeline) {
         },
         reapprove ? { ...args, resume_answer: null } : args,
         { stage: "final", acs: written, all_acs: allAcsWritten, rule_check: ruleCheck && ruleCheck.summary, held: heldPre, approvable: approvablePre },
-        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Final gate (test design). Show each approvable requirement: its criteria next to its test_spec, with its assigned_agent, estimated_complexity, delivers_to and expects_from; list held requirements separately with no approve option. Ask for one batch priority (critical / high / medium / low), then approve | edit | defer | cancel." },
+        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Final gate (test design). Show each approvable requirement: its criteria next to its test_spec, with its assigned_agent, estimated_complexity, delivers_to and expects_from; list held requirements separately with no approve option. Ask for one batch priority (critical / high / medium / low), then approve | edit | defer | cancel.\nApprovable: " + (approvablePre.join(", ") || "(none)") + heldPre.map((h) => "\nHeld, no approve option: " + h.id + " (" + h.reason + ")").join("") },
         args.run_id || "default-run"
       );
       // Non-proceed outcomes: exit immediately.
@@ -3037,7 +3091,7 @@ for (const step of pipeline) {
           status: "cancelled",
           cancelled_at: "final-gate",
           cancelled_by: "person",
-          message: buildCancelMessage(committedAcs, written, "final gate (test design)", acStoreDir, authoringWorktreePath),
+          message: buildCancelMessage(committedAcs, written, "final gate (test design)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -3049,8 +3103,8 @@ for (const step of pipeline) {
         return {
           status: "error",
           message:
-            `it-po failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-            buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)", acStoreDir, authoringWorktreePath),
+            `test-design failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
+            buildCancelMessage(committedAcs, written, "max-retries abort for test-design (final gate)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -3133,7 +3187,7 @@ for (const step of pipeline) {
           status: "error",
           message:
             `Final gate returned unrecognized action: ${JSON.stringify(finalAction)}. Pipeline aborted without committing.\n` +
-            buildCancelMessage(committedAcs, written, "final gate (unrecognized action)", acStoreDir, authoringWorktreePath),
+            buildCancelMessage(committedAcs, written, "final gate (unrecognized action)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };

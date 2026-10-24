@@ -104,7 +104,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124g-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/44_TICKET-20261023-GE-124g-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -138,3 +139,4 @@ notes: |
   the JSON schema cannot enforce the rejection — a front-end path is a valid
   string — so the rule belongs in the shared _ac_schema_validators surface that
   the commit hook calls. A rule added only to the JSON schema is a no-op.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

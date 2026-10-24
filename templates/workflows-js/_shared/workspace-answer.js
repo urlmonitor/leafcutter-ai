@@ -38,6 +38,22 @@ function workspaceParseJson(value) {
   try { return JSON.parse(trimmed); } catch (_e) { return value; }
 }
 
+// TQ-500f-3-v: a command step's JSON answer, read out of what its executor relayed. The executor is an
+// agent whose shell tool returns stdout and stderr merged (a script's own log line arrives as "stdout")
+// and which may append an "exit: N" line. The answer is the whole text when that parses as one JSON
+// object; otherwise the one line that is, on its own, a JSON object. No such line, or two different
+// ones, is no answer (null), and every caller still fails closed on null (TQ-500f-3-ii).
+function parseStepJson(text) {
+  if (typeof text !== "string") return null;
+  const asObject = (s) => {
+    try { const v = JSON.parse(s); return v && typeof v === "object" && !Array.isArray(v) ? v : null; } catch (_e) { return null; }
+  };
+  const whole = asObject(text.trim());
+  if (whole) return whole;
+  const lines = [...new Set(text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith("{") && asObject(l)))];
+  return lines.length === 1 ? asObject(lines[0]) : null;
+}
+
 // kind: "declined" | "none" | "unreadable" | "refused" | "error" | "invalid" -- why nothing was accepted.
 function workspaceReject(reason, raw, kind) {
   return { accepted: false, kind: kind || "invalid", reason: reason, received: workspaceQuote(raw) };

@@ -46,7 +46,7 @@ def test_t2_survivor_stops_although_t1_caught_it(tmp_path):
 
 
 def test_runner_cli_end_to_end_on_refresh_fixture(tmp_path):
-    # covers: TQ-500g-1-i
+    # covers: TQ-500g-1-i, TQ-500g-1
     # angle: reachability
     # Entry point: python scripts/build_orchestration/wrong_version_runner.py run ... (subprocess).
     # Asserts the JSON shape, the exit code mirroring gate_passed, byte identity afterwards.

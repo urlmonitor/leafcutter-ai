@@ -91,9 +91,17 @@ for the full measured evidence and the read-vs-mutate boundary this fixture sits
   collection deselects them. No decorator or list is needed; the suffix alone is the rule.
   Opt in with `python -m pytest -m manual tests/ unit_tests/` (a command-line `-m`
   overrides the one in `addopts`); `-m "manual or not manual"` collects everything.
-- **Known, accepted gap.** The excluded `_MANUAL` tests currently run nowhere in CI: the
-  scheduled (nightly) run that TQ-600a-13-i requires does not exist yet, so do not read
-  the exclusion as "covered elsewhere".
+- **Where the excluded `_MANUAL` tests run.** Not in the per-PR shards, but in the
+  post-merge correctness lane of `Post-merge suite` (`.github/workflows/post-merge-suite.yml`,
+  `-m "manual and not timing_ratio"`): after every push to main and on the 12-hour heartbeat
+  (cron `17 3,15 * * *`), with a run, one retry on a fresh runner, and a verdict.
+- **Live-database tests.** The same workflow's `live_run` / `live_retry` jobs run the whole
+  `tests/knowledge_live/` folder against three disposable `neo4j:5.26-community` services
+  (ports 17687, 18087, 18088) and share one combined verdict with the correctness lane. An
+  unreachable or unhealthy database ends the run as did-not-complete, and a skip is never a
+  pass. In the per-PR shards those tests skip (no database); the PR `done-proof` job starts
+  the same three databases and runs the live tests of the criteria the PR changes. A fix
+  proof for a red live lane starts the databases too (`post-merge-fix-proof.yml`).
 - **`timing_ratio` tests.** Tests marked `timing_ratio` are excluded from the default run
   and run in `Post-merge timing suite` (`.github/workflows/post-merge-timing.yml`) after
   every merge to main and on a 12-hour heartbeat; that suite goes red on failure and never

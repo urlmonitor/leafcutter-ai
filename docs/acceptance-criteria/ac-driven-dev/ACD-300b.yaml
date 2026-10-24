@@ -10,24 +10,39 @@ status: active
 req_status: active
 work_status: in_progress
 criteria: |
-  A JavaScript workflow script (create-ac.js) receives the triage routing
-  decision and dispatches the correct authoring agents in sequence. The script
-  handles three routing paths (strategic, behavioral, technical) and one
-  short-circuit path (covered). Each agent is called as a sub-agent, receives
-  the user's original request plus any ACs produced by prior agents, and writes
-  its output to the AC store. The workflow script itself never writes ACs —
-  it only orchestrates agents and presents confirmation gates.
+  The /plan-feature workflow script receives the triage routing decision and
+  dispatches the correct authoring agents in sequence. The script handles three
+  routing paths (strategic, behavioral, technical) and one short-circuit path
+  (covered). Every route ends with the technical planner's stage followed by the
+  test-design stage. Each agent is called as a sub-agent, receives the user's
+  original request plus any ACs produced by prior agents, and writes its output
+  to the AC store. The workflow script itself never edits AC records — it
+  orchestrates the agents, runs the store's deterministic steps (the requirement
+  rule check, the design pre-pass, the approval-hold report and the approval
+  step) and presents confirmation gates.
 depends_on: [ACD-300, ACD-300a]
 doc_links: []
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
-  agent: haiku-triage
+  agent: ac-triage
   contract: "{ route: strategic|behavioral|technical|covered, existing_acs: string[], parent_l1_id?: string }"
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: the script is the /plan-feature workflow,
+    not create-ac.js; every route now ends with the technical planner and then the
+    test-design stage; the script runs the store''s deterministic steps (rule check,
+    design pre-pass, hold report, approval step) besides dispatching agents, but still
+    edits no AC record itself. Intent unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: rename stale workflow/agent/template names in contracts
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300b-1, ACD-300b-2, ACD-300b-3]
 implemented_by:

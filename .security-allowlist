@@ -1052,3 +1052,4 @@ ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:416
 ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:417
 ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:418
 ENTROPY_HIGH:scripts/knowledge/emit_knowledge.py:419
+ENTROPY_HIGH:scripts/knowledge/health/capture_health_report.py:32

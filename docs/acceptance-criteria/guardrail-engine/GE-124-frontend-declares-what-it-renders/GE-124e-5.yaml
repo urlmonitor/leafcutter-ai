@@ -105,7 +105,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required both real gate messages (declaration and test-proof) to be reproduced side by side from captured output rather than paraphrased, asserted the routing from the check's own failure text, and required both diff-scoping facts including the untouched-is-not-passed half. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/37_TICKET-20261023-GE-124e-5.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -128,3 +129,4 @@ notes: |
   pass — turns an apparent regression into the backfill it actually is. Without
   this clause the most likely reaction is to look for the "recent change" that
   caused it, and the second most likely is to ask for the gate to be turned off.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

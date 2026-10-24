@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -31,28 +31,124 @@ depends_on:
   - TQ-500g-5
   - TQ-500g-1
 doc_links:
+  - path: docs/architecture/diagrams/c3-035-wrong-version-runner-components.md
+    relationship: describes
+    status: planned
+    relevance: "The component diagram this AC produces. Number 035 was the next free level-3 sequence on 2026-10-23 (scripts/next_diagram_seq.py 3); allocate again at write time (OQ-3, user decision 2026-10-23)."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: relates-to
+    status: planned
+    relevance: "TQ-500g-5's reference page. The diagram uses its names and links it, and restates no rule."
+  - path: docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+    relationship: relates-to
+    status: exists
+    relevance: "House style of a level-3 component diagram (frontmatter with parent, related_code, Mermaid)."
+  - path: docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md
+    relationship: relates-to
+    status: exists
+    relevance: "Parent diagram (both lanes' phases), per OQ-3 (user decision 2026-10-23)."
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: relates-to
     status: exists
   - path: docs/architecture/components/phantom-done-prevention.md
     relationship: relates-to
     status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: relates-to
+    status: exists
+    relevance: "Component doc owning the runner, writer, gate wrapper and sweep CLIs."
 assigned_agent: architecture-diagram-author
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: TQ-500g-5
+    contract: >-
+      The reference page's names (CLI steps, agent, executor, gate-file folders,
+      route labels), used verbatim; see TQ-500g-5 delivers_to.
+  - ac_id: TQ-500g-1
+    contract: >-
+      The four routes and the shared runner as wired on main (ae3a1591c); the
+      diagram is drawn from that code, not from the ACs.
 it_requirements:
-- Follow the write-c4-diagram skill's conventions and the existing component diagrams (docs/architecture/diagrams/c2-*).
-  Draw from what -1-v, -1-vi and -1-vii actually wired; a missing route call is drawn as missing.
-- Show the /build-epic record backstop (hook plus marker, TQ-500g-1-viii) as the mechanical guard beside
-  the supervisor's instruction-driven call.
-- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
-  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
-  there is offset in the same file.
-- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+  - >-
+    File and conventions. Create
+    docs/architecture/diagrams/c3-<seq>-wrong-version-runner-components.md through
+    the write-c4-diagram skill, allocating <seq> with "python
+    scripts/next_diagram_seq.py 3" at write time (035 was free on 2026-10-23).
+    Use frontmatter as in c3-030-requirement-rule-check-components.md: type
+    architecture, flight_level L3-Component, diagram_type component, parent
+    (docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md, per OQ-3,
+    user decision 2026-10-23), components testing_quality and build_orchestration, related_docs
+    (including docs/reference/wrong-version-runs.md) and related_code. Mermaid
+    is the house style. At most 300 lines after frontmatter (check-doc-length,
+    blocking).
+  - >-
+    Draw what main holds, from the code, not from the ACs. On ae3a1591c every
+    route is wired, so no call is drawn as missing. If a route's call is gone at
+    drawing time, draw it as missing. The route surfaces:
+    templates/workflows-js/fast-lane-ship.js (fastlane-wv-*), build-feature.js
+    (bf-wv-*) and build-ticket.js (bt-wv-*); and /build-epic as build-epic.js
+    plus ticket-supervisor following templates/skills/building-epics/SKILL.md
+    section 5.10.2. Each reaches the Python CLIs through the executor agent
+    command-step-runner.
+  - >-
+    One runner, no copies of the rule. Draw the shared CLIs once:
+    wrong_version_writer.py (list, write), wrong_version_gate.py (finish) and
+    wrong_version_runner.py (run, recover). Draw consumer_sweep.py check as the
+    first call inside finish. The three JS files and the skill each hold a thin
+    dispatch block, copied as text because the workflow engine has no module
+    loader. Draw it as a dispatch edge, not as a rule component, and say so in
+    the legend.
+  - >-
+    Scope from the requirement store. Show the runner (_wvr_scope through
+    _wvr_records) reading the AC store's test_spec entries: must_catch,
+    angle: discrimination, in_scope_files and requires_db. Show it reading the
+    covers tags in the test root. Show the to-run-later files
+    (<git-dir>/leafcutter/to-run-later/<ac-id>.json, read by _wvr_extras) as a
+    second, non-blocking input.
+  - >-
+    One shared reading. Show scripts/ac_store/pytest_outcome_reader.py, with the
+    kind rule done_proof_kind_support / _kind_plugin, used by the runner
+    (_wvr_pytest), the proof-of-done check (done_proof verify_done_eligible) and
+    the red-baseline reader (fast_lane.py verify_red_baseline / heavy_lane_gate).
+    It is also used by the sweep's runs (_cs_runs through _wvr_pytest).
+  - >-
+    Preparation is separate from the runner. Show agent test-breaker (Read only,
+    writes nothing, runs nothing) and the deterministic writer
+    (wrong_version_writer.py write, producing
+    <git-dir>/leafcutter/work/<work-key>/alterations.json) as one preparation
+    step that the route calls before finish. The runner only reads the manifest.
+    "The fix undone" is prepared by the runner itself from git, not by the
+    preparer.
+  - >-
+    One database. Show the configured test database reached only through
+    scripts/db_check/checker.py: check_test_db for the gate (_wvr_db), and
+    resolve_test_db_address inside the pytest plugin _wvr_db_plugin and its
+    put-back entry. The setting is testing_context.db_connection_test. No other
+    database edge appears.
+  - >-
+    /build-epic. Mark ticket-supervisor's edge to the CLIs as instruction-driven
+    (prompt text, building-epics SKILL section 5.10.2), unlike the three
+    workflow-code routes. Beside it draw the mechanical backstop:
+    build-epic.js running be-wv-recover and the gate markers
+    (gate_verdict_records.py open / close) in code; finish --record and
+    heavy_lane_gate --record writing <git-dir>/leafcutter/gate-verdicts/<ticket-key>/
+    (open.json, red_baseline.json, wrong_version.json); and the pre-commit hook
+    check_build_epic_gate_verdicts.py reading them. Note the residual
+    --no-verify bypass.
+  - >-
+    docs/**.md is under the blocking doc-length ratchet (300 lines after
+    frontmatter). docs/how-to/fast-lane-build.md (461) is over the limit and
+    must not grow; docs/testing/test-angles.md is at 297, so any pointer there
+    adds at most 3 net lines. Any pointer added to either is offset in the same
+    file.
+  - 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
 test_required: false
-test_rationale: 'Documentation only: a component diagram. Firewall as in TQ-500g-5. It is reviewed, not
-  tested.'
+test_rationale: >-
+  Documentation only: a component diagram. Firewall as in TQ-500g-5. It is
+  reviewed against the route files and CLIs named in it_requirements, not
+  tested; a test searching the diagram for names would be the prose-presence
+  proxy the firewall forbids.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -69,3 +165,31 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   architecture-diagram-author lane, with TQ-500g-5.
+
+  IT-PO ALIGNMENT (2026-10-23): AGAINST MAIN AT ae3a1591c
+  Technical fields rewritten from the code; criteria, title, depends_on and
+  readiness unchanged. Complexity S to M: the diagram has about 20 nodes
+  (4 routes, the executor, 5 CLIs, the preparer, the shared reader, the AC
+  store, the test database, gate files, and the backstop hook).
+  MISMATCHES BETWEEN THE CRITERIA AND THE CODE (the diagram follows the code):
+    M1 "with no route holding a copy of it": true of the rule. But each of the
+       three JS routes and the building-epics skill holds its own copy of the
+       thin dispatch block, because the engine has no module loader. The
+       diagram must show that distinction rather than imply that no route code
+       is duplicated.
+    M2 The criteria name three readers of the shared reading. A fourth, the
+       sweep's base-versus-now runs (_cs_runs through _wvr_pytest), uses it too.
+    M3 The preparation step is two parts: the read-only agent test-breaker and
+       the deterministic writer (TQ-500g-1-ix). The fix undone is prepared by
+       the runner from git, outside the preparation step.
+    M4 The criteria's /build-epic clause does not mention the backstop
+       (TQ-500g-1-viii). The diagram shows it, as the earlier it_requirement
+       asked.
+  OQ-3, the level and parent of the diagram, decided (see below). Recommended:
+  level 3 (as c3-030), parent c2-fast-vs-heavy-lane-phases.md, sequence number
+  allocated at write time.
+
+  USER DECISIONS (2026-10-23, answered directly by the user in the main
+  session's AskUserQuestion): OQ-3 accepted as recommended. Level 3, parent
+  docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md, and the sequence
+  number allocated with scripts/next_diagram_seq.py 3 at write time.
