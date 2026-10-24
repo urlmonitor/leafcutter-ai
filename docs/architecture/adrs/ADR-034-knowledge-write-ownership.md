@@ -1,10 +1,10 @@
 ---
 title: "ADR-034: Knowledge Write Ownership — the Harvester Writes, Agents Only Emit"
-description: "Resolves three contradictory answers to who persists a captured learning by confirming ADR-011's deferred-harvest model as authoritative, demoting inline agent-side capture from deferred to rejected, and retiring the route-learning and capture-learning skill names. Amended 2026-10-17: agents emit only through the one deployed helper emit_knowledge.py, which reaches the sink through ADR-069's declaration, records the unclassified sentinel, and fails open without creating anything. Amended 2026-10-21: the capture-attempt ledger is telemetry written only by emit_event.py, and the helper writes the recorded attempt itself so a skipped second command cannot read as nothing to record."
+description: "Resolves three contradictory answers to who persists a captured learning by confirming ADR-011's deferred-harvest model as authoritative, demoting inline agent-side capture from deferred to rejected, and retiring the route-learning and capture-learning skill names. Amended 2026-10-17: agents emit only through the one deployed helper emit_knowledge.py, which reaches the sink through ADR-069's declaration, records the unclassified sentinel, and fails open without creating anything. Amended 2026-10-21: the capture-attempt ledger is telemetry written only by emit_event.py, and the helper writes the recorded attempt itself so a skipped second command cannot read as nothing to record. Amendment 3 (2026-10-23, accepted): the capture-health report counts attempts, gives four verdicts, fails closed on an unlocatable ledger, and reads only the telemetry stream."
 type: "adr"
 status: "active"
 created: "2026-08-25"
-last_updated: "2026-10-21"
+last_updated: "2026-10-23"
 deciders:
   - BrainCandy
 components:
@@ -13,6 +13,7 @@ components:
 related_docs:
   - docs/architecture/adrs/amendments/ADR-034/amendment-1-emission-goes-through-one-helper.md
   - docs/architecture/adrs/amendments/ADR-034/amendment-2-capture-attempt-ledger-is-telemetry.md
+  - docs/architecture/adrs/amendments/ADR-034/amendment-3-capture-health-reader-contract.md
   - docs/architecture/adrs/ADR-011-learning-emission-sink.md
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
   - docs/architecture/agent_knowledge_system.md
@@ -24,6 +25,7 @@ related_docs:
 related_code:
   - scripts/knowledge/harvest_learnings.py
   - scripts/knowledge/emit_knowledge.py
+  - scripts/knowledge/health/capture_health_report.py
   - templates/skills/agent-telemetry/scripts/emit_event.py
   - templates/skills/agent-telemetry/SKILL.md
   - scripts/knowledge/sink_resolution.py
@@ -44,7 +46,7 @@ related_code:
 |---|---|
 | Status | Accepted, amended |
 | Date | 2026-08-25 |
-| Amended | 2026-10-17 — Amendment 1 (emission goes through one helper; `unclassified` is a defined non-value), revised 2026-10-20 after review. See [Amendment 1](amendments/ADR-034/amendment-1-emission-goes-through-one-helper.md). 2026-10-21 — Amendment 2 (the capture-attempt ledger is telemetry, written by `emit_event.py`; the helper writes `recorded` itself), revised 2026-10-21 after review. See [Amendment 2](amendments/ADR-034/amendment-2-capture-attempt-ledger-is-telemetry.md). |
+| Amended | 2026-10-17 — Amendment 1 (emission goes through one helper; `unclassified` is a defined non-value), revised 2026-10-20 after review. See [Amendment 1](amendments/ADR-034/amendment-1-emission-goes-through-one-helper.md). 2026-10-21 — Amendment 2 (the capture-attempt ledger is telemetry, written by `emit_event.py`; the helper writes `recorded` itself), revised 2026-10-21 after review. See [Amendment 2](amendments/ADR-034/amendment-2-capture-attempt-ledger-is-telemetry.md). 2026-10-23 — Amendment 3 (the capture-health report counts attempts, gives four verdicts and fails closed; Accepted by BrainCandy 2026-10-23). See [Amendment 3](amendments/ADR-034/amendment-3-capture-health-reader-contract.md). |
 | Deciders | BrainCandy |
 | Author | Written during the INF-400 consultation of 2026-08-25 (product-owner + business-analyst review) |
 | Context ADRs | ADR-011 (learning emission sink) — this ADR resolves an ambiguity it left open; ADR-069 (durable log root) — Amendment 1 reaches the sink through its declaration |
@@ -59,6 +61,10 @@ related_code:
 > adds a capture-attempt ledger.** It is telemetry, not knowledge, and `emit_event.py` is its
 > only writer. Amendment 1's two statements that `emit_event.py` is not the emitter still hold
 > for knowledge records; both are annotated in place.
+>
+> **[Amendment 3](amendments/ADR-034/amendment-3-capture-health-reader-contract.md) sets the
+> contract for the ledger's reader**, the capture-health report. It reads attempts, not runs,
+> and refuses to give a verdict when it cannot find the ledger.
 
 ## 1. Context
 
@@ -215,6 +221,23 @@ is one `emit_event.py` command (A2.3). `emit_knowledge.py` writes `recorded` (or
 failed append) itself and refuses empty or metadata-only text (A2.4–A2.5); A2.6–A2.7 state limits.
 Capture-step telemetry commands live once in named `agent-telemetry` sections that `signoff`
 points to, and an agent records `failed` only on a non-zero helper exit, naming the script (A2.8).
+
+## Amendment 3 — 2026-10-23 — The capture-health report reads attempts, gives four verdicts, and fails closed
+
+| Field | Value |
+|---|---|
+| Status | Accepted (BrainCandy, 2026-10-23) |
+| Date | 2026-10-23 |
+| Amends | Adds A3.1–A3.7; extends Amendment 2's three cases to four; departs, for the reader only, from Amendment 2's "no usable declaration reads as case 3" |
+| Full text | [amendments/ADR-034/amendment-3-capture-health-reader-contract.md](amendments/ADR-034/amendment-3-capture-health-reader-contract.md) |
+
+The capture-health report counts capture attempts, not agent runs (A3.1), and gives each
+period one of four verdicts in a fixed order: no-run-reached-the-step, capture-path-broken
+(naming each missing target), learnings-recorded, nothing-to-record (A3.2). Periods are
+half-open and chosen by record timestamps; bad lines are counted, never fatal (A3.3). With
+no usable declaration it exits non-zero with no verdict (A3.4). It reads only the telemetry
+stream, never the harvester or the emission sink (A3.5), and prints the A2.4 and A2.6 limits
+without cross-checking (A3.6). A3.7 records defaults open to revision by BrainCandy.
 
 ## 5. References
 
