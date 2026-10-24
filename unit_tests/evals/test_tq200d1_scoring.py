@@ -19,8 +19,11 @@ def _control_still_passes(record: dict) -> None:
     assert h.passed_assertions(record), f"nothing passed, so the failure proves nothing: {record['score']}"
 
 
-@pytest.mark.parametrize("bad", ["trap_only_cvd.py.recorded", "trap_equal_values.py.recorded"])
-def test_trap_row_fails_fixture_seeding_only_old_column(tmp_path, bad):
+@pytest.mark.parametrize(
+    ("bad", "why"),
+    [("trap_only_cvd.py.recorded", "seeds no"), ("trap_equal_values.py.recorded", "seeded equal")],
+)
+def test_trap_row_fails_fixture_seeding_only_old_column(tmp_path, bad, why):
     # covers: TQ-200d-1
     # angle: discrimination
     # Catches: trap scored on report wording only; fixture check accepts cvd-only seeding;
@@ -33,6 +36,10 @@ def test_trap_row_fails_fixture_seeding_only_old_column(tmp_path, bad):
     record = h.score(row, h.bad_output("trap", bad, tmp_path), tmp_path / "bad")
     assert record["score"]["passed"] is False, record["score"]
     assert h.failed_assertions(record), "the row failed without a failed assertion naming why"
+    # The static fixture check must itself reject the output; a mutant run alone failing the row is not enough.
+    seeding = [a for a in record["score"]["assertions"] if a["kind"] == "fixture_seeds_moved_input"]
+    assert [a["passed"] for a in seeding] == [False], seeding
+    assert why in seeding[0]["detail"], seeding[0]
     _control_still_passes(record)
 
 
@@ -49,10 +56,13 @@ def test_gold_outputs_pass_each_positive_row(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("key", "bad"),
-    [("empty", "empty_window_null_skipping.py.recorded"), ("presence", "presence_without_known_value.py.recorded")],
+    ("key", "bad", "static_kind"),
+    [
+        ("empty", "empty_window_null_skipping.py.recorded", "counts_rows_and_non_null"),
+        ("presence", "presence_without_known_value.py.recorded", "asserts_known_seeded_value"),
+    ],
 )
-def test_vacuous_checks_fail_their_rows(tmp_path, key, bad):
+def test_vacuous_checks_fail_their_rows(tmp_path, key, bad, static_kind):
     # covers: TQ-200d-1
     # angle: discrimination
     # Catches: empty-window row passes a NULL-skipping check; presence row passes a test that
@@ -62,6 +72,12 @@ def test_vacuous_checks_fail_their_rows(tmp_path, key, bad):
     record = h.score(row, h.bad_output(key, bad, tmp_path), tmp_path / "bad")
     assert record["score"]["passed"] is False, record["score"]
     assert h.failed_assertions(record)
+    # The static check itself must reject the vacuous test (the mutant runs would fail the row anyway);
+    # and on the gold output the same check passes (control).
+    static = [a for a in record["score"]["assertions"] if a["kind"] == static_kind]
+    assert [a["passed"] for a in static] == [False], static
+    gold_static = [a for a in h.score(row, h.gold_dir(row), tmp_path / "gold")["score"]["assertions"] if a["kind"] == static_kind]
+    assert [a["passed"] for a in gold_static] == [True], gold_static
     _control_still_passes(record)
 
 

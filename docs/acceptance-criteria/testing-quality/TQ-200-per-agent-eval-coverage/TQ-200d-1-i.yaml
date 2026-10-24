@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -157,8 +157,19 @@ test_spec:
     or a failing baseline), and a run where the manifest entry is missing (invalid), each fail the test
     half and quote the runner's detail.
   must_catch:
-  - unfinished runner verdict counted as a test-half pass
   - missing manifest entry ignored
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+- name: test_unfinished_verdict_with_a_caught_row_still_fails_test_half
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A real run_runner verdict on the O1 output, rewritten to gate_passed false (unfinished)
+    while its "drop the retry_due condition" result stays caught, fails the test half and the row. The
+    unaltered verdict passes the test half (control).
+  must_catch:
+  - unfinished runner verdict counted as a test-half pass
   in_scope_files:
   - scripts/evals/produced_tests_runs.py
 - name: test_runner_called_with_declared_scope_and_base_commit
@@ -196,6 +207,9 @@ amended_by:
   - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
     by: it-po
     at: 2026-10-23
+  - reason: "must_catch moved to the catching test after wrong-version runs. 'unfinished runner verdict counted as a test-half pass' moved from test_unfinished_runner_verdict_fails_test_half (which keeps 'missing manifest entry ignored') to a new entry test_unfinished_verdict_with_a_caught_row_still_fails_test_half. String unchanged. Criteria, title, depends_on and readiness untouched."
+    by: it-po
+    at: 2026-10-24
 superseded_by: null
 covered_by: []
 implemented_by: []

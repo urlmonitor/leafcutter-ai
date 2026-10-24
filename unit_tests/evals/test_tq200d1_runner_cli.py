@@ -40,6 +40,31 @@ def test_test_writer_set_registered_and_every_row_scored(tmp_path):
     assert [r["id"] for r in rows if not r["score"]["passed"]] == []
 
 
+def test_row_without_gold_target_is_scored_and_fails_not_skipped(tmp_path):
+    # covers: TQ-200d-1
+    # angle: boundary
+    # Catches: rows without gold_target skipped in score-gold mode.
+    rows = h.load_set()
+    victim = h.ROW_IDS["refresh"]
+    for r in rows:
+        if r["id"] == victim:
+            del r["expected"]["gold_output"]
+    set_copy = tmp_path / "test-writer-no-gold.jsonl"
+    set_copy.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    config["agents"]["test-writer"]["eval_set"] = str(set_copy)
+    cfg = tmp_path / "no_gold.json"
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    proc, results = _score_gold(tmp_path / "run", config=cfg)
+    assert results.is_file(), f"stdout={proc.stdout[-500:]} stderr={proc.stderr[-500:]}"
+    scored = {r["id"]: r for r in json.loads(results.read_text(encoding="utf-8"))["rows"]}
+    assert sorted(scored) == sorted(h.ROW_IDS.values()), "a row without a gold target must still be scored (as a failure), not dropped"
+    assert scored[victim]["score"]["passed"] is False and scored[victim].get("error"), scored[victim]
+    others = [r for i, r in scored.items() if i != victim]
+    assert len(others) == 4 and all(r["score"]["passed"] for r in others), "control: every row with a gold target still passes"
+    assert proc.returncode != 0, "a failed row must not leave the run green"
+
+
 def test_set_without_negative_row_is_incomplete(tmp_path):
     # covers: TQ-200d-1
     # angle: failure
@@ -79,6 +104,8 @@ def test_local_result_never_presented_as_ci(tmp_path):
     assert proc.returncode == 0, proc.stderr[-500:]
     assert json.loads(results.read_text(encoding="utf-8"))["run_context"] == "local"
     assert re.search(r"local run", proc.stdout, re.IGNORECASE), proc.stdout[-800:]
+    marker = [ln for ln in proc.stdout.splitlines() if ln.strip().startswith("LOCAL RUN:")]
+    assert marker and "CI eval gate has not run" in marker[0], f"the report must carry its own local marker line: {proc.stdout[:600]}"
     assert not re.search(r"checked by ci|ci[- ]verified", proc.stdout, re.IGNORECASE)
 
     changed = ["--changed-files", "templates/agents/test-writer.md"]

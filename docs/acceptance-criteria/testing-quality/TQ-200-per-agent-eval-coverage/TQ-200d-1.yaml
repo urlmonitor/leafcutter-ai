@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -192,6 +192,18 @@ test_spec:
     window, presence is not correctness, input moved to a new column), each with a score.
   must_catch:
   - produced-tests scoring_mode not dispatched by main()
+  in_scope_files:
+  - scripts/evals/run_agent_eval.py
+  - scripts/evals/produced_tests_mode.py
+- name: test_row_without_gold_target_is_scored_and_fails_not_skipped
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: A copy of the set with the refresh-gate row's gold output removed, run through run_agent_eval.py
+    --config <tmp config> --score-gold, still scores all five rows. The row without a gold target fails
+    with an error, the other four pass, and the run exits non-zero.
+  must_catch:
   - rows without gold_target skipped in score-gold mode
   in_scope_files:
   - scripts/evals/run_agent_eval.py
@@ -211,20 +223,34 @@ test_spec:
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
   - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
 - name: test_gold_outputs_pass_each_positive_row
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: criterion
   description: The recorded gold outputs for new function or existing code, empty window and presence
-    is not correctness each pass their row. An empty-window output whose test does not count non-NULL
-    values fails, and so does a presence output that asserts no seeded known value.
+    is not correctness each pass their row, each with a test check and a report check.
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
+- name: test_vacuous_checks_fail_their_rows
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: An empty-window output whose test does not count non-NULL values fails its row, and so
+    does a presence output that asserts no seeded known value. In each case the static check itself
+    (counts_rows_and_non_null, asserts_known_seeded_value) fails, the same check passes on the gold
+    output, and the report check still passes.
   must_catch:
   - empty-window row passes a NULL-skipping check
   - presence row passes a test that asserts no seeded known value
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
   - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
 - name: test_test_b_failing_only_at_import_fails_the_row
   target_dir: unit_tests/evals/
   framework: pytest
@@ -237,6 +263,7 @@ test_spec:
   - test B accepted when it fails only at import
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/produced_tests_mutants.py
 - name: test_set_without_negative_row_is_incomplete
   target_dir: unit_tests/evals/
   framework: pytest
@@ -272,6 +299,78 @@ test_spec:
   angle: real_artifact
   surface_invoked: python scripts/portability/check_shipped_addresses.py --build-root scripts/evals/sets
   description: The shipped-address scanner, run over the test-writer set directory, reports no finding.
+- name: test_vacuous_produced_test_fails_its_row
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Review case (test_tq200d1_review_scoring.py). Each real row's gold output passes, and a
+    recorded vacuous output fails the row with a failed assertion naming why while the report check
+    still passes - trap outputs with same-sign distinct values, an unused distinct constant or assert
+    True; an empty-window output asserting len() of literals; presence outputs asserting len(result)
+    == 2, n == 1 or x == 2; a test B that fails before reaching refresh_config() (assert 1 == 2,
+    pytest.fail, a KeyError on a dict it built).
+  must_catch:
+  - trap row accepts same-sign distinct values, an unused distinct constant or assert True
+  - empty-window row accepts len() of literals
+  - presence row accepts len(result) == 2, n == 1 or x == 2
+  - test B accepted when it fails before reaching refresh_config (assert 1 == 2, pytest.fail, a KeyError
+    on a dict it built)
+  in_scope_files:
+  - scripts/evals/produced_tests_mutants.py
+  - scripts/evals/produced_tests_scoring.py
+- name: test_skipped_produced_test_is_not_green
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Review case (test_tq200d1_review_scoring.py). For the trap, empty-window and presence
+    rows, the gold output with its test skipped by a skip decorator, xfail(run=False) or a pytest.skip()
+    call yields a failed produced_test_green assertion.
+  must_catch:
+  - produced_test_green counts a skipped / xfail(run=False) / pytest.skip() test as passed
+  in_scope_files:
+  - scripts/evals/produced_tests_mutants.py
+- name: test_scoring_leaves_a_repo_named_by_git_env_untouched
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  covers:
+  - TQ-200d-1-i
+  description: Review case (test_tq200d1_review_isolation.py). With GIT_INDEX_FILE, or GIT_DIR plus
+    GIT_WORK_TREE, pointing at a dummy repository, scoring the refresh-gate gold output passes and leaves
+    that repository byte-identical.
+  must_catch:
+  - sandbox git / the wrong-version runner inherit GIT_INDEX_FILE, GIT_DIR or GIT_WORK_TREE and stage,
+    commit or reset in the caller's repository
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+- name: test_live_row_exports_every_changed_file_and_scores_the_produced_test
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Review case (test_tq200d1_review_isolation.py). A live (non-gold) row with a stubbed
+    agent that writes its test, helpers, conftest and fixtures - committed or not - gets every changed
+    file into the scoring sandbox, and the row scores passed.
+  must_catch:
+  - export reads only uncommitted test_*.py files by basename, so a committing agent exports nothing
+    and helpers, conftest, fixtures and nested tests never reach the scoring sandbox
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+- name: test_score_one_honours_expected_field_of_the_agent_config
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Review case (test_tq200d1_review_isolation.py). score_one on a row whose expectations
+    sit under the key the agent config's expected_field names scores every assertion and passes.
+  must_catch:
+  - score_row reads a hard-coded row["expected"] although agent_cfg names another field
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+  - scripts/evals/produced_tests_scoring.py
 test_rationale: An eval set is worth something only if bad outputs fail it. Each row is therefore proven
   with recorded good AND bad outputs, through the real runner CLI in --score-gold and through the scoring
   module, with no live model. The trap row, the empty-window and presence rows, and test B carry the must_catch.
@@ -283,6 +382,12 @@ amended_by:
   - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
     by: it-po
     at: 2026-10-23
+  - reason: "Post-review test_spec data fix (additive only). The mutant- and run-based checks moved into scripts/evals/produced_tests_mutants.py (fails_on_mutants for the trap, empty-window and presence rows; produced_test_green; fails_on_wrong_result for test B), so that module was added to in_scope_files of the trap, gold-outputs and test-B entries. Added test_spec entries for the review tests in unit_tests/evals/test_tq200d1_review_scoring.py and test_tq200d1_review_isolation.py, must_catch taken from their Catches comments, in_scope_files where the behaviour lives. Criteria, title, depends_on and readiness untouched; nothing removed."
+    by: it-po
+    at: 2026-10-24
+  - reason: "must_catch moved to the catching test after wrong-version runs. 'rows without gold_target skipped in score-gold mode' moved from test_test_writer_set_registered_and_every_row_scored to a new entry test_row_without_gold_target_is_scored_and_fails_not_skipped; 'empty-window row passes a NULL-skipping check' and 'presence row passes a test that asserts no seeded known value' moved from test_gold_outputs_pass_each_positive_row to a new entry test_vacuous_checks_fail_their_rows (that entry's description narrowed to what the test asserts). Strings unchanged. Criteria, title, depends_on and readiness untouched."
+    by: it-po
+    at: 2026-10-24
 superseded_by: null
 covered_by:
   - TQ-200d-1-i

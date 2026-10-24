@@ -50,13 +50,24 @@ def test_o2_fails_test_half_whatever_the_report_says(tmp_path):
     # angle: discrimination
     # Catches: test half taken from the judge verdict; test half taken from the report's claim;
     # survived result counted as caught.
-    record = h.score(h.fixture_row("refresh_o2"), h.FIXTURES / "refresh_o2", tmp_path, judge=_judge_says_pass)
+    row = h.fixture_row("refresh_o2")
+    row["expected"]["rubric"] = "The report must say the test catches the wrong version."  # the judge only runs on a rubric row
+    judged = []
+
+    def judge(report, rubric):
+        judged.append(rubric)
+        return _judge_says_pass()
+
+    record = h.score(row, h.FIXTURES / "refresh_o2", tmp_path, judge=judge)
+    assert judged and record["score"]["judge"]["passed"] is True, "control: the persuaded judge was consulted and said pass"
     test_half, report_half = _halves(record)
     survived = [r for r in test_half["verdict"]["results"] if r["result"] == "survived"]
     assert any(r["wrong_version"] == h.WV_DROP for r in survived), test_half["verdict"]
     assert test_half["passed"] is False, test_half
     assert report_half["passed"] is True, "control: the report does claim the catch"
     assert record["score"]["passed"] is False
+    wv = [a for a in record["score"]["assertions"] if a["kind"] == "wrong_version_run"]
+    assert [a["passed"] for a in wv] == [False], "the judge verdict must not rewrite the test assertion"
 
 
 def test_o3_halves_scored_apart(tmp_path):
@@ -95,6 +106,33 @@ def test_unfinished_runner_verdict_fails_test_half(tmp_path, monkeypatch):
     assert test_half["passed"] is False, "an O1 output whose manifest entry is missing must not pass"
     unfinished = [r for r in test_half["verdict"]["results"] if r["result"] == "invalid"]
     assert unfinished and unfinished[0]["detail"] in test_half["detail"]
+
+
+def test_unfinished_verdict_with_a_caught_row_still_fails_test_half(tmp_path, monkeypatch):
+    # covers: TQ-200d-1-i
+    # angle: discrimination
+    # Catches: unfinished runner verdict counted as a test-half pass (the gate did not pass, yet a row is caught).
+    runs = h.module("produced_tests_runs")
+    wvr = h.module("wrong_version_runner")
+
+    def control(*args, **kwargs):
+        return wvr.run_runner(*args, **kwargs)
+
+    monkeypatch.setattr(runs, "run_runner", control)
+    ok = h.score(h.fixture_row("refresh_o1"), h.FIXTURES / "refresh_o1", tmp_path / "ok")
+    assert _halves(ok)[0]["passed"] is True, "control: the genuine verdict passes"
+
+    def unfinished(*args, **kwargs):
+        verdict = wvr.run_runner(*args, **kwargs)
+        assert any(r["result"] == "caught" and r["wrong_version"] == h.WV_DROP for r in verdict["results"])
+        return {**verdict, "gate_passed": False, "reason": "unfinished"}
+
+    monkeypatch.setattr(runs, "run_runner", unfinished)
+    record = h.score(h.fixture_row("refresh_o1"), h.FIXTURES / "refresh_o1", tmp_path / "bad")
+    test_half, _ = _halves(record)
+    assert any(r["result"] == "caught" for r in test_half["verdict"]["results"]), "the caught row is still in the verdict"
+    assert test_half["passed"] is False, test_half
+    assert record["score"]["passed"] is False
 
 
 def _git(root: str, *args: str) -> str:
