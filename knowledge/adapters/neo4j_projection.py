@@ -88,6 +88,9 @@ async def publish(
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     # Counts belong to this publication only; an already-ready generation reports none.
     db.publication_counts = None
+    db.publication_writes = None  # set when the build starts: row cap, payload budget, oversized, retried
+    db.publication_failure = None  # set by a failed write: cause, phase, batch, attempts, progress
+    db.publication_progress = None  # set when the build starts; an activation-only run reports none
     # Nothing is stored until the build starts; a failure before then removes nothing.
     db.publication_removal = {"outcome": "nothing_stored"}
     collapse_identical_edges(snapshot)  # in place, before any node or relationship is written
@@ -421,7 +424,9 @@ async def switch_active(
         set_current(db, tx, key, True)
         return True
 
-    return await db._transaction(transaction, True)
+    from knowledge.adapters.neo4j_writes import with_retry
+
+    return await with_retry(db, "activation", None, lambda: db._transaction(transaction, True))
 
 
 _NO_RETENTION = (
