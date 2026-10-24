@@ -264,3 +264,15 @@ notes: |
   validate_ac_schema._DOC_TRIGGER_VALUES and in the schema enum; fold them into one list.
   Which of the two survives as the one list (the schema enum is the natural single source
   both validators already read) is the IT PO's call. "api-guide" is a fixture name.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

@@ -11,18 +11,23 @@ req_status: active
 work_status: todo
 criteria: |
   Given the triage agent returns route: "behavioral",
-  When the create-ac.js workflow script processes the routing decision,
-  Then it skips PO v3 entirely,
-  And dispatches BA v3 with the user's request plus the parent_l1_id from triage,
-  And BA v3 writes L2/L3 ACs under the existing L1 parent,
-  And the workflow continues with the user gate and IT PO v3 as normal.
+  When the /plan-feature workflow script processes the routing decision,
+  Then it skips the product owner entirely,
+  And dispatches business-analyst with the user's request plus the parent_l1_id from triage,
+  And the business analyst writes L2/L3 ACs under the existing L1 parent,
+  And the workflow continues as normal: the business analyst's user gate, the technical
+    planner's auto-gated stage, the test-design stage and the final gate.
 
   Given the triage agent returns route: "technical",
-  When the create-ac.js workflow script processes the routing decision,
-  Then it skips both PO v3 and BA v3,
-  And dispatches IT PO v3 directly with the existing AC ids to amend,
-  And IT PO v3 enriches the specified ACs with technical constraints,
-  And the workflow presents the enriched ACs for user confirmation.
+    and no product-truth flow was approved earlier in the same run,
+  When the /plan-feature workflow script processes the routing decision,
+  Then it skips both the product owner and the business analyst,
+  And dispatches it-po directly with the existing AC ids to amend,
+  And the technical planner enriches the specified ACs with technical constraints,
+  And the technical planner's stage passes without a human gate once its requirement
+    rule check passes,
+  And the test-design stage follows, and the workflow presents the enriched ACs with
+    their test design at the final gate for user confirmation.
 depends_on: [ACD-300b]
 doc_links: []
 assigned_agent: python-coder
@@ -31,7 +36,16 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: /plan-feature workflow, not create-ac.js;
+    agents renamed (no -v3); after the business analyst come the auto-gated technical
+    planner, the test-design stage and the final gate; the technical route now presents
+    the ACs at the final gate after the test design. The technical-route clause is scoped
+    to runs with no approved product-truth flow, because such a run forces the business
+    analyst stage. Intent unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

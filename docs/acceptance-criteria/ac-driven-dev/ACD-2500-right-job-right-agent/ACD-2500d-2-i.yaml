@@ -98,3 +98,14 @@ notes: |
   "at authoring time"; if it fired after the planner's stage it would reject every
   package-surface AC the planner hands off. The rule moves to after the file-aware step;
   its content is unchanged (clause 3).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

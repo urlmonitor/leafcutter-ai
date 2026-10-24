@@ -246,3 +246,15 @@ notes: |
   report what they would have repaired. /plan-feature always passes a before-state, so its
   stage gates are unaffected. If the user prefers that only the before-state-dependent
   families stop repairing (back-links still fixed on a hand run), clauses 1 and 3 change.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

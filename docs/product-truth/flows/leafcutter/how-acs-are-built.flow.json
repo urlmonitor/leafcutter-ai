@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "tags": [
     "build-pipeline",
     "ticket-supervisor",
@@ -590,7 +590,8 @@
         "Ac"
       ],
       "implements": [
-        "ACD-300b"
+        "ACD-300b",
+        "ACD-2500e-3"
       ],
       "impl_status": "in_progress",
       "impl_asof": "2026-07-20",
@@ -834,7 +835,8 @@
         "Test"
       ],
       "implements": [
-        "BO-530-1"
+        "BO-530-1",
+        "ACD-2500c-2-i"
       ],
       "impl_status": "done",
       "impl_asof": "2026-07-20",
@@ -2445,6 +2447,12 @@
       "by": "flow-author (agent-led I/O contract migration)",
       "date": "2026-10-03",
       "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (right-job-right-agent product-truth refresh)",
+      "date": "2026-10-23",
+      "note": "Linked the test-writer step to the rule that it builds from the test design and never authors one, and the build-time IT product owner step to the rule that its enrichment carries no relocated fields. Topology, descriptions and io_contracts unchanged."
     }
   ],
   "impl_summary": {

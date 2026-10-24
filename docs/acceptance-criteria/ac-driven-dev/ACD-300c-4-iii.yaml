@@ -136,3 +136,14 @@ notes: |
   Non-obvious edge: the approval step's goal mode promotes only reviewed LEAF children of a
   goal (see its --help), so "approve the batch's top record as a goal" would leave the L1
   itself at reviewed. Today's agent edit approves every record in the batch, L1s included.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

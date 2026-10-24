@@ -70,8 +70,8 @@ Evaluate the user's `user_request` against all active ACs for the supplied
 
 | Route | Condition |
 |---|---|
-| `strategic` | No matching L1 AC found. New capability with no parent. |
-| `behavioral` | A matching L1 AC exists (feature already defined at L1). User wants to add scenarios/behaviors. |
+| `strategic` | Signals: no matching L1 parent in the AC store; the request describes a user-observable outcome or new system capability; it does not reference a specific existing component or AC. |
+| `behavioral` | Signals: a matching L1 parent exists in the AC store (feature already defined at L1); the request adds scenarios or edge cases to existing behaviour rather than a new capability. |
 | `technical` | Existing ACs cover the scope. User only adds constraints (perf, security, SLA). |
 | `covered` | Existing ACs already fully cover the request semantically. |
 
@@ -99,16 +99,19 @@ every active AC you loaded:
    If yes → route: `covered`, list matching AC IDs in `existing_acs`.
 
 2. **L1 match check** (if not covered): does any L1 AC describe the same
-   *feature* the user is extending? Match by feature domain in the title and
-   criteria subject. If yes → route: `behavioral`, set `parent_l1_id` to the
-   matched L1 ID.
+   *feature* the user is extending, and does the request add scenarios or edge
+   cases to that existing behaviour rather than a new capability? Match by
+   feature domain in the title and criteria subject. If yes → route:
+   `behavioral`, set `parent_l1_id` to the matched L1 ID (never null).
 
 3. **Technical constraint check** (if not covered and no L1 match): does the
    request only add a constraint (latency SLA, rate limit, error threshold,
    security requirement) to an existing capability that is already AC-documented?
    If yes → route: `technical`, list the ACs being constrained in `existing_acs`.
 
-4. **Default**: no match found → route: `strategic`.
+4. **Default**: no match found → route: `strategic` (no matching L1 parent, a
+   user-observable outcome or new system capability, no reference to a specific
+   existing component or AC).
 
 ## Step 3 — Return JSON
 
@@ -128,8 +131,8 @@ or explanation before or after the JSON block:
 Field rules:
 - `route`: required. One of the four literal strings.
 - `existing_acs`: array of AC IDs that are relevant (empty array `[]` for `strategic`).
-- `parent_l1_id`: the matched L1 AC ID string for `behavioral` route; `null` for all others.
-- `rationale`: one sentence (≤ 80 chars) explaining why this route was chosen.
+- `parent_l1_id`: the matched L1 AC ID string for `behavioral` route (must be non-null); `null` for all others.
+- `rationale`: one sentence (≤ 80 chars) naming the signal that decided the route.
 - `anomalies`: array of strings for unexpected conditions encountered during triage (empty `[]` if none).
 
 ## Machine-Parsed Dispatch Output Contract

@@ -126,3 +126,15 @@ notes: |
   ACD-1700 role scoping must follow this split (ACD-2500 L0 doc_links).
   Named alteration: leave S2.8's table in place -> clause 3 goes red, and ACD-2500a-3-i
   shows the two tables disagreeing on workflow .js.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

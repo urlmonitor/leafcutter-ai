@@ -10,18 +10,23 @@ status: active
 req_status: active
 work_status: in_progress
 criteria: |
-  Given the /create-ac workflow dispatches authoring agents in stages
-    (PO v3, BA v3, IT PO v3) with user confirmation gates between them,
-  When the user approves a stage's output at a confirmation gate,
+  Given the /plan-feature workflow dispatches authoring agents in stages
+    (product owner, business analyst, technical planner, test designer) with user
+    confirmation gates after the product owner and business analyst stages and a
+    final gate after the test design,
+  When a stage's output is approved — by the user at its confirmation gate, or
+    automatically for the technical planner's stage once its requirement rule
+    check passes — or the user approves the batch at the final gate,
   Then all AC YAML files created or modified during that stage are committed
-    to git before the next agent is dispatched,
+    to git before the next agent is dispatched (or, at the final gate, before
+    the run reports success),
   And each commit includes only the AC files from the completed stage,
   And each commit message identifies the workflow run and stage,
   And if the commit fails, the workflow does not advance to the next stage,
   And if the user cancels at a gate, no commit is made for that stage's output.
 depends_on: [ACD-300, ACD-300b, ACD-300c]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
 assigned_agent: python-coder
@@ -30,7 +35,16 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: /plan-feature, not /create-ac; the stages
+    now end with the test designer; the technical planner''s stage is committed after an
+    automatic approval (rule check passed) rather than a human gate, and the final commit
+    follows the final-gate approval after the test design. doc_links now point at the
+    plan-feature skill (the create-ac skill no longer exists). Commit-per-stage intent
+    unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-300g-1
@@ -43,7 +57,7 @@ change_target: pipeline
 risk_surface: contract_boundary
 product_truth:
   - flow: leafcutter/ac-lifecycle
-    node: approve
+    node: stageGate
     node_kind: step
     flow_kind: data
     screen: null
@@ -51,4 +65,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-20'
+    asof: '2026-10-23'

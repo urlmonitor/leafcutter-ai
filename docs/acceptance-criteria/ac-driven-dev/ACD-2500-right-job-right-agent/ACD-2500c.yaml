@@ -60,3 +60,15 @@ notes: |
   (test-planner with source access) fills the test design. The test writer at build
   time consumes it; it does not author it. See ACD-2500 notes for the ACD-1600c /
   check-ac-schema readiness conflict this must resolve.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

@@ -13,19 +13,35 @@ criteria: |
   Given the technical planner has enriched the AC batch and set readiness: reviewed,
     and the test-design stage has then completed for the batch,
   When the workflow presents the final gate to the user,
-  Then it displays: all ACs in the batch with their enriched fields
-    (assigned_agent, estimated_complexity, delivers_to, expects_from) and their test design,
-  And it prompts the user to set a priority (critical/high/medium/low)
-    for the batch,
-  And it offers three actions:
+  Then it displays every AC the approval-hold report releases with its criteria next to
+    its test design, and with its enriched fields (assigned_agent, estimated_complexity,
+    delivers_to, expects_from),
+  And it lists every held AC separately with its hold reason and no approve option,
+  And it prompts the user to set one priority (critical/high/medium/low) for the batch,
+  And an "approve" whose priority is present but not one of those four values (for
+    example "urgent") is applied with priority medium,
+  And an "approve" with no priority at all is not applied: no AC is approved, nothing is
+    committed, and the run stays paused at the final gate,
+  And it offers four actions:
     - "approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
       the chosen priority on every AC the approval-hold report releases, held ACs stay
-      reviewed; the pipeline completes successfully,
-    - "edit" — provide feedback; the test-design stage is re-invoked with the feedback
-      (loop until approved),
-    - "defer" — set readiness: reviewed but do NOT promote to approved;
-      ACs stay in store but are not scanner-eligible,
-  And if the user approves, the workflow reports the count of ACs approved and the count held.
+      reviewed; after that the batch is committed to the authoring branch as the final
+      commit of the run and the branch is delivered,
+    - "edit" — provide feedback; the test-design stage is re-invoked once with the
+      feedback and the final gate is shown again,
+    - "defer" — no AC is changed: readiness stays reviewed and no AC is promoted to
+      approved, the final gate makes no commit, and the run ends reporting the ACs as
+      left reviewed,
+    - "cancel" — abort the pipeline; this stage's ACs are left as uncommitted drafts,
+  And if the user chooses "edit" a second time at the final gate, the run aborts with an
+    error after 2 attempts, no AC is approved, and the final commit is not made,
+  And if the user approves and both the approval and the final commit succeed, the run
+    completes and reports the count of ACs approved, the count held, the chosen priority,
+    the count already approved when there are any, and each held AC id with its reason,
+  And if the approval step fails, the run ends with an error stating that nothing was
+    committed and naming the ACs approved before the failure, the ACs that failed and
+    the ACs left untouched,
+  And if the final commit fails, the run ends with an error and the branch is not delivered.
 depends_on: [ACD-300c]
 doc_links: []
 assigned_agent: python-coder
@@ -54,51 +70,134 @@ expects_from:
     Exit is non-zero when any written record fails read-back, and that record is restored to its pre-write
     bytes.'
 test_intent:
-- clause: 'it displays: all ACs in the batch with their enriched fields (assigned_agent, estimated_complexity,
-    delivers_to, expects_from) and their test design'
+- clause: it displays every AC the approval-hold report releases with its criteria next to its test design,
+    and with its enriched fields (assigned_agent, estimated_complexity, delivers_to, expects_from)
   needs_test: true
-  reason: The gate is where the user judges the test design, and omitting it would make the approval blind.
-- clause: it prompts the user to set a priority (critical/high/medium/low) for the batch
+  reason: The gate is where the user judges the test design against the criteria, and omitting either
+    would make the approval blind.
+- clause: it lists every held AC separately with its hold reason and no approve option
   needs_test: true
-  reason: The priority prompt feeds the approval step, and a missing prompt would approve with no priority.
+  reason: A held AC shown among the releasable ones would look approvable although the approval step
+    will not promote it.
+- clause: it prompts the user to set one priority (critical/high/medium/low) for the batch
+  needs_test: true
+  reason: The priority the user picks is the one the approval step writes, so the gate must offer the
+    four values and pass the chosen one on unchanged.
+- clause: an "approve" whose priority is present but not one of those four values (for example "urgent")
+    is applied with priority medium
+  needs_test: true
+  reason: An invalid value passed on unchanged would make the approval step reject or write a priority
+    outside the four allowed values.
+- clause: 'an "approve" with no priority at all is not applied: no AC is approved, nothing is committed,
+    and the run stays paused at the final gate'
+  needs_test: true
+  reason: The earlier behaviour applied a missing priority as medium; a regression to that fallback would
+    approve and commit the batch without the priority BO-2300d-1-iii requires.
 - clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and the chosen
-    priority on every AC the approval-hold report releases, held ACs stay reviewed; the pipeline completes
-    successfully'
+    priority on every AC the approval-hold report releases, held ACs stay reviewed; after that the batch
+    is committed to the authoring branch as the final commit of the run and the branch is delivered'
   needs_test: true
-  reason: Approve must route through the approval step with only released ids, which is the gap this change
-    closes.
-- clause: '"edit" — provide feedback; the test-design stage is re-invoked with the feedback (loop until
-    approved)'
+  reason: Approve must route through the approval step with only released ids and only then make the
+    final commit and deliver the branch; the order is what keeps an unapproved batch off the branch.
+- clause: '"edit" — provide feedback; the test-design stage is re-invoked once with the feedback and the
+    final gate is shown again'
   needs_test: true
-  reason: Edit must re-invoke the test-design stage, not the planner, now that the gate follows test design.
-- clause: '"defer" — set readiness: reviewed but do NOT promote to approved; ACs stay in store but are
-    not scanner-eligible'
+  reason: Edit must re-run the test-design stage, not the planner, with the user's feedback and come back
+    to the gate instead of ending the run.
+- clause: '"defer" — no AC is changed: readiness stays reviewed and no AC is promoted to approved, the
+    final gate makes no commit, and the run ends reporting the ACs as left reviewed'
   needs_test: true
-  reason: Defer must leave records unapproved and unchanged, and a regression would make them scanner-eligible.
-- clause: if the user approves, the workflow reports the count of ACs approved and the count held
+  reason: A regression that approved or committed on defer would make records scanner-eligible without
+    the user's consent.
+- clause: '"cancel" — abort the pipeline; this stage''s ACs are left as uncommitted drafts'
   needs_test: true
-  reason: The approved and held counts are computed from the approval step's report and can be wrong.
+  reason: Cancel must neither commit the test-design output nor report success.
+- clause: if the user chooses "edit" a second time at the final gate, the run aborts with an error after
+    2 attempts, no AC is approved, and the final commit is not made
+  needs_test: true
+  reason: A second edit that fell through to approve once committed unreviewed ACs (ACD-300g-4), so the
+    abort path must stay pinned.
+- clause: if the user approves and both the approval and the final commit succeed, the run completes
+    and reports the count of ACs approved, the count held, the chosen priority, the count already approved
+    when there are any, and each held AC id with its reason
+  needs_test: true
+  reason: Every number and id in the closing report is computed from the approval step's report and
+    can be wrong or missing.
+- clause: if the approval step fails, the run ends with an error stating that nothing was committed and
+    naming the ACs approved before the failure, the ACs that failed and the ACs left untouched
+  needs_test: true
+  reason: After a partial approval the user needs the true state of each id and the fact that no commit
+    was made in order to recover.
+- clause: if the final commit fails, the run ends with an error and the branch is not delivered
+  needs_test: true
+  reason: Delivering a branch whose final commit failed would ship a branch without the approved batch.
 test_spec:
 - name: test_final_gate_shows_enriched_fields_and_test_design
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
   type: unit
   angle: criterion
-  description: Driven through plan-feature.js under run_workflow_under_e2 (technical route, 4 ids), the
-    final-gate pause record's question names assigned_agent, estimated_complexity, delivers_to, expects_from
-    and the test design (test_spec) for the batch, and its context lists every batch id.
-  proves_clause: 'it displays: all ACs in the batch with their enriched fields (assigned_agent, estimated_complexity,
-    delivers_to, expects_from) and their test design'
+  description: Driven through plan-feature.js under run_workflow_under_e2 (technical route, 4 ids, none
+    held before the gate), the final-gate pause record's question names assigned_agent, estimated_complexity,
+    delivers_to, expects_from and the test design (test_spec), shows each released AC's criteria text
+    next to its test design, and its context lists every released id. The criteria check is new; the
+    existing test checks the fields, the test design and the ids only.
+  proves_clause: it displays every AC the approval-hold report releases with its criteria next to its
+    test design, and with its enriched fields (assigned_agent, estimated_complexity, delivers_to, expects_from)
   code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_lists_held_acs_apart_with_reason_and_no_approve_option
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The pre-gate hold report holds ACD-9990a-3 with reason "file finding undecided". The final-gate
+    question lists ACD-9990a-3 with that reason in a held section apart from the released ACs, the held
+    id is not among the released ids in the gate context, and an approve answer passes the approval step
+    only the released ids.
+  proves_clause: it lists every held AC separately with its hold reason and no approve option
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the held AC is shown among the released ACs as if it could be approved
+  - the held AC is listed without its hold reason
 - name: test_final_gate_asks_for_one_batch_priority
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
   type: unit
   angle: criterion
   description: The persisted final-gate question is a priority choice that names critical, high, medium
-    and low, and the approve answer's priority is the one passed on to the approval step.
-  proves_clause: it prompts the user to set a priority (critical/high/medium/low) for the batch
+    and low, and the approve answer's priority (low, not the medium fallback) is the one passed on to the
+    approval step.
+  proves_clause: it prompts the user to set one priority (critical/high/medium/low) for the batch
   code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_invalid_priority_is_taken_as_medium
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: An approve run whose answer carries priority "urgent" runs the approval step once with
+    --priority medium and returns status ok. Only the present-but-invalid case is exercised here; an
+    answer with no priority is the boundary test below.
+  proves_clause: an "approve" whose priority is present but not one of those four values (for example "urgent")
+    is applied with priority medium
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - an invalid priority is passed on to the approval step unchanged
+  - an invalid priority is treated like a missing one, so the run stays paused instead of applying medium
+- name: test_final_gate_approve_without_priority_stays_paused
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Mirrors unit_tests/workflows/test_bo_2300d_1_iii.py::test_priority_choice_approve_still_requires_priority
+    on this file's 4-id technical-route table. Resume at final-gate with a person's approve answer whose
+    priority key is removed. No approval-step apply dispatch (approve_acs.py) happens, no commit-stage-output
+    or deliver-authoring-branch dispatch follows the answer, and the result has status paused_awaiting_input
+    with gate_id final-gate.
+  proves_clause: 'an "approve" with no priority at all is not applied: no AC is approved, nothing is committed,
+    and the run stays paused at the final gate'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - a missing priority falls back to medium and approves
 - name: test_final_gate_approve_runs_the_approval_step_with_released_ids
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
@@ -108,8 +207,8 @@ test_spec:
     hold report holds one id dispatches the approval step command (approve_acs.py with the released ids
     and --priority high) and returns status ok; no status-checker apply-approval dispatch happens.
   proves_clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
-    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; the pipeline
-    completes successfully'
+    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; after that
+    the batch is committed to the authoring branch as the final commit of the run and the branch is delivered'
   code_file: templates/workflows-js/plan-feature.js
 - name: test_final_gate_approve_never_lets_an_agent_write_readiness
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
@@ -119,14 +218,29 @@ test_spec:
   description: 'Same approve run: the only approval dispatch is the deterministic approval-step command;
     its --ids list is exactly the released ids, and no agent prompt asks to set readiness or priority.'
   proves_clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
-    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; the pipeline
-    completes successfully'
+    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; after that
+    the batch is committed to the authoring branch as the final commit of the run and the branch is delivered'
   code_file: templates/workflows-js/plan-feature.js
   must_catch:
   - the approve branch still dispatches the status-checker apply-approval agent to edit readiness and
     priority
   - the approval step is given every batch id, including the held one
   - the chosen priority is dropped and the step is run with medium
+- name: test_final_gate_approve_commits_after_the_approval_step_then_delivers
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same approve run: after the gate answer the dispatch order is the approval-step apply,
+    then exactly one final commit-stage-output (the final commit of the run), then deliver-authoring-branch;
+    no commit-stage-output comes before the apply.'
+  proves_clause: '"approve" — the approval is applied as ACD-300c-4 specifies: readiness: approved and
+    the chosen priority on every AC the approval-hold report releases, held ACs stay reviewed; after that
+    the batch is committed to the authoring branch as the final commit of the run and the branch is delivered'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the final commit is made before the approval step runs
+  - the branch is not delivered after a successful approve
 - name: test_final_gate_edit_redispatches_the_test_designer_with_feedback
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
@@ -134,12 +248,26 @@ test_spec:
   angle: discrimination
   description: A person's edit answer with feedback at the final gate re-dispatches stage-test-design-author
     whose prompt carries that feedback text; stage-itpo-author is not dispatched again after the gate.
-  proves_clause: '"edit" — provide feedback; the test-design stage is re-invoked with the feedback (loop
-    until approved)'
+  proves_clause: '"edit" — provide feedback; the test-design stage is re-invoked once with the feedback
+    and the final gate is shown again'
   code_file: templates/workflows-js/plan-feature.js
   must_catch:
   - edit re-dispatches the test designer but drops the user's feedback from its prompt
   - edit re-dispatches the technical planner instead of the test-design stage
+- name: test_final_gate_edit_reruns_test_design_once_then_shows_the_gate_again
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Same edit run: exactly one stage-test-design-author dispatch follows the answer, the run
+    then pauses at final-gate again (a new final-gate pause record), and no approval-step or commit-stage-output
+    dispatch follows the answer.'
+  proves_clause: '"edit" — provide feedback; the test-design stage is re-invoked once with the feedback
+    and the final gate is shown again'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - edit re-runs the test designer and then ends the run without showing the final gate again
+  - edit re-runs the test designer more than once for one answer
 - name: test_final_gate_defer_leaves_records_untouched
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
   framework: pytest
@@ -147,8 +275,65 @@ test_spec:
   angle: criterion
   description: A defer answer returns status ok with acs_as_reviewed equal to the batch; no approval-step
     dispatch and no commit-stage-output dispatch follow the gate.
-  proves_clause: '"defer" — set readiness: reviewed but do NOT promote to approved; ACs stay in store
-    but are not scanner-eligible'
+  proves_clause: '"defer" — no AC is changed: readiness stays reviewed and no AC is promoted to approved,
+    the final gate makes no commit, and the run ends reporting the ACs as left reviewed'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_final_gate_cancel_leaves_the_test_design_output_uncommitted
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A person's cancel at final-gate returns a cancelled status, not ok; no approval-step,
+    commit-stage-output or deliver-authoring-branch dispatch follows the answer. The cancel message text
+    is ACD-300c-5's contract and is not asserted here.
+  proves_clause: '"cancel" — abort the pipeline; this stage''s ACs are left as uncommitted drafts'
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - cancel commits the test-design output before aborting
+  - cancel at the final gate returns status ok
+- name: test_exhausted_edit_at_final_gate_returns_error_status
+  target_dir: unit_tests/
+  framework: unittest
+  type: unit
+  angle: discrimination
+  covers:
+  - ACD-300c-3
+  - ACD-300g-4
+  description: Existing test in unit_tests/test_final_gate_and_commit_message.py (TestFinalGateEditFallthrough).
+    The final gate is reached a second time and answered edit again; the run returns status error, not
+    ok. It asserts no message text, so it stays neutral on the stage name, which ACD-300c-5 owns.
+  proves_clause: if the user chooses "edit" a second time at the final gate, the run aborts with an error
+    after 2 attempts, no AC is approved, and the final commit is not made
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the second edit falls through to the approve branch
+- name: test_exhausted_edit_at_final_gate_does_not_commit_final_stage
+  target_dir: unit_tests/
+  framework: unittest
+  type: unit
+  angle: discrimination
+  covers:
+  - ACD-300c-3
+  - ACD-300g-4
+  description: 'Existing test in unit_tests/test_final_gate_and_commit_message.py, same run: the only
+    commit dispatched is the earlier technical-planner stage commit; no final commit is made.'
+  proves_clause: if the user chooses "edit" a second time at the final gate, the run aborts with an error
+    after 2 attempts, no AC is approved, and the final commit is not made
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the exhausted edit commits the unreviewed batch as the final commit
+- name: test_exhausted_edit_at_final_gate_has_no_acs_approved
+  target_dir: unit_tests/
+  framework: unittest
+  type: unit
+  angle: criterion
+  covers:
+  - ACD-300c-3
+  - ACD-300g-4
+  description: 'Existing test in unit_tests/test_final_gate_and_commit_message.py, same run: the result
+    carries no acs_approved key.'
+  proves_clause: if the user chooses "edit" a second time at the final gate, the run aborts with an error
+    after 2 attempts, no AC is approved, and the final commit is not made
   code_file: templates/workflows-js/plan-feature.js
 - name: test_final_gate_reports_approved_and_held_counts
   target_dir: unit_tests/ac_driven_dev/test_design_stage/
@@ -157,19 +342,68 @@ test_spec:
   angle: discrimination
   description: With an approval-step report of 3 approved and 1 held, the closing message states 3 approved
     and 1 held.
-  proves_clause: if the user approves, the workflow reports the count of ACs approved and the count held
+  proves_clause: if the user approves and both the approval and the final commit succeed, the run completes
+    and reports the count of ACs approved, the count held, the chosen priority, the count already approved
+    when there are any, and each held AC id with its reason
   code_file: templates/workflows-js/plan-feature.js
   must_catch:
   - the approved count is the size of the batch instead of the step report's approved list
   - the held count is taken from the pre-gate hold list instead of the step's report
+- name: test_final_gate_closing_report_names_priority_held_reasons_and_already_approved
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Approve with priority low. With a step report of 3 approved and ACD-9990a-3 held for "file
+    finding undecided", the closing message names priority low and ACD-9990a-3 with that reason, and says
+    nothing about already approved ACs. With the repeat-run report (3 already approved), the message also
+    states 3 already approved.
+  proves_clause: if the user approves and both the approval and the final commit succeed, the run completes
+    and reports the count of ACs approved, the count held, the chosen priority, the count already approved
+    when there are any, and each held AC id with its reason
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the closing report omits the chosen priority
+  - an already-approved count of zero is still reported
+  - held ACs are counted but their ids and reasons are not named
+- name: test_final_gate_approval_failure_states_nothing_committed_and_each_id_state
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Approve on three released ids where the step approves ACD-9990a-1, fails ACD-9990a-2 and
+    leaves ACD-9990a-3 untouched (exit code 1). The run returns status error and its message states that
+    nothing was committed and names ACD-9990a-1 as approved before the failure, ACD-9990a-2 as failed
+    and ACD-9990a-3 as untouched.
+  proves_clause: if the approval step fails, the run ends with an error stating that nothing was committed
+    and naming the ACs approved before the failure, the ACs that failed and the ACs left untouched
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the failure message does not say that nothing was committed
+  - the untouched ids are dropped from the failure message
+- name: test_final_commit_failure_ends_in_error_without_delivery
+  target_dir: unit_tests/ac_driven_dev/test_design_stage/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Approve where the approval step succeeds and the final commit-stage-output reply is a hook
+    failure. The run returns status error and no deliver-authoring-branch dispatch follows. The stage name
+    in the message is ACD-300c-5's contract and is not asserted here.
+  proves_clause: if the final commit fails, the run ends with an error and the branch is not delivered
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the branch is delivered although the final commit failed
+  - the commit failure is reported as a completed run
 test_design_authorship:
   step: test-designer
-  date: '2026-10-16'
+  date: '2026-10-23'
 test_design_opened_files:
 - templates/workflows-js/plan-feature.js
 - unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
 - unit_tests/ac_driven_dev/test_design_stage/test_acd_2500c_2.py
 - unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/ac_driven_dev/test_design_stage/test_acd_300c_3.py
+- unit_tests/workflows/test_bo_2300d_1_iii.py
 file_findings:
 - file: templates/workflows-js/plan-feature.js
   verdict: consistent
@@ -200,9 +434,52 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-21'
+- reason: 'criteria match /plan-feature: "edit" re-invokes the test-design stage once (a second
+    edit aborts without approving or committing) instead of looping until approved; the gate offers
+    four actions, cancel included; held ACs are listed apart with their reason and no approve option;
+    a missing priority defaults to medium; approval is followed by the final commit and delivery;
+    the approval-failure report (approved before the failure, failed, untouched) and the full closing
+    report (approved, held with reasons, already approved) are stated; defer makes no commit.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'priority clause narrowed to agree with BO-2300d-1-iii ("approve" still requires a
+    priority), which the user ruled takes precedence on 2026-10-23: a present but invalid priority
+    is taken as medium; an approve with no priority is not applied and the run stays paused at
+    the final gate.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'it-po: test_intent and test_spec re-mapped to the 2026-10-23 criteria: one intent entry per
+    outcome clause (11); existing tests kept where they still prove a clause; new entries for the held
+    listing, the medium fallback, approve then final commit then delivery, edit showing the gate again,
+    cancel, the closing report, the approval-failure report and the final-commit failure; the second-edit
+    abort points at the existing ACD-300g-4 edit-exhaustion tests. Criteria, readiness and work_status
+    unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'it-po: test_intent re-mapped to the narrowed priority clause (BO-2300d-1-iii precedence): the
+    single priority entry is replaced by three, one each for the priority prompt, the present-but-invalid
+    priority applied as medium, and the approve with no priority left unapplied at the paused final gate
+    (13 entries). test_spec left to the test-designer. Criteria, readiness and work_status unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/15_TICKET-20261021-ACD-300c-3.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'
