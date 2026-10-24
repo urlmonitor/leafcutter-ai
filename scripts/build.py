@@ -1159,18 +1159,11 @@ def _check_intra_package_closure_guard(package_root: Path) -> int:
 
     findings: list[tuple[str, str, str]] = []
     unanalysable: list[tuple[str, str]] = []
+    closure_cache: dict = {}  # BP-900g-8: one per guard call, shared by all roots
     for deploy_path in sorted(deployable):
-        # AC BP-900g-8-ii: Set B now also carries non-code (config/docs) deploy
-        # paths a script READS -- e.g. "config/agent_registry.json" -- so that
-        # the CONTAINMENT check below (``namespaced - deployable``) can find
-        # them. Such an entry is a data file the guard's closure walk reports
-        # on, never itself a Python SCRIPT with a closure of its own to
-        # compute. Skipping non-``.py`` entries here is required for
-        # correctness, not just an optimisation: ``ast.parse()`` on a JSON
-        # file's content frequently SUCCEEDS (JSON object/array/string syntax
-        # overlaps valid Python expression syntax), so without this guard the
-        # loop would silently misinterpret a data file's own contents as
-        # source code and report nonsense findings against it.
+        # AC BP-900g-8-ii: Set B also carries non-code deploy paths (e.g.
+        # "config/agent_registry.json"); skip them -- ast.parse() on JSON often
+        # SUCCEEDS, so they would be misread as source and give nonsense findings.
         if not deploy_path.endswith(".py"):
             continue
         resolved = _source_file_for_deploy_path(package_root, deploy_path)
@@ -1184,18 +1177,11 @@ def _check_intra_package_closure_guard(package_root: Path) -> int:
         # closure. Collect rather than re-raise so one bad file does not hide
         # the rest — an operator fixing a broken deploy wants the whole list.
         try:
-            # AC BP-900g-8-ii: pass package_root as the DEPLOY root
-            # (data_root) alongside the family/module closure root. A
-            # template-sourced family's module root (e.g. "templates" for
-            # the entire commit-guardian family) is the wrong base for a
-            # repo-root-relative data read such as "config/doc_types.json" --
-            # relative to "templates" that never exists, so it was silently
-            # dropped (the central defect this AC exists to fix). The
-            # returned `deploy_root_relative` subset tells the namespacing
-            # step below which entries are ALREADY expressed relative to the
-            # deploy root and must NOT receive the family's deploy_prefix.
+            # AC BP-900g-8-ii: package_root is the DEPLOY root (data_root); a
+            # template family's module root is the wrong base for repo-root-relative
+            # data reads. `deploy_root_relative` marks entries NOT to prefix below.
             closure, deploy_root_relative = compute_intra_package_closure_with_deploy_root_relative(
-                source_file, root, package_root
+                source_file, root, package_root, closure_cache=closure_cache
             )
         except ClosureAnalysisError as exc:
             unanalysable.append((deploy_path, exc.reason))

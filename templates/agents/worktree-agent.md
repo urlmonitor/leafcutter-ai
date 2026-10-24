@@ -81,8 +81,10 @@ Inspect the user's request to determine which action applies:
 
 Ask the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace; never make, copy, link or install one by hand.
 
+Run ONE exact command, with the ABSOLUTE, quoted path to the deployed maker, unchanged, and return its stdout verbatim. Get the path as `<project root>/.leafcutter/scripts/worktree.py`, where the project root is the output of `git rev-parse --show-toplevel`; quote every path and slug. Never a cwd-relative path.
+
 ```bash
-python scripts/worktree.py ensure --kind <kind> --slug <slug>
+python "<project root>/.leafcutter/scripts/worktree.py" ensure --kind <kind> --slug "<slug>"
 ```
 
 For a ticket path, use `--kind ticket` with the ticket's slug and pass the ticket as the maker's ticket argument; for an ad-hoc branch name use `--kind feature`. Report `workspace_path` and `branch` from the maker's `"status": "ok"` answer. Report the ticket's working location ONLY from `ticket_path_in_worktree` of that answer (docs/how-to/get-a-workspace.md); never derive it from any other path or from a path the caller passed in.

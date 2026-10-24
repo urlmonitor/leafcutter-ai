@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -31,6 +32,11 @@ try:
     import fcntl
 except ImportError:  # pragma: no cover - non-POSIX platform
     fcntl = None  # type: ignore[assignment]
+
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover - POSIX platform
+    msvcrt = None  # type: ignore[assignment]
 
 _log = logging.getLogger(__name__)
 
@@ -44,6 +50,12 @@ PUBLISHED_DIRNAME = "published"
 PRIVATE_DIRNAME = "private"
 _LOCK_FILENAME = ".lock"
 _FAILURE_FILENAME = "failure.json"
+
+# Windows lock acquisition is a non-blocking byte-range lock polled until it
+# succeeds or this bound elapses (msvcrt has no unbounded blocking mode).
+# Generous: a waiter may legitimately sit behind a full deploy.
+_WIN_LOCK_TIMEOUT_S = 1800.0
+_WIN_LOCK_POLL_S = 0.05
 
 
 class SharedReferenceLayoutError(Exception):
@@ -132,15 +144,64 @@ def emit_execution_signal(target_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _acquire_windows(lock_fh, lock_path: Path, timeout_s: float) -> None:
+    """Take an exclusive byte-range lock on byte 0, polling until *timeout_s*.
+
+    ``msvcrt.locking`` byte-range locks are owned per open handle, so two
+    threads (or processes) that each open the file exclude each other, the
+    same property the POSIX ``flock`` path relies on.
+    """
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            lock_fh.seek(0)
+            msvcrt.locking(lock_fh.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        except OSError as exc:
+            if time.monotonic() >= deadline:
+                raise SharedReferenceLayoutError(
+                    f"could not acquire shared-layout lock at {lock_path} "
+                    f"within {timeout_s:.0f}s: {exc}"
+                ) from exc
+            time.sleep(_WIN_LOCK_POLL_S)
+
+
+def _acquire_lock(lock_fh, lock_path: Path) -> None:
+    """Acquire the exclusive lock on *lock_fh* using the platform primitive."""
+    if fcntl is not None:
+        try:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX)
+        except OSError as exc:
+            raise SharedReferenceLayoutError(
+                f"could not acquire shared-layout lock at {lock_path}: {exc}"
+            ) from exc
+        return
+    _acquire_windows(lock_fh, lock_path, _WIN_LOCK_TIMEOUT_S)
+
+
+def _release_lock(lock_fh, lock_path: Path) -> None:
+    """Release the lock taken by :func:`_acquire_lock` (best effort, logged)."""
+    try:
+        if fcntl is not None:
+            fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        else:
+            lock_fh.seek(0)
+            msvcrt.locking(lock_fh.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError as exc:
+        _log.warning("could not release shared-layout lock at %s: %s", lock_path, exc)
+
+
 @contextmanager
 def run_lock(run_base: Path) -> Iterator[None]:
     """Acquire an exclusive, blocking lock scoped to *run_base*.
 
     Serialises "who produces" across pytest-xdist worker OS processes via
-    ``fcntl.flock`` on a lock file under ``run_base``, and across threads
-    within one process too: each acquisition opens its own file descriptor,
-    and ``flock`` locks are held per open-file-description, so two threads
-    that each open the same path independently block each other correctly.
+    ``fcntl.flock`` on a lock file under ``run_base`` (POSIX) or an
+    ``msvcrt.locking`` byte-range lock on that file (Windows, polled with a
+    bounded timeout), and across threads within one process too: each
+    acquisition opens its own file handle and both lock kinds are owned per
+    open handle, so two threads that each open the same path independently
+    block each other correctly.
 
     Args:
         run_base: The run-scoped shared directory (created if absent).
@@ -150,33 +211,27 @@ def run_lock(run_base: Path) -> Iterator[None]:
 
     Raises:
         SharedReferenceLayoutError: when the lock cannot be acquired
-            (including on a platform without ``fcntl``).
+            (including on a platform with neither ``fcntl`` nor ``msvcrt``).
     """
-    if fcntl is None:
+    if fcntl is None and msvcrt is None:
         raise SharedReferenceLayoutError(
-            "shared reference layout locking requires POSIX fcntl.flock; "
-            "no fallback is implemented for this platform."
+            "shared reference layout locking requires POSIX fcntl.flock or "
+            "Windows msvcrt.locking; no fallback is implemented for this platform."
         )
     run_base.mkdir(parents=True, exist_ok=True)
     lock_path = run_base / _LOCK_FILENAME
     lock_fh = None
+    acquired = False
     try:
-        lock_fh = open(lock_path, "w", encoding="utf-8")
-        try:
-            fcntl.flock(lock_fh, fcntl.LOCK_EX)
-        except OSError as exc:
-            raise SharedReferenceLayoutError(
-                f"could not acquire shared-layout lock at {lock_path}: {exc}"
-            ) from exc
+        # Append mode: never truncate a lock file another handle holds locked.
+        lock_fh = open(lock_path, "a", encoding="utf-8")
+        _acquire_lock(lock_fh, lock_path)
+        acquired = True
         yield
     finally:
         if lock_fh is not None:
-            try:
-                fcntl.flock(lock_fh, fcntl.LOCK_UN)
-            except OSError as exc:
-                _log.warning(
-                    "could not release shared-layout lock at %s: %s", lock_path, exc
-                )
+            if acquired:
+                _release_lock(lock_fh, lock_path)
             lock_fh.close()
 
 
@@ -222,6 +277,11 @@ def read_failure_record(run_base: Path) -> str | None:
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-23 [python-coder]: Added a real Windows lock (msvcrt.locking
+#   byte-range, LK_NBLCK polled to a 1800s bound) so the shared-layout
+#   producer works on the Windows maker proof arm (BO-4300b-4). POSIX flock
+#   path unchanged apart from file mode "a" (no truncation); unsupported
+#   platforms still raise. (#BO-4300b-4)
 # - 2026-09-21 19:10 [python-coder]: Created module to hold the cross-process
 #   coordination primitives (run identity, run-scoped shared dir, execution
 #   signal, fcntl.flock-based lock, durable success/failure records) for

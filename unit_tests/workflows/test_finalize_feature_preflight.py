@@ -524,7 +524,7 @@ class TestUnresolvableTargetErrorFIN100g3:
         # covers: FIN-100g-3
         js = _js_text()
         assert "epicArg" in js.split("const finalizeSlug")[1].splitlines()[0], "slug must derive from the target (epicArg)"
-        assert "--slug" in js.split("const finalizeWorkspace")[1].splitlines()[1], "maker command must carry the slug"
+        assert "slug: finalizeSlug" in js.split("const finalizeWorkspace")[1].splitlines()[0], "the maker request must carry the slug"
 
     def test_unresolvable_target_error_lists_expected_forms(self):
         # covers: FIN-100g-3

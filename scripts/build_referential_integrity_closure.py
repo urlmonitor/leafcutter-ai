@@ -463,6 +463,84 @@ def _relative_to_root_without_symlink_escape(candidate: Path, root: Path) -> str
         return candidate.resolve().relative_to(root).as_posix()
 
 
+_AnalysisResult = tuple[list[tuple[Path, str]], set[str], set[str]]
+
+
+def _parse_script(script: Path, closure_cache: dict | None) -> ast.AST:
+    """Read and parse *script*, memoising the tree in *closure_cache* when given.
+
+    Raises:
+        ClosureAnalysisError: *script* cannot be read or parsed (KI-BP-022:
+            raised, never swallowed -- an empty closure would read as clean).
+            UnicodeDecodeError subclasses ValueError, not OSError, so it is
+            caught explicitly.
+    """
+    tree_key = ("tree", script)
+    if closure_cache is not None and tree_key in closure_cache:
+        return closure_cache[tree_key]
+    try:
+        text = script.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ClosureAnalysisError(script, f"cannot read: {exc}") from exc
+    try:
+        tree = ast.parse(text, filename=str(script))
+    except SyntaxError as exc:
+        raise ClosureAnalysisError(script, f"cannot parse: {exc}") from exc
+    if closure_cache is not None:
+        closure_cache[tree_key] = tree
+    return tree
+
+
+def _analyse_script(
+    script: Path, root: Path, data_root: Path, closure_cache: dict | None
+) -> _AnalysisResult:
+    """Return ``(entries, family_data, deploy_data)`` for one script.
+
+    *entries* lists every existing module candidate as ``(candidate,
+    root_relative_path)``; candidates not relative to *root* are dropped. The
+    result depends only on (*script* as reached, *root*, *data_root*), which is
+    the cache key, so it is safe to share across roots of one guard pass.
+    """
+    key = (script, root, data_root)
+    if closure_cache is not None and key in closure_cache:
+        return closure_cache[key]
+    tree = _parse_script(script, closure_cache)
+    syspath_dirs = tuple(_extract_syspath_directories(tree, script))
+    candidates = _extract_static_import_candidates(
+        tree, script.parent, root, extra_dirs=syspath_dirs
+    )
+    candidates.extend(_extract_dynamic_loader_paths(tree, script))
+
+    entries: list[tuple[Path, str]] = []
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            rel = _relative_to_root_without_symlink_escape(candidate, root)
+        except ValueError:
+            continue
+        entries.append((candidate, rel))
+
+    # AC BP-900g-8-ii: non-code (data/config) reads, same terms as modules,
+    # never recursed into (not parseable Python). See the DECISION note above
+    # _extract_data_file_read_candidates for why three separate detectors are
+    # needed rather than one, and the DECISION note above
+    # _add_data_file_candidates for why each detector reports into TWO sets
+    # (family-relative vs. deploy-root-relative) rather than one.
+    data_candidates = _extract_data_file_read_candidates(tree, script)
+    data_candidates.extend(_extract_resolvable_binop_paths(tree, script))
+    family_data: set[str] = set()
+    deploy_data: set[str] = set()
+    _add_data_file_candidates(data_candidates, root, data_root, family_data, deploy_data)
+    literal_family, literal_deploy = _extract_data_file_literal_candidates(tree, root, data_root)
+    family_data |= literal_family
+    deploy_data |= literal_deploy
+    result = (entries, family_data, deploy_data)
+    if closure_cache is not None:
+        closure_cache[key] = result
+    return result
+
+
 def _closure_walk(
     script: Path,
     root: Path,
@@ -470,6 +548,7 @@ def _closure_walk(
     closure: set[str],
     deploy_root_relative: set[str],
     data_root: Path,
+    closure_cache: dict | None = None,
 ) -> None:
     """Recursively add *script*'s resolvable intra-package dependencies to *closure*.
 
@@ -489,6 +568,12 @@ def _closure_walk(
     recorded in *deploy_root_relative* (a subset of *closure*) so a caller
     building a deploy-namespace string knows NOT to prepend a family prefix
     to it -- prepending one would land it at a path nothing deploys.
+
+    *closure_cache* (BP-900g-8 perf): ONE plain dict a caller shares across
+    every root of a single guard pass. Each file's analysis is stored in it
+    (see ``_analyse_script``) so a module shared by many roots is read and
+    parsed once per pass. ``None`` (default) analyses every file afresh. The
+    per-root *visited* set and the *closure* union are never cached.
     """
     # Dedupe on the REAL file, but walk *script* as reached (see the recursion
     # below): one file can be reached through two spellings across a symlink.
@@ -497,60 +582,16 @@ def _closure_walk(
         return
     visited.add(real_script)
 
-    # KI-BP-022: both handlers used to log a WARNING and return, leaving the
-    # closure empty. An empty closure means "nothing missing" to the caller, so
-    # an unreadable or unparseable script was reported CLEAN. Raise instead —
-    # see ClosureAnalysisError for why silence is not an option here.
-    #
-    # UnicodeDecodeError subclasses ValueError, not OSError, so it escaped the
-    # read handler entirely and surfaced as a raw traceback out of build.py.
-    # That failed closed by accident, which was the right outcome for the wrong
-    # reason; it is caught explicitly now.
-    try:
-        text = script.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        raise ClosureAnalysisError(script, f"cannot read: {exc}") from exc
-
-    try:
-        tree = ast.parse(text, filename=str(script))
-    except SyntaxError as exc:
-        raise ClosureAnalysisError(script, f"cannot parse: {exc}") from exc
-
-    syspath_dirs = tuple(_extract_syspath_directories(tree, script))
-    candidates = _extract_static_import_candidates(
-        tree, script.parent, root, extra_dirs=syspath_dirs
-    )
-    candidates.extend(_extract_dynamic_loader_paths(tree, script))
-
-    for candidate in candidates:
-        if not candidate.is_file():
-            continue
-        try:
-            rel = _relative_to_root_without_symlink_escape(candidate, root)
-        except ValueError:
-            continue
-        if rel not in closure:
-            closure.add(rel)
+    entries, family_data, deploy_data = _analyse_script(script, root, data_root, closure_cache)
+    for candidate, rel in entries:
+        closure.add(rel)
         # Recurse on the UNRESOLVED candidate: resolving it here crossed the
         # scripts/commit_guardian -> .leafcutter/ symlink, so the recursed
         # script's own sibling imports came back ``.leafcutter/``-prefixed and
         # were reported undeployed (see DECISION HISTORY, BO-2900b-1).
-        _closure_walk(candidate, root, visited, closure, deploy_root_relative, data_root)
-
-    # AC BP-900g-8-ii: non-code (data/config) reads, same terms as modules,
-    # never recursed into (not parseable Python). See the DECISION note above
-    # _extract_data_file_read_candidates for why three separate detectors are
-    # needed rather than one, and the DECISION note above
-    # _add_data_file_candidates for why each detector reports into TWO sets
-    # (family-relative vs. deploy-root-relative) rather than one.
-    data_candidates = _extract_data_file_read_candidates(tree, script)
-    data_candidates.extend(_extract_resolvable_binop_paths(tree, script))
-    family_data: set[str] = set()
-    deploy_data: set[str] = set()
-    _add_data_file_candidates(data_candidates, root, data_root, family_data, deploy_data)
-    literal_family, literal_deploy = _extract_data_file_literal_candidates(tree, root, data_root)
-    family_data |= literal_family
-    deploy_data |= literal_deploy
+        _closure_walk(
+            candidate, root, visited, closure, deploy_root_relative, data_root, closure_cache
+        )
     closure |= family_data | deploy_data
     deploy_root_relative |= deploy_data
 

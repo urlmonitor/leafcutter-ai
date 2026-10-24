@@ -144,8 +144,9 @@ command by the absolute path of the deployed `worktree.py` (the install's
 `scripts/worktree.py`; the path `worktree.py where` prints). Never use a
 cwd-relative path and never chain commands:
 
+Run ONE exact command, unchanged, quoting the maker path and every value, and return its stdout verbatim:
 ```bash
-python <absolute-install-root>/scripts/worktree.py ensure --kind ac --slug <slug> --repo-root <absolute-project-root>
+python "<absolute-install-root>/scripts/worktree.py" ensure --kind ac --slug "<slug>" --repo-root "<absolute-project-root>"
 ```
 
 - **Non-zero exit:** stop. Report the maker's answer verbatim and do NOT invoke

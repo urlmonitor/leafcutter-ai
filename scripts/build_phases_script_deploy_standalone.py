@@ -65,7 +65,10 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_ensure_state.py",
     "worktree_remove.py",
     "worktree_migrate.py",
+    "worktree_migrate_guards.py",
+    "worktree_migrate_carry.py",
     "worktree_ticket_record.py",
+    "worktree_ensure_steps.py",
 )
 
 
@@ -111,10 +114,17 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry, BO-4300e): the remove verb and the definite locate answer.
     - ``templates/scripts/worktree_migrate.py`` → ``scripts/worktree_migrate.py``
       (NAMED entry, BO-4300f-3): the ``migrate-legacy`` cut-over verb.
+    - ``templates/scripts/worktree_migrate_guards.py`` → ``scripts/worktree_migrate_guards.py``
+      (NAMED entry, BO-4300f-3-iii/-iv): the keep-as-is and ignored-file checks of the cut-over.
+    - ``templates/scripts/worktree_migrate_carry.py`` → ``scripts/worktree_migrate_carry.py``
+      (NAMED entry, BO-4300f-3): the clone, carry, prove and snapshot steps of the cut-over.
     - ``templates/scripts/worktree_ensure_state.py`` → ``scripts/worktree_ensure_state.py``
       (NAMED entry): the lock, set-aside and half-made handling (BO-4300d-1, d-2).
     - ``templates/scripts/worktree_ticket_record.py`` → ``scripts/worktree_ticket_record.py``
       (NAMED entry): the built-for-ticket record of a ticket workspace (BO-400e-3-ix).
+    - ``templates/scripts/worktree_ensure_steps.py`` → ``scripts/worktree_ensure_steps.py``
+      (NAMED entry): the clone-the-main-checkout and hub-fetch steps and the ok-answer
+      fields of ``ensure`` (BO-4300a-1 IT3, BO-4300c-2).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -162,8 +172,13 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   Added worktree_ensure_state.py as a NAMED entry (BO-4300d-1, d-2). (ADR-018)
     #   Added worktree_remove.py as a NAMED entry (BO-4300e). (ADR-018)
     #   Added worktree_migrate.py as a NAMED entry (BO-4300f-3). (ADR-018)
+    # - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/08]:
+    #   Added worktree_migrate_guards.py as a NAMED entry (BO-4300f-3-iii, -iv). (ADR-018)
+    #   Added worktree_migrate_carry.py as a NAMED entry (BO-4300f-3, rework). (ADR-018)
     # - 2026-10-21 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20)
     #   Added worktree_ticket_record.py as a NAMED entry (BO-400e-3-ix). (ADR-018)
+    # - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/05]:
+    #   Added worktree_ensure_steps.py as a NAMED entry (BO-4300a-1 IT10). (ADR-018)
     """
     import build_phases as _bp
 

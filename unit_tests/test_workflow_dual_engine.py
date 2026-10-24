@@ -60,9 +60,7 @@ _E1_ONLY_SCRIPTS = frozenset(
     ]
 )
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _collect_workflow_scripts() -> list[Path]:
@@ -129,9 +127,7 @@ def _script_id(script_path: Path) -> str:
     return script_path.name
 
 
-# ---------------------------------------------------------------------------
 # AC-3: Guard covers the whole fleet
-# ---------------------------------------------------------------------------
 
 
 def test_workflows_dir_exists() -> None:
@@ -151,9 +147,7 @@ def test_workflows_dir_exists() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # AC-1 + AC-2 + AC-3: Per-script E2 dispatch assertion
-# ---------------------------------------------------------------------------
 
 
 def _make_e2_dispatch_test(script_path: Path) -> None:
@@ -182,9 +176,7 @@ def _make_e2_dispatch_test(script_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # Parametrize: one test per *.js file
-# ---------------------------------------------------------------------------
 
 _ALL_SCRIPTS = _collect_workflow_scripts()
 _ALL_PARAMS = _make_params(_ALL_SCRIPTS)
@@ -479,13 +471,14 @@ def test_dispatch_order_build_epic() -> None:
     With default stub args (no `epic_path` in args, `userInput` = 'stub user input',
     no `batches` from the planner) build-epic.js:
 
-      Phase 0 (Worktree Guard):
-        1. status-checker  label='worktree-check'  — git context check
-        2. command-step-runner label='be-wv-recover' — drive-head recover (TQ-500g-1-viii)
-        3. command-step-runner label='be-gate-marker-close-all' — stale-marker close
+      Phase 0 (Workspace and guard):
+        1. shell-runner    label='resolve-maker-path' — the maker's absolute path (BO-4300a-1-ia)
+        2. shell-runner    label='workspace-ensure'   — the ONE verbatim maker request
+        3. command-step-runner label='be-wv-recover' — drive-head recover (TQ-500g-1-viii)
+        4. command-step-runner label='be-gate-marker-close-all' — stale-marker close
 
       Phase 1 (Planner):
-        4. status-checker  label='epic-planner'    — reads Master_Plan.md
+        5. status-checker  label='epic-planner'    — reads Master_Plan.md
 
       → Exits early (planner stub returns no batches)
 
@@ -504,17 +497,19 @@ def test_dispatch_order_build_epic() -> None:
         f"build-epic.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    assert result.dispatch_count >= 2, (
-        f"build-epic.js must dispatch >= 2 agents with default args "
-        f"(workspace-ensure + epic-planner before no-batches early exit). "
+    assert result.dispatch_count >= 3, (
+        f"build-epic.js must dispatch >= 3 agents with default args "
+        f"(resolve-maker-path + workspace-ensure + epic-planner before no-batches early exit). "
         f"Got {result.dispatch_count}.\n"
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    # Exact ordered (agentType, label) of the first four calls: workspace guard, drive-head recover + close-all (TQ-500g-1-viii), planner.
-    expected_sequence = [("shell-runner", "workspace-ensure"), ("command-step-runner", "be-wv-recover"),
-                         ("command-step-runner", "be-gate-marker-close-all"), ("status-checker", "epic-planner")]
-    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[:4]]
+    # Exact ordered (agentType, label) of the first five calls: maker-path probe (BO-4300a-1-ia), workspace,
+    # drive-head recover + close-all (TQ-500g-1-viii), planner.
+    expected_sequence = [("shell-runner", "resolve-maker-path"), ("shell-runner", "workspace-ensure"),
+                         ("command-step-runner", "be-wv-recover"), ("command-step-runner", "be-gate-marker-close-all"),
+                         ("status-checker", "epic-planner")]
+    actual_sequence = [(c.agent_type, c.label) for c in result.agent_calls[:5]]
 
     assert actual_sequence == expected_sequence, (
         f"build-epic.js dispatch order wrong (AC-2 / M-1).\n"
@@ -534,13 +529,14 @@ def test_dispatch_order_plan_feature() -> None:
     Pre-Stage-0 here):
 
       Pre-Stage-0:
-        1. shell-runner     label='detect-current-branch'
-        2. shell-runner     label='resolve-maker-path' (ACD-2100a-1: resolves the
+        1. shell-runner     label='resolve-maker-path' (BO-4300a-1-ia: first, so the branch check
+           below can name the repository; ACD-2100a-1: resolves the
            workspace maker .leafcutter/scripts/worktree.py to an absolute,
            repository-anchored path at runtime instead of trusting the cwd-relative
            {{config.output_root}} placeholder, which resolved against the parent
            copy when the cwd was not the repo root — KI-ACD-004. One single plain
            command per probe; the harness default answers the first probe.)
+        2. shell-runner     label='detect-current-branch'
         3. shell-runner     label='workspace-ensure' (BO-4300c-3: the ONE verbatim
            maker dispatch, naming that absolute path. ACD-2100b-5 moved the workspace-setup permission
            gate itself OUT of this workflow body entirely -- it no longer makes
@@ -616,8 +612,8 @@ def test_dispatch_order_plan_feature() -> None:
     )
 
     expected_sequence = [  # the docstring above gives each step's rationale
+        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path; BO-4300a-1-ia: now first, the branch check names it (consumer_drift)
         ("shell-runner", "detect-current-branch"),
-        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path
         ("shell-runner", "workspace-ensure"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
