@@ -1,10 +1,10 @@
 ---
 title: "plan-feature.js gets back under its file-size limit"
-status: todo
+status: deferred
 components:
   - ac_driven_dev
 created: 2026-10-23
-last_updated: 2026-10-23
+last_updated: 2026-10-24
 depends_on: []
 priority: medium
 roadmap_phase: phase_1
@@ -54,3 +54,6 @@ In order for changes to `/plan-feature` to land without skipping the size hook, 
 - Touches money? No.
 - Touches data? No. AC-store writes keep their current path through the stage commits.
 - Reversibility: full; this is a pure refactor.
+
+## Rejected
+2026-10-24, user decision: plan-feature.js may stay over its size limit. It is to be replaced soon, so shrinking it is not worth the work.
