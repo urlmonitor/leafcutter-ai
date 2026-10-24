@@ -16,7 +16,7 @@ related_docs:
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
   - docs/architecture/diagrams/c3-012-ticket-close-paths-sequence.md
-  - docs/architecture/diagrams/c3-035-shared-block-install-and-identity-check-components.md
+  - docs/architecture/diagrams/c3-037-shared-block-install-and-identity-check-components.md
 ---
 
 # Build Orchestration
@@ -238,6 +238,6 @@ every copy matches its source byte for byte. WORKSPACE-ANSWER is filled into sev
 COMMIT-ANSWER is built, and the build fills its `config/commit_step.json` values in at install
 time, but no route has adopted it yet.
 
-- [Shared Blocks — Install-Time Fill and Identity Check — Component Diagram](../diagrams/c3-035-shared-block-install-and-identity-check-components.md) — the block sources, route templates with empty marker pairs, the install step (one step, two blocks), the commit step's configuration feeding the install, the installed routes, COMMIT-ANSWER's planned consumers, and the identity check reading installed routes.
+- [Shared Blocks — Install-Time Fill and Identity Check — Component Diagram](../diagrams/c3-037-shared-block-install-and-identity-check-components.md) — the block sources, route templates with empty marker pairs, the install step (one step, two blocks), the commit step's configuration feeding the install, the installed routes, COMMIT-ANSWER's planned consumers, and the identity check reading installed routes.
 - [Shared blocks reference](../../reference/shared-blocks.md) — the marker grammar.
 - [Shared block install failures](../../reference/shared-block-install-failures.md) — the text of each install failure.

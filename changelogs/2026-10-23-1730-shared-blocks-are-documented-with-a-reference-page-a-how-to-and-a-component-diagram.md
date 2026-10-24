@@ -7,7 +7,7 @@ components:
   - documentation_system
   - build_orchestration
 summary: "Route authors get a reference page for shared blocks and the COMMIT-ANSWER contract, a how-to for adding a block or a consumer, and a component diagram of the install step and the identity check."
-description: "Documentation for BO-4500b-4, BO-4500b-4-i and BO-4500b-5 (branch feature/bo-4500b-docs). Files changed: docs/reference/shared-blocks.md, docs/reference/shared-block-install-failures.md, docs/reference/workflow-authoring-contract.md, docs/how-to/add-a-shared-workflow-block.md, docs/architecture/diagrams/c3-035-shared-block-install-and-identity-check-components.md, docs/architecture/components/build-orchestration.md, unit_tests/reference/test_bo4500b_4_shared_blocks_reference.py, and the BO-4500b, BO-4500b-4, BO-4500b-4-i and BO-4500b-5 AC records."
+description: "Documentation for BO-4500b-4, BO-4500b-4-i and BO-4500b-5 (branch feature/bo-4500b-docs). Files changed: docs/reference/shared-blocks.md, docs/reference/shared-block-install-failures.md, docs/reference/workflow-authoring-contract.md, docs/how-to/add-a-shared-workflow-block.md, docs/architecture/diagrams/c3-037-shared-block-install-and-identity-check-components.md, docs/architecture/components/build-orchestration.md, unit_tests/reference/test_bo4500b_4_shared_blocks_reference.py, and the BO-4500b, BO-4500b-4, BO-4500b-4-i and BO-4500b-5 AC records."
 breaking: false
 ---
 
@@ -27,6 +27,6 @@ The shared-block mechanism (BO-4500b-1..3) now has the documentation its parent 
 - `docs/how-to/add-a-shared-workflow-block.md` walks through adding a new block and making a route
   consume COMMIT-ANSWER. It teaches that the whole awaiting-adoption entry is removed in the change
   that lands the first adopting route. Both procedures were walked on a scratch copy of the package.
-- Diagram c3-035 shows the block sources, the route templates, the install step, the commit step's
+- Diagram c3-037 shows the block sources, the route templates, the install step, the commit step's
   configuration feeding the install, the installed routes and the identity check. It also states
   how this differs from comparing a workflow file with its shipped mirror (BP-1000e).

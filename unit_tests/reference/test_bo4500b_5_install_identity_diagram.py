@@ -1,6 +1,6 @@
 """
 MODULE: unit_tests/reference/test_bo4500b_5_install_identity_diagram.py
-GOAL: BO-4500b-5 - keep the c3-035 shared-block component diagram pointing at real code and
+GOAL: BO-4500b-5 - keep the c3-037 shared-block component diagram pointing at real code and
     naming the identity check, the install step and BP-1000e.
 BUSINESS CONTEXT: A diagram whose related_code lists a moved file, or that stops naming the two
     components it exists to show, misleads readers about the mechanism.
@@ -18,7 +18,7 @@ DIAGRAM_PATH = (
     / "docs"
     / "architecture"
     / "diagrams"
-    / "c3-035-shared-block-install-and-identity-check-components.md"
+    / "c3-037-shared-block-install-and-identity-check-components.md"
 )
 _FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 _MERMAID_RE = re.compile(r"```mermaid\n(.*?)```", re.DOTALL)
