@@ -10,7 +10,7 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given any of the three authoring agents (PO v3, BA v3, IT PO v3) invokes
+  Given any of the three authoring agents (product owner, business analyst, technical planner) invokes
     knowledge-query with a keyword or component name during S1,
   When the knowledge-query script returns zero matching nodes
     (the graph contains nodes but none match the query),
@@ -45,10 +45,18 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: ACD-300e-2
-  contract: "PO v3 template contains a knowledge-query invocation block in S1 that this AC's zero-result handling augments"
+  contract: "the product-owner template contains a knowledge-query invocation block in S1 that this AC's zero-result handling augments"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: rename stale workflow/agent/template names in contracts
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

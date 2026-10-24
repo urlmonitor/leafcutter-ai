@@ -70,7 +70,9 @@ def test_live_failed_publication_leaves_store_counts_unchanged(monkeypatch):
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:  # unreachable service
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         try:
             before = ((await db._run(_NODES))[0]["count"], (await db._run(_RELS))[0]["count"])
             with pytest.raises(ValueError) as caught:

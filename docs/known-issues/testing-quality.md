@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-21'
+last_updated: '2026-10-23'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 29** (1 blocker, 15 high, 13 low) · **Resolved: 5**
+**Open: 32** (1 blocker, 15 high, 16 low) · **Resolved: 5** (recounted from the directory 2026-10-23, after the three KI-TQ-20261023 entries were filed)
 
 ## Open
 
@@ -88,6 +88,9 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20260927-full-pytest-run-has-114-collection-errors — a bare pytest run imports scripts/ac_store as the top-level package ac_store, so all 112 test modules in unit_tests/ac_store fail to collect; two more modules import POSIX-only stdlib at module level | [open-low-ki-tq-20260927-full-pytest-run-has-114-collection-errors.md](testing-quality/open-low-ki-tq-20260927-full-pytest-run-has-114-collection-errors.md) |
 | `low` | KI-TQ-20260928-windows-pytest-collection-flake — freshly written test files intermittently fail collection with WinError 2 on Windows, so gates report inconclusive for an environmental reason | [open-low-ki-tq-20260928-windows-pytest-collection-flake.md](testing-quality/open-low-ki-tq-20260928-windows-pytest-collection-flake.md) |
 | `low` | KI-TQ-20261006-one-validator-run-reports-as-ten-test-failures — every test in test_uxp_300.py asserts the exit code of the same validate_product_truth.py pass over the real store, so one refusal is reported as nine or ten independent failures | [open-low-ki-tq-20261006-one-validator-run-reports-as-ten-test-failures.md](testing-quality/open-low-ki-tq-20261006-one-validator-run-reports-as-ten-test-failures.md) |
+| `low` | KI-TQ-20261023-consumer-sweep-full-repo-export — the consumer-sweep base run extracts `git archive` of the whole base commit on every `consumer_sweep.py check` with a test file in scope (about 60 s for 14,648 files), even for one changed test and even when the check already fails on an unlisted edit | [open-low-ki-tq-20261023-consumer-sweep-full-repo-export.md](testing-quality/open-low-ki-tq-20261023-consumer-sweep-full-repo-export.md) |
+| `low` | KI-TQ-20261023-wvr-verified-true-on-not-applicable — `_wvr_verdict.assemble` ignores `applicable` when it sets `verified`, so the no-covering-test-in-scope branch reads `applicable: false` with `verified: true`; nothing reads `verified` yet | [open-low-ki-tq-20261023-wvr-verified-true-on-not-applicable.md](testing-quality/open-low-ki-tq-20261023-wvr-verified-true-on-not-applicable.md) |
+| `low` | KI-TQ-20261023-g3-mypy-followups — PR #1324 leftovers: four annotation-only mypy errors in the consumer-sweep code (`_cs_asserts.py`:216, `_cs_edits.py`:173, `_cs_runs.py`:128 and :135) | [open-low-ki-tq-20261023-g3-mypy-followups.md](testing-quality/open-low-ki-tq-20261023-g3-mypy-followups.md) |
 
 ## Resolved
 

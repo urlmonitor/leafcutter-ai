@@ -28,7 +28,7 @@ sys.path.insert(0, str(_STAGE_DIR))
 from _approval_step_support import (  # noqa: E402
     BATCH, calls, gate_record, names, prepass_for, resume, route_approval_step, run, step_replies, table,
 )
-from _design_stage_support import PLAN_FEATURE_JS, sequenced  # noqa: E402
+from _design_stage_support import PLAN_FEATURE_JS, check_reply, sequenced  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
 _TEST_DESIGN = re.compile(r"test[- ]design", re.IGNORECASE)
@@ -43,10 +43,16 @@ _STORE = f"{_WT}/docs/acceptance-criteria"
 
 def _cancel_text(agent: str, draft: str) -> str:
     """buildCancelMessage's exact text for a mid-gate cancel with one uncommitted draft (no prior commits)."""
+    return _cancel_message(f"gate after {agent}", [draft])
+
+
+def _cancel_message(where: str, drafts: list[str]) -> str:
+    """buildCancelMessage's exact text for the label `where` with these uncommitted drafts (no prior commits)."""
+    paths = "\n".join(f"  {_STORE}/{draft}.yaml" for draft in drafts)
     return (
-        f"Pipeline cancelled at gate after {agent}.\n\n"
-        f"Uncommitted draft AC files from the cancelled stage ({draft}):\n"
-        f"  {_STORE}/{draft}.yaml\n"
+        f"Pipeline cancelled at {where}.\n\n"
+        f"Uncommitted draft AC files from the cancelled stage ({', '.join(drafts)}):\n"
+        f"{paths}\n"
         f"You can inspect these files, manually commit them with `git -C \"{_WT}\" add` + `git -C \"{_WT}\" commit`,"
         f"or discard tracked files with `git -C \"{_WT}\" checkout -- {_STORE}/` and delete any untracked new files "
         f"explicitly (e.g. `rm {_STORE}/<AC_ID>.yaml`). Note: `git checkout --` alone will NOT remove untracked "
@@ -144,6 +150,37 @@ def test_final_commit_failure_names_the_test_design_stage(tmp_path, monkeypatch,
     assert "it-po" not in message, message[:600]
 
 
+def test_final_gate_second_edit_abort_names_the_test_design_stage(prepass):
+    # covers: ACD-300c-5
+    # angle: discrimination
+    """Technical route, resumed with a person's approve at final-gate while the design-prepass reply fails (exit
+    1, no report) on every pass, so the test-design stage's check forces an edit on both final-gate passes (a
+    person's resume answer applies once per run, BO-2300d-1-iii; the TestFinalGateEditFallthrough technique):
+    design-prepass is dispatched twice, the status is error, the first message line is exactly
+    "test-design failed to produce satisfactory ACs after 2 attempts. Pipeline aborted.", the "Pipeline
+    cancelled at ..." label line names test-design, and the whole message contains none of it-po, IT-PO,
+    IT PO v3.
+
+    Wrong versions caught: only the first message line is fixed while the max-retries label still reads
+    "max-retries abort for it-po (final gate)"; the fix is made in the shared automatic-gate abort branch
+    instead of the final-gate branch; the abort is built from step.agent, so it names test-designer.
+    """
+    failing_prepass = {"output": "", "exit_code": 1, "stderr": "pre-pass failed"}
+    # A durable record that names no gate (as TestFinalGateEditFallthrough has it): the author stage is not skipped.
+    unnamed = {"exists": True, "stale": False}
+    labels = table(prepass, BATCH, **{"design-prepass": failing_prepass, "peek-pause-record": unnamed, "read-pause-record": unnamed})
+    result = run(labels, resume("approve"))
+
+    assert len(calls(result, "design-prepass")) == 2, names(result)
+    assert (result.result or {}).get("status") == "error", result.result
+    message = _message(result)
+    lines = message.splitlines()
+    assert lines[0] == "test-design failed to produce satisfactory ACs after 2 attempts. Pipeline aborted.", lines[0]
+    label_line = next((line for line in lines if line.startswith("Pipeline cancelled at")), "")
+    assert _TEST_DESIGN.search(label_line), label_line
+    assert not re.search(r"it-po|IT PO v3", message, re.IGNORECASE), message[:600]
+
+
 def _mid_gate_cancel(route: str, gate: str, author: str):
     ids = ["ACD-9990a-1"]
     record = {"exists": True, "stale": False, "record": {"gate_id": gate, "context": {"stage": gate[5:], "acs": ids}}}
@@ -168,8 +205,13 @@ def test_other_gate_messages_are_unchanged(prepass):
     cancelled at gate after product-owner" / "... business-analyst" (the whole message), and an itpo-stage
     commit failure still reads "Commit of it-po AC output failed" (the whole message).
 
+    The technical planner's automatic-gate abort is pinned too: with rule-check-itpo failing on both passes
+    the whole message is "it-po failed to produce satisfactory ACs after 2 attempts. Pipeline aborted."
+    plus buildCancelMessage's text for "max-retries abort for it-po" with the batch ids as drafts.
+
     Wrong versions caught: buildCancelMessage or formatCommitError changed globally, so every gate names
-    test design; the itpo stage's own commit failure relabelled test-design.
+    test design; the itpo stage's own commit failure relabelled test-design; the shared automatic-gate abort
+    renamed to test-design, or its max-retries label given a final-gate / test-design suffix.
     """
     po = _mid_gate_cancel("strategic", "gate-po", "stage-po-author")
     assert _message(po) == _cancel_text("product-owner", "ACD-9990a-1"), _message(po)
@@ -180,3 +222,15 @@ def test_other_gate_messages_are_unchanged(prepass):
     itpo = run(table(prepass, BATCH, **{"commit-stage-output": _HOOK_FAILURE}))
     assert len(calls(itpo, "commit-stage-output")) == 1, names(itpo)
     assert _message(itpo) == _ITPO_COMMIT_FAILURE, _message(itpo)
+
+    # The technical planner's automatic gate: its own check fails on both passes, so its abort names it-po.
+    failing_check = {"rule-check-itpo": check_reply(passed=False)}
+    aborted = run(table(prepass, BATCH, **failing_check))
+    assert len(calls(aborted, "stage-itpo-author")) == 2 and len(calls(aborted, "rule-check-itpo")) == 2, names(aborted)
+    assert calls(aborted, "design-prepass") == [], names(aborted)
+    assert (aborted.result or {}).get("status") == "error", aborted.result
+    expected = (
+        "it-po failed to produce satisfactory ACs after 2 attempts. Pipeline aborted.\n"
+        + _cancel_message("max-retries abort for it-po", BATCH)
+    )
+    assert _message(aborted) == expected, _message(aborted)

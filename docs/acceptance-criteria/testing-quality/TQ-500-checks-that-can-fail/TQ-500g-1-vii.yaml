@@ -182,7 +182,11 @@ it_requirements:
   test-breaker is not spawned and finish runs with an empty here-document. The supervisor never decides
   by itself that nothing is owed: only the list step says so.
 - >-
-  Fail closed on every reply. list: stdout must parse as one JSON object with owed an array and error
+  Fail closed on every reply. A reply's answer is found by TQ-500f-3-v's reading rule (amended by IT PO
+  2026-10-23, replacing the strict "stdout must parse as one JSON object", the fast lane's
+  JSON.parse(reply.stdout)): the whole trimmed output when it parses as one JSON object, otherwise the one
+  distinct line that is on its own a JSON object; zero or two-plus such lines is no reply. The fast lane
+  keeps its own strict parse (out of scope). list: the answer must have owed an array and error
   null, else halt with step "list". finish: gate_passed must be a boolean and true, else halt with step
   "finish". A non-zero exit, an empty stdout or prose counts as no reply. A writer stop (stopped_at
   "write") is a halt like any other; never retry by running the runner without a manifest.
@@ -321,3 +325,16 @@ notes: |
   PACKAGE SURFACE: false. Template-only edits; no registry entry is added
   (test-breaker is already in spawn_allowlist and its spawned_by already
   names ticket-supervisor).
+
+  IT-PO NOTE (2026-10-23): STEP REPLY READING RULE POINTS AT TQ-500f-3-v
+  The fail-closed entry's strict "stdout must parse as one JSON object" (the
+  fast lane's JSON.parse(reply.stdout)) now points at TQ-500f-3-v's reading
+  rule: a shell tool that merges stderr into stdout puts the writer's log line
+  ahead of the list JSON, and the strict form reads a real answer as no reply
+  (live halt, wf_f982c0ab-e94). TQ-500f-3-v changes build-epic.js's own JS
+  reader (gvStep: recover, gate-marker steps); it does not edit this AC's
+  prompt. The deployed runbook text (building-epics SKILL.md, "Parse
+  fail-closed" paragraph of the wrong-version subsection) still states the
+  strict form; aligning it is an llm-expert follow-up outside TQ-500f-3-v.
+  fast-lane-ship.js keeps its own parse (out of scope). Criteria, work_status
+  and readiness untouched.

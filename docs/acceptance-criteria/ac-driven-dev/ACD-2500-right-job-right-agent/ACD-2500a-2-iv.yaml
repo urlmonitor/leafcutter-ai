@@ -91,3 +91,15 @@ notes: |
   Standing rule honoured: ACD-400c ("a requirement only joins the buildable queue once a
   person has approved it"). IT-PO: the check needs to know each record's readiness at
   stage start (the stage's before-state); how it obtains that is an enrichment decision.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

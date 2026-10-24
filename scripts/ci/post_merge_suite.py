@@ -27,6 +27,10 @@ ARCHITECTURE: All decision logic lives here; ``post-merge-suite.yml`` is a thin
     (token in GITHUB_TOKEN) reads the earlier settled runs' verdict artifacts through
     ``_flaky_window`` and ``build_verdict_file`` turns them into the pass-on-retry window and
     the repeated-pass-on-retry escalation; without those options no history is read.
+    TQ-600a-13-xxi: ``run`` / ``retry`` take ``--lane live`` for the live-database lane (``_live_lane``: a reachability
+    check before any test, the lane's own whole-folder ``-m`` override, a report that records the check), and ``verdict``
+    adds the lane's ``live_database`` object (from ``LIVE_RUN_RESULT`` / ``LIVE_RETRY_RESULT`` and the live reports) and
+    ranks did_not_complete above red above green across both lanes.
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_suite.py`:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci._flaky_window import HistoryRead, flaky_fields, load_tunables, read_history, short_history  # noqa: E402
+from scripts.ci import _live_lane as live  # noqa: E402
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
 from scripts.ci._post_merge_stages import (  # noqa: E402
     FAILED_STATES,
@@ -55,12 +60,16 @@ from scripts.ci._post_merge_stages import (  # noqa: E402
 
 logger = logging.getLogger("post_merge_suite")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3  # 3: the ``live_database`` object (TQ-600a-13-xxi); every correctness-lane field keeps its meaning
 LANE = "correctness"
+LIVE_LANE = "live"
 LANES = (LANE, "timing")
+RUN_LANES = (LANE, LIVE_LANE)
 PLUGIN_ARGS = ["-p", "scripts.ci._lane_report_plugin"]
 FIRST_REPORT = "first-run-report/first-run-report.json"
 RETRY_REPORT = "retry-report/retry-report.json"
+LIVE_FIRST_REPORT = "live-first-run-report/live-first-run-report.json"
+LIVE_RETRY_REPORT = "live-retry-report/live-retry-report.json"
 
 
 class LaneReportError(RuntimeError):
@@ -158,6 +167,7 @@ def build_verdict_file(
     lane: str = LANE,
     history: list[dict | None] | None = None,
     tunables: dict | None = None,
+    live_database: dict | None = None,
 ) -> dict:
     """Build the ``post-merge-verdict.json`` object from the two reports (None = absent).
 
@@ -173,6 +183,8 @@ def build_verdict_file(
     identically, and an empty lane of either kind is did_not_complete at stage ``empty_selection``.
     Green is only ever the absence of every did-not-complete stage AND of every failure.
     ``collection_errors`` is always present (``[]`` when none): they are never failing tests.
+    ``live_database`` (TQ-600a-13-xxi) is the live-database lane's own verdict object (``None``: the lane did not take
+    part); top-level ``verdict`` / ``stage`` become the combined ones, every other top-level field stays correctness-only.
     """
     results = (first or {}).get("results", {})
     stage = lane_stage(first, retry, run_result=run_result, retry_result=retry_result, first_state=first_state)
@@ -185,12 +197,14 @@ def build_verdict_file(
     if repeated:
         verdict["verdict"] = "red"
     errors = sorted((first or {}).get("collection_errors") or [])
+    combined = live.merge_verdicts({"verdict": verdict["verdict"], "stage": stage}, live_database)
     return {
         "collection_errors": errors,
         "schema_version": SCHEMA_VERSION,
         "lane": lane,
-        "verdict": verdict["verdict"],
-        "stage": stage,
+        "verdict": combined["verdict"],
+        "stage": combined["stage"],
+        "live_database": live_database,
         "collected": verdict["collected"],
         "skipped": list(results.values()).count("skipped"),
         "collected_ids": sorted(results),
@@ -266,9 +280,32 @@ def _split_command(argv: list[str]) -> tuple[list[str], list[str]]:
     return argv[:index], argv[index + 1 :]
 
 
+def _live_execute(opts: argparse.Namespace, command: list[str], ids: list[str] | None) -> dict:
+    """One execution of the live lane: check the database is reachable BEFORE any test, then run the whole folder.
+
+    The lane owns its selection (``live.SELECTION``, appended so the default deselection never applies, on the retry too).
+    An unreachable database executes no test: the report records the failed reachability result and holds no result.
+    """
+    try:
+        limit = live.startup_limit(os.environ)
+    except ValueError as exc:  # a configuration error, reported as such rather than as a bare float() failure
+        logger.warning("live lane configuration error: %s", exc)
+        raise LaneReportError(str(exc)) from exc
+    reach = live.check_database(os.environ.get("LIVE_DB_ADDRESS", live.DEFAULT_ADDRESS), limit)
+    path = Path(opts.report)
+    if not reach["reachable"]:
+        logger.warning("the live database is not reachable: %s", reach["detail"])
+        live.write_unreachable_report(path, reach, os.environ.get("RUNNER_NAME"))
+        return read_report(path) or {"results": {}}
+    base = live.without_targets(command) if ids is not None else command
+    report = execute_lane([*base, "-m", live.SELECTION], path, ids)
+    live.stamp_reachability(path, reach)
+    return report
+
+
 def _cmd_run(opts: argparse.Namespace, command: list[str]) -> int:
     """First execution: always exit 0 when a report exists; hand over the failure ids."""
-    report = execute_lane(command, Path(opts.report))
+    report = _live_execute(opts, command, None) if opts.lane == LIVE_LANE else execute_lane(command, Path(opts.report))
     failures = _failed_ids(report["results"])
     _write_text(Path(opts.failures), "".join(f"{i}\n" for i in failures))
     _set_output("failure_count", str(len(failures)))
@@ -294,7 +331,10 @@ def _read_failure_ids(path: Path) -> list[str]:
 def _cmd_retry(opts: argparse.Namespace, command: list[str]) -> int:
     """Second execution of exactly the handed-over ids; exit 0 when its report is readable."""
     ids = _read_failure_ids(Path(opts.failures))
-    execute_lane(command, Path(opts.report), ids)
+    if opts.lane == LIVE_LANE:
+        _live_execute(opts, command, ids)
+    else:
+        execute_lane(command, Path(opts.report), ids)
     return 0
 
 
@@ -319,6 +359,22 @@ def _history_for(opts: argparse.Namespace, tunables: dict) -> HistoryRead | None
         return HistoryRead([], None)
 
 
+def _live_database(lane: str, base: Path, history: list | None, tunables: dict) -> dict | None:
+    """The live-database lane's verdict object, or None when the lane took part in no way.
+
+    It took part when the verdict job was given ``LIVE_RUN_RESULT`` (the live run job's ``needs.*.result``) and that job was
+    not skipped; a job that failed and left no report is the live-database start-up ending, never an absent lane.
+    """
+    given = os.environ.get("LIVE_RUN_RESULT")
+    run_result = normalize_job_result(given)
+    first, first_state = load_report(base / LIVE_FIRST_REPORT) if given is not None else (None, REPORT_ABSENT)
+    if lane != LANE or given is None or (first is None and run_result == "skipped"):
+        return None
+    retry, _state = load_report(base / LIVE_RETRY_REPORT)
+    ctx = {"run_result": run_result, "retry_result": normalize_job_result(os.environ.get("LIVE_RETRY_RESULT")), "first_state": first_state}
+    return live.live_verdict(first, retry, ctx, history, tunables)
+
+
 def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
     """Classify both reports, write the verdict file, publish the verdict as a step output."""
     base = Path(opts.artifacts)
@@ -336,6 +392,7 @@ def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
         lane=opts.lane,
         history=read.entries if read else None,
         tunables=tunables,
+        live_database=_live_database(opts.lane, base, read.entries if read else None, tunables),
     )
     _write_text(Path(opts.output), json.dumps(verdict_file, indent=2) + "\n")
     _set_output("verdict", verdict_file["verdict"])
@@ -383,9 +440,11 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="first execution; command after --")
     run.add_argument("--report", required=True)
     run.add_argument("--failures", required=True)
+    run.add_argument("--lane", choices=RUN_LANES, default=LANE, help="live: the live-database lane (reachability check, its own selection)")
     retry = sub.add_parser("retry", help="re-execute the listed ids; command after --")
     retry.add_argument("--failures", required=True)
     retry.add_argument("--report", required=True)
+    retry.add_argument("--lane", choices=RUN_LANES, default=LANE, help="live: the live-database lane")
     verdict = sub.add_parser("verdict", help="classify the reports and write the verdict file")
     verdict.add_argument("--artifacts", required=True)
     verdict.add_argument("--output", required=True)

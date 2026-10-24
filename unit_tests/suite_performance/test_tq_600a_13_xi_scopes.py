@@ -28,6 +28,8 @@ SPECIFIED = {
         "run": READ,
         "retry": READ,
         "verdict": {**READ, "actions": "read"},
+        "live_run": READ,  # -xxi: the live-database lane's two jobs mirror run / retry: `contents: read` for the checkout, nothing else
+        "live_retry": READ,
     },
     "post-merge-timing.yml": {"run": READ, "retry": READ, "verdict": READ},  # -xii mirrors -ii; the timing lane reads no earlier verdict
     "post-merge-followup.yml": {
