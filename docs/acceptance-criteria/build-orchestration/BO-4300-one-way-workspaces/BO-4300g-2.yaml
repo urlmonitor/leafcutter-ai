@@ -1,0 +1,88 @@
+id: BO-4300g-2
+title: "Workflow steps that only read or run one command go to an agent that cannot remove anything"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given the requirements-authoring workflow (/plan-feature) is run end to end on a
+    behavioral request, with one pause and resume at a confirmation gate,
+  When its dispatches are recorded,
+  Then the pause-store read, the gate-answer step, the pause-persist step and every
+    stage-end script step are each dispatched to an agent whose registered abilities
+    include neither removing a workspace nor deleting a branch,
+  And the run contains no dispatch at all to a removal-capable agent.
+
+  Given the finalize workflow is run end to end on a merged branch,
+  When its dispatches are recorded,
+  Then exactly one dispatch goes to a removal-capable agent -- the step-7 workspace
+    removal,
+  And every other step that reads state or runs one command goes to an agent that
+    cannot remove a workspace or delete a branch.
+depends_on: [BO-4300g, BO-4300e, BO-4300c-3]
+doc_links:
+- path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
+  relationship: describes
+  status: exists
+  relevance: Defect 2 -- a create-only or read-only step dispatched to an agent that can remove.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: Workflow bodies reach the system only through agent() dispatches.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-3
+  contract: >-
+    The single-command dispatch helper to an agent that runs one exact command unchanged and
+    relays stdout verbatim; the workflow engine harness that records every dispatch.
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300g-2-i]
+implemented_by: []
+notes: |
+  ORIGIN: user request via /plan-feature, 2026-10-23. At the user's reference point, plan-feature
+  still sends these steps to the workspace agent: its pause-store read (line 1570), its gate-answer
+  and pause-persist shell steps (lines 1645 and 1749), and its stage-end script steps (line 2198,
+  tracked by TICKET-20261021-PlanFeatureScriptStepsToShellRunner). Line numbers are hints; verify
+  them against HEAD.
+
+  OVERLAP CHECK: BO-4300c-3 already requires the WORKSPACE step to go through one single-command
+  agent. This record covers the non-workspace steps, which BO-4300c-3 does not reach. The
+  stage-end script ticket should be generated from, or reconciled with, this record so the same
+  behaviour does not have two owners.
+
+  Proof runs the deployed workflows under the workflow engine harness and asserts on the
+  recorded dispatch list and the registered abilities of each dispatched agent type. It never
+  greps the workflow source (user request; CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally,
+  Not by Grep").
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored from the user's request, second part.
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): BO-4300e exceeded its 5-L2 cap, so this record was
+#   renumbered under the new sibling L1 BO-4300g. Criteria unchanged.
+# ====================================================================

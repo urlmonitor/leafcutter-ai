@@ -1,0 +1,71 @@
+id: BO-4300g-3
+title: "Finalize's workspace removal carries the caller authorization for exactly its own workspace and branch"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: false
+criteria: |
+  Given finalize is run for the branch "feature/eta", whose workspace is
+    "<landing root>/feature/eta",
+  And its pull request has merged and the workspace holds no unsent work,
+  When finalize reaches step 7, the workspace removal,
+  Then its one dispatch to the removal-capable agent carries a caller authorization
+    naming exactly the workspace "<landing root>/feature/eta" and the branch
+    "feature/eta",
+  And after the run that workspace is gone and no other workspace under the landing
+    root is changed,
+  And finalize asks no interactive question at step 7.
+depends_on: [BO-4300g, BO-4300e, BO-4300g-1, BO-4300e-2]
+doc_links:
+- path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300g-1
+  contract: Caller-authorization shape the removal-capable agent accepts.
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300g-3-i]
+implemented_by: []
+notes: |
+  ORIGIN: user request via /plan-feature, 2026-10-23. Finalize's step-7 workspace removal (line
+  1777 at the user's reference point) is the only dispatch that removes by design. Once
+  BO-4300g-1 lands, that dispatch removes nothing unless it carries the authorization, so this
+  record and BO-4300g-1 must ship together. Otherwise finalize's teardown stops working.
+  BO-4300e-2 already removed the interactive "yes" at this step. This record adds the explicit
+  authorization from the caller.
+
+  Proof runs the deployed finalize workflow under the workflow engine harness and asserts on the
+  recorded step-7 dispatch. It never greps the workflow source.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored from the user's request (finalize step 7).
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): BO-4300e exceeded its 5-L2 cap, so this record was
+#   renumbered under the new sibling L1 BO-4300g. Criteria unchanged.
+# ====================================================================

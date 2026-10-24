@@ -1,0 +1,66 @@
+id: BO-4300g-3-i
+title: "Finalize sends no removal when it cannot name the exact workspace and branch"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: false
+criteria: |
+  Given finalize is run for the branch "feature/theta",
+  And the workspace lookup for "feature/theta" answers that no workspace is found,
+    or answers in prose, or answers without a workspace path,
+  When finalize reaches step 7,
+  Then it makes no dispatch to a removal-capable agent,
+  And it reports that step 7 was skipped because the workspace could not be
+    identified, quoting what the lookup answered,
+  And every workspace under the landing root is identical before and after.
+
+  Given the workspace lookup for "feature/theta" names a workspace whose branch is
+    "feature/iota",
+  When finalize reaches step 7,
+  Then it makes no dispatch to a removal-capable agent,
+  And it reports the mismatch, naming both branches.
+depends_on: [BO-4300g-3]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-1
+  contract: The maker's definite answer to "where is the workspace for this work".
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  An authorization is only as exact as the names put into it. If finalize filled it in from a
+  default, a guess or an 'unknown' placeholder, BO-4300c-3 would be broken by another route. So
+  when the workspace cannot be identified exactly, finalize sends no removal at all.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored as an edge case of BO-4300g-3.
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): renumbered under the new sibling L1 BO-4300g.
+#   Criteria unchanged.
+# ====================================================================

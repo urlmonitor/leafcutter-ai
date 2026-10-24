@@ -1,0 +1,66 @@
+id: BO-4300g-2-i
+title: "No deployed workflow sends a removal-capable agent a request without caller authorization"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: false
+criteria: |
+  Given every workflow the install deploys is run under the workflow engine harness
+    with its recorded dispatches captured, the set of workflows being derived from
+    what the install deploys and never from a hand-written list,
+  When every dispatch to a removal-capable agent is examined,
+  Then each such dispatch carries a caller authorization naming one exact workspace
+    and one exact branch,
+  And a dispatch to a removal-capable agent that carries no caller authorization
+    fails the check, naming the workflow and the step.
+
+  Given a new workflow is added that dispatches a removal-capable agent for a step
+    that only reads the pause store,
+  When the check runs,
+  Then it fails, naming that workflow and that step.
+depends_on: [BO-4300g-2, BO-4300g-1]
+doc_links:
+- path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300g-1
+  contract: Caller-authorization shape (exact workspace path and exact branch name).
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the regression guard. The fast lane's route was closed by re-pointing one dispatch,
+  but plan-feature kept four of the same shape, and nothing stopped new ones from being added.
+  The workflow set is derived, as BO-4300c-3 derives its consuming set, so a new workflow is
+  covered without anyone editing a list.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored as an edge case of BO-4300g-2.
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): renumbered under the new sibling L1 BO-4300g.
+#   Criteria unchanged.
+# ====================================================================
