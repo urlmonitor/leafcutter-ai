@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["Bash", "Read", "Edit"]}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "t0", "name": "Bash", "input": {"command": "python -m pytest -q tests/test_window_total.py"}}]}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t0", "content": "ok"}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "see report.md"}

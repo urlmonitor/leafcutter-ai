@@ -14,6 +14,8 @@ import re
 import unit_tests.evals._tq200d1_helpers as h
 
 CONFIG = h.EVALS_DIR / "agent_eval_config.json"
+# The whole test-writer set: the five TQ-200d-1 rows plus the three TQ-200d-4 database-setting rows.
+SET_ROW_IDS = sorted([*h.ROW_IDS.values(), "configured-database", "missing-setting-database-work", "missing-setting-no-database-work"])
 
 
 def _score_gold(tmp_path, *extra, config=None):
@@ -26,13 +28,14 @@ def _score_gold(tmp_path, *extra, config=None):
 
 def test_test_writer_set_registers_all_eight_rows_and_scores_each(tmp_path):
     # covers: TQ-200d-1
+    # covers: TQ-200d-4
     # angle: reachability
     # Catches: produced-tests mode not dispatched by main(); rows without gold_target skipped.
     proc, results = _score_gold(tmp_path)
     assert proc.returncode == 0, f"stdout={proc.stdout[-600:]} stderr={proc.stderr[-600:]}"
     payload = json.loads(results.read_text(encoding="utf-8"))
     rows = payload["rows"]
-    assert sorted(r["id"] for r in rows) == sorted(h.ROW_IDS.values()), [r.get("id") for r in rows]
+    assert sorted(r["id"] for r in rows) == SET_ROW_IDS, [r.get("id") for r in rows]
     for r in rows:
         assert isinstance(r["score"]["passed"], bool), r
         assert r["score"]["assertions"], f"row {r['id']} carries no scored assertion"
@@ -42,6 +45,7 @@ def test_test_writer_set_registers_all_eight_rows_and_scores_each(tmp_path):
 
 def test_row_without_gold_target_is_scored_and_fails_among_eight_rows(tmp_path):
     # covers: TQ-200d-1
+    # covers: TQ-200d-4
     # angle: boundary
     # Catches: rows without gold_target skipped in score-gold mode.
     rows = h.load_set()
@@ -58,10 +62,10 @@ def test_row_without_gold_target_is_scored_and_fails_among_eight_rows(tmp_path):
     proc, results = _score_gold(tmp_path / "run", config=cfg)
     assert results.is_file(), f"stdout={proc.stdout[-500:]} stderr={proc.stderr[-500:]}"
     scored = {r["id"]: r for r in json.loads(results.read_text(encoding="utf-8"))["rows"]}
-    assert sorted(scored) == sorted(h.ROW_IDS.values()), "a row without a gold target must still be scored (as a failure), not dropped"
+    assert sorted(scored) == SET_ROW_IDS, "a row without a gold target must still be scored (as a failure), not dropped"
     assert scored[victim]["score"]["passed"] is False and scored[victim].get("error"), scored[victim]
     others = [r for i, r in scored.items() if i != victim]
-    assert len(others) == 4 and all(r["score"]["passed"] for r in others), "control: every row with a gold target still passes"
+    assert len(others) == 7 and all(r["score"]["passed"] for r in others), "control: every row with a gold target still passes"
     assert proc.returncode != 0, "a failed row must not leave the run green"
 
 
