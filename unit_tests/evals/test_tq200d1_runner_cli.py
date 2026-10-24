@@ -24,7 +24,7 @@ def _score_gold(tmp_path, *extra, config=None):
     return h.run_cli(h.RUN_EVAL, args), results
 
 
-def test_test_writer_set_registered_and_every_row_scored(tmp_path):
+def test_test_writer_set_registers_all_eight_rows_and_scores_each(tmp_path):
     # covers: TQ-200d-1
     # angle: reachability
     # Catches: produced-tests mode not dispatched by main(); rows without gold_target skipped.
@@ -40,7 +40,7 @@ def test_test_writer_set_registered_and_every_row_scored(tmp_path):
     assert [r["id"] for r in rows if not r["score"]["passed"]] == []
 
 
-def test_row_without_gold_target_is_scored_and_fails_not_skipped(tmp_path):
+def test_row_without_gold_target_is_scored_and_fails_among_eight_rows(tmp_path):
     # covers: TQ-200d-1
     # angle: boundary
     # Catches: rows without gold_target skipped in score-gold mode.
