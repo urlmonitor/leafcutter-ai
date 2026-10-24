@@ -165,8 +165,26 @@ def python_with_string_forms(kind: str, s_lines: int) -> tuple[str, str]:
     return head + base_tail, head + base_tail + add
 
 
+def _joined_statements(tree: ast.Module, lines: list[str]) -> int:
+    """GE-127d-3-v from ``ast``: each statement with code before it on its first row adds one.
+
+    A standalone string statement adds nothing, and a ``case`` body is left out
+    (``match``/``case`` are soft keywords the measure does not split on).
+    """
+    extra = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.stmt) or node.lineno > len(lines):
+            continue
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, (str, bytes)):
+            continue
+        before = lines[node.lineno - 1].encode("utf-8")[: node.col_offset].decode("utf-8", "ignore").strip()
+        if before and not before.startswith("case "):
+            extra += 1
+    return extra
+
+
 def independent_python_length(text: str) -> int:
-    """Length by the 2026-10-20 rule, derived from ``ast`` + ``tokenize``."""
+    """Length by the 2026-10-20 rule plus GE-127d-3-v, derived from ``ast`` + ``tokenize``."""
     norm = text.replace("\r\n", "\n")
     lines = norm.split("\n")
     if lines and lines[-1] == "":
@@ -187,7 +205,8 @@ def independent_python_length(text: str) -> int:
         if tok.type == tokenize.STRING and any(a <= tok.start[0] and tok.end[0] <= b for a, b in standalone):
             continue
         counted.update(range(tok.start[0], tok.end[0] + 1))
-    return sum(1 for row, line in enumerate(lines, start=1) if row in counted and line.strip())
+    rows = sum(1 for row, line in enumerate(lines, start=1) if row in counted and line.strip())
+    return rows + _joined_statements(tree, lines)
 
 
 _NODE_ORACLE = r"""
@@ -226,7 +245,32 @@ for (const file of process.argv.slice(2)) {
     if (code) total++;  // blank lines never count (BrainCandy 2026-10-21)
     offset += line.length + 1;
   }
-  out[file] = total;
+  // GE-127d-3-v from the compiler's tokens: a ';' outside any paren opened since the innermost
+  // brace, followed on its line (no comment between) by a token that is not a closer, adds one.
+  const toks = [];
+  const leaves = (node) => {
+    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) return;
+    const kids = node.getChildren(sf);
+    if (kids.length === 0) { if (node.kind !== ts.SyntaxKind.EndOfFileToken && node.getWidth(sf) > 0) toks.push(node); return; }
+    for (const kid of kids) leaves(kid);
+  };
+  leaves(sf);
+  const K = ts.SyntaxKind;
+  const closers = new Set([K.CloseBraceToken, K.CloseParenToken, K.CloseBracketToken, K.SemicolonToken, K.CommaToken]);
+  const marks = []; let parens = 0, extra = 0;
+  for (let i = 0; i < toks.length; i++) {
+    const kind = toks[i].kind;
+    if (kind === K.OpenParenToken) parens++;
+    else if (kind === K.CloseParenToken) parens--;
+    else if (kind === K.OpenBraceToken) marks.push(parens);
+    else if (kind === K.CloseBraceToken) marks.pop();
+    else if (kind === K.SemicolonToken && parens === (marks.length ? marks[marks.length - 1] : 0)) {
+      const next = toks[i + 1];
+      const gap = next ? text.slice(toks[i].end, next.getStart(sf)) : '\n';
+      if (!closers.has(next ? next.kind : K.CloseBraceToken) && !gap.includes('\n') && gap.trim() === '') extra++;
+    }
+  }
+  out[file] = total + extra;
 }
 console.log(JSON.stringify(out));
 """

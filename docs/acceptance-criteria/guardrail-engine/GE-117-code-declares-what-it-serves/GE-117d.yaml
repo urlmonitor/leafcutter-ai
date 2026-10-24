@@ -1,5 +1,5 @@
 id: GE-117d
-readiness: draft
+readiness: approved
 priority: medium
 title: "Get stopped before committing code that hides why it exists or where it belongs"
 component: guardrail-engine

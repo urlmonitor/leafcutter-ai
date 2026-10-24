@@ -11,12 +11,14 @@ req_status: active
 work_status: todo
 criteria: |
   Given a user has a new feature idea, a behavioral addition, or a technical constraint,
-  When they invoke a single command (/create-ac),
-  Then the system triages their request, routes it through the correct authoring agents
-    (PO v3, BA v3, IT PO v3) in sequence with user confirmation gates between stages,
+  When they invoke a single command (/plan-feature),
+  Then the system triages their request and routes it through the correct authoring stages
+    in sequence (product owner, business analyst, technical planner, then the test designer),
   And the output is written to the AC store (docs/acceptance-criteria/<component>/),
   And duplicate or already-covered requirements are surfaced rather than re-authored,
-  And the user controls progression at each stage before the next agent begins.
+  And the user confirms the product owner's and the business analyst's output before the
+    next stage begins, and approves the batch at one final gate after the test design,
+  And no stage's output advances while its requirement rule check fails.
 depends_on: []
 doc_links: []
 assigned_agent: null
@@ -25,7 +27,15 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after EPIC-RightJobRightAgent (#1245) and its follow-ups (#1246):
+    the command is /plan-feature, not /create-ac; the stages now end with the test designer;
+    human gates sit after the product owner and business analyst and at one final gate,
+    the technical planner''s stage is auto-gated, and a failed requirement rule check
+    stops a stage from advancing. Intent unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-300a
@@ -38,6 +48,7 @@ covered_by:
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
+declares_side_effect: true
 product_truth:
   - flow: leafcutter/deliver-a-feature
     node: plan

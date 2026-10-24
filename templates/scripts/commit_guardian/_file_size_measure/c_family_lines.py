@@ -32,6 +32,7 @@ _IDENT = re.compile(r"[A-Za-z_$\u0080-\U0010ffff][\w$\u0080-\U0010ffff]*")
 _NUMBER = re.compile(r"\.?\d(?:[eE][+-]|[\w.])*")
 _SPACE = re.compile(r"[\s﻿]+")
 _FLAGS = re.compile(r"[A-Za-z]*")
+_NOT_A_STATEMENT = frozenset("\n})];,")
 _REGEX_AFTER_WORDS = frozenset(
     "return typeof instanceof in of new delete void throw case do else yield await".split()
 )
@@ -43,13 +44,16 @@ _EXPRESSION_END = frozenset({"ident", "num", "close", "str", "tmpl", "regex", "j
 class _State:
     """Per-``scan_code`` context: previous token kind, last word, braces, parens."""
 
-    __slots__ = ("depth", "kind", "parens", "word")
+    __slots__ = ("brace_marks", "depth", "kind", "parens", "word")
 
     def __init__(self) -> None:
         self.kind = "start"
         self.word = ""
         self.depth = 0
         self.parens: list[bool] = []
+        # len(parens) at each open brace: a ';' is a statement separator only when no
+        # parenthesis opened since the innermost brace is still open.
+        self.brace_marks: list[int] = []
 
 
 class JsScanner:
@@ -61,7 +65,9 @@ class JsScanner:
         self.jsx = jsx
         self.language = language
         self.ranges: list[Range] = []
+        self.breaks: list[int] = []
         self._dispatch: dict[str, Callable[[int, _State], int]] = {
+            ";": self._semicolon,
             "/": self._slash,
             '"': self._quoted,
             "'": self._quoted,
@@ -105,6 +111,8 @@ class JsScanner:
                 if state.depth == 0 and until_brace:
                     return index + 1
                 state.depth = max(0, state.depth - 1)
+                if state.brace_marks:
+                    state.brace_marks.pop()
                 state.kind = "block"
                 index += 1
                 continue
@@ -211,6 +219,18 @@ class JsScanner:
                 position += 1
         return self.fail_unterminated("template literal", index)
 
+    def _semicolon(self, index: int, state: _State) -> int:
+        """A ``;`` outside parentheses followed, on its line, by another statement is a break."""
+        state.kind = "op"
+        if len(state.parens) == (state.brace_marks[-1] if state.brace_marks else 0):
+            following = index + 1
+            while following < self.size and self.text[following] in " \t":
+                following += 1
+            rest = self.text[following : following + 2]
+            if rest and rest[0] not in _NOT_A_STATEMENT and rest not in ("//", "/*"):
+                self.breaks.append(following)
+        return index + 1
+
     def _open_paren(self, index: int, state: _State) -> int:
         state.parens.append(state.kind == "ident" and state.word in _CONTROL_HEADERS)
         state.kind = "open"
@@ -231,6 +251,7 @@ class JsScanner:
 
     def _open_brace(self, index: int, state: _State) -> int:
         state.depth += 1
+        state.brace_marks.append(len(state.parens))
         state.kind = "open"
         return index + 1
 
@@ -266,7 +287,20 @@ def js_ranges(text: str, *, jsx: bool, language: str) -> list[Range]:
     Raises:
         UnmeasurableContentError: an unterminated block comment or template literal.
     """
-    return JsScanner(text, jsx=jsx, language=language).run()
+    return js_lex(text, jsx=jsx, language=language)[0]
+
+
+def js_lex(text: str, *, jsx: bool, language: str) -> tuple[list[Range], list[int]]:
+    """Return the comment ranges and the statement breaks of JavaScript/TypeScript *text*.
+
+    A break is the offset of a statement that follows a ``;`` (outside any
+    parentheses, so a ``for (;;)`` header is one statement) on the same line.
+
+    Raises:
+        UnmeasurableContentError: an unterminated block comment or template literal.
+    """
+    scanner = JsScanner(text, jsx=jsx, language=language)
+    return scanner.run(), sorted(scanner.breaks)
 
 
 """
@@ -277,4 +311,10 @@ DECISION HISTORY
   file agrees except the 35 .tsx files holding a standalone JSX comment container, which this
   lexer uncounts whole (braces included) per GE-127d-3 while the compiler oracle counts the two
   brace characters as code. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-23 [GE-127d-3-v]: The scanner records statement breaks: a `;` outside parentheses
+  followed on its line by anything but a closer, a separator, a comment or the line end. js_lex
+  returns them with the comment ranges, so `a(); b();` counts two lines. "Outside parentheses"
+  means outside any parenthesis opened since the innermost brace, so a callback body inside a call
+  (`xs.forEach((x) => { a(x); b(x); })`) splits while a `for (;;)` header does not.
+  (#EPIC-FilesStayWorkable/GE-127d-3)
 """

@@ -300,3 +300,14 @@ notes: |
   a priority option, or priority is written by a second deterministic step; the criteria
   only require that no agent edit does it. plan-feature.js is over its size limit and must
   not grow (GE-127b-1).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

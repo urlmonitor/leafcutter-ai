@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: in_progress
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-1.yaml"
@@ -87,14 +87,18 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Named the attempt-ledger requirement that makes INF-700b-3's three-way distinction derivable — the criteria forbid a knowledge record on the no-learning path but say nothing about the heartbeat that proves the path was taken, and without it a quiet week and a dead dispatcher produce identical evidence. Added the outcome enum as an explicit delivers_to contract so INF-700b-3 reads a closed set rather than free text."
     by: it-po
     at: 2026-08-26
-  - reason: "AC-1 to AC-3 are proven by this ticket; AC-4's reader half is unproven until INF-700b-3 (ticket 06, scripts/knowledge/capture_health_report.py) lands; re-validate AC-4 then, and only then flip to done."
+  - reason: "AC-1 to AC-3 are proven by this ticket; AC-4's reader half is unproven until INF-700b-3 (ticket 06, scripts/knowledge/health/capture_health_report.py) lands; re-validate AC-4 then, and only then flip to done."
     by: ac-fulfillment-gate
     at: 2026-10-21
+  - reason: "AC-4 re-validated as the earlier amended_by promised: INF-700b-3's capture-health report (scripts/knowledge/health/capture_health_report.py) landed, and test_nothing_to_record_period_reports_zero_captured_and_zero_failed in tests/knowledge/test_inf_700b_3.py drives real emit_event.py nothing-to-record writes and asserts the report prints recorded=0 and failed=0 explicitly, attempts>0, verdict nothing-to-record, not the no-run verdict. AC-1 to AC-3 unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-23
 superseded_by: null
 covered_by:
 - tests/knowledge/test_inf_700b_1_i.py
 - unit_tests/test_emit_event.py
 - unit_tests/test_inf_700b_1_i.py
+- tests/knowledge/test_inf_700b_3.py
 implemented_by:
 - templates/skills/agent-telemetry/scripts/emit_event.py
 - scripts/knowledge/emit_knowledge.py

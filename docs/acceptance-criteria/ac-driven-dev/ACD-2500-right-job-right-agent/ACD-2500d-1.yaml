@@ -123,3 +123,15 @@ notes: |
   same host is fine (both need the declared files open, both run before approval) as long
   as the outputs stay separate (test design vs surface findings). Left to IT-PO / user -
   see open questions.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

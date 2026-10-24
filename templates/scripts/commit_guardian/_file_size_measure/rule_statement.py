@@ -68,6 +68,22 @@ _USED_PROBES = (
     _Probe("standalone f-strings", ".py", f'f"""\n{{x}}\n{_BODY}"""\n'),
 )
 _BLANK_PROBE = _Probe("blank lines", ".py", "x = 1\n\ny = 2\n")
+_JOINED_PROBES = (
+    _Probe("Python", ".py", "x = 1; y = 2\n"),
+    _Probe("JavaScript", ".js", "a(); b();\n"),
+    _Probe("TypeScript", ".ts", "a(); b();\n"),
+)
+
+
+def _per_statement(measure: Measure) -> str:
+    """The clause stating which languages count a joined line once per statement, or ''."""
+    languages = [probe.label for probe in _JOINED_PROBES if measure(probe.text, probe.extension) > 1]
+    if not languages:
+        return ""
+    return (
+        f"; a line holding several statements counts once per statement ({_join(languages)}), "
+        "so joining statements onto one line shortens nothing"
+    )
 
 _ALL_COMMENTS = "comments of every style (line and block comments in every language measured)"
 _ALL_STANDALONE = (
@@ -126,7 +142,7 @@ def describe(measure: Measure) -> str:
     counted += used_on if used_off else [_ALL_USED]
     counted.append("every other line of code")
     head = f"does not count {_join(not_counted)}; " if not_counted else ""
-    return f"{head}counts {_join(counted)}."
+    return f"{head}counts {_join(counted)}{_per_statement(measure)}."
 
 
 """
@@ -139,4 +155,7 @@ DECISION HISTORY
 - 2026-10-21 [python-coder]: With blank lines never counted (BrainCandy decision), the blank-line
   probe reads as uncounted, so the generated statement lists blank lines among what is not
   counted. (#EPIC-FilesStayWorkable/GE-127d-5)
+- 2026-10-23 [GE-127d-3-v]: A joined-statements probe per language adds the clause that a line
+  holding several statements counts once per statement, naming only the languages where the
+  measure actually does so. (#EPIC-FilesStayWorkable/GE-127d-3)
 """

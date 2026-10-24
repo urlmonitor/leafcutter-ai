@@ -144,3 +144,15 @@ notes: |
   step writes must_catch (the technical planner never does), and the presence of must_catch
   or angle 'discrimination' on an entry is that step's bug-fix/gate declaration -- no
   separate schema key.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

@@ -64,6 +64,7 @@ Fixed issues move to `ux-prototyping/resolved/` and are no longer listed as open
 | Severity | Issue | File |
 |---|---|---|
 | `low` | KI-UXP-20261009-flow-mock-data-ref-rewrites-done-acs — setting a flow's mock data reference rewrites every linked AC's product-truth back-reference, done ACs included, so the product-truth commit touches the AC store and check-done-proof refuses it | [open-low-ki-uxp-20261009-flow-mock-data-ref-rewrites-done-acs.md](ux-prototyping/open-low-ki-uxp-20261009-flow-mock-data-ref-rewrites-done-acs.md) |
+| `low` | KI-UXP-20261022-set-aside-recount-test-outgrows-its-timeout — test_uxp_700d_3_i runs a whole-store scan under a 30-second subprocess timeout and times out on loaded CI runners | [open-low-ki-uxp-20261022-set-aside-recount-test-outgrows-its-timeout.md](ux-prototyping/open-low-ki-uxp-20261022-set-aside-recount-test-outgrows-its-timeout.md) |
 
 ## Resolved
 

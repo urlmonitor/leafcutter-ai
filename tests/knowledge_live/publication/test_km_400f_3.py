@@ -68,7 +68,9 @@ def test_live_headroom_is_measured_from_a_loaded_backend(tmp_path):
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         try:
             sha = parent
             for n in range(PUBLISHED):  # real generations, no ceiling declared: usage is only reported

@@ -11,8 +11,8 @@ req_status: active
 work_status: todo
 criteria: |
   The knowledge-query SKILL.md contains an "Agent Consumption Protocol" section
-  that is the single source of truth for how AC-authoring agents (PO v3, BA v3,
-  IT PO v3) invoke the skill, interpret results, handle errors, format citations,
+  that is the single source of truth for how AC-authoring agents (product owner, business analyst,
+  technical planner) invoke the skill, interpret results, handle errors, format citations,
   and degrade gracefully. Each agent template declares the skill in its
   skills_used frontmatter and references the protocol with agent-specific query
   parameters — without duplicating error handling, citation format, or zero-result
@@ -40,7 +40,11 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300f-1, ACD-300f-2, ACD-300f-3, ACD-300f-4, ACD-300f-5]
 implemented_by: []
