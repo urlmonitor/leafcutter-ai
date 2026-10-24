@@ -228,5 +228,92 @@ class TestRemoveAnswersAtOnce(WorkspaceCase):
         self.assertEqual(self.refs(beta), heads_before)
 
 
+HOLDER = "import sys,time;open(sys.argv[1],'w').write('up');time.sleep(300)"
+
+
+class TestAnswerKeepsToolTextOut(WorkspaceCase):
+    """BO-4300c-2: the underlying tools' own messages never appear in the answer; a failed step is
+    named by a short ``step`` field instead."""
+
+    def assert_no_tool_text(self, res: dict[str, Any]) -> None:
+        answer = res["answer"]
+        stderr_lines = [ln.strip() for ln in res["stderr"].splitlines() if len(ln.strip()) >= 8]
+        self.assertTrue(any("fatal:" in ln or "error:" in ln for ln in stderr_lines),
+                        msg=f"fixture: the maker forwarded no git error line to stderr: {res['stderr']!r}")
+        step = answer.get("step")
+        self.assertTrue(isinstance(step, str) and step, msg=f"no step field: {answer}")
+        for field, text in (("message", answer.get("message", "")), ("step", step)):
+            self.assertNotIn("fatal:", text, msg=f"git text in {field}: {answer}")
+            self.assertNotIn("error:", text, msg=f"git text in {field}: {answer}")
+            for line in stderr_lines:
+                self.assertNotIn(line, text, msg=f"stderr line {line!r} appears in {field}: {answer}")
+
+    def test_remove_fetch_failure_message_carries_no_git_text(self):
+        # covers: BO-4300c-2
+        # covers: BO-4300e-2
+        # angle: deployed
+        """AC-3: origin repointed to a missing path: remove answers FETCH_FAILED with a step field,
+        and no line of the run's stderr (no 'fatal:') appears in message or step."""
+        ws = self.ensure("alpha")
+        self.git(["remote", "set-url", "origin", str(self.tmp / "no-such-hub.git")], ws)
+        res = self.remove(ws)
+        self.assertEqual(res["answer"].get("code"), "FETCH_FAILED", msg=f"{res}")
+        self.assertTrue(ws.is_dir(), msg="a workspace whose unsent check failed was deleted")
+        self.assert_no_tool_text(res)
+
+    def test_remove_status_failure_message_carries_no_git_text(self):
+        # covers: BO-4300c-2
+        # covers: BO-4300e-2
+        # angle: failure
+        """AC-3 (second git site): an unparseable status.aheadBehind makes `git status` fail after
+        the fetch passed; remove answers GIT_FAILED with a step field and none of git's text in
+        message or step."""
+        ws = self.ensure("alpha")
+        self.git(["config", "status.aheadBehind", "not-a-boolean"], ws)
+        res = self.remove(ws)
+        self.assertEqual(res["answer"].get("code"), "GIT_FAILED", msg=f"{res}")
+        self.assertTrue(ws.is_dir(), msg="a workspace whose unsent check failed was deleted")
+        self.assert_no_tool_text(res)
+
+
+class TestProcessHoldsFilesNamesHolders(WorkspaceCase):
+    def test_process_holds_files_names_holders_pid_and_name(self):
+        # covers: BO-4300c-2
+        # covers: BO-4300e-2
+        # angle: deployed
+        """AC-4: with a child process whose cwd is the workspace, remove refuses PROCESS_HOLDS_FILES
+        with holders == [{pid, name}] (exact key set, int pid, str name) and no processes key."""
+        import time
+
+        ws = self.ensure("alpha")
+        flag = self.tmp / "holder.up"
+        proc = subprocess.Popen([sys.executable, "-c", HOLDER, str(flag)], cwd=str(ws),
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        def _stop() -> None:
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait(timeout=30)
+
+        self.addCleanup(_stop)
+        deadline = time.time() + 30
+        while not flag.exists() and time.time() < deadline:
+            time.sleep(0.1)
+        self.assertTrue(flag.exists(), msg="the holder program never reported being up")
+
+        res = self.remove(ws)
+        answer = res["answer"]
+        self.assertEqual(answer.get("code"), "PROCESS_HOLDS_FILES", msg=f"{res}")
+        self.assertNotIn("processes", answer, msg=f"{answer}")
+        holders = answer.get("holders")
+        self.assertTrue(isinstance(holders, list) and holders, msg=f"no holders list: {answer}")
+        for holder in holders:
+            self.assertEqual(set(holder), {"pid", "name"}, msg=f"{holders}")
+            self.assertIsInstance(holder["pid"], int)
+            self.assertIsInstance(holder["name"], str)
+        self.assertIn(proc.pid, [h["pid"] for h in holders], msg=f"the child is not named: {holders}")
+        self.assertTrue(ws.is_dir())
+
+
 if __name__ == "__main__":
     unittest.main()

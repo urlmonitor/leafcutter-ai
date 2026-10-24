@@ -41,6 +41,7 @@ _GIT_ENV_LEAKS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"
 _INHERIT_DRIVER = (
     "import importlib.util, json, sys\n"
     "from pathlib import Path\n"
+    "sys.path.insert(0, str(Path(sys.argv[1]).resolve().parent))\n"
     "spec = importlib.util.spec_from_file_location('swt', sys.argv[1])\n"
     "m = importlib.util.module_from_spec(spec)\n"
     "sys.modules['swt'] = m\n"

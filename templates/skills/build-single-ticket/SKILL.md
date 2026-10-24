@@ -67,8 +67,9 @@ path of the deployed `worktree.py` (the install's `scripts/worktree.py`; the
 path `worktree.py where` prints). Never use a cwd-relative path and never chain
 commands:
 
+Run ONE exact command, unchanged, quoting the maker path and every value, and return its stdout verbatim:
 ```bash
-python <absolute-install-root>/scripts/worktree.py ensure --kind ticket --slug <slug> --ticket <MAIN_TICKET_PATH> --repo-root <absolute-project-root>
+python "<absolute-install-root>/scripts/worktree.py" ensure --kind ticket --slug "<slug>" --ticket "<MAIN_TICKET_PATH>" --repo-root "<absolute-project-root>"
 ```
 
 On a non-zero exit, surface the maker's answer verbatim and stop — do NOT fall

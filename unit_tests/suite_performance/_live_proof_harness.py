@@ -45,6 +45,7 @@ from ._proof_harness import (
 )
 from ._workflow_jobs import REPO_ROOT, find_job, load_workflow
 
+LANE_MARKER = "POST_MERGE_LIVE_LANE"  # set to "1" only for a live-lane pytest session (TQ-600a-13-xxvii)
 LIVE_FAILS, LIVE_RECLAIM, LIVE_CAPACITY = nid("publication_fails_until_fixed"), nid("reclaim_ok"), nid("capacity_ok")
 LIVE_NAMES = ("publication_fails_until_fixed", "reclaim_ok", "capacity_ok")
 CORR_A = "tests/test_lane.py::test_a_always_passes"
@@ -52,8 +53,17 @@ FAILS_WITNESS = ["publication_fails_until_fixed"]
 
 
 def live_sources(variant: str) -> dict:
-    """The live folder of a tree. ``fixed`` all pass; ``broken`` the fix-me test fails; ``skipping`` it skips; ``missing`` lacks one test."""
-    fails = {"fixed": "assert True", "broken": "assert False", "skipping": f"pytest.skip({OTHER_REASON!r})", "missing": "assert True"}[variant]
+    """The live folder of a tree. ``fixed`` all pass; ``broken`` the fix-me test fails; ``skipping`` it skips; ``missing`` lacks one test.
+
+    ``lane_marker`` passes only when its session carries the live lane's marker (TQ-600a-13-xxvii).
+    """
+    fails = {
+        "fixed": "assert True",
+        "broken": "assert False",
+        "skipping": f"pytest.skip({OTHER_REASON!r})",
+        "missing": "assert True",
+        "lane_marker": f"assert os.environ.get({LANE_MARKER!r}) == '1'",
+    }[variant]
     sources = {
         "publication_fails_until_fixed": live_test("publication_fails_until_fixed", fails, marks=("manual",)),
         "reclaim_ok": live_test("reclaim_ok"),

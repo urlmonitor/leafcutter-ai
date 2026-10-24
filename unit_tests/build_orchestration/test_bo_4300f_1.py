@@ -204,7 +204,7 @@ class RealMakerCase(WorkspaceCase):
 
 
 def _published_command(text: str) -> str | None:
-    m = re.search(r"python\S*\s+\S*worktree\.py\s+ensure[^\n`]*", text)
+    m = re.search(r"python\S*\s+\S*worktree\.py\"?\s+ensure[^\n`]*", text)
     return m.group(0).strip() if m else None
 
 
@@ -237,10 +237,10 @@ class TestEveryRouteGetsItsWorkspaceFromTheMaker(RealMakerCase):
                 text = (TEMPLATES_DIR / rel).read_text(encoding="utf-8")
                 published = _published_command(text)
                 self.assertIsNotNone(published, msg=f"{rel} publishes no worktree.py ensure command")
-                command = re.sub(r"--ticket\s+<[^>]+>", "", published)
+                command = re.sub(r"--ticket\s+\"?<[^>]+>\"?", "", published)
                 command = re.sub(r"<(?:kind)>", "feature", command)
                 command = re.sub(r"<(?:slug|ac-id)>", f"route-{i}", command)
-                command = re.sub(r"--repo-root\s+<[^>]+>", "", command)
+                command = re.sub(r"--repo-root\s+\"?<[^>]+>\"?", "", command)
                 command = command.replace("--kind ticket", "--kind feature")
                 command = command.replace("<absolute-install-root>/scripts/", "")
                 self.assertNotIn("<", command, msg=f"{rel}: unresolved placeholder in {command!r}")

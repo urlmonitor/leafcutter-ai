@@ -286,7 +286,7 @@ function stageDisplayName(stageKey) {
 async function commitStageOutput(written, stageName, component, isFinal, runId, acStorePath, authoringWorktreePath, extraPaths) {
   acStorePath = acStorePath || "docs/acceptance-criteria";
   // Build the git -C anchor for all git operations in this function. (AC BO-1500a-2)
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the no-main-commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
@@ -294,12 +294,10 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
     let branchConfirmed = false;
     let branchCheckError = "unknown error during branch check";
 
-    // Build git command: with -C if worktree path is known; bare otherwise.
-    const branchCheckCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" branch --show-current`
-      : `git branch --show-current`;
+    const branchCheckCmd = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)} branch --show-current` : null;
 
     try {
+      if (!branchCheckCmd) throw new Error("no authoring workspace path to anchor the branch check");
       const branchCheckResult = await agent(
         `Run the following command and return its raw stdout output:\n` +
         `${branchCheckCmd}\n` +
@@ -564,7 +562,7 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
 function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, authoringWorktreePath, recordPaths) {
   const store = acStorePath || "docs/acceptance-criteria";
   // Use the -C anchor in user-facing git instructions so cleanup targets the authoring worktree. (AC BO-1500a-2)
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const gitCheckoutCmd = `git ${gitC} checkout -- ${store}/`.trim();
   const draftFilePaths = draftAcs.map(
     (id) => !Array.isArray(recordPaths) || recordPaths.length === 0 ? `  ${store}/${id}.yaml` : "  " + (recordPaths.find((p) => p.split(/[\/]/).pop().replace(/\.yaml$/, "") === id) || id + " (no record path known)")
@@ -610,7 +608,7 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, au
 async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
   // Build the git status command, conditionally inserting -C.
   const gitStatusCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" status --porcelain --untracked-files=all -- ${acStoreDir}`
+    ? `git -C ${makerQuote(authoringWorktreePath)} status --porcelain --untracked-files=all -- ${acStoreDir}`
     : `git status --porcelain --untracked-files=all -- ${acStoreDir}`;
   // Run git status to discover modified/untracked YAML files in the AC store.
   let statusOutput;
@@ -723,7 +721,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
  * @returns {Promise<{ status: "ok"|"error", message: string, pr_url?: string }>}
  */
 async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, allAcsApproved, component, priority) {
-  const gitC = authoringWorktreePath ? `git -C "${authoringWorktreePath}"` : "git";
+  const gitC = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)}` : "git";
   const acList = allAcsApproved.length > 0 ? allAcsApproved.join(", ") : "(none)";
   const componentLabel = component || "ac-store";
   const prTitle = `chore(ac): ${componentLabel} — AC authoring session approved (${allAcsApproved.length} AC${allAcsApproved.length !== 1 ? "s" : ""})`;
@@ -818,7 +816,7 @@ async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, al
  */
 async function scanCommittedStages(authoringWorktreePath) {
   const gitLogCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" log --oneline origin/main..HEAD`
+    ? `git -C ${makerQuote(authoringWorktreePath)} log --oneline origin/main..HEAD`
     : "git log --oneline origin/main..HEAD";
 
   let logOutput;
@@ -896,7 +894,7 @@ async function scanCommittedStages(authoringWorktreePath) {
 async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath, userChoice) {
   // Build a git command prefix helper.
   const gitCmd = authoringWorktreePath
-    ? (sub) => `git -C "${authoringWorktreePath}" ${sub}`
+    ? (sub) => `git -C ${makerQuote(authoringWorktreePath)} ${sub}`
     : (sub) => `git ${sub}`;
 
   userChoice = (typeof userChoice === "string") ? userChoice.toLowerCase().trim() : "no";
@@ -1216,18 +1214,17 @@ async function emitPtTelemetry(event, detail, authoringWorktreePath) {
  */
 async function commitStageOutputProductTruth(reportedPaths, stageName, component, runId, ptStorePath, authoringWorktreePath) {
   ptStorePath = ptStorePath || "docs/product-truth";
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the PT commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
   {
     let branchConfirmed = false;
     let branchCheckError = "unknown error during branch check";
-    const branchCheckCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" branch --show-current`
-      : `git branch --show-current`;
+    const branchCheckCmd = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)} branch --show-current` : null;
 
     try {
+      if (!branchCheckCmd) throw new Error("no authoring workspace path to anchor the branch check");
       const branchCheckResult = await agent(
         `Run the following command and return its raw stdout output:\n` +
         `${branchCheckCmd}\n` +
@@ -1364,7 +1361,7 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
  */
 async function recoverFlowRefFromCommit(authoringWorktreePath) {
   const gitLogCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" log --name-only --format=%H%x00%s origin/main..HEAD`
+    ? `git -C ${makerQuote(authoringWorktreePath)} log --name-only --format=%H%x00%s origin/main..HEAD`
     : "git log --name-only --format=%H%x00%s origin/main..HEAD";
 
   try {
@@ -1465,7 +1462,7 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   }
 
   // Step 2 — commit the reconciliation as its own commit (flow + index + affected ACs).
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const commitMessage =
     `plan-feature(RECONCILE): ${component || "unknown-component"}\n\nrun-id: ${runId}\nflow step.implements back-links + regenerated derived data`;
   const indexPath = ptStorePath + "/index.json";
@@ -2147,27 +2144,6 @@ async function readCoveringTitles(ids, acStoreDir) {
   }
 }
 
-/**
- * ACD-2100a-1: the workspace maker's ABSOLUTE in-repository path. The repository is found the repo-anchored way
- * (the parent of git-common-dir run here, else a child folder holding .git), one single plain shell-runner
- * command per probe. Sibling folders are not probed: that glob would also match a working folder holding an
- * empty .git (the dev layout's untracked parent), i.e. the very copy this must never run. A decline or prose
- * reply, no repository found, or several child repositories (the maker's AMBIGUOUS_REPO; never a pick) is
- * returned for the caller to halt on, quoting what was received or the candidates.
- */
-const MAKER_PROBES = ["git rev-parse --path-format=absolute --git-common-dir", "realpath -- */.git"];
-async function resolveRepoAnchoredMakerPath(phaseName) {
-  const replies = [];
-  for (const probe of MAKER_PROBES) {
-    const reply = shellStepReply(await shellStepDispatch(probe, "resolve-maker-path", phaseName), "resolve-maker-path");
-    if (!reply.ok) return reply;
-    const gitDirs = [...new Set(reply.stdout.split(/\r?\n/).map((s) => s.trim()).filter((s) => /^(\/|[A-Za-z]:).*[\\/]\.git$/.test(s)))];
-    if (gitDirs.length) return gitDirs.length > 1 ? { ok: false, reason: "more than one child repository was found, so which one the workspace maker belongs to is ambiguous (AMBIGUOUS_REPO)", received: workspaceQuote(gitDirs) } : { ok: true, path: gitDirs[0].replace(/[\\/]\.git$/, "/.leafcutter/scripts/worktree.py") };
-    replies.push(reply.reply);
-  }
-  return { ok: false, reason: "the workspace maker's in-repository location could not be resolved (no repository here or in a child folder)", received: workspaceQuote(replies) };
-}
-
 // E2 top-level body — executed directly by the E2 engine
 
 phase('Stage 0')
@@ -2201,34 +2177,15 @@ if (!request) {
 // Detect whether the user's current checkout is on main. One shell-runner dispatch of one exact command; a
 // reply that is not a result (a decline, prose, no exit status) ends the run quoting it -- it is never taken
 // as the step having run.
-let userIsOnMain = false;
-let currentBranchRaw = null;
-let currentBranchDispatchFailed = false;
-try {
-  currentBranchRaw = await shellStepDispatch("git branch --show-current", "detect-current-branch", "Stage 0");
-} catch (branchDispatchErr) {
-  // A transport failure (no reply at all) is not a reply to quote; detection is best-effort then.
-  currentBranchDispatchFailed = true;
-  log("[plan-feature][WARNING] Could not dispatch the current-branch check: " + branchDispatchErr.message);
-}
-const currentBranchReply = currentBranchDispatchFailed
-  ? { ok: false, transport: true }
-  : shellStepReply(currentBranchRaw, "detect-current-branch");
-if (!currentBranchReply.ok && !currentBranchReply.transport) {
-  return {
-    status: "error",
-    message:
-      "Could not detect the current branch: " + currentBranchReply.reason + ". Received: " +
-      currentBranchReply.received + ". Nothing was dispatched after it.",
-  };
-}
-if (currentBranchReply.ok && currentBranchReply.exit_status === 0 && currentBranchReply.stdout.trim().toLowerCase() === "main") {
-  userIsOnMain = true;
-  log(
-    "[plan-feature] Detected: current checkout is on protected main branch.\n" +
-    "[plan-feature] The AC-authoring workspace is made by the workspace maker from origin/main " +
-    "on its own branch -- your main branch will not be modified."
-  );
+// Runs once the permission gate below has passed, in the project the maker was resolved in (ACD-2100a-1); null = go on.
+async function detectCurrentBranch(projectRoot) {
+  let r;
+  try { r = shellStepReply(await shellStepDispatch(`git -C ${makerQuote(projectRoot)} branch --show-current`, "detect-current-branch", "Stage 0"), "detect-current-branch"); }
+  catch (e) { r = { ok: false, reason: "no reply was received (" + e.message + ")", received: "(no answer)" }; }
+  if (!r.ok) return { status: "error", message: "Could not detect the current branch: " + r.reason + ". Received: " + r.received + ". Nothing was dispatched after it." };
+  if (r.exit_status !== 0 || r.stdout.trim().toLowerCase() !== "main") return null;
+  log("[plan-feature] Detected: current checkout is on protected main branch.\n[plan-feature] The AC-authoring workspace is made by the workspace maker from origin/main on its own branch -- your main branch will not be modified.");
+  return null;
 }
 
 const sessionSlug = component
@@ -2308,13 +2265,16 @@ if (workspaceSetupPermission.permits !== true) {
   return { status: "error", message: deniedMessage };
 }
 
+const makerPath = await resolveRepoAnchoredMakerPath("Stage 0", "{{config.output_root}}");
+if (!makerPath.ok) return workspaceFailure(makerPath);
+const branchFailure = await detectCurrentBranch(makerPath.root);
+if (branchFailure) return branchFailure;
+
 // The authoring workspace: the maker's answer (args.workspace) or exactly one verbatim dispatch of the maker
 // command. Anything but an accepted answer ends the run here, quoting what was received (BO-4300c-3).
 // ACD-2100a-1: that dispatch names the maker copy inside the repository by its absolute path, never a cwd-relative one.
-const makerPath = args && args.workspace != null ? { ok: true, path: "" } : await resolveRepoAnchoredMakerPath("Stage 0");
-if (!makerPath.ok) return workspaceFailure(makerPath);
 const authoringWorkspace = await workspaceObtain(
-  "python3 \"" + makerPath.path + "\" ensure --kind ac --slug " + (sessionSlug || "ac-authoring"), "Stage 0");
+  makerCommand(makerPath.path, "ensure", { kind: "ac", slug: sessionSlug || "ac-authoring" }), "Stage 0");
 if (!authoringWorkspace.accepted) return workspaceFailure(authoringWorkspace);
 
 const authoringWorktreePath = authoringWorkspace.workspace_path;
@@ -2735,7 +2695,7 @@ for (const step of pipeline) {
     // Why the crash-resume id recovery: docs/reference/plan-feature-workflow-rationale-helpers.md
     const stageDisplayLabel = stageDisplayName(step.stage);
     const resumeLogCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" log --format=%B origin/main..HEAD`
+      ? `git -C ${makerQuote(authoringWorktreePath)} log --format=%B origin/main..HEAD`
       : "git log --format=%B origin/main..HEAD";
 
     let resumedAcIds = [];

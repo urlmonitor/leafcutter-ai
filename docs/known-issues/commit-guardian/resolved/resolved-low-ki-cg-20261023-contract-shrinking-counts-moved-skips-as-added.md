@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-23'
-last_updated: '2026-10-23'
+last_updated: '2026-10-24'
 components:
   - commit_guardian
 related_docs:
@@ -16,13 +16,18 @@ related_docs:
 # KI-CG-20261023-contract-shrinking-counts-moved-skips-as-added — check-contract-shrinking reports every added pytest.skip line, even when it replaces an identical skip or sits in a brand-new test file
 
 > One known issue, filed directly into `commit-guardian/` on 2026-10-23. Index:
-> [commit-guardian.md](../commit-guardian.md). Filename severity is the
+> [commit-guardian.md](../../commit-guardian.md). Filename severity is the
 > three-level index bucket (`low`); the original grading is the `**Severity:**`
 > line below, unchanged — `medium` indexes as `low` per this register's own
 > "How this register is stored" section.
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** RESOLVED 2026-10-24 (moved to `resolved/`). Fixed by `GE-111f-1`: per file,
+  an added skip/xfail of a kind is reported only when added lines of that kind outnumber
+  removed ones, and a file added in the diff (`new file mode` / `--- /dev/null`) is not
+  judged for these patterns. A skip added to an existing test still blocks. Test:
+  `unit_tests/commit_guardian/test_ge_111f_1_contract_shrinking_net_skips.py`.
+- **Status when filed:** open.
 - **Occurrences:** 4 (2026-10-14: three live-test builds, KM-400f-1-i, KM-400b-5-i and
   KM-400f-1-iii; 2026-10-23: the TQ-600a-13 post-merge live-database lane, PR #1322)
 - **First seen:** 2026-10-14 · **Last seen:** 2026-10-23
@@ -74,7 +79,7 @@ the production change, so the practical response is to skip the gate. Every live
 test that is added or refactored now needs that skip, and a gate that is skipped by habit
 cannot catch the genuine skip it exists for.
 
-**Fix direction.** Not implemented — recorded for a future pass.
+**Fix direction.** Implemented as written by `GE-111f-1` (see Status).
 
 - Per file, net the added skip/xfail lines against the removed ones of the same kind and
   report only a net increase.

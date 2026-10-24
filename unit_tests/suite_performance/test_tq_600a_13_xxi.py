@@ -49,6 +49,7 @@ from ._workflow_jobs import FakeGitHub
 FAIL, OK, FLAKY = nid("publication_fails_twice"), nid("reclaim_ok"), nid("capacity_fail_then_pass")
 CORR_OK, CORR_FAIL = "unit_tests/test_corr.py::test_ok", "unit_tests/test_corr.py::test_flaky"
 CORRECTNESS_SELECTION = "manual and not timing_ratio"
+LANE_MARKER = "POST_MERGE_LIVE_LANE"  # TQ-600a-13-xxvii: "1" only in a live-lane pytest session
 
 
 def _collect(project: Path, selection: str, targets: tuple) -> set:
@@ -236,6 +237,54 @@ class TestTq600a13XxiLane(unittest.TestCase):
         self.assertEqual(baseline, collected)
         self.assertNotIn(nid("plain"), collected)
         self.assertEqual({CORRECTNESS_SELECTION}, workflow_selections(WORKFLOW), "the partition check must still see exactly one correctness selection")
+
+    def test_tq_600a_13_xxvii_only_the_live_lanes_session_carries_the_lane_marker(self):
+        # covers: TQ-600a-13-xxvii
+        # angle: seam
+        """One `manual` live test that passes only with POST_MERGE_LIVE_LANE=1, executed by both lanes of the real workflow.
+
+        Wrong versions caught: no lane sets the marker (the live lane fails it); the marker is a job-level env key or set
+        regardless of lane (the correctness lane, whose selection also collects it, passes it too).
+        """
+        probe = live_test("lane_marker", f"assert os.environ.get({LANE_MARKER!r}) == '1'", marks=("manual",))
+        with Listener() as db, workflow(self.api, {"lane_marker": probe}, None, db.address) as (wf, _state):
+            live_job = wf.execute_job("live_run")
+            self.assertEqual("success", live_job.conclusion, live_job.log_text()[-1500:])
+            corr_job = wf.execute_job("run")
+            self.assertEqual("success", corr_job.conclusion, corr_job.log_text()[-1500:])
+            live_results = wf.artifacts.read_json("live-first-run-report", "live-first-run-report.json")["results"]
+            corr_results = wf.artifacts.read_json("first-run-report", "first-run-report.json")["results"]
+        self.assertEqual("passed", live_results[nid("lane_marker")], "the live lane's session must carry the marker")
+        self.assertEqual("failed", corr_results[nid("lane_marker")], "the correctness lane's session must not carry the marker")
+
+    def test_tq_600a_13_xxvii_the_real_live_lane_test_skips_outside_the_live_lane_and_runs_inside_it(self):
+        # covers: TQ-600a-13-xxvii
+        # angle: real_artifact
+        """The real tests/knowledge_live/lane test, run the way the correctness lane runs it (`-m manual`, no marker): skipped, saying why.
+
+        With the marker it is not skipped (it fails on an unreachable database, or passes against a real one). Wrong versions
+        caught: the test skips on an unreachable database (it would skip inside the live lane too); it never skips (the
+        correctness lane, which starts no database, goes red - the 2026-10-23 post-merge failure).
+        """
+        repo = Path(__file__).resolve().parents[2]
+        node = f"{LIVE_DIR}/lane/test_tq_600a_13_xxi.py::test_tq_600a_13_xxi_the_live_lane_runs_against_the_same_real_databases_as_proof_of_done_MANUAL"
+
+        def session(extra: dict) -> str:
+            env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_") and k != LANE_MARKER}
+            env.update(extra)
+            argv = [sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider", "-m", "manual", node]
+            try:
+                proc = subprocess.run(argv, cwd=str(repo), env=env, capture_output=True, text=True, timeout=300, check=False)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                message = f"pytest could not run: {exc}"
+                raise AssertionError(message) from exc
+            return proc.stdout
+
+        outside = session({})
+        self.assertIn("1 skipped", outside, outside[-1500:])
+        self.assertIn("only inside the live-database lane", outside)
+        inside = session({LANE_MARKER: "1"})
+        self.assertNotIn("skipped", inside, inside[-1500:])
 
     def test_tq_600a_13_xxi_the_workflow_runs_the_live_lane_and_writes_the_combined_verdict_artifact(self):
         # covers: TQ-600a-13-xxi

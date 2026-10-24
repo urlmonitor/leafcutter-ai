@@ -16,8 +16,9 @@ Finding a workspace is the maker's `locate` verb (`scripts/worktree.py`; see `do
 
 1.  **Ask the user** which workspace to close (if not already specified), by kind and slug.
 2.  **Locate it** with the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`:
+    Run ONE exact command with the ABSOLUTE, quoted path to the deployed maker, unchanged, and return its stdout verbatim. The path is `<project root>/.leafcutter/scripts/worktree.py`, with the project root from `git rev-parse --show-toplevel` run in the main checkout. Quote every path and slug. Never a cwd-relative path.
     ```bash
-    python scripts/worktree.py locate --kind <kind> --slug <slug>
+    python "<project root>/.leafcutter/scripts/worktree.py" locate --kind <kind> --slug "<slug>"
     ```
     *   Take the **workspace path** and **branch name** from the `"status": "ok"` answer only.
 
@@ -106,8 +107,9 @@ keep the maker's `remove` verb from finishing (a `PROCESS_HOLDS_FILES` refusal).
 Clearing is the workspace maker's `remove` verb only (`scripts/worktree.py`; see `docs/how-to/clear-a-workspace.md` and `docs/how-to/get-a-workspace.md`).
 
 1.  **Ask the maker to clear it** (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`):
+    Run ONE exact command, the same absolute, quoted maker path as in Phase 1, unchanged, and return its stdout verbatim:
     ```bash
-    python scripts/worktree.py remove --path "<workspace-path>"
+    python "<project root>/.leafcutter/scripts/worktree.py" remove --path "<workspace-path>"
     ```
 2.  **If the answer is `UNSENT_WORK`**, the maker has refused and left the workspace as it was (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`). Show the user the listed `unsent` commits and files. Deliver the work first and ask again; repeat the request with the answer's `discard_token` only on the user's explicit instruction to throw that work away.
 3.  **Any other refusal** (for example `PROCESS_HOLDS_FILES`): surface the answer's `code` and `message` verbatim and STOP. Never delete the folder by hand and never retry with `--force`; the maker ignores it.

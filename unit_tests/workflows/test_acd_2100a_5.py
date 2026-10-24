@@ -94,6 +94,9 @@ _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 from _workflow_engine_harness import _strip_exports  # noqa: E402
 from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 from _plan_feature_harness_defaults import workspace_answer_at  # noqa: E402
+if str(_WORKTREE_ROOT / "templates" / "scripts") not in sys.path:
+    sys.path.insert(0, str(_WORKTREE_ROOT / "templates" / "scripts"))
+import worktree_paths  # noqa: E402  (the maker's own path serializer: how its marker spells project_root)
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
@@ -263,6 +266,9 @@ const __labelResponses__ = __LABEL_RESPONSES_JSON__;
 const __capturedCalls__ = [];
 
 const _CMD_RE = /Run the following command[^\n]*:\n([^\n]+)\n/;
+// BO-4300a-1-ia: the shared shell step (maker-path probe, verify of a handed-in workspace) is a shell-runner
+// dispatch in this shape, answered in the shell-runner reply shape.
+const _SHELL_STEP_RE = /Run exactly this one command[^\n]*\n\n([^\n]+)\n/;
 const _PAUSE_LINE_RE = /^.*pause_store\.py.*$/m;
 
 async function agent(promptOrOpts, opts) {
@@ -301,6 +307,19 @@ async function agent(promptOrOpts, opts) {
     var pparsed = null;
     try { pparsed = JSON.parse((preal.output || '').trim()); } catch (_pe) { pparsed = null; }
     response = pparsed;
+  } else if (typeof promptOrOpts === 'string' && _SHELL_STEP_RE.test(promptOrOpts)) {
+    var sm = promptOrOpts.match(_SHELL_STEP_RE);
+    var scmd = sm[1].replace(/\{\{config\.output_root\}\}/g, '.leafcutter');
+    var sreal = { command: scmd, output: '', exit_code: 0, stderr: '' };
+    try {
+      sreal.output = execSync(scmd, { cwd: __RUN_CWD__, encoding: 'utf8', timeout: 15000 });
+    } catch (se) {
+      sreal.output = (se.stdout || '').toString();
+      sreal.stderr = (se.stderr || '').toString();
+      sreal.exit_code = (se.status === null || se.status === undefined) ? 1 : se.status;
+    }
+    record.real_result = sreal;
+    response = { command: scmd, exit_status: sreal.exit_code, stdout: sreal.output, stderr: sreal.stderr };
   } else if (typeof promptOrOpts === 'string') {
     var m = promptOrOpts.match(_CMD_RE);
     if (m) {
@@ -504,6 +523,11 @@ def _drive_three_scenarios(tmp_path: Path, run_prefix: str) -> dict:
     ac_workspace = tmp_path / "ac-authoring-workspace"
     link_checkout(project_dir, ["-b", f"ac-authoring/{run_prefix}", str(ac_workspace), "main"])
     workspace = workspace_answer_at(ac_workspace)
+    # BO-4300a-1-ia: a handed-in workspace names its project in its marker; written the way the maker writes it
+    # (project_root stored relative to the workspace by the maker's own serializer), never a hand-typed literal.
+    marker_file = ac_workspace / ".leafcutter" / "workspace.json"
+    marker_file.parent.mkdir(parents=True, exist_ok=True)
+    marker_file.write_text(json.dumps({"project_root": worktree_paths.portable(str(project_dir), ac_workspace)}), encoding="utf-8")
 
     # Computed PER SCENARIO, from `cwd` set to that scenario's own starting
     # directory -- exactly what the plan-feature skill's real pre-flight

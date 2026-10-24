@@ -139,9 +139,14 @@ amended_by:
     binding (workspace path and maker record, unsent shas, uncommitted files with content), exact-match
     acceptance, the mismatch refusal with a fresh token, and no env/config/stdin/persistence. Three
     tests added, one reworded. readiness stays approved.
+- reason: bo4300-hardening-A7
+  by: human:user
+  at: '2026-10-22'
+  note: Child BO-4300e-3-ii added (a failed deletion of the hub line leaves the workspace in place); covered_by updated. Criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300e-3-i]
+covered_by: [BO-4300e-3-i, BO-4300e-3-ii]
 implemented_by:
+- templates/scripts/worktree_remove.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   Q8 -- DECIDED (user, 2026-09-28): a refusal to remove a workspace holding unpushed or

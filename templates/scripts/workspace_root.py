@@ -28,6 +28,7 @@ ARCHITECTURE: One public function, ``resolve(cwd, repo_root)``, importable as
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import os
@@ -43,6 +44,47 @@ _GIT_TIMEOUT_SECONDS = 15
 _MARKER_PARTS = (".leafcutter", "workspace.json")
 
 
+@functools.lru_cache(maxsize=None)
+def ssh_command_configured() -> bool:
+    """Return True when git config sets ``core.sshCommand`` (read once per process).
+
+    ``GIT_SSH_COMMAND`` outranks ``core.sshCommand``, so the no-prompt env must
+    not invent one when the user's ssh command lives only in git config. Exit
+    code 1 means unset; a launch failure is logged and treated as unset.
+    """
+    env = dict(os.environ)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    try:
+        result = subprocess.run(
+            ["git", "config", "--get", "core.sshCommand"],
+            stdin=subprocess.DEVNULL,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        _log.warning("workspace_root: git config core.sshCommand failed: %s", exc)
+        return False
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
+def _git_env() -> dict[str, str]:
+    """The caller's environment with git prompts disabled (BO-4300c-2).
+
+    Kept local rather than imported from ``worktree_git``: this module is the
+    leaf resolver that ``worktree_layout`` loads first, and must stay free of the
+    git-primitives layer. Mirrors ``worktree_git.git_env`` -- change both together.
+    """
+    env = dict(os.environ)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    if "GIT_SSH_COMMAND" not in env and "GIT_SSH" not in env and not ssh_command_configured():
+        env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+    return env
+
+
 def _git(args: list[str], cwd: Path) -> str | None:
     """Run ``git <args>`` with its working directory set to *cwd*; return stripped stdout.
 
@@ -53,6 +95,8 @@ def _git(args: list[str], cwd: Path) -> str | None:
         result = subprocess.run(
             ["git", *args],
             cwd=str(cwd),
+            stdin=subprocess.DEVNULL,
+            env=_git_env(),
             capture_output=True,
             text=True,
             timeout=_GIT_TIMEOUT_SECONDS,
