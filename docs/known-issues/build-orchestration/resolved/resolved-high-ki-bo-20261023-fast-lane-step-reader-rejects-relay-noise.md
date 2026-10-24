@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-23'
-last_updated: '2026-10-23'
+last_updated: '2026-10-24'
 components:
   - build_orchestration
 related_docs:
@@ -24,8 +24,9 @@ related_docs:
 - **Severity:** high. Nothing is wrongly committed, because the reader fails closed. But on any AC
   whose wrong-version names are derived, the lane halts at the list step every time, after the
   test-writer and coder have already done their work.
-- **Status:** open, no AC of its own. TQ-500f-3-v fixed the same reader in the three heavy-lane
-  routes and named the fast lane out of scope, because the fast lane is owned elsewhere.
+- **Status:** **RESOLVED** 2026-10-24. TQ-500f-3-v fixed the same reader in the three heavy-lane
+  routes and named the fast lane out of scope; the fast lane's `wvStep` now uses the same
+  `parseStepJson`. See the Resolution section at the end.
 - **Occurrences:** 0 live in the fast lane. Found 2026-10-23 by reading the code while fixing
   the identical defect, which halted three of three tickets live on `/build-feature` (run
   `wf_f982c0ab-e94`, ~4.2M tokens of correct work).
@@ -69,3 +70,26 @@ shrink in the same commit, or the owner's skip.
 
 **Pattern:** a step reader that assumes the relayed text is exactly the command's stdout, when the
 relay is an agent's shell tool that merges streams.
+
+---
+
+## Resolution — 2026-10-24
+
+**Fixed on branch** `feature/wv-list-parse`. `fast-lane-ship.js`'s `wvStep` now returns
+`parseStepJson(reply.stdout)`. The helper was already in the file: the shared
+`WORKSPACE-ANSWER` block (`templates/workflows-js/_shared/workspace-answer.js`) is filled into
+`fast-lane-ship.js` at build time, so no copy was added and the file shrank by one line.
+
+- **Trigger, as confirmed.** `command-step-runner` relays an agent's shell tool, which merges stderr
+  into stdout. `wrong_version_writer.py list` logs `base ref HEAD: N names declared, M derived`
+  (`_wvw_list.py:77`, INFO, to stderr), so the relayed `stdout` was `<log line>\n<json>` and the
+  whole-text `JSON.parse` threw. `wvStep` serves the recover, list and finish steps, all fixed.
+- **Still fails closed.** `parseStepJson` returns null for a non-string, an empty text, an array,
+  a truncated object, a line that shares text with the JSON, and two different objects. Every
+  `wvStep` caller halts on null.
+- **Tests.** `unit_tests/workflows/test_wv_fast_lane_relay_noise.py` drives the real template under
+  the E2 harness. Each noisy-answer case is paired with the same no-answer cases. Red before the
+  one-line change, green after.
+- **Not done.** `_wvw_list.py:77` stays at INFO. It goes to stderr and every reader now copes with it.
+  `wvStep` still does not read `exit_status`, in any of the four routes; a non-zero exit with a
+  valid object is judged by the object's own fields (`ok`, `owed`/`error`, `gate_passed`).

@@ -1771,14 +1771,8 @@ phase("Wrong-Version Runs");
 const wvDir = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration`;
 const wvIds = acIds.length ? `--ac-ids ${batchIdsCsv} ` : "";
 const wvFlags = `--ac-root ${acStoreRoot} --test-root ${worktreePath} --base-ref HEAD`;
-const wvStep = async (label, command) => {
-  try {
-    const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }),
-      { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
-    const out = JSON.parse(reply.stdout);
-    return out && typeof out === "object" ? out : null;
-  } catch { return null; }
-};
+const wvStep = (label, command) => Promise.resolve().then(() => agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }),
+  { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" })).then((reply) => parseStepJson(reply.stdout)).catch(() => null);
 const wvHalt = async (step, detail) => {
   const releaseReply = await agent(
     `You are the release-phase agent. The wrong-version ${step} step stopped the run before commit.\n\n` +
