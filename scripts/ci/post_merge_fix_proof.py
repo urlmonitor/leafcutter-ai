@@ -296,12 +296,19 @@ def _lane_command(args: argparse.Namespace, report: Path, targets: list[str], tr
 
 
 def _run_session(args: argparse.Namespace, targets: list[str], *, tree: Path | None = None, collect_only: bool = False, selection: str = LANE_SELECTION) -> tuple[int, dict | None]:
-    """Run the child session over ``targets`` in ``tree`` (default: the head); ``(its exit status, its lane report or None)``."""
+    """Run the child session over ``targets`` in ``tree`` (default: the head); ``(its exit status, its lane report or None)``.
+
+    A live-selection session (run by ``prove_live`` only after its database check) carries the live lane's marker (TQ-600a-13-xxvii).
+    """
+    from scripts.ci import _live_lane as live  # noqa: PLC0415 -- after _put_root_on_path
+
     where = tree or Path(args.head)
+    env = live.lane_environ(os.environ) if selection == live.SELECTION else None
     try:
         with tempfile.TemporaryDirectory(prefix="fix-proof-") as scratch:
             report_path = Path(scratch) / "lane-report.json"
-            completed = subprocess.run(_lane_command(args, report_path, targets, where, collect_only=collect_only, selection=selection), cwd=where, check=False)  # noqa: S603
+            command = _lane_command(args, report_path, targets, where, collect_only=collect_only, selection=selection)
+            completed = subprocess.run(command, cwd=where, env=env, check=False)  # noqa: S603
             report = _read_json(report_path)
             if report is not None and collect_only:  # the selected ids travel in a file next to the report, never in argv or env
                 report["collected_ids"] = _read_json(report_path.with_name(IDS_FILE), list) or []

@@ -221,11 +221,11 @@ def build_verdict_file(
 
 
 # --------------------------------------------------------------------------- executing pytest
-def execute_lane(command: list[str], report_path: Path, node_ids: list[str] | None = None) -> dict:
+def execute_lane(command: list[str], report_path: Path, node_ids: list[str] | None = None, env: dict[str, str] | None = None) -> dict:
     """Run the lane's pytest command (plus exact node ids for a retry); return the per-test report.
 
     The command's own ``-m`` selection is kept for a retry: node ids alone would be
-    deselected by pytest.ini's default ``-m`` and execute nothing.
+    deselected by pytest.ini's default ``-m`` and execute nothing. ``env`` (default: inherited) is the session's environment.
     """
     try:
         report_path.unlink(missing_ok=True)
@@ -236,7 +236,7 @@ def execute_lane(command: list[str], report_path: Path, node_ids: list[str] | No
     if node_ids:
         argv += ["--", *node_ids]
     try:
-        completed = subprocess.run(argv, check=False)
+        completed = subprocess.run(argv, check=False, env=env)
     except OSError as exc:
         logger.warning("cannot execute %s: %s", argv[0], exc)
         raise
@@ -298,7 +298,7 @@ def _live_execute(opts: argparse.Namespace, command: list[str], ids: list[str] |
         live.write_unreachable_report(path, reach, os.environ.get("RUNNER_NAME"))
         return read_report(path) or {"results": {}}
     base = live.without_targets(command) if ids is not None else command
-    report = execute_lane([*base, "-m", live.SELECTION], path, ids)
+    report = execute_lane([*base, "-m", live.SELECTION], path, ids, env=live.lane_environ(os.environ))  # marker only after the check
     live.stamp_reachability(path, reach)
     return report
 
