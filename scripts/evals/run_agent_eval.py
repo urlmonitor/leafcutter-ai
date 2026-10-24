@@ -402,39 +402,6 @@ def _first_balanced_object(text: str) -> str | None:
 
 
 
-# ---------------------------------------------------------------------------
-# Scoring — artifact mode (scaffold; no active consumer yet)
-# ---------------------------------------------------------------------------
-def run_deterministic_assertions(artifact: str, assertions: list[dict[str, Any]]) -> list[dict]:
-    """Run substring/regex/json-key assertions against a produced artifact.
-
-    Pure function. Each assertion: {"kind": "contains|not_contains|regex|json_has_key",
-    "value"|"pattern"|"key": ...}. Returns a per-assertion result list.
-    """
-    results: list[dict[str, Any]] = []
-    for spec in assertions:
-        results.append({"spec": spec, "passed": _check_assertion(artifact, spec)})
-    return results
-
-
-def _check_assertion(artifact: str, spec: dict[str, Any]) -> bool:
-    """Evaluate a single deterministic assertion. Pure function."""
-    kind = spec.get("kind")
-    if kind == "contains":
-        return str(spec.get("value", "")) in artifact
-    if kind == "not_contains":
-        return str(spec.get("value", "")) not in artifact
-    if kind == "regex":
-        return re.search(str(spec.get("pattern", "")), artifact) is not None
-    if kind == "json_has_key":
-        try:
-            obj = json.loads(artifact)
-        except json.JSONDecodeError:
-            return False
-        return isinstance(obj, dict) and spec.get("key") in obj
-    return False
-
-
 def run_llm_judge(
     artifact: str,
     rubric: str,
@@ -464,25 +431,6 @@ def run_llm_judge(
         "score": float(parsed.get("score", 0.0)),
         "reasoning": str(parsed.get("reasoning", "")),
     }
-
-
-def score_artifact_row(
-    artifact: str,
-    expected: dict[str, Any],
-    model: str,
-    timeout: int,
-    backend: str,
-) -> dict[str, Any]:
-    """Score one artifact row: deterministic assertions AND optional LLM-judge."""
-    assertions = expected.get("assertions", [])
-    det = run_deterministic_assertions(artifact, assertions)
-    det_ok = all(a["passed"] for a in det)
-    judge: dict[str, Any] | None = None
-    rubric = expected.get("rubric")
-    if rubric:
-        judge = run_llm_judge(artifact, str(rubric), model, timeout, backend)
-    judge_ok = judge is None or judge["verdict"] == "pass"
-    return {"passed": det_ok and judge_ok, "assertions": det, "judge": judge}
 
 
 # ---------------------------------------------------------------------------
@@ -1403,7 +1351,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--score-gold",
         action="store_true",
-        help="ARTIFACT mode: skip the agent run and score each row's gold_target artifact "
+        help="ARTIFACT / PRODUCED_TESTS mode: skip the agent run and score each row's recorded gold output "
         "as if the agent produced it (proves the scorer; expects ~100%%).",
     )
     parser.add_argument("--results-file", default=None, help="Where to write the JSON results file.")
@@ -1549,6 +1497,10 @@ def main(argv: list[str] | None = None) -> int:
         return _run_artifact_mode(args, agent_cfg, rows, system_prompt, repo_root)
     if mode == "label":
         return _run_label_mode(args, agent_cfg, rows, system_prompt, repo_root)
+    if mode == "produced_tests":
+        from produced_tests_mode import run_produced_tests_mode  # noqa: PLC0415 - handed this module, so no import cycle
+
+        return run_produced_tests_mode(args, agent_cfg, rows, system_prompt, repo_root, sys.modules[__name__])
     logger.error("Unknown scoring_mode %r for agent %s", mode, args.agent)
     return 2
 

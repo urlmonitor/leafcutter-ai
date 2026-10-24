@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-23'
+last_updated: '2026-10-24'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 32** (1 blocker, 15 high, 16 low) · **Resolved: 5** (recounted from the directory 2026-10-23, after the three KI-TQ-20261023 entries were filed)
+**Open: 35** (1 blocker, 15 high, 19 low) · **Resolved: 5** (recounted from the directory 2026-10-24, after the three KI-TQ-20261024 entries were filed)
 
 ## Open
 
@@ -91,6 +91,9 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20261023-consumer-sweep-full-repo-export — the consumer-sweep base run extracts `git archive` of the whole base commit on every `consumer_sweep.py check` with a test file in scope (about 60 s for 14,648 files), even for one changed test and even when the check already fails on an unlisted edit | [open-low-ki-tq-20261023-consumer-sweep-full-repo-export.md](testing-quality/open-low-ki-tq-20261023-consumer-sweep-full-repo-export.md) |
 | `low` | KI-TQ-20261023-wvr-verified-true-on-not-applicable — `_wvr_verdict.assemble` ignores `applicable` when it sets `verified`, so the no-covering-test-in-scope branch reads `applicable: false` with `verified: true`; nothing reads `verified` yet | [open-low-ki-tq-20261023-wvr-verified-true-on-not-applicable.md](testing-quality/open-low-ki-tq-20261023-wvr-verified-true-on-not-applicable.md) |
 | `low` | KI-TQ-20261023-g3-mypy-followups — PR #1324 leftovers: four annotation-only mypy errors in the consumer-sweep code (`_cs_asserts.py`:216, `_cs_edits.py`:173, `_cs_runs.py`:128 and :135) | [open-low-ki-tq-20261023-g3-mypy-followups.md](testing-quality/open-low-ki-tq-20261023-g3-mypy-followups.md) |
+| `low` | KI-TQ-20261024-sweep-list-recorded-against-head — test-writer records its consumer-sweep list with `--base-ref HEAD`, and `consumer_sweep.py check` honours a list only at its own base or a descendant, so once the branch takes in main and finish checks against the merge-base, a list recorded on a branch-only commit is dropped and finish stops at `sweep` with "sweep list missing" (TQ-200d-1: record base `9c3fb043`, finish base `78a408fc`); graded medium | [open-low-ki-tq-20261024-sweep-list-recorded-against-head.md](testing-quality/open-low-ki-tq-20261024-sweep-list-recorded-against-head.md) |
+| `low` | KI-TQ-20261024-eval-harness-cannot-launch-claude-on-windows — `run_agent_eval.py` runs the bare name `claude` through `subprocess.run` without a shell, which cannot start the npm install's `claude.cmd` on Windows, so every live row fails with "could not be launched" and the eval scores 0% (all four live evals on 2026-10-24); graded medium | [open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md](testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md) |
+| `low` | KI-TQ-20261024-restructuring-specialist-eval-reply-format — the restructuring-specialist live eval scored 0/2 on 2026-10-24 because neither reply gave a `skills_applied` object the harness could read (rs-001 no boolean for the axis, rs-002 no JSON object); pre-existing, and the CI eval job is informational | [open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md](testing-quality/open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md) |
 
 ## Resolved
 

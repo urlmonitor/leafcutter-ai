@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -30,8 +30,11 @@ criteria: |
       "export the report as CSV", a test design that invents wrong versions
       such as "revert the fix" for behaviour that had no earlier version fails
       the row, and a design that names none passes it,
-    And in every row the design states, in its own words, whether the
-      requirement is a bug fix, a gate or neither,
+    And in every row the design's judgement of whether the requirement is a
+      bug fix, a gate or neither is shown by the fields of its test entries,
+      not by a free-text sentence: for a bug fix or a gate, at least one
+      entry names wrong versions (must_catch) or is a discrimination test
+      (angle: discrimination); for neither, no entry carries either,
     And a local run of the shared eval runner for the test designer picks up
       every row without anyone naming them, and reports a score for each row,
     And a result from such a local run is reported as a local result; nothing
@@ -43,81 +46,200 @@ doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml
     relationship: relates-to
     status: exists
-    relevance: "R1 (bug fix), R2 (gate), R3 (new behaviour) — the rows here. Amended on main by PR #926; read it from origin/main."
+    relevance: "R1 (bug fix), R2 (gate), R3 (new behaviour), the rows here. Its user decision of 2026-09-27: the bug-fix / gate judgement is carried by existing test_spec fields (must_catch, angle: discrimination), with no new key. Still todo, so R1 and R2 are expected to fail until it lands (the eval's red baseline)."
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-5.yaml
     relationship: relates-to
     status: exists
-    relevance: "Registers the test-designer agent. This set cannot run until it exists."
+    relevance: "Done. Registered the test-designer agent and the design pre-pass this set dispatches it through."
   - path: templates/agents/test-designer.md
     relationship: relates-to
-    status: planned
+    status: exists
+    relevance: "The agent under test. Sonnet, tools Bash, Read, Write, Edit, no {{config.output_root}} placeholders. It edits the requirement record's test_spec, test_design_authorship and test_design_opened_files field by field and replies one JSON object."
+  - path: docs/reference/code-aware-step.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-pass report the designer is given and the definitions it relies on."
   - path: scripts/evals/agent_eval_config.json
     relationship: describes
     status: exists
-  - path: scripts/evals/run_agent_eval.py
+  - path: scripts/evals/README.md
     relationship: describes
     status: exists
+  - path: .github/workflows/agent-evals.yml
+    relationship: describes
+    status: exists
+    relevance: "The informational CI job a local-only set must stay out of."
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: ACD-2500d-5
-    contract: "A registered test-designer agent the shared runner can invoke."
+    contract: >-
+      The registered test-designer (templates/agents/test-designer.md; config/agent_registry.json id
+      test-designer), dispatched as plan-feature.js dispatchTestDesign does: record ids, the verbatim
+      JSON report of python scripts/ac_store/design_prepass.py --ids <ids> --store-root <store>
+      --repo-root <root>, and ac_store_path. It edits only test_spec, test_design_authorship and
+      test_design_opened_files (test-design group) of each record, field by field, and replies one
+      JSON object {status: ok|blocked, records: [{id, test_design: written|pending|not_needed,
+      file_findings: written|none, reason}], anomalies: [str]}.
+  - ac_id: TQ-200d-1
+    contract: >-
+      The produced-tests scoring_mode and modules (OQ-1 decided: scripts/evals/produced_tests_mode.py
+      and scripts/evals/produced_tests_scoring.py), the row expected object ({negative, fixture,
+      gold_output, assertions}), the git-initialised sandbox, local_only handling and the scored-row
+      record. Not a depends_on edge: build after TQ-200d-1 so the mode has one author.
+test_required: true
+package_surface: false
 it_requirements:
-- BLOCKED until ACD-2500d-5 registers test-designer. The rows may exist before TQ-500f-2-ii lands; they
-  fail until it does, which is the eval's red baseline.
-- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
-  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
-  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
-  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
-  in the same file.'
-- Compare must_catch lists structurally (which condition names appear, the presence of 'revert the fix').
-  The judge scores only the design's stated classification (bug fix, gate or neither).
-- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
-  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
-- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
-  path, using recorded good and bad agent outputs as fixtures.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'No longer blocked: ACD-2500d-5 is done and templates/agents/test-designer.md exists. TQ-500f-2-ii
+  (the must_catch duty in the designer''s procedure) is still todo and is not a build dependency. The rows
+  may fail until it lands, which is the eval''s red baseline. The live before-score is deferred, recorded
+  later as a separate step the user triggers (OQ-11 decided).'
+- 'Join the existing harness (TQ-200c-4). Register test-designer in scripts/evals/agent_eval_config.json
+  as agents["test-designer"] (template templates/agents/test-designer.md, model sonnet and tools Bash,
+  Read, Write, Edit per its frontmatter, local_only true per OQ-6). ONE set of {id, input, expected} rows
+  goes at scripts/evals/sets/test-designer.jsonl, with fixture projects and recorded outputs under scripts/evals/sets/test-designer/
+  (OQ-2 decided). Use the produced-tests scoring_mode of TQ-200d-1 (OQ-1 decided): new assertion kinds
+  go into its scoring module, and no third mode is added. run_agent_eval.py (1087 counted lines) must
+  not grow.'
+- 'The designer produces no test files: its output is edited requirement records. Each row''s sandbox
+  (the git-initialised temp copy of TQ-200d-1) therefore holds a small code fixture and an AC store of
+  its own. The store has one leaf record per requirement (bug fix, gate, new behaviour), each with test_intent
+  written and test design pending, and the fixture code it declares (the refresh gate, the trade gate,
+  a report module). Fixture ids use a prefix that does not exist in the real store, and the fixture store
+  lives outside docs/acceptance-criteria/, so no repository hook or scanner reads it as real requirements.'
+- 'The row input is built from the same ingredients as plan-feature.js dispatchTestDesign: the record
+  ids, the verbatim report of scripts/ac_store/design_prepass.py run on the sandbox, and ac_store_path.
+  The dispatch asks for the test-design group only (the template allows a single-group dispatch). OQ-13
+  decided: the eval builds the input from those ingredients and accepts that the prompt wording may drift
+  from plan-feature.js; the seam test pins the ingredients.'
+- 'Score the records after the run structurally, using the runner''s own matching rules (wrong_version_key
+  and ALIASES in scripts/build_orchestration/_wvr_scope.py, so "revert the fix" and "the fix undone" are
+  one name). Bug fix: an entry carries must_catch with the revert alias and at least one wrong version
+  naming the retry_due condition. Gate: one wrong version per condition (window open, position limit)
+  plus "the gate always allows". OQ-15 decided: "revert the fix" and "the gate always allows" match exactly after trimming and case-folding, through the runner''s alias rule; a condition-naming wrong version matches when its condition token (retry_due, window open, position limit) appears in the entry.
+  New behaviour (trap, expected.negative true): an invented revert alias fails the row (OQ-14 decided:
+  only a revert alias fails the trap; any other wrong versions named on that record are reported, not failed). Each produced record must also pass python scripts/ac_store/validate_ac_schema.py.'
+- 'The designer''s stated bug fix / gate / neither judgement is read from the record as TQ-500f-2-ii''s
+  2026-09-27 user decision defines it: an entry with must_catch or angle discrimination is the stated
+  bug-fix-or-gate judgement, and their absence states neither. There is no separate classification field,
+  and a judge, if any, is secondary and never the only scorer (OQ-5 decided). OQ-12 decided:
+  the criterion''s "in its own words" is read this way. The criterion wording needs a business-analyst
+  amendment to say so; the orchestrator dispatches the BA, and this pass does not change criteria.'
+- 'Local only (user decision; KI-TQ-20260907; OQ-6 decided): agents["test-designer"].local_only true,
+  so eval_selector.py keeps it out of the "Agent evals (affected)" job and out of --check. The payload
+  carries run_context "local" and the report says so. Nothing claims TQ-200b-2. The agent list in unit_tests/evals/test_agent_eval_config_triggers.py
+  is updated, which is an existing-test edit for the TQ-500g-3 sweep list.'
+- Unit tests never call a live model. Row pickup and scoring are proven through --score-gold with recorded
+  gold records, and through the scoring module with recorded bad records.
+- Every new or changed .py file stays at or under 400 counted lines. Files already over the limit (run_agent_eval.py,
+  1087) must not grow, and scripts/ac_store/design_prepass.py (156) and _wvr_scope.py (275) are reused,
+  not edited.
 test_spec:
 - name: test_test_designer_set_registered_and_every_row_scored
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
-  description: Gold-scoring mode finds the test-designer set and scores the bug fix, gate and new behaviour
-    rows.
+  surface_invoked: python scripts/evals/run_agent_eval.py --agent test-designer --score-gold --results-file
+    <tmp>
+  description: The subprocess exits 0 and scores exactly the bug fix, gate and new behaviour rows, with
+    no --row.
+  must_catch:
+  - test-designer entry missing from agent_eval_config.json
+  in_scope_files:
+  - scripts/evals/agent_eval_config.json
 - name: test_new_behaviour_trap_fails_invented_wrong_versions
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: discrimination
-  description: A recorded design naming 'revert the fix' for 'export the report as CSV' fails the trap
-    row, and a design naming none passes.
+  description: On the real trap row, a recorded design whose new-behaviour record carries must_catch "revert
+    the fix" fails, and so does one spelling it "the fix undone". A design naming no wrong version passes.
   must_catch:
   - new-behaviour trap passes a design that names 'revert the fix'
+  - alias spelling 'the fix undone' not matched
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/test-designer.jsonl
 - name: test_gate_row_requires_one_wrong_version_per_condition
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: criterion
-  description: A gate design missing 'drop the position-limit condition' fails, and the gold design passes.
+  description: A gate design missing "drop the position-limit condition" fails, and so does one missing
+    "the gate always allows". The gold design passes.
   must_catch:
   - gate row passes with one condition's wrong version missing
-- name: test_local_result_never_presented_as_ci
+  - gate row passes without 'the gate always allows'
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+- name: test_bug_fix_row_requires_revert_and_a_condition_naming_version
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A bug-fix design carrying only "revert the fix" fails, and so does one naming only "drop
+    the retry_due condition". The gold design carrying both passes.
+  must_catch:
+  - bug-fix row passes with 'revert the fix' alone
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+- name: test_stated_judgement_read_from_record_fields
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: A design whose bug-fix entry carries must_catch but neither angle discrimination nor any
+    other declaration still counts as stated. A gate record with no must_catch and no discrimination angle
+    fails as having stated neither. A produced record that fails validate_ac_schema.py fails its row.
+  must_catch:
+  - judgement read from the reply text instead of the record
+  - schema-invalid record accepted
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+- name: test_designer_row_input_carries_the_real_prepass_report
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: seam
+  surface_invoked: python scripts/ac_store/design_prepass.py --ids <fixture ids> --store-root <sandbox store>
+    --repo-root <sandbox>
+  description: The input the mode builds for a row embeds, verbatim, the JSON report design_prepass.py
+    prints for the row's sandbox, names the fixture record ids and the sandbox store path, and asks for
+    the test-design group only.
+  must_catch:
+  - pre-pass report built by the eval instead of design_prepass.py
+  - dispatch asks for the file-findings group too
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+- name: test_test_designer_local_result_never_presented_as_ci
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: failure
-  description: The local run is stamped as local.
+  description: The score-gold payload and report carry the local-run marker, and eval_selector.py does
+    not list test-designer as affected by a change to templates/agents/test-designer.md.
   must_catch:
-  - report omits the local marker
-test_rationale: As TQ-200d-1. Structural comparison of must_catch lists wherever possible, and a judge
-  only for the stated classification.
+  - eval_selector lists test-designer as affected
+  in_scope_files:
+  - scripts/evals/eval_selector.py
+  - scripts/evals/agent_eval_config.json
+test_rationale: As TQ-200d-1, recorded good and bad designs go through the real runner CLI and the scoring
+  module, with no live model. The must_catch lists are compared structurally, with the wrong-version runner's
+  own alias rule, because a judge would be the opinion TQ-500 exists to replace. The trap carries the
+  over-reach the designer is likely to show. The seam test pins that the designer sees the same pre-pass
+  report the real pipeline gives it.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
+    by: it-po
+    at: 2026-10-23
+  - reason: "User decision OQ-12 (2026-10-23): the bug fix / gate / neither judgement is scored structurally from the record's fields, per TQ-500f-2-ii's 2026-09-27 decision (no new field, no free-text sentence)."
+    by: business-analyst
+    at: 2026-10-23
+    note: "Criteria wording only: the clause 'the design states, in its own words, whether the requirement is a bug fix, a gate or neither' now says the judgement is shown by the test entries' fields (must_catch or angle: discrimination present for bug fix and gate; absent for neither). Every other scenario, example and Then-clause is unchanged; readiness stays approved."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -140,12 +262,83 @@ notes: |
   which would send the wrong-version runs an absence (TQ-500g-1-ii) and stop the
   work for nothing.
 
-  "IN ITS OWN WORDS" keeps TQ-500f-2-ii's rule that bug-fix / gate is the
-  designer's stated judgement, not an automatic classifier's output (TQ-500
-  non-goal). A judge scores that statement; the must_catch lists are compared
-  structurally where possible.
+  THE JUDGEMENT IS THE DESIGNER'S OWN. Per TQ-500f-2-ii, bug fix / gate /
+  neither is the designer's judgement, not an automatic classifier's output
+  (TQ-500 non-goal). The designer expresses it through the test_spec fields it
+  writes (must_catch, angle: discrimination; absence = neither), and the eval
+  scores those fields structurally (OQ-12). A judge is optional and secondary,
+  never the only scorer (OQ-5).
 
   LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.
 
   IT-PO ENRICHMENT (2026-09-28)
   Not buildable until ACD-2500d-5 (llm-expert, todo) is done.
+  IT-PO TECHNICAL ALIGNMENT (2026-10-23, claimed into the TQ-200d lane)
+  Criteria, title, depends_on and readiness untouched. Mismatches with the
+  earlier enrichment:
+    - "BLOCKED until ACD-2500d-5": ACD-2500d-5 is done and
+      templates/agents/test-designer.md exists. The it_requirement is
+      rewritten, and the test-designer.md doc_link is now status exists.
+    - The designer writes no test files. Its output is test_spec,
+      test_design_authorship and test_design_opened_files, edited field by
+      field into the requirement record, plus one JSON reply. The row
+      sandbox therefore carries a small AC store, and scoring reads the
+      edited records.
+    - The dispatch input is the plan-feature.js dispatchTestDesign shape,
+      built around the report of scripts/ac_store/design_prepass.py.
+    - "States, in its own words, whether the requirement is a bug fix, a
+      gate or neither": TQ-500f-2-ii's user decision of 2026-09-27 carries
+      that judgement in existing fields (must_catch, angle discrimination)
+      with no new key, so no free-text classification surface exists
+      (OQ-12).
+    - The template has no {{config.output_root}} placeholders, so OQ-3
+      rendering does not apply to this agent.
+  Shared decisions OQ-1, OQ-2, OQ-5, OQ-6 and OQ-11 apply as recorded
+  below, together with OQ-12 to OQ-15.
+
+  USER DECISIONS (2026-10-23, answered in the main session; all IT-PO
+  recommendations accepted)
+    OQ-1  A: one new produced-tests scoring_mode in sibling modules
+          scripts/evals/produced_tests_mode.py, produced_tests_scoring.py and
+          (TQ-200d-1-i) produced_tests_runs.py; run_agent_eval.py dispatches
+          it and offsets the lines by moving out the unused text-assertion
+          scaffold. No test_ prefix on these modules.
+    OQ-2  Sets at scripts/evals/sets/<agent>.jsonl, fixture projects and
+          recorded outputs under scripts/evals/sets/<agent>/{projects,recorded}/,
+          recorded test files with the suffix .py.recorded; bad outputs for
+          unit tests under unit_tests/evals/fixtures/ with the same suffix.
+    OQ-3  A: render {{config.output_root}} to the sandbox and copy the scripts
+          the template names (scripts/db_check; for runner callers also
+          scripts/build_orchestration and scripts/ac_store) into it.
+    OQ-4  The scorer writes the sandbox AC record after the agent runs, from
+          its # covers: tagged tests, with the must_catch from the row. The
+          agent works on the pre-fix code; the scorer installs the fix and
+          calls the runner with base_ref at the pre-fix commit.
+    OQ-5  Deterministic report and fixture checks everywhere, the judge
+          optional and secondary; the runner-backed check for the refresh
+          gate, offered for test B.
+    OQ-6  A: config key local_only: true; eval_selector.py keeps such agents
+          out of affected and out of --check; payload run_context "local".
+    OQ-7  A: the mode's own invoker captures a stream-json transcript and
+          scores Bash tool-call inputs structurally.
+    OQ-8  Accepted: the placeholder makes the checker report invalid; no row
+          reaches a database.
+    OQ-9  Structural check of produced SQL; a live run is optional later work.
+    OQ-10 TQ-200d-1 and TQ-200d-1-i are built in one fast-lane run.
+    OQ-11 The live before-score is DEFERRED: recorded later as a separate
+          step the user triggers, after PR #1324 merges, stamped with
+          trigger_shas. No build step calls a model.
+    OQ-12 The bug fix / gate / neither judgement is read from the record
+          fields (must_catch, angle discrimination; absence = neither), per
+          TQ-500f-2-ii's 2026-09-27 decision. The criterion's "in its own
+          words" needs a BUSINESS-ANALYST AMENDMENT to say so; the
+          orchestrator dispatches the BA. Criteria are not changed here.
+    OQ-13 The eval builds the dispatch input from the same ingredients as
+          plan-feature.js dispatchTestDesign (ids, verbatim design_prepass.py
+          report, ac_store_path, test-design group only) and accepts wording
+          drift; the seam test pins the ingredients.
+    OQ-14 Only a revert alias fails the new-behaviour trap; other wrong
+          versions on that record are reported, not failed.
+    OQ-15 "revert the fix" and "the gate always allows" match exactly after
+          trimming and case-folding (runner alias rule); a condition-naming
+          wrong version matches by its condition token.

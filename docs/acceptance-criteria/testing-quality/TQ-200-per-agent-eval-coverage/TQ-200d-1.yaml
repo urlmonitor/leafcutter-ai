@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -46,15 +46,23 @@ doc_links:
   - path: scripts/evals/agent_eval_config.json
     relationship: describes
     status: exists
-    relevance: "Where the test writer's set is registered (artifact mode: the agent produces files). Read its per-agent key shapes before adding an entry (TQ-200c-4 notes)."
-  - path: scripts/evals/run_agent_eval.py
+    relevance: "Where the test writer's set is registered. Per-agent key sets differ by scoring_mode (label: label_axes / response_label_field / derive_outcome; artifact: artifact_type / schema / sandbox_copy / tools / timeout). The new produced-tests mode adds its own keys; read the file before adding an entry (TQ-200c-4 notes)."
+  - path: scripts/evals/README.md
     relationship: describes
     status: exists
-    relevance: "The shared runner the rows join. No second harness."
+    relevance: "Harness overview: modes, sandbox, offline self-test and score-gold modes, and why the CI gate is informational (no credential). The new mode gets a short section here."
+  - path: .github/workflows/agent-evals.yml
+    relationship: describes
+    status: exists
+    relevance: "The 'Agent evals (affected)' job: eval_selector.py selects agents by triggers, runs run_agent_eval.py for each, then checks freshness. A local-only set must stay out of both steps."
   - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
     relationship: describes
     status: exists
     relevance: "Incident 1 (refresh gate, branch ran 0 times), incident 2 (cvd moved to cvd_delta_30; the NULL-skipping buy_volume >= 0 probe), incident 8 (presence measured instead of correctness)."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The discrimination angle and the green-by-vacuity family the rows encode."
   - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4.yaml
     relationship: relates-to
     status: exists
@@ -75,75 +83,311 @@ assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
   - agent: python-coder
+    ac_id: TQ-200d-1-i
+    contract: >-
+      The produced-tests scoring mode (OQ-1 decided: sibling modules scripts/evals/produced_tests_mode.py
+      and scripts/evals/produced_tests_scoring.py). Contract: a row's expected object carries
+      "negative" (bool), "fixture" (the fixture project directory the sandbox copies), "gold_output"
+      (the recorded output directory --score-gold materialises) and "assertions" (a list of
+      {"kind": <registered kind>, ...}); TQ-200d-1-i registers one more kind for the wrong-version
+      run. Each scored row is recorded as {"id": str, "negative": bool, "score": {"passed": bool,
+      "assertions": [{"kind": str, "passed": bool, "detail": str}], "judge": object|null}}, with
+      the sandbox a git repository whose base commit is the fixture project as copied.
+  - agent: python-coder
     ac_id: TQ-200d-4
-    contract: "The test writer's registered eval set, which TQ-200d-4 adds its database-setting rows to."
+    contract: >-
+      agents["test-writer"] in scripts/evals/agent_eval_config.json pointing at the one set
+      scripts/evals/sets/test-writer.jsonl (OQ-2 decided), which TQ-200d-4 appends its three
+      database-setting rows to, scored by the same mode and assertion kinds.
+  - agent: python-coder
+    ac_id: TQ-200d-2
+    contract: >-
+      The same produced-tests scoring_mode value and module for the sql-test-writer set; TQ-200d-2
+      adds assertion kinds to the scoring module, never a second mode.
 expects_from: null
+test_required: true
+package_surface: false
 it_requirements:
-- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
-  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
-  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
-  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
-  in the same file.'
-- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
-  repository tree.'
-- 'Score mechanically wherever the expected outcome is mechanical: the fixture seeds cvd_delta_30 with
-  values distinct from cvd; the query or test counts processed rows and non-NULL values; the known seeded
-  value is asserted. Judge rubrics are only for report wording. The refresh-gate row''s test half moves
-  to a real wrong-version run in TQ-200d-1-i.'
-- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
-  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
-- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
-  path, using recorded good and bad agent outputs as fixtures.
-- Record the before-score against today's test-writer. It is the eval's own red baseline.
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'Join the existing harness (TQ-200c-4). Register test-writer in scripts/evals/agent_eval_config.json
+  as agents["test-writer"] with the keys the shared loader reads: template (templates/agents/test-writer.md),
+  eval_set, scoring_mode, input_field, expected_field, model (sonnet, per the template frontmatter), tools,
+  timeout, threshold, triggers and notes. The set is ONE JSONL file of {id, input, expected} rows, at
+  scripts/evals/sets/test-writer.jsonl beside the existing restructuring-specialist.jsonl. Fixture projects
+  live under scripts/evals/sets/test-writer/projects/ and recorded outputs under scripts/evals/sets/test-writer/recorded/
+  (OQ-2 decided).'
+- 'Neither existing mode fits. main() in scripts/evals/run_agent_eval.py dispatches only "artifact"
+  and "label" and exits 2 on any other scoring_mode. Artifact mode is product-truth specific: copy_sandbox_inputs
+  copies docs/product-truth and its contract dependencies, jsonschema is a hard dependency, and scoring
+  reads *.mock.json / *.flow.json and runs validate_product_truth.py. Add ONE new scoring_mode for agents
+  that produce tests and a report, implemented in sibling modules under scripts/evals/ (OQ-1 decided:
+  produced_tests_mode.py and produced_tests_scoring.py; no test_ prefix on these modules). TQ-200d-2 and TQ-200d-4 reuse
+  it. No second harness and no third mode.'
+- 'run_agent_eval.py measures 1087 counted lines (count_content_lines in scripts/commit_guardian/_file_size_ratchet.py),
+  not 1438 as first recorded. It is over the 400-line limit and must not grow: the dispatch for the new
+  mode is offset in the same file. Offset is available: run_deterministic_assertions, _check_assertion
+  and score_artifact_row have no caller anywhere in the repository. The new module must not create an
+  import cycle with the helpers it reuses from run_agent_eval.py (invoke_agent_writer, extract_json_object,
+  run_llm_judge, check_eval_set_complete, write_results).'
+- 'Each row runs in a fresh temp-directory sandbox: a copy of the small fixture project the row names,
+  initialised as its own git repository with one base commit. The agent runs with cwd and LEAFCUTTER_REPO_ROOT
+  set to the sandbox, as invoke_agent_writer does today, and the sandbox is removed after scoring. Nothing
+  is read from or written to the repository tree, and the repository''s pytest.ini, AC store and tests
+  are not in the sandbox.'
+- 'load_system_prompt reads the template raw. test-writer.md carries five {{config.output_root}} placeholders,
+  including the path to scripts/db_check/, and the existing harness never renders them. The mode renders
+  {{config.output_root}} to the sandbox and copies the scripts those paths name into it (scripts/db_check;
+  for agents that call the wrong-version runner also scripts/build_orchestration and scripts/ac_store),
+  so no path resolves outside the sandbox (OQ-3 decided).'
+- '--score-gold must score EVERY row of this set. Today that mode skips any row without expected.gold_target
+  and never calls the judge. So each row carries a recorded gold output (the produced test files plus
+  the report text) that the mode places in the sandbox as if the agent had written it. Recorded test files
+  are stored under a name pytest does not collect, because pytest.ini sets no testpaths and a bare pytest
+  at the repository root would collect a test_*.py under scripts/. They are stored with the suffix .py.recorded and get their real name inside the
+  sandbox only. Bad outputs for unit tests live under unit_tests/evals/fixtures/ with the same suffix (OQ-2
+  decided).'
+- 'Score mechanically wherever the outcome is mechanical (OQ-5 decided: deterministic checks everywhere, the judge optional and secondary; the wrong-version run for the refresh gate, and offered for test B). The trap fixture
+  must seed cvd_delta_30 with values distinct from cvd; a fixture that seeds only cvd, or seeds cvd_delta_30
+  equal to cvd, fails. The empty-window test must assert an exact processed-row count and a non-NULL count.
+  The presence test must assert a known value seeded in its fixture. Test B must fail on a wrong result
+  from refresh_config(), not at import. Report checks read the completion report''s "Wrong versions the
+  tests now catch" list deterministically. A judge rubric is optional and secondary, never a row''s only
+  scorer, because gold mode does not call the judge. The refresh-gate row''s test half is a real wrong-version
+  run (TQ-200d-1-i).'
+- 'The trap row sets expected.negative true. The new mode applies check_eval_set_complete (TQ-200a-4)
+  before scoring, as artifact mode does, so a set with no negative row exits 2 as INCOMPLETE.'
+- 'Local only (user decision; KI-TQ-20260907). Today eval_selector.py puts any registered agent whose
+  triggers a PR touches into the affected set. The "Agent evals (affected)" job in .github/workflows/agent-evals.yml
+  then runs it and requires a fresh scripts/evals/results/<agent>.json. Registering test-writer must not
+  make that job run it, report it as passed, or demand a fresh result for it. Every result payload and
+  printed report of this set carries an explicit local-run marker (OQ-6 decided: agents["test-writer"].local_only true; eval_selector.py keeps local_only agents out of affected and out of --check; the payload carries run_context "local" and the report says so). Nothing claims
+  TQ-200b-2.'
+- 'unit_tests/evals/test_agent_eval_config_triggers.py pins the exact agent list (_ALL_AGENTS, asserted
+  in test_the_config_still_declares_the_three_agents), so registering test-writer means updating it. That
+  is an edit to an existing test: name it in the existing-test sweep list (TQ-500g-3), and it may only
+  be strengthened.'
+- Unit tests never call a live model. Row pickup and scoring are proven through --score-gold with the recorded
+  gold outputs, and through the scoring module with recorded bad outputs. No test needs model credentials
+  or network.
+- 'The live before-score against today''s test-writer is DEFERRED (user decision 2026-10-23): it is not
+  part of this build and is recorded later as a separate step the user triggers, after PR #1324 (TQ-500g-3)
+  merges, stamped with its trigger_shas (OQ-11 decided). It needs model credentials and is never run in
+  CI. The build must leave the set runnable live (python scripts/evals/run_agent_eval.py --agent test-writer),
+  but no build step may call a model.'
+- 'Any database address in a row, fixture or recorded output is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  scripts/portability/check_shipped_addresses.py (INF-1100d-4) scans only templates/ and config/, so it
+  never sees scripts/evals/sets/. The eval''s own test runs that scanner over the set directory.'
+- 'Every new or changed .py file stays at or under 400 counted lines, and run_agent_eval.py (1087) must
+  not grow. Headroom: eval_selector.py 248, unit_tests/evals/test_agent_eval_config_triggers.py 43. .json
+  and .jsonl files, and scripts/evals/README.md (outside docs/), are outside the size gates.'
 test_spec:
 - name: test_test_writer_set_registered_and_every_row_scored
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
-  description: run_agent_eval.py, run as a subprocess in gold-scoring mode for test-writer, finds the
-    registered set and reports a score for each of the five row ids without any row being named on the
-    command line.
+  surface_invoked: python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --results-file
+    <tmp>
+  description: run_agent_eval.py, run as a subprocess with --score-gold and no --row, exits 0 and writes
+    a results file whose rows are exactly the five ids (refresh gate, new function or existing code, empty
+    window, presence is not correctness, input moved to a new column), each with a score.
+  must_catch:
+  - produced-tests scoring_mode not dispatched by main()
+  in_scope_files:
+  - scripts/evals/run_agent_eval.py
+  - scripts/evals/produced_tests_mode.py
+- name: test_row_without_gold_target_is_scored_and_fails_not_skipped
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: A copy of the set with the refresh-gate row's gold output removed, run through run_agent_eval.py
+    --config <tmp config> --score-gold, still scores all five rows. The row without a gold target fails
+    with an error, the other four pass, and the run exits non-zero.
+  must_catch:
+  - rows without gold_target skipped in score-gold mode
+  in_scope_files:
+  - scripts/evals/run_agent_eval.py
+  - scripts/evals/produced_tests_mode.py
 - name: test_trap_row_fails_fixture_seeding_only_old_column
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: discrimination
-  description: A recorded output whose fixture seeds only cvd fails the 'input moved to a new column'
-    row, and the gold output seeding cvd_delta_30 distinct from cvd passes.
+  description: Scored on the real trap row from scripts/evals/sets/test-writer.jsonl, a recorded output
+    whose fixture seeds only cvd fails, and so does one seeding cvd_delta_30 equal to cvd. The gold output,
+    seeding cvd_delta_30 with values distinct from cvd, passes.
   must_catch:
   - trap row scored on report wording only
   - fixture check accepts cvd-only seeding
+  - fixture check accepts cvd_delta_30 seeded equal to cvd
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
 - name: test_gold_outputs_pass_each_positive_row
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: criterion
-  description: The recorded gold outputs for refresh gate, new function or existing code, empty window
-    and presence is not correctness each pass their row. An empty-window output that does not count non-NULL
-    values fails.
+  description: The recorded gold outputs for new function or existing code, empty window and presence
+    is not correctness each pass their row, each with a test check and a report check.
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
+- name: test_vacuous_checks_fail_their_rows
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: An empty-window output whose test does not count non-NULL values fails its row, and so
+    does a presence output that asserts no seeded known value. In each case the static check itself
+    (counts_rows_and_non_null, asserts_known_seeded_value) fails, the same check passes on the gold
+    output, and the report check still passes.
   must_catch:
   - empty-window row passes a NULL-skipping check
+  - presence row passes a test that asserts no seeded known value
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sets/test-writer.jsonl
+  - scripts/evals/produced_tests_mutants.py
+- name: test_test_b_failing_only_at_import_fails_the_row
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: For new function or existing code, a recorded test B that fails only because a name cannot
+    be imported fails the row. The gold test B, which reaches refresh_config() and fails on a wrong result,
+    passes it.
+  must_catch:
+  - test B accepted when it fails only at import
+  in_scope_files:
+  - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/produced_tests_mutants.py
+- name: test_set_without_negative_row_is_incomplete
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A copy of the set with the trap row's negative flag cleared, run through run_agent_eval.py
+    --config <tmp config> --score-gold, exits 2 as INCOMPLETE and scores no row.
+  must_catch:
+  - completeness check skipped in the produced-tests mode
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
 - name: test_local_result_never_presented_as_ci
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: failure
-  description: The report of a local run carries the local run marker, and the CI eval selection does
-    not treat the set as checked.
+  surface_invoked: python scripts/evals/eval_selector.py --changed-files templates/agents/test-writer.md
+  description: The results payload and the printed report of a score-gold run carry the local-run marker.
+    eval_selector.py, given a change to templates/agents/test-writer.md, does not list test-writer as affected,
+    and --check does not demand a result for it.
   must_catch:
   - report omits the local marker
-  - CI job reports the set as passed
-test_rationale: An eval set's worth is that bad outputs fail it. So each row is proven with recorded good
-  AND bad outputs through the real runner, with no live model. The trap row carries the must_catch.
+  - results payload omits the local marker
+  - eval_selector lists test-writer as affected
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+  - scripts/evals/eval_selector.py
+  - scripts/evals/agent_eval_config.json
+- name: test_test_writer_set_carries_only_placeholder_addresses
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  surface_invoked: python scripts/portability/check_shipped_addresses.py --build-root scripts/evals/sets
+  description: The shipped-address scanner, run over the test-writer set directory, reports no finding.
+- name: test_vacuous_produced_test_fails_its_row
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Review case (test_tq200d1_review_scoring.py). Each real row's gold output passes, and a
+    recorded vacuous output fails the row with a failed assertion naming why while the report check
+    still passes - trap outputs with same-sign distinct values, an unused distinct constant or assert
+    True; an empty-window output asserting len() of literals; presence outputs asserting len(result)
+    == 2, n == 1 or x == 2; a test B that fails before reaching refresh_config() (assert 1 == 2,
+    pytest.fail, a KeyError on a dict it built).
+  must_catch:
+  - trap row accepts same-sign distinct values, an unused distinct constant or assert True
+  - empty-window row accepts len() of literals
+  - presence row accepts len(result) == 2, n == 1 or x == 2
+  - test B accepted when it fails before reaching refresh_config (assert 1 == 2, pytest.fail, a KeyError
+    on a dict it built)
+  in_scope_files:
+  - scripts/evals/produced_tests_mutants.py
+  - scripts/evals/produced_tests_scoring.py
+- name: test_skipped_produced_test_is_not_green
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Review case (test_tq200d1_review_scoring.py). For the trap, empty-window and presence
+    rows, the gold output with its test skipped by a skip decorator, xfail(run=False) or a pytest.skip()
+    call yields a failed produced_test_green assertion.
+  must_catch:
+  - produced_test_green counts a skipped / xfail(run=False) / pytest.skip() test as passed
+  in_scope_files:
+  - scripts/evals/produced_tests_mutants.py
+- name: test_scoring_leaves_a_repo_named_by_git_env_untouched
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  covers:
+  - TQ-200d-1-i
+  description: Review case (test_tq200d1_review_isolation.py). With GIT_INDEX_FILE, or GIT_DIR plus
+    GIT_WORK_TREE, pointing at a dummy repository, scoring the refresh-gate gold output passes and leaves
+    that repository byte-identical.
+  must_catch:
+  - sandbox git / the wrong-version runner inherit GIT_INDEX_FILE, GIT_DIR or GIT_WORK_TREE and stage,
+    commit or reset in the caller's repository
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+- name: test_live_row_exports_every_changed_file_and_scores_the_produced_test
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Review case (test_tq200d1_review_isolation.py). A live (non-gold) row with a stubbed
+    agent that writes its test, helpers, conftest and fixtures - committed or not - gets every changed
+    file into the scoring sandbox, and the row scores passed.
+  must_catch:
+  - export reads only uncommitted test_*.py files by basename, so a committing agent exports nothing
+    and helpers, conftest, fixtures and nested tests never reach the scoring sandbox
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+- name: test_score_one_honours_expected_field_of_the_agent_config
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Review case (test_tq200d1_review_isolation.py). score_one on a row whose expectations
+    sit under the key the agent config's expected_field names scores every assertion and passes.
+  must_catch:
+  - score_row reads a hard-coded row["expected"] although agent_cfg names another field
+  in_scope_files:
+  - scripts/evals/produced_tests_mode.py
+  - scripts/evals/produced_tests_scoring.py
+test_rationale: An eval set is worth something only if bad outputs fail it. Each row is therefore proven
+  with recorded good AND bad outputs, through the real runner CLI in --score-gold and through the scoring
+  module, with no live model. The trap row, the empty-window and presence rows, and test B carry the must_catch.
+  The CI-exclusion test pins the user's local-only decision. Every must_catch names a wrong version of
+  this AC's own new code or rows, so the fast lane's wrong-version runs can apply it within in_scope_files.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
+    by: it-po
+    at: 2026-10-23
+  - reason: "Post-review test_spec data fix (additive only). The mutant- and run-based checks moved into scripts/evals/produced_tests_mutants.py (fails_on_mutants for the trap, empty-window and presence rows; produced_test_green; fails_on_wrong_result for test B), so that module was added to in_scope_files of the trap, gold-outputs and test-B entries. Added test_spec entries for the review tests in unit_tests/evals/test_tq200d1_review_scoring.py and test_tq200d1_review_isolation.py, must_catch taken from their Catches comments, in_scope_files where the behaviour lives. Criteria, title, depends_on and readiness untouched; nothing removed."
+    by: it-po
+    at: 2026-10-24
+  - reason: "must_catch moved to the catching test after wrong-version runs. 'rows without gold_target skipped in score-gold mode' moved from test_test_writer_set_registered_and_every_row_scored to a new entry test_row_without_gold_target_is_scored_and_fails_not_skipped; 'empty-window row passes a NULL-skipping check' and 'presence row passes a test that asserts no seeded known value' moved from test_gold_outputs_pass_each_positive_row to a new entry test_vacuous_checks_fail_their_rows (that entry's description narrowed to what the test asserts). Strings unchanged. Criteria, title, depends_on and readiness untouched."
+    by: it-po
+    at: 2026-10-24
 superseded_by: null
 covered_by:
   - TQ-200d-1-i
@@ -186,3 +430,63 @@ notes: |
   because run_agent_eval.py is over the ratchet. The BA flag on TQ-200a-1-i
   (in-scope list is not closed) stands.
   Lane: fast lane (python-coder). It can go first in the TQ-200d family.
+  IT-PO TECHNICAL ALIGNMENT (2026-10-23, against origin/main after TQ-500g-1,
+  TQ-500g-2 and TQ-500g-4 landed; TQ-500g-3 read from PR #1324)
+  Criteria, title, depends_on and readiness untouched. Rewritten:
+  it_requirements, delivers_to, doc_links, test_spec, test_rationale,
+  test_required, package_surface. Mismatches between the earlier enrichment
+  and the code as it stands:
+    - run_agent_eval.py is 1087 counted lines, not 1438 (still over 400).
+    - "gold-scoring mode" is --score-gold. It exists for artifact mode only,
+      skips rows without expected.gold_target, skips file-delta assertions
+      and never calls the judge.
+    - main() knows only "label" and "artifact"; any other mode exits 2.
+    - Artifact mode is product-truth specific (store copy, jsonschema,
+      validate_product_truth.py), so "a sibling scoring type" means a new
+      scoring_mode with its own row loop, not a new artifact_type.
+    - No local-run marker exists in the results payload or the report.
+      A registered agent with triggers is run by the informational CI job.
+    - unit_tests/evals/test_agent_eval_config_triggers.py pins the agent list.
+    - test-writer.md has unrendered {{config.output_root}} placeholders.
+    - INF-1100d-4's scanner covers templates/ and config/ only, not
+      scripts/evals/sets/.
+    - test-writer.md already carries Step 4b (three questions, vacuity
+      checklist, worked refresh-gate case), so the before-score may not
+      "mostly fail" as predicted above. That is still evidence.
+  Doc links to .py source were replaced by the config, README and workflow
+  they are described by; module names live in it_requirements.
+  Module names and the set layout were settled by the user decisions
+  below; in_scope_files use them.
+
+  USER DECISIONS (2026-10-23, answered in the main session; all IT-PO
+  recommendations accepted)
+    OQ-1  A: one new produced-tests scoring_mode in sibling modules
+          scripts/evals/produced_tests_mode.py, produced_tests_scoring.py and
+          (TQ-200d-1-i) produced_tests_runs.py; run_agent_eval.py dispatches
+          it and offsets the lines by moving out the unused text-assertion
+          scaffold. No test_ prefix on these modules.
+    OQ-2  Sets at scripts/evals/sets/<agent>.jsonl, fixture projects and
+          recorded outputs under scripts/evals/sets/<agent>/{projects,recorded}/,
+          recorded test files with the suffix .py.recorded; bad outputs for
+          unit tests under unit_tests/evals/fixtures/ with the same suffix.
+    OQ-3  A: render {{config.output_root}} to the sandbox and copy the scripts
+          the template names (scripts/db_check; for runner callers also
+          scripts/build_orchestration and scripts/ac_store) into it.
+    OQ-4  The scorer writes the sandbox AC record after the agent runs, from
+          its # covers: tagged tests, with the must_catch from the row. The
+          agent works on the pre-fix code; the scorer installs the fix and
+          calls the runner with base_ref at the pre-fix commit.
+    OQ-5  Deterministic report and fixture checks everywhere, the judge
+          optional and secondary; the runner-backed check for the refresh
+          gate, offered for test B.
+    OQ-6  A: config key local_only: true; eval_selector.py keeps such agents
+          out of affected and out of --check; payload run_context "local".
+    OQ-7  A: the mode's own invoker captures a stream-json transcript and
+          scores Bash tool-call inputs structurally.
+    OQ-8  Accepted: the placeholder makes the checker report invalid; no row
+          reaches a database.
+    OQ-9  Structural check of produced SQL; a live run is optional later work.
+    OQ-10 TQ-200d-1 and TQ-200d-1-i are built in one fast-lane run.
+    OQ-11 The live before-score is DEFERRED: recorded later as a separate
+          step the user triggers, after PR #1324 merges, stamped with
+          trigger_shas. No build step calls a model.

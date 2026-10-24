@@ -16,6 +16,8 @@ Ticket: TICKET-20261006-AgentEvalGateHonestAboutCredentials (AC-3)
 
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,7 +29,7 @@ sys.path.insert(0, str(_EVALS_DIR))
 import eval_selector  # noqa: E402
 
 _TRIGGERS = eval_selector.agent_triggers(eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json"))
-_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist"]
+_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "test-writer"]
 
 # One representative path per root that 974fa757f added and the owner decision removed.
 _OUTSIDE_OWN_FILES = [
@@ -64,6 +66,26 @@ def test_the_config_still_declares_the_three_agents() -> None:
     the contract-shrinking guard and the test's history stay continuous; it checks every agent.
     """
     assert sorted(_TRIGGERS) == _ALL_AGENTS
+
+
+def test_test_writer_is_declared_local_only_with_its_template_as_a_trigger() -> None:
+    # covers: TQ-200d-1
+    # angle: failure
+    """Local-only: declared with its own template as a trigger, yet the selector CLI never reports it affected.
+
+    compute_affected stays a pure glob match (so triggers still list test-writer above); the exclusion
+    lives in the selector's CLI path.
+    """
+    config = eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json")
+    entry = config["agents"]["test-writer"]
+    assert entry["local_only"] is True
+    assert "templates/agents/test-writer.md" in entry["triggers"]
+    for changed in ("templates/agents/test-writer.md", "scripts/evals/run_agent_eval.py"):
+        out = subprocess.run(
+            [sys.executable, str(_EVALS_DIR / "eval_selector.py"), "--changed-files", changed],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        assert "test-writer" not in json.loads(out)["affected"]
 
 
 @pytest.mark.parametrize("changed", _OUTSIDE_OWN_FILES)

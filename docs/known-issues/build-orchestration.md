@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-23'
+last_updated: '2026-10-24'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 75** (4 blocker, 41 high, 30 low) · **Resolved: 28** (recounted from the directory 2026-10-23, after KI-BO-20261023-uxp-700d-3-i-scan-timeout-flake was filed)
+**Open: 77** (4 blocker, 42 high, 31 low) · **Resolved: 28** (recounted from the directory 2026-10-24, after KI-BO-20261024-list-speed-test-flaky was filed)
 
 ## Open
 
@@ -147,6 +147,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire — the workspace maker's HOOKS_INACTIVE answer names the stage that did not fire but not why, and the canary's git report is captured and dropped inside the maker | [open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md](build-orchestration/open-low-ki-bo-20261010-hooks-inactive-answer-omits-why-a-stage-did-not-fire.md) |
 | `low` | KI-BO-20261023-g2-followups — PR #1316 leftovers: three mypy errors in new code (`wrong_version_runner.py`:274, `_tq500g2i_standin_pg.py`:90, `_tq500g2i_review_fixtures.py`:76), and `sql-test-writer` still declares `mutates: none` although it writes files | [open-low-ki-bo-20261023-g2-followups.md](build-orchestration/open-low-ki-bo-20261023-g2-followups.md) |
 | `low` | KI-BO-20261023-uxp-700d-3-i-scan-timeout-flake — `test_uxp_700d_3_i.py` runs `scan_ac_store.py --json` over the whole AC store in a subprocess with a 30 s timeout, and it timed out on CI shard 7 on three unrelated PRs (#1305, #1316, #1320) in two days; graded medium | [open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md](build-orchestration/open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md) |
+| `low` | KI-BO-20261024-list-speed-test-flaky — `test_tq500g1v_list_speed.py` asserts the 50-id `wrong_version_writer.py list` run takes at most 2 x the 1-id run + 1 s from one timing each, and both are dominated by fixed costs, so the ratio fails at random (CI proof-of-done on PR #1330, run 39990944257, passed on rerun; locally t1 9.1 s vs t50 6.8 s) | [open-low-ki-bo-20261024-list-speed-test-flaky.md](build-orchestration/open-low-ki-bo-20261024-list-speed-test-flaky.md) |
 
 ## Resolved
 

@@ -1,0 +1,11 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+from window_summary import summarise_window
+
+
+def test_summarise_window_counts_and_sums_the_rows():
+    # covers: TQ-9304
+    assert summarise_window([1.0, 2.0, 3.0]) == {"count": 3, "total": 6.0}

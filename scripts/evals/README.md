@@ -46,3 +46,31 @@ required check. This was the owner's decision on 2026-10-06
   and AC YAML. So a PR that only touches those affects no agent.
 - **Making it blocking.** This needs two repository-settings changes: add the
   secret, then add the check to the main ruleset's required status checks.
+
+## Produced-tests mode (local only)
+
+`scoring_mode: "produced_tests"` scores an agent whose output is test files plus a
+completion report. It is implemented in `produced_tests_mode.py` (row loop, report,
+payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs.py`
+(the git sandbox, pytest runs and the wrong-version run). The test-writer set,
+`sets/test-writer.jsonl`, is its first user.
+
+- **Rows.** `expected` carries `negative`, `fixture` (a project directory), `gold_output`
+  (a recorded output directory) and `assertions` (`{"kind": ...}`). Each row runs in a
+  fresh temp git repository: the fixture is the base commit. Recorded tests are stored as
+  `*.py.recorded` so a bare `pytest` never collects them. Fixture projects live under
+  `sets/test-writer/projects/`, recorded outputs under `sets/test-writer/recorded/`, and
+  only the placeholder database address is used.
+- **Scoring is deterministic.** Kinds: `fixture_seeds_moved_input`,
+  `counts_rows_and_non_null`, `asserts_known_seeded_value`, `test_fails_on_wrong_result`,
+  `produced_test_green`, `report_mentions`, `report_lists_wrong_version` and
+  `wrong_version_run`. The refresh-gate row's test half is a real run of the shared
+  wrong-version runner (`halves.test` carries the runner's verdict, `halves.report` the
+  report check). A judge, if a row has a rubric, is secondary and never decides a test half.
+- **Offline.** `python scripts/evals/run_agent_eval.py --agent test-writer --score-gold`
+  replays the recorded gold outputs, scores every row and calls no model.
+- **Local only.** `agents["test-writer"].local_only` is true: `eval_selector.py` keeps
+  it out of `affected` and out of `--check`, so the CI job neither runs it nor demands a
+  fresh result. Every payload carries `run_context: "local"` and the printed report says
+  "LOCAL RUN". A live run (`--agent test-writer` without `--score-gold`) needs model
+  credentials and is never run in CI.
