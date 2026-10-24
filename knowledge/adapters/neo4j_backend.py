@@ -83,6 +83,12 @@ class Neo4jBackend:
     publication_reclamation: dict | None = None
     # Capacity headroom report of the last publication (None before usage was measured), set by neo4j_projection.publish.
     publication_capacity: dict | None = None
+    # Write report of the last publication (row cap, payload budget, oversized and retried records).
+    publication_writes: dict | None = None
+    # Failure report of the last publication's write (cause, phase, batch, attempts, progress).
+    publication_failure: dict | None = None
+    # Completed-batch progress of the last publication's writes; reset by neo4j_projection.publish.
+    publication_progress: dict | None = None
     # Lookup policy for the adapter's own calls; __init__ reads LEAFCUTTER_NEO4J_ADDRESS_FAMILY.
     address_family: str = "ipv4"
     # True once verify_connectivity() succeeded on this backend's driver (set per instance).
@@ -198,10 +204,13 @@ class Neo4jBackend:
         timeout = remaining_seconds(self.query_timeout)
         recorder = recorder_var.get()
 
+        step = ["connect"]  # the step the worker is in; a timeout is the query time limit only in "query"
+
         def execute() -> TransactionResult:
             """Own the synchronous session within its worker-thread lifetime."""
             with lookup_scope(recorder, self.address_family), ExitStack() as stack:
                 self._open_connection(recorder)
+                step[0] = "query"
                 session = stack.enter_context(self.driver.session(database=database or self.database))
                 runner = session.execute_write if write else session.execute_read
                 with timed(recorder, "query"):
@@ -210,7 +219,17 @@ class Neo4jBackend:
         try:
             return await run_in_daemon(execute)
         except (OSError, TimeoutError, DriverError, Neo4jError) as error:
-            raise BackendUnavailable(describe_failure(error)) from error
+            from knowledge.adapters.neo4j_writes import TIME_LIMIT, classify_failure
+
+            failure = BackendUnavailable(describe_failure(error))
+            # from the driver's code, never the text; a connect-step timeout is the store being
+            # unreachable, not the writer's transaction time limit (it is not retried as one)
+            failure.cause_class = classify_failure(error)
+            if failure.cause_class == TIME_LIMIT and step[0] == "connect":
+                failure.cause_class = "unavailable"
+            if failure.cause_class == TIME_LIMIT:
+                failure.time_limit_seconds = timeout  # the limit actually applied, deadline included
+            raise failure from error
 
     async def setup(self) -> None:
         """Apply idempotent, versioned Community-compatible projection constraints."""
