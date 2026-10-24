@@ -79,3 +79,15 @@ notes: |
   unchanged in substance but its TIMING changes - see ACD-2500d-2-i.
   TKT-300a-2 (no implementation prescriptions in it_requirements) sits uneasily with a
   planner-written file path today; moving the choice out removes that tension.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

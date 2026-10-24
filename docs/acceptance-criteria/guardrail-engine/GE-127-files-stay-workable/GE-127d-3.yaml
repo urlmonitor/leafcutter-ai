@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -28,17 +28,30 @@ criteria: |
     the style a comment is carried in never changes the number,
   And a line holding code followed by a comment on the same line counts as one
     line,
-  And a line holding only whitespace, outside any comment or standalone string,
-    counts as one line, exactly as under the rule published before this change,
-    while every line inside a block comment or standalone string is uncounted
-    whether or not it is blank,
+  And a line counts only when it holds a token that is code — not part of a
+    comment and not part of a Python string standing alone as a statement — so a
+    physical line holding only whitespace never counts, wherever it stands:
+    between code lines, between two line comments, inside a block comment or
+    standalone string, or inside a multi-line string value that is used,
+  And given the same 2 lines of code with the 4 lines of text split into two
+    paragraphs by blank lines, carried once as line comments with a blank line
+    between the paragraphs and once as one block comment or standalone string with
+    a blank line inside it,
+  When their lengths are measured,
+  Then both measure 2,
+  And given a covered file and a copy of it with blank lines removed from it or
+    added to it anywhere, with nothing else changed,
+  When both lengths are measured,
+  Then the two measured lengths are the same number,
   And a Python string that is used — assigned to a name, passed as an argument,
     returned, or part of any larger expression, as embedded SQL, prompts and
     templates are — is a string value and each of its lines counts like any other
     code, and an f-string counts as code wherever it stands, because evaluating it
     runs the expressions inside it,
   And given a staged change to a covered file whose only effect is rewriting
-    existing comments from one style to another with their text unchanged,
+    existing comments from one style to another with their text unchanged —
+    including comment paragraphs separated by blank lines rewritten as one block —
+    or adding or removing blank lines,
   When the author performs an ordinary commit,
   Then the length quoted for the file before the change and after it is the same
     number.
@@ -62,7 +75,7 @@ doc_links:
       superseded by BrainCandy's 2026-10-16 decision recorded here; GE-127d-2 carries
       an amended_by entry saying so. That descriptor must be rewritten, not defended,
       when this record is built.
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
     relationship: context
     status: exists
     relevance: >-
@@ -71,7 +84,7 @@ doc_links:
       (build-feature.js raw 3652 -> 3667, measured 2548 -> 2529). Its first fix
       direction — strip every comment form with a tokenizer per language — is the
       one BrainCandy chose.
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
     relationship: context
     status: exists
     relevance: >-
@@ -120,6 +133,17 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-134-history-never-costs-size/GE-134a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SUPERSEDED BY THIS RECORD (BrainCandy, 2026-10-23). GE-134a made a line-comment
+      DECISION HISTORY block uncounted while ordinary comments and blank lines still
+      counted. Under this record no comment, standalone Python string or blank line counts,
+      so a history block is uncounted as a case of the general rule, with no special block
+      detection. GE-134a and its children carry amended_by entries stating which of their
+      criteria still hold; GE-134a-3 (the history-block sentence in the published rule) is
+      superseded_by this record. The measure must not keep a DECISION HISTORY special case.
 assigned_agent: python-coder
 estimated_complexity: L
 package_surface: false
@@ -154,25 +178,30 @@ it_requirements:
     statement made of nothing but non-f string literals, in ANY position: docstrings,
     bare strings mid-module or mid-function, and a trailing DECISION HISTORY block alike
     (bytes and raw literals included). A string that is assigned, passed, returned or part
-    of a larger expression is code, and a standalone f-string is code. Blank lines outside
-    comments and standalone strings stay counted. Decided by BrainCandy 2026-10-16 ("NO
-    comment counts toward a file's length, in any style") and 2026-10-20 (standalone
-    strings uncounted like comments, superseding "docstring position only").
+    of a larger expression is code, and a standalone f-string is code. Whitespace-only lines
+    are never counted, wherever they stand (see THE LINE RULE). Decided by BrainCandy
+    2026-10-16 ("NO comment counts toward a file's length, in any style"), 2026-10-20
+    (standalone strings uncounted like comments, superseding "docstring position only") and
+    2026-10-21 (blank lines never count, anywhere).
   - >-
     The language is chosen from the file's covered extension. A covered extension
     with no tokenizer is a defect in this change, not a raw-count fallback: GE-127d-3-ii
     owns the could-not-measure outcome, and the deployed-copy descriptor below fails
     if any checked extension is unmapped.
   - >-
-    THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16). A physical line
-    counts when it carries at least one token that is neither a comment nor part of a
-    standalone Python string statement, OR when it is whitespace-only and lies outside every
-    comment and standalone string. Every physical line spanned by a USED multi-line string
-    value (a Python string that is assigned, passed, returned or part of a larger expression,
-    a Python f-string, a JS template literal, a quoted shell string, a shell here-document
-    body, a SQL string) counts, blank or not. Every physical line wholly inside a comment or a
-    standalone Python string is uncounted, blank or not; a physical line shared between a
-    standalone string and code (e.g. `"""end"""; x = 1`) counts once. LF and CRLF content measure identically (the 2026-09-23 CRLF
+    THE LINE RULE, STATED ONCE FOR EVERY LANGUAGE (IT PO, 2026-10-16; revised 2026-10-21 for
+    BrainCandy's blank-line decision). A physical line counts if and only if it holds a code
+    token: some non-whitespace character that belongs to neither a comment nor a standalone
+    Python string statement. A whitespace-only line (spaces, tabs, form feeds, or nothing)
+    NEVER counts, wherever it stands — outside comments, between comment paragraphs, inside a
+    block comment or standalone string, and also inside a USED multi-line string value (a
+    Python string that is assigned, passed, returned or part of a larger expression, a Python
+    f-string, a JS template literal, a quoted shell string, a shell here-document body, a SQL
+    string, a dollar-quoted body). Every non-blank physical line spanned by such a used value
+    counts. Every physical line wholly inside a comment or a standalone Python string is
+    uncounted; a physical line shared between a standalone string and code (e.g.
+    `"""end"""; x = 1`) counts once. Adding or removing whitespace-only lines anywhere
+    therefore never changes the measured length. LF and CRLF content measure identically (the 2026-09-23 CRLF
     phantom-line defect in this module's own history must not return), as does a file with
     no trailing newline. "Total line count" wherever a sibling record compares against it
     (GE-127d-4) uses the SAME physical-line split as this measure.
@@ -238,11 +267,14 @@ it_requirements:
     (inject_config rewrites it at deploy time); build such a corpus string by concatenation.
   - >-
     THIS CHANGE MUST PASS THE FILE-SIZE GATE UNDER THE RULE IT INTRODUCES. Re-measured by the IT
-    PO on 2026-10-20 at 7897ca013 with an approximate token-stream classifier implementing the
-    2026-10-20 rule (not a gate run): _file_size_ratchet.py 335 -> 302, check_file_size.py
-    312 -> 293, check_file_size_rule_parity.py 239 -> 198, _file_description.py 199 -> 188 —
-    every file this tree of records edits stays under its 400 limit, with roughly 100 lines of
-    headroom on the two largest. The constraint is therefore ordinary: rebuild the deployed
+    PO on 2026-10-21 over the WORKING-TREE versions in the ge-127d implementation worktree (on
+    top of 6891f24d8, implementation uncommitted) with an approximate token-stream classifier
+    implementing the 2026-10-21 rule (not a gate run), shown as pre-2026-10-16 rule -> current
+    rule (raw): _file_size_ratchet.py 295 -> 215 (1087), check_file_size.py 363 -> 274 (1087),
+    check_file_size_rule_parity.py 267 -> 163 (531), _file_description.py 206 -> 145 (498);
+    the new sub-package's largest modules, c_family_lines.py 200, jsx_lines.py 125. Every file
+    this tree of records edits stands well under its 400 limit; check_file_size.py, the
+    largest, has about 125 lines of headroom. The constraint is therefore ordinary: rebuild the deployed
     layout (`python scripts/build.py --target-dir .`) before committing so the hook judges the
     change with the new rule, and keep each edited file at or under 400 measured lines; new
     lexer code goes in the sub-package, not into _file_size_ratchet.py or check_file_size.py.
@@ -250,20 +282,14 @@ it_requirements:
     a string is uncounted only by its syntactic role (a standalone statement).
   - >-
     POPULATION CHANGE, MEASURED — RE-MEASURE BEFORE BUILDING AND RECORD IT IN THE TICKET.
-    IT PO approximation at 7897ca013 over 2853 tracked .py files, all of which tokenize on
-    3.12, applying the 2026-10-20 rule: over 400 under the pre-2026-10-16 rule 193, under the
-    new rule 156. 45 files drop to at-or-under (line comments stop counting); 8 cross from
-    at-or-under to over, every one a test file whose USED multi-line strings (fixtures,
-    expected output) now count and whose old measure discarded them:
-    unit_tests/test_final_gate_and_commit_message.py 399 -> 559,
-    unit_tests/workflows/test_acd_2100a_1.py 326 -> 481, test_acd_2100c_2.py 391 -> 469,
-    test_acd_2100a_3.py 325 -> 413, unit_tests/prompt_assembly/test_test_requirements_guard.py
-    375 -> 438, unit_tests/commit_guardian/test_ge_127f_2_i.py 399 -> 438,
-    test_ge_119_contract_shrinking_rename_aware.py 252 -> 418,
-    test_ge_118c_doc_types_deployed_resolution.py 335 -> 401. No trailing DECISION HISTORY
-    string pushes any file over. tests/knowledge/test_native_decision.py measures 399 (332
-    before), so it does NOT cross 400 as GE-127d-3-i's notes expected. The superseded
-    2026-10-16 figures (164 over, 14 newly over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
+    IT PO approximation on 2026-10-21 over the 2864 .py files in the ge-127d worktree's index
+    (working-tree content; all tokenize on 3.12), applying the 2026-10-21 rule: over 400 under
+    the pre-2026-10-16 rule 194, under the current rule 98. 97 files drop to at-or-under (line
+    comments and blank lines stop counting); exactly 1 crosses from at-or-under to over —
+    unit_tests/test_final_gate_and_commit_message.py 399 -> 485, a test file whose USED
+    multi-line fixture strings now count where the old measure discarded them. The
+    superseded figures (2026-10-16: 164 over, 14 newly over; 2026-10-20: 156 over, 8 newly
+    over) no longer apply. .js/.mjs/.ts/.tsx/.sql/.sh
     were not measured here. GE-127d-3-iii keeps the switch from refusing an unchanged file; record the
     implementer's own before/after figures per extension in the ticket.
   - >-
@@ -323,20 +349,40 @@ test_spec:
       - "the pre-2026-10-16 rule: strip /* */ and triple-quoted strings, count # and // lines"
       - "strip # and // but not SQL -- comments"
       - "strip comments for .py only and count raw for every other extension"
-  - name: test_ge_127d_3_blank_lines_count_outside_comments_and_not_inside_them
+  - name: test_ge_127d_3_blank_lines_never_count_anywhere
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: behavioral
     angle: boundary
     description: >-
-      A file with B blank lines between code lines and C blank lines inside a block
-      comment or docstring measures N + B, with B and C varied independently; a line of
-      code with a trailing comment counts once; the same content with CRLF line endings
-      and with no trailing newline measures the same number.
+      REPLACES the 2026-10-16 "blank lines count outside comments" descriptor (BrainCandy
+      2026-10-21). A file of N code lines with B blank lines between code lines, C blank
+      lines between two line-comment paragraphs, D blank lines inside a block comment or
+      standalone string, and E whitespace-only lines inside a used multi-line string
+      measures exactly N, with B, C, D and E varied independently (each also with
+      trailing spaces or tabs on the blank line); a line of code with a trailing comment
+      counts once; the same content with CRLF line endings and with no trailing newline
+      measures the same number. For every covered extension, the file with every blank
+      line removed and the file with blank lines added between every pair of lines
+      measure the same as the original.
     must_catch:
-      - "blank lines dropped everywhere (raw non-blank measure)"
-      - "blank lines inside a block comment counted"
+      - "the 2026-10-16 rule: whitespace-only lines outside comments counted"
+      - "a blank line between two line comments counted"
+      - "a whitespace-only line holding spaces or a tab counted as non-blank"
       - "a CRLF file's uncounted region leaves a phantom line behind"
+  - name: test_ge_127d_3_the_reviewers_paragraph_restyle_repros_measure_equal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The pr-reviewer's two repros, written to disk byte-for-byte and measured by the shared
+      measure: a .js file `// a\n\n// b\nx();\n` and `/* a\n\n b */\nx();\n` both measure 1;
+      a .py file `# a\n\n# b\nx=1\n` and `"""a\n\nb"""\nx=1\n` both measure 1. Through the
+      hook in a temporary git repository, staging the second form of each over the first on
+      an over-limit file quotes the same length before and after and states 0 lines added.
+    must_catch:
+      - "a blank line between two line comments counted (the paragraph-to-block route)"
   - name: test_ge_127d_3_a_standalone_python_string_is_uncounted_wherever_it_stands
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -426,12 +472,13 @@ test_spec:
     covers:
       - GE-127d-2
     description: >-
-      REWRITE IN PLACE, SAME NAME (GE-127d-2's descriptor, superseded rule). Take one refused
-      .py file and produce three variants — blank lines outside comments removed, every `#`
-      comment removed, every docstring removed. The quoted length moves for the first only;
-      the second and third leave it unchanged; the outcome's Measures line lets an author
-      predict exactly that. The old assertion (deleting `#` comments moves the number) is
-      deleted, not kept alongside.
+      REWRITE IN PLACE, SAME NAME (GE-127d-2's descriptor, superseded rule; re-cut for
+      BrainCandy's 2026-10-21 blank-line decision). Take one refused .py file and produce
+      four variants — every blank line removed, every `#` comment removed, every standalone
+      string removed, and K code lines removed (K varied). The quoted length is unchanged
+      for the first three and falls by exactly K for the fourth; the outcome's Measures
+      line lets an author predict exactly that. The old assertions (deleting `#` comments,
+      or deleting blank lines, moves the number) are deleted, not kept alongside.
   - name: test_ge_127d_2_changing_the_rule_in_force_changes_both_what_is_published_and_what_is_quoted
     target_dir: unit_tests/commit_guardian/
     framework: unittest
@@ -443,7 +490,8 @@ test_spec:
       REWRITE IN PLACE, SAME NAME. The current mutation (also discard hash comments) is a
       no-op under the new rule, so the descriptor would pass vacuously. Replace it with a
       mutation that still changes one file's length under the new rule — e.g. make the
-      in-force measure count `#` comment lines again, or stop counting blank lines — and
+      in-force measure count `#` comment lines again, or count blank lines again (both are
+      now outside the rule after BrainCandy's 2026-10-21 decision) — and
       require both the published statement and the quoted length to move with it,
       re-derived independently at run time.
     must_catch:
@@ -544,12 +592,51 @@ amended_by:
     _file_size_ratchet.py 302 and check_file_size.py 293, so the landing commit has headroom.
     The old-rule test rewrite list narrowed to used strings. Removed this record's 2026-10-16
     DECISION HISTORY follow-up recommendation from the notes; the rule resolved it.
+- reason: blank-lines-never-count
+  by: business-analyst
+  at: '2026-10-21'
+  note: >-
+    Criteria changed on BrainCandy's 2026-10-21 decision: blank lines never count, anywhere
+    (a line counts only if it holds a code token). Replaced the "whitespace-only line outside
+    comments counts" arm; added a paragraph-restyle arm (blank-separated line-comment
+    paragraphs and one block or standalone string with a blank inside both measure 2) and a
+    blank-lines-anywhere arm (adding or removing blank lines changes the measure by 0); the
+    restyle-commit arm now includes paragraph-to-block restyles and blank-line-only changes.
+    test_spec: the blank-line boundary descriptor is replaced by
+    test_ge_127d_3_blank_lines_never_count_anywhere; added
+    test_ge_127d_3_the_reviewers_paragraph_restyle_repros_measure_equal (the pr-reviewer's two
+    repros, both 1); the two GE-127d-2 rewrite descriptors now treat blank lines as outside
+    the rule. work_status reset done -> todo: the changed criteria are unproven. Notes record
+    the decision and the statement-joining route as out of scope. Title, depends_on and
+    req_status unchanged. it_requirements (the line rule, item 1's "blank lines outside
+    comments ... stay counted") left for the IT PO.
+- reason: technical-enrichment-blank-lines-never-count
+  by: it-po
+  at: '2026-10-21'
+  note: >-
+    criteria untouched. it_requirements reconciled with the 2026-10-21 rule: item 1 no longer
+    keeps blank lines counted; THE LINE RULE now counts a line iff it holds a code token, and
+    a whitespace-only line never counts anywhere, including inside used multi-line strings,
+    here-document bodies and dollar-quoted bodies. Re-measured over the ge-127d working tree:
+    .py over 400 194 (pre-2026-10-16 rule) -> 98 (current rule), 97 drop under, 1 crosses
+    over (test_final_gate_and_commit_message.py 399 -> 485); self-measure _file_size_ratchet.py
+    215, check_file_size.py 274, check_file_size_rule_parity.py 163, _file_description.py 145.
+- reason: add-child-statement-joining
+  by: BrainCandy
+  at: '2026-10-23'
+  note: >-
+    covered_by gained GE-127d-3-v (a line holding several statements counts once per
+    statement, Python and the JavaScript family), closing the statement-joining route the
+    notes recorded as out of scope on 2026-10-21. The child lands done with its tests in the
+    same commit, so this record stays done. Criteria, title, depends_on and req_status
+    unchanged.
 superseded_by: null
 covered_by:
   - GE-127d-3-i
   - GE-127d-3-ii
   - GE-127d-3-iii
   - GE-127d-3-iv
+  - GE-127d-3-v
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -557,9 +644,9 @@ notes: |
   DECISION RECORDED (BrainCandy, 2026-10-16): no comment counts toward a file's length, in
   any style. `#`, `//`, `--` and `/* */` are stripped alike, docstrings stay uncounted as
   GE-127d-2 published, and stripping is lexically correct (a per-language tokenizer, not a
-  regex). Blank lines keep today's treatment: the rule published by GE-127d-2 and carried in
-  commit_guardian.json file_size._comment counts "every remaining line -- including blank
-  lines", so blank lines outside comments stay counted.
+  regex). [SUPERSEDED 2026-10-21, see decision (2) below: blank lines no longer count
+  anywhere.] Originally: blank lines keep today's treatment, so blank lines outside comments
+  stay counted.
 
   WHY AN L2 UNDER GE-127d AND NOT A NEW L1. GE-127 holds 7 of 7 L1s with no
   child_limit_override, so no eighth L1 is possible without a split. The subject is
@@ -587,13 +674,30 @@ notes: |
         Superseded wording kept for the record: (2026-10-16) "only a string literal that is
         the first statement of a module, class or function is uncounted; any other
         triple-quoted string, assigned or bare, counts as code."
-    (2) A BLANK LINE BETWEEN TWO LINE COMMENTS IS A BLANK LINE. With blank lines counted,
-        `# a / (blank) / # b` measures 1 while the same text as one block comment with a
-        blank line inside measures 0. The restyle invariant in the criteria is therefore
-        stated for comment text whose every line carries the marker, which is how `//`, `#`
-        and `--` runs are normally written. Removing this residue needs blank lines to stop
-        counting, which the decision kept. Kept as written (BrainCandy did not reverse
-        it): accept a one-line-per-gap difference.
+    (2) BLANK LINES NEVER COUNT, ANYWHERE — BRAINCANDY 2026-10-21, SUPERSEDING THE
+        2026-10-16 "BLANK LINES OUTSIDE COMMENTS STAY COUNTED" AND THIS RECORD'S EARLIER
+        "accept a one-line-per-gap difference". A physical line counts only when it holds a
+        token that is code (not part of a comment, not part of a standalone Python string).
+        Trigger: pr-reviewer found a formatting-only route — `// a / (blank) / // b` measured
+        1 while the same text as one `/* */` block or docstring with a blank line inside
+        measured 0, so rewriting blank-separated comment paragraphs as one block lowered the
+        measured length with no raw growth (GE-127d-4's backstop stays silent); and squeezing
+        out blank lines was the other formatting-only route. BrainCandy's stated goal: agents
+        must find no formatting-only way to lower the number. BA reading, flagged for
+        confirmation: "anywhere" includes a whitespace-only physical line inside a USED
+        multi-line string value (e.g. an embedded SQL template). That contradicts the IT PO's
+        line-rule it_requirement ("Every physical line spanned by a USED multi-line string
+        value ... counts, blank or not"), which is left for the IT PO to reconcile.
+
+  KNOWN REMAINING FORMATTING ROUTE — OUT OF SCOPE HERE, FOR A FUTURE AC (recorded 2026-10-21).
+  Joining code statements onto fewer physical lines (`a(); b();` on one line, `x = 1; y = 2`
+  in Python, chained shell commands with `;`) lowers both the measured and the raw line
+  count, so neither this measure nor GE-127d-4's backstop (which needs raw to rise) catches
+  it. Closing it needs a measure that counts statements or tokens rather than lines, or a
+  separate rule against statement-joining; neither is specified here.
+  CLOSED 2026-10-23 BY GE-127d-3-v for Python and the JavaScript family: a line holding several
+  statements counts once per statement. SQL and shell lines are still counted once each; see
+  that record's known residue.
 
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.

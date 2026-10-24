@@ -42,3 +42,15 @@ notes: |
   Existing requirements that already carry a planner-written test design need a
   stated treatment (kept as-is, or treated as intent) -- the BA should decide and
   write it down.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

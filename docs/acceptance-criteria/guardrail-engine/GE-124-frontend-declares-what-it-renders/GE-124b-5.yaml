@@ -94,7 +94,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the four consumers to be named as real artifact paths (making staleness checkable), required the two grammars and the selector-derived reason for their difference to be stated here, and routed GE-124b-3's React-only strip-coverage gap into this doc. Tests are agreement tests against the live reader, the live selector derivation and the filesystem. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/16_TICKET-20261022-GE-124b-5.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -114,3 +115,4 @@ notes: |
   between the @ac line grammar and the data-ac value grammar (the `~=` selector
   operator is the reason), and the React-only scope of the production strip
   built by GE-124b-3.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

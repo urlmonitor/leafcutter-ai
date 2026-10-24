@@ -28,6 +28,7 @@ MARKER_RE = re.compile(r"^// ([A-Z][A-Z0-9-]*)-START[ \t]*$", re.MULTILINE)
 MARKER_RE_BYTES = re.compile(rb"^// [A-Z][A-Z0-9-]*-START[ \t]*$", re.MULTILINE)
 _COMMIT_STEP_PLACEHOLDER = "{{config.commit_step_"
 _COMMIT_STEP_FILE = Path("config") / "commit_step.json"
+HAND_KEPT_FILE = "hand-kept.json"
 _FAMILIES = ("policy", "step", "check", "nothing")
 
 
@@ -74,15 +75,39 @@ def load_commit_step_values(package_root: Path) -> dict[str, str]:
     return values
 
 
+def read_hand_kept(shared_dir: Path) -> dict[str, str]:
+    """Return ``{block name: reason}`` from ``_shared/hand-kept.json`` (empty if absent).
+
+    Raises ``SharedBlockError`` when the file is unreadable or is not one object of strings.
+    """
+    path = shared_dir / HAND_KEPT_FILE
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        msg = f"{path}: the hand-kept declaration cannot be read: {exc}"
+        raise SharedBlockError(msg) from exc
+    if not isinstance(data, dict) or not all(isinstance(v, str) and v.strip() for v in data.values()):
+        msg = f"{path}: must hold one object mapping a block name to a non-empty reason"
+        raise SharedBlockError(msg)
+    return data
+
+
+def resolve_commit_step(text: str, package_root: Path) -> str:
+    """Resolve ``{{config.commit_step_*}}`` placeholders in block ``text`` (no-op without any)."""
+    if _COMMIT_STEP_PLACEHOLDER in text:
+        return inject_config(text, load_commit_step_values(package_root))
+    return text
+
+
 def _block_text(block: str, name: str, src_dir: Path, package_root: Path) -> str:
     """Return block ``block``'s source text with commit-step placeholders resolved."""
     source = src_dir / "_shared" / f"{block.lower()}.js"
     if not source.is_file():
         msg = (f"{name}: carries {block} markers but {source} is missing")
         raise SharedBlockError(msg)
-    text = source.read_text(encoding="utf-8")
-    if _COMMIT_STEP_PLACEHOLDER in text:
-        text = inject_config(text, load_commit_step_values(package_root))
+    text = resolve_commit_step(source.read_text(encoding="utf-8"), package_root)
     return text if text.endswith("\n") else text + "\n"
 
 
@@ -104,8 +129,13 @@ def inline_shared_blocks(text: str, name: str, src_dir: Path, package_root: Path
             msg = (f"{name}: // {block}-START has no matching // {block}-END")
             raise SharedBlockError(msg)
         holds_text = bool(text[match.end():end].strip())
-        if holds_text and not (src_dir / "_shared" / f"{block.lower()}.js").is_file():
-            continue  # a pre-existing hand-kept pair with no shared source is not ours to fill
+        has_source = (src_dir / "_shared" / f"{block.lower()}.js").is_file()
+        if holds_text and not has_source and block in read_hand_kept(src_dir / "_shared"):
+            continue  # declared hand-kept in _shared/hand-kept.json: not ours to fill
+        if holds_text and not has_source:
+            msg = (f"{name}: the {block} marker pair holds text but there is no _shared source "
+                   f"for it; declare it hand-kept in _shared/{HAND_KEPT_FILE}")
+            raise SharedBlockError(msg)
         if holds_text:
             msg = (
                 f"{name}: the {block} marker pair already holds text; it must be empty "
@@ -136,4 +166,7 @@ def fill_template_bytes(raw: bytes, name: str, src_dir: Path, package_root: Path
 #   {{config.commit_step_*}} placeholders, resolved from config/commit_step.json
 #   and validated before anything is written, so the retry ceiling and the
 #   reason-code families live in config, not in the block.
+# - 2026-10-23 [python-coder/BO-4500b-1]: A marker pair holding text with no
+#   _shared source is no longer skipped silently; it must be declared in
+#   _shared/hand-kept.json or the fill refuses (no route is silently skipped).
 # ===========================================================================

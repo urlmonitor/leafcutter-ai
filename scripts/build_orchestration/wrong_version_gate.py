@@ -10,7 +10,7 @@ BUSINESS CONTEXT: TQ-500g-1-v. One executor dispatch and one fail-closed parse i
 ARCHITECTURE: Public module with its own CLI. Calls ``wrong_version_writer.py write`` and
     ``wrong_version_runner.py run`` through their CLIs (subprocess, one JSON object each on
     stdout, their stderr passed through) and prints exactly one object
-    ``{gate_passed, stopped_at: null|"write", writer, verdict}``. Exit 0 if and only if
+    ``{gate_passed, stopped_at: null|"sweep"|"write", sweep, writer, verdict}``. Exit 0 if and only if
     ``gate_passed``. Same ids, AC root, test root and base ref go to both steps. Logging goes
     to stderr only. Never uses git stash.
 """
@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -47,9 +48,10 @@ def _parser() -> argparse.ArgumentParser:
 
 def _call(script: str, args: list[str], stdin: bytes | None) -> tuple[dict | None, int]:
     """Run one sibling CLI; return ``(its JSON object or None, exit code)``."""
+    env = dict(os.environ, PYTHONUTF8="1") if script == "consumer_sweep.py" else None  # only the sweep needs it
     try:
         proc = subprocess.run([sys.executable, str(_HERE / script), *args], input=stdin, stdout=subprocess.PIPE,
-                              stderr=None, timeout=_TIMEOUT_SECONDS, check=False)
+                              stderr=None, env=env, timeout=_TIMEOUT_SECONDS, check=False)
     except (OSError, subprocess.SubprocessError) as exc:
         _LOG.warning("%s could not run: %s", script, exc)
         return None, 1
@@ -61,13 +63,19 @@ def _call(script: str, args: list[str], stdin: bytes | None) -> tuple[dict | Non
     return (parsed if isinstance(parsed, dict) else None), proc.returncode
 
 
-def _shape(gate_passed: bool, stopped_at: str | None, writer: dict | None, verdict: dict | None) -> dict:
+def _shape(gate_passed: bool, stopped_at: str | None, writer: dict | None, verdict: dict | None,
+           sweep: dict | None = None) -> dict:
     """Return the one JSON object this command prints (fixed key order)."""
-    return {"gate_passed": gate_passed, "stopped_at": stopped_at, "writer": writer, "verdict": verdict}
+    return {"gate_passed": gate_passed, "stopped_at": stopped_at, "sweep": sweep, "writer": writer, "verdict": verdict}
+
+
+def _ok(result: dict | None, code: int, key: str) -> bool:
+    """True when a sibling CLI exited 0 and its JSON object holds ``key: true``."""
+    return result is not None and code == 0 and result.get(key) is True
 
 
 def finish(args: argparse.Namespace, reply: bytes) -> dict:
-    """Run the writer's write step on *reply*, then the runner's run step on its manifest.
+    """Run the sweep check (TQ-500g-3-i), then the writer's write step on *reply*, then the runner's run step on its manifest.
 
     Args:
         args: The parsed ``finish`` flags.
@@ -80,17 +88,19 @@ def finish(args: argparse.Namespace, reply: bytes) -> dict:
         not gvr.valid_key(args.record) or gvr.remove_record(Path(args.test_root), args.record, "wrong_version")
     ):
         return _shape(False, None, None, None)
+    sweep, sweep_code = _call("consumer_sweep.py", ["check", "--test-root", args.test_root, "--base-ref", args.base_ref or "HEAD"], None)
+    if not _ok(sweep, sweep_code, "passed"):
+        return _shape(False, "sweep", None, None, sweep)
     common = ["--ac-root", args.ac_root, "--test-root", args.test_root, "--base-ref", args.base_ref or "HEAD"]
     if args.ac_ids:
         common = ["--ac-ids", args.ac_ids, *common]
     writer, code = _call("wrong_version_writer.py", ["write", "--work-key", args.work_key, "--reply", "-", *common], reply)
     manifest = writer.get("manifest_path") if writer else None
-    if writer is None or code != 0 or writer.get("written") is not True or not isinstance(manifest, str) or not manifest:
-        return _shape(False, "write", writer, None)
+    if not _ok(writer, code, "written") or not isinstance(manifest, str) or not manifest:
+        return _shape(False, "write", writer, None, sweep)
     extra = ["--record", args.record] if args.record is not None else []
     verdict, run_code = _call("wrong_version_runner.py", ["run", *common, "--alterations", manifest, *extra], None)
-    passed = verdict is not None and verdict.get("gate_passed") is True and run_code == 0
-    return _shape(passed, None, writer, verdict)
+    return _shape(_ok(verdict, run_code, "gate_passed"), None, writer, verdict, sweep)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1813,8 +1813,7 @@ async function wvStep(label, command, workKey) {
   try {
     const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: resolvedTarget.worktree_path, run_id: workKey } }),
       { agentType: "command-step-runner", schema: WV_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
-    const out = JSON.parse(reply.stdout);
-    return out && typeof out === "object" ? out : null;
+    return parseStepJson(reply.stdout);
   } catch { return null; }
 }
 async function wvRecover(workKey) {
@@ -2132,10 +2131,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }` + scratchEnvNote,
           { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
         );
-        let gateVerdict = null;
-        if (gateReply && typeof gateReply.output === "string" && typeof gateReply.exit_code === "number") {
-          try { gateVerdict = JSON.parse(gateReply.output); } catch (_e) { gateVerdict = null; }
-        }
+        const gateVerdict = gateReply && typeof gateReply.exit_code === "number" ? parseStepJson(gateReply.output) : null;
         // FAIL CLOSED: unparseable/refused reply is never treated as a pass.
         if (!gateVerdict || typeof gateVerdict.gate_passed !== "boolean") {
           return refuse(`The red-baseline gate reply could not be verified for ticket ${worktreeTicketPath}: not a parseable {output, exit_code} envelope carrying a real heavy_lane_gate verdict (raw reply: ${JSON.stringify(gateReply)}). Fail closed — the coder is never dispatched on an unverified red-baseline gate reply.`,

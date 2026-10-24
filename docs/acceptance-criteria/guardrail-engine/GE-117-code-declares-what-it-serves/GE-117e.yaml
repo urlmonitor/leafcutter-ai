@@ -1,5 +1,5 @@
 id: GE-117e
-readiness: draft
+readiness: approved
 priority: medium
 title: "Fix a missing declaration quickly, or deliberately opt out when it truly does not apply"
 component: guardrail-engine

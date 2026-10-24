@@ -1,0 +1,341 @@
+id: TQ-500f-3-v
+components:
+  - testing_quality
+  - build_orchestration
+title: "A gate's real answer is read even when the relayed text carries a log line before it or an exit line after it, and a reply with no answer still halts"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a build route (/build-feature, the single-ticket route, or /build-epic)
+    runs a command step through an executor agent, and the command prints
+    exactly one JSON object as its answer on one line,
+  When the executor relays the command's output to the route as one of these
+    texts:
+      R1: the answer alone,
+          '{"gate_passed": true, "verified": true, "red": [3 tests]}',
+      R2: the same answer followed by a line "exit: 0",
+      R3: a log line "base ref HEAD: 0 names declared, 14 derived" followed by
+          the answer '{"owed": [14 items], "error": null}',
+      R4: a log line before the answer and "exit: 0" after it, with the answer
+          line ending in a carriage return,
+  Then in each of R1 to R4 the route reads that one line as the step's answer
+      and acts on it exactly as it acts on R1 today:
+        a red-baseline answer with gate_passed true dispatches the coder,
+        a wrong-version list answer with an owed array and error null goes on
+          to the next wrong-version step with that owed array unchanged,
+    And the lines around the answer are never read as part of it, and the
+      "exit: N" line never stands in for, or overrides, the answer's own
+      fields,
+    And the same relayed text gives the same reading in /build-feature and in
+      the single-ticket route, and for the wrong-version recover step and the
+      gate-marker steps also in /build-epic, which has no list step.
+
+  Given the relayed text holds a real answer that is a failing verdict, for
+    example a log line followed by
+    '{"gate_passed": false, "reason": "absence_only_red", ...}' and "exit: 1",
+  When the route reads it,
+  Then the ticket halts with that verdict's own reason and the tests it names,
+      exactly as it does when the same verdict arrives alone,
+    And the halt does not say the reply could not be verified.
+
+  Given the relayed text carries no JSON object answer:
+      N1: a refusal in prose ("Running arbitrary shell commands is not my
+          role"), with no JSON line,
+      N2: empty text,
+      N3: a line that is a JSON array, '[{"gate_passed": true}]',
+      N4: a truncated object, '{"gate_passed": tru',
+      N5: an answer that shares its line with other text,
+          'result: {"gate_passed": true}',
+      N6: two different lines that are each a JSON object,
+  When the route reads it,
+  Then no answer is read, and the route halts that ticket fail-closed exactly
+      as it does today: for the red-baseline step no coder is dispatched and the
+      halt says the red-baseline gate reply could not be verified; for the
+      wrong-version list step no later wrong-version step and no commit follows,
+      and the halt names the list step,
+    And none of N1 to N6 is ever read as gate_passed true, as an empty owed
+      list, or as "nothing owed".
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-ii
+  - TQ-500g-1-vi
+  - TQ-500g-1-vii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The red-baseline wiring and its fail-closed requirement. This AC is its other side: a real verdict must not be thrown away; no verdict must never pass."
+  - path: unit_tests/workflows/test_tq500f3ii_gate_reply_fail_closed.py
+    relationship: relates-to
+    status: exists
+    relevance: "The existing fail-closed test (refusal-shaped reply halts before the coder). It must stay green unchanged; N1 is its case."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vi.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The /build-feature and single-ticket wrong-version wiring. Its it_requirement 'parsed as the fast lane does: JSON.parse(reply.stdout)' was the strict whole-text parse this AC replaces in wvStep (recover, list, finish); amended 2026-10-23 to point here. Its fail-closed checks (ok true, owed an array and error null, gate_passed a boolean) stay."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The /build-epic wrong-version wiring (ticket-supervisor prompt). Its 'stdout must parse as one JSON object' rule was amended 2026-10-23 to point at this AC's reading rule; build-epic.js's own gvStep reader (recover, gate-marker open/close) is changed here."
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    relationship: modifies
+    status: exists
+    relevance: "Holds parseStepJson, the one copy of the reading rule, inlined into every route between its WORKSPACE-ANSWER markers."
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "Calls parseStepJson in wvStep (recover, list, finish) and in the red-baseline gateVerdict parse. Declares build-ticket.js as its TWIN."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "Twin: calls parseStepJson in wvStep and the red-baseline gateVerdict parse."
+  - path: templates/workflows-js/build-epic.js
+    relationship: modifies
+    status: exists
+    relevance: "Calls parseStepJson in gvStep: the drive-head wrong-version recover step and the gate-marker close-all / open / close steps. build-epic.js has no list step."
+  - path: unit_tests/workflows/test_step_json_relay_noise.py
+    relationship: modifies
+    status: exists
+    relevance: "The three behavioral tests for this AC (covers: TQ-500f-3-v), driving the real templates under the E2 harness."
+  - path: docs/agents/cards/command-step-runner.card.md
+    relationship: describes
+    status: exists
+    relevance: "The executor that relays the command's output; its shell tool returns stdout and stderr merged."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    state: existing
+  - path: templates/workflows-js/build-feature.js
+    state: existing
+  - path: templates/workflows-js/build-ticket.js
+    state: existing
+  - path: templates/workflows-js/build-epic.js
+    state: existing
+  - path: unit_tests/workflows/test_step_json_relay_noise.py
+    state: existing
+it_requirements:
+  - >-
+    Reading rule, one rule for every step it serves: the answer is the whole relayed text, trimmed, when
+    that parses as one JSON object (not an array, not a scalar, not null); otherwise the one DISTINCT line
+    that, trimmed (surrounding whitespace and a trailing carriage return removed), parses on its own as a
+    JSON object. Zero such lines, or two or more distinct such lines, is no answer (null). A line is a
+    candidate only as a whole: a JSON object embedded in a line with other text (N5) is never read. Identical
+    repeated lines count once. A multi-line JSON object is read only when it is the whole text.
+  - >-
+    Every caller still fails closed on null (TQ-500f-3-ii): the red-baseline gate halts before the coder
+    with "could not be verified"; a wrong-version step halts with that step named (recover, list, finish on
+    the twins; recover, and gate-marker open where its reply is checked, on /build-epic); no later
+    wrong-version step and no commit follows. The per-step shape checks already on main are unchanged:
+    gate_passed must be a boolean, recover ok must be true, list owed must be an array and error null,
+    finish gate_passed must be a boolean.
+  - >-
+    The lines around the answer are never read as part of it, and an "exit: N" line is neither parsed,
+    cross-checked nor allowed to override any field of the answer. A failing verdict found around noise
+    halts with its own reason and the tests it names, never as "could not be verified".
+  - >-
+    Where the rule applies: build-feature.js and its TWIN build-ticket.js, in wvStep (wrong-version
+    recover, list, finish) and in the red-baseline gateVerdict parse of the gate reply's output field;
+    build-epic.js in gvStep (the drive-head wrong-version recover step and the gate-marker close-all, open
+    and close steps). build-epic.js has no wrong-version list step and does not parse the red-baseline
+    verdict in JS (ticket-supervisor runs it from prompt text, TQ-500f-3-iv).
+  - >-
+    ONE copy of the reader, in templates/workflows-js/_shared/workspace-answer.js (the single source of the
+    shell-step reply rules), which the build copies between the WORKSPACE-ANSWER markers every route already
+    carries (BO-4300c-3, BO-4500). No route template holds its own copy. Amended 2026-10-23 (main session):
+    this replaced an earlier three-copy design after main gained the shared-block mechanism; the reading
+    rule is unchanged.
+  - >-
+    Out of scope: fast-lane-ship.js keeps its own strict parse of the relayed stdout and is not changed
+    here (owned elsewhere). The ticket-supervisor prompt rules (TQ-500f-3-iv, TQ-500g-1-vii) are not
+    changed by this AC. No Python changes; the commands' own output is unchanged.
+  - >-
+    JS growth: thin, pure helper only (about 10 counted lines per file, plus the call-site swaps). The three
+    files are over the 1000-line .js limit, so the file-size ratchet needs the same one-time user-approved
+    skip as the TQ-500g-1-v / -vi precedent; record the measured growth in the commit message.
+  - >-
+    Existing neighbouring workflow tests (the tq500f3* and tq500g1* families, including
+    test_tq500f3ii_gate_reply_fail_closed.py and the "not json" cases of test_tq500g1vi_route_halts.py) stay
+    green unchanged.
+test_spec:
+  - name: test_a_red_baseline_answer_around_relay_noise_is_acted_on_and_no_answer_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-feature.js and build-ticket.js under unit_tests/_workflow_engine_harness.py
+    description: >-
+      For each twin, a PASSED red-baseline verdict relayed as '<json>\nexit: 0' (R2) and as a log line,
+      the verdict with a trailing carriage return and 'exit: 0' (R4) dispatches python-coder. A FAILING
+      verdict (absence_only_red) after the log line and before 'exit: 1' halts with its own reason and not
+      "could not be verified". N1-N6 each dispatch no coder and halt with "could not be verified".
+    must_catch:
+      - the whole relayed text parsed as JSON, so a trailing exit line halts a passed gate
+      - a relayed gate reply with no single verdict in it read as a pass
+      - a failing verdict around noise reported as "could not be verified" instead of its own reason
+    in_scope_files:
+      - templates/workflows-js/build-feature.js
+      - templates/workflows-js/build-ticket.js
+  - name: test_a_list_answer_after_the_writers_log_line_is_read_and_no_answer_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-feature.js and build-ticket.js under unit_tests/_workflow_engine_harness.py
+    description: >-
+      For each twin, the wrong-version list answer relayed after the writer's log line "base ref HEAD: 0
+      names declared, 1 derived" (R3) is read: the route does not halt at list, test-breaker is dispatched
+      with the owed versions and finish runs once. N1-N6 each halt blocked with wrong_version_step "list",
+      with no test-breaker and no finish dispatch after it.
+    must_catch:
+      - stdout parsed whole, so the writer's own stderr log line turns the list answer into null
+      - a list reply carrying no single answer read as nothing owed
+    in_scope_files:
+      - templates/workflows-js/build-feature.js
+      - templates/workflows-js/build-ticket.js
+  - name: test_build_epic_reads_a_recover_answer_around_relay_noise_and_no_answer_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-epic.js under unit_tests/_workflow_engine_harness.py
+    description: >-
+      build-epic.js's drive-head recover answer relayed after a log line and before 'exit: 0' is read: the
+      drive returns ok and dispatches the one ticket-supervisor. N1-N6 each halt the drive blocked with
+      wrong_version_step "recover" before any ticket-supervisor is dispatched.
+    must_catch:
+      - build-epic's step reader left on the whole-text parse while the twins were fixed
+    in_scope_files:
+      - templates/workflows-js/build-epic.js
+test_required: true
+test_rationale: >-
+  Behavioral, per CLAUDE.md: each test drives the real templates under the E2 harness and asserts on the
+  recorded dispatches and the terminal payload, never on source text, and pairs its noisy-answer case with
+  the N1-N6 no-answer cases in the same run, so a reader that accepts anything fails. Mutation-proven on
+  2026-10-23: with the template changes stashed all three fail with the live halt messages ("red-baseline
+  gate reply could not be verified", "Wrong-version list step did not pass: null", and the recover halt);
+  with them all three pass, and the 49 neighbouring tq500f3* / tq500g1* tests stay green.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-ii
+    contract: "The red-baseline gate dispatch (label red-baseline-gate, envelope {output: str, exit_code: int}) and its halt-before-coder on an unreadable reply, as on main. This AC changes only how the verdict object is found inside output; the gate_passed boolean check and the halts are unchanged."
+  - ac_id: TQ-500g-1-vi
+    contract: "The twins' wrong-version step helper wvStep (command-step-runner reply {stdout: str, ...}) and its fail-closed checks (recover ok true; list owed an array and error null; finish gate_passed a boolean), as on main. This AC changes only how the answer object is found inside stdout."
+  - ac_id: TQ-500g-1-viii
+    contract: "build-epic.js's gvStep (command-step-runner reply {stdout: str, ...}) for be-wv-recover (ok must be true, else the drive halts blocked with wrong_version_step recover) and the be-gate-marker-* steps (be-gate-marker-open: opened must be true, else the ticket is blocked at step open; close-all and close replies are not checked), as on main. This AC changes only how the answer object is found inside stdout."
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+  - reason: "IT PO criteria correction: the clause 'for the wrong-version list step also in /build-epic' named a step build-epic.js does not have. It now reads 'for the wrong-version recover step and the gate-marker steps also in /build-epic, which has no list step', the steps build-epic.js's shared reader (gvStep) actually serves. No other clause changed; meaning otherwise unchanged. Technical fields filled against the implementation already in the workspace."
+    date: '2026-10-23'
+    by: it-po
+    directed_by: claude-main-session
+superseded_by: null
+covered_by: []
+implemented_by:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+  - templates/workflows-js/build-epic.js
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  THE DEFECT, MEASURED (run wf_f982c0ab-e94, 2026-10-23). Three of three tickets
+  halted after about 4.2M tokens of correct work, on two parses that read the
+  command's answer with a bare JSON parse of the whole relayed text:
+  - Red-baseline gate: the gate PASSED (gate_passed true, three red tests,
+    verified true), but the relayed text was '<json>\nexit: 0'. The drive halted
+    with "red-baseline gate reply could not be verified" and no coder ran.
+  - Wrong-version list step: the writer's list command logs "base ref HEAD: 0
+    names declared, 14 derived" to stderr. The executor's shell tool merges
+    stdout and stderr, so the log line arrived ahead of the JSON, the step read
+    null, and the drive halted with "Wrong-version list step did not pass: null".
+    This happens for EVERY ticket whose AC has derived wrong-version names; it is
+    not intermittent.
+
+  THE OTHER SIDE OF TQ-500f-3-ii's COIN. -ii says no verdict must ever pass.
+  This AC says a real verdict must not be thrown away. The N1-N6 clause keeps
+  -ii's fail-closed requirement whole: the existing refusal test must stay green
+  unchanged, and every case where the text carries no single JSON object answer
+  halts as today. Only R1-R4 (one whole line that is a JSON object) change.
+
+  DECISIONS THE BA MADE, FOR THE IT PO / USER TO CONFIRM:
+  - N6, two different JSON-object lines, is NOT read as an answer: with two
+    candidates the route cannot tell which one the command meant, and picking
+    one would be guessing. The case is hypothetical today (no log line on these
+    steps is JSON), so this costs nothing.
+  - N5, an answer sharing its line with other text, is NOT read. "A whole line"
+    is the rule; accepting a JSON object embedded mid-line widens what counts as
+    an answer to text a refusal could contain.
+  - A JSON object spread over several lines (pretty-printed) is read only when it
+    is the whole text (R1 rule). With noise around it, it is not read and halts.
+    Assumption: these commands print one-line JSON.
+  - Whitespace and a trailing carriage return around the answer line are
+    ignored (R4), because a Windows host or the executor may add them.
+  - The "exit: N" line is ignored, never cross-checked. A route that wanted the
+    exit status would get it from the command's own answer (gate_passed).
+
+  STEPS IN SCOPE. The red-baseline gate parse in build-feature.js and its twin
+  build-ticket.js, and the wrong-version step helper (wvStep) in build-feature.js,
+  build-ticket.js and build-epic.js. wvStep serves recover, list and finish, so
+  the one reading rule reaches all three; the criteria pin the list step because
+  that is where the defect was measured. On /build-epic the red-baseline gate is
+  run by ticket-supervisor from prompt text (TQ-500f-3-iv), not parsed in the
+  JS, so only the wrong-version step is in scope there.
+
+  OUT OF SCOPE: fast-lane-ship.js has the same bare parse of the relayed stdout,
+  but the fast lane is owned elsewhere. It is not changed here. Raise it with the
+  fast lane's owner; until then the lanes differ in how they read relayed noise,
+  though never in the verdict they reach on the same answer.
+
+  CONTRADICTION TO RECONCILE (not edited here, previous BA/IT-PO records are not
+  modified): TQ-500g-1-vi's it_requirements say "The reply is parsed as the fast
+  lane does: JSON.parse(reply.stdout)". This AC replaces that parse for the
+  heavy-lane routes. The IT PO should amend -vi's (and -vii's) entry to point
+  here. TQ-500f-3-iv's "stdout must parse as one JSON object" is a prompt rule
+  for ticket-supervisor and is left as is.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  Described against the implementation already in this workspace: one pure
+  reader, parseStepJson, copied identically into build-feature.js,
+  build-ticket.js and build-epic.js (no module loader). Twins: wvStep
+  (recover, list, finish) and the red-baseline gateVerdict parse. build-epic.js:
+  gvStep (drive-head recover, gate-marker close-all/open/close). The BA's
+  decisions above (N5 and N6 not read, multi-line only as whole text, CR
+  trimmed, exit line ignored) are confirmed and match the code.
+  CRITERIA CORRECTED: "for the wrong-version list step also in /build-epic"
+  became "for the wrong-version recover step and the gate-marker steps also
+  in /build-epic, which has no list step" (amended_by entry, 2026-10-23).
+  The BA's STEPS IN SCOPE paragraph above says wvStep on build-epic.js; the
+  helper there is gvStep and it serves recover and the gate-marker steps.
+  SIBLINGS AMENDED: TQ-500g-1-vi's and TQ-500g-1-vii's parse entries now point
+  at this AC's reading rule. fast-lane-ship.js stays on its own strict parse.
+  Complexity S: ~10 counted lines of pure helper per file plus three call-site
+  swaps; tests already written (three, behavioral, mutation-proven).
+
+  PLACEMENT. TQ-500 has 7 L1s (full), TQ-500f has 6 L2s and TQ-500g has 5 (both
+  at or over the 5-L2 cap), so this is an L3. It sits under TQ-500f-3 beside
+  TQ-500f-3-ii, whose fail-closed requirement it is the counterpart of; the
+  wrong-version list step it also covers is linked through depends_on
+  (TQ-500g-1-vi, -vii). BO-3200d ("a large result arrives whole") was
+  considered and rejected: its binding handover decision is that results travel
+  out of band and never in the reply, which this relay-parsing fix does not
+  follow. Moving these steps to an out-of-band handover would be a BO-3200
+  follow-up, not this fix.
+
+  TESTABILITY (for the IT PO): drive both twins (and build-epic.js for the
+  wrong-version step) under unit_tests/_workflow_engine_harness.py with the
+  executor responses R1-R4, the failing-verdict case and N1-N6, and assert on the
+  recorded dispatches (coder dispatched or not, next wrong-version step
+  dispatched or not, halt text). R3 must use the exact log line from the run; R2
+  the exact '<json>\nexit: 0' text. A test of the parse helper alone is not
+  enough: CLAUDE.md requires the verdict to be shown consumed in control flow.

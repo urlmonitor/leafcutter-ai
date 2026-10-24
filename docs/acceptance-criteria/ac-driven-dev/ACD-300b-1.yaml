@@ -3,7 +3,7 @@ components:
   - ac_driven_dev
 readiness: reviewed
 priority: medium
-title: "The strategic route dispatches PO v3, then BA v3, then IT PO v3 in strict sequence"
+title: "The strategic route dispatches the product owner, business analyst, technical planner and test designer in strict sequence"
 component: ac-driven-dev
 level: L2
 status: active
@@ -11,16 +11,21 @@ req_status: active
 work_status: todo
 criteria: |
   Given the triage agent returns route: "strategic",
-  When the create-ac.js workflow script processes the routing decision,
-  Then it dispatches product-owner-v3 with the user's request,
-  And waits for PO v3 to write L0/L1 ACs to the AC store with readiness: draft,
-  And presents the PO v3 output to the user for confirmation (gate 1),
-  And only after user approval dispatches business-analyst-v3 with the L1 AC ids,
-  And waits for BA v3 to write L2/L3 ACs with readiness: draft,
-  And presents the BA v3 output to the user for confirmation (gate 2),
-  And only after user approval dispatches it-po-v3 with the full AC batch,
-  And waits for IT PO v3 to enrich and set readiness: reviewed,
-  And presents the final output to the user for priority setting and approval (gate 3).
+  When the /plan-feature workflow script processes the routing decision,
+  Then it dispatches product-owner with the user's request,
+  And waits for the product owner to write L0/L1 ACs to the AC store with readiness: draft,
+  And presents the product owner's output to the user for confirmation (gate 1),
+  And only after user approval dispatches business-analyst with the L1 AC ids,
+  And waits for the business analyst to write L2/L3 ACs with readiness: draft,
+  And presents the business analyst's output to the user for confirmation (gate 2),
+  And only after user approval dispatches it-po with the full AC batch,
+  And waits for the technical planner to record per-clause test intent and set
+    readiness: reviewed,
+  And does not present the technical planner's output to the user: that stage is
+    approved automatically once its requirement rule check passes, and is committed,
+  And only then runs the design pre-pass and dispatches the test-designer for the batch,
+  And presents the batch with its test design to the user for one priority and
+    approval (the final gate).
 depends_on: [ACD-300b]
 doc_links: []
 assigned_agent: python-coder
@@ -29,7 +34,15 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: agents are product-owner, business-analyst,
+    it-po and test-designer (no -v3); the technical planner records per-clause test intent
+    and is auto-gated (rule-checked, committed, no human gate); the design pre-pass and the
+    test-designer follow; the final gate comes after the test design, not after IT PO.
+    The strict-sequence intent is unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
