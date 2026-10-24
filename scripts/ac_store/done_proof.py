@@ -1350,7 +1350,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     """
     if not test_files:
         return {}
-    cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
+    cmd = [sys.executable, "-m", "pytest", "-v", "--tb=short", "--no-header"]  # probe only: --tb=no on main
     cmd.extend([*_manual_opt_in_args(linked_functions), *(str(f) for f in test_files)])
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
@@ -1376,6 +1376,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
             file=sys.stderr,
         )
         return {}
+    print("PROBE pytest output:\n" + proc.stdout[-20000:], file=sys.stderr)  # probe only, never merged
     if proc.returncode not in (0, 1):
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)

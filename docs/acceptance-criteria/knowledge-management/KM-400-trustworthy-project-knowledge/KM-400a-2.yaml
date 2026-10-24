@@ -83,3 +83,4 @@ test_spec:
   - KM-400a-2
 test_rationale: Behavioral proof uses the public caller and source-format fixture so internal helper tests
   cannot mask missing wiring. Live server gates remain distinct from deterministic fake-provider tests.
+# probe: do not merge -- runs this record's live tests on main's code via Proof-of-done (2026-10-24)
