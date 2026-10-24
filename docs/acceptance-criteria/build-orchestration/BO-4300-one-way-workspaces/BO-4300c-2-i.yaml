@@ -1,0 +1,307 @@
+id: BO-4300c-2-i
+title: "The maker never waits on a question, whatever the shared project or the caller's input does"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a main copy whose shared project is at an https address where nothing
+    answers,
+  And a caller that holds the maker's input channel open and never writes to it,
+  When that caller requests a workspace, and separately asks to clear an existing
+    workspace of that project,
+  Then each request ends with one answer before the caller's time limit, the
+    workspace request stating that the shared project could not be reached,
+  And no prompt for a user name, password or passphrase appears on any channel,
+  And when the caller has set its own command for reaching the shared project over
+    ssh, the maker's requests to the shared project use that command unchanged.
+depends_on: [BO-4300c-2]
+doc_links:
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-2.yaml
+  relationship: parent
+  status: exists
+- path: docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
+  relationship: constrains
+  status: exists
+  relevance: A1.2 -- the maker MUST NOT read stdin or prompt.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: FETCH_FAILED and the answer every caller receives.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_git.py
+    state: existing
+  - path: templates/scripts/workspace_root.py
+    state: existing
+  - path: templates/scripts/worktree_identity.py
+    state: existing
+  - path: templates/scripts/worktree_canaries.py
+    state: existing
+  - path: templates/scripts/worktree_log_root.py
+    state: existing
+  - path: templates/scripts/worktree_readiness.py
+    state: existing
+  - path: unit_tests/build_orchestration/test_bo_4300e_2.py
+    state: existing
+it_requirements:
+  - >-
+    EVERY CHILD PROCESS, NOT ONLY GIT: no process the maker starts -- git through the shared git runner,
+    the resolver module's git calls, the identity module's object reads, the canary/shim installer, and
+    the install build -- can read the maker's own stdin. The maker's stdin is never inherited by a
+    child. The stdin and environment settings live in one shared helper that every maker call site uses
+    (including the install build that worktree_readiness.run_install_build hands to worktree_log_root),
+    so a later call site cannot miss them. workspace_root.py is the one exception: hooks import it
+    standalone, so it carries its own copy of the same settings, and the proof covers it like any other site.
+  - >-
+    FIXTURE FIX: the existing WorkspaceCase.cli(stdin='open') helper in
+    unit_tests/build_orchestration/test_bo_4300e_2.py calls Popen.communicate(), which closes the pipe, so it
+    never holds stdin open. Fix it to keep the handle open and unwritten for the run, so the existing
+    BO-4300e-2 "does not read stdin" test and this record's tests can actually catch a maker that reads stdin.
+  - >-
+    NO INTERACTIVE CREDENTIAL PATH: every git child runs with git's terminal prompting disabled and Git
+    Credential Manager's interactive mode disabled, so a credential that is missing ends the git command
+    with a failure instead of a prompt. The maker reads no credential and stores none.
+  - >-
+    SSH NON-INTERACTIVE WITHOUT OVERRIDING THE USER: when the caller's environment sets no
+    GIT_SSH_COMMAND (and no core.sshCommand applies), ssh is made non-interactive (batch mode). A
+    GIT_SSH_COMMAND or core.sshCommand the caller set is passed through byte for byte -- the maker never
+    replaces, wraps or appends to it.
+  - >-
+    The caller's other environment is preserved for every child (PATH, HOME, GIT_CONFIG_GLOBAL and the
+    like); only the non-interactive switches above are added.
+  - >-
+    An unreachable hub on ensure still ends in FETCH_FAILED (refused, exit 2) unless --allow-stale-base
+    was passed, and remove still answers per BO-4300e-2; both within BO-4300a-1's time budgets.
+  - >-
+    Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, the
+    status/code/exit mapping, workspace_path absent on every non-ok answer).
+  - >-
+    Proof runs the DEPLOYED maker as a separate process with its stdin a pipe that the test holds open
+    and never writes to or closes, under a timeout, against a real temporary main checkout whose origin
+    is an unanswered https URL (e.g. a closed local port). A hang shows as the timeout, never as a pass.
+    The ssh pass-through is shown with a caller-set GIT_SSH_COMMAND naming a stand-in script that records
+    how it was invoked. No mock of git, no import of the maker module, no grep of its source.
+  - >-
+    Tests must not spawn the package's own scripts/build.py; fixture projects carry the minimal stub build
+    entry point (CLAUDE.md 'Tests must not spawn their own build.py').
+  - >-
+    All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, KI-TQ-012).
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: >-
+    Result contract: one JSON object on stdout; FETCH_FAILED is status refused, exit 2; every child
+    process's output goes to stderr.
+test_intent:
+  - clause: each request ends with one answer before the caller's time limit, the workspace request stating that the shared project could not be reached
+    needs_test: true
+    reason: Every child inherits the held-open input today, so a credential or confirmation read would hang the request, which only a held-open stdin under a timeout shows.
+  - clause: no prompt for a user name, password or passphrase appears on any channel
+    needs_test: true
+    reason: With terminal prompting left on, git writes a credential prompt to the terminal or stderr before failing, so the channels must be checked for it.
+  - clause: when the caller has set its own command for reaching the shared project over ssh, the maker's requests to the shared project use that command unchanged
+    needs_test: true
+    reason: Forcing batch mode by overwriting the variable would break users whose ssh setup depends on their own command, and the overwrite is invisible unless the command's invocation is recorded.
+test_spec:
+  - name: test_ensure_and_remove_answer_before_the_limit_with_stdin_held_open_on_an_unreachable_hub
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      New unit_tests/build_orchestration/test_bo_4300c_2_i.py, a WorkspaceCase subclass (test_bo_4300e_2.py).
+      Use WorkspaceCase.cli(stdin='open') AFTER its fixture fix (now a declared change in test_bo_4300e_2.py):
+      today its Popen.communicate() closes a PIPE stdin when no input is given, so it never holds the channel open.
+      The fixed helper keeps the stdin handle open and unwritten for the whole run, collects output without
+      closing it, and fails the test on timeout (never skips). Give the main copy an origin of an https URL on a
+      closed local port (bind a socket to port 0, read the port, close it). Case 1: ensure --kind feature --slug alpha
+      ends with one JSON answer, refused FETCH_FAILED, exit 2, no workspace_path, and the message is not empty.
+      Case 2: after making a ready workspace against the good hub, point the workspace's origin at the same dead
+      https URL and run remove --path <ws>; it ends with one answer (refused FETCH_FAILED, exit 2) and the folder is
+      untouched.
+    proves_clause: each request ends with one answer before the caller's time limit, the workspace request stating that the shared project could not be reached
+    code_file: templates/scripts/worktree_git.py
+  - name: test_no_install_build_child_can_read_the_makers_open_stdin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      make_project(stub_build=<source>) with a fixture stub scripts/build.py (never the package's own build.py)
+      that, when run, uses select with a zero timeout on fd 0 and records into a file under its --target-dir
+      whether stdin reads as end-of-file immediately (closed or null device) or is an open, silent pipe. Run ensure
+      against the good local hub with the maker's stdin an open, unwritten pipe held by the test. Assert the ensure
+      is ok and the recorded stdin state is end-of-file, so the maker's stdin was not inherited by that child. The
+      build is the only direct, non-git child the fixture can instrument; the canary shim installer, the resolver
+      and the identity reader are separate call sites that this test does not reach.
+    proves_clause: each request ends with one answer before the caller's time limit, the workspace request stating that the shared project could not be reached
+    code_file: templates/scripts/worktree_log_root.py
+    must_catch:
+      - a maker that closes stdin only for git children and lets the install build inherit the open pipe
+      - a maker that passes stdin=DEVNULL to the git runner alone and leaves the resolver, identity and canary subprocess calls inheriting it
+  - name: test_credential_request_from_the_hub_never_prompts_on_any_channel
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      POSIX only (a pseudo-terminal is needed; mark the platform condition explicitly, as a stated precondition
+      of the case). Start a stand-in http server on a local port in a thread that answers every request with 401
+      and a Basic WWW-Authenticate challenge, and make it the main copy's https origin. Run ensure with the maker
+      as a child of a new session whose controlling terminal is a pty (pty.openpty plus setsid and TIOCSCTTY), so
+      git could really open /dev/tty and prompt. Assert the maker answers within the timeout, and that neither the
+      pty output nor stdout nor stderr contains 'Username for', 'Password for' or 'passphrase'. Without the fix git
+      blocks on the terminal prompt and the timeout fires.
+    proves_clause: no prompt for a user name, password or passphrase appears on any channel
+    code_file: templates/scripts/worktree_git.py
+    must_catch:
+      - a maker that closes stdin but leaves GIT_TERMINAL_PROMPT enabled, so git prompts on the controlling terminal
+      - a maker that sets GIT_TERMINAL_PROMPT=0 for the fetch only and not for the clone or the unsent-work fetch
+  - name: test_git_children_run_with_terminal_and_credential_manager_prompting_disabled
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      The isolated global git config of the test (HOME of WorkspaceCase) names a credential helper that is a
+      stand-in script; it writes its own environment (GIT_TERMINAL_PROMPT and GCM_INTERACTIVE) to a record file
+      and exits without answering. Point the main copy's origin at the stand-in http server that answers 401, run
+      ensure, then read the record: the helper saw GIT_TERMINAL_PROMPT equal to 0 and GCM_INTERACTIVE equal to
+      never (case-insensitive), and the caller's PATH and HOME were preserved in that same environment. Repeat
+      with remove on a workspace so the verb that runs fetch in the workspace is covered too.
+    proves_clause: no prompt for a user name, password or passphrase appears on any channel
+    code_file: templates/scripts/worktree_git.py
+  - name: test_callers_own_ssh_command_is_used_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Set the main copy's origin to ssh://git@127.0.0.1:1/x.git. The caller's environment sets GIT_SSH_COMMAND to
+      '<python> <stand-in.py> --user-marker 7' where the stand-in script appends its full argv and the value of
+      GIT_SSH_COMMAND it inherited to a record file and exits 255. Run ensure through the deployed maker. Assert
+      the stand-in was invoked (the record exists), its argv carries '--user-marker 7' as the caller wrote it, no
+      '-o BatchMode=yes' was appended to it, and the environment value it saw equals the caller's byte for byte.
+      The answer is refused FETCH_FAILED. Control in the same test: with GIT_SSH_COMMAND unset and a stand-in named
+      ssh first on PATH, the recorded argv contains BatchMode=yes, so the non-interactive default exists.
+    proves_clause: when the caller has set its own command for reaching the shared project over ssh, the maker's requests to the shared project use that command unchanged
+    code_file: templates/scripts/worktree_git.py
+    must_catch:
+      - a maker that replaces GIT_SSH_COMMAND with plain 'ssh -o BatchMode=yes'
+      - a maker that appends '-o BatchMode=yes' to the caller's command or wraps it in another command
+      - a maker that applies the ssh default only when it launches ensure's fetch and not the clone or remove's fetch
+  - name: test_every_git_child_including_the_resolvers_own_copy_sees_closed_stdin_and_disabled_prompting
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Put a stand-in executable named git first on PATH in the test's environment. It records, per invocation, its
+      argv, whether fd 0 reads end-of-file at once (select with zero timeout) and the values of GIT_TERMINAL_PROMPT
+      and GCM_INTERACTIVE, then execs the real git. Run ensure with NO --repo-root from inside the project so
+      workspace_root.resolve runs its own git calls (rev-parse --path-format=absolute --git-common-dir and
+      --show-toplevel), with the maker's stdin held open. Assert every recorded invocation, the resolver's
+      included, saw end-of-file on fd 0 and prompting disabled, and that PATH and HOME reached the stand-in
+      unchanged. workspace_root.py carries its own copy of these settings because hooks import it standalone, so
+      this case is what proves that copy.
+    proves_clause: no prompt for a user name, password or passphrase appears on any channel
+    code_file: templates/scripts/workspace_root.py
+    must_catch:
+      - a maker that applies the settings in the shared git runner but leaves workspace_root.py's own subprocess call inheriting stdin
+      - a maker whose workspace_root.py copy closes stdin but omits the prompt-disabling environment
+      - a maker that replaces the caller's environment instead of adding the switches to it
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-23"
+test_design_opened_files:
+  - templates/scripts/workspace_root.py
+  - templates/scripts/worktree_git.py
+  - templates/scripts/worktree_log_root.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_readiness.py
+  - templates/scripts/worktree_answer.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_fixtures.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+file_findings:
+  - file: templates/scripts/worktree_git.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: run_git is the single git subprocess boundary and it sets no stdin, no prompt-disabling environment and no ssh default today, so it holds the behaviour the criteria change.
+    decision: null
+  - file: templates/scripts/workspace_root.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its own _git helper calls subprocess.run directly with inherited stdin, so it is one of the call sites the never-read-stdin rule has to reach.
+    decision: null
+  - file: templates/scripts/worktree_identity.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _show_bytes calls subprocess.run directly with inherited stdin, so it is one of the call sites the never-read-stdin rule has to reach.
+    decision: null
+  - file: templates/scripts/worktree_canaries.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its install_shims calls subprocess.run directly with inherited stdin, so it is one of the call sites the never-read-stdin rule has to reach.
+    decision: null
+  - file: templates/scripts/worktree_log_root.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _run_build wraps the install build subprocess.run, so it can own the stdin rule for the build, although the run kwargs and env are assembled by worktree_readiness.run_install_build.
+    decision: null
+  - file: templates/scripts/worktree_readiness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: run_install_build builds the install child's subprocess kwargs and an env that only adds LEAFCUTTER_SHIM_STRATEGY to os.environ, with no stdin setting, so it is where the build child inherits the maker's stdin today.
+    decision: null
+  - file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: WorkspaceCase.cli(stdin='open') uses Popen.communicate(), which closes a PIPE stdin when no input is given, so the helper holds the fixture the record now says to fix.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_git.py
+  - templates/scripts/workspace_root.py
+  - templates/scripts/worktree_identity.py
+  - templates/scripts/worktree_canaries.py
+  - templates/scripts/worktree_log_root.py
+  - templates/scripts/worktree_readiness.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+origin_agent: it-po
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BY IT-PO on the /plan-feature technical route (no BA stage ran): a technical-constraint
+  sibling of BO-4300c-2 for defect M3 of disk-cleanup/compare/HANDOVER-v2.md. BO-4300c-2,
+  BO-4300e-2 and BO-4300a-1 each carry the it_requirement "the maker never reads stdin and never
+  prompts", but on main no subprocess call site closes stdin or disables git's prompts, and no test
+  exercised an open stdin or a credential-requiring hub. The criteria restate the constraint as
+  observable behaviour; BA to review the wording at the final gate.

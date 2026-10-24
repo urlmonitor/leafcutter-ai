@@ -1,0 +1,235 @@
+id: BO-4300e-1-ii
+title: "Confirming a workspace says yes only for a ready workspace of the work asked about"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given a ready workspace for "alpha",
+  When the workspace maker is asked to confirm it: once as the workspace for
+    "alpha", once as the workspace for "beta", once naming a kind of work the
+    maker does not know, once after the workspace has been switched onto the
+    shared main line, and once while it holds an uncommitted change,
+  Then the request for "alpha" is answered ready with its location,
+  And the request for "beta" is refused as not that work's workspace, with no
+    location,
+  And the request naming an unknown kind is refused as a malformed request,
+  And the request after the switch onto the shared main line is refused naming
+    the part of readiness that no longer holds, with no location,
+  And the request while it holds an uncommitted change is answered ready.
+depends_on: [BO-4300e-1, BO-4300c-1]
+doc_links:
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-1.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: VERIFY_FAILED and USAGE codes; workspace_path absent on every non-ok answer.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: How callers confirm a handed-in location with verify.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: templates/scripts/worktree_readiness.py
+    state: existing
+it_requirements:
+  - >-
+    verify's answer is derived from the checks it computes: ok only when every structural readiness
+    ingredient of BO-4300c-1 holds on the workspace as it now exists (independent clone, not the main
+    checkout, same project, branch matches the marker, not a protected branch, install present, protections
+    in place); any false structural check is refused VERIFY_FAILED, carrying failed_ingredients that names
+    every false check and no workspace_path. This holds for a workspace switched onto a protected branch
+    too: verify answers VERIFY_FAILED (failed_ingredients naming not_protected_branch), never
+    ON_PROTECTED_BRANCH, so every not-ready verify answer carries one code (decided at the plan-feature
+    gate, 2026-10-24).
+  - >-
+    tree_clean is reported but never refused on: work in progress is the normal state of a workspace being
+    confirmed mid-run. Freshness of the base against today's hub main is likewise not a verify refusal (a
+    workspace legitimately falls behind main while work happens in it).
+  - >-
+    IDENTITY CHECK: when --kind and --slug are given they are normalised through the one identity table
+    (BO-4300a-2, aliases included) and must equal the marker's kind and slug; a mismatch is refused
+    VERIFY_FAILED with no workspace_path. A --kind outside the maker's declared set of kinds is a USAGE
+    error (exit 64, one JSON object). --kind and --slug stay optional and must be given together.
+  - >-
+    failed_ingredients is an addition to the BO-4300c-2 result contract (compatible under its
+    schema_version policy); it appears only on a VERIFY_FAILED answer and names checks by their checks.*
+    key.
+  - >-
+    CALLERS STAY CORRECT: every caller that confirms a handed-in location through verify (BO-4300c-4-i,
+    e.g. build-feature.js's handed-in confirmation and each `verify --path` site in templates/workflows-js/)
+    still proceeds on a genuinely ready workspace and now halts on VERIFY_FAILED like any other non-ok
+    answer; the workflow-engine harness tests for those callers stay green.
+  - >-
+    verify stays read-only (BO-4300e-1-i): it creates, repairs and fetches nothing, and completes within
+    BO-4300a-1's 5 s budget for read-only verbs.
+  - >-
+    Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, the
+    status/code/exit mapping, workspace_path absent on every non-ok answer).
+  - >-
+    Proof runs the DEPLOYED maker as a separate process against a real ready workspace made by ensure;
+    readiness is falsified through the fixture (checking out main inside the workspace), never through a
+    maker flag. No mock of git, no import of the maker module, no grep of its source.
+  - >-
+    Tests must not spawn the package's own scripts/build.py; fixture projects carry the minimal stub build
+    entry point (CLAUDE.md 'Tests must not spawn their own build.py').
+  - >-
+    All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, KI-TQ-012).
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-1
+  contract: >-
+    locate/verify read-only answers: ok with workspace_path for a ready workspace; NOT_FOUND or INCOMPLETE
+    otherwise, never with workspace_path; checks.* keys as listed in the BO-4300c-2 result contract.
+test_intent:
+  - clause: the request for "alpha" is answered ready with its location
+    needs_test: true
+    reason: Tightening verify could start refusing healthy workspaces, which would halt every caller that confirms a handed-in location.
+  - clause: the request for "beta" is refused as not that work's workspace, with no location
+    needs_test: true
+    reason: verify parses the kind and slug today but never compares them with the marker, so a wrong workspace is confirmed.
+  - clause: the request naming an unknown kind is refused as a malformed request
+    needs_test: true
+    reason: An unvalidated kind falls through to the comparison and is silently accepted or mismatched instead of rejected.
+  - clause: the request after the switch onto the shared main line is refused naming the part of readiness that no longer holds, with no location
+    needs_test: true
+    reason: verify answers ok even when the checks it computes are false, so only a falsified ingredient shows the answer now follows the checks.
+  - clause: the request while it holds an uncommitted change is answered ready
+    needs_test: true
+    reason: Refusing on every false check would wrongly include the clean-tree check and halt every caller mid-run.
+test_spec:
+  - name: test_verify_of_alpha_as_alpha_is_ready_with_its_location
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      New unit_tests/build_orchestration/test_bo_4300e_1_ii.py, a WorkspaceCase subclass (test_bo_4300e_2.py;
+      test_bo_4300e_1.py is the neighbouring verb test). ensure --kind feature --slug alpha through the deployed
+      worktree.py, then run `verify --path <ws> --kind feature --slug alpha` as a subprocess. Assert status ok, exit
+      0, workspace_path equal to the ensured location. Also accept the declared spelling 'feature/alpha' and the
+      un-normalised slug 'Alpha' for the same workspace, and take a before/after snapshot of the workspace to show
+      verify stayed read-only.
+    proves_clause: the request for "alpha" is answered ready with its location
+    code_file: templates/scripts/worktree.py
+  - name: test_verify_of_alpha_as_beta_is_refused_without_a_location
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      With ready workspaces for alpha, run verify --path <alpha ws> --kind feature --slug beta. Assert refused
+      code VERIFY_FAILED, exit 2, one JSON object, no workspace_path key, and that no beta workspace was created.
+      Also run verify --path <alpha ws> --kind epic --slug alpha (same slug, other kind) and assert the same
+      refusal, so a slug-only comparison is caught.
+    proves_clause: the request for "beta" is refused as not that work's workspace, with no location
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a verify that still parses --kind and --slug and never compares them with the marker
+      - a verify that compares only the slug and ignores the kind
+  - name: test_verify_with_an_unknown_kind_is_a_usage_error
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Run verify --path <alpha ws> --kind bogus --slug alpha. Assert code USAGE, status error, exit 64, one JSON
+      object, no workspace_path key, and that the message names the unknown kind. Control: the same request with
+      --kind feature is ok. Also assert --kind given without --slug is a USAGE error (they stay optional and must be
+      given together).
+    proves_clause: the request naming an unknown kind is refused as a malformed request
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a verify that lets the unknown kind fall through to the comparison and answers VERIFY_FAILED with exit 2 instead of USAGE with exit 64
+      - a verify that accepts the unknown kind and answers ok
+  - name: test_verify_after_checkout_of_main_names_the_failed_ingredients_and_gives_no_location
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Falsify readiness through the fixture only: in the ensured workspace run `git checkout main` (the clone has
+      origin/main, so git creates the local main), then verify --path <ws> --kind feature --slug alpha. Assert
+      refused, exit 2, no workspace_path, failed_ingredients is a list naming at least branch_matches and
+      not_protected_branch, and the checks object is present with those two false. Assert code VERIFY_FAILED and
+      explicitly not ON_PROTECTED_BRANCH (worktree_readiness._refuse_structural maps not_protected_branch to
+      ON_PROTECTED_BRANCH today, which is why worktree_readiness.py is now declared). Also assert the before/after workspace snapshot is unchanged.
+    proves_clause: the request after the switch onto the shared main line is refused naming the part of readiness that no longer holds, with no location
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a verify that answers ok because it never turns its computed false checks into a refusal
+      - a verify that refuses but names only the first false check in failed_ingredients
+  - name: test_verify_with_an_uncommitted_change_is_still_ready
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Edit the tracked README.md inside the ensured workspace (git diff HEAD only sees tracked changes, so an
+      untracked file alone would not flip tree_clean) and add one untracked file, then verify --path <ws> --kind
+      feature --slug alpha. Assert status ok, exit 0, workspace_path equal to the location, and checks.tree_clean is
+      reported false. Control in the same test: the identical verify after the checkout of main is refused, so the
+      ok answer is not simply 'verify never refuses'.
+    proves_clause: the request while it holds an uncommitted change is answered ready
+    code_file: templates/scripts/worktree.py
+    must_catch:
+      - a verify that refuses on every false check including tree_clean, halting callers mid-run
+      - a verify that refuses on base_is_fresh when the workspace has legitimately fallen behind the hub main
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-23"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_readiness.py
+  - templates/scripts/worktree_answer.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/test_bo_4300e_1.py
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_verify defines the verify verb, parses --kind and --slug without using them, and always answers ok after computing its checks.
+    decision: null
+  - file: templates/scripts/worktree_readiness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _STRUCTURAL, _failed_structural and _refuse_structural hold the structural checks and the failed_ingredients refusal, but _refuse_structural answers ON_PROTECTED_BRANCH when not_protected_branch is false, which verify must not.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_readiness.py
+  - templates/scripts/worktree.py
+origin_agent: it-po
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BY IT-PO on the /plan-feature technical route (no BA stage ran): a technical-constraint
+  sibling of BO-4300e-1 for defect M5 (verify half) of disk-cleanup/compare/HANDOVER-v2.md. On main
+  cmd_verify ignores --kind/--slug and always answers ok, even when its computed checks are false --
+  against BO-4300c-2 (VERIFY_FAILED exists for this case) and BO-4300c-1 (any false ingredient is a
+  refusal). The exact set of structural checks is the coder's to confirm against the checks.* list;
+  the decided exemptions are tree_clean and base freshness. BA to review the wording at the final gate.

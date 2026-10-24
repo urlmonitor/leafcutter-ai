@@ -1,0 +1,218 @@
+id: BO-4300e-2-iii
+title: "Clearing removes only this project's own workspaces, and stops before deleting when the shared line cannot be removed"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given project P with a ready workspace "alpha" whose line of work also exists on
+    the shared project,
+  And a folder outside P's landing place for workspaces that carries a copy of a
+    workspace record naming P,
+  And a ready workspace that belongs to another project Q,
+  When clearing is requested for P, naming the outside folder by its location and
+    then Q's workspace by its location,
+  Then both requests are refused as not one of P's workspaces,
+  And the outside folder and Q's workspace are identical before and after,
+  And when "alpha" is cleared together with its line on the shared project while
+    the shared project refuses to delete that line, the request is refused naming
+    that step,
+  And "alpha" and its line on the shared project are both identical before and
+    after that refusal.
+depends_on: [BO-4300e-2, BO-4300b-2-i]
+doc_links:
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: NOT_FOUND and GIT_FAILED codes on remove.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: How a workspace is cleared through the maker.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+  - path: templates/scripts/worktree_layout.py
+    state: existing
+it_requirements:
+  - >-
+    SCOPE BEFORE ANYTHING ELSE: remove resolves the project (the explicit --repo-root, otherwise the
+    marker's project_root) and the landing place for that project by the same rule ensure uses
+    (BO-4300b-2, including a validated --landing-root). A --path that is not inside that landing place, or
+    whose location the landing rules attribute to another project's occupant (BO-4300b-2-i), is refused
+    NOT_FOUND before any fetch, process sweep, remote call or deletion. A workspace record on disk is never
+    on its own a licence to delete a folder.
+  - >-
+    REMOTE FIRST, LOUDLY: when --delete-remote-branch is given, the deletion of the line on the hub runs
+    before any local deletion, and its result is checked; a failure is refused GIT_FAILED with the
+    workspace, its marker and its local branch left exactly as they were. A remote line that is already
+    absent counts as deleted, not as a failure.
+  - >-
+    The ordering of the existing safety steps is kept: the unsent-work verdict and discard-token rule
+    (BO-4300e-2, BO-4300e-3), the running-process sweep (BO-4300e-2-ii) and the post-check that nothing
+    remains before an ok answer.
+  - >-
+    The message of a GIT_FAILED or NOT_FOUND answer names the step or the reason (outside this project's
+    landing place, the remote line delete failed) and never carries the tool's own text (BO-4300c-2-ii).
+  - >-
+    remove never reads stdin and never prompts (BO-4300c-2-i).
+  - >-
+    Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, the
+    status/code/exit mapping, workspace_path absent on every non-ok answer).
+  - >-
+    Proof runs the DEPLOYED maker as a separate process against real temporary repositories: two projects
+    each with a real ready workspace, a hand-made folder carrying a copied marker, and a bare hub made to
+    refuse the line's deletion through the fixture (for example a pre-receive hook on the hub). No mock of
+    git, no import of the maker module, no grep of its source.
+  - >-
+    Tests must not spawn the package's own scripts/build.py; fixture projects carry the minimal stub build
+    entry point (CLAUDE.md 'Tests must not spawn their own build.py').
+  - >-
+    All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+    isolated global and system config; afterwards the developer's own repository's branches, registered
+    worktrees and local git config are unchanged (BO-4300f-4-i, KI-TQ-012).
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: >-
+    Result contract: one JSON object on stdout for every outcome; NOT_FOUND and GIT_FAILED are status
+    refused, exit 2, with workspace_path absent; every child process's output goes to stderr. The remove
+    semantics themselves (unsent-work verdict, discard-token authorisation, whole-folder deletion with a
+    post-check) come from BO-4300e-2 via depends_on, and the landing-place rule from BO-4300b-2-i.
+test_intent:
+  - clause: both requests are refused as not one of P's workspaces
+    needs_test: true
+    reason: remove accepts any folder carrying a workspace record today, so only a folder outside the landing place shows the scope check exists.
+  - clause: the outside folder and Q's workspace are identical before and after
+    needs_test: true
+    reason: A scope check placed after the fetch or the process sweep would still refuse while having already changed the folder.
+  - clause: when "alpha" is cleared together with its line on the shared project while the shared project refuses to delete that line, the request is refused naming that step
+    needs_test: true
+    reason: The return code of the remote delete is ignored today, so a refused delete is reported as a successful clear.
+  - clause: '"alpha" and its line on the shared project are both identical before and after that refusal'
+    needs_test: true
+    reason: Deleting the local folder before the remote call would lose the workspace even when the refusal is reported.
+test_spec:
+  - name: test_remove_of_outside_folder_and_other_projects_workspace_is_refused_not_found
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      New unit_tests/build_orchestration/test_bo_4300e_2_iii.py, a WorkspaceCase subclass (test_bo_4300e_2.py).
+      Project P is self.project with ready workspace alpha. Outside folder: a plain folder placed where a string
+      prefix check on P's landing root would pass (<landing root name>-copy/feature/alpha, a sibling of the landing
+      root) holding a byte copy of alpha's .leafcutter/workspace.json (naming P) and one extra file. Project Q: a
+      second make_project world under self.tmp, with its own ready workspace made by the deployed maker. Run
+      `remove --path <outside> --repo-root <P>` and then `remove --path <Q workspace> --repo-root <P>` through the
+      deployed worktree.py. Assert each answer is refused, code NOT_FOUND, exit 2, one JSON object, and no
+      workspace_path key.
+    proves_clause: both requests are refused as not one of P's workspaces
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_refused_scope_requests_leave_both_folders_and_the_hub_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same fixture. Before each request take WorkspaceCase.snap(..., with_git=True) of the outside folder and of Q's
+      workspace, plus the hub refs of both hubs and Q workspace's refs; after the two refused requests assert every
+      snapshot is identical (marker included), so a scope check placed after the fetch, the process sweep or the
+      remote call fails. Control in the same test: remove --path <alpha> --repo-root <P> afterwards is ok and alpha
+      is gone, so the refusal came from the scope rule and not from a broken fixture.
+    proves_clause: the outside folder and Q's workspace are identical before and after
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - a remove that takes any folder carrying a workspace record as its licence to delete
+      - a scope check done as a string prefix of the landing root, which lets the -copy sibling folder through
+      - a scope check placed after the unsent-work fetch, so Q's remote-tracking refs change before the refusal
+  - name: test_remove_with_remote_delete_refused_by_the_hub_is_refused_naming_that_step
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Ready workspace alpha whose line feature/alpha is pushed to the hub (git push origin HEAD:refs/heads/
+      feature/alpha run inside the workspace, so nothing is unsent). Install an executable pre-receive hook in the
+      bare hub that exits non-zero with a distinctive sentence when a ref update has an all-zero new value (a
+      deletion). Run `remove --path <alpha> --delete-remote-branch`. Assert refused, code GIT_FAILED, exit 2, no
+      workspace_path, and a message that names the remote line delete step (contains 'delete' case-insensitively)
+      without the hook's sentence in it.
+    proves_clause: when "alpha" is cleared together with its line on the shared project while the shared project refuses to delete that line, the request is refused naming that step
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - a remove that ignores the return code of the remote delete and answers ok
+      - a remove that reports a generic failure that never names the remote line delete step
+  - name: test_refused_remote_delete_leaves_workspace_and_hub_line_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Same hook fixture. Snapshot alpha (WorkspaceCase.snap with_git=True, marker included), its refs, and the
+      hub's refs (feature/alpha present at the pushed sha). After the refused request assert the folder, the marker,
+      the local branch and the hub line are identical to the snapshots. Control in the same test: remove the hook
+      from the hub, repeat the identical request, and assert ok, the folder gone and feature/alpha gone from the
+      hub, so the refusal was caused by the hook. A remote line that is already absent counts as deleted: repeat
+      once more on a fresh workspace whose line was never pushed and assert ok.
+    proves_clause: '"alpha" and its line on the shared project are both identical before and after that refusal'
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - a remove that deletes the local folder before the remote delete and then reports the refusal
+      - a remove that deletes the folder when the remote delete fails and still answers ok
+      - a remove that treats an already-absent remote line as a failure
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-23"
+test_design_opened_files:
+  - templates/scripts/worktree_layout.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove deletes any --path that carries a marker with no landing-place check and ignores the return code of the push --delete call.
+    decision: null
+  - file: templates/scripts/worktree_layout.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: landing_for, landing_place, workspace_path_for and other_project_occupant hold the one landing rule and the other-project attribution that remove must apply, and iter_markers already filters by project, but _inside is private and nothing there tests a --path against a landing place yet.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_layout.py
+  - templates/scripts/worktree_remove.py
+origin_agent: it-po
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BY IT-PO on the /plan-feature technical route (no BA stage ran): a technical-constraint
+  sibling of BO-4300e-2 for defect M5 (remove half) of disk-cleanup/compare/HANDOVER-v2.md. On main
+  cmd_remove deletes any --path that carries .leafcutter/workspace.json without checking it lies in
+  this project's landing place, and ignores the return code of `push origin --delete`. BA to review
+  the wording at the final gate.

@@ -53,7 +53,11 @@ delivers_to:
     maker''s ensure answer as a JSON object, unmodified (BO-4300c-2 shape). The workflow applies the BO-4300c-3
     acceptance predicate to it.'
 expects_from:
-  ac_id: BO-4300a-1
+- ac_id: BO-4300c-2
+  contract: Result contract as relayed by skills -- exactly one JSON object on the maker's stdout for
+    every verb and outcome, exit 0/2/1/64 for ok/refused/error/usage; the skill relays that stdout verbatim
+    and stops on a non-zero exit, never summarising or re-deriving fields.
+- ac_id: BO-4300a-1
   contract: 'CLI of the one maker. Deployed at <install-root>/scripts/worktree.py (source templates/scripts/worktree.py;
     the name is provisional until this AC is built, after which that path is the contract every caller
     names). Stdlib-only Python, run as `python <absolute path> <verb> ...` from ANY cwd. Verbs: `ensure
