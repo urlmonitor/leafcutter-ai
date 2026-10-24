@@ -73,8 +73,11 @@ WORKTREE_PATH = "/tmp/fastlane-harness-wt"
 #     shared workspaceFailure() shape (status "error", quoting the reply), not
 #     the declined_step halt; it has its own test in
 #     test_bo2400f5iii_declined_step_core.py.
+#   - "resolve-maker-path" (BO-4300a-1-ia): the probe that resolves the maker's absolute path is part of the
+#     same workspace step and ends the run the same way (shared workspaceFailure(): status "error", quoting
+#     the reply); its decline is pinned in test_bo2400f5iii_declined_step_core.py too.
 EXCLUDED_LABELS = frozenset(
-    {"knowledge-routing-step", "scratch-item", "knowledge-routing-observe", "workspace-ensure"}
+    {"knowledge-routing-step", "scratch-item", "knowledge-routing-observe", "workspace-ensure", "resolve-maker-path"}
 )
 
 

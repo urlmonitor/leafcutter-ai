@@ -161,7 +161,8 @@ class TestBP600WorkflowGuardsHalt:
         )
         assert result.result is not None and result.result.get("status") == "error", result.result
         assert "workspace_occupied" in str(result.result.get("message")).lower(), result.result
-        assert result.dispatch_count == 1, (
+        # BO-4300a-1-ia: the one maker-path probe precedes the maker request (consumer_drift: 1 -> 2).
+        assert _labels(result) == ["resolve-maker-path", "workspace-ensure"] and result.dispatch_count == 2, (
             "A refused workspace step must halt before any further dispatch "
             f"(BP-600a-2). Labels dispatched: {_labels(result)}"
         )
@@ -184,7 +185,8 @@ class TestBP600WorkflowGuardsHalt:
         assert result.result.get("status") == "error"
         assert "workspace step failed" in str(result.result.get("message")).lower(), result.result
         assert "worktree creation failed" in str(result.result.get("message")), "the reply must be quoted"
-        assert result.dispatch_count == 1, (
+        # BO-4300a-1-ia: the one maker-path probe precedes the maker request (consumer_drift: 1 -> 2).
+        assert _labels(result) == ["resolve-maker-path", "workspace-ensure"] and result.dispatch_count == 2, (
             "A failed workspace step must halt before guard-checks or any later "
             f"phase. Labels dispatched: {_labels(result)}"
         )

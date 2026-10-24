@@ -127,6 +127,23 @@ class TestDeclinedWorkspaceStepEndsTheRunBeforeAnythingElseIsDispatched(unittest
             self.assertFalse(calls_with_label(result, later), f"{later} was dispatched after a declined workspace step")
 
 
+class TestDeclinedMakerPathProbeEndsTheRunBeforeAnythingElseIsDispatched(unittest.TestCase):
+    """The maker-path probe (BO-4300a-1-ia, part of the workspace step) ends the run as an error quoting the
+    reply when it is declined, and nothing is dispatched after it (consumer_drift: it joined the sweep above)."""
+
+    def test_declined_maker_path_probe_ends_the_run_quoting_the_reply(self) -> None:
+        # covers: BO-4300a-1-ia
+        # angle: failure
+        decline_text = decline_reply_for("shell-runner")
+        result = run_lane({"resolve-maker-path": decline_text})
+        payload = result.result or {}
+        self.assertEqual(payload.get("status"), "error", payload)
+        self.assertIn("I can't help with that", payload.get("message", ""), payload)
+        self.assertNotEqual(payload.get("halt_kind"), "declined_step", payload)
+        for later in ("workspace-ensure", "resolve-connected", "claim-connected", "test-writer-connected"):
+            self.assertFalse(calls_with_label(result, later), f"{later} was dispatched after a declined probe")
+
+
 class TestDeclinedStepIsClassifiedApartFromContentionGateFailureAndUnproducible(
     unittest.TestCase
 ):
