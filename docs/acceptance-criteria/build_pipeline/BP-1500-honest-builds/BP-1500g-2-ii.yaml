@@ -1,0 +1,104 @@
+id: BP-1500g-2-ii
+title: "A collision kept for the adopter is carried only to a surface that really holds the same capability"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+declares_side_effect: false
+criteria: |
+  Given a project whose discoverable capability directory is a real directory,
+    not a link, so the ordinary build merges into it name by name and keeps every
+    contested name for the adopter,
+  And the other active platform has an output directory of the same name that
+    holds a different family of capabilities,
+  When that project is rebuilt with the ordinary everyday command,
+  Then no contested item is copied into that other platform's directory under a
+    name the package never put there,
+  And the next rebuild in the copy layout the workspace maker uses leaves the
+    output-drift check with no gap for any file in that directory,
+  And a file that really is foreign to that directory, placed there by hand, is
+    still reported as a gap.
+depends_on:
+  - BP-1500g-2-i
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g-2-i.yaml"
+    relationship: describes
+    status: exists
+    relevance: "The sibling whose defect-3 repair added the cross-surface carry. This AC limits that carry to surfaces that really mirror the contested item."
+  - path: scripts/build_capability_merge.py
+    relationship: describes
+    status: exists
+    relevance: "_sibling_capability_dir / _propagate_winner_to_siblings: the carry that wrote the Claude Code workflow scripts into gemini/workflows."
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The register entry for the false check-output-drift gap that this defect produced in maker workspaces."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE CARRY TARGET MUST BE DECIDED FROM WHAT THE PACKAGE ITSELF WROTE ON THAT SURFACE, NOT FROM A DIRECTORY NAME. `<output_root>/gemini/<output_rel>` is the antigravity mirror for agents, skills and hooks. For `workflows` it is a different family: the antigravity copy of the commands-family workflow markdown. The Claude Code workflow scripts in `<output_root>/workflows` have no antigravity mirror. A contested name is carried to the sibling surface only when the package's own output there already holds an item of that name. That is the only case in which there is a package version on that surface for the adopter's version to win over."
+  - "THE ADOPTER-WINS GUARANTEE OF BP-1500g-2-i MUST STAY TRUE ON EVERY SURFACE THAT REALLY MIRRORS THE ITEM. A contested skill (or agent, or hook) still ends with the adopter's bytes under `<output_root>/gemini/<family>/<name>`."
+  - "NO HARDCODED NAME LIST AND NO EXEMPTION ENTRY. The files are build-determined. Adding them to drift_gate_exemption_registry would hide every future foreign file in `.gemini/workflows/`."
+  - "Must follow the project error handling policy and must not add output on the ordinary no-collision path."
+test_spec:
+  - name: test_bp_1500g_2_ii_a_contested_workflow_script_is_not_carried_into_the_gemini_workflows_family
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Real filesystem, real merge_capability_items. A real `.claude/workflows` container holds a non-empty `<minted>.js`. The package output holds `workflows/<minted>.js` and an unrelated `gemini/workflows/<other>.md`. After the merge, `gemini/workflows/<minted>.js` does not exist."
+    must_catch:
+      - "_sibling_capability_dir returns <output_root>/gemini/<output_rel> whenever that directory exists, so every contested .js is copied into gemini/workflows"
+  - name: test_bp_1500g_2_ii_a_contested_skill_is_still_carried_to_its_real_gemini_mirror
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Over-correction control. The package wrote `skills/<minted>/SKILL.md` and `gemini/skills/<minted>/SKILL.md`, and the adopter's own `.claude/skills/<minted>/SKILL.md` collides. After the merge, the gemini copy holds the adopter's bytes."
+    must_catch:
+      - "propagation to sibling surfaces removed entirely (no carry for any family)"
+  - name: test_bp_1500g_2_ii_a_maker_layout_rebuilt_after_a_plain_build_has_no_gemini_workflows_gap_but_a_foreign_file_is_still_one
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "LEAFCUTTER_SHIM_STRATEGY=copy build.py, then plain build.py, then LEAFCUTTER_SHIM_STRATEGY=copy build.py, then the deployed check_output_drift.py"
+    description: "The reported sequence end to end, in a scratch project. After the three builds the deployed hook reports no GAP under `.gemini/workflows/`. A hand-planted `.gemini/workflows/<minted>.js` is then reported as a GAP by name."
+    must_catch:
+      - "_sibling_capability_dir returns <output_root>/gemini/<output_rel> whenever that directory exists, so every contested .js is copied into gemini/workflows"
+test_rationale: |
+  The two unit entries pin the decision both ways. A contested script is not
+  carried into a family it does not belong to, and a contested skill still is,
+  so the fix cannot become "never carry anything". The integration entry runs
+  the reported sequence (maker copy build, plain build, maker copy build) and
+  the deployed hook. It also includes the control that a real foreign file is
+  still a gap, so the hook cannot pass this AC by going quiet. That entry
+  builds its own scratch project three times. It is a mutator: it switches the
+  shim strategy between builds, and the shared reference layout cannot show
+  that.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-2-i
+  contract: "merge_capability_items' collision branch and its _propagate_winner_to_siblings carry, and the stated winner that must hold on every surface that really mirrors the contested item."
+origin_agent: BrainCandy
+created: 2026-10-25
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - scripts/build_capability_merge.py
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Found 2026-10-23 in a maker workspace (feature/ge-127d-6-statements-per-line).
+  Every commit was blocked by check-output-drift with 9 GAPs for
+  `.gemini/workflows/*.js`. Reproduced 2026-10-25 on origin/main 411b87761:
+  maker copy build, then a plain `build.py --target-dir <ws>`, then a
+  maker-way copy rebuild. The RESULT line is identical to the report.
