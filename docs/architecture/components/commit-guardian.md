@@ -20,6 +20,8 @@ related_docs:
   - docs/how-to/managing-pre-commit-hooks.md
   - docs/reference/commit-guardian-negative-control-liveness.md
   - docs/reference/source-file-length-measurement.md
+  - docs/reference/commit-guardian-outcome-vocabulary.md
+  - docs/how-to/declare-frontend-acceptance-criteria.md
 related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
@@ -46,6 +48,7 @@ The Commit Guardian is the pre-commit enforcement layer for the leafcutter-ai pa
 - Guard against contract shrinking in test suites (`check_contract_shrinking.py`)
 - Enforce exception handling boundaries in Python code
 - Check ticket sign-off parity between frontmatter and Sign-offs sections
+- Read frontend components' staged `@ac` declarations (`_frontend_declaration_reader.py`, `GE-124a-1`)
 
 ## Entry Points
 
@@ -119,7 +122,7 @@ already established for it:
   exception from the shared module itself and degrades to the same
   could-not-check outcome, so a broken dependency cannot crash the check
   outright. `could_not_check=True` is an `OUTCOME_COULD_NOT_CHECK` outcome
-  (see the vocabulary table below), never license to widen the scope.
+  (see the [outcome vocabulary](../../reference/commit-guardian-outcome-vocabulary.md)), never license to widen the scope.
 - The merge-scoping predicate here is deliberately **broader** than the
   pre-existing per-check helpers' "differs from both `HEAD` and `MERGE_HEAD`"
   intersection: scoping to `MERGE_HEAD` alone is required so a check's
@@ -250,27 +253,9 @@ full Gherkin spec and its fixture-manifest coverage note.
 
 ## Machine-Readable Outcome Vocabulary
 
-Because the merge-scoped set above can legitimately come back empty — a clean
-auto-merge where the author changed nothing of their own — both checks must be able
-to report that outcome explicitly, without silently widening back to the whole staged
-tree and without confusing it with a check that never ran at all. `check_outcome.py`
-declares this vocabulary once, for every check in this directory to share:
-
-| Constant | Meaning |
-|---|---|
-| `OUTCOME_OK` | The check ran its inspection and found nothing wrong. |
-| `OUTCOME_COULD_NOT_CHECK` | The check could not perform its inspection at all (e.g. a required helper module was absent) — distinct from a genuine clean pass. |
-| `OUTCOME_NOTHING_TO_INSPECT` | The check derived its own (merge-scoped/authored) change set per the section above and that set was empty — there was nothing of the author's to inspect. This is a pass, not a skip: exit status is 0 and the commit proceeds. It must never be produced by falling back to the whole staged tree when the derived set is empty; an empty derived set is an explicit value, not an absence, and is never widened. |
-
-Each value is emitted on stdout as a fixed-shape `RESULT: <outcome>` line via
-`check_outcome.emit_result()`, so a caller can detect it with
-`line.startswith("RESULT: ")` independent of exit code and without parsing prose.
-`check_contract_shrinking.py` and `check_doc_frontmatter.py` both call a
-`_report_if_nothing_to_inspect()` helper from their own empty-derived-set pass branch
-in `main()` to emit `OUTCOME_NOTHING_TO_INSPECT`. See AC `GE-120e-1-i` under
-`docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/` for the
-no-widening-on-empty guarantee this vocabulary entry pins down, and AC `GE-120a-1`
-for the `OUTCOME_OK` / `OUTCOME_COULD_NOT_CHECK` vocabulary it extends.
+`check_outcome.py` declares one shared outcome vocabulary (`OUTCOME_OK`, `OUTCOME_COULD_NOT_CHECK`,
+`OUTCOME_NOTHING_TO_INSPECT`), each emitted as a fixed-shape `RESULT: <outcome>` stdout line. Meanings,
+the no-widening-on-empty rule and the emitting helpers: [outcome vocabulary reference](../../reference/commit-guardian-outcome-vocabulary.md).
 
 ### `check_ac_parent_covered_by.py` — Cannot-Reach-Prerequisite Reports `OUTCOME_COULD_NOT_CHECK`
 
@@ -330,3 +315,8 @@ script is now registered as the `check-decision-number-uniqueness` hook in
 for the fail-open narrowing this registration depended on. `check_identifier_uniqueness.py`
 itself is registered as the `check-identifier-uniqueness` hook (`always_run: true`, since the
 pass inspects the whole collection regardless of the staged diff).
+
+## Frontend Declaration Reader: `_frontend_declaration_reader.py` (`GE-124a-1`)
+
+The single parser of a frontend component's leading-comment `@ac` declaration, shared by `GE-124c`/`d`/`e`.
+Record shape, grammar, verdicts and design: [the how-to](../../how-to/declare-frontend-acceptance-criteria.md#how-the-reader-works).

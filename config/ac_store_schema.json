@@ -118,6 +118,24 @@
             "uniqueItems": false,
             "default": []
         },
+        "declared_by": {
+            "type": "array",
+            "description": "Front-end source file paths whose component-level declaration names this criterion. An unverified claim the file makes about itself: it never establishes coverage or implementation, so it is never written to covered_by or implemented_by (GE-124g-1, ADR-079).",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": false,
+            "default": []
+        },
+        "pinned_by": {
+            "type": "array",
+            "description": "Element pin slugs (decl-...) of rendered elements that pin this criterion. An unverified element-level claim: never written to covered_by or implemented_by (GE-124g-1, ADR-079).",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": false,
+            "default": []
+        },
         "origin_agent": {
             "type": "string",
             "description": "Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. Historical agent names (e.g. business-analyst-v2, business-analyst-v3, create-ticket, refinement from now-deleted or renamed agents) remain valid and are never rewritten.",

@@ -9,7 +9,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml"
 criteria: |
   Given a front-end file names the criterion KM-ADM-004 in its component-level

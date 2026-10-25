@@ -553,6 +553,30 @@ jobs:
         # .next/ and dist/ are excluded by the scanner.
         run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }} --test-root .
 
+  ui-ac-declared:
+    name: UI declaration reverse gate (GE-124e-1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        # Required before invoking check_ui_ac_declared.py: resolves .leafcutter
+        # and the scripts/commit_guardian/ symlinks (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Run UI declaration reverse gate (CI mode)
+        # BLOCKING: an unreadable store exits 1 (no evidence produced).
+        run: python scripts/commit_guardian/check_ui_ac_declared.py --mode ci --base origin/${{ github.base_ref }}
+
   reachability-guard:
     name: Reachability guard (BO-2900b-1, forward direction)
     runs-on: ubuntu-latest

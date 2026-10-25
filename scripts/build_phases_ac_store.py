@@ -212,6 +212,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # statement fails loudly, unlike the importlib.util try/except elsewhere).
     ("scripts/ac_store/_ac_components.py",            "_ac_components.py"),
     ("scripts/ac_store/_ac_schema_test_spec_validators.py", "_ac_schema_test_spec_validators.py"),  # TQ-500f-1/-2-i: same import hazard as _ac_components.py
+    ("scripts/ac_store/_ac_covered_by_rule.py",       "_ac_covered_by_rule.py"),  # GE-124g-1: imported by validate_ac_schema.py and the hook bridge
     ("scripts/ac_store/ac_triage.py",                 "ac_triage.py"),
     ("scripts/ac_store/create_ac_workflow.py",        "create_ac_workflow.py"),
     ("scripts/ac_store/cross_reference_audit.py",     "cross_reference_audit.py"),

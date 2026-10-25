@@ -5,7 +5,7 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-09-28
+last_updated: 2026-10-23
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
@@ -23,6 +23,7 @@ related_docs:
   - docs/how-to/done-proof-reachability-gates.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md
+  - docs/architecture/adrs/ADR-079-declarations-never-enter-covered-by.md
 related_adrs:
   - ADR-001
   - ADR-020

@@ -1,0 +1,19 @@
+{
+  "id": "GE-9999a-1",
+  "title": "Fixture AC for the GE-124g-1 covered_by rejection rule",
+  "component": "guardrail-engine",
+  "components": ["ac_store", "commit_guardian"],
+  "status": "active",
+  "readiness": "approved",
+  "priority": "high",
+  "level": "L2",
+  "work_status": "todo",
+  "assigned_agent": "documentation-expert",
+  "estimated_complexity": "S",
+  "change_target": "docs",
+  "risk_surface": "contract_boundary",
+  "test_required": false,
+  "criteria": "Given a front-end file names the criterion KM-ADM-004 in its declaration,\nWhen the declaration is recorded,\nThen covered_by is unchanged.",
+  "covered_by": ["unit_tests/ac_store/test_existing_coverage.py::test_existing"],
+  "implemented_by": ["tickets/00_inbox/TICKET-existing.md"]
+}

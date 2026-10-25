@@ -38,6 +38,11 @@ AC-1: Schema requires readiness field with enum [draft, reviewed, approved].
 AC-2: Schema requires priority field with enum [critical, high, medium, low].
 
 DECISION HISTORY:
+  - 2026-10-23 [python-coder/GE-124g-1]: _validate_file also runs covered_by_declaration_errors
+    (scripts/ac_store/_ac_covered_by_rule.py), the one definition of the rule that keeps a
+    front-end declaration or element pin out of covered_by; the commit hook reaches the same
+    function through _covered_by_rule_bridge.py. declared_by / pinned_by are accepted via the
+    shared JSON schema. (#EPIC-EveryScreenSaysWhichRequirementItIs/44) (ADR-079)
   - 2026-10-21 [python-coder/ACD-200b-2]: the documentation-trigger names live ONLY in the
     documentation_triggers enum of config/ac_store_schema.json; ``_DOC_TRIGGER_VALUES`` and its
     explicit check are deleted; with no schema passed, `_trigger_names` reads the shipped schema's enum. main() reads the schema of the RECORD's repo (``_repo_schema``),
@@ -73,6 +78,7 @@ from typing import Any
 import yaml
 
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
+from _ac_covered_by_rule import covered_by_declaration_errors  # noqa: E402
 from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
 from declared_files import declared_files_commit_messages  # noqa: E402
 
@@ -354,6 +360,7 @@ def _validate_file(
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1 / TQ-500f-2-i
+    errors.extend(covered_by_declaration_errors(path, data))  # GE-124g-1: no opt-out, same rule as the hook
     # --- Validate against config/ac_store_schema.json (ACS-200e) ---
     # This is the SAME schema file the commit-time hook
     # (templates/scripts/commit_guardian/check_ac_schema.py) validates staged

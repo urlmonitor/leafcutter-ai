@@ -80,6 +80,13 @@ DECISION HISTORY:
     The two single-error early exits (empty file, non-mapping) now return the list directly,
     repaying the size ratchet. _load_schema and SCHEMA_PATH moved verbatim to sibling
     _ac_schema_loader.py and are imported back.
+  - 2026-10-23 [python-coder/GE-124g-1]: _validate_file now refuses a front-end declaration or
+    element pin written into covered_by, via sibling _covered_by_rule_bridge.py (the one rule
+    lives in scripts/ac_store/_ac_covered_by_rule.py, shared with validate_ac_schema.py). No
+    opt-out. The size ratchet was repaid by collapsing the validators import block, merging the
+    empty-list early exit of _fetch_head_yaml_batch with its HOOK_NO_GIT exit, and dropping the
+    blank-HOOK_TEST_STAGED_FILES early return (an empty string splits to no paths anyway).
+    (#EPIC-EveryScreenSaysWhichRequirementItIs/44) (ADR-079)
 """
 
 from __future__ import annotations
@@ -91,12 +98,10 @@ from pathlib import Path
 from typing import Any
 
 from _ac_schema_validators import (  # noqa: E402
-    load_yaml, load_yaml_from_string, load_yaml_manual,
-    validate_criteria_not_pattern_duplicate, validate_declares_side_effect,
-    validate_deprecated_pattern_reference, validate_manually,
-    validate_pattern_bindings_completeness, validate_test_contract,
-    validate_with_jsonschema,
+    load_yaml, load_yaml_from_string, load_yaml_manual, validate_criteria_not_pattern_duplicate, validate_declares_side_effect,
+    validate_deprecated_pattern_reference, validate_manually, validate_pattern_bindings_completeness, validate_test_contract, validate_with_jsonschema,
 )
+from _covered_by_rule_bridge import covered_by_errors  # noqa: E402  (GE-124g-1)
 from _ac_supersession_validators import is_retired_record, supersession_errors  # noqa: E402
 from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
 from _ac_store_file_discovery import find_ac_files  # noqa: E402
@@ -176,10 +181,7 @@ def _fetch_head_yaml_batch(
     """
     result_map: dict[str, dict | None] = {p: None for p in rel_paths}
 
-    if not rel_paths:
-        return result_map
-
-    if os.environ.get("HOOK_NO_GIT"):
+    if not rel_paths or os.environ.get("HOOK_NO_GIT"):
         return result_map
 
     git_cmd = ["git"]
@@ -348,9 +350,7 @@ def _get_staged_ac_paths(root: Path | None = None) -> list[Path]:
     # Test seam: HOOK_TEST_STAGED_FILES overrides real git diff.
     test_env = os.environ.get("HOOK_TEST_STAGED_FILES")
     if test_env is not None:
-        # Empty string means explicitly no staged files.
-        if not test_env.strip():
-            return []
+        # Empty string means explicitly no staged files (the loop below finds none).
         paths: list[Path] = []
         for part in test_env.replace(os.pathsep, "\n").splitlines():
             part = part.strip()
@@ -600,7 +600,7 @@ def _validate_file(
     errors.extend(supersession_errors(path, data, all_ac_data))  # ACS-900d-4-ii/-iii
 
     # declares_side_effect gate: DERIVED from criteria, never opinion (BO-2900g-2/-i).
-    errors.extend(validate_declares_side_effect(path, data))
+    errors.extend(validate_declares_side_effect(path, data) + covered_by_errors(path, data))  # GE-124g-1: no opt-out
 
     if all_ac_data is not None:
         errors.extend(validate_pattern_bindings_completeness(path, data, all_ac_data))

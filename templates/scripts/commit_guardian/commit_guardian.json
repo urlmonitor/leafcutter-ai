@@ -2035,6 +2035,10 @@
       "ground": "BP-100n-4-i declared non-gate: a shared library module (declares the INDETERMINATE/reason= outcome vocabulary other commit_guardian checks emit) with no __main__ entry point; it is imported by other checks, never itself invoked as a gate."
     },
     {
+      "script": "check_ui_ac_declared.py",
+      "ground": "GE-124e-1 declared non-gate for pre-commit: a CI-only reverse gate. It is run by the ui-ac-declared job in .github/workflows/ci.yml as 'python scripts/commit_guardian/check_ui_ac_declared.py --mode ci --base origin/<base_ref>', which selects done UI acceptance criteria across the whole store; it is deliberately not registered as a pre-commit hook."
+    },
+    {
       "id": "check-paths-integrity",
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
     },

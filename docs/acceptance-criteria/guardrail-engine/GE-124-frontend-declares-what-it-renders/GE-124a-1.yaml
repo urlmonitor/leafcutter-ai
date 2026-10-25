@@ -9,7 +9,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 created_by: "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124a.yaml"
 criteria: |
   Given a staged screen component file whose leading comment block contains the
