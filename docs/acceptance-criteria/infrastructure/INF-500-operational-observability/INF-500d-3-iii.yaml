@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -173,8 +173,10 @@ amended_by:
   agent: approve_acs
   date: '2026-10-25'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/feedback/test_inf_500d_3_iii.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
 change_target:
   - code
 risk_surface: contract_boundary

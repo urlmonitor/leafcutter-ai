@@ -177,13 +177,14 @@ capture the returned `feedback_id`.
 
    **Call 1** — run the submit script:
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --tags <tags_or_omit_flag> --note "<one-sentence note>" 2>/tmp/feedback_err.txt
+   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --tags <tags_or_omit_flag> --note "<one-sentence note>" 2>/tmp/feedback_err_<ticket_basename>_<agent_name>.txt
    ```
    Read the feedback ID directly from the Bash tool result (stdout).
+   `<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
    **Call 2** (only if Call 1 stdout was empty) — check the sidecar fallback:
    ```bash
-   grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err.txt
+   grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err_<ticket_basename>_<agent_name>.txt
    ```
    If this returns a path like `sidecar:/tmp/feedback_id_12345.txt`, read that
    file in a third call to retrieve the ID.
