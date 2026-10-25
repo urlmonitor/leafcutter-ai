@@ -107,6 +107,130 @@ test_intent:
   - clause: "that match names the recovery file holding the id the submission printed, So that the uniquely-named recovery file is still found by the recovery step agents are told to run"
     needs_test: true
     reason: A match on the wrong line or the wrong file would hand the agent a foreign id.
+test_spec:
+  - name: test_two_same_second_submissions_leave_two_distinct_recovery_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Two submissions (python-coder on ticket A, pr-reviewer on ticket B) are started back to back as separate subprocesses of the copied layout's submit_feedback.py, each with its own TMPDIR-confined temporary directory shared between the two and its own declared sink; both exit 0 and two distinct feedback_id_<digits>.txt files exist."
+    proves_clause: two distinct id-recovery files exist, one per submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_first_submissions_announced_recovery_file_holds_exactly_its_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The path on the first submission's 'sidecar:' stderr line is read back and its content equals that submission's printed stdout id exactly (no newline, no extra text)."
+    proves_clause: the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_second_submissions_announced_recovery_file_holds_exactly_its_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The path on the second submission's 'sidecar:' stderr line is read back and its content equals the second submission's printed id exactly; the two ids differ so a cross-write is visible."
+    proves_clause: the recovery file announced on the second submission's error stream contains exactly fb_2026-08-25_9057159a
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_neither_recovery_file_is_overwritten_by_the_other_submission
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "After both same-second submissions finish, each announced file still holds its own id and the two announced paths differ; repeated for several rounds so a probabilistic scheme is exposed."
+    proves_clause: neither recovery file was overwritten by the other submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - a recovery file name built from whole epoch seconds only, as today
+      - a recovery file name with a process id but no per-submission random part
+      - a recovery file written with open mode w over a name that already exists
+  - name: test_existing_recovery_file_is_never_replaced_or_truncated_on_a_forced_name_collision
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A subprocess runs the copied layout's main() twice with the clock, process id and random sources frozen so the first-choice name is identical for both runs; the first run's file must be left intact with its id and the second run must announce a different file holding the second id (uniqueness by construction, not by low collision probability)."
+    proves_clause: neither recovery file was overwritten by the other submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - check-then-write that tests for existence and then opens the same name with mode w
+      - a collision retry that truncates the existing file before choosing a new name
+  - name: test_twenty_same_second_submissions_leave_twenty_distinct_recovery_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Twenty separate processes are started back to back against one confined temporary directory; all exit 0 and exactly twenty distinct feedback_id_<digits>.txt files exist."
+    proves_clause: 20 distinct recovery files exist
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - a name built from epoch seconds plus a short random suffix that collides under twenty-way concurrency
+      - a name built from epoch seconds plus a counter that is local to each process
+  - name: test_each_printed_id_appears_in_exactly_one_recovery_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Across the twenty recovery files, every printed stdout id is found as the exact content of exactly one file and no file holds an id that was not printed."
+    proves_clause: each printed id appears in exactly one recovery file
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_error_stream_names_the_recovery_file_holding_its_own_printed_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "For each of the twenty submissions the single 'sidecar:' line on its own stderr names a file whose content equals that submission's own stdout id."
+    proves_clause: each submission's error stream names the recovery file that holds that submission's own printed id
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_documented_recovery_search_returns_exactly_one_match_per_submission
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The search pattern documented in the deployed signoff skill (read from the shared reference layout, grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt') is applied with grep to each submission's captured stderr; exactly one match comes back."
+    proves_clause: it returns exactly one match
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_documented_search_match_names_the_file_holding_the_printed_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The single match of the documented search, with its 'sidecar:' prefix removed, is a file whose content equals the id the submission printed; the sink line '[submit_feedback] sink:' is not matched."
+    proves_clause: that match names the recovery file holding the id the submission printed, So that the uniquely-named recovery file is still found by the recovery step agents are told to run
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_submit_feedback_is_reachable_as_a_subprocess_and_leaves_a_recovery_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the copied layout's scripts/feedback/submit_feedback.py as a real subprocess with real argv (h.submit via the _inf_500d_4_helpers layout), asserts exit 0, one stdout line and a sidecar line naming an existing file."
+    proves_clause: two distinct id-recovery files exist, one per submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_recovery_file_is_a_real_digits_only_artifact_in_the_confined_temp_directory
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Lets the entry point write its recovery file into the confined TMPDIR, reads the file back from disk, and asserts the name matches feedback_id_<digits only>.txt, the content is exactly the printed id, and no other file was created beside it; the real shared temporary directory and a real sink are never touched."
+    proves_clause: the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/skills/signoff/SKILL.md
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/test_submit_feedback_concurrency.py
+file_findings:
+  - file: templates/scripts/feedback/submit_feedback.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It builds the whole-second sidecar name (feedback_id_<epoch>.txt at lines 419-423) that the criteria change, and it is the single write chokepoint for the id.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
 delivers_to:
   - agent: llm-expert
     contract: "On every successful write the error stream carries exactly one line of the form 'sidecar:<absolute temp dir>/feedback_id_<digits>.txt' (digits only between 'feedback_id_' and '.txt'), naming a file unique to that submission whose content is exactly the printed id (fb_YYYY-MM-DD_xxxxxxxx). The documented search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' matches that line exactly once. Consumed by INF-500d-3-ii."

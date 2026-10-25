@@ -79,6 +79,89 @@ test_intent:
   - clause: "the sign-off instructions still tell the agent to read standard output first and to fall back to the recovery file only when standard output is empty"
     needs_test: true
     reason: The edits to the signoff skill in INF-500d-3-ii could reorder the steps, and the deployed text shows whether the order survived.
+test_spec:
+  - name: test_each_of_twenty_concurrent_submissions_prints_exactly_one_line_on_stdout
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Starts twenty separate processes of the copied layout's submit_feedback.py back to back (own declared sink, confined TMPDIR, distinct note/phase/category per process) and asserts every exit status is 0 and every stdout is exactly one line ending in a newline."
+    proves_clause: each submission's standard output is exactly one line
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_stdout_line_is_a_feedback_id_of_the_documented_form
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Each of the twenty stdout lines fully matches fb_YYYY-MM-DD_xxxxxxxx (eight lowercase hex digits); neither the 'sidecar:' line nor the '[submit_feedback] sink:' line appears on stdout."
+    proves_clause: that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_twenty_concurrent_ids_are_pairwise_distinct
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The set of twenty printed ids has twenty members; the processes are started so that their record timestamps fall in one or two adjacent seconds, and the test asserts the overlap before asserting distinctness."
+    proves_clause: the 20 ids are pairwise distinct
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_printed_id_names_the_record_its_own_submission_appended
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Reads the declared sink back and, for each process, locates its record by that process's own category, phase and note (never by position or timestamp order) and asserts the record's feedback_id equals that process's stdout id and each record is matched exactly once."
+    proves_clause: each id names the record that its own submission appended, matched by that record's category, phase and note
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_declared_sink_holds_the_twenty_records_read_back_from_disk
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "The twenty submissions append to the copied layout's own declared sink file; the file is read back from disk and holds exactly twenty parseable JSON lines, one per process, and the real sink and the real shared temporary directory are untouched."
+    proves_clause: each id names the record that its own submission appended, matched by that record's category, phase and note
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_live_surface_tester_capture_block_runs_unchanged_and_returns_the_single_line_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Lifts the FB_ID=$(python scripts/feedback/submit_feedback.py ...) capture block from the deployed live-surface-tester instruction (shared reference layout, shared_layout_reader), runs it as written with only placeholders filled and the script path pointed at the copied layout, and asserts FB_ID equals the id of the record in the declared sink."
+    proves_clause: it receives the same single-line id with no change to its command or parsing
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_epic_supervisor_capture_form_runs_unchanged_and_returns_the_single_line_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Lifts the FB_ID=$(... 2>/dev/null) || FB_ID=\"(submit-failed)\" form from the deployed epic-supervisor instruction (it sits as a comment line inside a pseudo-code block, so only the leading comment marker is removed and placeholders filled), runs it with bash as written, and asserts FB_ID equals the id in the declared sink and is not the failure marker."
+    proves_clause: it receives the same single-line id with no change to its command or parsing
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_signoff_reads_stdout_first_and_falls_back_to_the_recovery_file_only_when_stdout_is_empty
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Reads the deployed signoff skill from the shared reference layout, lifts Call 1 and Call 2, asserts Call 1 precedes Call 2 and Call 2 is conditioned on empty stdout, then runs the pair as an agent would: with a normal stdout the recovery step is not needed, with stdout forced empty the Call 2 search recovers the id."
+    proves_clause: the sign-off instructions still tell the agent to read standard output first and to fall back to the recovery file only when standard output is empty
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_submit_feedback_is_reachable_as_twenty_concurrent_subprocesses
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the deployed entry point scripts/feedback/submit_feedback.py of the copied layout as real subprocesses with real argv (popen_py) and asserts the single-line id output occurs for each."
+    proves_clause: each submission's standard output is exactly one line
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/live-surface-tester.md
+  - templates/agents/epic-supervisor.md
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/test_submit_feedback_concurrency.py
 delivers_to: null
 expects_from:
   - ac_id: INF-500d-3-i

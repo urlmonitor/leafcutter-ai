@@ -122,6 +122,199 @@ test_intent:
   - clause: "it fails when any of them prescribes a name without both the ticket and the phase in it"
     needs_test: true
     reason: The failure branch must be proven against a surface that lacks one part, or the check could never fail.
+test_spec:
+  - name: test_signoff_names_for_two_concurrent_runs_resolve_to_different_error_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Fills the signoff Call 1 redirect target for run A (python-coder, 03-add-parser) and run B (pr-reviewer, 05-wire-cli) using the placeholders the deployed skill prescribes, and asserts the two resolved paths differ."
+    proves_clause: the two runs resolve to two different files
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_documentation_verifier_names_for_two_runs_resolve_to_different_error_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Same fill-in-and-compare for the documentation-verifier redirect target, using the deployed copy from the shared reference layout."
+    proves_clause: the two runs resolve to two different files
+    code_file: templates/agents/documentation-verifier.md
+  - name: test_user_surface_smoker_names_for_two_runs_resolve_to_different_error_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Same fill-in-and-compare for the user-surface-smoker redirect target, using the deployed copy from the shared reference layout."
+    proves_clause: the two runs resolve to two different files
+    code_file: templates/agents/user-surface-smoker.md
+  - name: test_live_surface_tester_names_for_two_runs_resolve_to_different_error_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Same fill-in-and-compare for the live-surface-tester capture block, covering both the 2> redirect and the grep search input, which must resolve to the same distinct file per run."
+    proves_clause: the two runs resolve to two different files
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_each_resolved_error_file_name_carries_the_ticket_and_the_phase_as_one_path_component
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "For every discovered redirecting instruction, the name resolved for each of the two runs contains that run's ticket base name and its phase name, and is a single path component with no separator, space or shell metacharacter; a name with only the ticket or only the phase fails."
+    proves_clause: the name each run resolves to includes the ticket it is signing off on and the phase name it is submitting as
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_no_deployed_instruction_prescribes_one_fixed_error_file_shared_by_every_caller
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Discovers every submit_feedback.py command with a redirected error stream in the deployed instructions at check time, fills the placeholders for two different runs, and fails for any surface whose target is identical across the two runs (the old /tmp/feedback_err.txt and workspace-relative feedback_err.txt included)."
+    proves_clause: no shipped instruction prescribes one fixed file name that every caller shares
+    code_file: templates/agents/documentation-verifier.md
+    must_catch:
+      - a surface left on the fixed /tmp/feedback_err.txt name
+      - live-surface-tester left on the workspace-relative feedback_err.txt name
+      - a name keyed only on the phase that is shared by two tickets of the same phase
+  - name: test_two_supervisors_halting_in_one_second_write_their_error_streams_to_different_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "For each of the four ticket-supervisor event kinds (mechanical-retry, cross-agent-rework, brainstorm-escalation, halt), fills the redirect target for tickets 03-add-parser and 05-wire-cli and asserts the two files differ while the event-kind suffix is kept; then runs both halt commands concurrently as subprocesses in a copied layout and asserts two distinct error files each holding its own stderr."
+    proves_clause: "each supervisor's submission writes its error stream to a different file, Because a name keyed only on the event kind is shared across every ticket in the batch and recreates the collision this record removes"
+    code_file: templates/agents/ticket-supervisor.md
+    must_catch:
+      - an event-kind-only name such as feedback_err_halt.txt shared by every ticket in the batch
+      - a name that adds the ticket but drops the event-kind suffix
+  - name: test_recovery_search_reads_exactly_the_file_the_submit_step_wrote
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "For every surface that carries a recovery search (signoff Call 2, live-surface-tester), fills the placeholders the same way for the submit step and the search and asserts the search input equals the redirect target; then runs Call 1 and Call 2 as written in a copied layout and asserts the search returns exactly one match naming a file holding the run's own id."
+    proves_clause: the search reads only the file that run's own submission wrote
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - a search that still reads the old fixed file while the submit step writes the per-run file
+      - a search whose placeholders resolve to a different ticket or phase than the redirect
+  - name: test_signoff_id_capture_contract_survives_the_prompt_change
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Updates the existing test in unit_tests/feedback/test_inf_500d_4_vi.py (it hard-codes /tmp/feedback_err.txt): fill the per-run placeholders the same way for Call 1 and Call 2 (and in the grep line), assert the per-run redirect name, and keep every existing assertion (id on stdout is exactly one line, exactly one search match, record in the declared sink, the old-override control still caught); _inf_500d_4_vi_helpers placeholders extended if needed."
+    proves_clause: the search reads only the file that run's own submission wrote
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - Call 2 left on /tmp/feedback_err.txt while Call 1 redirects to the per-run name, so the search finds nothing
+      - the test still asserting the fixed /tmp/feedback_err.txt target
+  - name: test_a_concurrent_agents_submission_cannot_write_to_a_runs_own_error_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Runs the filled Call 1 commands for run A and run B concurrently as subprocesses of a copied layout with its own declared sink and a confined TMPDIR; each run's error file is read back and holds only its own sidecar line, and each run's Call 2 search returns only its own recovery file."
+    proves_clause: another agent's submission that finished in the same second cannot have written to that file
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_check_reports_how_many_redirecting_instructions_it_inspected
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Runs the check against the shared deployed reference layout and asserts its result carries an inspected count (at least the five known surfaces) and that the count appears in its report message."
+    proves_clause: it reports how many redirecting instructions it inspected
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_check_discovers_a_new_redirecting_surface_without_a_hard_coded_file_list
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Plants an extra agent instruction that copies the submit_feedback.py redirect pattern into a synthetic instruction tree beside the real ones and asserts the inspected count rises by one and the surface is judged."
+    proves_clause: it reports how many redirecting instructions it inspected
+    code_file: templates/agents/user-surface-smoker.md
+    must_catch:
+      - a check that iterates a hard-coded list of the five known file names
+  - name: test_check_fails_when_zero_redirecting_instructions_are_inspected
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Points the check at an empty instruction tree and at a tree with instructions that contain no redirected submit command; both must fail with a message naming the zero count, never pass."
+    proves_clause: it fails when that count is zero
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - a check that passes vacuously when nothing is inspected
+      - a check that counts a missing instruction directory as a pass
+  - name: test_check_fails_when_a_prescribed_name_lacks_the_ticket_or_the_phase
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Feeds the check synthetic instructions whose resolved name has only the phase, only the ticket, or neither, alongside a conforming one; each non-conforming surface makes the check fail and the conforming one alone passes."
+    proves_clause: it fails when any of them prescribes a name without both the ticket and the phase in it
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - a check that only verifies that some suffix exists in the name
+      - a check that requires the ticket but not the phase
+      - a check that requires the phase but not the ticket
+  - name: test_prescribed_submit_commands_run_as_written_from_the_deployed_instructions
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Lifts the submit_feedback.py commands from the deployed instructions (shared reference layout), fills the placeholders, and runs them with bash -c from a worktree root of a copied layout (its own declared sink, confined TMPDIR); each exits 0 and leaves its per-run error file at the resolved name."
+    proves_clause: the two runs resolve to two different files
+    code_file: templates/agents/ticket-supervisor.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/ticket-supervisor.md
+  - templates/agents/documentation-verifier.md
+  - templates/agents/user-surface-smoker.md
+  - templates/agents/live-surface-tester.md
+  - templates/scripts/feedback/submit_feedback.py
+  - unit_tests/feedback/test_inf_500d_4_vi.py
+  - unit_tests/feedback/_inf_500d_4_vi_helpers.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+file_findings:
+  - file: templates/skills/signoff/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the fixed /tmp/feedback_err.txt redirect in Call 1 and the matching recovery search in Call 2 (lines 178-189) that the criteria change.
+    decision: null
+  - file: templates/agents/ticket-supervisor.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the four event-keyed redirect names (lines 554, 566, 578, 588) that the criteria change, though it carries no recovery search of its own.
+    decision: null
+  - file: templates/agents/documentation-verifier.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the fixed /tmp/feedback_err.txt redirect at line 697 that the criteria change.
+    decision: null
+  - file: templates/agents/user-surface-smoker.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the fixed /tmp/feedback_err.txt redirect at line 306 that the criteria change.
+    decision: null
+  - file: templates/agents/live-surface-tester.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the workspace-relative feedback_err.txt redirect and the grep search in the capture block (lines 366-379) that the criteria change.
+    decision: null
+file_findings_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/ticket-supervisor.md
+  - templates/agents/documentation-verifier.md
+  - templates/agents/user-surface-smoker.md
+  - templates/agents/live-surface-tester.md
 delivers_to:
   agent: llm-expert
   contract: "Every shipped submit instruction redirects the error stream to a per-run file named from the ticket base name and the phase (plus an event kind where one applies), and the same instruction's recovery search reads that same per-run file and nothing else. Consumed by INF-500d-3-iv."
