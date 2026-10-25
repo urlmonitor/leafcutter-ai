@@ -186,6 +186,42 @@
         "scripts/evals/produced_tests_reports.py"
       ],
       "notes": "TQ-200d-4. LOCAL ONLY like test-writer. The test runner writes no files, so its rows are scored on its report and on the Bash commands of a stream-json transcript (capture_transcript true): the checker was run against the project, and no command carries a postgresql:// literal or a host, port or database flag. --score-gold replays scripts/evals/sets/test-runner/recorded/ with no model call."
+    },
+    "sql-test-writer": {
+      "template": "templates/agents/sql-test-writer.md",
+      "eval_set": "scripts/evals/sets/sql-test-writer.jsonl",
+      "scoring_mode": "produced_tests",
+      "local_only": true,
+      "input_field": "input",
+      "expected_field": "expected",
+      "model": "sonnet",
+      "tools": "Bash,Read,Edit,Write",
+      "support_scripts": [
+        "scripts/db_check",
+        "scripts/build_orchestration",
+        "scripts/ac_store"
+      ],
+      "timeout": 900,
+      "threshold": 1.0,
+      "triggers": [
+        "templates/agents/sql-test-writer.md",
+        "scripts/evals/sets/sql-test-writer.jsonl",
+        "scripts/evals/sets/sql-test-writer/**",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/produced_tests_mode.py",
+        "scripts/evals/produced_tests_scoring.py",
+        "scripts/evals/produced_tests_runs.py",
+        "scripts/evals/produced_tests_mutants.py",
+        "scripts/build_orchestration/wrong_version_runner.py",
+        "scripts/evals/cli_envelope.py",
+        "scripts/evals/produced_tests_db.py",
+        "scripts/evals/produced_tests_transcript.py",
+        "scripts/evals/produced_tests_commands.py",
+        "scripts/evals/produced_tests_reports.py",
+        "scripts/evals/sql_test_writer_eval/**"
+      ],
+      "notes": "TQ-200d-2. PRODUCED-TESTS mode for the database test writer (Bash, Read, Edit, Write only: the sandbox has no sub-agents or skills). Three rows: a stored-procedure regression (observed only with a quoted verdict row, a wrong version in the to-run-later file), the empty-window database shape (the SQL counts processed rows and non-NULL values) and the no-test-database trap (every answer reasoned, both runs not run, the setting named, no claimed result). Every database address is the placeholder, so the checker reports invalid or not_configured and no row reaches a database. LOCAL ONLY: local_only true keeps this agent out of eval_selector's affected set and --check; every payload carries run_context 'local'. --score-gold replays scripts/evals/sets/sql-test-writer/recorded/ and makes no model call; the live before-score is deferred (OQ-11)."
     }
   }
 }

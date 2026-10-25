@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-24'
+last_updated: '2026-10-25'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 36** (1 blocker, 15 high, 20 low) · **Resolved: 5** (recounted from the directory 2026-10-24, after KI-TQ-20261024-produced-tests-db-scoring-residual-misreads was filed)
+**Open: 37** (1 blocker, 15 high, 21 low) · **Resolved: 5** (recounted from the directory 2026-10-25, after KI-TQ-20261025-sql-test-writer-eval-residual-misreads was filed)
 
 ## Open
 
@@ -95,6 +95,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20261024-eval-harness-cannot-launch-claude-on-windows — `run_agent_eval.py` runs the bare name `claude` through `subprocess.run` without a shell, which cannot start the npm install's `claude.cmd` on Windows, so every live row fails with "could not be launched" and the eval scores 0% (all four live evals on 2026-10-24); graded medium | [open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md](testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md) |
 | `low` | KI-TQ-20261024-restructuring-specialist-eval-reply-format — the restructuring-specialist live eval scored 0/2 on 2026-10-24 because neither reply gave a `skills_applied` object the harness could read (rs-001 no boolean for the axis, rs-002 no JSON object); pre-existing, and the CI eval job is informational | [open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md](testing-quality/open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md) |
 | `low` | KI-TQ-20261024-produced-tests-db-scoring-residual-misreads — residual misreads left by the TQ-200d-4 pr-review in the database-setting scoring: `commands_no_db_address` flags `psql <<EOF` / `psql < file.sql` and any `host=` in the whole command text and misses `$env:PGHOST=`; the report checks read `README.rst:10`, `tests:12`, `3.11.2.5` and "does not use localhost" as addresses and miss some not-run / outcome wordings; `db_test_uses_setting` taints flow-insensitively, matches `DB_SCHEMA` / `GPG_KEY`, and skips `ConnectionPool` / `create_pool`; `python -m db_check.checker` and `-t .` are not checker runs; a live timeout kills only the direct `claude` child. Live scores can be falsely red or green; recorded gold scoring is unaffected | [open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md](testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md) |
+| `low` | KI-TQ-20261025-sql-test-writer-eval-residual-misreads — residual misreads left by three TQ-200d-2 pr-review rounds in the sql-test-writer scoring: `sql_observed_labels_quote_a_run` passes an invented `caught` row (no transcript to check it against; with the placeholder database only `not_run` / `invalid` rows are genuine), rejects a multi-line JSON row and passes "not caught"; the no-test-database trap misses "run clean", "survived", "is caught", "reported caught", "assertions held", "pytest exited 0" and "verified: red before, green after"; `run_line` reads a parenthetical label, a table row and a next-line value as empty; the SQL resolver blanks `%` / `.format()` / `" ".join` SQL and tuple assignments, skips `fetchone` / `pd.read_sql`, chained helpers and a `sql=` helper keyword, counts `execute` on a mock, and `count(all col)` is not a non-NULL count; `sql_answers_labelled` rejects a bare `reasoned`, a backticked `observed` and a label before its Q marker. Live scores can be falsely red or green; recorded gold scoring is unaffected | [open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md](testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md) |
 
 ## Resolved
 

@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -139,6 +139,10 @@ test_spec:
   - trap row passes a report that does not name testing_context.db_connection_test
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sql_test_writer_eval/report_kinds.py
+  - scripts/evals/sql_test_writer_eval/label_kinds.py
+  - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+  - scripts/evals/sql_test_writer_eval/sql_resolve.py
   - scripts/evals/sets/sql-test-writer.jsonl
 - name: test_regression_row_accepts_observed_only_with_quoted_run
   target_dir: unit_tests/evals/
@@ -153,6 +157,11 @@ test_spec:
   - wrong version read from report prose instead of the to-run-later file
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sql_test_writer_eval/report_kinds.py
+  - scripts/evals/sql_test_writer_eval/label_kinds.py
+  - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+  - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - scripts/evals/sets/sql-test-writer.jsonl
 - name: test_empty_window_db_row_requires_row_and_non_null_counts
   target_dir: unit_tests/evals/
   framework: pytest
@@ -165,6 +174,11 @@ test_spec:
   - non-NULL count satisfied by a row count alone
   in_scope_files:
   - scripts/evals/produced_tests_scoring.py
+  - scripts/evals/sql_test_writer_eval/report_kinds.py
+  - scripts/evals/sql_test_writer_eval/label_kinds.py
+  - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+  - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - scripts/evals/sets/sql-test-writer.jsonl
 - name: test_trap_sandbox_leaves_db_setting_unset
   target_dir: unit_tests/evals/
   framework: pytest
@@ -210,6 +224,9 @@ amended_by:
   - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
     by: it-po
     at: 2026-10-23
+  - reason: "Fast-lane wrong-version gate: in_scope_files of the scoring entries named only produced_tests_scoring.py, but the new assertion kinds live in the scripts/evals/sql_test_writer_eval/ sub-package (scripts/evals/ is at its folder-density limit) and the row assertions live in sets/sql-test-writer.jsonl. Added those files to the entries naming produced_tests_scoring.py so each named wrong version can be prepared where the behaviour is. must_catch names, criteria and tests unchanged."
+    by: orchestrator
+    at: 2026-10-25
 superseded_by: null
 covered_by: []
 implemented_by: []

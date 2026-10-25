@@ -1,0 +1,10 @@
+{
+ "ac_id": "TQ-9501",
+ "to_run_later": [
+  {
+   "test": "unit_tests/sql_functions/test_fn_refresh_due.py::TestFnRefreshDue::test_retry_due_gate",
+   "wrong_version": "fn_refresh_due returns refresh_due alone, without the retry_due condition",
+   "reason": "the test seeds retry_due false"
+  }
+ ]
+}
