@@ -170,6 +170,12 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 import build as _build  # noqa: E402 — after sys.path setup
 from injection_builders import assemble_context_bundle  # noqa: E402
 
+# The fast-lane harness plumbing moved to the consumption file; sibling suites
+# (1-iii, 1-vi, blank-lines) still reach it through this module as _sibling.
+from test_bo2400c_prompt_cache_consumption import (  # noqa: E402, F401
+    _BUNDLE_LABEL, _GREEN_LABELS, _call, _labels_ship, _run_ship,
+)
+
 _INJECTION_BUILDERS_PY = _SCRIPTS_DIR / "injection_builders.py"
 
 
