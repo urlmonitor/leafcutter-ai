@@ -231,6 +231,7 @@ def _assert_one_recorded_attempt(proj: dict[str, Path], agent: str) -> None:
 @pytest.mark.shared_layout_reader
 def test_section_7_command_lands_one_clean_record_in_the_declared_sink(shared_reference_layout, tmp_path):
     # covers: INF-700b-1
+    # covers: INF-700b
     # angle: reachability
     """Run the command the DEPLOYED section 7 prescribes, with no --sink, against a live declaration.
 

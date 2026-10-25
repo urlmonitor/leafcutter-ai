@@ -3,10 +3,11 @@ title: "Knowledge System — Cross-Session Learning Persistence"
 description: "Knowledge harvesting and context file maintenance system that persists learnings across agent sessions for improved future-invocation quality."
 flight_level: L3-Component
 diagram_type: component
+parent: docs/architecture/agent_knowledge_system.md
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-06-22
+last_updated: 2026-10-25
 components:
   - knowledge_system
 ---
@@ -131,7 +132,7 @@ sequenceDiagram
 
 ## Integration
 
-The signoff skill §7 Knowledge Capture Step invokes the `route-learning` and `capture-learning` skills, which ultimately persist entries that `harvest_learnings.py` consolidates across sessions.
+The signoff skill §7 Knowledge Capture Step has the agent run one command: `emit_knowledge.py` to record a learning, or the `agent-telemetry` skill's capture-attempt commands when there is nothing to record or capture fails. The agent does not route or write the learning; `harvest_learnings.py` is the sole writer and consolidates the emitted records across sessions. The record fields, the two streams and the routing trigger are in [Agent Knowledge System](../agent_knowledge_system.md). `route-learning` and `capture-learning` are retired names (ADR-034).
 
 The acceptance-criteria store feeds the knowledge map via the `acs` surface declared in `config/paths.json`; surface declaration is implemented in ticket `KM-KGS-100a-1` and the four relationship-edge kinds in `KM-KGS-100a-3`.
 

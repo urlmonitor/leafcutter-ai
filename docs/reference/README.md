@@ -48,6 +48,8 @@ below by hand.
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it â€” this index does. |
 
 | [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
+| [description-field-convention.md](description-field-convention.md) | The required `description:` frontmatter field on documentation files: purpose, enforcement hook and backfill script, what to write, and scope. |
+| [knowledge-graph-visualization.md](knowledge-graph-visualization.md) | Output format, invocation and failure exit of `visualise_knowledge_graph.py`. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 | [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
 | [knowledge-retention-evaluation-details.md](knowledge-retention-evaluation-details.md) | Detail sections of the retention evaluation result: active generation, reclaimable bases, entity-node reconciliation, assessment outcome and the read-only condition. |
