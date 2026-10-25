@@ -1,0 +1,112 @@
+id: BO-2500a-8-iv
+components:
+  - build_orchestration
+  - ac_store
+title: "Every unfinished test-free record with no reason gets its own hand-written reason, approved by the user in batches"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the unfinished records declared test-free with no stated reason, measured
+    2026-10-25 over docs/acceptance-criteria, active records only, reason counted
+    present when non-empty after whitespace stripping: 96 with work_status todo
+    (ACD 36, DK 19, BO 17, ACS 14, GE 8, BP 2) and 3 with work_status in_progress,
+  When the backfill is carried out,
+  Then each record is given a test_rationale written for that record alone, naming
+    what its deliverable is and why no executable test can observe it,
+  And no two records are given the same text, and no text is produced by filling
+    a template from change_target or any other field,
+  And proposed reasons are shown to the user in batches, each entry listing the
+    record id, its title, its change_target and the proposed reason, and a reason
+    is written to a record only after the user has approved the batch holding it,
+  And a record for which the user rejects the reason, or for which no honest
+    reason can be written because its deliverable has behaviour a test can observe,
+    is not given a reason and is listed with that finding for the user's decision,
+  And when the backfill ends, every one of the 99 records either carries an
+    approved reason or appears on that list with the user's decision recorded,
+  And the 46 finished test-free records with no reason are not given a reason by
+    this backfill; they go to TQ-400d triage or to the wave-2 migration
+    (BO-2500f-4-ii), so a finished claim is never justified after the fact by a
+    sentence,
+  And the run reports the count of records given a reason, the count listed for a
+    decision, and the measurement date and inclusion rule of the starting
+    population.
+depends_on: [BO-2500a-8, BO-2500a-8-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400d.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the finished-but-unproven pile; the 46 finished records without a reason are routed there, not here."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: it-po
+estimated_complexity: L
+it_requirements:
+  - 'Measure the population, never copy it: at the start re-run the inclusion rule (active
+    records, test_required false, test_rationale empty after strip, work_status todo or in_progress)
+    and report the count, date and rule. The 99 of 2026-10-25 is the expected figure, not
+    an input.'
+  - 'Write only the test_rationale key into each approved record: a targeted insert, never
+    a load-and-dump rewrite (criteria bytes, key order and comments unchanged). A second run
+    over an already-backfilled record writes nothing.'
+  - Nothing is written before the user approves the batch that holds it. A rejected or unwritable
+    reason goes to the decision list with its finding, never a guessed value.
+  - 'Before each batch is shown, check uniqueness with BO-2500a-8-v''s normalisation function
+    (the same one check-ac-schema applies): each proposed reason differs from every other
+    proposed and every already-stored test-free reason, so no approved reason is later refused
+    at commit.'
+  - Each written record is committed through check-ac-schema, so BO-2500a-8-i's refusal is
+    the gate every backfilled record passes. Build after BO-2500a-8-i.
+  - Records with work_status done are never written by this run (they belong to TQ-400d and
+    BO-2500f-4-ii).
+  - 'it-po is not a ticket-phase agent (config/agent_registry.json: is_ticket_phase false),
+    so /build-ac cannot dispatch this record. Run it as a planning session with the user,
+    batch by batch.'
+test_required: false
+test_rationale: 'The deliverable is about 99 hand-written sentences in record files, one per
+  record, each approved by the user; whether a sentence honestly says why no test can observe
+  that record is a judgement no test can make. What verifies it: the user''s per-batch approval,
+  recorded in the run report with each batch''s member ids; BO-2500a-8-i''s check-ac-schema
+  refusal, which every backfilled record passes when it is committed; and the run''s closing
+  count (reasons written plus records listed for decision equals the measured population),
+  stated with its measurement date and inclusion rule.'
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500a-8-i
+    contract: "The authoring-time refusal that makes each backfilled record pass the commit-time record check when it is next changed."
+  - ac_id: BO-2500a-8-v
+    contract: The normalisation function and the duplicate refusal; each proposed reason is
+      checked with it before a batch is shown.
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+declares_side_effect: true
+notes: |
+  Wave 1. User backfill decision (2026-10-25): hand-written rationales per record,
+  approved by the user in batches; no templated text; the 46 finished records go to
+  TQ-400d triage or the wave-2 migration. This replaces the brief's original idea
+  of a script proposing a rationale per change_target.
+
+  Population drift. The brief (2026-10-24) counted 97 todo records (ACD 37). The
+  recount on 2026-10-25 finds 96 active todo (ACD 36) plus 3 in_progress records
+  that also lack a reason. The 3 in_progress records are included because they are
+  just as stuck at mark time; see the open question in the BA report.
+
+  assigned_agent is it-po because test_rationale is a field the technical planner
+  owns. The planner drafts; the user approves; nothing is written before approval.

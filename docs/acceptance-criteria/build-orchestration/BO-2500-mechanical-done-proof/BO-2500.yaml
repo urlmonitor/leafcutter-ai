@@ -39,7 +39,7 @@ amended_by:
     date: "2026-08-18"
     reason: "Value restated, not narrowed. The original text promised that the opinion-only review steps 'can be retired' outright. The fast lane no longer does that: BO-2400f-11 (shipped in PR #485 on BrainCandy's explicit instruction that the lane 'must also use a review agent in the process to catch any silly things that should not be shipped') keeps exactly one reviewer in the lane. The promise that actually matters here — and the one still kept — is that no LLM opinion may CONFER done-ness; done-ness comes only from the mechanical gates. A reviewer that can only withhold delivery leaves that intact. Amended so the goal states the surviving guarantee rather than an abolition that did not happen."
 superseded_by: null
-covered_by: [BO-2500a, BO-2500b, BO-2500c, BO-2500d, BO-2500e]
+covered_by: [BO-2500a, BO-2500b, BO-2500c, BO-2500d, BO-2500e, BO-2500f]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

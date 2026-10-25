@@ -1,0 +1,86 @@
+id: BO-2500f-4-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "A verification record that cannot be read or checked never waives the missing test"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four test-free records with no covering test: one whose verification record
+    is not a mapping, one naming a check file that cannot be opened, one listing an
+    inspected file whose current content cannot be fingerprinted, and one whose
+    approval source cannot be reached,
+  When each is evaluated by the shared done rule,
+  Then none of the four has its missing test waived, and each is refused,
+  And each refusal names the record and what could not be read or reached,
+  And a failure to evaluate is reported as such, never as "holds" and never
+    silently as "no verification record",
+  And the same four records evaluated at the commit-time check and at the CI sweep
+    receive the same refusal.
+depends_on: [BO-2500f-4]
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/ac_store/_done_proof_waiver.py
+    state: to_be_created
+it_requirements:
+  - 'Three-valued verdict: holds, does not hold, could not evaluate. ''Could not evaluate''
+    refuses exactly as ''does not hold'' does and says what could not be read or reached.
+    No exception escapes the shared rule: each is caught at the rule''s boundary, logged at
+    WARNING or higher, and turned into a refusal.'
+  - 'The four causes map to: verified_by not a mapping (BO-2500f-1''s validator), a check
+    file that cannot be opened (BO-2500f-2), an inspected file that cannot be fingerprinted
+    (BO-2500f-3), an approval source that cannot be reached (BO-2500f-3-i).'
+  - The same verdict object is produced in pre-commit and CI modes; tests assert the CLI's
+    exit code and message in both modes.
+test_required: true
+test_intent:
+  - clause: none of the four has its missing test waived, and each is refused
+    needs_test: true
+    reason: Each of the four unreadable shapes is a fail-open risk, and one case each shows
+      that none waives.
+  - clause: each refusal names the record and what could not be read or reached
+    needs_test: true
+    reason: The refusal must name the record and the cause, or the four failures look identical
+      to the reader.
+  - clause: a failure to evaluate is reported as such, never as "holds" and never silently
+      as "no verification record"
+    needs_test: true
+    reason: Collapsing 'could not evaluate' into 'holds' or 'no verification record' is the
+      fail-open bug this record names.
+  - clause: the same four records evaluated at the commit-time check and at the CI sweep receive
+      the same refusal
+    needs_test: true
+    reason: Both layers share the rule, and running the four records through both CLI modes
+      shows they agree.
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500f-4
+    contract: "The shared done rule whose failure path this record bounds."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. Fail-closed edge, carried over from BO-2500a-1-ii's error-handling
+  requirement (a malformed record still requires the tag).

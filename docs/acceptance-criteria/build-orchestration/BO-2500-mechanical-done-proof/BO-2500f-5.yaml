@@ -1,0 +1,110 @@
+id: BO-2500f-5
+components:
+  - build_orchestration
+  - ac_store
+title: "How-to: close a requirement no test can prove by naming its check or recording its inspection"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person who has to close a requirement that no test can prove,
+  When they follow the how-to for proving a requirement done,
+  Then the guide shows how to choose between a check and an inspection, with one
+    worked example of each, and states that an inspection is not available for
+    code, schema or pipeline work,
+  And it shows how to add the enforces tag to a check and how to confirm the check
+    is wired to a commit-time hook or a build phase,
+  And it shows how to run the inspection workflow (BO-2500f-3-ii) so that a person
+    approves the inspection, that the approval is kept in a committed approval
+    file the inspection references by run id, that the file must be committed
+    together with the record, that the approval and its date are read from that
+    file when the record is marked done, and that a change to any inspected file
+    makes marking done refuse with "re-inspection needed",
+  And it links to the exemption reference entry (TQ-400e-6, as amended for the
+    verification record) for when a declaration is honoured or refused and which
+    records may carry one, and does not restate those rules,
+  And it has a section on what goes wrong that lists each refusal a reader can
+    meet, with the message and the fix,
+  And a reader who follows the guide produces a record the done gate accepts.
+depends_on: [BO-2500f, BO-2500f-4]
+doc_links:
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: documentation-expert
+estimated_complexity: M
+declared_files:
+  - path: docs/how-to/prove-ac-done.md
+    state: existing
+  - path: docs/how-to/close-a-requirement-no-test-can-prove.md
+    state: to_be_created
+  - path: docs/INDEX.md
+    state: existing
+it_requirements:
+  - docs/how-to/prove-ac-done.md is 248 lines against check-doc-length's 300-line limit, and
+    crossing it is refused. Two worked examples, the choice between methods and a refusal
+    table will not fit, so the material goes in a new how-to page linked from prove-ac-done.md's
+    test-free section. The new page carries the frontmatter check-doc-frontmatter requires
+    and is registered in docs/INDEX.md in the same change.
+  - Link to the TQ-400e-6 entry for the honour, refuse and eligibility rules; do not restate
+    them.
+  - Refusal messages are quoted verbatim from the delivered code (BO-2500f-4 and its parts);
+    write after BO-2500f-4 lands.
+  - The worked examples are complete verified_by blocks a reader can paste, using the field
+    names BO-2500f-1 fixes (method, check, wired_as; method, gate_run, statement, inspected[path,
+    blob]).
+  - 'Describe the inspection approval as it is built: the person runs /inspect <AC-ID> (BO-2500f-3-ii),
+    sees each path with its fingerprint, and answers approve; the workflow writes docs/acceptance-criteria/_inspections/<run_id>.json
+    and fills gate_run and the blobs into the record; the person commits both together; marking
+    done reads the committed approval file, so it works the same on every machine and in CI.
+    Explain that an approval file left untracked is treated as missing.'
+test_required: false
+test_rationale: 'This guide is a set of steps a person follows; it is right when following
+  it produces a record the done gate accepts, and that gate''s behaviour is proven by the
+  tests of BO-2500f-4 and its children. What verifies the page: at pull-request review the
+  two worked verified_by examples are pasted into a scratch record and run through check_done_proof.py
+  --mode precommit (the inspection example with the approval file a real /inspect approve
+  answer produced, committed in a scratch branch), the refusal table is compared line by line
+  with the messages the delivered code prints, and check-doc-links proves the link to the
+  TQ-400e-6 entry resolves.'
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500f-4
+    contract: "The shared done rule and its refusal messages, which the guide's 'what goes wrong' section lists."
+  - ac_id: TQ-400e-6
+    contract: "The exemption reference entry, amended 2026-10-25 to state the verification record."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+declares_side_effect: false
+notes: |
+  Wave 2 documentation. BO-2500f carries documentation_triggers [how-to,
+  reference-doc]. This record is the how-to.
+
+  reference-doc rationale: no separate reference-doc record is authored. Per user
+  scope change 3 (PO gate 2026-10-25) the reference for these rules is TQ-400e-6,
+  the existing exemption rulebook, and it is amended (2026-10-25) to state the
+  verification record. A second reference record under BO-2500f would be the
+  second statement of the rules TQ-400e-6's last clause forbids.
+
+  The brief also names an ADR, "verification methods for non-test requirements".
+  An ADR is not an AC; it is left to the IT PO / documentation-expert (adr-author)
+  and flagged in the BA report.

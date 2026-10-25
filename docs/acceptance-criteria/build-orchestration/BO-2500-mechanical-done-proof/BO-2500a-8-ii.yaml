@@ -1,0 +1,127 @@
+id: BO-2500a-8-ii
+components:
+  - build_orchestration
+  - ac_store
+title: "The technical planner's instructions require a record-specific reason whenever they declare no test is needed"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the technical planner's instructions for declaring a requirement test-free,
+  When the planner follows them for a requirement whose change is only a guide or
+    only the wording of an agent instruction,
+  Then the instructions direct it to write test_required false together with a
+    test_rationale, and present the two as one declaration, never the first alone,
+  And they state that the reason must be specific to the record: it names what the
+    deliverable is and why no executable test can observe it,
+  And they state that one sentence reused across records, or text filled in from
+    the record's change_target, is not a reason,
+  And they state that the commit-time record check refuses the declaration without
+    a reason (BO-2500a-8-i) and that the done gate refuses it at mark time
+    (BO-2500a-1-ii),
+  And no passage in the instructions describes setting test_required false as
+    complete on its own,
+  And for which records may carry a test-free declaration at all, the instructions
+    point to the exemption reference entry (TQ-400e-6) and do not restate that rule,
+  And a planner run on a docs-only requirement with these instructions loaded writes
+    both fields, where the same run without the new instruction writes
+    test_required false alone.
+depends_on: [BO-2500a-8, BO-2500a-8-i]
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: constrains
+    status: exists
+    relevance: "Section 2.7, the `test_required: false` paragraph: 'set this, with no test_intent, when the AC genuinely produces no executable behaviour'. Never mentions test_rationale."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: llm-expert
+estimated_complexity: S
+declared_files:
+  - path: templates/agents/it-po.md
+    state: existing
+it_requirements:
+  - Edit templates/agents/it-po.md only, never the deployed copies (.claude/agents/it-po.md,
+    .leafcutter/, compiled platform output; ADR-001), and rebuild afterwards.
+  - 'Every passage that mentions test_required: false must carry the pair. Three passages
+    describe it alone today (2026-10-25): section 2.7 (around line 517; the brief''s ''445-452''
+    has moved), the S7 write rules (around line 786) and the S8 checklist item 12 (around
+    line 825). Clause 5 covers all of them.'
+  - Do not restate which records may be test-free. Link to the TQ-400e-6 entry in docs/reference/ac-schema.md;
+    if TQ-400e-6 is not built yet, link to the existing test_required and test_rationale rows.
+  - Quote BO-2500a-8-i's refusal message as delivered, not paraphrased; build after BO-2500a-8-i.
+  - 'The template is 1114 lines and every it-po run pays for its length: keep net growth to
+    what the clauses need.'
+  - 'Prompt proof per BO-3500c-2-iv: the consumer is a model (the it-po agent), so the with-and-without
+    comparison needs a live model call, states its cost, and is refused, not passed, when
+    no credential is available. The repo''s live-model harness is scripts/evals/run_agent_eval.py
+    (agent_eval_config.json has no it-po entry today, and its CI job is informational because
+    the repository has no ANTHROPIC_API_KEY secret).'
+test_required: true
+test_intent:
+  - clause: the instructions direct it to write test_required false together with a test_rationale,
+      and present the two as one declaration, never the first alone
+    needs_test: true
+    reason: Whether the template presents the two fields as one declaration is observable
+      in its text, and a later edit splitting them again would otherwise pass unnoticed.
+  - clause: 'they state that the reason must be specific to the record: it names what the
+      deliverable is and why no executable test can observe it'
+    needs_test: false
+    reason: This is wording about what a good reason says; its effect is observed by the with-and-without
+      comparison in the last clause, and a phrase-match test would only restate it.
+  - clause: they state that one sentence reused across records, or text filled in from the
+      record's change_target, is not a reason
+    needs_test: false
+    reason: Wording about what is not a reason; observed through the comparison run, and a
+      phrase-match test would only restate the sentence.
+  - clause: they state that the commit-time record check refuses the declaration without a
+      reason (BO-2500a-8-i) and that the done gate refuses it at mark time (BO-2500a-1-ii)
+    needs_test: false
+    reason: Citation wording; the cited refusals are proven by BO-2500a-8-i's and BO-2500a-1-ii's
+      own tests.
+  - clause: no passage in the instructions describes setting test_required false as complete
+      on its own
+    needs_test: true
+    reason: Three passages mention test_required false alone today, and a scan of the whole
+      template is what catches one left behind.
+  - clause: for which records may carry a test-free declaration at all, the instructions point
+      to the exemption reference entry (TQ-400e-6) and do not restate that rule
+    needs_test: false
+    reason: Whether a passage restates a rule or points to it is a judgement on prose, made
+      at review, not a string match.
+  - clause: a planner run on a docs-only requirement with these instructions loaded writes
+      both fields, where the same run without the new instruction writes test_required false
+      alone
+    needs_test: true
+    reason: 'This is the prompt proof BO-3500c-2-iv defines: the planner run with and without
+      the instruction on a docs-only requirement, comparing which fields it writes.'
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500a-8-i
+    contract: "The authoring-time refusal and its message, which the instructions cite."
+  - ac_id: BO-3500c-2-iv
+    contract: "The proof kind for a prompt: the consuming surface loads it and behaves differently with the instruction present. The last clause is that comparison."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+declares_side_effect: false
+notes: |
+  Wave 1. The it-po template is in ACD-300 scope for llm-expert (brief). The
+  "no templated text" clause carries the user's 2026-10-25 backfill decision
+  forward into authoring, so new records do not recreate the pile BO-2500a-8-iv
+  clears.

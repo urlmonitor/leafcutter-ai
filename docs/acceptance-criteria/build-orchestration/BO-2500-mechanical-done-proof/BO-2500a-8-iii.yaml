@@ -1,0 +1,129 @@
+id: BO-2500a-8-iii
+components:
+  - build_orchestration
+  - ac_store
+title: "A reference page for test-free declarations explains the waiver and the two meanings of the reason field, and the guides point to it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a new reference page for test-free declarations, and the three pages a
+    person reads to prove a requirement done: the how-to for proving a requirement
+    done, the how-to for done-proof enforcement, and the architecture page on
+    phantom-done prevention,
+  When a reader looks up why a finished requirement with no covering test was, or
+    was not, accepted as done,
+  Then the reference page states that a test-free declaration with a stated reason
+    lifts the covering-test rule and that one without a reason is refused,
+  And it states the two meanings of test_rationale as two separate statements:
+    with test_required false it is the reason no test can prove the record;
+    alongside test_spec it justifies the shape of that test contract,
+  And it links to the exemption rulebook (TQ-400e-6) for when a declaration is
+    honoured, when it is refused and which records may carry one, and does not
+    carry its own list of those conditions,
+  And each of the three guides links to the reference page instead of explaining
+    the waiver itself,
+  And the field reference for the store's record fields has a single one-line
+    entry for test_rationale that links to the reference page, and the field
+    reference is no longer than it was before the change,
+  And the reference page and the store schema's description of test_rationale
+    state the same two meanings,
+  And a reader who writes a declaration from the reference page alone produces one
+    the commit-time record check and the done gate both accept.
+depends_on: [BO-2500a-8, BO-2500a-8-i]
+doc_links:
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/done-proof-enforcement.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The test_rationale row in the field table (line 80 on 2026-10-24) defines the field only as justification for test_spec's shape. This is also where TQ-400e-6's reference entry lives."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: documentation-expert
+estimated_complexity: S
+declared_files:
+  - path: docs/reference/test-free-declarations.md
+    state: to_be_created
+  - path: docs/how-to/prove-ac-done.md
+    state: existing
+  - path: docs/how-to/done-proof-enforcement.md
+    state: existing
+  - path: docs/architecture/components/phantom-done-prevention.md
+    state: existing
+  - path: docs/reference/ac-schema.md
+    state: existing
+  - path: docs/INDEX.md
+    state: existing
+it_requirements:
+  - The explanation goes in the new page docs/reference/test-free-declarations.md, kept under
+    check-doc-length's 300-line limit, with the frontmatter check-doc-frontmatter requires,
+    and registered in docs/INDEX.md in the same change.
+  - 'docs/reference/ac-schema.md (774 lines, over the limit) gets one line for test_rationale
+    linking to the new page. The file must be no longer than before the change (criteria),
+    which is also what the check-doc-length growth ratchet enforces: replace the row, do not
+    add one.'
+  - The new page links to the TQ-400e-6 entry for when a declaration is honoured or refused
+    and which records may carry one; it carries no list of those conditions. The three guides
+    link to the new page and drop any explanation of the waiver of their own.
+  - 'The two meanings on the new page match the schema description BO-2500a-8-i writes in
+    config/ac_store_schema.json: build after BO-2500a-8-i, and read the schema text rather
+    than paraphrasing it.'
+  - 'Keep check-doc-frontmatter and check-doc-links passing: update last_updated on each edited
+    page, and every link and anchor must resolve.'
+test_required: false
+test_rationale: 'A new reference page, three guides that point to it and a one-line field
+  row are prose for people; nothing in them executes. What verifies them: check-doc-links
+  proves every link from the guides and the field row to the new page, and from the page to
+  the TQ-400e-6 entry, resolves; check-doc-length''s growth ratchet refuses a commit in which
+  docs/reference/ac-schema.md grows; the page''s two meanings are compared at pull-request
+  review with the schema description BO-2500a-8-i writes; and the last clause, a declaration
+  written from the page being accepted, rests on BO-2500a-8-i''s commit-time tests and BO-2500a-1-ii''s
+  done-gate tests.'
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500a-8-i
+    contract: "The schema description wording for test_rationale's two meanings; the reference row matches it."
+  - ac_id: TQ-400e-6
+    contract: "The exemption reference entry the three pages link to, as the single statement of when a declaration is honoured or refused and which records may carry one."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+declares_side_effect: false
+notes: |
+  Wave 1. Defect 2 of the brief: the waiver is undocumented in the three guides,
+  and test_rationale is defined with only one of its two meanings. Per the user's
+  scope change 3 (PO gate 2026-10-25) the guides point to TQ-400e-6 and do not
+  restate its rules.
+
+  User decision 2026-10-25 (IT PO stage): the account goes into a NEW page,
+  docs/reference/test-free-declarations.md; docs/reference/ac-schema.md gets only
+  a one-line row linking to it, with no net growth. The IT PO's declared_files
+  need the new page added (state to_be_created).
+
+  Boundary with TQ-400e-6. TQ-400e-6's reference entry also lives in
+  docs/reference/ac-schema.md, at the test_required / test_rationale rows. This
+  record changes the field DEFINITION (what the field means); the exemption RULES
+  (when honoured, when refused, who is eligible) stay TQ-400e-6's. If TQ-400e-6 is
+  not built when this record is, the link points at the existing rows and the open
+  question in the BA report applies.

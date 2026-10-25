@@ -1,0 +1,124 @@
+id: BO-2500f-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "A check that nothing runs verifies nothing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check carrying an enforces tag for a record, and the record stating that
+    the check runs as commit-time hook "check-skill-refs" or as build phase
+    "docs-lint",
+  When the wiring is evaluated as part of the record's done-status,
+  Then the verification holds only if the hook is registered in the project's
+    active commit-time hook configuration and that registration invokes this check,
+    or the build phase is one the build pipeline dispatches and that phase invokes
+    this check,
+  And a check named only in text, such as a comment, a document or a disabled
+    registration, is not wired, because only an actual invocation counts
+    (BO-2900b-3),
+  And a check registered under a hook id other than the one the record states fails
+    the verification, naming both hook ids,
+  And a check that was wired when the record was written and has since been
+    unwired fails the next time that record's done-status is evaluated, naming the
+    missing registration,
+  And re-checking the wiring of records already finished, on a schedule and without
+    a change to them, is not done here; it is TQ-400a's.
+depends_on: [BO-2500f-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Only an actual invocation counts as a caller; a name in text does not. The brief's 'reuse the BO-2900 reachability-gate idea'."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/ac_store/_verification_wiring.py
+    state: to_be_created
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+it_requirements:
+  - 'Hook wiring is read from the active hook configuration: the generated .pre-commit-config.yaml
+    at the repo root (in CI it exists after the build step). A hook counts only if it is present,
+    not disabled, in a stage that runs on commit, and its entry invokes the check. Map the
+    deployed entry path (.leafcutter/scripts/commit_guardian/<x>.py, run through run_hook.py)
+    back to its template source through the build''s deploy mapping, never by guessing from
+    the basename.'
+  - If .pre-commit-config.yaml is absent or unparseable, the verdict is 'could not evaluate'
+    (fail closed; BO-2500f-4-i), never 'holds' and never a silent 'not wired'.
+  - 'Build-phase wiring: a phase counts only if the build pipeline dispatches it and that
+    phase invokes the check. ''Build phase'' is read as a scripts/build.py phase (the build_phases*.py
+    modules). Confirm this with the user (open question) and do not invent a phase registry.'
+  - Whether a line invokes the check is decided by BO-2900b-3's collector (collected_invocations
+    in templates/scripts/commit_guardian/_reachability_invocation_collector.py), reused, not
+    copied. A name in a comment, a document or a disabled entry is not an invocation.
+  - A hook-id mismatch names both ids; an unwired check names the missing registration.
+  - Evaluated per record at mark time only; no periodic re-check here (TQ-400a).
+  - Every new module under scripts/ac_store/ is added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py,
+    and its import is proven in the DEPLOYED .leafcutter/ layout, not only the source tree
+    (the BO-2500a-1-ii ModuleNotFoundError precedent).
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: the verification holds only if the hook is registered in the project's active
+      commit-time hook configuration and that registration invokes this check, or the build
+      phase is one the build pipeline dispatches and that phase invokes this check
+    needs_test: true
+    reason: Wiring separates a check that runs from one that merely exists, and both the hook
+      route and the phase route need a positive case.
+  - clause: a check named only in text, such as a comment, a document or a disabled registration,
+      is not wired, because only an actual invocation counts (BO-2900b-3)
+    needs_test: true
+    reason: A name in text is the BO-2900b-3 trap; a comment and a disabled registration must
+      each be shown not to count.
+  - clause: a check registered under a hook id other than the one the record states fails
+      the verification, naming both hook ids
+    needs_test: true
+    reason: A check wired under another id passes an exists test, so the mismatch needs its
+      own case with both ids in the message.
+  - clause: a check that was wired when the record was written and has since been unwired
+      fails the next time that record's done-status is evaluated, naming the missing registration
+    needs_test: true
+    reason: Wiring is re-read at each evaluation; unwiring after the record was written shows
+      no cached verdict is reused.
+  - clause: re-checking the wiring of records already finished, on a schedule and without
+      a change to them, is not done here; it is TQ-400a's
+    needs_test: false
+    reason: This states a boundary (TQ-400a owns scheduled re-checks), and there is no behaviour
+      here to exercise.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-2
+    contract: 'wiring_verdict(check_path, wired_as, repo_root) -> {holds: bool, reason: str};
+      the reason names both hook ids on a mismatch and the missing registration when unwired;
+      ''could not evaluate'' when the hook configuration cannot be read.'
+expects_from:
+  - ac_id: BO-2500f-2
+    contract: "The check named by the record and its enforces tag."
+  - ac_id: BO-2900b-3
+    contract: "The invocation-not-mention rule for what counts as a caller."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. The hook and phase names in the Given are examples; the brief named
+  scripts/check_skill_refs.py as a candidate check. Per user scope change 4 the
+  periodic re-check stays in TQ-400 (TQ-400a/b); cross-referenced, not duplicated.

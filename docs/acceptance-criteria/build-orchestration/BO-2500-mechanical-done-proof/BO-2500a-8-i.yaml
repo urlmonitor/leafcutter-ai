@@ -1,0 +1,219 @@
+id: BO-2500a-8-i
+components:
+  - build_orchestration
+  - ac_store
+title: "A record cannot be written declaring no test is needed unless it also states why"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement record being added or changed that sets test_required to
+    false,
+  And its test_rationale is absent, null, an empty string, or only whitespace,
+  When the commit-time record check (check-ac-schema) checks the record as part of
+    the change being committed,
+  Then the record is refused,
+  And the refusal names the record id, the field test_rationale, and that a
+    test-free declaration needs a stated reason,
+  And the refusal applies at every readiness (draft, reviewed, approved) and for
+    every change_target, so the authoring side can no longer produce a record the
+    done gate refuses at mark time,
+  And the same record carrying a non-empty test_rationale is accepted,
+  And a record whose test_required is true or absent is checked exactly as before,
+    with test_rationale still optional for it,
+  And the test "is the reason non-empty" applied here is the same shared rule the
+    done gate applies (BO-2500a-1-ii), so for any record the authoring check and the
+    done gate agree on whether a reason is present,
+  And a stored record that lacks a reason and is not part of the change being
+    committed is not refused by that commit; it is refused the first time it is
+    itself changed,
+  And the refusal is made by the commit-time record check alone: the store schema
+    carries no conditional rule for it, and its only change is a clearer
+    description of test_rationale stating both meanings (with test_required false,
+    the reason no test can prove the record; alongside test_spec, the
+    justification for that test contract's shape),
+  And the whole-store baseline test that validates every stored record against the
+    schema is unchanged and still passes with the 99 stored records that lack a
+    reason.
+depends_on: [BO-2500a-8, BO-2500a-1-ii]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "Field table rows for test_required and test_rationale (the test_rationale row is the overloaded definition this record's last clause corrects at the schema level; BO-2500a-8-iii corrects the reference row)."
+  - path: config/ac_store_schema.json
+    relationship: constrains
+    status: exists
+    relevance: "Holds the test_rationale definition that today reads only as 'justification for the test contract in test_spec'."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: templates/scripts/commit_guardian/_ac_schema_validators.py
+    state: existing
+  - path: config/ac_store_schema.json
+    state: existing
+  - path: scripts/ac_store/_done_proof_phase_helpers.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    state: to_be_created
+it_requirements:
+  - ONE PREDICATE, TWO CALLERS. The reason-present test (a str that is non-empty after strip)
+    is defined once beside is_covers_tag_waived in scripts/ac_store/_done_proof_phase_helpers.py,
+    is_covers_tag_waived is rewritten to use it, and the commit-time validator imports that
+    same function. A re-typed check in templates/scripts/commit_guardian/_ac_schema_validators.py
+    repeats the defect BO-2500a-1-ii fixed.
+  - The commit-guardian validator reaches scripts/ac_store through the existing _ac_store_locator
+    seam, and the import must resolve in the deployed .leafcutter/ layout. A failed import
+    refuses the record (fail closed); it never skips the rule.
+  - 'ONE ENFORCEMENT POINT (user decision 2026-10-25). The refusal lives in check-ac-schema''s
+    staged-records pass only, through the new sibling module called from validate_test_contract.
+    config/ac_store_schema.json gets no if/then, no required key and no pattern for test_rationale:
+    its only change is the description stating the two meanings.'
+  - THE WHOLE-STORE BASELINE STAYS AS IT IS. unit_tests/ac_store/test_acs_100i_7_store_wide_pass.py
+    and its recorded baseline (tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json)
+    are not edited, and the test passes in the same change with the 99 stored reasonless records
+    present. A change that needs that baseline re-recorded has put a rule in the schema and
+    is wrong.
+  - Applies at every readiness and every change_target. The existing approved-leaf-code rule
+    and the test_spec/test_required contradiction rule in validate_test_contract are unchanged.
+  - The refusal message (record id, the field test_rationale, and that a test-free declaration
+    needs a stated reason) is quoted by BO-2500a-8-ii, so changing its wording later is a
+    contract change.
+  - 'check-file-size: .py files are limited to 400 counted lines and an already-oversized
+    file may not grow net (GE-127b-1 ratchet). _done_proof_phase_helpers.py (820 lines) stays
+    net neutral because the reason half moves out of is_covers_tag_waived''s body into the
+    new predicate. _ac_schema_validators.py (648) may not grow, so the new rule lives in a
+    sibling module, templates/scripts/commit_guardian/_ac_test_rationale_validators.py, called
+    from validate_test_contract (the _ac_side_effect_validators.py precedent; the build copies
+    every .py in that directory).'
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: the record is refused
+    needs_test: true
+    reason: The refusal is the gate itself, and a validator that never fires lets the authoring
+      side keep producing records the done gate refuses.
+  - clause: the refusal names the record id, the field test_rationale, and that a test-free
+      declaration needs a stated reason
+    needs_test: true
+    reason: The message is a contract the planner's instructions quote, and a wrong field
+      name sends authors to fix the wrong thing.
+  - clause: the refusal applies at every readiness (draft, reviewed, approved) and for every
+      change_target, so the authoring side can no longer produce a record the done gate refuses
+      at mark time
+    needs_test: true
+    reason: The old rule fires only on approved leaf code records, so a draft docs record
+      is the case that shows the new rule is not scoped like the old one.
+  - clause: the same record carrying a non-empty test_rationale is accepted
+    needs_test: true
+    reason: A refuse-everything validator passes every refusal test, so the accepting case
+      proves the rule tests presence.
+  - clause: a record whose test_required is true or absent is checked exactly as before, with
+      test_rationale still optional for it
+    needs_test: true
+    reason: Records with test_required true or absent must see no new refusal, and only that
+      case catches an over-broad condition.
+  - clause: the test "is the reason non-empty" applied here is the same shared rule the done
+      gate applies (BO-2500a-1-ii), so for any record the authoring check and the done gate
+      agree on whether a reason is present
+    needs_test: true
+    reason: Two callers of one predicate can drift, and a boundary set run through both the
+      authoring check and the done gate is what catches a re-typed copy.
+  - clause: a stored record that lacks a reason and is not part of the change being committed
+      is not refused by that commit; it is refused the first time it is itself changed
+    needs_test: true
+    reason: 'Diff scope is behaviour: a whole-store implementation would block every commit
+      while about 99 unfinished records lack a reason.'
+  - clause: 'the refusal is made by the commit-time record check alone: the store schema carries
+      no conditional rule for it, and its only change is a clearer description of test_rationale
+      stating both meanings (with test_required false, the reason no test can prove the record;
+      alongside test_spec, the justification for that test contract''s shape)'
+    needs_test: true
+    reason: A schema-level conditional would refuse stored records; validating a reasonless
+      record against the JSON schema alone shows the schema stays permissive, while the description
+      wording itself is reviewed, not tested.
+  - clause: the whole-store baseline test that validates every stored record against the schema
+      is unchanged and still passes with the 99 stored records that lack a reason
+    needs_test: true
+    reason: The existing whole-store baseline test, run unmodified in the same change, is
+      the proof; a rule slipped into the schema turns it red.
+expects_from: null
+delivers_to:
+  - agent: llm-expert
+    ac_id: BO-2500a-8-ii
+    contract: 'The refusal message check-ac-schema prints for a staged record with test_required
+      false and no reason: it names the record id, the field test_rationale, and that a test-free
+      declaration needs a stated reason. The planner''s instructions quote it.'
+  - agent: documentation-expert
+    ac_id: BO-2500a-8-iii
+    contract: 'The test_rationale description in config/ac_store_schema.json, stating its
+      two meanings (with test_required false: the reason no test can prove the record; alongside
+      test_spec: justification of the test contract''s shape). The reference row in docs/reference/ac-schema.md
+      states the same two meanings.'
+  - agent: it-po
+    ac_id: BO-2500a-8-iv
+    contract: 'The commit-time refusal: a staged record with test_required false whose test_rationale
+      fails the shared reason-present predicate fails check-ac-schema, so every backfilled
+      record is checked as it is committed.'
+  - agent: python-coder
+    ac_id: BO-2500f-1
+    contract: 'The shared reason-present predicate (one function in scripts/ac_store/_done_proof_phase_helpers.py:
+      a str non-empty after strip) and the write-time refusal. The wave-2 verification record
+      is added to this reason, never substituted for it.'
+  - agent: python-coder
+    ac_id: BO-2500a-8-v
+    contract: 'templates/scripts/commit_guardian/_ac_test_rationale_validators.py, called
+      from validate_test_contract for each staged record, and the reason-present predicate:
+      a record whose reason is empty is BO-2500a-8-i''s refusal and takes no part in the duplicate
+      comparison.'
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 1 of the done-proof remedy (user decision 2026-10-24 "plan both waves";
+  scope confirmed at the PO gate 2026-10-25). Defect 1 of the brief: the done side
+  (BO-2500a-1-ii) refuses a test-free declaration with no reason, while the
+  authoring side accepts it. Today the commit-time record check only rejects an
+  approved leaf code record that has neither test_spec nor test_required false; it
+  never asks for the reason (validate_test_contract in
+  scripts/commit_guardian/_ac_schema_validators.py, mirrored under templates/).
+
+  User decision 2026-10-25 (IT PO stage): the refusal lives in check-ac-schema
+  only, on records being written or changed. No JSON-schema if/then rule; the
+  schema gets only a clearer test_rationale description; the whole-store baseline
+  test is unchanged.
+
+  Unasked-for clause, kept deliberately: "a stored record ... is not refused by
+  that commit". Without it the rule could be built as a whole-store sweep, and the
+  96 todo + 3 in_progress records still lacking a reason (measured 2026-10-25)
+  would block every commit until BO-2500a-8-iv is finished. The refusal is on
+  change, so the backfill can proceed record by record.
+
+  The planner's instruction wording is a separate record (BO-2500a-8-ii,
+  llm-expert) because it is a different craft and a different proof kind
+  (BO-3500c-2-iv, prompt).
+
+  Wave 2 (BO-2500f-1) adds a typed verification record on top of this reason; it
+  does not remove this rule.

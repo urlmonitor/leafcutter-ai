@@ -1,0 +1,173 @@
+id: BO-2500a-8-v
+components:
+  - build_orchestration
+  - ac_store
+title: "A test_rationale copied from another record is refused, naming the record it duplicates"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store in which record DK-210b-3, declared with test_required false,
+    already carries the test_rationale "Docs-only change; no executable behaviour
+    to test.",
+  And a record being added or changed, also declared with test_required false,
+    carries the test_rationale "docs only change  -  no executable behaviour to
+    test",
+  When the commit-time record check (check-ac-schema) checks the changed record,
+  Then the record is refused, because its test_rationale is identical to
+    DK-210b-3's once both are normalised,
+  And normalising folds letter case, collapses every run of whitespace to one
+    space, ignores punctuation, and trims both ends,
+  And the refusal names the changed record, the field test_rationale, and the
+    other record that already carries the same text (DK-210b-3),
+  And when the same text is carried by more than one other record, the refusal
+    names every one of them,
+  And a test_rationale that differs from every other record's after normalising
+    is accepted, even when it shares most of its words with one,
+  And the comparison is made against every record in the store declared with
+    test_required false, not only the records in the change being committed,
+  And only records declared with test_required false take part: the
+    test_rationale of a record whose test_required is true or absent (the
+    justification of its test_spec) is never compared and never refused by this
+    rule, even when it is identical to another record's test_rationale,
+  And two records in the same change that carry the same normalised text are both
+    refused, each naming the other,
+  And a stored record left unchanged by the commit is not refused by it, even if
+    its text duplicates another stored record's; it is refused the first time it
+    is itself changed.
+depends_on: [BO-2500a-8, BO-2500a-8-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "The user's 'no templated text' decision for the backfill. This record turns it into a mechanical rule for every later write."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/check_ac_schema.py
+    state: existing
+it_requirements:
+  - Same sibling module as BO-2500a-8-i (templates/scripts/commit_guardian/_ac_test_rationale_validators.py);
+    build after BO-2500a-8-i, in the same lane.
+  - 'NORMALISATION IS ONE FUNCTION: case-fold, replace every punctuation character (Unicode
+    category P*) with a space, collapse every whitespace run to one space, trim both ends.
+    Punctuation is REPLACED, not deleted; deleting it turns ''Docs-only'' into ''docsonly''
+    and the Given''s two texts would no longer match. The same function is the uniqueness
+    check BO-2500a-8-iv runs before showing a batch.'
+  - 'Comparison population: every record in the store whose test_required is exactly False
+    and whose reason is non-empty by the shared predicate (an empty reason is BO-2500a-8-i''s
+    refusal, not a duplicate). Read it from the store index check-ac-schema already builds
+    (_ac_store_index.get_ac_index, the shared mtime-keyed cache), never a second store walk.
+    A staged record''s staged text replaces its stored text, so a record is never compared
+    with its own previous version.'
+  - Only staged records are refused; stored duplicates are reported by nothing until they
+    are changed. The refusal names the changed record, the field test_rationale and every
+    other record carrying the same normalised text, sorted by id.
+  - 'Performance: one pass builds a normalised-text-to-ids map over about 3,200 records; the
+    rule must add under one second to check-ac-schema on a warm index.'
+  - 'Fail closed: if the store index cannot be read, a staged test-free record is refused
+    with the reason that uniqueness could not be confirmed; it is never let through silently.'
+  - 'check_ac_schema.py is 723 lines, over check-file-size''s 400-line limit, and may not
+    grow net: the rule lives in the sibling module and the call-site change in check_ac_schema.py
+    (passing the store index through) stays net non-growing.'
+test_required: true
+test_intent:
+  - clause: the record is refused, because its test_rationale is identical to DK-210b-3's
+      once both are normalised
+    needs_test: true
+    reason: The duplicate refusal is the rule itself, and only the Given's two differently
+      written texts show normalisation is applied before comparing.
+  - clause: normalising folds letter case, collapses every run of whitespace to one space,
+      ignores punctuation, and trims both ends
+    needs_test: true
+    reason: Each normalisation step (case, whitespace, punctuation, trim) is a separate way
+      two copies can differ, and each needs its own case, including punctuation replaced rather
+      than deleted.
+  - clause: the refusal names the changed record, the field test_rationale, and the other
+      record that already carries the same text (DK-210b-3)
+    needs_test: true
+    reason: The message must name the other record, or the author cannot find which reason
+      they copied.
+  - clause: when the same text is carried by more than one other record, the refusal names
+      every one of them
+    needs_test: true
+    reason: A rule that stops at the first match would name one record; a text shared by three
+      records shows all are named.
+  - clause: a test_rationale that differs from every other record's after normalising is accepted,
+      even when it shares most of its words with one
+    needs_test: true
+    reason: A refuse-on-overlap rule would pass every refusal test, so a near-identical but
+      different reason must be shown accepted.
+  - clause: the comparison is made against every record in the store declared with test_required
+      false, not only the records in the change being committed
+    needs_test: true
+    reason: Comparing only within the commit would miss the commonest case, a copy of a stored
+      record's reason; the stored-record case shows the whole store is read.
+  - clause: 'only records declared with test_required false take part: the test_rationale
+      of a record whose test_required is true or absent (the justification of its test_spec)
+      is never compared and never refused by this rule, even when it is identical to another
+      record''s test_rationale'
+    needs_test: true
+    reason: test_rationale has a second meaning on records with a test_spec, and identical
+      texts there must be shown never compared or refused.
+  - clause: two records in the same change that carry the same normalised text are both refused,
+      each naming the other
+    needs_test: true
+    reason: Two copies arriving in one commit have no stored original, so only a same-change
+      pair shows both are refused and each names the other.
+  - clause: a stored record left unchanged by the commit is not refused by it, even if its
+      text duplicates another stored record's; it is refused the first time it is itself changed
+    needs_test: true
+    reason: 'Diff scope is behaviour: stored duplicates must not block an unrelated commit,
+      which a store holding a duplicate pair shows.'
+delivers_to:
+  - agent: it-po
+    ac_id: BO-2500a-8-iv
+    contract: The normalisation function (case-fold, punctuation to space, collapse whitespace,
+      trim) and the commit-time duplicate refusal; the backfill checks each proposed reason
+      with the same function before a batch is shown, and each committed record passes the
+      refusal.
+expects_from:
+  - ac_id: BO-2500a-8-i
+    contract: The sibling validator module and its call from validate_test_contract, and the
+      reason-present predicate that decides which records take part.
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 1. User decision 2026-10-25 (IT PO stage): check-ac-schema refuses a
+  test_rationale whose normalised text (case, whitespace, punctuation folded) is
+  identical to another record's test_rationale in the store, and the refusal names
+  the other record.
+
+  Scope (narrowed by the user 2026-10-25): only the test-free reason is compared,
+  meaning the test_rationale of records with test_required false, and only
+  against other test-free records. The test_spec-justification meaning on other
+  records is out of scope.
+
+  Interaction with existing duplicates: the store may already hold records that
+  share a rationale. They are not refused until they are changed (last clause),
+  the same on-change rule as BO-2500a-8-i, so the store does not block on day one.
+
+  DK-210b-3 and the texts in the Given are examples.

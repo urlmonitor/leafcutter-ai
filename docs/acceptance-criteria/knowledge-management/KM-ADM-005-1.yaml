@@ -1,0 +1,149 @@
+id: KM-ADM-005-1
+components:
+  - knowledge_management
+  - testing_quality
+title: "Records the done gate waives leave the untagged-done count, each exclusion stated with its ground"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the untagged-done ratchet counting finished records that no test tags,
+  And among them finished records declared test-free with a non-empty stated reason
+    (31 of the 240 counted on 2026-10-24),
+  When the ratchet measures its count,
+  Then a record the done gate waives, decided by the same shared rule the gate uses
+    (BO-2500a-1-ii), is not counted as untagged,
+  And the measurement reports each exclusion as a count paired with its ground:
+    "superseded" for superseded records and "waived: declared test-free with a
+    stated reason" for waived ones,
+  And both grounds are on the published list of legitimate grounds (ACS-1100b-1),
+    and an exclusion without a ground on that list is reported as an unexplained
+    shortfall,
+  And the untagged count plus every exclusion count plus the tagged count equals
+    the number of finished records enumerated,
+  And a finished record declared test-free WITHOUT a stated reason is still counted
+    as untagged,
+  And in the same change the recorded high-water mark is lowered to the newly
+    measured count, with that count's measurement date and inclusion rule recorded
+    beside it, and is never left at the old value or raised,
+  And after the change, marking a waived record done does not raise the count,
+    while marking a finished record with no tag and no waiver done still fails the
+    ratchet.
+depends_on: [KM-ADM-005, BO-2500a-1-ii]
+doc_links:
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: verifies
+    status: exists
+    relevance: "The ratchet. Lines 160-226 on 2026-10-24 exclude only superseded records; HIGH_WATER_MARK = 240, exactly today's count, so every legitimate waived close trips it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
+    relationship: constrains
+    status: exists
+    relevance: "The shared waiver rule. The ratchet consults it rather than re-implementing the conjunction."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: "Every exclusion states its ground; counts sum; provenance and measurement date travel with the figure."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/ac_store/untagged_done_count.py
+    state: to_be_created
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    state: existing
+it_requirements:
+  - The waiver decision is a call to the shared predicate (is_covers_tag_waived, imported
+    from scripts/ac_store), never a re-typed conjunction. When BO-2500f-4 replaces it, this
+    caller moves through KM-ADM-005-2.
+  - Measurement (enumerate finished records, exclusions with grounds, tagged, untagged, the
+    sum check) moves out of the test file into scripts/ac_store/untagged_done_count.py, so
+    the counting logic can be tested and KM-ADM-005-2 extends one place. The ratchet test
+    keeps reading the LIVE store and live test roots; no fixture stands in for the corpus
+    in the ratchet itself.
+  - Ground strings are declared once, in that module. If ACS-1100b-1's published list does
+    not exist when this is built, declare the two grounds there and name ACS-1100b-1 as their
+    eventual owner; do not create a second list.
+  - The sum check (untagged + each exclusion + tagged == finished records enumerated) runs
+    on every ratchet run, so an unexplained shortfall fails loudly instead of shrinking the
+    count.
+  - 'Lowering HIGH_WATER_MARK: measure on the branch at build time, and record the value,
+    date, commit and inclusion rule in the comment beside it (the file''s existing style).
+    The expected drop is the waived-and-untagged population (31 on 2026-10-24); a different
+    figure is reported, never forced.'
+  - Stdlib only; the new module stays under the 400-line check-file-size limit.
+test_required: true
+test_intent:
+  - clause: a record the done gate waives, decided by the same shared rule the gate uses (BO-2500a-1-ii),
+      is not counted as untagged
+    needs_test: true
+    reason: The exclusion is the behaviour being added, and a ratchet that still counts waived
+      records trips on every legitimate close.
+  - clause: 'the measurement reports each exclusion as a count paired with its ground: "superseded"
+      for superseded records and "waived: declared test-free with a stated reason" for waived
+      ones'
+    needs_test: true
+    reason: The ground reported with each exclusion is computed output, and a missing or wrong
+      ground hides why records left the count.
+  - clause: both grounds are on the published list of legitimate grounds (ACS-1100b-1), and
+      an exclusion without a ground on that list is reported as an unexplained shortfall
+    needs_test: true
+    reason: An exclusion with an unlisted ground must surface as a shortfall, and only a case
+      with such a ground shows it is not silently accepted.
+  - clause: the untagged count plus every exclusion count plus the tagged count equals the
+      number of finished records enumerated
+    needs_test: true
+    reason: The sum is arithmetic over enumerations, and an off-by-one in any bucket breaks
+      it silently.
+  - clause: a finished record declared test-free WITHOUT a stated reason is still counted
+      as untagged
+    needs_test: true
+    reason: A too-broad waiver test (test_required false alone) passes every positive case,
+      so the reasonless record must be shown still counted.
+  - clause: in the same change the recorded high-water mark is lowered to the newly measured
+      count, with that count's measurement date and inclusion rule recorded beside it, and
+      is never left at the old value or raised
+    needs_test: false
+    reason: The new mark is a measured constant written once with its date and rule; review
+      compares it with the measurement, and a test would only restate the number.
+  - clause: after the change, marking a waived record done does not raise the count, while
+      marking a finished record with no tag and no waiver done still fails the ratchet
+    needs_test: true
+    reason: 'This is the ratchet''s end-to-end behaviour on the real store: a waived close
+      must not move the count, and an unwaived untagged close must still fail it.'
+delivers_to:
+  - agent: python-coder
+    ac_id: KM-ADM-005-2
+    contract: "The ratchet's exclusion-with-ground reporting and lowered high-water mark, which the wave-2 split replaces the 'waived' ground of."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+declares_side_effect: false
+notes: |
+  Wave 1. Placed under KM-ADM-005, the ratchet's owner (user scope change 2,
+  PO gate 2026-10-25), not under BO-2500a-1 as the brief first proposed.
+
+  ACS-1100b-1 is todo and unbuilt; it is a doc_link, not a depends_on, so this
+  record is not blocked on it. If the published list of grounds does not exist yet,
+  the ratchet declares its two grounds in place and ACS-1100b-1 adopts them.
+
+  Lowering the high-water mark here is a re-scoping, not TQ-400d's drawdown: the
+  waived records leave the population, they are not retired from the pile. Per
+  KM-ADM-005's reconciliation note, nothing ever raises it.
+
+  The wave-2 split of this ratchet (typed record only; second count at 0) is
+  KM-ADM-005-2.

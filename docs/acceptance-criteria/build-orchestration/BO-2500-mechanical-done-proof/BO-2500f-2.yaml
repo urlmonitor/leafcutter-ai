@@ -1,0 +1,160 @@
+id: BO-2500f-2
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A check verifies a record only when the check itself names that record"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test-free record whose verification record names a check,
+  When the record's done-status is evaluated,
+  Then the verification holds only if the named check exists and carries a tag
+    "# enforces: <id>" naming this record's id, and the check is wired as
+    BO-2500f-2-i requires,
+  And a named check that does not exist fails the verification, naming the check,
+  And a named check with no enforces tag for this id fails the verification, naming
+    the check and the missing tag,
+  And enforces tags are collected by the same scan that collects covers tags, so
+    the link graph carries a check-enforces link from each tagged check to the
+    record it names,
+  And an enforces tag naming an id that is not an active record counts toward no
+    record and is reported as dangling, with the id and the check it was found in,
+    exactly as a dangling covers tag is (BO-2500a-1-i),
+  And where the record's deliverable is of a kind for which BO-3500c-2 defines a
+    proof, the check must be the instrument of that kind's proof, and a check whose
+    class of proof is weaker than that kind requires does not verify the record,
+  And no list of check kinds is kept for this purpose beyond the per-kind proofs
+    BO-3500c-2 already defines.
+depends_on: [BO-2500f, BO-2500f-1]
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The dangling-tag rule for covers tags, applied unchanged to enforces tags."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3500-buildable-by-any-craft/BO-3500c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Per-kind proofs for non-code work (written page, diagram, screen, prompt, setting). A check-method record points at these, it does not define its own."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/ac_store/_enforces_tags.py
+    state: to_be_created
+  - path: scripts/ac_store/done_proof.py
+    state: existing
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+  - path: docs/reference/artifact-knowledge-graph.graph.json
+    state: existing
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    state: existing
+it_requirements:
+  - 'Tag syntax ''# enforces: <AC-ID>'' (''// enforces:'' in JS checks), parsed by the same
+    tag scanner as covers (done_proof''s _scan_test_file_for_all_tags already emits tag_type
+    entries; enforces is one more tag_type), so id normalisation (quote stripping, full hierarchical
+    ids) is shared. Covers results must not change.'
+  - The covers scan walks test roots, but checks live under templates/scripts/ and scripts/.
+    The enforces scan reads the check the record names (its source path; ADR-001) and the
+    source roots, for the dangling report. Deployed copies (.leafcutter/, and the scripts/commit_guardian/
+    build output) are never scanned, or every tag is counted twice.
+  - done_proof.py is 1989 lines; the growth ratchet refuses net growth. New code goes in scripts/ac_store/_enforces_tags.py,
+    and any edit to done_proof.py is net non-growing.
+  - Dangling enforces tags reuse BO-2500a-1-i's mechanism and message shape; one report lists
+    both tag kinds, each labelled.
+  - 'Graph: add a check-enforces edge (source check, target ac, rel ENFORCES) to docs/reference/artifact-knowledge-graph.graph.json
+    and its row to the data-map doc, with an enforcement note saying it is checked at mark
+    time only.'
+  - The proof class per kind comes from BO-3500c-2 (derive_proof_kind's class reading|comparing).
+    No list of check kinds is kept here. Clause 6 waits on BO-3500c-2.
+  - 'Verdict to BO-2500f-4: {ac_id, holds, reason}; never raises.'
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: 'the verification holds only if the named check exists and carries a tag "# enforces:
+      <id>" naming this record''s id, and the check is wired as BO-2500f-2-i requires'
+    needs_test: true
+    reason: The two-sided link is the fix for defect 3, and a check that exists but does not
+      name the record must not verify it.
+  - clause: a named check that does not exist fails the verification, naming the check
+    needs_test: true
+    reason: A missing check file is the commonest stale state after a rename.
+  - clause: a named check with no enforces tag for this id fails the verification, naming
+      the check and the missing tag
+    needs_test: true
+    reason: Without this case a check that exists but tags another record would pass.
+  - clause: enforces tags are collected by the same scan that collects covers tags, so the
+      link graph carries a check-enforces link from each tagged check to the record it names
+    needs_test: true
+    reason: The enforces tag must use the shared scanner; covers results unchanged with enforces
+      tags present show no fork was made.
+  - clause: an enforces tag naming an id that is not an active record counts toward no record
+      and is reported as dangling, with the id and the check it was found in, exactly as a
+      dangling covers tag is (BO-2500a-1-i)
+    needs_test: true
+    reason: Dangling tags need the same report covers tags get, and without a test they are
+      dropped silently.
+  - clause: where the record's deliverable is of a kind for which BO-3500c-2 defines a proof,
+      the check must be the instrument of that kind's proof, and a check whose class of proof
+      is weaker than that kind requires does not verify the record
+    needs_test: true
+    reason: A weaker proof class satisfying a stronger kind is the escape BO-3500c-2 forbids;
+      only a mismatched pair shows the refusal.
+  - clause: no list of check kinds is kept for this purpose beyond the per-kind proofs BO-3500c-2
+      already defines
+    needs_test: false
+    reason: This states that no parallel list exists; it is judged at review against BO-3500c-2's
+      derivation and has no behaviour of its own to run.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-4
+    contract: 'check_verdict(record, repo_root) -> {ac_id: str, holds: bool, reason: str},
+      combining the enforces tag, the check''s existence and BO-2500f-2-i''s wiring verdict;
+      never raising.'
+  - agent: python-coder
+    ac_id: BO-2500f-2-i
+    contract: The check's source path and the record's wired_as value ('pre-commit:<hook-id>'
+      | 'build-phase:<name>'), once the enforces tag is confirmed.
+expects_from:
+  - ac_id: BO-2500f-1
+    contract: 'A valid check-form record: verified_by.check (source path) and verified_by.wired_as.'
+  - ac_id: BO-3500c-2
+    contract: 'derive_proof_kind(path) -> {kind, claimed_by, class: ''reading''|''comparing''}
+      or the no-match sentinel; the kind is derived, never self-declared.'
+  - ac_id: BO-2500f-2-i
+    contract: 'wiring_verdict(check_path, wired_as, repo_root) -> {holds: bool, reason: str}.'
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-2500f-2-i
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. Defect 3 of the brief: the waiver links the record to nothing. The
+  enforces tag is the link from the check's side; the record's named check is the
+  link from the record's side. Both are required, so neither side can claim the
+  other alone.
+
+  Per user scope change 1 (PO gate 2026-10-25): relate to BO-3500c and its
+  children by expects_from; no second check vocabulary.

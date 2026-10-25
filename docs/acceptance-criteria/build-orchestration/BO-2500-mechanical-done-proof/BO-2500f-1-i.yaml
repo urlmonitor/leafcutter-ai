@@ -1,0 +1,112 @@
+id: BO-2500f-1-i
+components:
+  - build_orchestration
+  - ac_store
+title: "An inspection cannot verify a record whose change can be tested"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test-free record whose change_target is code, schema or pipeline, alone
+    or as one value in a list,
+  When it carries an inspection verification record and is marked done,
+  Then marking done is refused, and the refusal names the change_target value that
+    rules inspection out,
+  And the same record carrying a check verification record that holds may be
+    marked done,
+  And writing or changing such a record without marking it done is not refused
+    for this reason (BO-2500f-1),
+  And a record whose change_target values are only docs, prompt or config may carry
+    an inspection,
+  And a record with no change_target is treated as ruling inspection out, so a
+    missing declaration never opens the weaker method,
+  And where the kind of the record's deliverable is determined from where its
+    declared files sit (BO-3500c-2) and that kind is code, schema or pipeline, a
+    change_target stating docs does not lift the refusal, and the disagreement is
+    reported as a defective declaration rather than adopted.
+depends_on: [BO-2500f-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3500-buildable-by-any-craft/BO-3500c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The kind of artifact is derived from where the deliverable sits; a record's own statement of its class is never honoured."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/ac_store/_verification_record.py
+    state: to_be_created
+it_requirements:
+  - Added to BO-2500f-1's validator as one more problem kind, naming the ruling change_target
+    value. Applied at mark time only; never at write time.
+  - change_target is read as a scalar or a list. code, schema or pipeline rule inspection
+    out; an absent or empty change_target fails closed. Only docs, prompt and config allow
+    it, so any other value (ui, infrastructure, model, dependency) also rules inspection out.
+  - 'The derived kind comes from BO-3500c-2''s derivation (derive_proof_kind, per that record''s
+    contract), applied to the record''s declared_files. No second path-to-kind table lives
+    here. BO-3500c-2 is draft and unbuilt, so clause 6 cannot be met until it lands (open
+    question: wait, or ship clauses 1 to 5 first).'
+  - When the declared change_target and the derived kind disagree, the record is reported
+    as a defective declaration naming both values, and the derived kind decides.
+test_required: true
+test_intent:
+  - clause: marking done is refused, and the refusal names the change_target value that rules
+      inspection out
+    needs_test: true
+    reason: This refusal is the loophole guard, and without it an inspection could close code
+      work.
+  - clause: the same record carrying a check verification record that holds may be marked
+      done
+    needs_test: true
+    reason: 'The guard must not over-block: the check method stays open to code records.'
+  - clause: writing or changing such a record without marking it done is not refused for this
+      reason (BO-2500f-1)
+    needs_test: true
+    reason: Silence at write time is behaviour, and a write path calling the rule would break
+      it.
+  - clause: a record whose change_target values are only docs, prompt or config may carry
+      an inspection
+    needs_test: true
+    reason: The allowed set is the other edge of the guard and needs its positive case.
+  - clause: a record with no change_target is treated as ruling inspection out, so a missing
+      declaration never opens the weaker method
+    needs_test: true
+    reason: Failing closed on a missing change_target is the case a lenient default gets wrong;
+      23 test-free records had none on 2026-10-24.
+  - clause: where the kind of the record's deliverable is determined from where its declared
+      files sit (BO-3500c-2) and that kind is code, schema or pipeline, a change_target stating
+      docs does not lift the refusal, and the disagreement is reported as a defective declaration
+      rather than adopted
+    needs_test: true
+    reason: A self-declared docs target escaping the derived kind is the exact bypass this
+      clause closes.
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500f-1
+    contract: "The validated verification record whose method this rule restricts."
+  - ac_id: BO-3500c-2
+    contract: "The derived kind of a deliverable from its declared location; this record adds no second kind vocabulary."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. Decided at mark time, like every verification-record refusal (user
+  decision 2026-10-25, see BO-2500f-1). The brief's loophole guard, plus two clauses nobody asked for: absent
+  change_target fails closed (23 test-free records had none on 2026-10-24), and a
+  self-declared change_target cannot escape the derived kind. Without the last
+  clause, flipping change_target to docs would re-open the hole this record closes.
