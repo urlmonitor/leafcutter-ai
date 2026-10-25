@@ -1,5 +1,5 @@
 ---
-title: "KI-BO-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace — /plan-feature returned pause_persist_failed at gate-ba from a workspace-maker workspace; the cause is not established, and the code still carries three ways to produce it"
+title: "KI-BO-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace — /plan-feature returned pause_persist_failed at gate-ba from a workspace-maker workspace because worktree-agent declined the pause-store write, and the code still carries two more ways to produce it"
 description: "high — the BA gate's pause record was reported unwritten, so the run could not be resumed. Not filed as an occurrence of KI-BO-20260928 (enveloped read-back) or KI-BO-20260927 (status-checker refusal): the reply was not kept, and pause-store calls no longer go to status-checker. Three candidate paths are open at origin/main 411b87761: an enveloped read-back, a worktree-agent decline, and an unescaped single quote in the --record argument (inferred)."
 type: reference
 category: reference
@@ -17,16 +17,17 @@ related_docs:
   - docs/how-to/resume-a-paused-plan-feature-run.md
 ---
 
-# KI-BO-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace — /plan-feature returned pause_persist_failed at gate-ba from a workspace-maker workspace; the cause is not established, and the code still carries three ways to produce it
+# KI-BO-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace — /plan-feature returned pause_persist_failed at gate-ba from a workspace-maker workspace because worktree-agent declined the pause-store write, and the code still carries two more ways to produce it
 
 - **Severity:** high. The run could not be resumed. The user has to commit the stage by hand and
   start a new run, and the drafts are at risk if they do not.
-- **Status:** open. No AC. **Mechanism not established.** The `pause-persist` and
-  `pause-persist-verify` replies were not kept, so this entry cannot say which path fired. It is
-  filed separately so that it is not counted as a confirmed occurrence of either related KI.
-- **Occurrences:** 1 (`/plan-feature` for KM-400d-4-i..iii, gate `gate-ba`, from a workspace made
-  by `.leafcutter/scripts/worktree.py ensure --kind ac`, 2026-10-22)
-- **First seen:** 2026-10-22 · **Last seen:** 2026-10-22
+- **Status:** open. No AC. **Mechanism established on the second occurrence (2026-10-25):
+  `worktree-agent` declined the write (candidate path 2).** See the section at the end. The first
+  occurrence's replies were not kept, so it may or may not have had the same cause.
+- **Occurrences:** 2 (`/plan-feature` for KM-400d-4-i..iii, 2026-10-22; `/plan-feature` run
+  `finalize-gate-child-1`, 2026-10-25; both at gate `gate-ba`, both from a workspace made by
+  `.leafcutter/scripts/worktree.py ensure --kind ac`)
+- **First seen:** 2026-10-22 · **Last seen:** 2026-10-25
 - **Where:** `templates/workflows-js/plan-feature.js:1756-1802` (`pauseAtGate()`): the write prompt
   at `:1778-1782`, the write dispatch at `:1783` (its reply is discarded), the read-back at
   `:1785-1787`, the failure return at `:1788-1801`. The read-back helper is
@@ -91,3 +92,26 @@ Used on 2026-10-22, and it worked:
 
 **Pattern:** a failure that discards its own evidence. The workflow knew what the write returned
 and threw it away, so the report cannot say which of three causes it was.
+
+## Occurrence 2026-10-25 — mechanism established: path 2 (worktree-agent declines)
+
+Reproduced on run `finalize-gate-child-1` (workflow run `wf_1133c2f0-d2d`), `/plan-feature` in a
+maker workspace (`ac/finalize-merge-gate-person-only`, base `411b87761`). The BA stage wrote its
+drafts, then gate-ba ended `pause_persist_failed`. The workflow's journal kept the reply the
+workflow itself discards. The `pause-persist` dispatch to `worktree-agent` returned:
+
+```text
+{"status":"error","code":"UNSUPPORTED_ACTION","message":"worktree-agent only supports 'create'
+ and 'remove'. The requested task is to persist a pause record for gate 'gate-ba' by running a
+ compound shell command that calls pause_store.py. That is neither action, so nothing was run and
+ no pause record was written.", ...}
+```
+
+`pause-persist-verify` then read `{"exists": false, "stale": false, "record": null}`. So the cause
+was candidate path 2: the agent declined on its charter. It also gave a second reason: the command
+is a compound shell line (`cd`, `||`, `&&`, subshells), which the global shell rules forbid. Path 1
+(wrapped read-back) and path 3 (quote in the record) did not fire in this run.
+
+That settles fix direction 3: move the pause-store dispatches to `shell-runner` (ADR-070) and give
+it single commands, not a compound line. Fix direction 1 still stands. The journal was the only
+place this reply survived.
