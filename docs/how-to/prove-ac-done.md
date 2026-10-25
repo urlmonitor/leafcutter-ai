@@ -5,12 +5,13 @@ type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-10-25
 components:
   - build_orchestration
   - testing_quality
 related_docs:
   - docs/how-to/done-proof-enforcement.md
+  - docs/reference/test-free-declarations.md
   - docs/how-to/fast-lane-build.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
@@ -28,6 +29,9 @@ tasks:
 2. [Understanding what the done-proof gate checks](#2-what-the-gate-checks)
 3. [Edge cases: how missing, failing, xfail, and skipped tests are treated](#3-edge-cases)
 4. [How dangling covers tags are flagged](#4-dangling-tags)
+
+A record declared test-free needs no covers tag; see
+[Reference: Test-Free Declarations](../reference/test-free-declarations.md).
 
 **Design reference:**
 

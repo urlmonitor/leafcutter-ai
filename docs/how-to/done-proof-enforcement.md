@@ -5,7 +5,7 @@ type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-09-27
+last_updated: 2026-10-25
 components:
   - build_orchestration
   - commit_guardian
@@ -13,6 +13,7 @@ components:
 related_docs:
   - docs/how-to/done-proof-reachability-gates.md
   - docs/how-to/prove-ac-done.md
+  - docs/reference/test-free-declarations.md
   - docs/how-to/fast-lane-build.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
@@ -191,6 +192,13 @@ unproven done AC without the CI gate observing it.
 > code by direct import when the unit has a real way in) and the sibling
 > no-entry-point-anywhere gate (`BO-2900a-3`, refuses a unit no way of running
 > the product can reach at all, however many tests pass).
+
+---
+
+## Records declared test-free
+
+A record declared test-free is judged by one shared rule in both layers. See
+[Reference: Test-Free Declarations](../reference/test-free-declarations.md).
 
 ---
 

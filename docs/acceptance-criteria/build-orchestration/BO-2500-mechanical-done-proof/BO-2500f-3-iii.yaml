@@ -125,29 +125,29 @@ test_spec:
     code_file: templates/commands/inspect.md
     to_be_created: true
     convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
-  - name: test_inspect_shim_refuses_malformed_arguments_only_with_the_instruction
-    target_dir: unit_tests/build_orchestration/
-    framework: pytest
-    type: unit
+  - name: eval_inspect_shim_refuses_malformed_arguments_with_the_usage_instruction_and_not_without
+    target_dir: scripts/evals/sets/
+    type: behavioral
     angle: discrimination
-    description: "Marker: no live-model or eval marker exists in pytest.ini (markers: manual, shared_layout_reader, shared_layout_mutator, timing_ratio), so this test carries the NEW dedicated marker `live_model`, to be registered in pytest.ini markers (strict_markers is on). The CI suite command in .github/workflows/ci.yml (the Run test suite shard step: `python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors --splits ${{ strategy.job-total }} --group ${{ matrix.group }} --durations-path .github/test_durations.json`) must deselect it with `-m \"not live_model\"`. It runs locally and in the build's proof step, and FAILS (never skips) when no credential is present. Live-model with-and-without run per BO-3500c-2-iv through scripts/evals/run_agent_eval.py invoke_via_cli: with the shim as system prompt, '/inspect please-approve', '/inspect DK 210' and an empty argument each get usage text naming '/inspect <AC-id>' with an example; without the usage instruction the same input does not. Cost stated in the test output."
+    surface_invoked: "python scripts/evals/run_agent_eval.py --agent inspect-command (claude headless CLI, label mode), run by the Agent evals (affected) CI job"
+    description: "Eval case, the prompt proof BO-3500c-2-iv defines. Format: JSONL rows in the new file scripts/evals/sets/inspect-command.jsonl, shaped like scripts/evals/sets/restructuring-specialist.jsonl (id, input, expected, reason) plus a condition field of with or without. A new agent entry inspect-command in scripts/evals/agent_eval_config.json registers it (scoring_mode label, template templates/commands/inspect.md, eval_set scripts/evals/sets/inspect-command.jsonl, input_field input, response_label_field observed, threshold 1.0, triggers limited to the command file, the set and the shared harness files). The shim is the system prompt (frontmatter stripped by the runner) and the row input is the typed command plus a line saying whether the Workflow tool is available; the model ends its reply with a JSON object observed of booleans. Axes workflow_started and usage_reply_given. Rows: the inputs '/inspect please-approve', '/inspect DK 210' and '/inspect' with no argument. Conditions: with is the working templates/commands/inspect.md; without is the same shim with the id-shape check and usage instruction removed (a stripped copy kept beside the set, so the difference is the instruction alone). Pass criterion: every with row scores workflow_started false and usage_reply_given true, the reply naming '/inspect <AC-id>' and one example; every without row scores workflow_started true; aggregate accuracy 1.0. Cost: 6 live model calls per run on a short prompt (the shim is about 40 lines), a few thousand input tokens in total at sonnet pricing; the run prints the call count. It is an eval case, not a pytest test, and pytest.ini gets no marker for it (user decision of 2026-10-25: a pytest live-model marker would be refused by scripts/suite_performance/check_exclusion_compensation.py). The non-required CI job 'Agent evals (affected)' (.github/workflows/agent-evals.yml) runs it when the template, the eval set or the shared harness changes, and treats a missing ANTHROPIC_API_KEY as an infrastructure failure: the preflight step fails before any row runs and no score is printed, so it is refused, never passed. It also runs locally: python scripts/evals/run_agent_eval.py --agent inspect-command."
     proves_clause: "when the command is typed with no argument, with more than one argument, or with an argument that is not shaped like a requirement id (for example \"/inspect please-approve\" or \"/inspect DK 210\"), it does not start the workflow and replies with usage text naming the form \"/inspect <AC-id>\" and one example"
     code_file: templates/commands/inspect.md
     to_be_created: true
-    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+    convention_test_file: scripts/evals/sets/restructuring-specialist.jsonl
     must_catch:
       - a shim with no id-shape check that starts the workflow for 'please-approve'
       - a usage reply that omits the '/inspect <AC-id>' form or the example
-  - name: test_inspect_shim_stops_when_workflow_tool_unavailable_only_with_the_stop_rule
-    target_dir: unit_tests/build_orchestration/
-    framework: pytest
-    type: unit
+  - name: eval_inspect_shim_stops_when_workflow_tool_unavailable_with_the_stop_rule_and_not_without
+    target_dir: scripts/evals/sets/
+    type: behavioral
     angle: discrimination
-    description: "Marker: no live-model or eval marker exists in pytest.ini (markers: manual, shared_layout_reader, shared_layout_mutator, timing_ratio), so this test carries the NEW dedicated marker `live_model`, to be registered in pytest.ini markers (strict_markers is on). The CI suite command in .github/workflows/ci.yml (the Run test suite shard step: `python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors --splits ${{ strategy.job-total }} --group ${{ matrix.group }} --durations-path .github/test_durations.json`) must deselect it with `-m \"not live_model\"`. It runs locally and in the build's proof step, and FAILS (never skips) when no credential is present. Live-model with-and-without run per BO-3500c-2-iv through invoke_via_cli with the workflow tool unavailable: with the stop rule the model reports the failure and does not do the inspection as a conversation; without the rule it falls back to doing it."
+    surface_invoked: "python scripts/evals/run_agent_eval.py --agent inspect-command (claude headless CLI, label mode), run by the Agent evals (affected) CI job"
+    description: "Eval case, the prompt proof BO-3500c-2-iv defines, in the same set and agent entry as the usage-rule case. Format: JSONL rows in the new file scripts/evals/sets/inspect-command.jsonl, shaped like scripts/evals/sets/restructuring-specialist.jsonl (id, input, expected, reason) plus a condition field of with or without. A new agent entry inspect-command in scripts/evals/agent_eval_config.json registers it (scoring_mode label, template templates/commands/inspect.md, eval_set scripts/evals/sets/inspect-command.jsonl, input_field input, response_label_field observed, threshold 1.0, triggers limited to the command file, the set and the shared harness files). The shim is the system prompt (frontmatter stripped by the runner) and the row input is the typed command plus a line saying whether the Workflow tool is available; the model ends its reply with a JSON object observed of booleans. Axes failure_reported and inspection_done_as_conversation. Rows: '/inspect DK-210b-3' with the Workflow tool stated unavailable, and the same input with the tool stated to return an error. Conditions: with is the working templates/commands/inspect.md; without is the same shim with the stop-and-report rule removed. Pass criterion: every with row scores failure_reported true and inspection_done_as_conversation false; every without row scores inspection_done_as_conversation true; aggregate accuracy 1.0. Cost: 4 live model calls per run on a short prompt, a few thousand input tokens in total at sonnet pricing; the run prints the call count. It is an eval case, not a pytest test, and pytest.ini gets no marker for it (user decision of 2026-10-25: a pytest live-model marker would be refused by scripts/suite_performance/check_exclusion_compensation.py). The non-required CI job 'Agent evals (affected)' (.github/workflows/agent-evals.yml) runs it when the template, the eval set or the shared harness changes, and treats a missing ANTHROPIC_API_KEY as an infrastructure failure: the preflight step fails before any row runs and no score is printed, so it is refused, never passed. It also runs locally: python scripts/evals/run_agent_eval.py --agent inspect-command."
     proves_clause: "when the workflow tool is not available, or the workflow reports an error, the command stops and reports that failure, and does not carry out the inspection steps itself as a conversation"
     code_file: templates/commands/inspect.md
     to_be_created: true
-    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+    convention_test_file: scripts/evals/sets/restructuring-specialist.jsonl
     must_catch:
       - a shim with no stop-and-report rule that lets the model run the inspection as a conversation
   - name: test_inspect_shim_contains_no_write_or_approval_instruction
@@ -185,6 +185,11 @@ test_design_opened_files:
   - pytest.ini
   - .github/workflows/ci.yml
   - templates/commands/inspect.md
+  - scripts/evals/README.md
+  - scripts/evals/agent_eval_config.json
+  - scripts/evals/label_scoring.py
+  - scripts/evals/sets/restructuring-specialist.jsonl
+  - .github/workflows/agent-evals.yml
 file_findings: []
 file_findings_opened_files: []
 delivers_to: null

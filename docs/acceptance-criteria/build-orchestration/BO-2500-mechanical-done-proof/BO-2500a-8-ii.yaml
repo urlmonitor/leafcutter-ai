@@ -50,6 +50,12 @@ estimated_complexity: S
 declared_files:
   - path: templates/agents/it-po.md
     state: existing
+  - path: scripts/evals/agent_eval_config.json
+    state: existing
+  - path: scripts/evals/sets/it-po.jsonl
+    state: to_be_created
+  - path: scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md
+    state: to_be_created
 it_requirements:
   - Edit templates/agents/it-po.md only, never the deployed copies (.claude/agents/it-po.md,
     .leafcutter/, compiled platform output; ADR-001), and rebuild afterwards.
@@ -62,11 +68,19 @@ it_requirements:
   - Quote BO-2500a-8-i's refusal message as delivered, not paraphrased; build after BO-2500a-8-i.
   - 'The template is 1114 lines and every it-po run pays for its length: keep net growth to
     what the clauses need.'
-  - 'Prompt proof per BO-3500c-2-iv: the consumer is a model (the it-po agent), so the with-and-without
-    comparison needs a live model call, states its cost, and is refused, not passed, when
-    no credential is available. The repo''s live-model harness is scripts/evals/run_agent_eval.py
-    (agent_eval_config.json has no it-po entry today, and its CI job is informational because
-    the repository has no ANTHROPIC_API_KEY secret).'
+  - Prompt proof per BO-3500c-2-iv as two eval entries, with the runner unchanged (decision
+    2026-10-25). In scripts/evals/agent_eval_config.json, 'it-po' points its template at templates/agents/it-po.md,
+    and 'it-po-without-reason-rule' points at scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md.
+    Both share scripts/evals/sets/it-po.jsonl, which holds a docs-only requirement. The proof
+    passes when 'it-po' meets its threshold and 'it-po-without-reason-rule' does not. Each
+    entry's triggers name only its own template and the shared set. With no credential, the
+    run reports 'no model credentials', not a score; the agent-evals CI job stays informational.
+  - 'The fixture is a byte copy of templates/agents/it-po.md at the merge base, before BO-2500a-8-ii''s
+    edit. It is the honest before-state baseline and is never regenerated or updated later.
+    It is a data fixture, not a deployed template: the build must not copy it into .claude/.'
+  - 'Lanes: the template edit is llm-expert''s. The eval config entries, the set and the fixture
+    are the proof harness and are written in the test-writer phase of the same ticket. No
+    .py changes; scripts/evals/run_agent_eval.py is not touched.'
 test_required: true
 test_intent:
   - clause: the instructions direct it to write test_required false together with a test_rationale,
@@ -131,13 +145,12 @@ test_spec:
     description: "The consuming surface loads the template: the real scripts/render_effective_prompt.py CLI is run as a subprocess for the it-po agent (pointed at a temp repo root holding a verbatim copy of templates/agents/it-po.md and one ACD-2500 record, as rendered_prompt_paragraphs in the sibling support module does), and every paragraph of the rendered prompt that mentions test_required false also mentions test_rationale. Proves the instruction reaches the prompt the planner receives, not only the template file. This is the repeatable half of the BO-3500c-2-iv proof and is never sufficient alone."
     proves_clause: "the instructions direct it to write test_required false together with a test_rationale, and present the two as one declaration, never the first alone"
     code_file: templates/agents/it-po.md
-  - name: test_planner_run_on_a_docs_only_requirement_writes_both_fields_with_the_instruction_and_one_without
-    target_dir: unit_tests/ac_driven_dev/it_po_prompt/
-    framework: pytest
+  - name: eval_it_po_writes_both_fields_for_a_docs_only_requirement_with_the_instruction_and_one_without
+    target_dir: scripts/evals/sets/
     type: behavioral
     angle: criterion
-    surface_invoked: "claude headless CLI via invoke_via_cli, twice per run with and without the instruction"
-    description: "The prompt proof BO-3500c-2-iv defines, for a model-only consumer. The it-po agent is called live through the repo's headless harness (invoke_via_cli in scripts/evals/run_agent_eval.py, tools disabled) on one docs-only requirement, N=3 times under each of two conditions: condition_a is the template at the merge base with origin/main (instruction absent), condition_b is the working template (instruction present). The reply's enrichment YAML is parsed; condition_b must write test_required false AND a non-empty test_rationale in every run, condition_a must write test_required false with no test_rationale in every run, and the two conditions must differ (identical template text is rejected, which is how a build that adds nothing is caught). The test prints that it made 2 x N live model calls and their cost, is marked as a live-model test, and when no credential or no stable answer is available it FAILS saying the proof cannot be established here, never skips and never passes. Expected red today: the working template equals the base, so the conditions are identical."
+    surface_invoked: "python scripts/evals/run_agent_eval.py --agent it-po (claude headless CLI, label mode), run by the Agent evals (affected) CI job"
+    description: "Eval case in the agent-eval suite, the prompt proof BO-3500c-2-iv defines for a model-only consumer. Format: JSONL rows in the new file scripts/evals/sets/it-po.jsonl, shaped like scripts/evals/sets/restructuring-specialist.jsonl (id, input, expected, reason). Two entries in scripts/evals/agent_eval_config.json, both label mode with the same eval_set, input_field, label_axes (test_required_false and test_rationale), response_label_field declares and model: it-po, whose template is the real templates/agents/it-po.md (the with condition), and it-po-without-reason-rule, whose template is scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md, a stored byte copy of it-po.md at the merge base with origin/main (the without condition, instruction absent). The runner needs no change. Each row gives the agent one docs-only requirement (a guide with no executable behaviour) and asks it to end its reply with a JSON object declares holding two booleans: whether its enrichment writes test_required false, and whether it writes a non-empty test_rationale. The rows expect both true. Pass criterion: it-po meets its threshold (1.0, every row writes both fields) and it-po-without-reason-rule does not (it writes test_required false alone, so it scores below threshold); the proof holds only when both are true, and a build that adds nothing is caught because the two entries would then score the same. Cost: 3 rows per entry, 6 live model calls per run at about 20k input tokens each (the template is 1114 lines), roughly 120k input tokens at sonnet pricing. It is an eval case, not a pytest test, and pytest.ini gets no marker for it (user decision of 2026-10-25: a pytest live-model marker would be refused by scripts/suite_performance/check_exclusion_compensation.py). The non-required CI job 'Agent evals (affected)' (.github/workflows/agent-evals.yml) runs both entries when the template, the eval set, the fixture or the shared harness changes (each entry lists them in triggers), and treats a missing ANTHROPIC_API_KEY as an infrastructure failure: the preflight step fails before any row runs and no score is printed, so it is refused, never passed. It also runs locally: python scripts/evals/run_agent_eval.py --agent it-po, then --agent it-po-without-reason-rule. Expected red today: the working template equals the stored copy, so both entries score the same."
     proves_clause: "a planner run on a docs-only requirement with these instructions loaded writes both fields, where the same run without the new instruction writes test_required false alone"
     code_file: templates/agents/it-po.md
 test_design_authorship:
@@ -153,6 +166,10 @@ test_design_opened_files:
   - unit_tests/evals/test_tq200d1_runner_cli.py
   - docs/acceptance-criteria/build-orchestration/BO-3500-buildable-by-any-craft/BO-3500c-2-iv.yaml
   - unit_tests/agents/test_acd_2500e_1.py
+  - scripts/evals/README.md
+  - scripts/evals/label_scoring.py
+  - scripts/evals/sets/restructuring-specialist.jsonl
+  - .github/workflows/agent-evals.yml
 file_findings:
   - file: templates/agents/it-po.md
     verdict: consistent
@@ -160,8 +177,15 @@ file_findings:
     found_in: null
     reason: "It is the planner template and holds the section 2.7, S7 and S8 passages that describe test_required false and that the criteria change."
     decision: null
+  - file: scripts/evals/agent_eval_config.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the registry where the it-po and it-po-without-reason-rule eval entries are added, and it already holds the label-mode entries to follow."
+    decision: null
 file_findings_opened_files:
   - templates/agents/it-po.md
+  - scripts/evals/agent_eval_config.json
 delivers_to: null
 expects_from:
   - ac_id: BO-2500a-8-i

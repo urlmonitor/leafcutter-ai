@@ -4,7 +4,7 @@ description: "A requirement record with test_required false is proven done by a 
 type: "adr"
 status: "active"
 created: "2026-10-25"
-last_updated: "2026-10-25"
+last_updated: 2026-10-25
 deciders:
   - BrainCandy
   - adr-author
@@ -24,6 +24,7 @@ related_docs:
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-v.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
   - docs/reference/ac-schema.md
+  - docs/reference/test-free-declarations.md
   - docs/acceptance-criteria/build-orchestration/BO-3500-buildable-by-any-craft/BO-3500c.yaml
   - docs/acceptance-criteria/knowledge-management/KM-ADM-005-1.yaml
   - docs/acceptance-criteria/knowledge-management/KM-ADM-005-2.yaml
