@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-24'
+last_updated: '2026-10-25'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 77** (4 blocker, 42 high, 31 low) · **Resolved: 28** (recounted from the directory 2026-10-24, after KI-BO-20261024-list-speed-test-flaky was filed)
+**Open: 77** (4 blocker, 42 high, 31 low) · **Resolved: 29** (recounted from the directory 2026-10-25, after KI-BO-20261025-wv-recover-depends-on-executor-cwd was filed resolved)
 
 ## Open
 
@@ -183,4 +183,5 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide — /finalize-feature Step 3.5 walked the whole inbox and flipped every ticket and AC to `done` (fixed by PR #1292: the closable set is now computed from the branch's own commits since the merge base, shown to a person, and digest-bound) | [resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md](build-orchestration/resolved/resolved-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md) |
 | `high` | KI-BO-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists — `/build-feature` runs `documentation-expert` as a depth-1 phase agent with no Agent tool, so it cannot dispatch the leaf author, the verifier fails on the missing doc and commit refuses | [open-high-ki-bo-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists.md](build-orchestration/open-high-ki-bo-20261012-documentation-expert-phase-cannot-dispatch-doc-specialists.md) |
 | `low` | KI-BO-20261012-red-baseline-gate-measures-after-llm-expert-coder — the red-baseline gate fires only before a `python-coder` / `sql-coder` / `frontend-coder` dispatch, so when `llm-expert` is the coder it measures after the work is done and halts a real red baseline as `green_at_baseline`; graded medium | [open-low-ki-bo-20261012-red-baseline-gate-measures-after-llm-expert-coder.md](build-orchestration/open-low-ki-bo-20261012-red-baseline-gate-measures-after-llm-expert-coder.md) |
+| `high` | KI-BO-20261025-wv-recover-depends-on-executor-cwd — `wrong_version_runner.py recover` found its repository from the process cwd and no route passed one, so every drive started from a session outside the workspace halted at the recover step before dispatching a ticket (fixed: `recover --test-root <worktree>` in all four routes) | [resolved-high-ki-bo-20261025-wv-recover-depends-on-executor-cwd.md](build-orchestration/resolved/resolved-high-ki-bo-20261025-wv-recover-depends-on-executor-cwd.md) |
 

@@ -1819,8 +1819,7 @@ async function wvStep(label, command, workKey) {
 async function wvRecover(workKey) {
   const unsafe = wvBad(workKey);
   if (unsafe.length) return { step: "input-check", detail: unsafe, message: `Wrong-version inputs are not plain values, no command was run: ${JSON.stringify(unsafe)}` };
-  const recovered = await wvStep(`${WV}-wv-recover`, wvPy("wrong_version_runner", "recover"), workKey);
-  return !recovered || recovered.ok !== true ? { step: "recover", detail: recovered, message: `Wrong-version recover step did not pass: ${JSON.stringify(recovered)}` } : null;
+  return wvStep(`${WV}-wv-recover`, wvPy("wrong_version_runner", `recover --test-root "${wvRoot()}"`), workKey).then((r) => !r || r.ok !== true ? { step: "recover", detail: r, message: `Wrong-version recover step did not pass: ${JSON.stringify(r)}` } : null);
 }
 async function wvRuns(workKey, ids) {
   const flags = `--ac-root "${wvRoot()}/${AC_STORE_REL_PATH}" --test-root "${wvRoot()}" --base-ref HEAD`, idArg = ids.length ? `--ac-ids "${ids.join(",")}" ` : "";

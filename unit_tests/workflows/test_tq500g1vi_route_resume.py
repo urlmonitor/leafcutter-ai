@@ -56,7 +56,7 @@ def test_k4_resumed_drive_recovers_first_then_reruns_sequence_before_commit():
         order = [labels.index(x) for x in (route.recover, route.list, route.breaker, route.finish, fx.COMMIT)]
         assert order == sorted(set(order)), f"{case}: wrong dispatch order, recorded labels: {labels}"
         recover = fx.request_of(fx.calls(result, route.recover)[0])
-        assert re.search(r"wrong_version_runner\.py\s+recover\s*$", recover["command"]), recover["command"]
+        assert re.search(r'wrong_version_runner\.py\s+recover --test-root "' + re.escape(wt) + r'"\s*$', recover["command"]), recover["command"]
         assert recover["target"]["workspace"] == wt and recover["target"]["run_id"] == fx.STEM, recover
         assert len(fx.calls(result, "workspace-ensure")) == 1, f"{case}: the maker is asked exactly once: {labels}"
     wt, _ = fx.worktree_case(FRESH)

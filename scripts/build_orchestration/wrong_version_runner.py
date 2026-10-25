@@ -401,7 +401,9 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--base-ref", default="HEAD")
     run.add_argument("--alterations", default="")
     run.add_argument("--record", default=None, help="Ticket key the verdict record is written for.")
-    sub.add_parser("recover", help="Put back any file a cut-short run left altered")
+    rec = sub.add_parser("recover", help="Put back any file a cut-short run left altered")
+    rec.add_argument("--test-root", default=None,
+                     help="The worktree to recover in. Route steps always pass it; without it the process cwd is used.")
     return parser
 
 
@@ -441,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
             signal.signal(getattr(signal, name), _interrupted)
     with contextlib.redirect_stdout(sys.stderr):
         if args.command == "recover":
-            payload = recover(Path.cwd())
+            payload = recover(Path(args.test_root) if args.test_root else Path.cwd())
             ok = payload["ok"]
         else:
             payload = _run_and_record(args)
