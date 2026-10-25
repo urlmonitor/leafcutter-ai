@@ -1,0 +1,51 @@
+id: TDE-9703
+title: The report can be exported as CSV
+component: testing-quality
+components:
+- testing_quality
+level: L3
+status: active
+readiness: approved
+priority: high
+criteria: 'Given the report job runs,
+
+  When the requirement applies,
+
+  Then the report is exported as a CSV file with a header row.
+
+  '
+assigned_agent: python-coder
+declared_files:
+- path: scripts/report_export.py
+  state: to_be_created
+test_required: true
+test_intent:
+- clause: the report is exported as a CSV file with a header row
+  needs_test: true
+  reason: The behaviour is observable only by running the code.
+test_spec:
+- name: test_new_behaviour_guard
+  target_dir: unit_tests/reporting/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Proves: the report is exported as a CSV file with a header row.'
+  proves_clause: the report is exported as a CSV file with a header row
+  code_file: scripts/report_export.py
+  to_be_created: true
+  convention_test_file: unit_tests/reporting/existing_reporting.py.recorded
+- name: test_new_behaviour_reachable
+  target_dir: unit_tests/reporting/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Running the production entry point exits 0.
+  proves_clause: the report is exported as a CSV file with a header row
+  code_file: scripts/report_export.py
+  to_be_created: true
+  convention_test_file: unit_tests/reporting/existing_reporting.py.recorded
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-25'
+test_design_opened_files:
+- unit_tests/reporting/existing_reporting.py.recorded
