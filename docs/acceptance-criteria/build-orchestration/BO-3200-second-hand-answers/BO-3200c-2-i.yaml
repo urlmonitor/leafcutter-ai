@@ -198,3 +198,103 @@ notes: |
   ORDERING NOTE FOR THE IT PO: the shell-runner agent named by ADR-070 must exist in the deployed
   registry before the pause-store dispatches can route to it. If it does not yet exist at build
   time, that is a depends_on to add, not a reason to keep status-checker.
+test_spec:
+  - name: test_person_proceed_answer_merges_pr
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Executes finalize-feature.js under a stubbed agent()/args harness with a resume_answer {gate_id step-4-merge-gate, channel person, action ok} and a confirmed pause record; asserts the step-4-merge-pr dispatch to the pull-request agent happens (anti-vacuum case).
+    proves_clause: the pull request is merged to main, by the same provenance rule finalize's own closure gate already applies
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_live_agent_ok_reply_never_merges_and_pauses
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: With no resume_answer, the stubbed status-checker answers the step-4-merge-gate dispatch with status ok; asserts no step-4-merge-pr dispatch, the result is paused_awaiting_input for step-4-merge-gate, and no choice is recorded.
+    proves_clause: the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a gate that still reads the live agent reply status ok as action ok and merges
+      - a gate that filters the live reply by a check on its content but leaves the live dispatch able to settle the gate
+      - a pause path that records the agent reply as the person's choice in the pause record
+  - name: test_non_person_or_mismatched_answer_treated_as_no_answer
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parametrised over three resume answers (channel agent, channel absent, gate_id of another gate), each otherwise valid with action ok; asserts no merge dispatch and a paused_awaiting_input result at step-4-merge-gate, and that the rejected answer is logged with what arrived and which gate.
+    proves_clause: "that answer is treated as no answer: the pull request is not merged and the run pauses resumably at the merge-to-main gate"
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a gate that checks the channel only when the field is present, so a missing channel merges
+      - a gate that accepts any non-empty channel value
+      - a gate that ignores the answer's gate_id and merges on another gate's person answer
+      - a gate that infers provenance from a role or author field inside the answer
+  - name: test_person_decline_halts_distinct_from_pause
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: A person-channel resume answer for the merge gate with the decline choice; asserts a halted result at step 4 whose reason reports the person declined, differs from paused_awaiting_input, and no merge dispatch occurs.
+    proves_clause: the run halts before the merge, the pull request is not merged, and the outcome reports that the person declined, distinguishable from a pause awaiting an answer
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a decline that returns the same paused_awaiting_input outcome as no answer
+      - a decline that is treated as an unrecognised choice and merges
+      - a decline outcome with no field telling it apart from a pause
+  - name: test_pause_store_dispatches_go_to_shell_runner_not_status_checker
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Records every stubbed agent() call during a resume path (read-pause-record) and a headless pause path (pause-persist); asserts both labels are dispatched with agentType shell-runner and none carrying pause_store.py goes to status-checker.
+    proves_clause: the dispatch goes to the agent chartered to run workflow shell commands, and never to the status-reporting agent that is not permitted to run commands
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - only the pause-persist write moved to shell-runner while read-pause-record stays on status-checker
+      - only the read moved to shell-runner while the write stays on status-checker
+      - a refusal or result-less reply from the executor treated as a successful read or write
+  - name: test_confirmed_pause_write_reports_paused_awaiting_input
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Headless run at the merge gate where the stubbed shell-runner returns a successful pause_store write whose evidence shows the record exists for this gate; asserts the result is paused_awaiting_input naming the gate and no merge occurs.
+    proves_clause: the run reports that it is paused awaiting the person's input
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_failed_pause_write_reports_pause_persist_failed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parametrised over a failing, a refused/declined and a result-less or unconfirmable pause write; asserts the result is a distinct pause-persist-failed outcome naming the merge gate, is not paused_awaiting_input, and no merge dispatch occurs.
+    proves_clause: the run does not report that it is paused awaiting input; it reports a distinct pause-persist-failed outcome naming the gate, and the pull request is not merged
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a write that is awaited and ignored so a refused write still reports paused_awaiting_input
+      - confirmation based on the executor claiming success without evidence the record exists for this gate
+      - a pause-persist-failed outcome that does not name the gate
+  - name: test_finalize_merge_gate_reachable_through_real_workflow_entry
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: Runs the real templates/workflows-js/finalize-feature.js top-level body as a node subprocess (the workflow engine's globals agent, args, log, phase supplied by a thin runner) through pre-flight to step 4, and asserts the new merge-gate behaviour occurs - an agent ok reply does not merge and a person-channel answer does.
+    proves_clause: the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate
+    code_file: templates/workflows-js/finalize-feature.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/finalize-feature.js
+file_findings:
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It implements the step-4 merge gate (resolveGate call, live status-checker dispatch) and the pause-store dispatches (resolveGate read-pause-record, pauseAtGate pause-persist) that the criteria change, with the step-3.5 channel person rule as in-file precedent.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/finalize-feature.js
