@@ -8,9 +8,13 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
 criteria: |
   Given a finalize run that has reached the merge-to-main gate, and a resume answer for that
     gate whose channel is "person" and whose choice is to proceed,
@@ -72,16 +76,97 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The existing pause-resume substrate the resumable pause builds on; no second pause store."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the finalize-feature workflow and its gates."
 assigned_agent: python-coder
 estimated_complexity: M
 declares_side_effect: true
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+it_requirements:
+  - >-
+    PROVENANCE COMES FROM THE CHANNEL, NEVER FROM THE CONTENT. The step-4 merge-to-main gate
+    settles only on a resume answer whose gate id is the merge-to-main gate's id and whose
+    channel is exactly "person" -- the same acceptance rule the step-3.5 closure gate in the same
+    file already applies. A missing channel, any other channel value, or another gate's id is
+    treated exactly as no answer. Nothing inside a reply (an action/choice string, a role name,
+    an author field) may establish provenance.
+  - >-
+    NO LIVE AGENT REPLY MAY REACH THE MERGE GATE'S SETTLE PATH. A dispatched agent's result
+    (including the existing "ask the user" status-checker dispatch) must be structurally unable
+    to settle the merge-to-main gate, not merely filtered by a check that could later be
+    removed. This is the finalize instance of BO-3200c-2's structural requirement.
+  - >-
+    THREE DISTINCT, MACHINE-DISTINGUISHABLE OUTCOMES, NONE OF WHICH MERGES: paused awaiting the
+    person's input (record confirmed written), the person declined, and pause-persist-failed
+    (naming the gate). No path that ends in any of these three may reach the merge step, and no
+    choice may be recorded on the person's behalf (no default, no last-received value, no null
+    that a downstream branch reads as a choice).
+  - >-
+    BOTH PAUSE-STORE DISPATCHES (read-pause-record and pause-persist) go to the shell-runner
+    agent per ADR-070. After the change, no dispatch in finalize-feature.js hands a pause-store
+    command to status-checker (permits_shell false). A decline or result-less reply from the
+    executor is treated as a failed read/write, never as success.
+  - >-
+    A PAUSE IS REPORTED ONLY WHEN THE RECORD IS CONFIRMED WRITTEN. Confirmation must rest on
+    verifiable evidence that the record exists for this gate, not on the absence of an error or
+    on the executor's own claim of success. A failed, refused, or unconfirmable write yields the
+    pause-persist-failed outcome.
+  - >-
+    A rejected non-person or mismatched answer at the merge gate must be recorded in the run's
+    output (what arrived, for which gate, and that it was rejected), so a run repeatedly answered
+    by the wrong source is diagnosable rather than appearing to hang.
+  - >-
+    SCOPE IS A CALL-SITE FIX IN templates/workflows-js/finalize-feature.js ONLY (edit the
+    template, never the deployed build output, per ADR-001). No shared gate module, no
+    marker-delimited GATE-ANSWER block, and no change to plan-feature.js (ADR-078 pending). The
+    step-3.5 closure gate's behaviour and every other finalize step's outcomes stay unchanged.
+  - >-
+    The fix must be self-contained: buildable and verifiable without any change to BO-3200c-1,
+    BO-3200c-2 or BO-3200c-3 being implemented first.
+test_intent:
+  - clause: "the pull request is merged to main, by the same provenance rule finalize's own closure gate already applies"
+    needs_test: true
+    reason: This is the anti-vacuum case; a gate that accepts nothing would satisfy every refusal clause and never merge.
+  - clause: "the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate"
+    needs_test: true
+    reason: A well-formed agent reply naming ok is exactly the blocker shape, and today it proceeds to the merge.
+  - clause: "that answer is treated as no answer: the pull request is not merged and the run pauses resumably at the merge-to-main gate"
+    needs_test: true
+    reason: Missing channel, wrong channel and wrong gate id are three separate ways a lax check would still let the merge through.
+  - clause: "the run halts before the merge, the pull request is not merged, and the outcome reports that the person declined, distinguishable from a pause awaiting an answer"
+    needs_test: true
+    reason: Collapsing decline into the pause outcome would make no answer and the person saying no indistinguishable.
+  - clause: "the dispatch goes to the agent chartered to run workflow shell commands, and never to the status-reporting agent that is not permitted to run commands"
+    needs_test: true
+    reason: Routing the pause-store commands to status-checker gets them refused, and the agent type chosen is executable dispatch behaviour.
+  - clause: "the run reports that it is paused awaiting the person's input"
+    needs_test: true
+    reason: The paused outcome is the only resumable result of a headless run, so it must still be produced when the write succeeds.
+  - clause: "the run does not report that it is paused awaiting input; it reports a distinct pause-persist-failed outcome naming the gate, and the pull request is not merged"
+    needs_test: true
+    reason: Today a refused write still reports paused_awaiting_input, a pause no later run can resume.
 delivers_to: null
-expects_from:
-  - ac_id: BO-3200c-2
-    contract: "The generic rule that only an answer arriving through the person channel settles a gate. This AC is the finalize-feature instance of that rule, applied at the step-4 merge-to-main gate."
+expects_from: null
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-10-25
+  note: Added change_target/risk_surface (auth), package_surface false, declared_files,
+    it_requirements, test_intent (7 clauses), build-orchestration doc_link; readiness reviewed.
+    criteria, assigned_agent, complexity untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-10-25
+  note: expects_from on BO-3200c-2 cleared to null. BO-3200c-2 is the parent rule, not a
+    data producer, declares no delivers_to, and may not be edited beyond covered_by; the
+    parent link is carried by depends_on. This AC is self-contained (it_requirements).
 superseded_by: null
 covered_by: []
 implemented_by: []
