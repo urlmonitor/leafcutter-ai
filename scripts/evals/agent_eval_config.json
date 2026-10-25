@@ -146,6 +146,52 @@
         "scripts/evals/cli_envelope.py"
       ],
       "notes": "TQ-200d-1 / TQ-200d-1-i. PRODUCED-TESTS mode: the agent writes tests and a completion report in a per-row git sandbox (the row's fixture project plus the scripts the template names, {{config.output_root}} rendered to the sandbox); the output is scored deterministically (fixture seeds the moved input, exact row and non-NULL counts, a seeded known value, test B red on a wrong result not at import) and the refresh-gate row's test half comes from the shared wrong-version runner (halves.test, halves.report). LOCAL ONLY (user decision 2026-09-28, KI-TQ-20260907): local_only true keeps this agent out of eval_selector's affected set and --check, and every payload carries run_context 'local'. --score-gold replays the recorded gold outputs under scripts/evals/sets/test-writer/recorded/ and makes no model call. A live run (python scripts/evals/run_agent_eval.py --agent test-writer) needs model credentials; the live before-score is deferred (OQ-11)."
+    },
+    "it-po": {
+      "template": "templates/agents/it-po.md",
+      "eval_set": "scripts/evals/sets/it-po.jsonl",
+      "scoring_mode": "label",
+      "input_field": "input",
+      "expected_field": "expected",
+      "response_label_field": "declares",
+      "model": "sonnet",
+      "label_axes": [
+        "test_required_false",
+        "test_rationale"
+      ],
+      "threshold": 1.0,
+      "triggers": [
+        "templates/agents/it-po.md",
+        "scripts/evals/sets/it-po.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "BO-2500a-8-ii prompt proof, the WITH condition: the real template. Every row must write test_required false and a non-empty test_rationale (threshold 1.0). Informational, like the other live evals; with no credential the run reports 'no model credentials', not a score."
+    },
+    "it-po-without-reason-rule": {
+      "template": "scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md",
+      "eval_set": "scripts/evals/sets/it-po.jsonl",
+      "scoring_mode": "label",
+      "input_field": "input",
+      "expected_field": "expected",
+      "response_label_field": "declares",
+      "model": "sonnet",
+      "label_axes": [
+        "test_required_false",
+        "test_rationale"
+      ],
+      "threshold": 1.0,
+      "triggers": [
+        "scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md",
+        "scripts/evals/sets/it-po.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "BO-2500a-8-ii prompt proof, the WITHOUT condition: a stored byte copy of it-po.md from before the reason rule (never regenerated). It is expected to score BELOW threshold (test_required false alone); the proof holds only when it-po meets its threshold and this entry does not."
     }
   }
 }

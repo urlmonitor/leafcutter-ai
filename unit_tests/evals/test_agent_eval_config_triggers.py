@@ -29,7 +29,10 @@ sys.path.insert(0, str(_EVALS_DIR))
 import eval_selector  # noqa: E402
 
 _TRIGGERS = eval_selector.agent_triggers(eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json"))
-_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "test-writer"]
+_ALL_AGENTS = [
+    "flow-author", "it-po", "it-po-without-reason-rule", "mock-data-author", "pt-classifier",
+    "restructuring-specialist", "test-writer",
+]
 
 # One representative path per root that 974fa757f added and the owner decision removed.
 _OUTSIDE_OWN_FILES = [
@@ -53,6 +56,9 @@ _OWN_FILES = {
     "templates/agents/pt-classifier.md": ["pt-classifier"],
     "templates/agents/restructuring-specialist.md": ["restructuring-specialist"],
     "scripts/evals/sets/restructuring-specialist.jsonl": ["restructuring-specialist"],
+    "templates/agents/it-po.md": ["it-po"],
+    "scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md": ["it-po-without-reason-rule"],
+    "scripts/evals/sets/it-po.jsonl": ["it-po", "it-po-without-reason-rule"],
     "scripts/evals/artifact_dependencies.py": ["flow-author", "mock-data-author"],
     "scripts/evals/cli_envelope.py": _ALL_AGENTS,
     "scripts/evals/run_agent_eval.py": _ALL_AGENTS,
