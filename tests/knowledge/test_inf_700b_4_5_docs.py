@@ -66,7 +66,9 @@ def _body(text: str) -> str:
 
 
 def _frontmatter(text: str) -> dict:
-    return yaml.safe_load(re.match(r"---\n(.*?)\n---\n", text, re.S).group(1))
+    match = re.match(r"---\n(.*?)\n---\n", text, re.S)
+    assert match is not None, "document has no YAML frontmatter block"
+    return yaml.safe_load(match.group(1))
 
 
 def _sentences(text: str) -> list[str]:
