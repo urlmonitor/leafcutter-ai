@@ -257,14 +257,25 @@ for (const file of process.argv.slice(2)) {
   leaves(sf);
   const K = ts.SyntaxKind;
   const closers = new Set([K.CloseBraceToken, K.CloseParenToken, K.CloseBracketToken, K.SemicolonToken, K.CommaToken]);
-  const marks = []; let parens = 0, extra = 0;
+  // GE-127d-3-vi: a brace pair directly holding such a ';' is a block; code after its '{' on that
+  // line (no comment between) adds one, and its '}' with a token before it on that line adds one.
+  const frames = []; let parens = 0, extra = 0;
+  const gapOf = (a, b) => text.slice(a.end, b.getStart(sf));
   for (let i = 0; i < toks.length; i++) {
     const kind = toks[i].kind;
     if (kind === K.OpenParenToken) parens++;
     else if (kind === K.CloseParenToken) parens--;
-    else if (kind === K.OpenBraceToken) marks.push(parens);
-    else if (kind === K.CloseBraceToken) marks.pop();
-    else if (kind === K.SemicolonToken && parens === (marks.length ? marks[marks.length - 1] : 0)) {
+    else if (kind === K.OpenBraceToken) frames.push({ parens, open: i, sep: false });
+    else if (kind === K.CloseBraceToken) {
+      const frame = frames.pop();
+      if (frame && frame.sep) {
+        const after = toks[frame.open + 1], gapA = gapOf(toks[frame.open], after);
+        if (after.kind !== K.CloseBraceToken && !gapA.includes('\n') && gapA.trim() === '') extra++;
+        if (!gapOf(toks[i - 1], toks[i]).includes('\n')) extra++;
+      }
+    }
+    else if (kind === K.SemicolonToken && parens === (frames.length ? frames[frames.length - 1].parens : 0)) {
+      if (frames.length) frames[frames.length - 1].sep = true;
       const next = toks[i + 1];
       const gap = next ? text.slice(toks[i].end, next.getStart(sf)) : '\n';
       if (!closers.has(next ? next.kind : K.CloseBraceToken) && !gap.includes('\n') && gap.trim() === '') extra++;
@@ -327,7 +338,8 @@ LITERAL_CASES: dict[str, list[tuple[str, str]]] = {
 
 REGEX_DIVISION_JS = [
     ("c", "const r1 = /[/*]/;"), ("c", "const r2 = /\\/\\*/;"), ("c", "if (x) /'/.test(s);"), ("c", "const d1 = a / b / c;"),
-    ("c", "const d2 = (a) / 2; // c"), ("c", 'function f() { return /"/; }'), ("c", "x = y++ / 2;"),
+    # No `;` inside the braces: with one it is a one-line block measuring 3 (GE-127d-3-vi).
+    ("c", "const d2 = (a) / 2; // c"), ("c", 'function f() { return /"/ }'), ("c", "x = y++ / 2;"),
     ("m", "// genuine"), ("m", "// genuine two"), ("m", "/* genuine block */"), ("c", "const after = 1;"),
 ]
 JSX_LINES = [
