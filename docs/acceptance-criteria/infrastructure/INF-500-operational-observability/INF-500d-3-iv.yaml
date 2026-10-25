@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an agent's submission printed nothing on standard output,
@@ -190,7 +190,10 @@ expects_from:
     contract: "Every shipped submit instruction redirects the error stream to a per-run file named from the ticket base name and the phase (plus an event kind where one applies), and the same instruction's recovery search reads that same per-run file and nothing else."
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

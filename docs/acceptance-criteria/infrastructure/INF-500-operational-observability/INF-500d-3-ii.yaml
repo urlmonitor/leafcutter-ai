@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given every shipped agent instruction that submits a report and saves the
@@ -323,7 +323,10 @@ expects_from:
     contract: "On every successful write the error stream carries exactly one line 'sidecar:<absolute temp dir>/feedback_id_<digits>.txt' naming a file unique to that submission whose content is exactly the printed id; the search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' matches it exactly once."
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

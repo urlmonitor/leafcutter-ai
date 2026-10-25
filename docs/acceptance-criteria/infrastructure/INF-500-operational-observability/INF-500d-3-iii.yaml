@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given 20 submissions from 20 separate processes start within the same second,
@@ -168,7 +168,10 @@ expects_from:
     contract: "The recovery-file naming change touches only the error stream and the recovery file; standard output stays exactly one line holding the id."
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []
