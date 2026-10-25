@@ -160,7 +160,7 @@ covered_by:
   - unit_tests/commit_guardian/test_inf_700b_2_followup.py
   - unit_tests/commit_guardian/test_inf_700b_2_ci.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/04_TICKET-20261016-INF-700b-2.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/04_TICKET-20261016-INF-700b-2.md
 - templates/scripts/commit_guardian/check_agent_registry.py
 - scripts/check_skill_refs.py
 notes: |
