@@ -29,6 +29,7 @@ from typing import Any
 import produced_tests_db as db_kinds
 import produced_tests_mutants as mutants
 import produced_tests_runs as runs
+import sql_test_writer_eval
 from produced_tests_runs import RowContext, SandboxError
 
 logger = logging.getLogger("run_agent_eval")
@@ -189,6 +190,7 @@ KINDS: dict[str, Callable[[RowContext, dict], dict]] = {
     "report_lists_wrong_version": report_lists_wrong_version,
     "wrong_version_run": runs.wrong_version_run,
     **db_kinds.KINDS,
+    **sql_test_writer_eval.KINDS,
 }
 HALF_OF = {"wrong_version_run": "test", "report_lists_wrong_version": "report"}
 
@@ -201,7 +203,7 @@ def run_assertion(ctx: RowContext, spec: dict) -> dict:
         return {"passed": False, "detail": f"unknown assertion kind {kind!r}"}
     try:
         return check(ctx, spec)
-    except (SandboxError, OSError, KeyError) as exc:
+    except (SandboxError, OSError, KeyError, ValueError, TypeError, SyntaxError) as exc:
         logger.warning("assertion %s could not run: %r", kind, exc)
         return {"passed": False, "detail": f"{kind} could not run: {exc!r}"}
 

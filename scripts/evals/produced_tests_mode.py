@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,6 +50,13 @@ def changed_paths(sandbox: Path, base: str) -> list[str]:
     return sorted({p for p in (*tracked, *untracked) if p and not set(Path(p).parts) & set(skip) and (sandbox / p).is_file()})
 
 
+def export_evidence(sandbox: Path, out_dir: Path) -> None:
+    """Write the sandbox git dir's ``leafcutter/`` folder (the to-run-later files) back to ``out_dir/leafcutter`` (TQ-200d-2)."""
+    git_dir = Path(runs.git(sandbox, "rev-parse", "--absolute-git-dir").strip())
+    if (git_dir / runs.EVIDENCE_DIR).is_dir():
+        shutil.copytree(git_dir / runs.EVIDENCE_DIR, out_dir / runs.EVIDENCE_DIR, dirs_exist_ok=True)
+
+
 def export_outputs(sandbox: Path, base: str, reply: str, out_dir: Path) -> None:
     """Write every file the agent added or changed (relative paths kept, under ``files/``) and its reply (report.md)."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -56,6 +64,7 @@ def export_outputs(sandbox: Path, base: str, reply: str, out_dir: Path) -> None:
         target = out_dir / runs.FILES_DIR / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((sandbox / rel).read_bytes())
+    export_evidence(sandbox, out_dir)
     (out_dir / "report.md").write_text(reply, encoding="utf-8")
 
 

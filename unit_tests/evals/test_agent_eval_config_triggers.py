@@ -29,7 +29,7 @@ sys.path.insert(0, str(_EVALS_DIR))
 import eval_selector  # noqa: E402
 
 _TRIGGERS = eval_selector.agent_triggers(eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json"))
-_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "test-runner", "test-writer"]
+_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "sql-test-writer", "test-runner", "test-writer"]
 
 # One representative path per root that 974fa757f added and the owner decision removed.
 _OUTSIDE_OWN_FILES = [

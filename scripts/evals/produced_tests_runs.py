@@ -50,6 +50,7 @@ TESTS_DIR = "tests"
 PYTEST_TIMEOUT = 180
 FILES_DIR = "files"
 SANDBOX_NAME = "sandbox"
+EVIDENCE_DIR = "leafcutter"
 # Variables that point git at a repository other than the sandbox (a pre-commit hook sets some of them).
 GIT_REDIRECT_VARS = ("GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_PREFIX", "GIT_OBJECT_DIRECTORY",
                      "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE", "GIT_CEILING_DIRECTORIES")
@@ -146,6 +147,17 @@ def _register_test(ctx: RowContext, target: Path) -> None:
     ctx.test_files[key] = target
 
 
+def place_evidence(output_dir: Path, ctx: RowContext) -> None:
+    """Copy ``<output_dir>/leafcutter/**`` into ``<sandbox git dir>/leafcutter``, where the template writes it (TQ-200d-2).
+
+    The to-run-later file lives under the git dir so it never reads as a changed project file.
+    """
+    source = output_dir / EVIDENCE_DIR
+    if source.is_dir():
+        git_dir = Path(git(ctx.sandbox, "rev-parse", "--absolute-git-dir").strip())
+        shutil.copytree(source, git_dir / EVIDENCE_DIR, dirs_exist_ok=True)
+
+
 def place_outputs(output_dir: Path, ctx: RowContext) -> None:
     """Put the recorded output into the sandbox and read the report.
 
@@ -166,6 +178,7 @@ def place_outputs(output_dir: Path, ctx: RowContext) -> None:
         shutil.copyfile(source, target)
         if target.name.startswith("test_") and target.suffix == ".py":
             _register_test(ctx, target)
+    place_evidence(output_dir, ctx)
     report = output_dir / "report.md"
     ctx.report = report.read_text(encoding="utf-8") if report.is_file() else ""
     transcript = output_dir / TRANSCRIPT_NAME
