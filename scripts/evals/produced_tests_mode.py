@@ -29,6 +29,7 @@ from typing import Any
 
 import produced_tests_runs as runs
 import produced_tests_scoring as scoring
+import produced_tests_transcript as capture
 
 logger = logging.getLogger("run_agent_eval")
 OUTPUT_ROOT_PLACEHOLDER = "{{config.output_root}}"
@@ -74,10 +75,17 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
     base = runs.build_sandbox(repo_root / expected["fixture"], agent_box, runs.hold_back_dirs(expected.get("assertions", [])),
                               support_for(agent_cfg, repo_root))
     try:
-        reply = harness.invoke_agent_writer(render_prompt(system_prompt, agent_box), row[agent_cfg.get("input_field", "input")],
-                                            agent_cfg.get("model", "sonnet"), timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
+        args = (render_prompt(system_prompt, agent_box), row[agent_cfg.get("input_field", "input")], agent_cfg.get("model", "sonnet"),
+                timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
+        transcript = None
+        if agent_cfg.get("capture_transcript"):
+            reply, transcript = capture.invoke_with_transcript(*args, harness.ModelInvocationError)
+        else:
+            reply = harness.invoke_agent_writer(*args)
         out_dir = work_dir / "produced"
         export_outputs(agent_box, base, reply, out_dir)
+        if transcript is not None:
+            (out_dir / capture.TRANSCRIPT_NAME).write_text(transcript, encoding="utf-8")
     finally:
         runs.remove_tree(agent_box)
     return out_dir

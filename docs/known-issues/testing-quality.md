@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 35** (1 blocker, 15 high, 19 low) · **Resolved: 5** (recounted from the directory 2026-10-24, after the three KI-TQ-20261024 entries were filed)
+**Open: 36** (1 blocker, 15 high, 20 low) · **Resolved: 5** (recounted from the directory 2026-10-24, after KI-TQ-20261024-produced-tests-db-scoring-residual-misreads was filed)
 
 ## Open
 
@@ -94,6 +94,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20261024-sweep-list-recorded-against-head — test-writer records its consumer-sweep list with `--base-ref HEAD`, and `consumer_sweep.py check` honours a list only at its own base or a descendant, so once the branch takes in main and finish checks against the merge-base, a list recorded on a branch-only commit is dropped and finish stops at `sweep` with "sweep list missing" (TQ-200d-1: record base `9c3fb043`, finish base `78a408fc`); graded medium | [open-low-ki-tq-20261024-sweep-list-recorded-against-head.md](testing-quality/open-low-ki-tq-20261024-sweep-list-recorded-against-head.md) |
 | `low` | KI-TQ-20261024-eval-harness-cannot-launch-claude-on-windows — `run_agent_eval.py` runs the bare name `claude` through `subprocess.run` without a shell, which cannot start the npm install's `claude.cmd` on Windows, so every live row fails with "could not be launched" and the eval scores 0% (all four live evals on 2026-10-24); graded medium | [open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md](testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md) |
 | `low` | KI-TQ-20261024-restructuring-specialist-eval-reply-format — the restructuring-specialist live eval scored 0/2 on 2026-10-24 because neither reply gave a `skills_applied` object the harness could read (rs-001 no boolean for the axis, rs-002 no JSON object); pre-existing, and the CI eval job is informational | [open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md](testing-quality/open-low-ki-tq-20261024-restructuring-specialist-eval-reply-format.md) |
+| `low` | KI-TQ-20261024-produced-tests-db-scoring-residual-misreads — residual misreads left by the TQ-200d-4 pr-review in the database-setting scoring: `commands_no_db_address` flags `psql <<EOF` / `psql < file.sql` and any `host=` in the whole command text and misses `$env:PGHOST=`; the report checks read `README.rst:10`, `tests:12`, `3.11.2.5` and "does not use localhost" as addresses and miss some not-run / outcome wordings; `db_test_uses_setting` taints flow-insensitively, matches `DB_SCHEMA` / `GPG_KEY`, and skips `ConnectionPool` / `create_pool`; `python -m db_check.checker` and `-t .` are not checker runs; a live timeout kills only the direct `claude` child. Live scores can be falsely red or green; recorded gold scoring is unaffected | [open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md](testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md) |
 
 ## Resolved
 

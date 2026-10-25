@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+from produced_tests_transcript import TRANSCRIPT_NAME, BashCall, bash_calls
 
 _ORCHESTRATION = Path(__file__).resolve().parents[1] / "build_orchestration"
 if str(_ORCHESTRATION) not in sys.path:
@@ -92,6 +93,7 @@ class RowContext:
     base_sha: str
     report: str = ""
     test_files: dict[str, Path] = field(default_factory=dict)
+    calls: list[BashCall] | None = None  # Bash calls of the agent's transcript; None when none was recorded
 
 
 def git(sandbox: Path, *args: str) -> str:
@@ -166,6 +168,8 @@ def place_outputs(output_dir: Path, ctx: RowContext) -> None:
             _register_test(ctx, target)
     report = output_dir / "report.md"
     ctx.report = report.read_text(encoding="utf-8") if report.is_file() else ""
+    transcript = output_dir / TRANSCRIPT_NAME
+    ctx.calls = bash_calls(transcript.read_text(encoding="utf-8")) if transcript.is_file() else None
 
 
 def run_pytest(ctx: RowContext, names: list[str], env_extra: dict[str, str] | None = None) -> dict:

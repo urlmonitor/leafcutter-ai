@@ -29,7 +29,7 @@ sys.path.insert(0, str(_EVALS_DIR))
 import eval_selector  # noqa: E402
 
 _TRIGGERS = eval_selector.agent_triggers(eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json"))
-_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "test-writer"]
+_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist", "test-runner", "test-writer"]
 
 # One representative path per root that 974fa757f added and the owner decision removed.
 _OUTSIDE_OWN_FILES = [
@@ -60,7 +60,7 @@ _OWN_FILES = {
 
 
 def test_the_config_still_declares_the_three_agents() -> None:
-    """Guard: the assertions below are about these agents, so they must all be configured.
+    """Guard: the assertions below are about these agents, so they must all be configured (six since TQ-200d-4 added test-runner).
 
     The name predates the fourth agent (restructuring-specialist, INF-800f-1). It is kept so
     the contract-shrinking guard and the test's history stay continuous; it checks every agent.
@@ -104,3 +104,12 @@ def test_the_agents_own_files_still_trigger_them(changed: str, expected: list[st
     """Each agent's own template, eval set and scorer still trigger it, and the harness triggers all."""
     split = eval_selector.compute_affected([changed], _TRIGGERS)
     assert split["affected"] == expected
+
+
+@pytest.mark.parametrize("changed", ["templates/agents/test-runner.md", "scripts/evals/sets/test-runner.jsonl"])
+def test_the_test_runners_own_files_trigger_only_it(changed: str) -> None:
+    # covers: TQ-200d-4
+    # angle: criterion
+    """TQ-200d-4: the test runner's template and set trigger test-runner (a pure glob match; local_only is applied by the CLI)."""
+    split = eval_selector.compute_affected([changed], _TRIGGERS)
+    assert split["affected"] == ["test-runner"]
