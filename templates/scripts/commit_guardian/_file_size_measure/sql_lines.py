@@ -22,11 +22,12 @@ import logging
 import re
 
 from .errors import UnmeasurableContentError
-from .spans import Range
+from .spans import Break, Range
 
 _LOGGER = logging.getLogger(__name__)
 
-_INTERESTING = re.compile(r"--|/\*|['\"$]")
+_INTERESTING = re.compile(r"--|/\*|['\"$;]")
+_NEXT_CODE = re.compile(r"[ \t]*(?!--|/\*)[^\s]")
 _BLOCK_TOKEN = re.compile(r"/\*|\*/")
 _STANDARD_STRING = re.compile(r"'(?:[^']|'')*'")
 _ESCAPE_STRING = re.compile(r"'(?:[^'\\]|\\.|'')*'", re.DOTALL)
@@ -70,7 +71,7 @@ def _quoted(text: str, index: int, end: int) -> int:
     return match.end()
 
 
-def _dollar(text: str, index: int, end: int, out: list[Range]) -> int:
+def _dollar(text: str, index: int, end: int, out: list[Range], breaks: list[Break]) -> int:
     """Consume a dollar-quoted string at *index* (or a lone ``$``); return the next offset."""
     if index > 0 and (text[index - 1].isalnum() or text[index - 1] in "_$"):
         return index + 1
@@ -82,8 +83,9 @@ def _dollar(text: str, index: int, end: int, out: list[Range]) -> int:
         detail = "unterminated dollar-quoted string"
         raise _Unlexable(detail)
     body: list[Range] = []
+    body_breaks: list[Break] = []
     try:
-        _lex(text, tag.end(), close, body)
+        _lex(text, tag.end(), close, body, body_breaks)
     except _Unlexable as exc:
         line = text.count("\n", 0, index) + 1
         _LOGGER.warning(
@@ -91,19 +93,25 @@ def _dollar(text: str, index: int, end: int, out: list[Range]) -> int:
             line,
             exc.detail,
         )
-        body = []
+        body, body_breaks = [], []
     out.extend(body)
+    breaks.extend(body_breaks)
     return close + len(tag.group(0))
 
 
-def _lex(text: str, index: int, end: int, out: list[Range]) -> None:
-    """Lex ``text[index:end]``, appending every comment range to *out*."""
+def _lex(text: str, index: int, end: int, out: list[Range], breaks: list[Break]) -> None:
+    """Lex ``text[index:end]``, appending every comment range to *out* and statement break to *breaks*."""
     while True:
         match = _INTERESTING.search(text, index, end)
         if not match:
             return
         index, marker = match.start(), match.group(0)
-        if marker == "--":
+        if marker == ";":
+            following = _NEXT_CODE.match(text, index + 1, end)
+            if following:
+                breaks.append((following.end() - 1, 0))
+            index += 1
+        elif marker == "--":
             stop = text.find("\n", index, end)
             stop = end if stop < 0 else stop
             out.append((index, stop))
@@ -111,7 +119,7 @@ def _lex(text: str, index: int, end: int, out: list[Range]) -> None:
         elif marker == "/*":
             index = _block_comment(text, index, end, out)
         elif marker == "$":
-            index = _dollar(text, index, end, out)
+            index = _dollar(text, index, end, out, breaks)
         else:
             index = _quoted(text, index, end)
 
@@ -129,12 +137,27 @@ def sql_ranges(text: str) -> list[Range]:
         UnmeasurableContentError: an unterminated block comment, string,
             identifier or dollar quote.
     """
+    return sql_lex(text)[0]
+
+
+def sql_lex(text: str) -> tuple[list[Range], list[Break]]:
+    """Return the comment ranges and the statement breaks of SQL *text*.
+
+    A break (indent step 0) is the start of code that follows a ``;`` on the
+    same line, outside strings, identifiers and comments; inside a lexable
+    dollar-quoted body too, so PL/pgSQL statements count one per statement.
+
+    Raises:
+        UnmeasurableContentError: an unterminated block comment, string,
+            identifier or dollar quote.
+    """
     ranges: list[Range] = []
+    breaks: list[Break] = []
     try:
-        _lex(text, 0, len(text), ranges)
+        _lex(text, 0, len(text), ranges, breaks)
     except _Unlexable as exc:
         raise UnmeasurableContentError("SQL", exc.detail) from exc
-    return sorted(ranges)
+    return sorted(ranges), sorted(breaks)
 
 
 """
@@ -146,4 +169,7 @@ DECISION HISTORY
 - 2026-10-21 [python-coder]: An unlexable dollar-quoted body now logs a WARNING naming the line
   and that its lines are counted as a string, instead of being swallowed silently.
   (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: sql_lex also returns statement breaks: code after a `;` on the same
+  line, outside strings, identifiers and comments, starts a new counted line. Breaks inside a
+  dollar-quoted body are kept only when the body lexes, like its comments. (#EPIC-FilesStayWorkable/GE-127d-3)
 """

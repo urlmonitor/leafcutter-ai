@@ -22,10 +22,15 @@ import re
 from typing import NoReturn
 
 from .errors import UnmeasurableContentError
-from .spans import Range
+from .spans import Break, Range
 
 _HEREDOC_WORD = re.compile(r"""[ \t]*(?:'([^']*)'|"([^"]*)"|\\?([^\s;&|()<>'"\\]+))""")
 _SEPARATORS = frozenset(";&|()")
+# A keyword after which the rest of the line is the next statement, one level deeper.
+_BODY_KEYWORD = re.compile(r"(then|do|else)(?=[ \t])")
+_NEXT_CODE = re.compile(r"[ \t]*([^\s#])")
+_HEADER_CONTINUES = re.compile(r"(then|do)\b")
+_CLOSING_KEYWORD = re.compile(r"(fi|done|esac|else|elif)\b")
 
 
 class _ShellScanner:
@@ -35,6 +40,7 @@ class _ShellScanner:
         self.text = text
         self.size = len(text)
         self.ranges: list[Range] = []
+        self.breaks: list[Break] = []
         self.heredocs: list[tuple[str, bool]] = []
         self.in_test = False
 
@@ -46,12 +52,12 @@ class _ShellScanner:
 
     def run(self) -> list[Range]:
         """Scan the whole text and return the comment ranges."""
-        text, index, word_start = self.text, 0, True
+        text, index, word_start, command = self.text, 0, True, True
         while index < self.size:
             char = text[index]
             if char == "\n":
                 index = self._heredoc_bodies(index + 1)
-                word_start, self.in_test = True, False
+                word_start, command, self.in_test = True, True, False
             elif char in " \t":
                 index, word_start = index + 1, True
             elif char == "#" and word_start:
@@ -59,9 +65,37 @@ class _ShellScanner:
                 end = self.size if end < 0 else end
                 self.ranges.append((index, end))
                 index = end
+            elif command and (keyword := _BODY_KEYWORD.match(text, index)):
+                index = self._body_keyword(keyword.end())
             else:
                 index, word_start = self._token(index)
+                command = word_start and text[index - 1] in _SEPARATORS
         return self.ranges
+
+    def _body_keyword(self, end: int) -> int:
+        """After ``then``/``do``/``else`` in command position, the next command is one level deeper."""
+        following = _NEXT_CODE.match(self.text, end)
+        if following:
+            self.breaks.append((following.start(1), 1))
+        return end
+
+    def _separator(self, index: int) -> int:
+        """Consume ``;`` or ``;;``; the next command on the line is a new statement.
+
+        A ``;`` before ``then`` or ``do`` ends a header whose keyword stays on its
+        line, so it does not split there; before a closing keyword the next
+        statement is one level shallower.
+        """
+        end = index + (2 if self.text.startswith(";;", index) else 1)
+        following = _NEXT_CODE.match(self.text, end)
+        if following and not _HEADER_CONTINUES.match(self.text, following.start(1)):
+            step = -1 if _CLOSING_KEYWORD.match(self.text, following.start(1)) else 0
+            self.breaks.append((following.start(1), step))
+            if end == index + 1:
+                # A lone `;` that splits is only a separator: cut it from the key, so
+                # `a; b` keys exactly like `a` and `b` on two lines.
+                self.ranges.append((index, end))
+        return end
 
     def _token(self, index: int) -> tuple[int, bool]:
         """Consume one non-space token start; return ``(next offset, word_start)``."""
@@ -83,6 +117,8 @@ class _ShellScanner:
             return self._redirect(index), False
         if char == "(" and text.startswith("((", index):
             return self._balanced(index, "(", ")"), False
+        if char == ";":
+            return self._separator(index), True
         if char == "[" and text.startswith("[[", index):
             self.in_test = True
         elif char == "]" and text.startswith("]]", index):
@@ -198,7 +234,24 @@ def shell_ranges(text: str) -> list[Range]:
     Raises:
         UnmeasurableContentError: an unterminated quote or substitution.
     """
-    return _ShellScanner(text).run()
+    return shell_lex(text)[0]
+
+
+def shell_lex(text: str) -> tuple[list[Range], list[Break]]:
+    """Return the comment ranges and the ``(offset, indent step)`` statement breaks of shell *text*.
+
+    A command after ``;`` or ``;;`` on the same line breaks (one level
+    shallower before ``fi``/``done``/``esac``/``else``/``elif``), except a
+    ``;`` before ``then``/``do``; a command after ``then``/``do``/``else`` in
+    command position breaks one level deeper. ``&&`` and ``||`` lists stay one
+    statement.
+
+    Raises:
+        UnmeasurableContentError: an unterminated quote or substitution.
+    """
+    scanner = _ShellScanner(text)
+    ranges = scanner.run()
+    return ranges, sorted(scanner.breaks)
 
 
 """
@@ -210,4 +263,7 @@ DECISION HISTORY
 - 2026-10-21 [python-coder]: A double less-than inside (( )), $(( )) or [[ ]] is a shift or
   comparison, never a here-document operator, so later lines are no longer swallowed.
   (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: shell_lex also returns statement breaks: `a; b`, `if x; then y; fi`
+  and `for i in 1 2; do echo $i; done` measure like their one-command-per-line forms. Keywords split
+  only in command position, so `echo do it` stays one line. (#EPIC-FilesStayWorkable/GE-127d-3)
 """

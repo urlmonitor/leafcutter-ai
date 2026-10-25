@@ -26,7 +26,7 @@ import tokenize
 from collections.abc import Iterator
 
 from .errors import UnmeasurableContentError
-from .spans import Range, line_starts, split_physical_lines
+from .spans import Break, Range, line_starts, split_physical_lines
 
 _IGNORED = frozenset(
     {tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER}
@@ -106,16 +106,18 @@ def _tokenize(text: str) -> list[tokenize.TokenInfo]:
         raise UnmeasurableContentError("Python", detail) from exc
 
 
-def _statement_breaks(tokens: list[tokenize.TokenInfo]) -> list[tuple[int, int]]:
-    """Start positions of statements that begin on the row of the one before them.
+def _statement_breaks(tokens: list[tokenize.TokenInfo]) -> list[tuple[tuple[int, int], int]]:
+    """``(start position, indent step)`` of statements that begin on the row of the one before them.
 
-    A statement ends at a top-level ``;`` and at the ``:`` ending a compound
-    header (``if x: y``); a lambda's own ``:`` is skipped. The next statement
-    is a break only when its first token sits on the separator's row.
+    A statement ends at a top-level ``;`` (step 0) and at the ``:`` ending a
+    compound header (``if x: y``, step 1: the body sits one level deeper); a
+    lambda's own ``:`` is skipped. The next statement is a break only when its
+    first token sits on the separator's row.
     """
-    breaks: list[tuple[int, int]] = []
+    breaks: list[tuple[tuple[int, int], int]] = []
     statement = _Statement()
     pending_row: int | None = None
+    pending_step = 0
     for token in tokens:
         if token.type == tokenize.NEWLINE:
             statement, pending_row = _Statement(), None
@@ -123,10 +125,11 @@ def _statement_breaks(tokens: list[tokenize.TokenInfo]) -> list[tuple[int, int]]
         if token.type in _IGNORED:
             continue
         if pending_row == token.start[0]:
-            breaks.append(token.start)
+            breaks.append((token.start, pending_step))
         pending_row = None
         if statement.ends_with(token):
             statement, pending_row = _Statement(depth=statement.depth), token.end[0]
+            pending_step = 1 if token.string == ":" else 0
     return breaks
 
 
@@ -158,8 +161,8 @@ class _Statement:
         return self.first.string in _COMPOUND
 
 
-def python_lex(text: str) -> tuple[list[Range], list[int]]:
-    """Return the uncounted ranges and the statement breaks of Python *text*.
+def python_lex(text: str) -> tuple[list[Range], list[Break]]:
+    """Return the uncounted ranges and the ``(offset, indent step)`` statement breaks of Python *text*.
 
     Raises:
         UnmeasurableContentError: the running interpreter's tokenizer rejects *text*.
@@ -167,7 +170,8 @@ def python_lex(text: str) -> tuple[list[Range], list[int]]:
     tokens = _tokenize(text)
     starts = line_starts(split_physical_lines(text)) or [0]
     breaks = _statement_breaks(tokens)
-    return _uncounted(tokens, starts, frozenset(breaks)), [_offset(starts, start) for start in breaks]
+    body_starts = frozenset(start for start, _step in breaks)
+    return _uncounted(tokens, starts, body_starts), [(_offset(starts, start), step) for start, step in breaks]
 
 
 def python_ranges(text: str) -> list[Range]:
@@ -219,4 +223,7 @@ DECISION HISTORY
   statement after a top-level `;` or after a compound header's `:` on the same row (`x = 1; y = 2`,
   `if x: y`) counts as its own line. `match`/`case` are left out because they are soft keywords
   (`match: int = 1` is an annotation). (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: A break after a compound header carries indent step 1, so the body of
+  `if x: y` is keyed four spaces deeper, exactly as it would stand on its own line.
+  (#EPIC-FilesStayWorkable/GE-127d-3)
 """
