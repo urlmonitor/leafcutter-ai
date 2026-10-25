@@ -46,12 +46,44 @@ doc_links:
   - path: templates/agents/live-surface-tester.md
     relationship: implements
     status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+declared_files:
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/live-surface-tester.md
+    state: existing
+it_requirements:
+  - "Test home: unit_tests/feedback/test_inf_500d_3_iv.py (to be created by the test phase). It is not in declared_files because test files belong to python-coder/test-writer per the surface map and this record's own change is prompt-only."
+  - "The only id sources the instructions may name are the submission's own standard output and the recovery file named in that same submission's own per-run error-stream file. No step may list, sort, glob or search the shared temporary directory, and no step may take 'the newest' or 'the first' recovery file."
+  - "live-surface-tester's executable capture block must, when run as written, yield the failure marker (never a foreign id) both when its own error-stream file has no recovery line and when the named recovery file is missing or empty, even with other recovery files present in the temporary directory. It must not depend on 'first match wins'."
+  - "The marker reason identifiers come from INF-500d-3's closed set and are referenced, not redefined; this record adds no reason of its own. The 'written but not captured' reason is the one used whenever the error stream announced a recovery file."
+  - "The verdict and sign-off still complete when the id is missing (fail-open, BO-2000a-3 continue-anyway); recording the marker never aborts or downgrades the sign-off."
+  - "Edits land in the template sources only; deployed copies are refreshed by the build (ADR-001)."
+  - "Tests read the shared deployed reference layout (shared_layout_reader) and execute the shell form of the recovery recipe where the instruction provides one, with decoy recovery files planted in a confined temporary directory; a grep for forbidden words alone is not sufficient (CLAUDE.md 'Gate / Workflow ACs')."
+test_intent:
+  - clause: "it records a failure marker whose reason comes from INF-500d-3's closed set"
+    needs_test: true
+    reason: The executable recipe's fallback value decides what is recorded, and a wrong fallback writes a bare or invented marker.
+  - clause: "it does not record fb_2026-08-25_9057159a or any other id it did not read from its own standard output or from the recovery file named in its own error stream"
+    needs_test: true
+    reason: Running the recipe with a planted decoy file is the only way to show it never picks up another agent's id.
+  - clause: "the sign-off instructions contain no step that lists, sorts, or searches the shared temporary directory for recovery files by name pattern or modification time"
+    needs_test: true
+    reason: A newest-file fallback step is the improvisation this record forbids, and the deployed text can be checked for any such step.
+  - clause: "it records the failure marker with INF-500d-3's \"written but not captured\" reason"
+    needs_test: true
+    reason: Choosing this reason over the others drives whether the report is later re-filed, so a wrong choice duplicates records.
+  - clause: "it does not record any other id, So that a missing id stays visible as missing instead of being replaced by a plausible id that belongs to another agent"
+    needs_test: true
+    reason: A recipe that falls through to a directory search when the named file is empty would record a foreign id here.
 delivers_to: null
 expects_from:
   - ac_id: INF-500d-3-ii
-    contract: "Each agent's error stream goes to a file unique to that run, and the recovery search reads only that file."
+    contract: "Every shipped submit instruction redirects the error stream to a per-run file named from the ticket base name and the phase (plus an event kind where one applies), and the same instruction's recovery search reads that same per-run file and nothing else."
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

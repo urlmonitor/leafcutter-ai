@@ -55,11 +55,63 @@ doc_links:
     relationship: related
     status: exists
     relevance: "CONTRACT TENSION. Its criteria pin the recovery line's shape and the pattern 'sidecar:[^ ]*feedback_id_[0-9]*.txt'. A name with non-digit separators no longer matches that pattern. See notes."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+declared_files:
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_3_i.py
+    state: to_be_created
+it_requirements:
+  - "NAMING DECISION (IT PO, 2026-10-25): option (a). The recovery file keeps the form feedback_id_<D>.txt in the temporary directory, where <D> is a run of decimal digits only, so the documented search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' is unchanged. REASON: '[0-9]*' accepts a digit run of any length, so a digits-only name built from per-submission parts (for example high-resolution time, process id and random digits, all written as digits) gives uniqueness without touching any caller. The signoff skill, live-surface-tester, INF-500d-4-ii's and INF-500d-4-vi's tests and every existing recovery-pattern test stay valid as they are. Option (b) was rejected because it would edit two approved records' tests and two instruction surfaces for no gain in uniqueness."
+  - "No submission may ever replace or truncate a recovery file it did not create. Uniqueness must hold by construction (a name already present must yield a different name, never an overwrite), not only by low collision probability."
+  - "The error-stream recovery line keeps its existing shape: one line 'sidecar:<absolute path>' and nothing else on that line, emitted only after the file holds the complete id. The recovery file's content stays exactly the printed id."
+  - "Standard output is untouched by this change: still exactly one line, the id (INF-500d-4-ii, INF-500d-3-iii)."
+  - "A failed recovery-file write stays fail-open: a warning on the error stream, the id still printed on standard output, exit status unchanged (the existing WARNING path)."
+  - "The module docstring that documents the stderr contract and the DECISION HISTORY block must be updated to describe the new name and why (per the doc-enforcer conventions)."
+  - "templates/scripts/feedback/submit_feedback.py is over the 400-line check-file-size limit: the change must leave it within the ratchet. Never SKIP check-file-size."
+  - "scripts/feedback/submit_feedback.py is a tracked copy that is byte-identical to the template today: it must still be byte-identical after the change (ADR-001 template-first; refresh the copy, never hand-diverge it)."
+  - "Tests must run the real entry point as separate concurrent subprocesses against a copied temporary layout with its own declared sink and its own temporary directory; no test writes to a real sink or the real shared temporary directory (INF-500d-4)."
+  - "Accumulation of recovery files is out of scope (see notes); this record must not add deletion of other submissions' recovery files."
+test_intent:
+  - clause: "two distinct id-recovery files exist, one per submission"
+    needs_test: true
+    reason: The file name is computed per submission, and the current whole-second name makes both submissions share one file.
+  - clause: "the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7"
+    needs_test: true
+    reason: Linking each announced path to its own id is the property the overwrite currently breaks.
+  - clause: "the recovery file announced on the second submission's error stream contains exactly fb_2026-08-25_9057159a"
+    needs_test: true
+    reason: The second submission is the one whose write lands last today, so its file content proves no cross-write happened.
+  - clause: "neither recovery file was overwritten by the other submission"
+    needs_test: true
+    reason: An overwrite is silent and only a concurrent run can show that each file still holds its own id.
+  - clause: "20 distinct recovery files exist"
+    needs_test: true
+    reason: A naming scheme that only adds a coarse suffix can still collide under twenty-way concurrency.
+  - clause: "each printed id appears in exactly one recovery file"
+    needs_test: true
+    reason: A duplicated or missing id across files is the computed outcome a weak uniqueness scheme would produce.
+  - clause: "each submission's error stream names the recovery file that holds that submission's own printed id"
+    needs_test: true
+    reason: The announced path and the written path are produced separately, so they can drift apart under concurrency.
+  - clause: "it returns exactly one match"
+    needs_test: true
+    reason: A unique name that the documented search pattern no longer matches would silently break every caller's recovery step.
+  - clause: "that match names the recovery file holding the id the submission printed, So that the uniquely-named recovery file is still found by the recovery step agents are told to run"
+    needs_test: true
+    reason: A match on the wrong line or the wrong file would hand the agent a foreign id.
 delivers_to:
-  agent: llm-expert
-  contract: "A recovery-file line on the error stream naming a file unique to this submission, in a shape the documented recovery search matches exactly once."
+  - agent: llm-expert
+    contract: "On every successful write the error stream carries exactly one line of the form 'sidecar:<absolute temp dir>/feedback_id_<digits>.txt' (digits only between 'feedback_id_' and '.txt'), naming a file unique to that submission whose content is exactly the printed id (fb_YYYY-MM-DD_xxxxxxxx). The documented search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' matches that line exactly once. Consumed by INF-500d-3-ii."
+  - agent: python-coder
+    contract: "The recovery-file naming change touches only the error stream and the recovery file; standard output stays exactly one line holding the id. Consumed by INF-500d-3-iii."
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-25

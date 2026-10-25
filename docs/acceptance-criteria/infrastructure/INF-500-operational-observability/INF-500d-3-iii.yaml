@@ -42,12 +42,47 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Already pins 'stdout is exactly one line, the id' for a single submission. This record adds the concurrent case and the unchanged-caller case. It does not restate the single-submission guarantee."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+declared_files:
+  - path: unit_tests/feedback/test_inf_500d_3_iii.py
+    state: to_be_created
+it_requirements:
+  - "This record is a regression guard: it adds no behaviour to submit_feedback.py. If its tests fail after INF-500d-3-i or INF-500d-3-ii, the fix goes into the record that caused the regression, not into a workaround here."
+  - "Concurrent submissions must be real separate processes of the deployed entry point, started so that they overlap within one second, against a copied temporary layout with its own declared sink and temporary directory. An in-process helper call does not satisfy the first scenario."
+  - "The unchanged-caller scenario must run the exact capture form a shipped instruction uses today (FB_ID=$(...) in epic-supervisor and live-surface-tester) as written, without editing the command, and compare the captured value with the id the record holds."
+  - "The id-to-record match must use the record's own category, phase and note as appended in the declared sink, never position or timestamp order."
+  - "Tests reading deployed instructions use the shared deployed reference layout (shared_layout_reader); no test spawns its own build."
+  - "The suite must stay within its existing timeout budget: the twenty-process run must finish within the per-test timeout the feedback tests already use."
+test_intent:
+  - clause: "each submission's standard output is exactly one line"
+    needs_test: true
+    reason: A refactor that adds a second stdout line would corrupt every caller, and only running the real process shows it.
+  - clause: "that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx"
+    needs_test: true
+    reason: A stream mix-up can put the recovery line or a warning on stdout instead of the id.
+  - clause: "the 20 ids are pairwise distinct"
+    needs_test: true
+    reason: The id is generated per submission, and a time-seeded generator could repeat under same-second concurrency.
+  - clause: "each id names the record that its own submission appended, matched by that record's category, phase and note"
+    needs_test: true
+    reason: An id printed by one process but belonging to another's record is the cross-agent mix-up this feature exists to prevent.
+  - clause: "it receives the same single-line id with no change to its command or parsing"
+    needs_test: true
+    reason: Existing callers parse stdout directly, so executing their unchanged command is the only proof they still work.
+  - clause: "the sign-off instructions still tell the agent to read standard output first and to fall back to the recovery file only when standard output is empty"
+    needs_test: true
+    reason: The edits to the signoff skill in INF-500d-3-ii could reorder the steps, and the deployed text shows whether the order survived.
 delivers_to: null
 expects_from:
   - ac_id: INF-500d-3-i
-    contract: "The recovery-file naming change touches only the error stream and the recovery file, never standard output."
+    contract: "The recovery-file naming change touches only the error stream and the recovery file; standard output stays exactly one line holding the id."
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

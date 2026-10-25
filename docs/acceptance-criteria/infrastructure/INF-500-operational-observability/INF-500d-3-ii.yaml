@@ -63,14 +63,71 @@ doc_links:
   - path: templates/agents/live-surface-tester.md
     relationship: implements
     status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
 assigned_agent: llm-expert
-estimated_complexity: S
+estimated_complexity: M
+declared_files:
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/ticket-supervisor.md
+    state: existing
+  - path: templates/agents/documentation-verifier.md
+    state: existing
+  - path: templates/agents/user-surface-smoker.md
+    state: existing
+  - path: templates/agents/live-surface-tester.md
+    state: existing
+it_requirements:
+  - "Test home for the fourth scenario's check: unit_tests/feedback/test_inf_500d_3_ii.py (to be created by the test phase). It and unit_tests/feedback/test_inf_500d_4_vi.py (below) are not in declared_files because test files belong to python-coder/test-writer per the surface map and this record's own change is prompt-only; the test phase must still deliver both in the same delivery."
+  - "SURFACE SET VERIFIED (IT PO, 2026-10-25, grep of templates/ for 'feedback_err' and for submit_feedback.py stderr redirects): exactly five shipped instruction surfaces redirect the submission's error stream to a fixed file - signoff SKILL.md (Call 1 and the Call 2 search), ticket-supervisor.md (four event-keyed names), documentation-verifier.md, user-surface-smoker.md, live-surface-tester.md (workspace-relative name, both the redirect and the search). epic-supervisor.md sends the error stream to /dev/null and captures standard output only, so it is not in scope. The BA's set is complete."
+  - "The set of redirecting instructions the check inspects must be discovered from the deployed instruction files at check time (any submit_feedback.py command whose error stream is redirected to a file), never from a hard-coded list of five file names, so a new surface that copies the pattern is inspected automatically."
+  - "In every surface, the submit step's redirect target and the recovery search's input must name the same per-run file, written with the same placeholders; a mismatch must be caught by the check."
+  - "The ticket and phase parts of the name must come from placeholders the agent already holds (for example the ticket file's base name and its own phase name) and must resolve to a single path component: no path separators, spaces or shell metacharacters after substitution."
+  - "Each prescribed command stays a single simple shell command (shell convention): no chaining, pipes, subshells or variables are introduced to build the name. live-surface-tester's existing multi-line capture block may keep its shape but must use the per-run name in both places."
+  - "ticket-supervisor's four event-keyed names keep their event-kind suffix and additionally carry the ticket and the phase, so two supervisors in one batch never share a file."
+  - "The id-capture order is unchanged: standard output first, the recovery file only when standard output is empty (INF-500d-3-iii)."
+  - "SAME-DELIVERY TEST CHANGE: unit_tests/feedback/test_inf_500d_4_vi.py (test_signoff_id_capture_contract_survives_the_prompt_change) hard-codes the signoff redirect target '/tmp/feedback_err.txt' and runs the Call 2 search line with only '/tmp/' substituted. Both break once the name carries placeholders. That test must be updated in this delivery to fill the placeholders the same way for Call 1 and Call 2 and to assert the per-run name, while keeping every INF-500d-4-vi assertion it makes today (id on standard output, exactly one search match, record in the declared sink). INF-500d-4-vi's YAML is not edited."
+  - "The check of the fourth scenario must be behavioural (CLAUDE.md 'Gate / Workflow ACs'): fill in each prescribed name for the two concrete runs named in the criteria and assert the results differ and contain the ticket and the phase; a scan that only checks a suffix exists does not satisfy it. It reads the shared deployed reference layout (shared_layout_reader), never its own build."
+  - "Deployed copies are refreshed by the build from templates (ADR-001); never edit .claude/ outputs."
+test_intent:
+  - clause: "the two runs resolve to two different files"
+    needs_test: true
+    reason: Filling the prescribed placeholders is mechanical, so a test can show the two runs no longer share one name.
+  - clause: "the name each run resolves to includes the ticket it is signing off on and the phase name it is submitting as"
+    needs_test: true
+    reason: A name keyed on only one of the two parts still collides in some parallel drives, and substitution shows which parts are present.
+  - clause: "no shipped instruction prescribes one fixed file name that every caller shares"
+    needs_test: true
+    reason: A single surface left on the fixed name reintroduces the collision, and only a scan of every deployed surface finds it.
+  - clause: "each supervisor's submission writes its error stream to a different file, Because a name keyed only on the event kind is shared across every ticket in the batch and recreates the collision this record removes"
+    needs_test: true
+    reason: The event-keyed names are the convention that looks safe but is shared across a batch, so it needs its own concrete check.
+  - clause: "the search reads only the file that run's own submission wrote"
+    needs_test: true
+    reason: A recovery search pointed at a different name than the redirect finds nothing or another run's file, and the filled-in pair shows it.
+  - clause: "another agent's submission that finished in the same second cannot have written to that file"
+    needs_test: true
+    reason: Two different runs resolving to the same file is the computed outcome that proves or disproves this.
+  - clause: "it reports how many redirecting instructions it inspected"
+    needs_test: true
+    reason: The count is what tells a reader the check looked at something rather than nothing.
+  - clause: "it fails when that count is zero"
+    needs_test: true
+    reason: A check that inspects zero surfaces and passes is the success-shaped no-op this repo has shipped before.
+  - clause: "it fails when any of them prescribes a name without both the ticket and the phase in it"
+    needs_test: true
+    reason: The failure branch must be proven against a surface that lacks one part, or the check could never fail.
 delivers_to:
   agent: llm-expert
-  contract: "Each agent's error stream goes to a file unique to that run, and the recovery search reads only that file."
+  contract: "Every shipped submit instruction redirects the error stream to a per-run file named from the ticket base name and the phase (plus an event kind where one applies), and the same instruction's recovery search reads that same per-run file and nothing else. Consumed by INF-500d-3-iv."
 expects_from:
   - ac_id: INF-500d-3-i
-    contract: "The submission's error stream names a recovery file unique to that submission."
+    contract: "On every successful write the error stream carries exactly one line 'sidecar:<absolute temp dir>/feedback_id_<digits>.txt' naming a file unique to that submission whose content is exactly the printed id; the search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' matches it exactly once."
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []
