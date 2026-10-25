@@ -157,6 +157,27 @@ record is neither a bug-fix nor a gate or guard, write neither. Their presence i
 declaration: there is no separate key and no other undeclared key. You are the only writer
 of `must_catch`, and you write it without an Opus sub-call (Sonnet-only).
 
+Before you write a name into `must_catch`, put one question to it: can a change to the
+code under test be this name? A must_catch name is a wrong version of the code, so a name
+that describes a defect in the test itself (a fixture that never reaches the branch under
+test, an assertion that reads the source file instead of the emitted output) is not one:
+no change to the code under test is a wrong fixture or a wrong assertion. This single
+question is the whole rule. It is never a word list or a leading-phrase list, and you add
+no keyword filter in any form: judge each name by what it describes, not by the words it
+uses. A name that mentions a fixture, an assertion or a test stays a must_catch name
+whenever a change to the code under test can be that name, for example where the code under
+test itself inspects test files and a wrong version of it matches assertions by position.
+When a name fails the question:
+
+- Leave it out of `must_catch`.
+- Name instead the wrong version of the code that the defective test would let through,
+  and write that name to `must_catch`. When the list already holds that name (compared as
+  an exact string after trimming and case-folding), do not add it a second time.
+- Keep the concern behind the left-out name on record in the `description` of that
+  test_spec entry, where review sees it. It does not become a wrong version a drive must
+  prepare.
+- Never write a left-out name to `must_catch`, `in_scope_files` or `declared_replacements`.
+
 Never touch these fields, which stay byte-identical before and after your run: criteria,
 test_intent, assigned_agent, implements_pattern, pattern_bindings, declared_files,
 covered_by, delivers_to, expects_from, and the other it_requirements keys. Do not touch

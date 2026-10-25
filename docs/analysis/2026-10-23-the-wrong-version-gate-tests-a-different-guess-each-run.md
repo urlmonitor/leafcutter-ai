@@ -216,6 +216,21 @@ concern has to stay on record, it belongs in the entry's `description` or in rev
 `must_catch`. An authoring check could refuse a `must_catch` string whose subject is a
 fixture, an assertion or a test, before a drive ever starts.
 
+**Follow-up (TQ-500f-2-iii).** The authoring side is now handled where `must_catch` is
+filled, and it is not a keyword refusal. The code-aware test designer
+(`templates/agents/test-designer.md`, TQ-500f-2-ii; judgement rationale in
+`docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md`) puts one
+question to each candidate name: can a change to the code under test be this name? A name
+that fails it is left out of `must_catch`, the code-side wrong version it would let through
+is named instead (not added twice), and the concern stays in that test entry's `description`.
+A keyword filter was ruled out because names about assertions and fixtures are legitimate
+where the code under test analyses tests (TQ-500g-3-iii). As a backstop, a name of this
+kind that still reaches a drive is answered by the preparer
+(`templates/agents/test-breaker.md`, TQ-500g-1-iv) as could_not_prepare with a fixed reason
+saying it names a defect in a test rather than in the code, so a reader sees the requirement
+must be corrected, not the code or the tests. Related sibling failure:
+`docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md`.
+
 ## 5. Remedy options compared
 
 | | (i) Pin | (ii) Deterministic preparation | (iii) AC carries the alteration | (iv) Leave as is |

@@ -130,8 +130,13 @@ is missing, return the failure reply (see Stop-and-Ask Rule).
      something never written, such as timeout handling that is absent), or the
      name is too vague to act on (more than one reading would change different
      things), or the change would need a file that is not listed for this name,
-     or a test file. Give a one-line `reason` that says which (when a further
-     file is needed, the reason names that file), and `replacements: []`.
+     or a test file, or the name describes a defect in a test (a wrong fixture,
+     a wrong assertion) rather than a wrong version of the code, so no change to
+     the code can be it. Give a one-line `reason` that says which (when a further
+     file is needed, the reason names that file; for a test defect the reason
+     reads "names a defect in a test rather than in the code; the requirement
+     must be corrected, not the code or the tests", so a reader can tell it from
+     "the code has no such behaviour"), and `replacements: []`.
      Do not guess a reading, do not change something nearby, and do not pick a
      loosely related change. This is a finding for a human: the work may be
      incomplete or the name unclear.
