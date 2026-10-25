@@ -163,6 +163,7 @@ def test_records_with_unparseable_timestamps_are_excluded_from_every_period(tmp_
 def test_inf_700b_3_reachable_from_entry_point(tmp_path):
     # covers: INF-700b-3
     # covers: INF-700b-1-ii
+    # covers: INF-700b
     # angle: reachability
     """Run the CLI once per fixture period over ONE stream; the three verdicts differ pairwise.
 

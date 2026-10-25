@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: done
+work_status: in_progress
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
 criteria: |
   Given any script the build deploys into a consumer install,
@@ -243,11 +243,23 @@ amended_by:
     by this pass — its 18 tests were already real and already passing;
     BP-900g-8-i was the one piece still open, and is now closed. criteria
     untouched.'
+- reason: store-accuracy
+  by: python-coder
+  at: 2026-10-25
+  note: 'Added child BP-900g-8-iv (closure-guard per-file reuse; done, covered by
+    unit_tests/test_bp_900g_8_iv.py) to covered_by, and changed work_status from done to
+    in_progress. Staging this parent for the first time since BP-900g-8-iii was added
+    made check-done-proof refuse it: a composite marked done while its child
+    BP-900g-8-iii (the CLAUDE.md deploy-dependency rule wording, documentation-expert)
+    is still todo with no coverage. That claim was false before this change too;
+    in_progress is the accurate state until BP-900g-8-iii lands. Its own 18 tests and
+    the done children -i, -ii and -iv are unchanged. criteria untouched.'
 superseded_by: null
 covered_by:
   - BP-900g-8-i
   - BP-900g-8-ii
   - BP-900g-8-iii
+  - BP-900g-8-iv
   - unit_tests/test_bp_900g_8.py
   - unit_tests/test_bp_closure_guard_correctness.py
 implemented_by:

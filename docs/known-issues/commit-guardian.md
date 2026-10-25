@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-23'
+last_updated: '2026-10-25'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 83** (1 blocker, 35 high, 47 low) · **Resolved: 28** (recounted from the directory 2026-10-24)
+**Open: 83** (1 blocker, 35 high, 47 low) · **Resolved: 29** (recounted from the directory 2026-10-25)
 
 ## Open
 
@@ -189,3 +189,4 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260909-gate-folder-density — `check-folder-density`'s grandfather compared `git ls-files`, so its blocking branch was unreachable — RESOLVED: GE-120h-3 (`d8cd00a9d`, PR #1067) reads BEFORE with `git ls-tree -r HEAD`, raised to the max over MERGE_HEAD parents by PR #1143 | [resolved-low-ki-cg-20260909-gate-folder-density.md](commit-guardian/resolved/resolved-low-ki-cg-20260909-gate-folder-density.md) |
 | `low` | KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — `check-folder-density` refused every BA-stage commit that took a flat AC tree past 15 files — RESOLVED: GE-133a (PR #1168) sets `docs/acceptance-criteria/` aside via `folder_density.set_aside_locations` (`_density_set_aside.py`) | [resolved-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md](commit-guardian/resolved/resolved-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md) |
 | `low` | KI-CG-20261023-contract-shrinking-counts-moved-skips-as-added — `check-contract-shrinking` reported every added `pytest.skip` line, even one that replaced an identical skip or sat in a brand-new test file — RESOLVED 2026-10-24 (GE-111f-1): skips and xfails are netted per file and kind, and files added in the diff are not judged | [resolved-low-ki-cg-20261023-contract-shrinking-counts-moved-skips-as-added.md](commit-guardian/resolved/resolved-low-ki-cg-20261023-contract-shrinking-counts-moved-skips-as-added.md) |
+| `high` | KI-CG-20261023-output-drift-gaps-on-gemini-workflow-scripts — `check-output-drift` blocked every commit in a maker workspace with 9 GAPs for `.gemini/workflows/*.js`, which a plain build had carried from `.claude/workflows` into the unrelated `gemini/workflows` family — RESOLVED 2026-10-25 (BP-1500g-2-ii): the capability merge carries a contested item to the antigravity surface only when the package's own output there already holds that name | [resolved-high-ki-cg-20261023-output-drift-gaps-on-gemini-workflow-scripts.md](commit-guardian/resolved/resolved-high-ki-cg-20261023-output-drift-gaps-on-gemini-workflow-scripts.md) |
