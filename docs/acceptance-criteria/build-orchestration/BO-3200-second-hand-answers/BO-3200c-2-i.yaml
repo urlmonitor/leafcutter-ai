@@ -1,0 +1,115 @@
+id: BO-3200c-2-i
+title: "Finalize merges to main only on the person's own answer, and only reports a pause that was actually recorded"
+component: build-orchestration
+components:
+  - build_orchestration
+  - ac_driven_dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a finalize run that has reached the merge-to-main gate, and a resume answer for that
+    gate whose channel is "person" and whose choice is to proceed,
+  When the gate is resolved,
+  Then the pull request is merged to main, by the same provenance rule finalize's own closure
+    gate already applies.
+
+  Given a finalize run at the merge-to-main gate and no resume answer from the person for it,
+  When a live agent reply arrives for that gate in exactly the shape of a valid decision
+    naming "ok" (for example a reply from an agent dispatched to "ask the user"),
+  Then the pull request is not merged, the agent reply is not recorded as the person's choice,
+    and the run pauses resumably at the merge-to-main gate.
+
+  Given a finalize run at the merge-to-main gate,
+  When the only resume answer present has a channel other than "person", or has no channel at
+    all, or names a different gate,
+  Then that answer is treated as no answer: the pull request is not merged and the run pauses
+    resumably at the merge-to-main gate.
+
+  Given a finalize run at the merge-to-main gate and a resume answer for that gate whose channel
+    is "person" and whose choice is to decline,
+  When the gate is resolved,
+  Then the run halts before the merge, the pull request is not merged, and the outcome reports
+    that the person declined, distinguishable from a pause awaiting an answer.
+
+  Given a finalize run that reads or writes its pause record,
+  When it dispatches that read or that write,
+  Then the dispatch goes to the agent chartered to run workflow shell commands, and never to
+    the status-reporting agent that is not permitted to run commands.
+
+  Given a finalize run pausing at a gate,
+  When the pause record is confirmed written,
+  Then the run reports that it is paused awaiting the person's input.
+
+  Given a finalize run pausing at a gate,
+  When the write of the pause record fails, is refused, or cannot be confirmed,
+  Then the run does not report that it is paused awaiting input; it reports a distinct
+    pause-persist-failed outcome naming the gate, and the pull request is not merged.
+depends_on:
+  - BO-3200c-2
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md
+    relationship: describes
+    status: exists
+    relevance: "The blocker this AC fixes: finalize's merge gate accepts a live agent reply with no channel check, and its pause-store dispatches go to status-checker with no persist verification."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The only file in scope. Step-4 merge-to-main gate and the two pause-store dispatches (read-pause-record, pause-persist). The step-3.5 closure gate in the same file already applies the channel === person rule and is the in-file precedent."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Every workflow step that hands an agent a shell command goes to shell-runner; a decline or result-less reply ends the run."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "status-checker carries permits_shell: false; the pause-store dispatches must not go to it."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The existing pause-resume substrate the resumable pause builds on; no second pause store."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200c-2
+    contract: "The generic rule that only an answer arriving through the person channel settles a gate. This AC is the finalize-feature instance of that rule, applied at the step-4 merge-to-main gate."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SCOPE — FINALIZE INSTANCE ONLY, BUILDABLE ON ITS OWN. A call-site fix in
+  templates/workflows-js/finalize-feature.js. It does NOT introduce a shared gate module or a
+  marker-delimited GATE-ANSWER block, and does NOT change plan-feature.js (a runtime decision for
+  plan-feature is pending under ADR-078). The generic BO-3200c tree (c-1, c-2, c-3) is unchanged;
+  this child neither waits on nor alters them. The only edit to an existing record made alongside
+  this AC is adding BO-3200c-2-i to BO-3200c-2's covered_by.
+
+  Fixes KI-BO-20260925-finalize-gate-accepts-agent-answers (blocker), both halves:
+  (1) the step-4 merge gate accepts any {action|choice}-shaped live reply — the KI-ACD-005 shape on
+  the most destructive step in the package; (2) the read-pause-record and pause-persist dispatches
+  go to status-checker (permits_shell: false), and with no persist verification a refused write
+  still yields paused_awaiting_input, i.e. a pause no later run can resume.
+
+  WHY ONE AC CARRIES BOTH HALVES. Requested as a single narrow child. The halves are coupled: once
+  agent replies stop settling the merge gate, every headless run takes the pause path, so the pause
+  path must actually persist — otherwise the provenance fix converts "merges on an agent reply" into
+  "reports a pause that cannot be resumed". Splitting them would ship the first half into the
+  second half's defect.
+
+  THE DECLINE SCENARIO IS THE ANTI-VACUUM CLAUSE. A gate that never merges satisfies scenarios 2 and
+  3; scenario 1 (person proceeds -> merge) and scenario 4 (person declines -> halt, distinct from
+  pause) stop the fix being satisfied by a gate that accepts nothing, and keep "no answer" and
+  "the person said no" distinguishable as BO-3200c requires.
+
+  ORDERING NOTE FOR THE IT PO: the shell-runner agent named by ADR-070 must exist in the deployed
+  registry before the pause-store dispatches can route to it. If it does not yet exist at build
+  time, that is a depends_on to add, not a reason to keep status-checker.
