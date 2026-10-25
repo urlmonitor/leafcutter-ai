@@ -66,6 +66,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -105,7 +106,9 @@ def _find_config_root() -> Path:
         Path: Absolute path to the config directory that contains
             feedback_categories.yaml.
     """
-    return Path(__file__).resolve().parents[2] / "config"
+    # abspath, not resolve(): a symlinked deployed script must stay anchored at
+    # the invoked .leafcutter/ rather than follow the link out of it. (AC INF-100c-1-i)
+    return Path(os.path.abspath(__file__)).parents[2] / "config"
 
 
 # ---------------------------------------------------------------------------
