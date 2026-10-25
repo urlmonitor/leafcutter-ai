@@ -1,0 +1,152 @@
+id: TQ-500g-1-xviii
+components:
+  - testing_quality
+  - build_orchestration
+title: "On /build-epic the supervisor reads each wrong-version step's answer through relayed log and exit lines, asks the list for the ticket's own pins, and sends test-breaker only the names that need preparing"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic driven through /build-epic whose ticket 07_TICKET-refresh-gate
+    (ticket_key "07_TICKET-refresh-gate" in the dispatch input, source_ac
+    ["TQ-9101"], run alone in its chunk) reaches the step before commit,
+    and test T1's entry owes N1 "drop the retry_due condition" and N2
+    "the gate always allows",
+    and the supervisor's shell tool relays each command's stdout and stderr
+    merged, so the list step's output arrives as one of:
+      E1: the writer's log line "base ref HEAD: 0 names declared, 2 derived",
+          then the one-line answer
+          '{"owed": [N1, N2], "to_prepare": [N2], "decisions": [...], "error": null}',
+          then a line "exit: 0",
+      E2: the same three lines, with "to_prepare": [] (both names pinned),
+      E3: no JSON object answer: a prose refusal with no JSON line, or two
+          different lines that are each a JSON object,
+      E4: an answer with owed [N1, N2] and error null but no to_prepare, or a
+          to_prepare that is not a list,
+  When the supervisor runs the wrong-version sequence for that ticket,
+  Then the list command it runs carries --work-key "07_TICKET-refresh-gate",
+      the ticket_key build-epic.js passed, never a key the supervisor makes
+      up, and finish is given that same key,
+    And in E1 the supervisor reads the answer line and spawns test-breaker
+      exactly once, with wrong_versions equal to the to_prepare list [N2]
+      exactly (same item, spelling, files and scope), never with N1 and never
+      with the owed list, and hands test-breaker's reply to finish unchanged,
+    And in E2 the supervisor spawns no test-breaker at all and runs finish
+      with an empty reply,
+    And in E1 and E2 the log line and the "exit: 0" line are never read as
+      part of the answer and never cause a halt,
+    And in E3 and E4 no answer is read: no test-breaker is spawned, finish
+      does not run, no commit follows, and the ticket is reported blocked
+      with the list step named; a missing or non-list to_prepare is never
+      read as "nothing to prepare",
+    And finish's output is read by the same rule: a log line before
+      '{"gate_passed": true, ...}' and "exit: 0" after it still leads to the
+      commit, and a finish output with no JSON object answer never does.
+depends_on:
+  - TQ-500g-1
+  - TQ-500f-3-v
+  - TQ-500g-1-xi
+  - TQ-500g-1-vii
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Section 5.10.2, the wrong-version subsection: its 'Parse fail-closed' paragraph still requires stdout to parse as one JSON object, and its sequence still sends every owed name to test-breaker with no --work-key on the list command."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: modifies
+    status: exists
+    relevance: "Restates the commit-lock sequence; its restatement of the list step and the test-breaker spawn changes with the skill."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-v.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The reading rule this AC applies to the supervisor's prompt: the whole trimmed text when it is one JSON object, else the one distinct line that is on its own a JSON object; zero or two-plus such lines is no answer. TQ-500f-3-v fixed only the JS routes."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-xi.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The list step's --work-key and its to_prepare / decisions output; test-breaker only for to_prepare, not at all when it is []."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The done /build-epic wiring this AC amends in the prompt: input check, serial check, pinned command lines, halt shape. Its notes name this follow-up."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md
+    relationship: relates-to
+    status: exists
+    relevance: "Why the eval must be shown to have invoked the agent: the agent-eval gate has fast-passed or scored a plausible percentage without ever running the model."
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Why pins exist; until this lands /build-epic pays the preparer for every owed name on every run."
+origin_agent: business-analyst-v3
+created: 2026-10-24
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: llm-expert
+change_target: prompt
+risk_surface: contract_boundary
+test_required: true
+test_rationale: >-
+  The behaviour is an agent following prompt text, so a search of the skill text cannot show it (CLAUDE.md:
+  verify behaviourally, not by grep). The proof is an agent eval of ticket-supervisor run with the edited
+  building-epics skill and ticket-supervisor template, whose shell tool returns the scripted outputs E1 to E4
+  (and the finish outputs) and whose agent-spawn tool only records; the assertions are on the recorded tool
+  calls, not on the reply text: the list command carries --work-key "07_TICKET-refresh-gate"; test-breaker is
+  spawned once with wrong_versions equal to [N2] in E1 and not at all in E2; nothing after the list step runs in
+  E3 and E4, and the blocked result names the list step. Every row must show the model was actually invoked: a
+  row with no model response fails the eval, never scores as a match (KI-TQ-20260907).
+notes: |
+  WHY. The IT PO's caveat on TQ-500g-1-vii and TQ-500g-1-xi. On /build-epic
+  the list / test-breaker / finish sequence is run by ticket-supervisor from
+  prompt text (building-epics SKILL.md section 5.10.2, and its restatement in
+  ticket-supervisor.md), not from workflow JS. That text still
+  (i) requires stdout to parse as one JSON object, which the shell tool's
+      merged stderr defeats (the writer logs "base ref HEAD: ..." before its
+      answer); TQ-500f-3-v fixed this only in the JS routes, and
+  (ii) sends every owed name to test-breaker instead of only to_prepare, with
+      no --work-key on the list command, so pins are never used on /build-epic
+      and the preparer is paid every run (safe, since the writer ignores
+      answers for pinned names, but slow and the guess it could make differs).
+  One agent per requirement: TQ-500g-1-xi is python-coder's and does not
+  declare the skill, so this llm-expert AC carries the prompt change.
+
+  PLACEMENT. L3 under TQ-500g-1, next to TQ-500g-1-vii whose prompt it amends.
+  TQ-500g-1-vii is done; this AC is new work rather than a reopening of it.
+
+  WHAT STAYS AS -vii SAYS. Input check, serial check, the quoted command lines
+  (only --work-key "<ticket_key>" is added right after list), the commit lock,
+  --record "<ticket_key>" on finish, the halt shape, wrong_version_outcome, no
+  supervisor-side recover, re-running before every commit spawn. K3 (no
+  source_ac) still skips list and test-breaker and runs finish without ids.
+
+  TESTABILITY (for the IT PO to turn into test_spec). An agent eval, not a
+  grep:
+    - Subject: ticket-supervisor with the edited building-epics skill and
+      template, run through the repository's agent-eval runner (the Agent
+      Evals harness), with the skill and template in its triggers so a change
+      to either selects the eval.
+    - Fixture: scripted shell-tool outputs for the list step (E1 to E4) and for
+      finish (answer around a log line and "exit: 0"; no answer), a recording
+      stub for agent spawns, a dispatch input carrying ticket_key and
+      runs_alone true.
+    - Assertions on the recorded tool calls: the list command's --work-key
+      value; test-breaker spawn count and its wrong_versions; no finish and no
+      commit spawn after a list with no answer or no to_prepare list; the
+      blocked result's wrong_version_step "list".
+    - Fail closed: a row where the model was not invoked counts as failed
+      (KI-TQ-20260907), so the eval cannot pass by not running.
+    - Control rows: the same scripted outputs with the answer alone (no log
+      line) behave the same as E1 / E2, so the eval separates "reads the
+      answer" from "reads any JSON-looking text".
+  A live /build-epic drive of a fixture epic (a pinned ticket that owes two
+  names, one pinned) is a useful extra check but not the proof.
+
+  ASSUMPTIONS (BA). The ticket_key build-epic.js passes is the work key used
+  for pins on /build-epic (TQ-500g-1-xi pins per work key; -vii already uses
+  ticket_key as finish's --work-key). A supervisor started by the user without
+  ticket_key uses the ticket file stem, as -vii's input check says.

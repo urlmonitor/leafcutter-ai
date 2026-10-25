@@ -447,6 +447,16 @@ it_requirements:
     Composite done-proof: this L2 is test_required: false and has children. Until
     KI-CG-20260914-done-proof-precommit-ignores-test-required is fixed (still open
     on 2026-10-23), the pre-commit done-proof path refuses to mark it done.
+  - >-
+    Pinning additions (IT-PO, 2026-10-23, from TQ-500g-1-xi to -xvii; a separate later update to the
+    page, made after those ACs are built and written from what ships). The verdict vocabulary gains the
+    unfinished result not_executed ("not executed: the test runs none of the changed lines") and the "could
+    not be traced" note; each row's alteration_id, source ("prepared: not pinned", "pinned", "re-prepared:
+    <reason>", "declared", "fix undone") and replacements; the list step's to_prepare and decisions; where
+    pins (<git-dir>/leafcutter/pins/<work-key>.json), the plan and the manifest history
+    (work/<work-key>/history/<NNNN>/) live; the operator reset command (wrong_version_writer.py reset) and
+    when to use it; the test_spec field declared_replacements and its precedence declared > pinned >
+    prepared.
 test_required: false
 test_rationale: >-
   Documentation only. Its truth depends on the behaviour it describes, which the
