@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a finished record declared test-free whose stated reason is absent, empty,
@@ -115,6 +115,25 @@ test_spec:
     type: integration
     angle: criterion
     description: "In one run, a refused declaration and a record carrying no declaration at all reach the SAME outcome class, and both are actually demoted when outcomes are applied. Assert the refused record is not parked in a separate non-demotable state — a third 'refused' outcome outside the demotable population defeats this AC as completely as honouring the declaration would."
+  - name: test_tq_400e_4_reasoned_declaration_without_a_holding_record_is_refused_through_the_honouring_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_done_proof.py --mode ci, as a subprocess, asserting exit code and report"
+    description: "MUST_BLOCK. Through the real check_done_proof.py --mode ci subprocess with BO-2500f-4's switch turned on through its declared mechanism, a done record with test_required false and a non-empty rationale but no verified_by, and one with a verified_by whose check is not wired, are refused (exit 1) and the report names the failed_part from the shared verdict verbatim; a reasoned record with a holding record in the same store is honoured."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration whose reason is present but whose verification record is absent or does not hold is refused on the same terms, and the report names the part of the verification record that failed"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_4_reasoned_but_unverified_declaration_is_unproven_on_the_same_terms_as_an_undeclared_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, a reasoned declaration with a failing verification record and a record with no declaration get the same unproven outcome class in one run, no third refused outcome exists, and both are eligible for the same demotion."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration whose reason is present but whose verification record is absent or does not hold is refused on the same terms, and the report names the part of the verification record that failed"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
 test_rationale: |
   An exemption gate has exactly one interesting property — can it actually refuse — and that
   property is invisible to every positive-path test and to any test that calls a validator
@@ -157,6 +176,9 @@ amended_by:
     test-contract gap. expects_from BO-2500f-4 added (existing TQ-400e-3 contract kept verbatim).
     readiness returned to reviewed until the test-designer covers the appended clause. criteria
     and test_spec untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - TQ-400e-4-i

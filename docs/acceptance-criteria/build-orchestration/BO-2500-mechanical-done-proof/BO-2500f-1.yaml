@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a requirement record with test_required false,
@@ -167,9 +167,169 @@ delivers_to:
 expects_from:
   - ac_id: BO-2500a-8-i
     contract: "The stated-reason refusal this record builds on."
+test_spec:
+  - name: test_bo_2500f_1_unknown_method_value_is_refused_naming_the_value
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "validate_verification_record refuses a method of 'analysis', 'test', '' , None and a list, each problem naming the offending value, while the two closed values 'check' and 'inspection' in their full valid shapes are valid. The validator never raises on a non-mapping verified_by."
+    proves_clause: "its verification record must state exactly one method, check or inspection, and any other method value is refused, naming the value"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_1_check_record_missing_check_or_wiring_is_refused_part_by_part
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A check record without verified_by.check, one without wired_as, one whose wired_as is neither 'pre-commit:<hook-id>' nor 'build-phase:<name>' (e.g. 'cron:x', 'pre-commit:' with an empty id), and one with an empty check string are each refused with a problem naming exactly that part; a complete record is valid."
+    proves_clause: "a check record must name the check that verifies the requirement and how that check runs in everyday work, either as a named commit-time hook or as a named build phase, and is refused when either is missing"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_1_inspection_record_missing_any_part_or_with_empty_file_list_is_refused
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An inspection record missing gate_run, missing statement, missing inspected, with inspected [] (the truthiness edge), with an entry lacking path, or with a blob that is not 40 hex characters is refused, one problem naming each missing or wrong part; a complete record is valid."
+    proves_clause: "an inspection record must reference the workflow run whose interactive gate recorded the person's approval of the review, a statement of what the review confirmed, and every inspected file each paired with the content fingerprint of the exact version inspected, and is refused when any of these is missing or the file list is empty"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_1_part_of_the_other_method_is_refused_naming_that_part
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A check record carrying gate_run, and an inspection record carrying check or wired_as (a hook), are refused with a problem naming that part, even though each per-method required part is present."
+    proves_clause: "a verification record that carries a part belonging to the other method (a gate run reference on a check, a hook on an inspection) is refused, naming that part"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a validator that checks the required parts of the stated method only and ignores extra keys"
+      - "a validator that names the method but not the cross-method part"
+  - name: test_bo_2500f_1_record_with_no_verification_record_is_refused_naming_the_missing_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "A record with no verified_by key, with verified_by null and with verified_by an empty mapping is refused, the problem naming verified_by as the missing record; nothing raises."
+    proves_clause: "a record with no verification record at all is refused, naming the missing record"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_1_refusal_at_the_hook_names_record_id_and_part
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Through the real check_done_proof.py --mode precommit subprocess with BO-2500f-4's switch turned on through its declared mechanism, a staged done test-free record with a stated reason and a verification record missing one part prints a refusal line carrying the record id and the missing or wrong part, for one case per method; the exit code is 1."
+    proves_clause: "each refusal names the record id and the missing or wrong part"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_1_verification_record_never_waives_a_record_that_owes_a_test
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Through the precommit CLI with BO-2500f-4's switch turned on through its declared mechanism, a done record with test_required true, and one with test_required absent, each carrying an otherwise valid check verification record and no covers tag, is still refused (exit 1) and the output reports the verification record as misplaced; the verdict equals the one without the record."
+    proves_clause: "a verification record on a record whose test_required is true or absent never waives the test that record owes, and is reported as misplaced"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a rule that waives on a valid verification record whatever test_required says"
+      - "a rule that reports misplaced but still waives"
+  - name: test_bo_2500f_1_valid_record_without_the_stated_reason_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Through the precommit CLI with BO-2500f-4's switch turned on through its declared mechanism, a done record with test_required false, a fully valid verification record and no test_rationale (absent, empty and whitespace) is refused (exit 1) naming the missing stated reason; the same record with a reason and a holding record passes."
+    proves_clause: "the stated reason required by BO-2500a-8-i is still required; the verification record is added to it, not substituted for it"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a rule that lets a valid verification record stand in for the stated reason"
+  - name: test_bo_2500f_1_unfinished_record_with_invalid_verification_record_passes_every_write_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A staged in_progress test-free record whose verified_by is missing, incomplete, of an unknown method and not a mapping passes the check-ac-schema hook and validate_ac_schema.py (exit 0), and the precommit done check (exit 0); requirement_rule_check raises no finding on it. Run each as its real CLI."
+    proves_clause: "none of these refusals is made when a record is checked without being marked done: the check of an unfinished record with a missing, incomplete or invalid verification record passes, so the roughly 170 unfinished test-free records remain editable before they have a verification record"
+    code_file: templates/scripts/commit_guardian/check_ac_schema.py
+    convention_test_file: unit_tests/commit_guardian/test_check_ac_schema.py
+  - name: test_bo_2500f_1_verified_by_is_declared_in_the_store_schema_without_a_write_time_rule
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "config/ac_store_schema.json declares verified_by permissively (no if/then, no required keys): a record carrying any verified_by shape is accepted by validate_ac_schema.py, and the key is no longer refused as an additional property."
+    proves_clause: "none of these refusals is made when a record is checked without being marked done: the check of an unfinished record with a missing, incomplete or invalid verification record passes, so the roughly 170 unfinished test-free records remain editable before they have a verification record"
+    code_file: config/ac_store_schema.json
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_1_unknown_method_is_refused_through_the_precommit_cli
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess, asserting its exit code and message"
+    description: "Runs the real check_done_proof.py --mode precommit as a subprocess in a temporary git repo with BO-2500f-4's switch turned on through its declared mechanism: a staged done record with test_required false, a stated reason and verified_by.method 'analysis' exits 1 and names the record id and the value 'analysis'; the same record with a valid check record exits 0."
+    proves_clause: "its verification record must state exactly one method, check or inspection, and any other method value is refused, naming the value"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_1_verification_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_verification_record.py is in build_ac_store's deploy_map and imports in a fresh subprocess whose sys.path holds only the deployed .leafcutter/scripts/ac_store directory (the BO-2500a-1-ii ModuleNotFoundError precedent); the deployed copy is asserted present, never skipped."
+    proves_clause: "its verification record must state exactly one method, check or inspection, and any other method value is refused, naming the value"
+    code_file: scripts/ac_store/_verification_record.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_verification_record.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - templates/scripts/commit_guardian/check_ac_schema.py
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+  - config/ac_store_schema.json
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - scripts/ac_store/_ac_schema_test_spec_validators.py
+  - scripts/ac_store/validate_ac_schema.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: config/ac_store_schema.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the store schema that must declare the verified_by key, whose absence makes the store refuse the field today."
+    decision: null
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, the list build_ac_store deploys from, to which the new validator module must be added."
+    decision: null
+file_findings_opened_files:
+  - config/ac_store_schema.json
+  - scripts/build_phases_ac_store.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - BO-2500f-1-i

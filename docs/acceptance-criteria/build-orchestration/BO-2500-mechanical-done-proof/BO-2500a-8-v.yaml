@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a store in which record DK-210b-3, declared with test_required false,
@@ -135,6 +135,157 @@ test_intent:
     needs_test: true
     reason: 'Diff scope is behaviour: stored duplicates must not block an unrelated commit,
       which a store holding a duplicate pair shows.'
+test_spec:
+  - name: test_a_differently_written_copy_of_a_stored_reason_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "check_ac_schema.py as a subprocess"
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". A staged test-free record carries \"docs only change  -  no executable behaviour to test\" (the Given's second text); the hook exits 1. Expected red today: no duplicate rule exists."
+    proves_clause: "the record is refused, because its test_rationale is identical to DK-210b-3's once both are normalised"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "an exact-string comparison"
+      - "a comparison that never reads stored records"
+      - "a rule that is never called from check_ac_schema.py"
+  - name: test_each_normalisation_step_is_applied_before_comparing
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". One subTest per step, each a staged copy of the stored text that differs in only that way and is refused: upper case; a tab and a newline between words; doubled spaces; leading and trailing spaces; hyphen versus space; a semicolon and a full stop; a Unicode dash and an ellipsis. One control: 'docsonly' (punctuation deleted, not replaced) for a stored 'docs-only' is accepted, so punctuation is replaced by a space, not removed."
+    proves_clause: "normalising folds letter case, collapses every run of whitespace to one space, ignores punctuation, and trims both ends"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a case-sensitive comparison"
+      - "punctuation deleted instead of replaced with a space"
+      - "no trimming of either end"
+      - "punctuation limited to ASCII"
+      - "collapsing only runs of spaces, not tabs and newlines"
+  - name: test_refusal_names_the_changed_record_the_field_and_the_duplicated_record
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". The hook's stderr for the refused copy contains the changed record's id, the field name test_rationale and DK-210b-3."
+    proves_clause: "the refusal names the changed record, the field test_rationale, and the other record that already carries the same text (DK-210b-3)"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a refusal that does not name the other record"
+      - "a refusal naming the field test_required"
+  - name: test_refusal_names_every_other_record_carrying_the_same_text
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". Three stored test-free records carry the same text; one staged copy is refused and the output names all three, in id order. A rule that stops at the first match names one."
+    proves_clause: "when the same text is carried by more than one other record, the refusal names every one of them"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a rule that names only the first matching record"
+  - name: test_a_different_reason_sharing_most_words_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". A staged test-free reason that shares most words with DK-210b-3's (one extra word; one changed word) exits 0. Green today by design; catches a refuse-on-overlap, prefix or substring rule."
+    proves_clause: "a test_rationale that differs from every other record's after normalising is accepted, even when it shares most of its words with one"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a prefix or substring comparison"
+      - "a word-overlap threshold"
+      - "a rule that refuses any reason containing another record's reason"
+  - name: test_comparison_covers_the_whole_store_not_only_the_change
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". The duplicated text sits only in a stored, unstaged record and the staged record is the only record in the change; it is refused. A rule that compares only within the commit accepts it."
+    proves_clause: "the comparison is made against every record in the store declared with test_required false, not only the records in the change being committed"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a comparison limited to the staged records"
+      - "a store index read that is empty because the stored records are not staged"
+  - name: test_only_test_free_records_take_part_in_the_comparison
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". Three cases, all exit 0: a staged record with test_required true and a test_spec whose test_rationale equals a stored test-free reason; a staged record with test_required absent likewise; a staged test-free record whose text equals only the test_rationale of a stored test_required-true record. Green today by design."
+    proves_clause: "only records declared with test_required false take part: the test_rationale of a record whose test_required is true or absent (the justification of its test_spec) is never compared and never refused by this rule, even when it is identical to another record's test_rationale"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a comparison population of every record that has a test_rationale"
+      - "a staged-side filter on test_required that treats absent as false"
+      - "a stored-side filter that includes records with test_required true"
+  - name: test_two_records_in_one_change_with_the_same_text_are_both_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". Two staged test-free records carry the same normalised text and no stored record does; the hook exits 1 and the output names both records as refused, each naming the other."
+    proves_clause: "two records in the same change that carry the same normalised text are both refused, each naming the other"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a rule that compares staged records only to the stored index"
+      - "a rule that refuses only the second of the pair"
+  - name: test_stored_duplicates_not_in_the_change_are_not_refused_until_changed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_v_duplicate_reason.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump (stored records on disk, staged ones named in HOOK_TEST_STAGED_FILES); the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set. DK-210b-3 is a stored test-free record carrying \"Docs-only change; no executable behaviour to test.\". The store holds a duplicate pair on disk. Staging only an unrelated valid record exits 0; staging one of the pair exits 1 naming the other."
+    proves_clause: "a stored record left unchanged by the commit is not refused by it, even if its text duplicates another stored record's; it is refused the first time it is itself changed"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a whole-store duplicate sweep that blocks every commit"
+  - name: test_duplicate_refusal_is_reached_through_the_git_staged_hook_path
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "check_ac_schema.py via the git-staged path, as a subprocess"
+    description: "In a fresh git init temp repo holding the copied schema and the stored DK-210b-3 record, the differently written copy is written and staged with git add; check_ac_schema.py is run as the pre-commit hook runs it (cwd in the repo, no HOOK_TEST_STAGED_FILES) and exits 1 naming DK-210b-3. Proves the call-site change in check_ac_schema.py passes the store index through on the production path."
+    proves_clause: "the record is refused, because its test_rationale is identical to DK-210b-3's once both are normalised"
+    code_file: templates/scripts/commit_guardian/check_ac_schema.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_ac_schema.py
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - config/ac_store_schema.json
+  - unit_tests/commit_guardian/test_ac_test_contract.py
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_ac_schema.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the commit-time record check whose call site passes the store index through to the new duplicate rule."
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_ac_schema.py
 delivers_to:
   - agent: it-po
     ac_id: BO-2500a-8-iv
@@ -148,7 +299,10 @@ expects_from:
       reason-present predicate that decides which records take part.
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

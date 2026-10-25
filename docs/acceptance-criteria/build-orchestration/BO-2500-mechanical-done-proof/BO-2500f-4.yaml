@@ -9,8 +9,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the layers that decide whether a record may be done: the mark command, the
@@ -174,9 +174,150 @@ expects_from:
     contract: Check-method verdict {ac_id, holds, reason}.
   - ac_id: BO-2500f-3
     contract: Inspection-method verdict {ac_id, holds, reason, changed, missing, review_date}.
+test_spec:
+  - name: test_bo_2500f_4_waiver_holds_only_when_the_check_or_inspection_route_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "is_done_proof_waived(ac_info, repo_root) on a temporary repo: a valid shape plus a tagged and wired check waives with method 'check'; a valid inspection with unchanged content and a matching approval waives with method 'inspection'; each route with one failing part (shape, tag, wiring, content, approval) does not waive."
+    proves_clause: "the missing covering test is waived only when the record's verification record holds: its shape is valid (BO-2500f-1, BO-2500f-1-i), a named check is tagged and wired (BO-2500f-2, BO-2500f-2-i), or an inspection's content is unchanged and its reviewer is a person (BO-2500f-3, BO-2500f-3-i)"
+    code_file: scripts/ac_store/_done_proof_waiver.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_a_stated_reason_alone_no_longer_proves_done
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Real precommit CLI subprocess: with the switch off a done record with test_required false and a stated reason exits 0 (old rule); with BO-2500f-4's switch turned on through its declared mechanism the same record exits 1 with the message 'a stated reason alone no longer proves done'."
+    proves_clause: "a record carrying test_required false and a non-empty stated reason but no verification record that holds is refused, the reason given being that a stated reason alone no longer proves done"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a rule that still waives on the stated reason alone"
+      - "a switch that is on at landing"
+  - name: test_bo_2500f_4_refusal_names_the_part_of_the_verification_record_that_failed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, the precommit CLI output for a check record with no wired_as, a check not tagged, an unwired check, a changed inspected file and a missing approval each carries the failing part verbatim from the BO-2500f-1, -2 and -3 verdicts."
+    proves_clause: "the refusal names the part of the verification record that failed"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_4_every_layer_consults_the_one_shared_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "A table of records with BO-2500f-4's switch turned on through its declared mechanism gets the same accept or refuse at the mark command (mark_ac_done.py), check_done_proof.py precommit, ci and ci-changed, and verify_done_eligible; and the four call sites (_done_proof_phase_helpers.py _handle_no_direct_tests, check_done_proof.py check_staged_done_proofs, check_all_done_acs, check_changed_done_acs, and _done_proof_composite.py) no longer call is_covers_tag_waived, a patched is_done_proof_waived being the one function every layer reaches."
+    proves_clause: "all layers reach the same verdict for the same record, because they consult one shared rule, and the earlier stated-reason rule (BO-2500a-1-ii) is replaced by it rather than kept beside it"
+    code_file: scripts/ac_store/_done_proof_waiver.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a layer left on the old is_covers_tag_waived"
+      - "the composite roll-up left on the old rule"
+  - name: test_bo_2500f_4_a_parent_counts_a_test_free_child_as_proven_only_under_the_same_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A composite with a tagged code child and a test-free child: with BO-2500f-4's switch turned on through its declared mechanism it is unproven when the child has only a stated reason, proven when the child's verification record holds, and the status-map entries the composite path uses carry verified_by, change_target and declared_files so it decides on the same data as the leaf path. Exercised through check_done_proof.py precommit and ci."
+    proves_clause: "a parent whose children include a test-free child counts that child as proven only under the same rule"
+    code_file: scripts/ac_store/_done_proof_composite.py
+    convention_test_file: unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py
+  - name: test_bo_2500f_4_the_commit_time_check_result_is_the_exit_code_a_commit_receives
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess, asserting its exit code"
+    description: "Real check_done_proof.py --mode precommit subprocess in a temporary git repo with BO-2500f-4's switch turned on through its declared mechanism, cwd the repo, staged fixtures: a holding record exits 0 and a failing one exits 1 with the refusal on stdout, the same result the in-process rule returns."
+    proves_clause: "the commit-time check is exercised the way a commit reaches it, and its result is the one a commit receives"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_4_records_that_owe_a_test_are_judged_exactly_as_before
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A done record with test_required true or absent: no covers tag is refused and a covers-tagged one passes, identically with the switch off and on, at the mark command, precommit, ci and ci-changed."
+    proves_clause: "a record whose test_required is true or absent is judged exactly as before"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_4_waiver_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_done_proof_waiver.py and the other new ac_store modules it imports are in build_ac_store's deploy_map and import in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory, and the deployed check_done_proof.py lazy loader resolves is_done_proof_waived."
+    proves_clause: "the commit-time check is exercised the way a commit reaches it, and its result is the one a commit receives"
+    code_file: scripts/ac_store/_done_proof_waiver.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_done_proof_waiver.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - scripts/ac_store/_done_proof_composite.py
+  - unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - scripts/ac_store/done_proof.py
+  - scripts/ac_store/mark_ac_done.py
+  - scripts/build_phases_ac_store.py
+  - unit_tests/commit_guardian/test_check_done_proof_ci_fail_closed.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/ac_store/_done_proof_phase_helpers.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It defines is_covers_tag_waived and calls it in _handle_no_direct_tests (line 570), the first call site the new rule replaces."
+    decision: null
+  - file: scripts/ac_store/_done_proof_composite.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It calls is_covers_tag_waived at lines 355, 438, 463 and 522 in the roll-up, the composite call sites the new rule replaces."
+    decision: null
+  - file: scripts/ac_store/done_proof.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It re-exports is_covers_tag_waived (line 205), the name the composite and the commit-time check import, so its export moves with the rule."
+    decision: null
+  - file: templates/scripts/commit_guardian/check_done_proof.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It calls the predicate in check_staged_done_proofs, check_all_done_acs and check_changed_done_acs and holds its lazy loader."
+    decision: null
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new waiver module must be added."
+    decision: null
+file_findings_opened_files:
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - scripts/ac_store/_done_proof_composite.py
+  - scripts/ac_store/done_proof.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - scripts/build_phases_ac_store.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - BO-2500f-4-i

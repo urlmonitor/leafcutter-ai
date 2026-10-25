@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a person who has to close a requirement that no test can prove,
@@ -88,7 +88,10 @@ expects_from:
     contract: "The exemption reference entry, amended 2026-10-25 to state the verification record."
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a requirement no test can prove, declared with test_required false,
@@ -95,11 +95,45 @@ test_intent:
     reason: 'Agreement across the two layers is this parent''s own outcome: one boundary set
       of records run through check-ac-schema and through check_done_proof.py must get matching
       answers, which no single child''s test observes.'
+test_spec:
+  - name: test_authoring_check_and_done_gate_agree_on_every_reason_boundary
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "real check_ac_schema.py and check_done_proof.py --mode precommit, each as a subprocess, compared record by record"
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_authoring_done_agreement.py, a store-shaped temp tree holds one test_required-false record per boundary reason: absent, null, empty string, spaces only, tab and newline only, a non-breaking space only, a zero-width space only, a non-string (a number, a list), and a real sentence. Each record is run through the real check-ac-schema hook (check_ac_schema.py as a subprocess, record staged through HOOK_TEST_STAGED_FILES) and through the real check-done-proof hook (check_done_proof.py --mode precommit as a subprocess, record staged with work_status done and no covers tag anywhere). The test asserts, per reason, that the two exit codes are both 0 or both non-zero, and that the answer matches the reason-present rule (non-empty str after strip: the non-breaking space is absent, the zero-width space is present). A re-typed copy of the rule in either layer disagrees on at least one value. Expected red today: the authoring check accepts every reasonless record the done gate refuses."
+    proves_clause: "for any record, the authoring side and the done gate (BO-2500a-1-ii) agree on whether its declaration is complete, so a record the authoring side accepts is never refused at done because its reason is missing"
+    code_file: scripts/ac_store/_done_proof_phase_helpers.py
+  - name: test_a_record_the_authoring_hook_accepts_is_never_refused_at_done_for_a_missing_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "check_ac_schema.py as the pre-commit hook runs it (git-staged path), then check_done_proof.py --mode precommit, both as subprocesses"
+    description: "In a fresh git init temp repo the record is written with yaml.safe_dump and staged with git add; check_ac_schema.py is run the way the pre-commit hook runs it (cwd in the repo, no HOOK_TEST_STAGED_FILES). For a test-free record with no reason the hook must refuse, so no such record reaches done. For the same record with a real reason, it accepts and the real check_done_proof.py --mode precommit run in that repo also exits 0. Asserts the property: authoring exit 0 implies done-gate exit 0, for both records."
+    proves_clause: "for any record, the authoring side and the done gate (BO-2500a-1-ii) agree on whether its declaration is complete, so a record the authoring side accepts is never refused at done because its reason is missing"
+    code_file: scripts/ac_store/_done_proof_phase_helpers.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - templates/scripts/commit_guardian/check_ac_schema.py
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - BO-2500a-8-i

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given four test-free records with no covering test: one whose verification record
@@ -72,9 +72,68 @@ delivers_to: null
 expects_from:
   - ac_id: BO-2500f-4
     contract: "The shared done rule whose failure path this record bounds."
+test_spec:
+  - name: test_bo_2500f_4_i_none_of_the_four_unreadable_shapes_waives_the_missing_test
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess"
+    description: "Real precommit CLI subprocess with BO-2500f-4's switch turned on through its declared mechanism: a verified_by that is not a mapping, a check naming a file that cannot be opened, an inspected file that cannot be fingerprinted (a directory, a path outside the repo) and an approval source that cannot be reached (an approval path that is a directory) each exit 1."
+    proves_clause: "none of the four has its missing test waived, and each is refused"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a rule that catches the exception and treats it as waived"
+      - "a rule that lets the exception escape so the hook skips"
+      - "a rule that treats the unreadable record as no verification record"
+  - name: test_bo_2500f_4_i_each_refusal_names_the_record_and_what_could_not_be_read
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The four refusals each print the record id and the specific thing that could not be read or reached (the verified_by value, the check path, the inspected path, the approval file), so no two read alike."
+    proves_clause: "each refusal names the record and what could not be read or reached"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_4_i_failure_to_evaluate_is_reported_as_could_not_evaluate
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The verdict object for each of the four is 'could not evaluate' with the cause; it is never holds and never the text for a record with no verification record; the exception is logged at WARNING or higher."
+    proves_clause: "a failure to evaluate is reported as such, never as \"holds\" and never silently as \"no verification record\""
+    code_file: scripts/ac_store/_done_proof_waiver.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_i_the_same_four_records_get_the_same_refusal_at_precommit_and_ci
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_done_proof.py --mode precommit and --mode ci, each as a subprocess"
+    description: "The same four committed fixtures run through check_done_proof.py --mode precommit and --mode ci as subprocesses give the same exit code and the same refusal message per record."
+    proves_clause: "the same four records evaluated at the commit-time check and at the CI sweep receive the same refusal"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - scripts/ac_store/_done_proof_waiver.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings: []
+file_findings_opened_files: []
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

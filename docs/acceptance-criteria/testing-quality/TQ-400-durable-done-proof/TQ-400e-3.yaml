@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a finished record for which a covering test is structurally impossible —
@@ -112,6 +112,34 @@ test_spec:
     type: integration
     angle: reachability
     description: "PRODUCTION ENTRY POINT. Run the sweep as a subprocess and assert every exempt record is PRESENT in the report artifact written to disk. The current behaviour is a bare `continue`, so 'skipped' is the default an implementation falls back into, and skipped versus exempt is invisible to any test that only inspects the unproven list."
+  - name: test_tq_400e_3_reason_alone_is_not_exempt_once_the_typed_record_is_in_force
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_done_proof.py --mode ci, as a subprocess, asserting exit code and report"
+    description: "Runs the whole-store sweep as the real check_done_proof.py --mode ci subprocess in a temporary git repo with BO-2500f-4's switch turned on through its declared mechanism: a done test-free record with a reason and a holding verification record is exempt (no violation, exit 0); the same record with only the reason is not exempt and is reported unproven. With the switch off both are exempt as today."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration is honoured as exempt only when it also carries a verification record that holds (BO-2500f-4), so a written reason alone no longer makes a record exempt"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_3_exempt_outcome_follows_the_shared_rule_not_a_second_reader
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, the sweep's exempt set equals the set of records for which is_done_proof_waived returns waived (patching the rule changes the exempt set), and the sweep contains no verified_by reader of its own."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration is honoured as exempt only when it also carries a verification record that holds (BO-2500f-4), so a written reason alone no longer makes a record exempt"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_3_report_shows_the_verification_method_next_to_the_stated_reason
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, the report written for the sweep names method 'check' or 'inspection' (read from verdict.method) on the same line as each exempt record's stated reason; before the switch is on the method column is empty, never guessed."
+    proves_clause: "the run's report then shows the verification method, check or inspection, next to the stated reason"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
 test_rationale: |
   The dominant risk here is not a wrong answer but a duplicated mechanism: an implementer who
   does not know that test_required: false is already live at check_done_proof.py:463 will build
@@ -156,6 +184,9 @@ amended_by:
     (protected test_spec covers the first four clauses only). expects_from BO-2500f-4 added;
     readiness returned to reviewed because the appended clauses have no test design yet. criteria
     and test_spec untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

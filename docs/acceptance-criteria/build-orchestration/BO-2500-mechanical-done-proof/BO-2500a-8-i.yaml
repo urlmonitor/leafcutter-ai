@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a requirement record being added or changed that sets test_required to
@@ -152,6 +152,166 @@ test_intent:
     reason: The existing whole-store baseline test, run unmodified in the same change, is
       the proof; a rule slipped into the schema turns it red.
 expects_from: null
+test_spec:
+  - name: test_staged_test_free_record_without_a_reason_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "check_ac_schema.py as a subprocess"
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). A staged record with test_required false and a test_rationale that is absent, null, an empty string, or only whitespace makes the hook exit 1. One subTest per variant. Expected red today: the hook exits 0 for all four."
+    proves_clause: "the record is refused"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a validator that is never called from validate_test_contract"
+      - "a rule that refuses only an absent test_rationale and accepts null, empty or whitespace"
+      - "a rule that refuses only a null test_rationale"
+  - name: test_refusal_names_the_record_the_field_and_the_stated_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). The hook's stderr for a reasonless staged test-free record contains the record id, the field name test_rationale and the words 'stated reason' (a test-free declaration needs a stated reason), so an author is sent to the right field. The wording is a contract BO-2500a-8-ii quotes."
+    proves_clause: "the refusal names the record id, the field test_rationale, and that a test-free declaration needs a stated reason"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a refusal that names test_required instead of test_rationale"
+      - "a refusal without the record id"
+      - "a refusal that is only the generic schema message"
+  - name: test_refusal_applies_at_every_readiness_and_change_target
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). A matrix of readiness (draft, reviewed, approved) by change_target (docs, prompt, code, schema) for a reasonless test-free record; every cell exits 1 and the output carries the test_rationale refusal (not only the older approved-leaf-code message). The draft docs cell is the case that separates this rule from the old one."
+    proves_clause: "the refusal applies at every readiness (draft, reviewed, approved) and for every change_target, so the authoring side can no longer produce a record the done gate refuses at mark time"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a rule scoped like the old one, firing only on approved leaf code records"
+      - "a rule that fires only for change_target code"
+      - "a rule that skips draft records"
+  - name: test_same_test_free_record_with_a_reason_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). The same matrix as the refusal test, each record now carrying a non-empty test_rationale, exits 0 (code change_target cells excepted where the older rule already refuses test_required false on an approved leaf code record; those are asserted to carry no test_rationale message). Catches a refuse-everything validator; green today for the non-code cells by design."
+    proves_clause: "the same record carrying a non-empty test_rationale is accepted"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a validator that refuses every test-free record"
+      - "a validator that also demands a reason longer than a minimum length"
+  - name: test_records_with_test_required_true_or_absent_are_checked_as_before
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). Records with test_required true (carrying a test_spec and no test_rationale), with test_required true and a test_rationale as the test_spec justification, and with test_required absent, all exit 0 exactly as before. Green today by design; goes red only on an over-broad condition."
+    proves_clause: "a record whose test_required is true or absent is checked exactly as before, with test_rationale still optional for it"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a condition written as 'not test_required', which also refuses an absent test_required"
+      - "a rule demanding a reason on every record"
+  - name: test_authoring_check_and_done_gate_use_one_reason_present_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    surface_invoked: "check_ac_schema.py and check_done_proof.py, each as a subprocess"
+    description: "Same boundary reason set as the roll-up record's agreement test (absent, null, empty, spaces, tab-newline, non-breaking space, zero-width space, number, list, real sentence), asserted from this record's side: check_ac_schema.py (subprocess) refuses exactly the reasons for which check_done_proof.py --mode precommit (subprocess, same record staged as done) refuses at the covers-tag waiver. A second copy of the rule in the commit-guardian validator drifts on the non-breaking and zero-width values."
+    proves_clause: "the test \"is the reason non-empty\" applied here is the same shared rule the done gate applies (BO-2500a-1-ii), so for any record the authoring check and the done gate agree on whether a reason is present"
+    code_file: scripts/ac_store/_done_proof_phase_helpers.py
+    must_catch:
+      - "a re-typed 'if not rationale' check that accepts whitespace-only text"
+      - "a re-typed strip(' ') that treats a tab or a non-breaking space as text"
+  - name: test_stored_reasonless_record_is_refused_only_when_it_is_itself_changed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_i_reason_required.py, a temp tree copies config/ac_store_schema.json and holds records written with yaml.safe_dump; the real check_ac_schema.py runs as a subprocess with HOOK_ROOT set and the record staged through HOOK_TEST_STAGED_FILES (the helper style of test_check_ac_schema.py). The tree holds a stored reasonless test-free record and an unrelated valid record. Staging only the unrelated record exits 0; staging the stored record (a change to it) exits 1 naming it. A whole-store implementation fails the first assertion."
+    proves_clause: "a stored record that lacks a reason and is not part of the change being committed is not refused by that commit; it is refused the first time it is itself changed"
+    code_file: templates/scripts/commit_guardian/_ac_test_rationale_validators.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_ac_test_contract.py
+    must_catch:
+      - "a whole-store sweep that refuses the commit while any stored record lacks a reason"
+  - name: test_json_schema_alone_stays_permissive_for_a_reasonless_test_free_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "validate_ac_schema.py as a subprocess"
+    description: "The real scripts/ac_store/validate_ac_schema.py CLI (the JSON-schema-only path, driven as unit_tests/ac_store/_acs_100i_support.py drives it) is run as a subprocess on a yaml.safe_dump record with test_required false and no test_rationale, and exits 0: the store schema carries no conditional rule for it. The description wording of test_rationale is reviewed, not tested. Green today by design; red if an if/then, a required key or a pattern lands in the schema."
+    proves_clause: "the refusal is made by the commit-time record check alone: the store schema carries no conditional rule for it, and its only change is a clearer description of test_rationale stating both meanings (with test_required false, the reason no test can prove the record; alongside test_spec, the justification for that test contract's shape)"
+    code_file: config/ac_store_schema.json
+  - name: test_unrelated_refusals_are_unchanged_file_for_file
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Existing test in unit_tests/ac_store/test_acs_100i_7_store_wide_pass.py, run unmodified in the same change (the test writer writes nothing here; the file and tests/fixtures/acs_100i_7/pre_change_refusal_baseline.json are not edited). It compares every stored record's schema refusals with the recorded baseline, so a rule slipped into config/ac_store_schema.json for the 99 reasonless records turns it red."
+    proves_clause: "the whole-store baseline test that validates every stored record against the schema is unchanged and still passes with the 99 stored records that lack a reason"
+    code_file: config/ac_store_schema.json
+  - name: test_commit_time_hook_refuses_a_reasonless_test_free_record_through_the_git_staged_path
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "check_ac_schema.py via the git-staged path, as a subprocess"
+    description: "In a fresh git init temp repo holding the copied schema, a reasonless test-free record is written with yaml.safe_dump and staged with git add; check_ac_schema.py is run as the pre-commit hook runs it (cwd in the repo, no HOOK_TEST_STAGED_FILES) and exits 1 with the test_rationale refusal; the same record with a reason exits 0. Proves the new validator is reached from the production entry point and not only from a seam."
+    proves_clause: "the record is refused"
+    code_file: templates/scripts/commit_guardian/check_ac_schema.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+  - templates/scripts/commit_guardian/check_ac_schema.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - config/ac_store_schema.json
+  - unit_tests/commit_guardian/test_ac_test_contract.py
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py
+  - unit_tests/ac_store/test_acs_100i_7_store_wide_pass.py
+  - unit_tests/ac_store/_acs_100i_support.py
+  - scripts/ac_store/validate_ac_schema.py
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
+file_findings:
+  - file: templates/scripts/commit_guardian/_ac_schema_validators.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It defines validate_test_contract, the commit-time test-contract rule that the new reason rule is called from."
+    decision: null
+  - file: config/ac_store_schema.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the test_rationale definition whose description the criteria change, and the schema that must stay without a conditional rule."
+    decision: null
+  - file: scripts/ac_store/_done_proof_phase_helpers.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It defines is_covers_tag_waived, the waiver whose reason half the criteria extract into the one shared predicate."
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+  - config/ac_store_schema.json
+  - scripts/ac_store/_done_proof_phase_helpers.py
 delivers_to:
   - agent: llm-expert
     ac_id: BO-2500a-8-ii
@@ -182,7 +342,10 @@ delivers_to:
       comparison.'
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -119,6 +119,105 @@ test_intent:
     needs_test: true
     reason: 'This is the ratchet''s end-to-end behaviour on the real store: a waived close
       must not move the count, and an unwaived untagged close must still fail it.'
+test_spec:
+  - name: test_a_waived_done_record_is_not_counted_untagged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. A done record with test_required false and a real test_rationale and no covers tag anywhere is not in the untagged list and is counted under the waived exclusion; a done record with test_required true and no tag is still untagged."
+    proves_clause: "a record the done gate waives, decided by the same shared rule the gate uses (BO-2500a-1-ii), is not counted as untagged"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_waiver_decision_is_the_shared_predicate_not_a_copy
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    surface_invoked: "measurement call with the shared predicate patched"
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. With scripts/ac_store/_done_proof_phase_helpers.py is_covers_tag_waived patched to return False for every record, a record that really is test-free with a reason is counted untagged; patched to True, a reasonless record is excluded. A re-typed conjunction in the new module ignores the patch and fails."
+    proves_clause: "a record the done gate waives, decided by the same shared rule the gate uses (BO-2500a-1-ii), is not counted as untagged"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_each_exclusion_is_reported_with_its_exact_ground
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. A store with one superseded and two waived done records reports the counts 1 under 'superseded' and 2 under 'waived: declared test-free with a stated reason', as a mapping from ground string to count. The two ground strings are asserted verbatim."
+    proves_clause: "the measurement reports each exclusion as a count paired with its ground: \"superseded\" for superseded records and \"waived: declared test-free with a stated reason\" for waived ones"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_exclusion_without_a_published_ground_is_an_unexplained_shortfall
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. With the module's published list of grounds patched to omit the waived ground, the waived records are reported as an unexplained shortfall (a non-zero count under a distinct key) and the sum check fails loudly rather than silently shrinking the untagged count."
+    proves_clause: "both grounds are on the published list of legitimate grounds (ACS-1100b-1), and an exclusion without a ground on that list is reported as an unexplained shortfall"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_untagged_plus_exclusions_plus_tagged_equals_finished_records
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. A mixed store (tagged, untagged, superseded, waived, a quoted id such as \"GE-1\", a comma-separated covers list, a hierarchical id) satisfies untagged + every exclusion count + tagged == finished records enumerated; the same equality holds on the live store."
+    proves_clause: "the untagged count plus every exclusion count plus the tagged count equals the number of finished records enumerated"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_finished_test_free_record_without_a_stated_reason_is_still_untagged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "In unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py, a temp store (yaml.safe_dump records) and temp test roots (real files carrying '# covers:' tags) are measured by the new module scripts/ac_store/untagged_done_count.py. The record names no function signature, so the test writer fixes the measurement call (ac_root and test roots in, a result carrying untagged, tagged, finished, the exclusion counts by ground and any unexplained shortfall out) and uses it in every test of this record. Finished records with test_required false and a reason that is absent, null, an empty string, spaces only or a non-breaking space only are each counted untagged and appear in no exclusion. Catches a waiver taken on test_required alone."
+    proves_clause: "a finished record declared test-free WITHOUT a stated reason is still counted as untagged"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    must_catch:
+      - "a waiver decided on test_required false alone"
+      - "a waiver that treats a whitespace-only or non-breaking-space reason as a reason"
+  - name: test_waived_close_does_not_raise_the_count_and_an_unwaived_close_still_fails_the_ratchet
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "In unit_tests/docs/test_artifact_graph_covers_scope.py (extended): the live acceptance-criteria store is copied to a temp directory; adding one done waived record leaves the measured untagged count unchanged and the ratchet check passes; adding one done test-free record with no reason and no tag raises the count by one and makes the ratchet check fail (assertion error). The ratchet keeps reading the live store and live test roots in its own run; the copy is used only here, through a root parameter on the ratchet check."
+    proves_clause: "after the change, marking a waived record done does not raise the count, while marking a finished record with no tag and no waiver done still fails the ratchet"
+    code_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_ratchet_run_reports_its_exclusions_with_grounds_and_passes_on_the_live_store
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "pytest subprocess running the ratchet test on the live store"
+    description: "The production entry is the ratchet itself: pytest is run as a subprocess on unit_tests/docs/test_artifact_graph_covers_scope.py::test_untagged_done_ac_backlog_does_not_grow with output shown (-s); it exits 0 and its output states each exclusion count paired with its ground, including 'waived: declared test-free with a stated reason'. Proves the ratchet calls the new module and not its old inline counting. Expected red today."
+    proves_clause: "a record the done gate waives, decided by the same shared rule the gate uses (BO-2500a-1-ii), is not counted as untagged"
+    code_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
+file_findings:
+  - file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the untagged-done ratchet, its counting and its HIGH_WATER_MARK, which the criteria change."
+    decision: null
+file_findings_opened_files:
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
 delivers_to:
   - agent: python-coder
     ac_id: KM-ADM-005-2
@@ -126,7 +225,10 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

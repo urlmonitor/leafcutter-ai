@@ -9,8 +9,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a test-free record whose verification record names a check,
@@ -138,9 +138,149 @@ expects_from:
       or the no-match sentinel; the kind is derived, never self-declared.'
   - ac_id: BO-2500f-2-i
     contract: 'wiring_verdict(check_path, wired_as, repo_root) -> {holds: bool, reason: str}.'
+test_spec:
+  - name: test_bo_2500f_2_check_holds_only_when_it_exists_names_the_record_and_is_wired
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_verdict(record, repo_root) in a temporary git repo: a check that exists, carries '# enforces: <id>' for this record and is wired as the record states holds; the same check tagging another record, and an enforces tag with no wiring, do not hold."
+    proves_clause: "the verification holds only if the named check exists and carries a tag \"# enforces: <id>\" naming this record's id, and the check is wired as BO-2500f-2-i requires"
+    code_file: scripts/ac_store/_enforces_tags.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_named_check_that_does_not_exist_fails_naming_the_check
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "A verified_by.check path that is absent (the post-rename state) gives holds false with a reason naming the check path; nothing raises."
+    proves_clause: "a named check that does not exist fails the verification, naming the check"
+    code_file: scripts/ac_store/_enforces_tags.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_check_without_an_enforces_tag_for_this_id_fails_naming_check_and_tag
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A check present but carrying no enforces tag, one tagging a different id, and a JS check using '// enforces:' for this id: the first two fail with a reason naming the check and the missing tag, the JS one holds."
+    proves_clause: "a named check with no enforces tag for this id fails the verification, naming the check and the missing tag"
+    code_file: scripts/ac_store/_enforces_tags.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_enforces_tags_share_the_covers_scan_and_the_graph_carries_the_link
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Scanning a tree holding covers tags and enforces tags returns covers results identical to the same tree without the enforces tags (no fork of the scanner), tag_type 'enforces' entries appear from the same scan, deployed copies (.leafcutter/, scripts/commit_guardian/) are not scanned so no tag counts twice, and the link graph carries a check-enforces edge from each tagged check to its record."
+    proves_clause: "enforces tags are collected by the same scan that collects covers tags, so the link graph carries a check-enforces link from each tagged check to the record it names"
+    code_file: scripts/ac_store/done_proof.py
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_check_enforces_edge_is_declared_in_the_graph_json_and_the_data_map
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The graph JSON has an edge with id check-enforces (source check, target ac, rel ENFORCES) whose note says it is checked at mark time only, and the data-map doc has the matching row; the doc and JSON agree on its enforcement rating."
+    proves_clause: "enforces tags are collected by the same scan that collects covers tags, so the link graph carries a check-enforces link from each tagged check to the record it names"
+    code_file: docs/reference/artifact-knowledge-graph.graph.json
+    convention_test_file: unit_tests/docs/test_artifact_graph_doc_parity.py
+  - name: test_bo_2500f_2_dangling_enforces_tag_is_reported_with_id_and_check
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "An enforces tag naming an id that is not an active record counts toward no record and is reported as dangling with the id and the check file it was found in, in the same report and message shape as a dangling covers tag, each labelled by tag kind."
+    proves_clause: "an enforces tag naming an id that is not an active record counts toward no record and is reported as dangling, with the id and the check it was found in, exactly as a dangling covers tag is (BO-2500a-1-i)"
+    code_file: scripts/ac_store/done_proof.py
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_check_of_a_weaker_proof_class_than_the_kind_requires_does_not_verify
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "For a record whose declared files derive a kind with a comparing proof (BO-3500c-2 derive_proof_kind class), a check that only reads does not verify it, while a comparing check does; the class comes from the derivation and no list of check kinds is kept here. Depends on BO-3500c-2 (draft), red until it lands."
+    proves_clause: "where the record's deliverable is of a kind for which BO-3500c-2 defines a proof, the check must be the instrument of that kind's proof, and a check whose class of proof is weaker than that kind requires does not verify the record"
+    code_file: scripts/ac_store/_enforces_tags.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a rule that accepts any wired check whatever its class of proof"
+      - "a local table of check kinds"
+  - name: test_bo_2500f_2_check_record_is_verified_through_the_precommit_cli
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess"
+    description: "Real precommit CLI subprocess in a temporary git repo with BO-2500f-4's switch turned on through its declared mechanism: a staged done test-free record naming a committed check that carries an enforces tag and is wired in the repo's .pre-commit-config.yaml exits 0; with the check file removed, or its tag naming another id, it exits 1 naming the check."
+    proves_clause: "the verification holds only if the named check exists and carries a tag \"# enforces: <id>\" naming this record's id, and the check is wired as BO-2500f-2-i requires"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_2_enforces_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_enforces_tags.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "the verification holds only if the named check exists and carries a tag \"# enforces: <id>\" naming this record's id, and the check is wired as BO-2500f-2-i requires"
+    code_file: scripts/ac_store/_enforces_tags.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_enforces_tags.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - scripts/ac_store/done_proof.py
+  - docs/reference/artifact-knowledge-graph.graph.json
+  - unit_tests/docs/test_artifact_graph_doc_parity.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - docs/reference/artifact-knowledge-graph-data-map.md
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/ac_store/done_proof.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds _scan_test_file_for_all_tags, the shared tag scanner whose tag_type entries enforces tags extend."
+    decision: null
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new _enforces_tags module must be added."
+    decision: null
+  - file: docs/reference/artifact-knowledge-graph.graph.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the edge list, including the test-covers edge, to which the check-enforces edge is added."
+    decision: null
+  - file: docs/reference/artifact-knowledge-graph-data-map.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the edge table with the COVERS row beside which the check-enforces row is added."
+    decision: null
+file_findings_opened_files:
+  - scripts/ac_store/done_proof.py
+  - scripts/build_phases_ac_store.py
+  - docs/reference/artifact-knowledge-graph.graph.json
+  - docs/reference/artifact-knowledge-graph-data-map.md
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - BO-2500f-2-i

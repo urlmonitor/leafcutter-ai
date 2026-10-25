@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the exemption path — a finished record declared to need no test, carrying
@@ -365,6 +365,9 @@ amended_by:
     not grow), and the test-contract gap. delivers_to BO-2500a-8-iii and BO-2500f-5, and expects_from
     BO-2500f-4, added. readiness returned to reviewed until the appended clauses have test
     design. criteria and test_spec untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

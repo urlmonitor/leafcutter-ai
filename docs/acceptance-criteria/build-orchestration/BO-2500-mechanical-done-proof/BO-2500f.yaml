@@ -9,8 +9,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   A requirement with no test names the check or review that vouches for it.
@@ -32,7 +32,10 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-10-24
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: [BO-2500f-1, BO-2500f-2, BO-2500f-3, BO-2500f-4, BO-2500f-5]
 implemented_by: []

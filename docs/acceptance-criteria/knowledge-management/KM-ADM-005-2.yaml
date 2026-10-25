@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -101,9 +101,109 @@ expects_from:
     contract: "The shared done-proof waiver rule over verification records."
   - ac_id: KM-ADM-005-1
     contract: "The ratchet's exclusion-with-ground reporting, whose 'waived' ground this record replaces."
+test_spec:
+  - name: test_km_adm_005_2_each_method_is_excluded_under_its_own_ground_with_its_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On a fixture store of finished records, one verified by a holding check and two by a holding inspection leave the untagged count under the grounds 'verified by check' (1) and 'verified by inspection' (2), reported separately."
+    proves_clause: "a finished record whose verification record holds is excluded under the ground \"verified by check\" or \"verified by inspection\", one ground per method, each reported with its count"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_km_adm_005_2_a_stated_reason_without_a_holding_verification_record_is_not_excluded
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A finished record with test_required false, a stated reason and no verification record (and one whose record does not hold) is counted as untagged and is excluded under no ground, so the old 'waived: declared test-free with a stated reason' ground no longer exists."
+    proves_clause: "a finished record declared test-free with a stated reason but no verification record that holds is no longer excluded under any ground"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_km_adm_005_2_the_second_count_names_each_failing_record_and_a_single_one_fails_it
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "With HIGH_WATER_MARK_INVALID = 0 recorded beside the first mark with date and rule, a store holding one finished test-free record whose verification record is absent fails the ratchet, naming the record and the failed part; a store holding none passes."
+    proves_clause: "a second count reports the finished test-free records whose verification record is absent or does not hold, names each one and the part that failed, and has a recorded high-water mark of 0, so a single such record fails it"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    must_catch:
+      - "a second mark above 0"
+      - "a count that fails but does not name the record and part"
+  - name: test_km_adm_005_2_holding_is_decided_by_the_shared_rule_without_recomparing_inspected_content
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The ratchet calls is_done_proof_waived with compare_content=False: on a check-verified record it agrees with the done gate (check_done_proof.py ci), and changing an inspected file after the approval does not flip the ratchet while the approval file is still read from the committed tree."
+    proves_clause: "whether a verification record holds is decided by the same shared rule the done gate uses, except that the content of an inspection is not re-compared here; re-checking finished records over time is TQ-400a's"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    must_catch:
+      - "a copy of the holds logic inside the ratchet"
+      - "a ratchet that re-compares inspected content"
+  - name: test_km_adm_005_2_counts_with_every_exclusion_sum_to_the_finished_records_enumerated
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "On a fixture store with tagged, superseded, check-verified, inspection-verified, untagged and invalid records, untagged plus every exclusion plus tagged equals the finished records enumerated, and an exclusion with a ground not on the published list is reported as an unexplained shortfall."
+    proves_clause: "the counts with every exclusion still sum to the finished records enumerated, each ground on the published list (ACS-1100b-1)"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+  - name: test_km_adm_005_2_a_rise_in_the_first_count_fails_the_ratchet
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Running the ratchet file as a pytest subprocess against a fixture repo copy holding one extra untagged finished record fails; against the live repo it passes with HIGH_WATER_MARK unchanged from KM-ADM-005-1's value and HIGH_WATER_MARK_INVALID at 0."
+    proves_clause: "the first ratchet's high-water mark is not raised by this change; a rise means the migration (BO-2500f-4-ii) is incomplete, and the change is refused"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    must_catch:
+      - "raising the first high-water mark to absorb the new record"
+  - name: test_km_adm_005_2_ratchet_runs_green_on_the_live_store_through_pytest
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "pytest unit_tests/docs/test_artifact_graph_covers_scope.py, as a subprocess"
+    description: "Runs unit_tests/docs/test_artifact_graph_covers_scope.py as a pytest subprocess from the repo root, as CI does, and asserts exit 0 and that the output reports both grounds with their counts and the second count at 0."
+    proves_clause: "a finished record whose verification record holds is excluded under the ground \"verified by check\" or \"verified by inspection\", one ground per method, each reported with its count"
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/untagged_done_count.py
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the untagged-done ratchet and HIGH_WATER_MARK that this record splits and extends."
+    decision: null
+file_findings_opened_files:
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []

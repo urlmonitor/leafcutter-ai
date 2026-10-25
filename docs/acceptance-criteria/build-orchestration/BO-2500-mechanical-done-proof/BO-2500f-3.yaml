@@ -9,8 +9,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a test-free record verified by an inspection that lists two files, each
@@ -134,13 +134,116 @@ expects_from:
   - ac_id: BO-2500f-3-i
     contract: 'approval_verdict(gate_run, ac_id, inspected, repo_root, layer) -> {holds: bool,
       review_date: str|None, reason: str}, read from the tracked approval file.'
+test_spec:
+  - name: test_bo_2500f_3_each_layer_fingerprints_the_version_it_decides_on
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In a temporary git repo, a listed file whose staged content, committed content and working-tree content differ: the pre-commit layer fingerprints the staged index entry, the ci-changed layer the head tree, and the mark command the working-tree file through the repository's clean filters (git hash-object --path), so a CRLF checkout yields the committed blob sha. Each verdict names the sha it computed."
+    proves_clause: "each listed file is fingerprinted as it stands in the version being marked done and compared with its recorded fingerprint"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_unchanged_inspection_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "An inspection listing two files whose current blobs equal the recorded ones holds at all three layers; the positive control that the rule does not refuse everything."
+    proves_clause: "when both fingerprints match, the inspection holds"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_changed_files_refuse_with_re_inspection_needed_naming_each_pair
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "With one file changed the verdict is 're-inspection needed' naming that file with its recorded and current sha; with both changed one refusal names both (not first-failure); the unchanged file is not named."
+    proves_clause: "when either differs, marking done is refused with the verdict \"re-inspection needed\", naming each changed file with its recorded and its current fingerprint"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a comparison that reports only the first differing file"
+      - "a refusal without the recorded and current fingerprints"
+      - "a refusal that names unchanged files"
+  - name: test_bo_2500f_3_a_listed_file_that_no_longer_exists_is_reported_missing_not_changed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A listed path deleted from the version being decided is refused as missing in the missing list, not in changed; a path escaping the repo root is refused; git unavailable gives 'could not evaluate', never holds."
+    proves_clause: "a listed file that no longer exists at its recorded path refuses marking done in the same way, reported as missing rather than as changed"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_one_record_reaches_one_verdict_at_mark_precommit_and_ci_changed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "mark_ac_done.py, check_done_proof.py --mode precommit and --mode ci-changed, each as a subprocess"
+    description: "One fixture repo with BO-2500f-4's switch turned on through its declared mechanism, run through the real mark_ac_done.py CLI, check_done_proof.py --mode precommit and --mode ci-changed as subprocesses: unchanged content gives accept at all three, a changed listed file gives refusal at all three with the same 're-inspection needed' text and shas."
+    proves_clause: "this comparison is made at every layer that decides done for a record being marked done: the mark command, the commit-time done check and the CI check over changed records"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_3_an_old_inspection_of_unchanged_content_still_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An inspection whose approval answered_at and commits are dated years in the past (GIT_AUTHOR_DATE and GIT_COMMITTER_DATE set back) holds when the content is unchanged; the verdict is identical with the system clock advanced, so no clock is read."
+    proves_clause: "the inspection's age plays no part in the verdict, so an inspection of unchanged content holds however old it is"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a rule that expires an inspection after a number of days"
+  - name: test_bo_2500f_3_fingerprint_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_inspection_fingerprint.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "when both fingerprints match, the inspection holds"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_inspection_fingerprint.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - scripts/ac_store/mark_ac_done.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new fingerprint module must be added."
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_ac_store.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - BO-2500f-3-i
   - BO-2500f-3-ii
+  - BO-2500f-3-iii
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
