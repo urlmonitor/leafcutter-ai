@@ -1,0 +1,199 @@
+id: BO-4300g-3-i
+title: "Finalize sends no removal when it cannot name the exact workspace and branch"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: false
+criteria: |
+  Given finalize is run for the branch "feature/theta",
+  And the workspace lookup for "feature/theta" answers that no workspace is found,
+    or answers in prose, or answers without a workspace path,
+  When finalize reaches step 7,
+  Then it makes no dispatch to a removal-capable agent,
+  And it reports that step 7 was skipped because the workspace could not be
+    identified, quoting what the lookup answered,
+  And every workspace under the landing root is identical before and after.
+
+  Given the workspace lookup for "feature/theta" names a workspace whose branch is
+    "feature/iota",
+  When finalize reaches step 7,
+  Then it makes no dispatch to a removal-capable agent,
+  And it reports the mismatch, naming both branches.
+depends_on: [BO-4300g-3]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+it_requirements:
+  - >-
+    Fail closed: "the workspace lookup" is the new step-7 maker locate of BO-4300g-3 (worktree.py
+    locate --kind <kind> --slug <slug> through shell-runner, user decision F). The step-7 removal
+    is dispatched only when that answer is one JSON object with status "ok", a non-empty absolute
+    workspace_path, and a marker.branch exactly equal to the branch finalize is run for (no prefix
+    or case-insensitive match). Anything else (NOT_FOUND or INCOMPLETE refusal, prose, missing
+    path, mismatched branch, empty or no reply, a shell-runner decline) skips step 7 with no
+    removal dispatch and no fallback to the pre-flight answer or WORKTREE_ROOT.
+  - >-
+    The lookup answer is judged by the same acceptance rule the workflows already share for maker
+    answers (BO-4300c-3's WORKSPACE-ANSWER predicate) plus the branch-equality check, not by a new
+    hand-written parser.
+  - >-
+    The skip report quotes the lookup's answer verbatim, bounded to 2 KB, and on a mismatch names
+    both the expected and the found branch.
+  - >-
+    A skipped step 7 is recorded exactly once as skipped, and finalize's earlier steps (merge,
+    ticket closure) keep their outcomes. Skipping step 7 is not a run failure unless BO-4300e
+    already treats it as one.
+  - >-
+    PROOF RUNS THE DEPLOYED FINALIZE, NEVER GREPS IT. Each lookup shape (not found, prose, no path,
+    other branch) is fed to the deployed finalize under the workflow engine harness, and the
+    recorded dispatches and the landing root's workspaces are checked before and after.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-1
+  contract: >-
+    The maker's locate answer to "where is the workspace for this work": one JSON object with
+    status "ok", workspace_path (absolute, non-empty string) and marker.branch (string) for a
+    ready workspace, or a refusal object with a code (NOT_FOUND, INCOMPLETE) and no
+    workspace_path; anything else is not definite.
+test_required: true
+test_intent:
+  - clause: it makes no dispatch to a removal-capable agent
+    needs_test: true
+    reason: A removal filled in from a guess, a placeholder or another branch's workspace is the route around the authorization this record closes, in both scenarios.
+  - clause: it reports that step 7 was skipped because the workspace could not be identified, quoting what the lookup answered
+    needs_test: true
+    reason: A silent skip would leave a workspace behind with no trace of why.
+  - clause: every workspace under the landing root is identical before and after
+    needs_test: true
+    reason: Only a before-and-after snapshot shows that nothing was removed by another path.
+  - clause: it reports the mismatch, naming both branches
+    needs_test: true
+    reason: The operator needs both names to tell a stale lookup from a wrong branch argument.
+origin_agent: business-analyst
+test_spec:
+  - name: test_no_removal_dispatch_for_any_unidentifiable_lookup_or_mismatched_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Runs the deployed finalize-feature workflow under run_workflow_under_e2 for the branch feature/theta, driven
+      to step 7, once per shape of the reply to the step-7 locate dispatch (worktree.py locate --kind --slug through
+      shell-runner, never the pre-flight ensure answer): the real deployed maker's locate refusal for a slug that has no workspace,
+      a prose reply, an ok object without workspace_path, an empty reply and no reply, a declined shell reply, and
+      an ok answer naming a workspace whose branch is feature/iota. In every run it asserts zero dispatches to a
+      removal-capable agent (by the registry declaration) and that step 7 was reached; the control, an ok answer
+      for feature/theta, makes exactly one.
+    proves_clause: it makes no dispatch to a removal-capable agent
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a step 7 that falls back to the pre-flight workspace or WORKTREE_ROOT when the lookup is not definite
+      - a step 7 that fills the authorization with "unknown" or an empty string and dispatches anyway
+      - a step 7 that compares the branch by prefix or case-insensitively and accepts feature/iota
+      - a step 7 that judges the lookup by a new hand-written parser that accepts prose containing a path
+  - name: test_skip_report_quotes_the_lookup_answer_bounded_to_2kb_and_records_one_skipped_outcome
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For each unidentifiable lookup shape the terminal payload and the step 7 outcome say step 7 was skipped
+      because the workspace could not be identified and quote the lookup's answer verbatim (a reply of about 5 KB
+      is quoted cut at 2 KB with the truncation marker), step 7 is recorded exactly once as skipped in
+      step_outcomes and skipped_steps, and earlier steps (merge, ticket closure) keep their outcomes and the run
+      status is not an error.
+    proves_clause: it reports that step 7 was skipped because the workspace could not be identified, quoting what the lookup answered
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_every_workspace_under_the_landing_root_is_identical_after_a_skipped_step_7
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed finalize run for feature/theta, with the lookup answers produced by the real deployed maker
+      against a real fixture whose landing root holds several workspaces, snapshots every workspace (files and
+      refs) before the run and after it for each unidentifiable lookup shape, and asserts they are identical and
+      that no dispatch to a removal-capable agent was recorded (the stub engine cannot remove, so the no-dispatch
+      assertion is what ties the identical state to finalize's own behaviour).
+    proves_clause: every workspace under the landing root is identical before and after
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_mismatch_report_names_the_expected_and_the_found_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      With a lookup that names a workspace whose branch is feature/iota while finalize runs for feature/theta, the
+      step 7 report names both branches (expected feature/theta, found feature/iota), step 7 is recorded exactly
+      once as skipped, and no removal-capable dispatch occurs.
+    proves_clause: it reports the mismatch, naming both branches
+    code_file: templates/workflows-js/finalize-feature.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/_shared/workspace-answer.js
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_workflow_engine_workspace.py
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - templates/scripts/worktree_remove.py
+file_findings:
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Step 7 (lines 1750-1803) holds the removal dispatch the fail-closed rule must guard and the shared acceptance predicate it must reuse lives in templates/workflows-js/_shared/workspace-answer.js (workspaceAcceptAnswer, copied between the WORKSPACE-ANSWER markers at line 443), which needs no edit because only the branch-equality check is new.
+    decision:
+      choice: assignment stands
+      reason: The fail-closed branch check sits on the new step-7 locate in finalize-feature.js and reuses the shared predicate unchanged, so it stays one python-coder change.
+      by: it-po
+file_findings_opened_files:
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/_shared/workspace-answer.js
+created: 2026-10-23
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  An authorization is only as exact as the names put into it. If finalize filled it in from a
+  default, a guess or an 'unknown' placeholder, BO-4300c-3 would be broken by another route. So
+  when the workspace cannot be identified exactly, finalize sends no removal at all.
+
+  USER DECISIONS 2026-10-25 (recorded by IT PO): F -- "the workspace lookup" in the criteria is
+  the new step-7 maker locate (worktree.py locate, read-only, through shell-runner); only a
+  definite ok answer whose marker.branch equals the expected branch builds the authorization,
+  and every case in this record's criteria makes no removal dispatch.
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-23 [business-analyst/plan-feature/caller-authorized-workspace-removal]:
+#   Authored as an edge case of BO-4300g-3.
+# - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
+#   Pattern C split (user decision): renumbered under the new sibling L1 BO-4300g.
+#   Criteria unchanged.
+# ====================================================================

@@ -1,0 +1,81 @@
+id: BO-2400c-1-xi
+components:
+  - build_orchestration
+  - injection_builder
+title: "The bundle command writes UTF-8 to stdout whatever the locale code page"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the assemble-bundle command is run with layer content that holds characters
+    outside the locale code page (for example the emoji in agent and skill docs),
+    and its stdout is a pipe whose default encoding is that code page (cp1252 on
+    Windows) with no PYTHONUTF8 or PYTHONIOENCODING override set by the caller,
+  When `python .leafcutter/scripts/injection_builders.py assemble-bundle ...` runs,
+  Then it exits zero and writes the assembled bundle to stdout encoded as UTF-8,
+    so the bytes a caller reads decode as UTF-8 to exactly the text
+    assemble_context_bundle returned for the same inputs,
+  And the output contract is unchanged: stdout carries the bundle and nothing else
+    (no banner, no byte-order mark, no log text), and diagnostics still go to stderr,
+  And the bug symptom ("On Windows, `python .leafcutter/scripts/injection_builders.py assemble-bundle ...` exits 1 with UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f464' and prints no bundle; it only succeeds when the caller sets PYTHONUTF8=1 (seen in the FIN-100c-15 fast-lane run).") must not occur.
+depends_on: [BO-2400c-1-ii]
+doc_links:
+  - path: scripts/injection_builders.py
+    relationship: implements
+    status: exists
+    relevance: "Holds the assemble-bundle subcommand whose final print(bundle) encodes with the locale code page."
+  - path: docs/reference/fast-lane-prompt-caching.md
+    relationship: describes
+    status: exists
+    relevance: "The command surface and stdout-only output contract this constraint must leave intact."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    bundle_stdout_encoding:
+      type: string
+      description: "The assemble-bundle command writes the bundle to stdout encoded as UTF-8 regardless of the locale code page, with no BOM and no other bytes."
+  reference_file_path: "scripts/injection_builders.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Encode the bundle as UTF-8 at the stdout write (e.g. sys.stdout.buffer.write(bundle.encode('utf-8')) or sys.stdout.reconfigure(encoding='utf-8') before printing) inside the command path only; importing the module must stay side-effect-free."
+    - "Do not add a BOM and do not change the bytes emitted for pure-ASCII bundles — existing byte-for-byte tests from BO-2400c-1-ii must stay green."
+    - "Covering tests must execute the command as a real subprocess with the child's stdout encoding forced to cp1252 (PYTHONIOENCODING=cp1252, PYTHONUTF8=0) so the defect reproduces on every platform, not only on Windows."
+test_required: true
+test_spec:
+  - name: test_bundle_command_emits_utf8_when_stdout_encoding_is_cp1252
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Run assemble-bundle as a subprocess with PYTHONIOENCODING=cp1252 and PYTHONUTF8=0 and a layer containing '\\U0001f464'; it exits zero, stderr has no UnicodeEncodeError, and stdout bytes decode as UTF-8 to the same text the imported assemble_context_bundle returns (plus the command's existing trailing newline)."
+  - name: test_bundle_command_utf8_output_has_no_bom_or_extra_bytes
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Under the same forced cp1252 stdout, the stdout bytes do not start with a UTF-8 BOM and contain nothing besides the encoded bundle and the existing trailing newline."
+test_rationale: "The defect only shows when the child process's stdout encoding is a legacy code page; forcing PYTHONIOENCODING=cp1252 in a real subprocess reproduces it deterministically on Linux CI and Windows alike, and comparing decoded bytes to the pure function's output proves both the encoding fix and that the output contract did not drift."
+origin_agent: BrainCandy
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - "scripts/injection_builders.py"
+change_target: code
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: The bundle is written with print() to sys.stdout, whose encoding is the locale code page (cp1252) on Windows when stdout is a pipe; bundle text containing characters outside cp1252 (emoji in agent/skill docs) cannot be encoded. The bundle must be written to stdout as UTF-8 regardless of locale (e.g. sys.stdout.buffer.write(bundle.encode('utf-8')) or reconfiguring stdout to utf-8 before printing), keeping the byte-for-byte output contract (bundle and nothing else on stdout) unchanged..
+
+  Placed as an L3 under BO-2400c-1 because the L1 BO-2400c is at its raised cap of 6
+  L2 children and this is a technical constraint on the already-specified command
+  surface (BO-2400c-1-ii), not a new L2 behaviour.

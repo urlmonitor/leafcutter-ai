@@ -82,5 +82,6 @@ covered_by:
   - BO-2400c-1-viii
   - BO-2400c-1-ix
   - BO-2400c-1-x
+  - BO-2400c-1-xi
 implemented_by:
   - "scripts/injection_builders.py"
