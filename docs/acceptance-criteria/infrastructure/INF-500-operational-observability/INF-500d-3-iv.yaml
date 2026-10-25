@@ -1,0 +1,85 @@
+id: INF-500d-3-iv
+components:
+  - infrastructure
+  - feedback_collector
+title: "An agent that cannot find its own recovery file records that the id was not captured, never the newest id it can find"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent's submission printed nothing on standard output,
+  And the agent's own error-stream file holds no recovery-file line (the submission
+    exited before writing one),
+  And the shared temporary directory holds recovery files written in the last minute
+    by other agents' submissions, the newest holding fb_2026-08-25_9057159a,
+  When the agent follows the sign-off instructions to fill in its feedback id,
+  Then it records a failure marker whose reason comes from INF-500d-3's closed set,
+  And it does not record fb_2026-08-25_9057159a or any other id it did not read from
+    its own standard output or from the recovery file named in its own error stream,
+  And the sign-off instructions contain no step that lists, sorts, or searches the
+    shared temporary directory for recovery files by name pattern or modification
+    time.
+
+  Given an agent's own error-stream file names a recovery file that no longer exists
+    or is empty,
+  When the agent follows the sign-off instructions,
+  Then it records the failure marker with INF-500d-3's "written but not captured"
+    reason,
+  And it does not record any other id,
+  So that a missing id stays visible as missing instead of being replaced by a
+    plausible id that belongs to another agent.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-ii
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/live-surface-tester.md
+    relationship: implements
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-3-ii
+    contract: "Each agent's error stream goes to a file unique to that run, and the recovery search reads only that file."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EDGE MATTERS. The KI's stated harm: "a missing id is visible; a plausible
+  id belonging to another agent's phase is not". Once INF-500d-3-i makes recovery
+  files unique, an LLM whose fallback comes back empty has an obvious and WRONG
+  improvisation available: take the newest recovery file in the temporary
+  directory. Under parallel dispatch, that produces exactly the cross-agent id the
+  fix exists to prevent. The instructions must explicitly forbid that route.
+
+  Which marker: in the first scenario the agent cannot tell from its own side
+  whether the write happened. The reason comes from INF-500d-3's closed set, based on
+  the submission's exit status and error stream. Do not invent a new reason. In the
+  second scenario the error stream shows a recovery file was announced, so the write
+  succeeded and the reason is "written but not captured". Per INF-500d-3's second
+  scenario, that case must never be re-filed.
+
+  live-surface-tester currently runs 'head -1' over the search result, which takes
+  the first match whoever wrote it. Once its error-stream file is per-run
+  (INF-500d-3-ii) it can only ever hold one match. Even so, the instruction must not
+  rely on "first match wins".
+
+  BOUNDARY. INF-500d-3 owns the marker reason vocabulary. This record only requires
+  that the instructions record the marker rather than a foreign id.

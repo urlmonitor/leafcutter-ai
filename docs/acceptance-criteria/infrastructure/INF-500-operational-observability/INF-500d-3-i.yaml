@@ -1,0 +1,101 @@
+id: INF-500d-3-i
+components:
+  - infrastructure
+  - feedback_collector
+title: "Two submissions in the same second each leave their own id-recovery file, holding their own id"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two agents, a python-coder on ticket A and a pr-reviewer on ticket B, each
+    submit one report,
+  And both submissions start within the same wall-clock second,
+  When both submissions complete successfully, printing ids fb_2026-08-25_869bc2f7
+    and fb_2026-08-25_9057159a respectively,
+  Then two distinct id-recovery files exist, one per submission,
+  And the recovery file announced on the first submission's error stream contains
+    exactly fb_2026-08-25_869bc2f7,
+  And the recovery file announced on the second submission's error stream contains
+    exactly fb_2026-08-25_9057159a,
+  And neither recovery file was overwritten by the other submission.
+
+  Given 20 submissions from 20 separate processes start within the same second,
+  When all 20 complete successfully,
+  Then 20 distinct recovery files exist,
+  And each printed id appears in exactly one recovery file,
+  And each submission's error stream names the recovery file that holds that
+    submission's own printed id.
+
+  Given any successful submission,
+  When the recovery search documented in the sign-off instructions is applied to that
+    submission's error stream,
+  Then it returns exactly one match,
+  And that match names the recovery file holding the id the submission printed,
+  So that the uniquely-named recovery file is still found by the recovery step agents
+    are told to run.
+depends_on:
+  - INF-500d-3
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "Owns the documented recovery search. Whatever recovery-file name this AC adopts must still produce exactly one match for that search, or the search must change in the same delivery (see notes)."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRACT TENSION. Its criteria pin the recovery line's shape and the pattern 'sidecar:[^ ]*feedback_id_[0-9]*.txt'. A name with non-digit separators no longer matches that pattern. See notes."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "A recovery-file line on the error stream naming a file unique to this submission, in a shape the documented recovery search matches exactly once."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  SOURCE. KI-FC-002 half (1). The recovery file is named after whole epoch seconds,
+  so two submissions in the same second share a name and the later one overwrites
+  the earlier. Observed 2026-08-25: entries 869bc2f7 and 9057159a share timestamp
+  18:52:29Z, and only one recovery file exists for that second.
+
+  FIX DIRECTION (from the KI, not binding on the implementer): add the process id
+  and a random suffix to the name. The criteria require uniqueness per submission
+  and do not prescribe a scheme.
+
+  CONTRACT TENSION WITH INF-500d-4-ii / INF-500d-4-vi. Both pin the recovery search
+  'sidecar:[^ ]*feedback_id_[0-9]*.txt', and their tests apply that exact pattern.
+  A name such as feedback_id_<epoch>_<pid>_<hex>.txt does NOT match it: the run of
+  digits stops at the first underscore, and the single-character '.' wildcard is
+  followed by a literal 'txt' that is not there. Two ways to resolve this; the IT PO
+  chooses:
+    (a) keep the name all-digits (e.g. epoch, pid and a random number concatenated
+        as digits), so the existing pattern, the existing callers and both earlier
+        ACs keep working unchanged; or
+    (b) change the name freely and update the recovery search in every caller
+        (signoff skill, live-surface-tester) plus INF-500d-4-ii's and -4-vi's tests
+        in the same delivery.
+  The third criteria scenario holds under either option. It is the guard against
+  shipping a unique name that the documented recovery step can no longer find.
+  The BA did not edit INF-500d-4-ii or -4-vi.
+
+  Out of scope: removing recovery files after use. Unique names mean the files
+  accumulate in the temporary directory. That is a separate concern and is not
+  required for correctness.

@@ -1,0 +1,70 @@
+id: INF-500d-3-iii
+components:
+  - infrastructure
+  - feedback_collector
+title: "Reading the feedback id from standard output keeps working unchanged, and still returns each agent its own id under concurrent submissions"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given 20 submissions from 20 separate processes start within the same second,
+  When all 20 complete successfully,
+  Then each submission's standard output is exactly one line,
+  And that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx,
+  And the 20 ids are pairwise distinct,
+  And each id names the record that its own submission appended, matched by that
+    record's category, phase and note.
+
+  Given a caller that captures the id from standard output and never consults the
+    recovery file, as the epic-supervisor and live-surface-tester instructions do
+    today,
+  When it runs the same submission command as before the recovery-file change and
+    the error-stream change,
+  Then it receives the same single-line id with no change to its command or parsing,
+  And the sign-off instructions still tell the agent to read standard output first
+    and to fall back to the recovery file only when standard output is empty.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-i
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Already pins 'stdout is exactly one line, the id' for a single submission. This record adds the concurrent case and the unchanged-caller case. It does not restate the single-submission guarantee."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-3-i
+    contract: "The recovery-file naming change touches only the error stream and the recovery file, never standard output."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN RECORD. The user request requires that the existing
+  parallel-safe capture through standard output keep working unchanged. Standard
+  output is per-process, so it was never part of the collision. The risk is a
+  regression: a refactor of the recovery-file naming adds a second line to standard
+  output, or reorders the writes, and corrupts every caller that captures the id
+  directly. That includes FB_ID=$(...) in epic-supervisor and live-surface-tester.
+
+  Run the real entry point as subprocesses and start them concurrently. An
+  in-process helper call cannot show a stream mix-up. Use a copied temporary layout
+  with its own declared sink, so no test writes into a real sink (INF-500d-4).

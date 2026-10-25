@@ -1,0 +1,116 @@
+id: INF-500d-3-ii
+components:
+  - infrastructure
+  - feedback_collector
+title: "Every agent sends its submission's error stream to a file of its own, so its recovery search reads only its own submission"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every shipped agent instruction that submits a report and saves the
+    submission's error stream to a file for the id-recovery step,
+  When the file name each instruction prescribes is filled in for two concurrent
+    runs — a python-coder signing off on ticket 03-add-parser and a pr-reviewer
+    signing off on ticket 05-wire-cli in the same epic drive,
+  Then the two runs resolve to two different files,
+  And the name each run resolves to includes the ticket it is signing off on and the
+    phase name it is submitting as,
+  And no shipped instruction prescribes one fixed file name that every caller shares.
+
+  Given two ticket supervisors driving tickets 03-add-parser and 05-wire-cli in
+    parallel,
+  When both record the same kind of supervisor event (for example a halt) within the
+    same second,
+  Then each supervisor's submission writes its error stream to a different file,
+  Because a name keyed only on the event kind is shared across every ticket in the
+    batch and recreates the collision this record removes.
+
+  Given one agent run whose submission printed nothing on standard output,
+  When it runs the documented recovery search,
+  Then the search reads only the file that run's own submission wrote,
+  And another agent's submission that finished in the same second cannot have
+    written to that file.
+
+  Given the set of shipped instructions that redirect a submission's error stream,
+  When a check scans the deployed instructions,
+  Then it reports how many redirecting instructions it inspected,
+  And it fails when that count is zero,
+  And it fails when any of them prescribes a name without both the ticket and the
+    phase in it.
+depends_on:
+  - INF-500d-3
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/documentation-verifier.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/user-surface-smoker.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/live-surface-tester.md
+    relationship: implements
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "Each agent's error stream goes to a file unique to that run, and the recovery search reads only that file."
+expects_from:
+  - ac_id: INF-500d-3-i
+    contract: "The submission's error stream names a recovery file unique to that submission."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  SOURCE. KI-FC-002 half (2). The signoff skill tells every agent to save the error
+  stream to the same fixed file in the shared temporary directory and then search
+  that file. With per-submission recovery files (INF-500d-3-i) alone, agent X can
+  still read agent Y's recovery line if Y's submission overwrote the shared file
+  between X's submit and X's search. Both halves are needed.
+
+  SCOPE IS WIDER THAN THE SIGNOFF SKILL (found while reading the instruction
+  surfaces, 2026-10-25). The same shared fixed name is also copied verbatim into
+  documentation-verifier and user-surface-smoker. live-surface-tester uses a
+  workspace-relative fixed name. A fix limited to the signoff skill leaves three
+  copies of the defect.
+
+  THE "EXISTING CONVENTION" IS NOT PARALLEL-SAFE EITHER. The user request and the KI
+  cite ticket-supervisor's per-name files as the model to follow. Those names are
+  keyed on the EVENT KIND (mechanical-retry, cross-agent-rework,
+  brainstorm-escalation, halt), not on the ticket. Under /build-feature, one
+  supervisor runs per ticket in a batch, so two supervisors halting at the same time
+  share a file. The second scenario covers that. Follow the convention's shape (a
+  distinguishing suffix), but key it on ticket and phase as well.
+
+  Why ticket + phase is enough: one ticket never runs two instances of the same
+  phase at the same time. If the IT PO finds a surface where that is false (for
+  example a retried phase overlapping its predecessor), add a further distinguishing
+  part to the name. Do not weaken the criteria.
+
+  Keep each instruction a single shell command (shell convention). The recovery
+  search must read the same per-run file the submit step wrote. A mismatch between
+  the two names makes the search find nothing, so it fails safe, but every agent
+  would then lose its id.
+
+  Behavioural, not grep-only (CLAUDE.md "Gate / Workflow ACs"): the check in the
+  fourth scenario must fill in the prescribed names for two concrete runs and assert
+  they differ. A scan that only checks a suffix exists is not enough.
