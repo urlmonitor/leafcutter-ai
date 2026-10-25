@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -105,7 +105,7 @@ amended_by:
   at: '2026-10-22'
   note: Child BO-4300e-2-iii added (clearing only ever removes one of this project's own workspaces); covered_by updated. Criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300e-2-i, BO-4300e-2-ii, BO-4300e-2-iii, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py]
+covered_by: [BO-4300e-2-i, BO-4300e-2-ii, BO-4300e-2-iii, BO-4300e-2-iv, BO-4300e-2-v, BO-4300e-2-vi, BO-4300e-2-vii, BO-4300e-2-viii, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py]
 implemented_by:
 - templates/scripts/workspace_root.py
 - templates/scripts/worktree_canaries.py
