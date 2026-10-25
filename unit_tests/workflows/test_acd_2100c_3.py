@@ -154,6 +154,16 @@ def _after_itpo_committed(ids: list[str]) -> dict:
     }
 
 
+def _person_answer(gate_id: str, action: str = "approve") -> dict:
+    """The `args.resume_answer` a person supplies for `gate_id` (a single-choice answer on the person channel)."""
+    return {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": action,
+        "channel": "person",
+    }
+
+
 def _approve_ids(payload: dict, label: str) -> list:
     """The --ids list of each approve_acs.py dispatch under `label` (ACD-300c-4's approval step)."""
     prompts = [c.get("prompt") or "" for c in payload.get("calls", []) if c.get("label") == label]
@@ -292,12 +302,7 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         # Run 2: a brand-new process (a fresh Node child_process invocation --
         # NOT the same process as run 1) supplying the answer for the decision
         # point the first run paused at.
-        resume_answer = {
-            "gate_id": gate_id,
-            "type": "single_choice",
-            "action": "approve",
-            "channel": "person",
-        }
+        resume_answer = _person_answer(gate_id)
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses=_after_itpo_committed([]),
@@ -388,18 +393,8 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
             f"gate). Got {gate_id_a!r} and {gate_id_b!r}."
         )
 
-        approve_answer = {
-            "gate_id": gate_id_a,
-            "type": "single_choice",
-            "action": "approve",
-            "channel": "person",
-        }
-        cancel_answer = {
-            "gate_id": gate_id_b,
-            "type": "single_choice",
-            "action": "cancel",
-            "channel": "person",
-        }
+        approve_answer = _person_answer(gate_id_a)
+        cancel_answer = _person_answer(gate_id_b, "cancel")
 
         payload_approve = _run_plan_feature_real(
             fixture["worktree_path"],
@@ -461,12 +456,7 @@ def test_no_waiting_record_remains_after_the_resumed_run_passes_the_gate():
         run_id = "acd2100c3-seam-run"
         _payload1, gate_id = _pause_headless(fixture["worktree_path"], fixture["project_dir"], run_id)
 
-        resume_answer = {
-            "gate_id": gate_id,
-            "type": "single_choice",
-            "action": "approve",
-            "channel": "person",
-        }
+        resume_answer = _person_answer(gate_id)
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
@@ -522,12 +512,7 @@ def test_acd_2100c_3_reachable_from_entry_point():
             f"of the production entry point must report the paused status. Got: {payload1.get('result')}"
         )
 
-        resume_answer = {
-            "gate_id": gate_id,
-            "type": "single_choice",
-            "action": "approve",
-            "channel": "person",
-        }
+        resume_answer = _person_answer(gate_id)
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses=approval_step_replies(),  # ACD-300c-4: the approval step releases one id
@@ -677,7 +662,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
             "approval-holds": {"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id], "held": []}), "exit_code": 0},
             "approval-apply": approval_apply_reply({"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id]})}),
             "branch-check": {"output": "ac-authoring/h2-dup-test", "exit_code": 0},
-            "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+            "commit-stage-output": {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}},
         }
 
         payload = _run_plan_feature_real(
@@ -826,12 +811,7 @@ def test_h1_itpo_author_skipped_when_resume_answer_targets_an_earlier_gate():
         # end the pipeline -- the SAME process's `for` loop advances into the
         # "itpo" step's own iteration, with `args.resume_answer` unchanged
         # from what was supplied for "gate-ba".
-        resume_answer = {
-            "gate_id": gate_id,
-            "type": "single_choice",
-            "action": "approve",
-            "channel": "person",
-        }
+        resume_answer = _person_answer(gate_id)
         label_responses = {
             "stage-0-triage": behavioral_triage_stub,
             # commitStageOutput()'s internal branch-check + commit dispatch,
@@ -840,7 +820,7 @@ def test_h1_itpo_author_skipped_when_resume_answer_targets_an_earlier_gate():
             # this, an early commit error would return before the "itpo" step
             # is ever reached, making the assertion below vacuous.
             "branch-check": {"output": "ac-authoring/h1-skip-test", "exit_code": 0},
-            "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+            "commit-stage-output": {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}},
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
