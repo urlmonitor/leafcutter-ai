@@ -151,6 +151,7 @@ task, then pull only those files.
 | ac driven build loop | [docs/how-to/ac-driven-build-loop.md](how-to/ac-driven-build-loop.md) | Step-by-step guide to running the AC-driven build loop (/build-ac and ac-scanner) on a consumer install, including the deployed ac_store scripts. |
 | ac driven development | [docs/how-to/ac-driven-development.md](how-to/ac-driven-development.md) | How to use the AC-driven development system |
 | ac traceability store | [docs/how-to/ac-traceability-store.md](how-to/ac-traceability-store.md) | How-to guide for delivering approved ACs via the reviewed-PR path, and for creating, amending, deprecating, and tracing acceptance criteria through the AC Traceability Store and knowledge map. |
+| add a shared workflow block | [docs/how-to/add-a-shared-workflow-block.md](how-to/add-a-shared-workflow-block.md) | Add a new shared block under templates/workflows-js/_shared/ and mark it in one route, then make another route start consuming an existing block such as COMMIT-ANSWER, installing and running the identity check each time. |
 | answer the decision kernel questions | [docs/how-to/answer-the-decision-kernel-questions.md](how-to/answer-the-decision-kernel-questions.md) | Answer the two questions a decision asks you, the approval question and the ranked-choice question, with answers the kernel accepts as written, and know what each answer does. |
 | approval gate | [docs/how-to/approval-gate.md](how-to/approval-gate.md) | Task-oriented guide: read the readiness report, choose a gate option (yes / review-all / cancel), and manage the IT PO review-all path. |
 | authoring product truth artifacts | [docs/how-to/authoring-product-truth-artifacts.md](how-to/authoring-product-truth-artifacts.md) | Step-by-step guide for authoring product-truth artifacts by hand, including the mandatory search-index.json then add-vs-create protocol that keeps exactly one canonical dataset per entity per component. |
@@ -261,6 +262,8 @@ task, then pull only those files.
 | proof claims and completeness | [docs/reference/proof-claims-and-completeness.md](reference/proof-claims-and-completeness.md) | For each of the seven kinds of proof a test can claim, states what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | remedy declarations | [docs/reference/remedy-declarations.md](reference/remedy-declarations.md) | Lookup for the GE-132a-1 remedy declaration: which commit checks need one, where it lives, how the shared loader finds it, and the three refusals check-hook-parity raises. |
 | requirement rule check | [docs/reference/requirement-rule-check.md](reference/requirement-rule-check.md) | Lookup reference for the requirement rule check CLI, its JSON report, dispositions, rule families (including the protected-fields family and its per-stage owner map), the before-state a repairing run needs, fail-closed paths, /plan-feature use and family registration. |
+| shared block install failures | [docs/reference/shared-block-install-failures.md](reference/shared-block-install-failures.md) | Lookup for route authors: every shared-block install failure with its exact message and fix. |
+| shared blocks | [docs/reference/shared-blocks.md](reference/shared-blocks.md) | Lookup for route authors: the shared-block marker convention, the identity check, the COMMIT-ANSWER caller contract, and which routes take it. Install failures are on a companion page. |
 | shared commit step | [docs/reference/shared-commit-step.md](reference/shared-commit-step.md) | Lookup for calling the shared commit step (commit_changes.py): its inputs, every key of its one JSON answer, the four statuses and what a caller does next, the reason_code families, the rules a caller can rely on, the remedy and handoff payload, and one real answer per status. |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](reference/skill-frontmatter.md) | Overview of Reference: SKILL.md Frontmatter Fields. |
 | skills config fields | [docs/reference/skills-config-fields.md](reference/skills-config-fields.md) | Overview of Reference: skills_config.json Fields. |
@@ -287,9 +290,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -297,9 +300,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
