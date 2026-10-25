@@ -1,0 +1,28 @@
+id: TDE-9702
+title: A trade is blocked unless the window is open and the position limit is not
+  reached
+component: testing-quality
+components:
+- testing_quality
+level: L3
+status: active
+readiness: approved
+priority: high
+criteria: 'Given the report job runs,
+
+  When the requirement applies,
+
+  Then a trade is blocked unless both the window is open and the position limit is
+  not reached.
+
+  '
+assigned_agent: python-coder
+declared_files:
+- path: scripts/trade_gate.py
+  state: existing
+test_required: true
+test_intent:
+- clause: a trade is blocked unless both the window is open and the position limit
+    is not reached
+  needs_test: true
+  reason: The behaviour is observable only by running the code.

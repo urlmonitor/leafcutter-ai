@@ -26,6 +26,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
+import designer_eval
 import produced_tests_db as db_kinds
 import produced_tests_mutants as mutants
 import produced_tests_runs as runs
@@ -191,6 +192,7 @@ KINDS: dict[str, Callable[[RowContext, dict], dict]] = {
     "wrong_version_run": runs.wrong_version_run,
     **db_kinds.KINDS,
     **sql_test_writer_eval.KINDS,
+    **designer_eval.KINDS,
 }
 HALF_OF = {"wrong_version_run": "test", "report_lists_wrong_version": "report"}
 

@@ -39,7 +39,7 @@ def test_test_runner_set_registered_and_every_row_scored(tmp_path):
 
     # One set per agent: the new test-writer rows live in the TQ-200d-1 set, in no second file.
     assert h.agent_config("test-writer")["eval_set"] == "scripts/evals/sets/test-writer.jsonl"
-    assert sorted(p.name for p in h.SETS_DIR.glob("*.jsonl")) == ["restructuring-specialist.jsonl", "sql-test-writer.jsonl", "test-runner.jsonl", "test-writer.jsonl"]
+    assert sorted(p.name for p in h.SETS_DIR.glob("*.jsonl")) == ["restructuring-specialist.jsonl", "sql-test-writer.jsonl", "test-designer.jsonl", "test-runner.jsonl", "test-writer.jsonl"]
     assert [r["id"] for r in h.load_rows("test-runner")].count(h.ROW_IDS["cfg"]) == 1
 
 
