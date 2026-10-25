@@ -70,6 +70,7 @@ def _assert_scored_literals() -> None:
 
 def test_test_designer_set_registered_and_every_row_scored(tmp_path):
     # covers: TQ-200d-3
+    # covers: TQ-200d
     # angle: reachability
     # must_catch: test-designer entry missing from agent_eval_config.json
     _assert_registered_config(h.agent_config())
