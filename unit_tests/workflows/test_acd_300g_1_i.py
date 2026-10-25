@@ -21,7 +21,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _acd_300g_support import PO_IDS, UNDO, calls, commit_failure, format_commit_error, gate_run, names, terminal  # noqa: E402
+from _acd_300g_support import (  # noqa: E402
+    PO_IDS, UNDO, calls, commit_failure, commit_reply, format_commit_error, gate_run, names, terminal,
+)
 
 HOOK = "check-ac-schema"
 HOOK_ERROR = "criteria assert ... declares_side_effect is not set"
@@ -45,7 +47,7 @@ def test_acd_300g_1_i_hook_rejection_stops_the_pipeline():
 
     Wrong version caught: the next authoring agent is dispatched after a hook rejection.
     """
-    result = _approve_po(commit_failure(HOOK))
+    result = _approve_po(commit_reply(HOOK, reason=HOOK_ERROR))
 
     assert len(calls(result, "commit-stage-output")) == 1, names(result)
     assert calls(result, "stage-ba-author") == [], names(result)
@@ -100,12 +102,16 @@ def test_acd_300g_1_i_failed_commit_leaves_files_on_disk():
     """A failing commit: no dispatch after the commit carries git restore, git checkout, git reset or rm, the
     commit instructions say to leave the files as uncommitted changes, and the run's acs_as_drafts lists the
     stage's ids."""
-    result = _approve_po(commit_failure(HOOK))
+    result = _approve_po(commit_reply(HOOK, reason=HOOK_ERROR))
 
     commit_at = max(i for i, c in enumerate(result.agent_calls) if c.label == "commit-stage-output")
     later = [str(c.label) for c in result.agent_calls[commit_at + 1:] if UNDO.search(str(c.prompt))]
     assert later == [], names(result)
-    assert "uncommitted changes" in result.agent_calls[commit_at].prompt, result.agent_calls[commit_at].prompt[-300:]
+    # BO-4500a-5-ii: the commit dispatch runs only the shared step (which never discards files); it carries no
+    # restore/checkout/reset/rm of its own, and the user-facing error says the files remain on disk.
+    commit_prompt = str(result.agent_calls[commit_at].prompt)
+    assert "commit_changes.py" in commit_prompt and UNDO.search(commit_prompt) is None, commit_prompt[-400:]
+    assert "remain on disk as uncommitted changes" in terminal(result).get("message", ""), terminal(result)
     assert sorted(terminal(result).get("acs_as_drafts") or []) == PO_IDS, terminal(result)
 
 
@@ -127,17 +133,22 @@ def test_acd_300g_1_i_conflict_reports_index_conflict_and_paths():
 def test_acd_300g_1_i_conflict_is_not_retried_or_forced():
     # covers: ACD-300g-1-i
     # angle: discrimination
-    """A commit agent returning is_conflict true: exactly one commit-stage-output dispatch is recorded, and its
-    instructions forbid a retry and --no-verify and contain no force flag.
+    """The shared commit step answers refused with a conflict: exactly one commit-stage-output dispatch is
+    recorded, it is a single run of the shared step in supervised mode ("once", no other way of committing)
+    with no --no-verify and no force flag, the run ends in error, and the user text reports an index conflict
+    (not a hook rejection).
 
     Wrong versions caught: the workflow re-dispatches the commit after a conflict; the commit instructions
-    allow --no-verify or a force overwrite.
+    allow --no-verify or a force overwrite; the conflict is reported as a hook rejection.
+    # covers: BO-4500a-5-ii
     """
-    result = _approve_po(commit_failure(conflict=True))
+    result = _approve_po(commit_reply(conflict=True))
 
     dispatched = calls(result, "commit-stage-output")
     assert len(dispatched) == 1, names(result)
     prompt = dispatched[0].prompt
-    assert "Do NOT retry the commit" in prompt and "Do NOT run git commit --no-verify" in prompt, prompt[-400:]
-    assert _FORCE.search(prompt) is None, _FORCE.search(prompt)
-    assert terminal(result).get("status") == "error", terminal(result)
+    assert "through the shared commit step, once" in prompt and "Use no other way of committing" in prompt, prompt[-500:]
+    assert "--no-verify" not in prompt and _FORCE.search(prompt) is None, _FORCE.search(prompt)
+    out = terminal(result)
+    assert out.get("status") == "error", out
+    assert "index conflict" in out.get("message", ""), out

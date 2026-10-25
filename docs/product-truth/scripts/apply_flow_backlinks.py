@@ -210,6 +210,33 @@ def reconcile(
     return changed
 
 
+AC_STORE = STORE.parent / "acceptance-criteria"
+
+
+def snapshot_ac_store(ac_store: Path = AC_STORE) -> dict[Path, bytes]:
+    """Map every AC record under ``ac_store`` to its current bytes (empty if the store is absent)."""
+    snap: dict[Path, bytes] = {}
+    for path in sorted(ac_store.rglob("*.yaml")):
+        try:
+            snap[path] = path.read_bytes()
+        except OSError:
+            logger.exception("cannot read %s", path)
+            raise
+    return snap
+
+
+def rewritten_ac_records(before: dict[Path, bytes], after: dict[Path, bytes], root: Path) -> list[str]:
+    """Repo-relative POSIX paths of AC records whose bytes differ between the two snapshots."""
+    out = []
+    for path, data in after.items():
+        if before.get(path) != data:
+            try:
+                out.append(path.relative_to(root).as_posix())
+            except ValueError:
+                out.append(path.as_posix())
+    return sorted(out)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Write a flow's step.implements back-links, then regenerate derived product-truth data."
@@ -229,11 +256,15 @@ def main() -> int:
 
     try:
         backlinks = load_backlinks(file=args.backlinks_file, inline=args.backlinks_json)
+        before = snapshot_ac_store()
         reconcile(args.flow, backlinks, skip_generate=args.skip_generate)
+        rewritten = rewritten_ac_records(before, snapshot_ac_store(), STORE.parent.parent)
     except BacklinkError as exc:
-        logger.error("FAIL: %s", exc)
+        logger.exception("FAIL: %s", str(exc))  # noqa: TRY401 - keeps the one-line message the callers match on
         return 1
     logger.info("OK: flow back-links reconciled")
+    # Machine-readable report: exactly the AC records this run rewrote (the workflow commits these).
+    print(json.dumps({"rewritten_acs": rewritten}))  # noqa: T201
     return 0
 
 

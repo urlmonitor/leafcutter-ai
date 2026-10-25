@@ -104,7 +104,7 @@ def _labels_for(check_reply: dict, **overrides) -> dict:
         "clear-pause-record": {"ok": True},
         "clear-pause-record-verify": {"exists": False},
         "branch-check": {"output": "ac-authoring/rule-check-test", "exit_code": 0},
-        "commit-stage-output": {"status": "ok", "message": "committed successfully"},
+        "commit-stage-output": {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}},
         _CHECK_LABEL: check_reply,
     }
     labels.update(overrides)

@@ -77,11 +77,8 @@ class NodeScriptError(Exception):
 
 def _read_source(path: str) -> str:
     """Read and return the full text of a file."""
-    try:
-        with open(path, encoding="utf-8") as fh:
-            return fh.read()
-    except OSError as exc:
-        raise OSError(f"Cannot read source file {path}: {exc}") from exc
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
 
 
 def _run_node_script(script_text: str, timeout: int = 15) -> subprocess.CompletedProcess:
@@ -99,29 +96,27 @@ def _extract_coercion_block(source: str) -> str:
     """
     Return the exact text of the result-coercion block from commitStageOutput().
 
-    The coercion block spans:
-        let result;
-        try { result = ... } catch (_parseErr) { result = ...; }
-        return result || ...;
+    BO-4500a-5-ii: the block reads the shared commit step's answer out of the
+    commit agent's `{status, commit_answer}` envelope. It spans:
+        let answer = null;
+        try { answer = parseAgentJson(...).commit_answer } catch { answer = null; }
+        if (answer committed) return ok;
+        return { status: "error", ... };
 
     Raises SourceParseError if the sentinel lines cannot be found.
     """
-    start_sentinel = "  let result;"
-    end_sentinel = "  return result ||"
+    start_sentinel = "  let answer = null;"
+    end_sentinel = "\n  };\n}"  # the closing of the error-return object, then of commitStageOutput()
 
     start_idx = source.find(start_sentinel)
     if start_idx == -1:
-        raise SourceParseError("let-result-sentinel-missing")
+        raise SourceParseError("answer-sentinel-missing")
 
     end_idx = source.find(end_sentinel, start_idx)
     if end_idx == -1:
-        raise SourceParseError("return-result-sentinel-missing")
+        raise SourceParseError("return-error-sentinel-missing")
 
-    end_of_return = source.find(";", end_idx)
-    if end_of_return == -1:
-        raise SourceParseError("return-statement-end-missing")
-
-    return source[start_idx: end_of_return + 1]
+    return source[start_idx: end_idx + len("\n  };")]
 
 
 # ---------------------------------------------------------------------------
@@ -160,15 +155,12 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
 
         Returns the parsed JSON result dict, or raises NodeScriptError on failure.
         """
-        # Strip the leading `return` keyword from the last line so the block can
-        # assign into a local variable rather than return from the wrapper.
-        # The coercion block text looks like:
-        #   let result;
-        #   try { result = ... } catch (_parseErr) { result = ...; }
-        #   return result || { ... };
-        # We replace the `return` with a local assignment so we can capture the value.
-        coercion_without_return = self.coercion_block.replace(
-            "  return result ||", "  const __finalResult = result ||", 1
+        # The block has two `return` statements, so it runs inside its own async
+        # function whose return value is the function's final result.
+        coercion_without_return = (
+            "const __finalResult = await (async () => {\n"
+            + self.coercion_block
+            + "\n})();"
         )
 
         # BP-300e-5: the coercion block now calls the module-level parseAgentJson
@@ -313,12 +305,39 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
 
         AC: ACD-300g-1 — a successful commit still advances the pipeline.
         """
-        result = self._replay_coercion('{ status: "ok", message: "committed successfully" }')
+        result = self._replay_coercion(
+            "{ status: 'committed', commit_answer: { status: 'committed', reason_code: null,"
+            " reason: null, sha: 'abc1234' } }"
+        )
         self.assertEqual(
             result.get("status"),
             "ok",
-            msg="SUCCESS PATH BROKEN: well-formed {status:'ok'} must pass through unchanged.",
+            msg="SUCCESS PATH BROKEN: a committed commit_answer must read as ok.",
         )
+
+    def test_old_shape_ok_without_commit_answer_is_fail_closed(self):
+        """
+        BO-4500a-5-ii: a reply in the retired {status:'ok'} shape carries no
+        commit answer from the shared step, so it cannot confirm a commit.
+
+        # covers: BO-4500a-5-ii
+        """
+        result = self._replay_coercion('{ status: "ok", message: "committed successfully" }')
+        self.assertEqual(result.get("status"), "error")
+
+    def test_non_committed_answer_is_not_a_commit(self):
+        """
+        BO-4500a-5-ii: only status 'committed' is a commit; a refused or
+        conflicted answer, whatever the envelope status says, fails closed.
+
+        # covers: BO-4500a-5-ii
+        """
+        result = self._replay_coercion(
+            "{ status: 'ok', commit_answer: { status: 'refused', reason_code: 'conflict',"
+            " reason: 'index conflict', sha: null } }"
+        )
+        self.assertEqual(result.get("status"), "error")
+        self.assertIn("conflict", result.get("message", ""))
 
     def test_well_formed_ok_json_string_passes_through(self):
         """
@@ -330,7 +349,7 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
         AC: ACD-300g-1 — a successful commit still advances the pipeline.
         """
         result = self._replay_coercion(
-            '"{\\"status\\": \\"ok\\", \\"message\\": \\"committed successfully\\"}"'
+            '"{\\"status\\": \\"committed\\", \\"commit_answer\\": {\\"status\\": \\"committed\\"}}"'
         )
         self.assertEqual(
             result.get("status"),
@@ -351,17 +370,21 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
         AC: ACD-300g-1-i — genuine agent-reported error must abort the pipeline.
         """
         result = self._replay_coercion(
-            "{ status: 'error', message: 'git commit failed',"
-            " hook_name: null, failing_files: [], is_conflict: false }"
+            "{ status: 'hook_failed', commit_answer: { status: 'hook_failed',"
+            " reason_code: 'check_failed', reason: 'git commit failed',"
+            " hook_name: 'check-x', failing_files: ['a.yaml'] } }"
         )
         self.assertEqual(
             result.get("status"),
             "error",
             msg=(
-                "ERROR PROPAGATION BROKEN: {status:'error'} from agent "
-                "must be returned unchanged."
+                "ERROR PROPAGATION BROKEN: a failed commit answer "
+                "must be returned as status error."
             ),
         )
+        self.assertEqual(result.get("hook_name"), "check-x")
+        self.assertEqual(result.get("failing_files"), ["a.yaml"])
+        self.assertIn("git commit failed", result.get("message", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +444,7 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
             if (agentType === 'commit') {
                 // Capture the real dispatched commit call (prompt + agentType).
                 globalThis.__capturedCommitCalls.push({ instructions, agentType });
-                return { status: 'ok', message: 'mock commit ok' };
+                return { status: 'committed', commit_answer: { status: 'committed', reason_code: null, reason: null, sha: 'abc1234' } };
             }
             // ACD-2100c-1: resolveGate() consults the durable pause record via
             // these agent-mediated read/clear dispatches ONLY after a

@@ -186,7 +186,8 @@ def design_stage_default_responses() -> dict[str, Any]:
     holds = {"output": json.dumps({"approved": [], "held": []}), "exit_code": 0, "stderr": ""}
     designer = {"status": "ok", "records": [], "anomalies": []}
     # itpo is now an auto-approved, committed stage, so every run that reaches the final gate commits once first.
-    commit = {"status": "ok", "message": "committed successfully"}
+    # BO-4500a-5-ii: the commit agent relays the shared commit step's answer in a commit_answer envelope.
+    commit = {"status": "committed", "commit_answer": {"status": "committed", "reason_code": None, "reason": None, "sha": "abc1234"}}
     branch = {"output": _WORKTREE_SETUP_DEFAULT_BRANCH, "exit_code": 0}
     return {
         "design-prepass": prepass, "approval-holds": holds, "stage-test-design-author": designer,

@@ -129,7 +129,7 @@ def drive_commit_stage_output(
             }}
             if (label === 'commit-stage-output') {{
                 prompts.push(prompt);
-                return {{ status: 'ok', message: 'committed successfully' }};
+                return {{ status: 'committed', commit_answer: {{ status: 'committed', reason_code: null, reason: null, sha: 'abc1234' }} }};
             }}
             return {{ status: 'ok' }};
         }};
@@ -142,19 +142,39 @@ def drive_commit_stage_output(
     return json.loads(run_isolated_e2(["commitStageOutput", "stageDisplayName", "parseAgentJson"], driver))
 
 
-def run_full_workflow_to_commit(written: list[str], commit_reply: dict, run_id: str = "r300g2"):
+def step_paths(prompt: str) -> list[str]:
+    """The exact path list a stage-commit prompt passes to the shared commit step (BO-4500a-5-ii).
+
+    The paths follow `--run <run-id>` on the one line that runs commit_changes.py.
+    """
+    line = next(ln for ln in prompt.splitlines() if "commit_changes.py" in ln)
+    tokens = line.split(" --supervised --run ", 1)[1].split()
+    return tokens[1:]
+
+
+def run_full_workflow_to_commit(written: list[str], commit_reply: dict, run_id: str = "r300g2",
+                                records_to_commit: list[str] | None = None):
     """Production entry point: plan-feature.js's own top-level body (technical
-    route -> it-po stage -> stage commit) through the E2 harness."""
+    route -> it-po stage -> stage commit) through the E2 harness.
+
+    `records_to_commit` is what the it-po stage's rule check reports (every record file the stage changed,
+    repaired parents included); it is the path list the stage commit hands to the shared step.
+    """
     from _workflow_engine_harness import run_workflow_under_e2  # noqa: WPS433
 
+    labels = {
+        "stage-0-triage": {"route": "technical", "existing_acs": []},
+        "stage-itpo-author": {"status": "ok", "acs_written": written},
+        "commit-stage-output": commit_reply,
+    }
+    if records_to_commit is not None:
+        report = {"verdict": "passed", "location": AC_STORE, "records_checked": len(records_to_commit),
+                  "findings": [], "records_to_commit": records_to_commit}
+        labels["rule-check-itpo"] = {"output": json.dumps(report), "exit_code": 0, "stderr": ""}
     return run_workflow_under_e2(
         _REPO_ROOT / "templates" / "workflows-js" / "plan-feature.js",
         timeout=60,
-        label_responses={
-            "stage-0-triage": {"route": "technical", "existing_acs": []},
-            "stage-itpo-author": {"status": "ok", "acs_written": written},
-            "commit-stage-output": commit_reply,
-        },
+        label_responses=labels,
         args={"workspace_setup_permission": {"permits": True}, "run_id": run_id},
     )
 
