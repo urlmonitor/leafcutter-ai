@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -268,9 +268,13 @@ test_spec:
       the log line to "log.info('refresh starting')". Run 2, in fresh processes: list --work-key prints
       to_prepare [] and both decisions "pinned"; finish with an empty reply writes a manifest whose entry
       for the name has source "pinned" and an altered copy reading "if refresh_due" that still carries
-      "log.info('refresh starting')". Run 3 applies both pins again in the same way.
+      "log.info('refresh starting')". Run 3 applies both pins again in the same way. A replacement with an
+      extra key beside path/old/new reaches the manifest and the pin as path/old/new only. (2026-10-25: the
+      name "the altered copy of an earlier run applied instead of the replacement rebuilt from the current
+      file" was left out of must_catch. Pins store replacements, never copies, so no change to the code
+      under test can be that name; the preparer answered could_not_prepare. The concern stays covered by
+      this test's carried-over log line.)
     must_catch:
-      - the altered copy of an earlier run applied instead of the replacement rebuilt from the current file
       - the pin written into the work folder the write step clears, so run 2 finds no pin
       - the pin taken from the preparer's raw reply rather than from the replacements the writer applied
     in_scope_files:
@@ -300,7 +304,9 @@ test_spec:
     description: >-
       An entry naming "revert the fix" beside a named wrong version. After two runs the pin file holds no
       key for "the fix undone" or its alias, the list never puts it in owed, to_prepare or decisions, and
-      run 2's verdict still judges the fix undone built from the base ref.
+      run 2's verdict still judges the fix undone built from the base ref. The pin step itself, handed
+      a manifest whose prepared, passing entries are named "the fix undone" and "revert the fix", pins
+      neither (a second line of defence behind the list).
     must_catch:
       - the fix undone pinned and reused instead of rebuilt from the base ref
     in_scope_files:
@@ -331,10 +337,11 @@ test_spec:
       list --work-key plans a name as pinned; then the pinned old text is edited away in the file before
       finish. The write step sees the fingerprint mismatch, recomputes the plan, and records the name as
       could_not_prepare "no alteration returned" (it was not sent to the preparer), never applying the
-      stale pin.
+      stale pin. (2026-10-25: the name "the write step taking the plan from the route" was left out of
+      must_catch. The write step has no input that could carry a plan from the route, so no change to the
+      code under test can be that name; the preparer answered could_not_prepare.)
     must_catch:
       - the write step trusting plan.json after the code changed
-      - the write step taking the plan from the route
     in_scope_files:
       - scripts/build_orchestration/_wvw_write.py
       - scripts/build_orchestration/_wvp_plan.py
@@ -493,9 +500,21 @@ amended_by:
     agent: approve_acs
     date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xi.py
+- unit_tests/workflows/test_tq_500g_1_xi.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/02_TICKET-20261024-TQ-500g-1-xi.md
+- scripts/build_orchestration/_wvp_store.py
+- scripts/build_orchestration/_wvp_plan.py
+- scripts/build_orchestration/_wvw_list.py
+- scripts/build_orchestration/_wvw_write.py
+- scripts/build_orchestration/wrong_version_writer.py
+- scripts/build_orchestration/wrong_version_gate.py
+- templates/workflows-js/_shared/wrong-version-runs.js
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
+- templates/workflows-js/fast-lane-ship.js
 change_target:
   - code
   - pipeline

@@ -2,7 +2,8 @@
 MODULE: scripts/build_orchestration/wrong_version_gate.py
 GOAL: The one command a build route runs before it commits to make the wrong-version runs:
     ``finish`` runs the writer's ``write`` step on the test-breaker reply (stdin), then, only
-    when the writer did not stop, the runner's ``run`` step with the manifest the writer made.
+    when the writer did not stop, the runner's ``run`` step with the manifest the writer made, then the
+    writer's ``pin`` step on the runner's JSON.
 BUSINESS CONTEXT: TQ-500g-1-v. One executor dispatch and one fail-closed parse in each route,
     and the decision "the writer stopped, so the runner must not run without a manifest" stays
     here, in Python. The wrapper holds no rule of its own: every verdict is the shared
@@ -10,7 +11,9 @@ BUSINESS CONTEXT: TQ-500g-1-v. One executor dispatch and one fail-closed parse i
 ARCHITECTURE: Public module with its own CLI. Calls ``wrong_version_writer.py write`` and
     ``wrong_version_runner.py run`` through their CLIs (subprocess, one JSON object each on
     stdout, their stderr passed through) and prints exactly one object
-    ``{gate_passed, stopped_at: null|"sweep"|"write", sweep, writer, verdict}``. Exit 0 if and only if
+    ``{gate_passed, stopped_at: null|"sweep"|"write"|"pin", sweep, writer, verdict, pins}``
+    (``pins`` is the writer's pin-step JSON, null when the pin step did not run; TQ-500g-1-xi: a failed pin
+    write fails the gate). Exit 0 if and only if
     ``gate_passed``. Same ids, AC root, test root and base ref go to both steps. Logging goes
     to stderr only. Never uses git stash.
 """
@@ -64,9 +67,10 @@ def _call(script: str, args: list[str], stdin: bytes | None) -> tuple[dict | Non
 
 
 def _shape(gate_passed: bool, stopped_at: str | None, writer: dict | None, verdict: dict | None,
-           sweep: dict | None = None) -> dict:
+           sweep: dict | None = None, pins: dict | None = None) -> dict:
     """Return the one JSON object this command prints (fixed key order)."""
-    return {"gate_passed": gate_passed, "stopped_at": stopped_at, "sweep": sweep, "writer": writer, "verdict": verdict}
+    return {"gate_passed": gate_passed, "stopped_at": stopped_at, "sweep": sweep, "writer": writer, "verdict": verdict,
+            "pins": pins}
 
 
 def _ok(result: dict | None, code: int, key: str) -> bool:
@@ -100,7 +104,14 @@ def finish(args: argparse.Namespace, reply: bytes) -> dict:
         return _shape(False, "write", writer, None, sweep)
     extra = ["--record", args.record] if args.record is not None else []
     verdict, run_code = _call("wrong_version_runner.py", ["run", *common, "--alterations", manifest, *extra], None)
-    return _shape(_ok(verdict, run_code, "gate_passed"), None, writer, verdict, sweep)
+    passed = _ok(verdict, run_code, "gate_passed")
+    if verdict is None:
+        return _shape(passed, None, writer, verdict, sweep)
+    pin_args = ["pin", "--work-key", args.work_key, "--manifest", manifest, "--test-root", args.test_root]
+    pins, pin_code = _call("wrong_version_writer.py", pin_args, json.dumps(verdict).encode("utf-8"))
+    if pin_code != 0 or pins is None:  # bookkeeping the next run relies on is fail-closed, never only a warning
+        return _shape(False, "pin", writer, verdict, sweep, pins)
+    return _shape(passed, None, writer, verdict, sweep, pins)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,3 +132,8 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)

@@ -101,6 +101,8 @@ def test_gate_finish_cli_end_to_end(tmp_path: Path):
     g.assert_shape(proc, out)
     assert out["gate_passed"] is True and proc.returncode == 0, (proc.returncode, out)
     assert out["stopped_at"] is None and isinstance(out["writer"], dict) and isinstance(out["verdict"], dict)
-    stop_proc, stop_out = g.run_finish(sb, "")
+    # TQ-500g-1-xi: run 1 pinned both names for ix.WORK_KEY, so an empty reply would now pass for that key;
+    # a fresh work key has no pins, which keeps the empty reply a real stop case.
+    stop_proc, stop_out = g.run_finish(sb, "", work_key=ix.WORK_KEY + "-fresh")
     g.assert_shape(stop_proc, stop_out)
     assert stop_out["gate_passed"] is False and stop_proc.returncode == 1, (stop_proc.returncode, stop_out)

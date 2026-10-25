@@ -8,6 +8,7 @@ in every consuming workflow template, because E2 workflow bodies cannot `require
 |---|---|---|
 | `workspace-answer.js` | `// WORKSPACE-ANSWER-START` / `// WORKSPACE-ANSWER-END` | The acceptance predicate for the workspace maker's answer, the one shell-step reply check (`shellStepReply`), and the single dispatch helpers that send the maker command to `shell-runner` (BO-4300c-3, ADR-070) |
 | `commit-answer.js` | `// COMMIT-ANSWER-START` / `// COMMIT-ANSWER-END` | `decideCommitAnswer(reply, history)`: a pure decision (continue / retry / engage / stop / report) for every commit-step reply; the configured retry ceiling and reason-code families are filled from `config/commit_step.json` at install; engages a specialist at most once and only for an `engage-specialist` remedy with a usable demand (BO-4500b-3). Awaiting adoption by routes: see `awaiting-adoption.json` |
+| `wrong-version-runs.js` | `// WRONG-VERSION-RUNS-START` / `// WRONG-VERSION-RUNS-END` | The wrong-version dispatch block of `build-feature.js` and `build-ticket.js`: `wvStep`, `wvRecover`, `wvRuns` (list with `--work-key`, test-breaker only for `to_prepare`, then finish), `wvStem`, `wvHaltFields` (TQ-500g-1-xi). `fast-lane-ship.js` keeps its own block |
 
 Rules:
 - Edit the source here, never a copy inside a workflow. A template whose marker pair already

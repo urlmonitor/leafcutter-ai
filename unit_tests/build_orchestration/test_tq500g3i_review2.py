@@ -154,6 +154,8 @@ def test_l1_finish_does_not_inject_pythonutf8_into_writer_and_runner(tmp_path: P
     args = gate._parser().parse_args(["finish", "--work-key", "w", "--reply", "-", "--ac-root", str(tmp_path),  # noqa: SLF001
                                       "--test-root", str(tmp_path)])
     assert gate.finish(args, b"")["gate_passed"] is True
-    assert [s for s, _ in calls] == ["consumer_sweep.py", "wrong_version_writer.py", "wrong_version_runner.py"], calls
+    # TQ-500g-1-xi: the pin step (the writer again) runs after the runner.
+    assert [s for s, _ in calls] == ["consumer_sweep.py", "wrong_version_writer.py", "wrong_version_runner.py",
+                                     "wrong_version_writer.py"], calls
     for script, env in calls[1:]:
         assert env is None or env.get("PYTHONUTF8") != "1", f"{script} got PYTHONUTF8=1 injected by finish"

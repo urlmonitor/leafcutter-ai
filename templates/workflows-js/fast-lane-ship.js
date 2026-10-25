@@ -1728,16 +1728,11 @@ phase("Wrong-Version Runs");
 const wvDir = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration`;
 const wvIds = acIds.length ? `--ac-ids ${batchIdsCsv} ` : "";
 const wvFlags = `--ac-root ${acStoreRoot} --test-root ${worktreePath} --base-ref HEAD`;
-const wvParseLine = (line) => {
-  try { const out = JSON.parse(line.trim()); return out && typeof out === "object" && !Array.isArray(out) ? out : null; } catch { return null; }
-};
+const wvParseLine = (line) => { try { const out = JSON.parse(line.trim()); return out && typeof out === "object" && !Array.isArray(out) ? out : null; } catch { return null; } };
 const wvLastJsonObject = (stdout) => String(stdout || "").split(/\r?\n/).reverse().map(wvParseLine).find(Boolean) || null;
 const wvStep = async (label, command) => {
   let reply = null;
-  try {
-    reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }),
-      { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" });
-  } catch (err) { return { ok: false, error: `dispatch failed: ${String((err && err.message) || err)}` }; }
+  try { reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, branch, ac_id: targetAc } }), { agentType: CLAIM_EXECUTOR_AGENT_TYPE, schema: CLAIM_RUNNER_SCHEMA, label, phase: "Wrong-Version Runs" }); } catch (err) { return { ok: false, error: `dispatch failed: ${String((err && err.message) || err)}` }; }
   const out = wvLastJsonObject(reply && reply.stdout);
   return out || { ok: false, error: `unparseable reply: ${JSON.stringify(reply)}` };
 };
@@ -1753,13 +1748,11 @@ if (workspaceCreated === false) {
 }
 let wvReply = "";
 if (acIds.length) {
-  const listed = await wvStep("fastlane-wv-list", `python ${wvDir}/wrong_version_writer.py list ${wvIds}${wvFlags}`);
-  if (!listed || !Array.isArray(listed.owed) || listed.error !== null) return await wvHalt("list", listed);
-  if (listed.owed.length) {
+  const listed = await wvStep("fastlane-wv-list", `python ${wvDir}/wrong_version_writer.py list --work-key ${targetAc} ${wvIds}${wvFlags}`);
+  if (!listed || !Array.isArray(listed.owed) || !Array.isArray(listed.to_prepare) || listed.error !== null) return await wvHalt("list", listed);
+  if (listed.to_prepare.length) {
     try {
-      const raw = await agent(
-        `Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: targetAc, repo_root: worktreePath, requirement_ids: acIds, wrong_versions: listed.owed })}`,
-        { agentType: "test-breaker", label: "fastlane-wv-test-breaker", phase: "Wrong-Version Runs" });
+      const raw = await agent(`Prepare the owed wrong versions. Input: ${JSON.stringify({ work_key: targetAc, repo_root: worktreePath, requirement_ids: acIds, wrong_versions: listed.to_prepare })}`, { agentType: "test-breaker", label: "fastlane-wv-test-breaker", phase: "Wrong-Version Runs" });
       wvReply = typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "";
     } catch { wvReply = ""; }
   }

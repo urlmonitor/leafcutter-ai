@@ -106,9 +106,13 @@ def _hook_accepts(sb) -> None:
 
 def _stop_blocks(sb) -> None:
     """A real stop blocks, and so does the same record rewritten to read 'passed'."""
-    proc, out = fx.finish(sb, fx.survivor_reply(), record=STOP_KEY)
+    # TQ-500g-1-xi: earlier finishes pinned N1 for ix.WORK_KEY, which would replace this survivor reply;
+    # a fresh work key has no pins, so the survivor reply is the preparation that gets judged.
+    key = ix.WORK_KEY + "-survivor"
+    reply = json.dumps({**json.loads(fx.survivor_reply()), "work_key": key})  # a reply names the work key it is for
+    proc, out = fx.finish(sb, reply, record=STOP_KEY, work_key=key)
     assert out["gate_passed"] is False and out["stopped_at"] is None and out["verdict"]["survivors"], out
-    stop = fx.read_record(sb.work, STOP_KEY, "wrong_version")
+    stop =fx.read_record(sb.work, STOP_KEY, "wrong_version")
     assert stop is not None and stop["verdict"] == out["verdict"], "a stop is recorded too, on every outcome"
     fx.heavy(sb.work, sb.ac_root, None, record=STOP_KEY)
     proc, text = _hook_after(sb.work, STOP_KEY, x.TEST_FILE, "retry_policy.py")
@@ -122,10 +126,12 @@ def _stop_blocks(sb) -> None:
 def _writer_stop_leaves_no_record(sb) -> None:
     """A writer stop leaves NO wrong-version record: not a stale one, not a new one."""
     assert fx.read_record(sb.work, PASS_KEY, "wrong_version") is not None
-    proc, out = fx.finish(sb, "", record=PASS_KEY)
+    # TQ-500g-1-xi: an empty reply stops the writer only for a work key with no pins; use a fresh one.
+    fresh = ix.WORK_KEY + "-nopins"
+    proc, out = fx.finish(sb, "", record=PASS_KEY, work_key=fresh)
     assert out["stopped_at"] == "write" and out["gate_passed"] is False, out
     assert fx.read_record(sb.work, PASS_KEY, "wrong_version") is None, "the record of the earlier passing finish survived a writer stop"
-    proc, out = fx.finish(sb, "", record=STOPPED_KEY)
+    proc, out = fx.finish(sb, "", record=STOPPED_KEY, work_key=fresh)
     assert out["stopped_at"] == "write" and fx.read_record(sb.work, STOPPED_KEY, "wrong_version") is None, "finish wrote a record after the writer stopped"
 
 

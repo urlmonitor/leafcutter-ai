@@ -63,6 +63,7 @@ TESTS_PY = (
     f'def test_other_requirement():\n    # covers: {AC_ID_2}\n    assert refresh_config(False, False) == "skip"\n'
 )
 EXPECTED_KEYS = ["written", "manifest_path", "error", "entries", "ignored_reply_names", "preparer_anomalies"]
+LIST_KEYS = ["owed", "to_prepare", "decisions", "error"]  # TQ-500g-1-xi: the list step's fixed key order
 
 
 @dataclass

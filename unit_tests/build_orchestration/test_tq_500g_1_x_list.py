@@ -87,7 +87,7 @@ def test_list_marks_each_name_declared_or_derived_additively(tmp_path):
     # Catches: every name marked declared whatever its entries carry
     # Catches: the scope marker replacing or renaming the name or files key
     proc, out = x.run_list(x.build(tmp_path))
-    assert proc.returncode == 0 and list(out) == ["owed", "error"], (proc.returncode, list(out))
+    assert proc.returncode == 0 and list(out) == ["owed", "to_prepare", "decisions", "error"], (proc.returncode, list(out))
     assert all(list(o) == ["name", "files", "scope"] for o in out["owed"]), out["owed"]
     scopes = {o["name"]: o["scope"] for o in out["owed"]}
     assert scopes == {x.N1: "declared", x.N3: "declared", x.N2: "derived", x.N9: "derived"}, scopes
@@ -126,7 +126,7 @@ def test_list_cli_takes_base_ref_and_defaults_to_head(tmp_path):
                 "--test-root", str(sb.work)]
     proc = subprocess.run(cmd_head, cwd=sb.work, capture_output=True, text=True, timeout=120, env=x.env())
     out = ix.parse_one_json(proc)
-    assert proc.returncode == 0 and list(out) == ["owed", "error"] and out["error"] is None
+    assert proc.returncode == 0 and list(out) == ["owed", "to_prepare", "decisions", "error"] and out["error"] is None
     assert all("scope" in o for o in out["owed"]), out
     assert {o["name"]: o["files"] for o in out["owed"]}[x.N2] == ["retry_policy.py"], "default is HEAD"
     given = x.listed(sb)  # --base-ref <base commit>

@@ -77,7 +77,8 @@ def test_writer_list_meets_time_budget_on_real_repo():
     t1, t50 = results[1][0], results[50][0]
     times = f"t1={t1:.2f} s, t50={t50:.2f} s"
     for count, (seconds, code, parsed) in results.items():
-        assert code == 0 and isinstance(parsed, dict) and set(parsed) == {"owed", "error"}, (count, code, parsed, times)
+        assert code == 0 and isinstance(parsed, dict) and set(parsed) == {"owed", "to_prepare", "decisions", "error"}, (count, code, parsed, times)
+        assert parsed["to_prepare"] == parsed["owed"] and parsed["decisions"] == [], (parsed, times)
         assert parsed["error"] is None and isinstance(parsed["owed"], list), (parsed, times)
         assert seconds < CEILING_SECONDS, f"list for {count} id(s) took {seconds:.2f} s, ceiling {CEILING_SECONDS} s ({times})"
     limit = SCALE_FACTOR * t1 + SCALE_SLACK_SECONDS

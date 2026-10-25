@@ -62,8 +62,10 @@ def recover_reply(ok: Any = True) -> dict:
     return ran({"restored": [], "ok": ok, "copy_dir": None, "detail": ""})
 
 
-def list_reply(owed: list[dict], error: str | None = None) -> dict:
-    return ran({"owed": owed, "error": error}, 0 if error is None else 1)
+def list_reply(owed: list[dict], error: str | None = None, to_prepare: list[dict] | None = None) -> dict:
+    """The list step's reply; ``to_prepare`` defaults to *owed* ("prepare everything", TQ-500g-1-xi); both [] on error."""
+    prepare = [] if error is not None else (list(owed) if to_prepare is None else to_prepare)
+    return ran({"owed": owed, "to_prepare": prepare, "decisions": [], "error": error}, 0 if error is None else 1)
 
 
 def owed_item(name: str, files: list[str], scope: str = "declared") -> dict:
@@ -90,7 +92,8 @@ def verdict_f3() -> dict:
 def finish_reply(verdict: dict | None, *, stopped_at: str | None = None, writer: dict | None = None) -> dict:
     """The reply to the finish step; exit status 1 whenever the wrapper's gate_passed is false."""
     passed = bool(verdict and verdict["gate_passed"])
-    out = {"gate_passed": passed, "stopped_at": stopped_at, "writer": writer or writer_json(), "verdict": verdict}
+    out = {"gate_passed": passed, "stopped_at": stopped_at, "writer": writer or writer_json(), "verdict": verdict,
+           "pins": None}
     return ran(out, 0 if passed else 1)
 
 

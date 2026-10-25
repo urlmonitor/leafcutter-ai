@@ -14,6 +14,8 @@ related_docs:
   - docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
   - docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iv.yaml
   - docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+  - docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-xi.yaml
+  - docs/architecture/adrs/ADR-079-wrong-version-pins-replay-replacements-per-work.md
 ---
 
 # The wrong-version gate tests a different guess each run
@@ -304,6 +306,10 @@ Acceptance criteria this needs (prose only; the YAML is for /plan-feature):
 8. **Authoring refusal.** At AC authoring, a `must_catch` string that names a defect in a
    test (a fixture, an assertion) is refused, with a pointer to the code-side wrong version
    it should name instead.
+
+**Follow-up (TQ-500g-1-xi).** Criteria 1 and 3 (pin, reuse rebuilt from the current code) are
+built; what is pinned, where, and what stays open are in
+`docs/architecture/adrs/ADR-079-wrong-version-pins-replay-replacements-per-work.md`.
 
 ## What this page does not establish
 

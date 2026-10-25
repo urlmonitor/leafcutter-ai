@@ -14,7 +14,9 @@ from collections import Counter
 import unit_tests.build_orchestration._tq500g1_fixtures as fx
 import unit_tests.build_orchestration._tq500g1ix_fixtures as ix
 
-_ENTRY_KEYS = {"name", "status", "reason", "files", "diff"}
+_ENTRY_KEYS = {
+    "name", "status", "reason", "files", "diff", "replacements", "alteration_id", "source",
+}
 
 
 def test_owed_names_exactly_once_and_unowed_or_alias_names_absent(tmp_path):

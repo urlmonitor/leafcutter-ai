@@ -25,8 +25,6 @@ from pathlib import Path
 from typing import Any
 
 __all__ = [
-    "_WORKSPACE_ANSWER_END",
-    "_WORKSPACE_ANSWER_SOURCE",
     "_WORKSPACE_ANSWER_START",
     "_fill_workspace_answer",
     "_handed_in_verify_default",
@@ -181,34 +179,43 @@ def finalize_baseline_responses(
     }
 
 
+_SHARED_DIR = Path(__file__).resolve().parents[1] / "templates" / "workflows-js" / "_shared"
 _WORKSPACE_ANSWER_START = "// WORKSPACE-ANSWER-START"
 
 
-_WORKSPACE_ANSWER_END = "// WORKSPACE-ANSWER-END"
-
-
-_WORKSPACE_ANSWER_SOURCE = (
-    Path(__file__).resolve().parents[1] / "templates" / "workflows-js" / "_shared" / "workspace-answer.js"
+# Marker name -> the single tracked source the build fills that pair from.
+_SHARED_BLOCKS = (
+    ("WORKSPACE-ANSWER", "workspace-answer.js"),  # BO-4300c-3
+    ("WRONG-VERSION-RUNS", "wrong-version-runs.js"),  # TQ-500g-1-xi (build-feature.js, build-ticket.js)
 )
 
 
-def _fill_workspace_answer(source: str) -> str:
-    """Fill an EMPTY WORKSPACE-ANSWER marker pair from the single tracked source (BO-4300c-3).
-
-    The build phase does this when it deploys a workflow; a test that runs a
-    template straight from ``templates/workflows-js/`` (or a source-patched
-    copy of one) would otherwise execute a body whose helper block is empty.
-    A pair that already holds text (a deployed copy) or a source with no pair
-    is returned unchanged -- the harness never overwrites a block.
-    """
-    start = source.find(_WORKSPACE_ANSWER_START)
+def _fill_pair(source: str, name: str, filename: str) -> str:
+    """Fill one EMPTY ``// <name>-START`` / ``// <name>-END`` pair from ``_shared/<filename>``."""
+    start_marker, end_marker = f"// {name}-START", f"// {name}-END"
+    start = source.find(start_marker)
     if start == -1:
         return source
-    end = source.find(_WORKSPACE_ANSWER_END, start)
-    if end == -1 or source[start + len(_WORKSPACE_ANSWER_START):end].strip():
+    end = source.find(end_marker, start)
+    if end == -1 or source[start + len(start_marker):end].strip():
         return source
-    block = _WORKSPACE_ANSWER_SOURCE.read_text(encoding="utf-8").strip()
-    return source[:start + len(_WORKSPACE_ANSWER_START)] + "\n" + block + "\n" + source[end:]
+    block = (_SHARED_DIR / filename).read_text(encoding="utf-8").strip()
+    return source[:start + len(start_marker)] + "\n" + block + "\n" + source[end:]
+
+
+def _fill_workspace_answer(source: str) -> str:
+    """Fill every EMPTY shared-block marker pair from its single tracked source, as the build does.
+
+    Despite the name (kept for its callers) this fills each pair in ``_SHARED_BLOCKS``. The build
+    phase does this when it deploys a workflow; a test that runs a template straight from
+    ``templates/workflows-js/`` (or a source-patched copy of one) would otherwise execute a body
+    whose block is empty. A pair that already holds text (a deployed copy) or a source with no
+    pair (fast-lane-ship.js keeps its own wrong-version block) is returned unchanged -- the
+    harness never overwrites a block.
+    """
+    for name, filename in _SHARED_BLOCKS:
+        source = _fill_pair(source, name, filename)
+    return source
 
 
 fill_workspace_answer = _fill_workspace_answer

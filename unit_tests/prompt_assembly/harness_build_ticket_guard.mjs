@@ -248,7 +248,22 @@ function fillWorkspaceAnswer(text) {
   return text.slice(0, start + startMark.length) + "\n" + block + "\n" + text.slice(end);
 }
 
-const source = fillWorkspaceAnswer(readFileSync(scriptPath, "utf8")).replace(
+// TQ-500g-1-xi: the twins' wrong-version block lives in _shared/wrong-version-runs.js; a template run straight
+// from templates/workflows-js/ carries an EMPTY WRONG-VERSION-RUNS pair, filled here the same way.
+function fillWrongVersionRuns(text) {
+  const startMark = "// WRONG-VERSION-RUNS-START";
+  const endMark = "// WRONG-VERSION-RUNS-END";
+  const start = text.indexOf(startMark);
+  if (start === -1) return text;
+  const end = text.indexOf(endMark, start);
+  if (end === -1 || text.slice(start + startMark.length, end).trim()) return text;
+  const block = readFileSync(
+    join(REPO_ROOT, "templates", "workflows-js", "_shared", "wrong-version-runs.js"), "utf8"
+  ).trim();
+  return text.slice(0, start + startMark.length) + "\n" + block + "\n" + text.slice(end);
+}
+
+const source = fillWrongVersionRuns(fillWorkspaceAnswer(readFileSync(scriptPath, "utf8"))).replace(
   /^export const meta/m,
   "const meta"
 );

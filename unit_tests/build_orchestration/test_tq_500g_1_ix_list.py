@@ -35,7 +35,8 @@ def test_list_each_owed_name_once_verbatim_with_its_in_scope_files(tmp_path):
     files = {o["name"]: o["files"] for o in out["owed"]}
     assert files[ix.N7] == ["refresh_config.py", "settings.py"]
     assert [n for n in ix.OWED if files[n] == ["refresh_config.py"]] == [n for n in ix.OWED if n != ix.N7]
-    assert list(out) == ["owed", "error"] and all(list(o)[:2] == ["name", "files"] for o in out["owed"])  # TQ-500g-1-x adds "scope" after these
+    assert list(out) == ["owed", "to_prepare", "decisions", "error"] and all(list(o)[:2] == ["name", "files"] for o in out["owed"])  # TQ-500g-1-x adds "scope" after these
+    assert out["to_prepare"] == out["owed"] and out["decisions"] == [], "no work key: everything is to prepare"
 
 
 def test_list_omits_aliases_and_test_files(tmp_path):
@@ -61,7 +62,7 @@ def test_list_requirement_without_wrong_versions_lists_nothing_and_exits_0(tmp_p
     sb = ix.build_sandbox(tmp_path)
     proc, alone = ix.run_writer(sb, "list", ac_ids=ix.AC_ID_2)
     assert proc.returncode == 0, (proc.returncode, alone)
-    assert alone == {"owed": [], "error": None}
+    assert alone == {"owed": [], "to_prepare": [], "decisions": [], "error": None} and list(alone) == ix.LIST_KEYS
     both, only_first = _listed(sb, ix.IDS), _listed(sb, ix.AC_ID)
     assert len(only_first["owed"]) == 9, "control: TQ-9101 alone owes nine names"
     assert both == only_first, "TQ-9102 adds no name and no file"
@@ -112,8 +113,8 @@ def test_list_cli_end_to_end_prints_owed_json(tmp_path):
     sb = ix.build_sandbox(tmp_path)
     proc, out = ix.run_writer(sb, "list")
     assert proc.returncode == 0, proc.stderr
-    assert list(out) == ["owed", "error"] and out["error"] is None and len(out["owed"]) == 9, out
+    assert list(out) == ["owed", "to_prepare", "decisions", "error"] and out["error"] is None and len(out["owed"]) == 9, out
     bad_proc, bad = ix.run_writer(sb, "list", ac_root=tmp_path / "no-such-store")
     assert bad_proc.returncode == 1, bad_proc.returncode
-    assert list(bad) == ["owed", "error"] and bad["owed"] == [], bad
+    assert list(bad) == ["owed", "to_prepare", "decisions", "error"] and bad["owed"] == [] and bad["to_prepare"] == [] and bad["decisions"] == [], bad
     assert isinstance(bad["error"], str) and bad["error"].strip(), bad
