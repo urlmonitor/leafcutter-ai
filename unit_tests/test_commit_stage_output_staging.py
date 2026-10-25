@@ -56,7 +56,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import tempfile
 import textwrap
@@ -70,11 +69,16 @@ from _plan_feature_e2_runner import (
 )
 from _plan_feature_gate_harness import (
     NodeScriptError,
-    SourceParseError,
     granted_workspace_setup_permission,
     init_scratch_repo,
     run_git as _run_git,
     write_text_file,
+)
+from unit_tests.workflows._bo4500a5ii_support import (
+    command_paths,
+    commit_prompts,
+    stage_commit,
+    step_command,
 )
 
 # Sole plan-feature.js consumer surface (E2). Git-scratch tests are
@@ -183,23 +187,6 @@ def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
     if not commit_calls:
         raise NodeScriptError("E2 pipeline dispatched no commit agent call")
     return commit_calls[0].get("instructions", "")
-
-
-def _extract_porcelain_command(instructions: str) -> str:
-    """
-    Parse the `git status` command out of the Step 1 instructions text.
-
-    Returns the full command string (e.g. "git status --porcelain -- docs/acceptance-criteria/")
-    as it appears in the instructions, so tests can verify whether --untracked-files=all
-    is present or absent.
-
-    Raises SourceParseError if no porcelain command can be found.
-    """
-    # Look for "Run: git status ..." -- a real worktree anchors it with -C.
-    match = re.search(r'Run:\s*(git(?:\s+-C\s+"[^"]*")?\s+status\s+[^\n]+)', instructions)
-    if not match:
-        raise SourceParseError("porcelain-command-not-found-in-instructions")
-    return match.group(1).strip()
 
 
 def _apply_stem_filter(porcelain_output: str, written: list[str]) -> list[str]:
@@ -371,47 +358,22 @@ class TestUntrackedSubfolderDiscovery(unittest.TestCase):
 
     def test_instructions_specify_untracked_files_all(self):
         """
-        The porcelain command in the commitStageOutput() instructions MUST include
-        --untracked-files=all (or -uall).
+        BO-4500a-5-ii: the protection moved from a `git status` discovery step
+        (which needed --untracked-files=all) to naming each record. Records in
+        an entirely-untracked subfolder are passed to the shared commit step
+        by their exact paths, and the commit prompt runs no `git status`
+        discovery that could collapse the folder.
 
-        CURRENTLY FAILS: the instructions contain
-            "git status --porcelain -- docs/acceptance-criteria/"
-        which lacks --untracked-files=all and silently misses files in new
-        subfolders.
-
-        RED until the instructions are updated to include the flag.
-
+        # covers: BO-4500a-5-ii
         AC: untracked AC files in a new subfolder are staged.
         """
-        try:
-            instructions = _capture_instructions(_PLAN_FEATURE_JS, written=["ACD-200"])
-        except NodeScriptError as exc:
-            self.fail(f"Failed to capture instructions from plan-feature.js: {exc}")
-
-        try:
-            porcelain_cmd = _extract_porcelain_command(instructions)
-        except SourceParseError as exc:
-            self.fail(f"Could not extract porcelain command from instructions: {exc}")
-
-        has_uall_flag = (
-            "--untracked-files=all" in porcelain_cmd
-            or "-uall" in porcelain_cmd
-            or " -u all" in porcelain_cmd
-        )
-
-        self.assertTrue(
-            has_uall_flag,
-            msg=(
-                "DEFECT: The git status command in commitStageOutput() instructions "
-                "does not include --untracked-files=all.\n"
-                f"Current command: {porcelain_cmd!r}\n"
-                "Without --untracked-files=all, an entirely-untracked "
-                "docs/acceptance-criteria/ directory is collapsed to a single "
-                "'?? docs/' line and no .yaml files are discovered.\n"
-                "Fix: change Step 1 to use:\n"
-                "  git status --porcelain --untracked-files=all -- docs/acceptance-criteria/"
-            ),
-        )
+        paths = [
+            "docs/acceptance-criteria/new-sub/ACD-200.yaml",
+            "docs/acceptance-criteria/new-sub/ACD-201.yaml",
+        ]
+        prompt = commit_prompts(stage_commit(False, paths))[0]
+        self.assertEqual(command_paths(step_command(prompt)), paths)
+        self.assertNotIn("git status", prompt)
 
     def test_fresh_untracked_ac_store_does_not_silently_skip(self):
         """
@@ -579,66 +541,22 @@ class TestExactAcIdStemMatch(unittest.TestCase):
 
     def test_instructions_require_exact_stem_equality(self):
         """
-        The filter prose in commitStageOutput() instructions MUST require EXACT
-        string equality between the filename stem and an AC ID in `written`.
+        BO-4500a-5-ii: exact-id matching is now exact path naming. With
+        written=['ACD-300'], the path list the workflow passes to the shared
+        commit step is exactly ACD-300.yaml: never the prefix-nested siblings
+        ACD-300g.yaml or ACD-300g-2.yaml, and no wildcard or directory.
 
-        The current prose says "matches" — unqualified — which can be
-        (and is) interpreted as startswith/prefix, causing the false-positive
-        staging defect for prefix-nested IDs.
-
-        CURRENTLY FAILS: the instructions do not contain a phrase like
-        "exact", "exactly equal", "==" or an explicit counter-example showing
-        that ACD-300g.yaml must NOT match ACD-300.
-
-        RED until the instructions prose is hardened with an explicit equality
-        requirement and a counter-example.
-
+        # covers: BO-4500a-5-ii
         AC: only the current stage's AC files are staged under prefix-nested IDs.
         """
         try:
-            instructions = _capture_instructions(
-                _PLAN_FEATURE_JS, written=["ACD-300"]
-            )
+            instructions = _capture_instructions(_PLAN_FEATURE_JS, written=["ACD-300"])
         except NodeScriptError as exc:
             self.fail(f"Failed to capture instructions from plan-feature.js: {exc}")
 
-        # Check for an explicit "exact" equality requirement in the filter prose.
-        has_exact_qualifier = bool(
-            re.search(
-                r"exact(?:ly)?[\s\S]{0,60}equal|exactly\s+equal|exact\s+string\s+equality"
-                r"|=== |== |stem\s+equals?\b|stem\s+must\s+equal",
-                instructions,
-                re.IGNORECASE,
-            )
-        )
-
-        # Check for a concrete counter-example that names ACD-300g vs ACD-300.
-        has_counter_example = bool(
-            re.search(
-                r"ACD-300g.*must\s+NOT|must\s+NOT.*ACD-300g"
-                r"|ACD-300g.*not.*match|not.*match.*ACD-300g"
-                r"|ACD-300[^\s.]*\s+must\s+not|must\s+not\s+match\s+ACD-300",
-                instructions,
-                re.IGNORECASE,
-            )
-        )
-
-        exact_or_counter = has_exact_qualifier or has_counter_example
-
-        self.assertTrue(
-            exact_or_counter,
-            msg=(
-                "DEFECT: The stem-match filter in commitStageOutput() instructions "
-                "does not explicitly require EXACT equality between the stem and AC ID.\n"
-                "Current instructions contain only the ambiguous 'matches' language, "
-                "which an agent implementing it with startswith() will wrongly stage "
-                "ACD-300g.yaml when written=['ACD-300'].\n"
-                "Fix: change the prose to say "
-                "'whose filename stem is exactly equal to one of the AC IDs' "
-                "AND add a counter-example: "
-                "'For example, ACD-300g.yaml must NOT match ACD-300 "
-                "(stems must be identical, not merely prefix-equal).'"
-            ),
+        self.assertEqual(
+            command_paths(step_command(instructions)),
+            ["docs/acceptance-criteria/ACD-300.yaml"],
         )
 
     def test_exact_filter_stages_only_acd_300(self):
@@ -763,33 +681,24 @@ class TestUnrelatedChangesStayUnstaged(unittest.TestCase):
 
     def test_instructions_scope_discovery_to_ac_dir(self):
         """
-        The porcelain command in the instructions must scope discovery to
-        docs/acceptance-criteria/ so that unrelated working-tree changes
-        are excluded from the discovered set.
+        BO-4500a-5-ii: scoping moved from a path-limited `git status` to the
+        path list handed to the shared commit step. Of the paths a rule check
+        reports, only .yaml records under docs/acceptance-criteria/ are named
+        (an unrelated file, a record outside the store and a `..` escape are
+        dropped), so unrelated working-tree changes cannot be staged.
 
-        GREEN against both current and fixed code — the scope path is already
-        correct in the current instructions.
-
+        # covers: BO-4500a-5-ii
         AC: unrelated working-tree changes stay unstaged.
         """
-        try:
-            instructions = _capture_instructions(_PLAN_FEATURE_JS, written=["ACD-500"])
-        except NodeScriptError as exc:
-            self.fail(f"Failed to capture instructions from plan-feature.js: {exc}")
-
-        try:
-            porcelain_cmd = _extract_porcelain_command(instructions)
-        except SourceParseError as exc:
-            self.fail(f"Could not extract porcelain command from instructions: {exc}")
-
-        self.assertIn(
-            "docs/acceptance-criteria",
-            porcelain_cmd,
-            msg=(
-                "DEFECT: The porcelain command does not scope to docs/acceptance-criteria/. "
-                f"Current command: {porcelain_cmd!r}"
-            ),
-        )
+        store = "docs/acceptance-criteria"
+        paths = [
+            "some-unrelated-file.txt",
+            f"{store}/ACD-500.yaml",
+            "other/ACD-501.yaml",
+            f"{store}/../escape/ACD-502.yaml",
+        ]
+        prompt = commit_prompts(stage_commit(False, paths))[0]
+        self.assertEqual(command_paths(step_command(prompt)), [f"{store}/ACD-500.yaml"])
 
 
 if __name__ == "__main__":

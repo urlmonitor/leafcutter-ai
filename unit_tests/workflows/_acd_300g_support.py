@@ -46,6 +46,7 @@ def commit_reply(hook_name: str | None = "check-ac-schema", conflict: bool = Fal
                  reason: str = "pre-commit hook rejected staged files") -> dict:
     """A commit-stage-output reply carrying the shared commit step's failed answer (BO-4500a-5-ii envelope)."""
     path = "docs/acceptance-criteria/x/ACD-9301.yaml"
+    answer: dict[str, object]
     if conflict:
         answer = {"status": "refused", "reason_code": "step_vcs_error", "sha": None,
                   "reason": f"git commit failed: CONFLICT (content): merge conflict in {path}"}

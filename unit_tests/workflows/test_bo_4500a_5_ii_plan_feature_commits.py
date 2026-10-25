@@ -126,7 +126,7 @@ class TestReconciliationCommitsRewrittenAcs(unittest.TestCase):
 
 
 class TestNonCommittedAnswerFailsTheCommit(unittest.TestCase):
-    ANSWERS = (
+    ANSWERS: tuple[tuple[str, str, str, str | None, list[str]], ...] = (
         ("hook_failed", "check_failed", "a check rejected the files", "check-ac-schema", [S.rel("BP-100k-4-iv")]),
         ("refused", "policy_protected_branch", "the branch is protected", None, []),
         ("handoff", "handoff_needed", "a specialist must fix this", "check-complexity", [S.rel("BP-100k-4-v")]),
