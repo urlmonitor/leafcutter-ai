@@ -753,8 +753,23 @@ def _cmd_assemble_bundle(parsed: argparse.Namespace) -> int:
         working_diff=optional["working_diff"],
         breakpoint_marker=parsed.breakpoint_marker,
     )
-    print(bundle)
+    _write_utf8_stdout(bundle + "\n")
     return 0
+
+
+def _write_utf8_stdout(text: str) -> None:
+    """Write ``text`` to stdout as UTF-8 regardless of the locale code page.
+
+    Falls back to a plain text write when stdout has no binary buffer
+    (e.g. a StringIO swapped in by tests).
+    """
+    buffer = getattr(sys.stdout, "buffer", None)
+    if buffer is None:
+        sys.stdout.write(text)
+        return
+    sys.stdout.flush()
+    buffer.write(text.encode("utf-8"))
+    buffer.flush()
 
 
 def main(argv: list[str] | None = None) -> int:
