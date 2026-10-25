@@ -33,11 +33,13 @@ from typing import Any
 
 import worktree_answer as wa
 import worktree_git as wg
+import worktree_identity as wi
 import worktree_paths as wp
 
 _log = logging.getLogger(__name__)
 
 BASE_REF = "origin/main"
+SOURCE_REMOTE = "leafcutter-src"  # the clone's remote name while it points at the main checkout
 FETCH_OK, FETCH_FAILED, FETCH_SKIPPED = "ok", "failed", "skipped"
 _CHUNK = 100  # ref names per git call: a repository can hold thousands of tags
 
@@ -122,16 +124,34 @@ def _drop_alternates(workspace: Path) -> dict[str, Any] | None:
     return None
 
 
-def clone_main_checkout(repo_root: Path, workspace_path: Path) -> dict[str, Any] | None:
+def _swap_source_for_hub(workspace: Path, hub: str) -> dict[str, Any] | None:
+    """Add ``origin`` at the hub, seed ``origin/main`` from the source, then remove the temporary remote.
+
+    ``origin`` is never the main checkout, so an outside bare ``git fetch``
+    cannot rewrite ``origin/*`` to the main checkout's branches. The seed is
+    only a stale base for ``--allow-stale-base``; a hub fetch overwrites it.
+    """
+    seed = wg.run_git(["rev-parse", "--verify", "-q", f"refs/remotes/{SOURCE_REMOTE}/main"], workspace).stdout.strip()
+    if wg.run_git(["remote", "add", "origin", hub], workspace).returncode != 0:
+        return _failed("set-origin", "point the workspace's origin at the hub")
+    if seed and wg.run_git(["update-ref", f"refs/remotes/{BASE_REF}", seed], workspace).returncode != 0:
+        return _failed("set-origin", "seed the workspace's origin/main")
+    if wg.run_git(["remote", "remove", SOURCE_REMOTE], workspace).returncode != 0:
+        return _failed("strip-remote-refs", "remove the main checkout's branches from the workspace")
+    return None
+
+
+def clone_main_checkout(repo_root: Path, workspace_path: Path, hub: str) -> dict[str, Any] | None:
     """Hardlink-clone the main checkout (never the hub URL) without a checkout; a refusal on failure.
 
-    The clone holds none of the main checkout's local branches or tags and
+    The clone's remote is named ``leafcutter-src`` while it exists and is swapped for
+    ``origin`` at the hub. It holds none of the main checkout's local branches or tags and
     no alternates link, so the line of work comes only from the hub's refs.
     """
-    proc = wg.run_git(["clone", "--no-checkout", "--local", str(repo_root), str(workspace_path)], repo_root)
-    if proc.returncode != 0:
+    cmd = ["clone", "-o", SOURCE_REMOTE, "--no-checkout", "--local", str(repo_root), str(workspace_path)]
+    if wg.run_git(cmd, repo_root).returncode != 0:
         return _failed("clone", "clone the main checkout into the workspace")
-    return _strip_local_refs(workspace_path) or _drop_alternates(workspace_path)
+    return _strip_local_refs(workspace_path) or _drop_alternates(workspace_path) or _swap_source_for_hub(workspace_path, hub)
 
 
 def _drop_foreign_remote_refs(workspace: Path) -> bool:
@@ -158,7 +178,8 @@ def sync_with_hub(hub: str, workspace: Path, allow_stale_base: bool) -> tuple[st
     fetch is tolerated, but the main checkout's branches are still dropped;
     origin/main is then the main checkout's own main (a stale base).
     """
-    if wg.run_git(["remote", "set-url", "origin", hub], workspace).returncode != 0:
+    has_origin = wg.run_git(["remote", "get-url", "origin"], workspace).returncode == 0
+    if wg.run_git(["remote", "set-url" if has_origin else "add", "origin", hub], workspace).returncode != 0:
         return FETCH_FAILED, _failed("set-origin", "point the workspace's origin at the hub")
     status, refusal = _fetch(["fetch", "--prune", "origin"], workspace, allow_stale_base)
     if refusal is not None:
@@ -176,15 +197,63 @@ def refresh_main(workspace: Path, allow_stale_base: bool) -> tuple[str, dict[str
     return _fetch(["fetch", "origin", "main"], workspace, allow_stale_base)
 
 
-def ok_fields(workspace: Path, base_commit: str, fetch: str, created: bool) -> dict[str, Any]:
+def _verify_built(workspace: Path, sha: str) -> dict[str, Any] | None:
+    """Refuse (VERIFY_FAILED, step ``verify-checkout``) unless HEAD is *sha* and the tracked tree is clean."""
+    head = wg.run_git(["rev-parse", "HEAD"], workspace).stdout.strip()
+    status = wg.run_git(["status", "--porcelain", "-z", "--untracked-files=no"], workspace)
+    if head == sha and status.returncode == 0 and not any(status.stdout.split("\0")):
+        return None
+    return step_error("VERIFY_FAILED", "verify-checkout", "The new line of work does not start exactly where its files are.")
+
+
+def _unsent_local_refusal(workspace: Path, branch: str, sha: str) -> dict[str, Any] | None:
+    """WORK_AT_RISK when local *branch* exists and holds commits not under *sha* (``-B`` would drop them)."""
+    ref = f"refs/heads/{branch}"
+    if wg.run_git(["rev-parse", "--verify", "-q", ref], workspace).returncode != 0:
+        return None
+    if wg.run_git(["merge-base", "--is-ancestor", ref, sha], workspace).returncode == 0:
+        return None
+    return wa.error_answer("WORK_AT_RISK", f"The local branch {branch!r} holds commits the hub's line lacks; "
+                           "it was not reset. Push or move them, then ask again.", step="checkout", branch=branch)
+
+
+def build_line(workspace: Path, ident: Any, ticket: Any,
+               base_commit: str) -> tuple[str, str, str, dict[str, Any] | None]:
+    """Build the line of work from ONE resolved commit: ``(branch, line_of_work, start_sha, refusal)``.
+
+    The start is the hub line's tip (``resumed``) or *base_commit* (``new``), read as a SHA once and
+    handed to ``checkout --no-track -B`` so a ref moved meanwhile cannot split HEAD from the files.
+    A local branch of a resumed line holding commits the hub lacks is never reset (WORK_AT_RISK).
+    HEAD must then equal that SHA with a clean tree. The caller discards a clone on a refusal.
+    """
+    lines = wi.hub_lines(workspace, ident)
+    refusal = wi.line_refusal(lines, ident)
+    branch, line = (lines[0], "resumed") if lines else (ident.branch, "new")
+    sha = base_commit
+    if lines and refusal is None:
+        sha = wg.run_git(["rev-parse", f"origin/{branch}"], workspace).stdout.strip()
+        refusal = _unsent_local_refusal(workspace, branch, sha)
+    if refusal is None and ticket is not None:
+        refusal = wi.base_ticket_refusal(workspace, sha, ticket)
+    if refusal is None and (not sha or wg.run_git(["checkout", "--no-track", "-B", branch, sha], workspace).returncode != 0):
+        refusal = _failed("checkout", "check out the line of work")
+    if refusal is None and lines and wg.run_git(["branch", f"--set-upstream-to=origin/{branch}"], workspace).returncode != 0:
+        refusal = _failed("set-upstream", "set the line's upstream")
+    return branch, line, sha, refusal or _verify_built(workspace, sha)
+
+
+def ok_fields(workspace: Path, base_commit: str, fetch: str, created: bool,
+              built_from: str | None = None) -> dict[str, Any]:
     """The BO-4300c-2 base fields of an ensure ok answer.
 
     After a failed hub fetch origin/main is not the hub's, so
     ``origin_main_commit`` is null and the base never "matches" it; the
-    staleness is logged to stderr, never added to the answer.
+    staleness is logged to stderr, never added to the answer. *built_from* is
+    the SHA the line was built from (resolved right after the fetch); it is
+    the tip reported, so a ref moved since never changes the answer.
     """
     stale = fetch == FETCH_FAILED
-    tip = None if stale else (wg.run_git(["rev-parse", BASE_REF], workspace).stdout.strip() or None)
+    tip = None if stale else (built_from or wg.run_git(["rev-parse", BASE_REF], workspace).stdout.strip() or None)
     fields: dict[str, Any] = {
         "base_ref": BASE_REF,
         "base_commit": base_commit,
@@ -209,6 +278,15 @@ def bootstrap_fields(bootstrap: dict[str, Any], config_path: Path | str, env_cop
 
 # ===========================================================================
 # DECISION HISTORY
+# - 2026-10-25 [python-coder/EPIC-WorkspaceMakerHardening/11]:
+#   (#EPIC-WorkspaceMakerHardening/11) The clone's remote is ``leafcutter-src``
+#   until ``origin`` is added at the hub (no ``origin`` ever names the main
+#   checkout); ``build_line`` builds the line from one resolved SHA with
+#   ``checkout --no-track -B`` and refuses (GIT_FAILED / VERIFY_FAILED, with a
+#   step) unless HEAD is that SHA on a clean tree. No new contract code. (ADR-018)
+# - 2026-10-25 [python-coder/EPIC-WorkspaceMakerHardening/11 rework]:
+#   (#EPIC-WorkspaceMakerHardening/11) M-3: build_line refuses WORK_AT_RISK (step
+#   ``checkout``, naming the branch) instead of ``-B``-resetting a local branch with commits the hub lacks. (ADR-018)
 # ===========================================================================
 # - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/05]:
 #   (#EPIC-WorkspaceMakerHardening/05)

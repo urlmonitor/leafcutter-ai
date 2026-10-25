@@ -40,6 +40,7 @@ ARCHITECTURE: Stdlib-only CLI (argparse, json, subprocess, shutil, sys,
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
 import sys
@@ -70,34 +71,12 @@ def _repo_context(repo_root: Path) -> dict[str, Any]:
     return {**wp.repo_fields(repo_root), "layout": wl.layout_for(repo_root)}
 
 
-def _start_line(workspace_path: Path, ident: wi.Identity, place: Path, ticket: wi.TicketRequest | None,
-                *, discard: bool = True) -> tuple[str, str, dict[str, Any] | None]:
-    """Check out the line of work: resume the one hub line, else start fresh at origin/main.
-
-    Returns ``(branch, line_of_work, refusal)``; a refusal discards the clone
-    this request just made (*discard*), never a folder being finished.
-    """
-    lines = wi.hub_lines(workspace_path, ident)
-    refusal = wi.line_refusal(lines, ident)
-    branch, line = (lines[0], "resumed") if lines else (ident.branch, "new")
-    if refusal is None and ticket is not None:
-        refusal = wi.base_ticket_refusal(workspace_path, f"origin/{branch}" if lines else "origin/main", ticket)
-    if refusal is None:
-        cmd = ["checkout", "-b", branch, "--track", f"origin/{branch}"] if lines else ["checkout", "-B", branch, "origin/main"]
-        proc = wg.run_git(cmd, workspace_path)
-        if proc.returncode != 0:
-            refusal = wst.step_error("GIT_FAILED", "checkout", "Could not check out the line of work.")
-    if refusal is not None and discard:
-        wi.discard_new_clone(workspace_path, place)
-    return branch, line, refusal
-
-
 def _checkout_line(hub: str, ident: wi.Identity, place: Path, workspace_path: Path, args: argparse.Namespace,
                    ticket: wi.TicketRequest | None, *, discard: bool,
-                   ) -> tuple[tuple[str, str, str, str] | None, dict[str, Any] | None]:
+                   ) -> tuple[tuple[str, ...] | None, dict[str, Any] | None]:
     """Point origin at the hub, fetch (pruned), and check out the line.
 
-    Returns ``((branch, line, base, fetch_status), refusal)``.
+    Returns ``((branch, line, base, fetch_status, start_sha), refusal)``.
     """
     fetch_status, fetch_refusal = wst.sync_with_hub(hub, workspace_path, args.allow_stale_base)
     if fetch_refusal is not None:
@@ -107,22 +86,27 @@ def _checkout_line(hub: str, ident: wi.Identity, place: Path, workspace_path: Pa
     base_commit = wg.run_git(["rev-parse", "origin/main"], workspace_path).stdout.strip()
     if not base_commit:
         return None, wst.step_error("FETCH_FAILED", "resolve-base", "origin/main did not resolve to a commit after fetch.")
-    branch, line_of_work, refusal = _start_line(workspace_path, ident, place, ticket, discard=discard)
+    branch, line_of_work, start_sha, refusal = wst.build_line(workspace_path, ident, ticket, base_commit)
     if refusal is not None:
+        if discard:
+            wi.discard_new_clone(workspace_path, place)  # a clone this request just made holds no work
         return None, refusal
     wes.abort_if("after_branch")
-    return (branch, line_of_work, base_commit, fetch_status), None
+    return (branch, line_of_work, base_commit, fetch_status, start_sha), None
 
 
 def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_path: Path, args: argparse.Namespace,
-                      ticket: wi.TicketRequest | None, line: tuple[str, str, str, str], action: str,
+                      ticket: wi.TicketRequest | None, line: tuple[str, ...], action: str,
                       marker: dict[str, Any] | None = None) -> dict[str, Any]:
     """Install inside the folder, prove every ingredient, mark it ready, and build the ok answer.
 
     The work's uncommitted changes (if any) are set aside around the set-up and
     put back byte for byte, so finishing or re-readying never overwrites them.
+    A ``created`` workspace holds no work: nothing is set aside, a dirty tree is refused.
     """
-    branch, line_of_work, base_commit, fetch_status = line
+    branch, line_of_work, base_commit, fetch_status = line[:4]
+    start_sha = line[4] if len(line) > 4 else None  # set when this request built the line from a resolved SHA
+    built_from = base_commit if start_sha else None
     wg.run_git(["config", "gc.auto", "0"], workspace_path)
     wg.run_git(["config", "maintenance.auto", "false"], workspace_path)
     env_copied = wg.copy_optional_files(repo_root, workspace_path)
@@ -139,9 +123,9 @@ def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_p
                 "default config, never this maker's own location.",
             )
     wes.arm_after_install()
-    with wes.work_set_aside(workspace_path):
+    with contextlib.nullcontext() if action == "created" else wes.work_set_aside(workspace_path):
         proof = wr.prove_ready(workspace_path, hub, kind=ident.kind, branch=branch, project_root=repo_root,
-                               config_path=config_path, line_of_work=line_of_work)
+                               config_path=config_path, line_of_work=line_of_work, base_ref=start_sha)
     if proof.get("status") in ("refused", "error"):
         return proof  # a refusal never carries a workspace location
     checks = wr.with_restored_tree(proof["checks"], workspace_path)  # the work is back in place
@@ -163,7 +147,7 @@ def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_p
         "line_of_work": line_of_work,
         "hub": hub,
         **wp.path_fields(workspace_path),
-        **wst.ok_fields(workspace_path, base_commit, fetch_status, action == "created"),
+        **wst.ok_fields(workspace_path, base_commit, fetch_status, action == "created", built_from),
         "bootstrap": wst.bootstrap_fields(proof["bootstrap"], config_path, env_copied),
         "hooks_stages_declared": proof["hooks_stages_declared"],
         "checks": checks,
@@ -175,7 +159,7 @@ def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
                        args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
     """Clone the main checkout, fetch the hub, checkout, install, and mark a brand-new workspace ready."""
     workspace_path.parent.mkdir(parents=True, exist_ok=True)
-    clone_refusal = wst.clone_main_checkout(repo_root, workspace_path)
+    clone_refusal = wst.clone_main_checkout(repo_root, workspace_path, hub)
     if clone_refusal is not None:
         wi.discard_new_clone(workspace_path, place)
         return clone_refusal
@@ -433,4 +417,9 @@ if __name__ == "__main__":
 #   fetches the hub with pruning (worktree_ensure_steps); M4: failed git
 #   steps answer with ``step`` and no git text; M9c: the ok answer carries the
 #   BO-4300c-2 base, fetch, created and bootstrap fields. (ADR-018)
+# - 2026-10-25 [python-coder/EPIC-WorkspaceMakerHardening/11]:
+#   (#EPIC-WorkspaceMakerHardening/11) The line is built from one resolved SHA
+#   (worktree_ensure_steps.build_line); a created workspace never runs the
+#   set-aside; freshness uses the SHA built from; the clone's remote is
+#   ``leafcutter-src`` until origin is added at the hub. (ADR-018)
 # ===========================================================================
