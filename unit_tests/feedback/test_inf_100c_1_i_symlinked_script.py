@@ -70,5 +70,40 @@ class TestSymlinkedScriptStaysInLeafcutter(unittest.TestCase):
         self.assertRegex(result.stdout.strip(), h.FEEDBACK_ID_RE)
 
 
+class TestCiShimDirectorySymlink(unittest.TestCase):
+    """CI layout: <root>/scripts/feedback is a build shim symlink into
+    <root>/.leafcutter/scripts/feedback (parent contract INF-100c-1)."""
+
+    def test_regression_shim_dir_symlink_resolves_to_leafcutter_config(self):
+        # covers: INF-100c-1
+        # angle: regression
+        """Loading the script through the shim dir must still anchor config
+        at <root>/.leafcutter/config, not <root>/config."""
+        root = Path(tempfile.mkdtemp(prefix="lc_ci_shim_"))
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        lc = h.deploy_install(root, git=False)
+        h.declare(lc)
+        shim = root / "scripts" / "feedback"
+        if shim.is_symlink() or shim.is_file():
+            shim.unlink()
+        elif shim.is_dir():
+            shutil.rmtree(shim)
+        shim.parent.mkdir(parents=True, exist_ok=True)
+        os.symlink(lc / "scripts" / "feedback", shim)
+
+        script = shim / "submit_feedback.py"
+        spec = importlib.util.spec_from_file_location("sf_ci_shim", str(script))
+        mod = importlib.util.module_from_spec(spec)
+        sys.path.insert(0, str(script.resolve().parent))
+        try:
+            spec.loader.exec_module(mod)
+        finally:
+            sys.path.remove(str(script.resolve().parent))
+        self.assertEqual(
+            os.path.abspath(mod._find_config_root()),
+            os.path.abspath(lc / "config"),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
