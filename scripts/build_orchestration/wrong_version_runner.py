@@ -36,6 +36,7 @@ from pathlib import Path
 import _wvr_db as db_mod
 import _wvr_gate as gate_mod
 import gate_verdict_records as gvr
+from _wvr_effect import changed_lines
 from _wvr_extras import demote, extra_rows
 from _wvr_pytest import PytestRun, run_selected
 from _wvr_scope import (
@@ -53,6 +54,7 @@ from _wvr_scope import (
     resolve_scope,
     wrong_version_key,
 )
+from _wvr_trace import Traced, apply_reach, run_traced
 from _wvr_verdict import NO_SOURCE_OUTCOME, NOT_APPLIED, NOT_PREPARED, assemble, classify_run, row
 
 _LOG = logging.getLogger("wrong_version_runner")
@@ -120,6 +122,8 @@ class Context:
     interrupted: bool = False
     db_names: set[str] = field(default_factory=set)  # TQ-500g-2-i: the requires_db test names
     db_seen: tuple[db_mod.Session, dict] | None = None  # the last run's database session and findings
+    traced: Traced = field(default_factory=Traced)  # TQ-500g-1-xiv: what each test ran on the code as written
+    changes: dict[str, dict[str, set[int]]] = field(default_factory=dict)  # wrong version key -> {file: changed lines}
 
     def shared_diff(self) -> DiffCache:
         """The run's one ``git diff``, shared by the fix undone and the per-name scope check."""
@@ -244,11 +248,31 @@ def _baseline_session(ctx: Context, versions: list[WrongVersion], tests: list[Sc
     return db_mod.begin_baseline(ctx.root, rels, tests, ctx.db_names)
 
 
-def _baseline(tests: list[ScopedTest], db: db_mod.Session, db_names: set[str]) -> tuple[list[dict], bool]:
-    """Run every in-scope test once on the code as written (with the as-written SQL installed); return ``(rows, ok)``."""
+def _trace_scope(ctx: Context, versions: list[WrongVersion]) -> list[str]:
+    """Record the changed lines of every named wrong version; return the files to trace (the fix undone excluded)."""
+    files: list[str] = []
+    for wv in versions:
+        if wv.is_undone:
+            continue
+        altered, state, _detail = _prepare(wv, ctx)
+        try:
+            ctx.changes[wv.key] = {rel: changed_lines(_as_written(ctx.root, rel) or b"", data) for rel, data in altered.items()}
+        except OSError as exc:
+            _LOG.warning("changed lines of %r could not be read (%s); its run-or-not-run is not traced", wv.name, exc)
+            continue
+        files += [rel for rel in altered if state == "ready" and rel not in files]
+    return files
+
+
+def _baseline(ctx: Context, versions: list[WrongVersion], tests: list[ScopedTest], db: db_mod.Session) -> tuple[list[dict], bool]:
+    """Run every in-scope test once on the code as written (with the as-written SQL installed); return ``(rows, ok)``.
+
+    The one run also carries the trace plugin (TQ-500g-1-xiv), beside the database plugin when there is one.
+    """
     with db:
-        run = _run(tests, db)
-        unfinished = db_mod.baseline_rows(tests, db, db_names)
+        run, ctx.traced = run_traced([t.node for t in tests], _trace_scope(ctx, versions), ctx.root,
+                                     None if db.child is None else [db.child], run_selected)
+        unfinished = db_mod.baseline_rows(tests, db, ctx.db_names)
     if run.status != "ran":
         return [row(t.label, "", "not_run", f"the run on the code as written was cut short ({run.status}): {run.detail}") for t in tests], False
     bad = [t for t in tests if run.outcome.get(t.node.identity) != "PASSED"]
@@ -271,7 +295,10 @@ def _drive(ctx: Context, versions: list[WrongVersion], runnable: list[ScopedTest
             return _stopped(str(exc), rows)
         ran = runnable if wv.is_undone else wv.holders
         new = classify_run(ran, wv.holders, run, wv.name, wv.is_undone)
-        rows += demote(db_mod.judge(new, *ctx.db_seen, ran, ctx.db_names, wv.name), wv.extra_labels)
+        judged = db_mod.judge(new, *ctx.db_seen, ran, ctx.db_names, wv.name)
+        if not wv.is_undone and run.status == "ran" and ctx.changes.get(wv.key):
+            judged = apply_reach(judged, {t.label: t.node.identity for t in wv.holders}, ctx.changes[wv.key], ctx.traced)
+        rows += demote(judged, wv.extra_labels)
         if ctx.interrupted:
             break
     return assemble(rows)
@@ -329,7 +356,7 @@ def _verdict_for(scope: Scope, out_rows: list[dict], test_root: Path, ac_root: P
         return assemble(rows)
     ctx.db_names = scope.db_names
     versions = _wrong_versions(runnable)
-    base_rows, ok = _baseline(runnable, _baseline_session(ctx, versions, runnable), scope.db_names)
+    base_rows, ok = _baseline(ctx, versions, runnable, _baseline_session(ctx, versions, runnable))
     if not ok:
         reason = "failing on the code as written" if base_rows and "failing" in base_rows[0]["detail"] else "unfinished"
         return assemble(rows + base_rows, reason_override=reason if reason != "unfinished" else None)
@@ -452,3 +479,10 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ================================================================================
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-25 20:30 [python-coder]: Baseline run traces the altered files; rows of tests that ran no changed
+#   line become not_executed. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

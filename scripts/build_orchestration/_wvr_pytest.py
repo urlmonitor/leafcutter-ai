@@ -131,18 +131,30 @@ def _module_skipped(stdout: str, by_nodeid: dict[str, str], root: Path | None = 
     return named - reported
 
 
-def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None) -> dict[str, str]:
+Extra = tuple[str, dict[str, str]]  # (plugin module, its environment)
+
+
+def _as_extras(extra: Extra | list[Extra] | None) -> list[Extra]:
+    """Normalise the ``extra`` argument: ``None``, one ``(module, env)`` pair (the old form) or a list of them."""
+    if extra is None:
+        return []
+    return [extra] if isinstance(extra, tuple) else list(extra)
+
+
+def _child_env(kind_path: str, extra: Extra | list[Extra] | None = None) -> dict[str, str]:
     """Environment of the pytest child: strict AC mode, the kind plugin, no bytecode.
 
-    *extra* (TQ-500g-2-i) is ``(plugin module, its environment)``; this directory joins the import path for it.
+    *extra* (TQ-500g-2-i, TQ-500g-1-xiv) is one or several ``(plugin module, its environment)``; this
+    directory joins the import path for them.
     """
+    extras = _as_extras(extra)
     plugin_dir = str(Path(kind_support.__file__).resolve().parent)
-    if extra is not None:
+    if extras:
         plugin_dir += os.pathsep + str(Path(__file__).resolve().parent)
     existing = os.environ.get("PYTHONPATH", "")
     return {
         **os.environ,
-        **(extra[1] if extra else {}),
+        **{k: v for _module, env in extras for k, v in env.items()},
         "AC_ENFORCE_STRICT": "1",
         kind_support._KIND_OUTPUT_ENV_VAR: kind_path,
         "PYTHONPATH": plugin_dir + os.pathsep + existing if existing else plugin_dir,
@@ -150,7 +162,7 @@ def _child_env(kind_path: str, extra: tuple[str, dict[str, str]] | None = None) 
     }
 
 
-def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
+def run_selected(nodes: list[NodeSpec], extra: Extra | list[Extra] | None = None) -> PytestRun:
     """Run pytest once over *nodes* (selected by node id) and read it.
 
     The child runs in the nodes' ``cwd`` (the repo root, so tests that resolve the test database
@@ -160,7 +172,8 @@ def run_selected(nodes: list[NodeSpec], extra: tuple[str, dict[str, str]] | None
 
     Args:
         nodes: The in-scope tests to run; nothing else is selected.
-        extra: ``(plugin module, environment)`` of a second plugin loaded into this same single run, or ``None``.
+        extra: ``(plugin module, environment)`` of one more plugin, or a list of them (the database and the
+            trace plugin), all loaded into this same single run; ``None`` for none.
 
     Returns:
         The :class:`PytestRun`. Never raises for a timeout, a crash or an OSError.
@@ -192,13 +205,13 @@ def _rooted(outcomes: dict, cwd: Path | None) -> dict:
 
 
 def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None,
-                  extra: tuple[str, dict[str, str]] | None = None) -> PytestRun:
+                  extra: Extra | list[Extra] | None = None) -> PytestRun:
     """Launch pytest, classify how it ended, and read a finished run."""
     files = sorted({n.file for n in nodes})
     budget = _resolve_pytest_timeout_seconds(files)
     cmd = [sys.executable, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
-    if extra is not None:
-        cmd.extend(["-p", extra[0]])
+    for module, _env in _as_extras(extra):
+        cmd.extend(["-p", module])
     cmd.extend(n.arg for n in nodes)  # a relative file is relative to the child's cwd, never to this process's
     # Absolute callers (the wrong-version runner) get absolute outcome ids back; relative callers keep relative ones.
     root = cwd if any(Path(n.file).is_absolute() for n in nodes) else None
@@ -229,3 +242,10 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None
     by_nodeid = dict(kinds_path_outcomes)
     return PytestRun("ran", "", _merge_outcomes(kinds_path_outcomes), kinds, collected, by_nodeid,
                      module_skipped=_module_skipped(proc.stdout, by_nodeid, root))
+
+
+# ================================================================================
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-25 20:30 [python-coder]: run_selected takes one extra plugin or a list, so the database and trace
+#   plugins share one run. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

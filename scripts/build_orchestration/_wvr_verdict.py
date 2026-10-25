@@ -26,7 +26,9 @@ DID_NOT_LOAD = "wrong version did not load: not a valid run"
 NOT_APPLIED = "wrong version not applied: it changes nothing"
 NOT_PREPARED = "wrong version could not be prepared"
 NON_BLOCKING = frozenset({"caught", "not_in_scope", "not_applicable"})
-UNFINISHED = frozenset({"did_not_load", "not_applied", "invalid", "not_run"})
+NOT_EXECUTED = "not executed: the test runs none of the changed lines"
+UNTRACED_NOTE = "run-or-not-run could not be traced for"
+UNFINISHED = frozenset({"did_not_load", "not_applied", "invalid", "not_run", "not_executed"})
 NO_SOURCE_OUTCOME = "wrong-version runs not applicable: no source requirement"
 
 
@@ -102,12 +104,18 @@ def classify_run(
 
 
 def _unfinished(rows: list[dict]) -> list[dict]:
-    """One entry per wrong version that has an unfinished result."""
-    seen: dict[str, dict] = {}
+    """One entry per wrong version that has an unfinished result, and one per test it could not reach.
+
+    A ``not_executed`` row is about one test, so its entry also names the test (TQ-500g-1-xiv).
+    """
+    seen: dict[tuple[str, str], dict] = {}
     for r in rows:
-        if r["result"] in UNFINISHED and r["wrong_version"] not in seen:
+        key = (r["wrong_version"], r["test"] if r["result"] == "not_executed" else "")
+        if r["result"] in UNFINISHED and key not in seen:
             word = "could_not_prepare" if r["detail"].startswith(NOT_PREPARED) else r["result"]
-            seen[r["wrong_version"]] = {"wrong_version": r["wrong_version"], "result": word, "detail": r["detail"]}
+            seen[key] = {"wrong_version": r["wrong_version"], "result": word, "detail": r["detail"]}
+            if word == "not_executed":
+                seen[key]["test"] = r["test"]
     return list(seen.values())
 
 
@@ -141,3 +149,10 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
         "outcome": outcome, "reason": reason, "results": rows, "survivors": survivors, "unfinished": unfinished,
         "non_blocking_survivors": side,
     }
+
+
+# ================================================================================
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-25 20:30 [python-coder]: not_executed is an unfinished result; its unfinished entry names the test.
+#   (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

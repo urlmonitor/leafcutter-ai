@@ -95,6 +95,7 @@ Each row of `results` is `{test, wrong_version, result, blocking, detail}`. `blo
 | `not_applied` | Yes | Yes | `wrong version not applied: it changes nothing`. The run is not made. |
 | `invalid` | Yes | Yes | The run is not a valid test of the wrong version. Causes below. |
 | `not_run` | Yes | Yes | No valid result: `the run was cut short (<timeout, crash, interrupted or unreadable>): <detail>`, `the test produced no result in this run`, `the test ended <OUTCOME>, neither passed nor failed`, the baseline row `the run on the code as written was cut short (<status>): <detail>` (reason `unfinished`), and the database and put-back rows. |
+| `not_executed` | Yes | Yes | `not executed: the test runs none of the changed lines`. The test never ran a line the wrong version changes on the run on the code as written, so the wrong version could not reach it. It is not a survivor and does not mean the test is weak. See [Reached or not executed](#reached-or-not-executed). |
 | `not_in_scope` | No | No | A test outside scope, or an unusable to-run-later note. |
 | `not_applicable` | No | No | The fix undone has nothing to restore. |
 
@@ -116,6 +117,27 @@ Each row of `results` is `{test, wrong_version, result, blocking, detail}`. `blo
 | The suite put the correct code back | `the suite put the correct code back before the tests ran: <object> held the code as written`. See [Database tests](#database-tests). |
 | Bad `--record` key (runner CLI) | `record: ticket key '<key>' is not one plain path segment` |
 
+## Reached or not executed
+
+The baseline run on the code as written is traced (standard library only, no coverage dependency) for the files the named wrong versions alter. The trace plugin `_wvr_trace_plugin.py` joins the same single pytest run as the kind and database plugins. `_wvr_effect.changed_lines` gives the as-written line numbers a wrong version changes (every as-written line of a replace or delete; for a pure insert, the line before the insertion point, or line 1 at the top). `_wvr_effect.reached` then answers per test:
+
+| Answer | When | Row |
+|---|---|---|
+| reached | The test ran at least one changed line of a traceable file. | Decided by its run, as before. |
+| not reached | Every altered file is traceable and the test ran none of the changed lines. | `not_executed`, whatever its outcome under the wrong version. |
+| not traceable | An altered file is not traceable. | Decided by its run; the detail gains `; run-or-not-run could not be traced for <file>`. |
+
+Rules:
+
+- A line run inside a test counts for that test only when that test ran it; another test running it does not count.
+- A line run at import or collection time, before any test starts (a module-level constant), counts as run by every test of the run.
+- A file is traceable only when it ends in `.py` and lies inside the repository. SQL, JS and YAML files are not traceable, so such a wrong version is never `not_executed` for that reason alone.
+- A missing or unreadable trace output makes every file of that run not traceable (verdicts come from the run as before) and is logged at WARNING.
+- The fix undone is never `not_executed`; its group rule applies as before.
+- A to-run-later extra's `not_executed` row is non-blocking like its other rows.
+
+Source: TQ-500g-1-xiv.
+
 ## Verdict and stop reasons
 
 The runner prints one JSON object and exits 0 if and only if `gate_passed` is true: `{gate_passed, applicable, verified, outcome, reason, results, survivors, unfinished, non_blocking_survivors}`. `survivors` and `non_blocking_survivors` list `{test, wrong_version}`. `verified` means every owed run was validly made; it can be true while survivors stop the work, and it is not "passed". It can also be true on a not-applicable verdict that lists `not_in_scope` rows.
@@ -131,7 +153,7 @@ The runner prints one JSON object and exits 0 if and only if `gate_passed` is tr
 |---|---|
 | `null` | Nothing stops it. |
 | `survivor` | A blocking row is `survived`. Outranks `unfinished`. |
-| `unfinished` | A blocking row is `did_not_load`, `not_applied`, `invalid` or `not_run`. |
+| `unfinished` | A blocking row is `did_not_load`, `not_applied`, `invalid`, `not_run` or `not_executed`. A survivor outranks it. |
 | `failing on the code as written` | The baseline run failed. |
 | `the code may still be altered: <path> <why>; the copy of the code as written is kept at <absolute path>` | The put-back failed. The outcome carries the same text. |
 | `the database was not put back: <objects> still differs from the code as written` | The database put-back failed (`... could not be verified against the code as written` when unverifiable). |
@@ -248,6 +270,7 @@ No flag turns the runs off. Deleting `must_catch` names, narrowing `in_scope_fil
 | Stop | What to do |
 |---|---|
 | `survived` | Strengthen the named test so it fails under that wrong version: assert the distinguishing value, use distinct fixture values (`retry_due` distinct from `refresh_due`), add a control row. Then re-drive. |
+| `not_executed` | The test never ran a line the wrong version changes. Make the test run the changed code (call the function the name describes), or, if the wrong version alters the wrong line, re-drive so it is prepared again. Do not weaken the name. |
 | `could_not_prepare` | The name describes code that does not exist or is too vague. Amend the AC's `must_catch` name or `in_scope_files` through the AC authoring path. |
 | `did_not_load` | Re-drive so the version is prepared again. If it recurs, see Known limits. |
 | `failing on the code as written` | Fix the code or the test first. |
@@ -263,6 +286,7 @@ No flag turns the runs off. Deleting `must_catch` names, narrowing `in_scope_fil
 | A re-deploy inside a test's own uncommitted transaction cannot be seen from the plugin's separate connection. | TQ-500g-2-i |
 | A wrong version caught only in `setUpClass` or setup has no call-phase capture and reads `not_run`. | TQ-500g-2-i |
 | The real PostgreSQL catalogue query is tested only against stand-in drivers, not in CI. Only `CREATE FUNCTION` / `PROCEDURE` objects are identified. | TQ-500g-2-i |
+| Run-or-not-run is traced for `.py` files inside the repository only; other files keep their run-decided verdict. | TQ-500g-1-xiv |
 | `verified` can read true together with `applicable: false` when covering tests exist but none is in scope (known issue, filed). | — |
 | In a shared-worktree parallel batch, a sibling's unlisted edit can stop another ticket's finish. | TQ-500g-3 |
 | On `/build-epic` the backstop is bypassed by `--no-verify`. | TQ-500g-1-viii |

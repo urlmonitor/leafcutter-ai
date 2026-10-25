@@ -44,10 +44,10 @@ def test_putback_failure_surfaces_when_run_raises_unexpected_error(tmp_path, mon
     monkeypatch.chdir(sb.work)
     real, calls = rv.wvr.run_selected, []
 
-    def flaky(nodes):
+    def flaky(nodes, extra=None):
         calls.append(1)
         if len(calls) == 1:
-            return real(nodes)
+            return real(nodes, extra) if extra is not None else real(nodes)
         os.remove(sb.target)
         os.mkdir(sb.target)  # the put-back cannot write over a directory
         msg = "boom mid-run"

@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -277,9 +277,16 @@ amended_by:
     agent: approve_acs
     date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xiv.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/04_TICKET-20261024-TQ-500g-1-xiv.md
+- scripts/build_orchestration/_wvr_trace_plugin.py
+- scripts/build_orchestration/_wvr_trace.py
+- scripts/build_orchestration/_wvr_effect.py
+- scripts/build_orchestration/_wvr_pytest.py
+- scripts/build_orchestration/_wvr_verdict.py
+- scripts/build_orchestration/wrong_version_runner.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

@@ -94,6 +94,12 @@ Directions only; nothing here is applied.
 - **Runner, optional.** Refuse an alteration that changes no line executed by the tests in
   scope, using line coverage of the as-written run. Report it as unfinished with its own word
   (for example `not_executed`), not as a survivor.
+  **Partly applied by TQ-500g-1-xiv:** the runner now traces the as-written run and reports a
+  test that runs none of a wrong version's changed lines as `not_executed` (unfinished, never a
+  survivor), per test. This covers the case where a test never reaches the changed line. It does
+  not cover an alteration whose changed line is run but whose effect is dead (the two cases
+  above: an unread environment variable, a copy thrown away); those still read as survivors.
+  See [Reached or not executed](../../reference/wrong-version-runs.md#reached-or-not-executed).
 - **Triage, optional.** Before a survivor stops the gate, ask a separate step whether the
   alteration is behaviourally equivalent to the code as written, and report the answer next
   to the survivor row.

@@ -116,6 +116,7 @@ _SEAM = {
                  f'    if _ALTERED:\n        from nonexistent_gate_mod import gate\n'
                  f'    assert refresh_config(False, False) == "skip"\n'),
     "SEAM_ASSERT": ("test_seam_assert.py", f'def {SEAM_ASSERT}():\n    # covers: {AC_ID}\n    _log({SEAM_ASSERT!r})\n'
+                    f'    refresh_config(True, False)  # runs the line the wrong version changes\n'
                     f'    assert not _ALTERED, "refresh_config.py carries an alteration"\n'),
 }
 _NAMES = {"T1": T1, "T2": T2, "T3": T3, "T4": T4, "SEAM_ABS": SEAM_ABS, "SEAM_ASSERT": SEAM_ASSERT}
