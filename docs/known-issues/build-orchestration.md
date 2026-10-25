@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-24'
+last_updated: '2026-10-25'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 77** (4 blocker, 42 high, 31 low) · **Resolved: 28** (recounted from the directory 2026-10-24, after KI-BO-20261024-list-speed-test-flaky was filed)
+**Open: 80** (4 blocker, 44 high, 32 low) · **Resolved: 28** (recounted from the directory 2026-10-25, after the two KI-BO-20261025 entries were filed; the directory holds open entries this table does not list, so trust the `ls` above)
 
 ## Open
 
@@ -118,6 +118,8 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children — the connected-set walk adds a not-done L2 prerequisite alone, never its children, then marks it done and reports `all_done`, so GE-127g-2 went done over an unbuilt GE-127g-2-i | [open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md](build-orchestration/open-high-ki-bo-20261014-fast-lane-dependency-walk-omits-a-prerequisites-children.md) |
 | `high` | KI-BO-20261021-unquoted-shell-args — the fast lane's wrong-version and claim commands, and the red-baseline gate in /build-feature and build-ticket.js, paste paths and ids into shell lines unquoted, so a path with a space halts every fast-lane drive and an id with shell metacharacters runs extra commands | [open-high-ki-bo-20261021-unquoted-shell-args.md](build-orchestration/open-high-ki-bo-20261021-unquoted-shell-args.md) |
 | `high` | KI-BO-20261023-fast-lane-step-reader-rejects-relay-noise — the fast lane reads command-step answers with a whole-text JSON.parse, so the wrong-version writer's own stderr log line, relayed inside stdout, halts the list step on every AC with derived names; fixed in the three heavy-lane routes by TQ-500f-3-v | [open-high-ki-bo-20261023-fast-lane-step-reader-rejects-relay-noise.md](build-orchestration/open-high-ki-bo-20261023-fast-lane-step-reader-rejects-relay-noise.md) |
+| `high` | KI-BO-20261025-halted-epic-resume-refused-on-new-template-sources — a halted epic cannot be resumed once a ticket created a new templates/ source: the maker rebuilds the install, build.py's tracked-source guard refuses the untracked file (BOOTSTRAP_FAILED), and the maker's set-aside step clears `git add -N` before building | [open-high-ki-bo-20261025-halted-epic-resume-refused-on-new-template-sources.md](build-orchestration/open-high-ki-bo-20261025-halted-epic-resume-refused-on-new-template-sources.md) |
+| `low` | KI-BO-20261025-bare-build-drifts-from-the-maker-build — a bare `build.py --target-dir <ws>` without the maker's `--config-path` renders changelog outputs in .claude/ and .gemini/ differently, so check-output-drift blocks; the maker's build arguments are documented nowhere; graded medium | [open-low-ki-bo-20261025-bare-build-drifts-from-the-maker-build.md](build-orchestration/open-low-ki-bo-20261025-bare-build-drifts-from-the-maker-build.md) |
 | `low` | KI-BO-20261023-test-breaker-no-op-alterations — test-breaker can prepare a wrong version that changes text but not behaviour (a setting nothing reads, a change to a discarded copy), and the runner only refuses alterations that do not load or change nothing, so a sound test reads as a blocking survivor; graded medium | [open-low-ki-bo-20261023-test-breaker-no-op-alterations.md](build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md) |
 | `low` | KI-BO-20261023-gate-verdicts-sensitive-to-machine-load — with two heavy pytest lanes on one Windows machine, `mark_done` reported ACs stale and `wrong_version_gate.py finish` stopped on failures and timeouts for tests that pass alone, and `mark_done` prints no reason; graded medium | [open-low-ki-bo-20261023-gate-verdicts-sensitive-to-machine-load.md](build-orchestration/open-low-ki-bo-20261023-gate-verdicts-sensitive-to-machine-load.md) |
 | `low` | KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — mostly fixed 2026-10-14 (was blocker): a failed or skipped phase now blocks the done write (BO-400a-2-v, PR #1201) and agent templates no longer write level-2 headings into Comments (BO-400a-2-vi); still open: the latest sign-off entry is the last one in file order | [open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md](build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md) |

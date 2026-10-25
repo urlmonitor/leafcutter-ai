@@ -26,8 +26,9 @@ related_docs:
   `scripts/build_capability_merge.py` now carries a contested item to the antigravity
   surface only when the package's own output there already holds an item of that name.
   Tests: `unit_tests/portability/test_bp_1500g_2_ii.py`.
-- **Occurrences:** 1 (2026-10-23, workspace `feature/ge-127d-6-statements-per-line`,
-  base `ae3a1591c`)
+- **Occurrences:** 2 (2026-10-23, workspace `feature/ge-127d-6-statements-per-line`,
+  base `ae3a1591c`; 2026-10-25, GE-124 epic workspace, pre-fix copies returning, see the
+  note at the end)
 - **First seen:** 2026-10-23 · **Last seen:** 2026-10-25 (reproduced on `411b87761`)
 - **Where:** the symptom shows in hook id `check-output-drift`
   (`templates/scripts/commit_guardian/check_output_drift.py`). The cause is in the build:
@@ -101,5 +102,27 @@ update those copied containers; only the next copy build does. This is the conte
 **Pattern:** a "mirror" rule keyed on a directory name holds only while every family with
 that name is the same family. `workflows` means two different things on the two
 platforms.
+
+## Observed again, 2026-10-25: the pre-fix copies come back on every rebuild
+
+**Where:** the GE-124 epic workspace (`epic/every-screen-says-which-requirement-it-is`),
+during the epic drive.
+
+**What happened.** check-output-drift reported `gaps=9` for the same nine files
+(`build-epic`, `build-feature`, `build-ticket`, `commit`, `create-ticket`, `fast-lane-ship`,
+`finalize-feature`, `plan-feature`, `quick-fix`) under `.gemini/workflows/`. The fix above
+stops the build writing new copies into `.leafcutter/gemini/workflows/`, but the copies an
+earlier build wrote there were still present. The gemini shim copies `.leafcutter/gemini` into
+`.gemini` on every copy-strategy rebuild, so deleting only `.gemini/workflows/*.js` does not
+last: the next rebuild puts them back.
+
+**Workaround used.** The nine `.js` files in `.leafcutter/gemini/workflows/` were moved to a
+backup folder, then the install was rebuilt.
+
+**Residual, not tracked elsewhere.** The cleanup paragraph above leaves this to a human
+because the build cannot tell these files from adopter files. That is true of `.gemini/`, but
+`.leafcutter/gemini/` is the package's own output root. Suggested fix: the build prunes items
+under its own shim-source roots (`.leafcutter/gemini/...`) that it no longer produces and that
+the previous manifest recorded as its own, or at least warns about them by name.
 
 ---

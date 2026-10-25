@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-25'
 components:
   - ac_driven_dev
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-26
+- **Occurrences:** 3
+- **First seen:** 2026-08-18 · **Last seen:** 2026-10-25
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `## Agent Contracts` →
   `### documentation-expert` emitter
 
@@ -101,5 +101,14 @@ verifier's Step 2 parser over the output — the two sides have disagreed silent
 the same producer/consumer divergence class as the `ac_traceability` shape mismatch that
 `ACD-1900b-5-i` fixes. Add a second case for the empty-`documentation_triggers` parent,
 asserting that **no** contract line is emitted at all.
+
+**Occurrence 3 — 2026-10-25, GE-124 epic drive (`epic/every-screen-says-which-requirement-it-is`),
+tickets 01, 32 and 44.** The second defect above (the target is a back-reference, not the doc the
+change writes) hit three tickets in one epic. Each ticket's `### documentation-expert` AC-1 named
+its parent AC record as the documentation target: `GE-124a.yaml`, `GE-124e.yaml` and
+`GE-124g.yaml`. Those parent records are files the tickets must leave unchanged, so the contract
+could only be met by editing a file the ticket was forbidden to touch. Repaired by hand on the
+epic branch: each AC-1 was repointed to the docs documentation-expert actually wrote. The
+generator is unchanged.
 
 ---

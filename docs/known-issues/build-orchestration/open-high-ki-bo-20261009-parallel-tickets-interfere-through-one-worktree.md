@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-13'
+last_updated: '2026-10-25'
 components:
   - build_orchestration
 related_docs:
@@ -21,10 +21,12 @@ related_docs:
   agent can be sent to fix code that is not broken. The remedies that worked were all manual:
   re-ordering dependencies so the two tickets never share a batch.
 - **Status:** open, no AC. Observed and diagnosed in the ticket's own Comments.
-- **Occurrences:** 2 incidents. Tickets 02 and 05, 2026-09-30: the coordinator then serialised 02
+- **Occurrences:** 3 incidents. Tickets 02 and 05, 2026-09-30: the coordinator then serialised 02
   after 05 (`731e7a930`) and 06 after 02 (`b30e18b94`) to stop it recurring. Tickets 07 and 08,
-  2026-10-12: committed from separate lane worktrees (see "Observed again" below).
-- **First seen:** 2026-09-30 · **Last seen:** 2026-10-12
+  2026-10-12: committed from separate lane worktrees (see "Observed again" below). GE-124 epic,
+  2026-10-25: per-ticket commits refused by check-build-drift on siblings' templates (see the
+  2026-10-25 note).
+- **First seen:** 2026-09-30 · **Last seen:** 2026-10-25
 - **Where:** `templates/workflows-js/build-feature.js`: the planner's only physical-coupling rule is
   "no two tickets share any files_touched entry" (:3079). A batch's tickets are dispatched together
   through `parallel()` in chunks of `BATCH_SIZE` (:3305-3445), all in `realWorktreePath`.
@@ -125,3 +127,27 @@ restore.
 **What this adds.** It confirms the first fix direction above, one worktree per ticket: the lanes worked.
 It also rules out the two cheaper substitutes. Those were tried, and both failed. The lanes cost a
 manual set-up and a fast-forward per ticket, which the drive should do itself.
+
+## Observed again, 2026-10-25: pre-commit's stash makes a sibling's template look drifted
+
+**Where:** the GE-124 epic drive (`epic/every-screen-says-which-requirement-it-is`), per-ticket
+commits from the shared epic worktree.
+
+**What happened.** Each per-ticket commit failed `check-build-drift` on templates that belonged to
+other tickets, for example `check_ac_schema.py`. pre-commit stashes unstaged changes before running
+hooks. A sibling's modified template therefore reverted to its HEAD content while the hooks ran,
+but its deployed copy had already been rebuilt from the new content. The hook compared the two and
+reported drift. So the mechanism is slightly different from the 2026-10-13 occurrence: there a
+half-edited template was on disk; here the template was finished and the stash put the old
+version back for the duration of the hook.
+
+**Workaround used.** One combined commit for all the tickets in the tree, `10ceb6c9d` on the epic
+branch.
+
+**What this adds to the fix direction.**
+
+- Have `check-build-drift` compare against the staged index (or `git show :<path>`), not against
+  the tree pre-commit restores from its stash. The tree it reads during a hook is neither the
+  commit nor the working copy.
+- Or have the drive commit each ticket right after its phases finish, before a sibling's work is
+  in the tree. One worktree per ticket (above) also removes it.
