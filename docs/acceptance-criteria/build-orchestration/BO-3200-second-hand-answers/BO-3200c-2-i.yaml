@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target:
   - code
@@ -167,6 +167,9 @@ amended_by:
   note: expects_from on BO-3200c-2 cleared to null. BO-3200c-2 is the parent rule, not a
     data producer, declares no delivers_to, and may not be edited beyond covered_by; the
     parent link is carried by depends_on. This AC is self-contained (it_requirements).
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []
