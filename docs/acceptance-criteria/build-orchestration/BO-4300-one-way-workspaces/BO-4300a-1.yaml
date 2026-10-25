@@ -324,7 +324,7 @@ amended_by:
   at: '2026-10-22'
   note: Timing budgets are recorded on every CI runner and fail only above 2x the budget.
 superseded_by: null
-covered_by: [BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py, unit_tests/build_orchestration/test_bo_4300a_1_budgets.py, unit_tests/build_orchestration/test_bo_4300a_1_marker_survival.py, unit_tests/build_orchestration/test_bo_4300a_1_route_shape.py, unit_tests/build_orchestration/test_bo_4300a_1_clone_source.py]
+covered_by: [BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py, unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py, unit_tests/build_orchestration/test_bo_4300a_1_budgets.py, unit_tests/build_orchestration/test_bo_4300a_1_marker_survival.py, unit_tests/build_orchestration/test_bo_4300a_1_route_shape.py, unit_tests/build_orchestration/test_bo_4300a_1_clone_source.py, unit_tests/build_orchestration/test_bo_4300a_1_checkout_race.py]
 implemented_by:
 - templates/scripts/workspace_root.py
 - templates/scripts/worktree_canaries.py
@@ -350,6 +350,7 @@ implemented_by:
 - templates/scripts/worktree.py
 - templates/scripts/worktree_answer.py
 - templates/scripts/worktree_ensure_steps.py
+- templates/scripts/worktree_readiness.py
 notes: |
   The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the
   shape). Freshness itself stays BO-4100a, protections firing stays BO-1700a/d -- this

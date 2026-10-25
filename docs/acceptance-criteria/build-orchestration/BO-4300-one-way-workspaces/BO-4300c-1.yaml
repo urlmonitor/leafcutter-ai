@@ -186,7 +186,7 @@ amended_by:
   at: '2026-10-22'
   note: Independent-copy and installed-tools ingredients gain their extra checks; new IT for verify's read-only re-check (never refuses on base_is_fresh or tree_clean); criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii, unit_tests/build_orchestration/test_bo_4300c_1_independence.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_refuses.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_readonly.py, unit_tests/build_orchestration/test_bo_4300a_1_same_location.py]
+covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii, unit_tests/build_orchestration/test_bo_4300c_1_independence.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_refuses.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_readonly.py, unit_tests/build_orchestration/test_bo_4300a_1_same_location.py, unit_tests/build_orchestration/test_bo_4300a_1_checkout_race.py]
 implemented_by:
 - templates/scripts/worktree_admin.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
@@ -195,6 +195,7 @@ implemented_by:
 - templates/scripts/worktree_readiness.py
 - templates/scripts/commit_guardian/commit_guardian.json
 - templates/scripts/commit_guardian/precommit_canary.py
+- templates/scripts/worktree_ensure_steps.py
 - scripts/build_helpers.py
 notes: |
   The MAKER half of BO-4300c ("ready means all of it"). Each ingredient already has an owner
