@@ -303,6 +303,7 @@ task, then pull only those files.
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
 | EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
+| EPIC ALearningAnAgentHasTodayActuallyGets | [docs/retrospectives/EPIC-ALearningAnAgentHasTodayActuallyGets.md](retrospectives/EPIC-ALearningAnAgentHasTodayActuallyGets.md) | Overview of Retrospective: EPIC-ALearningAnAgentHasTodayActuallyGets. |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |

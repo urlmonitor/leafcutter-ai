@@ -124,7 +124,7 @@ superseded_by: null
 covered_by:
 - tests/knowledge/test_inf_700b_3.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/06_TICKET-20261016-INF-700b-3.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/06_TICKET-20261016-INF-700b-3.md
 - scripts/knowledge/health/capture_health_report.py
 - scripts/build_phases_knowledge.py
 notes: |

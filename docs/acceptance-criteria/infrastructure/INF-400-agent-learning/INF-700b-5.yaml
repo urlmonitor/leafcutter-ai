@@ -86,7 +86,7 @@ superseded_by: null
 covered_by:
 - tests/knowledge/test_inf_700b_4_5_docs.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/08_TICKET-20261016-INF-700b-5.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/08_TICKET-20261016-INF-700b-5.md
 - docs/architecture/agent_knowledge_system.md
 - docs/architecture/components/knowledge-system.md
 notes: |
