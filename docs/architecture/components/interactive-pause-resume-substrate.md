@@ -14,6 +14,7 @@ children:
 related_docs:
   - docs/architecture/components/build-orchestration.md
   - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+  - docs/architecture/adrs/ADR-078-plan-feature-pause-resume-runtime.md
   - docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
   - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
   - docs/how-to/resume-a-paused-plan-feature-run.md
