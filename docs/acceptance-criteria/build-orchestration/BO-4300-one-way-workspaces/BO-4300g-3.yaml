@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 change_target: pipeline
@@ -39,11 +39,191 @@ doc_links:
   status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-delivers_to: null
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+  - path: unit_tests/workflows/_bo400e3_finalize_harness.py
+    state: existing
+it_requirements:
+  - >-
+    NEW LOCATE AT STEP 7 (user decision F, 2026-10-25). Step 7 asks the workspace maker afresh,
+    immediately before the removal: one plain command, worktree.py locate --kind <kind> --slug
+    <slug> (the read-only verb, docs/architecture/components/worktree-manager.md; kind and slug
+    are this run's own work identity), with absolute paths, dispatched to shell-runner (ADR-070)
+    and passed through the ADR-070 section 5 reply check. No new maker verb is needed: locate
+    already answers ok with workspace_path and marker.branch for a ready workspace and refuses
+    NOT_FOUND / INCOMPLETE otherwise (BO-4300e-1). The pre-flight ensure answer, WORKTREE_ROOT,
+    the git worktree list probe, the target argument and any agent prose are never a source for
+    the authorization.
+  - >-
+    The step-7 authorization is built only from a definite ok answer of that locate whose
+    marker.branch is exactly equal to the branch finalize is run for: workspace_path from the
+    answer, branch = that branch. On anything else no removal dispatch is made (BO-4300g-3-i).
+  - >-
+    The authorization is built in one place in the workflow and passed as the
+    removal_authorization field of the step-7 request, exactly as BO-4300g-1 defines it. It is
+    not hand-copied into other steps.
+  - >-
+    BUILT TOGETHER WITH BO-4300g-1 IN ONE BUILD (user decision D, 2026-10-25). Once the gate lands,
+    a step-7 dispatch without the authorization removes nothing, so finalize's teardown must never
+    be left in a state where it silently stops removing.
+  - >-
+    The step-7 removal request carries removal_authorization with both workspace_path and branch
+    non-empty (finalize never sends the workspace-only form that BO-4300g-1 allows), so it passes
+    the BO-4300g-2-i repo-wide check.
+  - >-
+    EXISTING FINALIZE TESTS THAT SCRIPT THE DISPATCH SEQUENCE ARE UPDATED IN THE SAME CHANGE. The
+    new step-7 locate is one more dispatch: the finalize driver in
+    unit_tests/workflows/_bo400e3_finalize_harness.py gains a scripted reply for it and a
+    drive-to-step-7 entry point shared by the BO-4300g-2, -2-i, -3 and -3-i proofs. Any other
+    finalize test that pins the step-7 sequence (for example the INF-700a-5-i teardown tests) is
+    found by a failing run and updated in the same change, never skipped.
+  - >-
+    Step 7 keeps BO-4300e-2's no-interactive-question rule and its existing outcome recording:
+    one recorded outcome for step 7 per non-halt path (CLAUDE.md "Skip-Branch Side-Effects").
+  - >-
+    PROOF RUNS THE DEPLOYED FINALIZE, NEVER GREPS IT. The proof runs the deployed
+    finalize-feature workflow under the workflow engine harness on a merged-branch fixture, asserts
+    on the recorded step-7 request, and checks the landing root's workspaces before and after.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The recorded step-7 dispatch (label step-7-remove-worktree) to worktree-agent, whose request
+    carries removal_authorization {workspace_path: string (absolute, non-empty, the step-7 locate
+    answer's workspace_path), branch: string (non-empty, equal to the run's branch)}; it is the
+    only removal-capable dispatch in a finalize run. Consumed by BO-4300g-2-i.
 expects_from:
-  ac_id: BO-4300g-1
-  contract: Caller-authorization shape the removal-capable agent accepts.
+- ac_id: BO-4300g-1
+  contract: >-
+    removal_authorization = {workspace_path: string (absolute), branch: string | null} in the
+    dispatching workflow's own request; finalize always fills both fields.
+- ac_id: BO-4300e-1
+  contract: >-
+    The maker's locate answer: one JSON object with status "ok", workspace_path (absolute,
+    non-empty) and marker.branch (string) for a ready workspace, or a refusal (NOT_FOUND,
+    INCOMPLETE) with no workspace_path; anything else is not definite.
+test_required: true
+test_intent:
+  - clause: its one dispatch to the removal-capable agent carries a caller authorization naming exactly the workspace "<landing root>/feature/eta" and the branch "feature/eta"
+    needs_test: true
+    reason: Without the authorization in the request, the gated agent removes nothing and finalize's teardown stops working.
+  - clause: after the run that workspace is gone and no other workspace under the landing root is changed
+    needs_test: true
+    reason: The authorized removal must reach its own workspace and no neighbour, which only an end-to-end run shows.
+  - clause: finalize asks no interactive question at step 7
+    needs_test: true
+    reason: Adding the authorization must not bring back the interactive "yes" that BO-4300e-2 removed.
 origin_agent: business-analyst
+test_spec:
+  - name: test_step_7_dispatch_carries_the_authorization_for_exactly_its_own_workspace_and_branch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Runs the deployed finalize-feature workflow under run_workflow_under_e2 for the branch feature/eta on a
+      merged-branch fixture driven through step 7 (a finalize-to-step-7 driver on the base_responses of
+      unit_tests/workflows/_bo400e3_finalize_harness.py). The step-7 locate is a recorded dispatch to shell-runner
+      whose command is exactly one plain worktree.py locate --kind <kind> --slug <slug> (absolute paths, this
+      run's own kind and slug, not ensure), issued before the removal dispatch, and its reply comes from the REAL
+      deployed maker (locate run against a real fixture whose landing root holds feature/eta and neighbours), not
+      hand typed. Asserts exactly one dispatch to worktree-agent (label step-7-remove-worktree) and that its request
+      carries removal_authorization equal to {workspace_path: "<landing root>/feature/eta", branch: "feature/eta"},
+      parsed through the same removal_authorization contract helper the BO-4300g-1 eval fixtures use, and that the
+      announcement text of INF-700a-5-i is still in the prompt.
+    proves_clause: its one dispatch to the removal-capable agent carries a caller authorization naming exactly the workspace "<landing root>/feature/eta" and the branch "feature/eta"
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_authorization_comes_from_the_makers_answer_and_not_from_the_argument_or_a_default
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Runs finalize with an argument that names a different slug than the step-7 locate answer carries (the
+      argument echoes "EPIC-eta-arg", the maker's locate answers for feature/eta), with a pre-flight ensure answer
+      that names another workspace, and with the maker's branch spelled differently from the argument; the step-7
+      authorization must equal the locate answer's workspace_path and marker.branch exactly, never the argument,
+      the ensure answer, the harness default workspace, an empty string or "unknown".
+    proves_clause: its one dispatch to the removal-capable agent carries a caller authorization naming exactly the workspace "<landing root>/feature/eta" and the branch "feature/eta"
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - an authorization built from the target argument echo
+      - an authorization built from the pre-flight ensure answer or WORKTREE_ROOT instead of the step-7 locate answer
+      - an authorization whose branch is null or empty when the maker named one
+      - an authorization hand-copied into a second step instead of built in one place
+  - name: test_authorised_step_7_request_clears_its_workspace_and_no_other_through_the_real_maker
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      Takes the removal_authorization recorded from the finalize step-7 dispatch above and applies it to the real
+      deployed maker's remove verb in the real fixture (the effect the gated agent has for an authorised request),
+      with snapshots of every workspace under the landing root taken before and after: feature/eta is gone
+      completely and every other workspace, its refs and its files are identical.
+    proves_clause: after the run that workspace is gone and no other workspace under the landing root is changed
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_finalize_step_7_request_removes_through_the_real_worktree_agent_MANUAL
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: e2e
+    angle: seam
+    description: >-
+      Ship-together proof with BO-4300g-1 (user decision 4), against the agent's NEW contract and not a stub of the
+      old one. The exact step-7 request recorded from the deployed finalize run is dispatched live to the deployed
+      worktree-agent through the removal_state harness of BO-4300g-1-iv (throwaway clone, bare hub, 5 trials, zero tolerance): the feature/eta
+      workspace is gone, its branch handled as authorised, and the neighbouring workspaces are identical, so a
+      finalize that sends the request in a shape the gated agent does not accept shows as a workspace left behind.
+      Name ends _MANUAL (deselected by default, run with -m manual).
+    proves_clause: after the run that workspace is gone and no other workspace under the landing root is changed
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_step_7_asks_no_interactive_question_and_records_one_outcome
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      On the same finalize run no dispatch in phase Step 7 is a confirmation gate, a pause-persist or a question to
+      the person, the run does not pause, and step_outcomes holds exactly one entry for step 7 on the executed
+      path (and exactly one on the skipped-because-absent path).
+    proves_clause: finalize asks no interactive question at step 7
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a step 7 that pauses at a person gate before the removal
+      - a step 7 that records its outcome twice, once in the skip branch and once unconditionally
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/_shared/workspace-answer.js
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_workflow_engine_workspace.py
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
+  - unit_tests/workflows/test_inf_700a_5_i_finalize_teardown.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - templates/scripts/worktree_remove.py
+  - templates/agents/worktree-agent.md
+file_findings:
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Step 7 (lines 1750-1803) is the one worktree-agent removal dispatch and today sends a prose request naming WORKTREE_ROOT with no authorization, taking its path and branch from the pre-flight ensure answer (lines 447-452) and probing existence with a status-checker git worktree list rather than a maker locate, so the same file holds the change and the planner must decide whether the authorization is built from the ensure answer or from a new step-7 locate dispatch.
+    decision:
+      choice: assignment stands
+      reason: The user chose a new step-7 maker locate through shell-runner (decision F), which is a workflow edit in the same file, so the work stays with python-coder and no new maker verb is needed.
+      by: it-po
+  - file: unit_tests/workflows/_bo400e3_finalize_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its base_responses scripts finalize only up to Step 3.5 and has no reply for a step-7 locate and no drive-to-step-7 entry point, so it is the shared driver this record must extend.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/finalize-feature.js
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
 created: 2026-10-23
 amended_by: []
 superseded_by: null
@@ -59,6 +239,17 @@ notes: |
 
   Proof runs the deployed finalize workflow under the workflow engine harness and asserts on the
   recorded step-7 dispatch. It never greps the workflow source.
+
+  USER DECISIONS 2026-10-25 (recorded by IT PO): D -- built together with BO-4300g-1 in one
+  build. F -- step 7 gets its workspace and branch from a NEW maker locate at step 7
+  (worktree.py locate --kind <kind> --slug <slug>, read-only, through shell-runner); the
+  authorization is built only from a definite ok answer for the expected branch. No new maker
+  verb. The test-designer's step-7 tests that say "ensure and locate run against a real fixture"
+  already fit this choice.
+
+  must_catch ON THIS RECORD'S test_spec: kept. This record closes the KI-BO-20260921 route
+  around the authorization at finalize step 7 (bug-fix, fail-closed guard), the case the
+  test-designer rule allows must_catch for; otherwise kept as test-quality guidance, none deleted.
 
 # ====================================================================
 # DECISION HISTORY

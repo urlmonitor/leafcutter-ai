@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 change_target: pipeline
@@ -29,7 +29,7 @@ criteria: |
     that only reads the pause store,
   When the check runs,
   Then it fails, naming that workflow and that step.
-depends_on: [BO-4300g-2, BO-4300g-1]
+depends_on: [BO-4300g-2, BO-4300g-1, BO-4300g-3]
 doc_links:
 - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md
   relationship: describes
@@ -39,13 +39,178 @@ doc_links:
   status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: unit_tests/_workflow_engine_harness.py
+    state: existing
+it_requirements:
+  - >-
+    The workflow set is derived from what the install deploys (the deployed workflows directory of
+    a built layout), and the removal-capable agent set from the registry declaration delivered by
+    BO-4300g-2. Neither is a hand-written list, and no workflow or step is exempted by name.
+  - >-
+    The check reads the deployed layout only, so it reuses the shared session-scoped reference
+    layout (shared_layout_reader) and spawns no build of its own (CLAUDE.md, TQ-600a).
+  - >-
+    The check inspects the request each recorded dispatch actually carried. For a deployed workflow
+    dispatch, a removal_authorization counts only when both workspace_path and branch are non-empty
+    strings, not placeholders and not "unknown". This is deliberately stricter than the agent's own
+    contract (BO-4300g-1), where branch null is a valid workspace-only authorization: no deployed
+    workflow may use that form, and finalize step 7 always fills both (BO-4300g-3). A failure names
+    the workflow file, the step label and the agent type.
+  - >-
+    The removal_authorization parse helper lives in unit_tests/_workflow_engine_harness.py (the
+    extended AgentCall exposes the parsed object or None plus the raw request); no separate support
+    file is created. The BO-4300g-3 proofs and the BO-4300g-1 eval support parse through the same
+    helper, so the contract has one reader.
+  - >-
+    COVERAGE IS THE DISPATCHES THE SCRIPTED RUNS REACH. A generic run of a deployed workflow stops
+    at its first unscripted halt, so the check covers what the scripted runs reach and states that
+    in its report. Finalize step 7 is reached by the finalize-to-step-7 driver built on
+    unit_tests/workflows/_bo400e3_finalize_harness.py (extended under BO-4300g-3, which adds the
+    step-7 locate dispatch the driver must answer); this record reuses that driver and does not
+    change it. The check asserts that at least one removal-capable dispatch was examined, so an
+    unreached step 7 cannot pass vacuously.
+  - >-
+    The check proves it can fail: a fixture workflow that sends a removal-capable agent a
+    pause-store read is reported by workflow and step, and the same step sent to a non-removal agent
+    is not.
+  - >-
+    Recording each dispatch's request payload (not only the agent type) is the harness capability
+    this check needs. The harness is extended, never forked, so the BO-4300g-2 and BO-4300g-3
+    proofs use the same recordings.
 delivers_to: null
 expects_from:
-  ac_id: BO-4300g-1
-  contract: Caller-authorization shape (exact workspace path and exact branch name).
+- ac_id: BO-4300g-1
+  contract: >-
+    removal_authorization = {workspace_path: string (absolute), branch: string | null} in the
+    dispatching workflow's own request; this check requires both fields non-empty on every
+    deployed workflow dispatch (branch null is agent-contract-only).
+- ac_id: BO-4300g-2
+  contract: >-
+    The registry's boolean removal_capable property per agent entry (absent on a
+    permits_shell: true entry counts as removal-capable).
+- ac_id: BO-4300g-3
+  contract: >-
+    Finalize's recorded step-7 dispatch (label step-7-remove-worktree) to worktree-agent, whose
+    request carries removal_authorization {workspace_path: absolute non-empty string from the
+    step-7 maker locate answer, branch: non-empty string equal to the run's branch}; the one
+    removal-capable dispatch the check must examine.
+test_required: true
+test_intent:
+  - clause: each such dispatch carries a caller authorization naming one exact workspace and one exact branch
+    needs_test: true
+    reason: This is the repo-wide guard that keeps every current and future removal dispatch carrying the authorization.
+  - clause: a dispatch to a removal-capable agent that carries no caller authorization fails the check, naming the workflow and the step
+    needs_test: true
+    reason: A guard that never reports a bad dispatch is inert, so its failure path has to be induced and seen.
+  - clause: it fails, naming that workflow and that step
+    needs_test: true
+    reason: Covering a newly added workflow without editing a list is the point of deriving the set, and only a fixture workflow shows it.
 origin_agent: business-analyst
+test_spec:
+  - name: test_every_removal_capable_dispatch_in_every_deployed_workflow_run_carries_an_exact_authorization
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: >-
+      Derives the workflow set from the deployed workflows directory (deployed_workflow_names of
+      unit_tests/build_orchestration/_bo_4300c_3_fixtures.py, never a typed list), runs each under
+      run_workflow_under_e2 plus a finalize run driven to step 7, takes the removal-capable agent set from the
+      registry property delivered by BO-4300g-2, and for every recorded dispatch to one of them reads the request
+      the dispatch actually carried and requires a removal_authorization whose workspace_path and branch are
+      non-empty strings (not a placeholder, not "unknown"). It asserts at least one removal-capable dispatch was
+      examined (finalize step 7), so an empty set cannot pass. Marked shared_layout_reader and reads the shared
+      session layout; it spawns no build of its own.
+    proves_clause: each such dispatch carries a caller authorization naming one exact workspace and one exact branch
+    code_file: unit_tests/_workflow_engine_harness.py
+  - name: test_harness_exposes_the_removal_authorization_each_recorded_dispatch_carried
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      Runs small fixture workflows under run_workflow_under_e2 whose dispatch carries the authorization inside the
+      prompt text as a JSON object, inside the options object, and not at all; the extended AgentCall exposes the
+      parsed removal_authorization (or None) and the raw request for each. The existing fields (prompt, opts, reply,
+      agent_type, label, phase_name) are unchanged, so the BO-4300g-2 and BO-4300g-3 proofs read the same recording.
+    proves_clause: each such dispatch carries a caller authorization naming one exact workspace and one exact branch
+    code_file: unit_tests/_workflow_engine_harness.py
+  - name: test_dispatch_without_authorization_fails_naming_workflow_step_and_agent_type
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Feeds the check a temporary deployed directory holding a fixture workflow that sends worktree-agent a request
+      with no removal_authorization, and variants whose authorization has an empty branch, a null branch, an empty
+      workspace_path, a relative path and the string "unknown". Each fails the check and the failure message names
+      the workflow file, the step label and the agent type; a request with a complete exact pair passes.
+    proves_clause: a dispatch to a removal-capable agent that carries no caller authorization fails the check, naming the workflow and the step
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a check that counts any non-empty removal_authorization object as valid without reading its fields
+      - a check that accepts the placeholder "unknown" or an empty branch
+      - a check that reports the failure without the step label
+      - a check that skips a workflow it did not reach instead of reporting it
+  - name: test_fixture_workflow_reading_the_pause_store_through_a_removal_capable_agent_fails_naming_it
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Adds a brand-new fixture workflow file to a temporary deployed directory, without editing any list in the
+      check, whose pause-store read step is sent to worktree-agent: the check fails naming that workflow and that
+      step; the identical step sent to shell-runner is not reported. This also proves the workflow set is derived
+      from the directory and that the failure path can be induced.
+    proves_clause: it fails, naming that workflow and that step
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a check that exempts a workflow or a step by name
+      - a check that reads a hand-written workflow list and so never sees the added file
+      - a check that flags every dispatch regardless of the agent type
+  - name: test_every_deployed_workflow_is_covered_without_editing_a_list
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      Existing regression (BO-4300a-1-ia, unit_tests/build_orchestration/test_bo_4300a_1_ia.py): the deployed
+      workflow enumeration stays directory-derived and the shell-permission scan stays clean after the harness
+      extension; with test_harness_captures_agent_calls_from_e2_script in unit_tests/test_workflow_dual_engine.py
+      it shows the harness is extended and not forked.
+    proves_clause: it fails, naming that workflow and that step
+    code_file: unit_tests/_workflow_engine_harness.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_workflow_engine_workspace.py
+  - unit_tests/test_workflow_dual_engine.py
+  - unit_tests/build_orchestration/test_bo_4300a_1_ia.py
+  - unit_tests/build_orchestration/_bo_4300c_3_fixtures.py
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
+  - config/agent_registry.json
+  - templates/workflows-js/finalize-feature.js
+  - pytest.ini
+file_findings:
+  - file: unit_tests/_workflow_engine_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its AgentCall already records each dispatch's prompt, opts and reply (lines 583-618) and run_workflow_under_e2 captures every call, so it holds the recording, but it exposes no parsed removal_authorization, and a generic run of every deployed workflow stops at its first unscripted halt, so step 7 of finalize is reached only by a scripted finalize driver (as in unit_tests/workflows/_bo400e3_finalize_harness.py).
+    decision:
+      choice: assignment stands
+      reason: The parse helper goes into the already-declared harness and the finalize driver is reused (extended under BO-4300g-3), so the work stays one python-coder change and coverage is stated as the dispatches the scripted runs reach.
+      by: it-po
+file_findings_opened_files:
+  - unit_tests/_workflow_engine_harness.py
 created: 2026-10-23
-amended_by: []
+amended_by:
+- reason: depends-on-finalize-step-7-authorization
+  by: business-analyst
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -54,6 +219,11 @@ notes: |
   but plan-feature kept four of the same shape, and nothing stopped new ones from being added.
   The workflow set is derived, as BO-4300c-3 derives its consuming set, so a new workflow is
   covered without anyone editing a list.
+
+  IT PO 2026-10-25: the check's "at least one removal-capable dispatch examined" assertion needs
+  finalize step 7 to carry the authorization, so this record builds after (or with)
+  BO-4300g-3; depends_on (BA field) now names BO-4300g-3 alongside BO-4300g-2 and BO-4300g-1.
+  The contract is recorded in expects_from BO-4300g-3.
 
 # ====================================================================
 # DECISION HISTORY

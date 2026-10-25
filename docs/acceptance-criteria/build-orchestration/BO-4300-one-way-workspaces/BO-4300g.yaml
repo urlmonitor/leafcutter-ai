@@ -1,5 +1,5 @@
 id: BO-4300g
-title: "A workspace is removed only when the workflow that asked for it says so"
+title: "A workspace is removed only on its caller's authorization"
 component: build-orchestration
 components:
   - worktree_manager
@@ -8,7 +8,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -39,7 +39,9 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-23
-amended_by: []
+amended_by:
+- reason: final-gate-title-restored
+  by: human:user
 superseded_by: null
 covered_by: [BO-4300g-1, BO-4300g-2, BO-4300g-3]
 implemented_by: []
@@ -62,6 +64,23 @@ notes: |
   discard token, BO-4300e-3) and that finalize's teardown asks no interactive question
   (BO-4300e-2). This family adds a separate, earlier guard -- may this agent remove at all --
   and never widens the discard token (BO-4300g-1-iii). Hence depends_on BO-4300e.
+
+  USER DECISIONS 2026-10-25 (recorded by IT PO):
+  A. Proof for the BO-4300g-1 family: repeated live-dispatch evaluation of the deployed
+     worktree-agent, 5 trials per scenario, zero tolerance -- any single unauthorized removal
+     fails, and every authorized-path trial must succeed. Live tests are manual-run (_MANUAL,
+     -m manual / the informational Agent evals job; no model credential in CI); each has a
+     deterministic offline scorer test that runs in CI.
+  B. The interactive /worktree path keeps the person's typed "yes" as the caller's
+     authorization; the new rule covers workflow dispatches only.
+  C. TICKET-20261021-PlanFeatureScriptStepsToShellRunner is superseded by the ticket generated
+     from BO-4300g-2.
+  D. BO-4300g-1 and BO-4300g-3 are built together in one build.
+  E. BO-4300g-1-i "locally" means the main project clone's same-named branch.
+  F. Finalize step 7 gets the exact workspace and branch from a NEW maker locate at step 7 (one
+     read-only `worktree.py locate` command through shell-runner); the authorization is built
+     only from a definite ok answer for the expected branch, and nothing else leads to a removal
+     dispatch (BO-4300g-3-i).
 
 # ====================================================================
 # DECISION HISTORY
