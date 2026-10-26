@@ -1,0 +1,177 @@
+id: BO-4300e-2-v
+title: "Asking again to clear a half-cleared workspace of this project finishes the job"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose landing place holds three folders left by
+    clearings that stopped part-way, each with its repository already gone:
+    "ticket/alpha", now completely empty,
+    "ticket/gamma", holding only its workspace record naming shop,
+    and "ticket/delta", holding its workspace record naming shop and an empty
+    sub-folder "build",
+  And a project "blog" beside it whose landing place holds an empty folder
+    "ticket/alpha" left the same way,
+  When clearing is requested from shop for each of shop's three folders, and for
+    blog's "ticket/alpha",
+  Then each of shop's three requests is answered cleared, and no folder or file
+    of it remains at its location,
+  And none of shop's three requests is answered "not found",
+  And the request for blog's "ticket/alpha" is refused, stating that shop has no
+    workspace at that location, and that folder is identical before and after,
+  And no fetch or push reached the shared project of either project.
+depends_on: [BO-4300e-2, BO-4300e-2-iii]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new refusal field must match it.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+it_requirements:
+- A folder qualifies as half-cleared only when it sits at a workspace position inside this project's own
+  landing place, its repository is gone, and it holds nothing but at most a workspace record naming this
+  project and empty folders; the decision derives from the folder's contents, never from a name list.
+- A folder in another project's landing place, or whose record names another project, is never touched
+  (BO-4300e-2-iii rule unchanged), even when it carries no record at all.
+- Finishing a half-cleared folder makes no network call to the shared project.
+- If the hub branch named by a half-cleared record still exists, it is handled by the same unsent-work
+  rule as a normal clear; finishing never deletes a branch holding commits that are not on the shared
+  main line.
+- 'Repeated requests on the same half-cleared folder converge: each either finishes it or leaves it unchanged,
+  never in a new partial state.'
+- Must log at info level that a half-cleared workspace was finished, with its path.
+- Edit the template source under templates/scripts/, never a deployed build output (ADR-001); the change
+  must reach the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer
+  field or code must be additive.
+- Must stay within the project's file-size and complexity limits for the maker modules; if the remove
+  module would exceed them, the new logic moves into a sibling maker module rather than raising a limit.
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no
+  write, rename or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: each of shop's three requests is answered cleared, and no folder or file of it remains at its
+    location
+  needs_test: true
+  reason: Recognising the three half-cleared shapes and finishing them is new computed behaviour.
+- clause: none of shop's three requests is answered "not found"
+  needs_test: true
+  reason: The observed defect answered not found for exactly this case, so the regression must be pinned.
+- clause: the request for blog's "ticket/alpha" is refused, stating that shop has no workspace at that
+    location, and that folder is identical before and after
+  needs_test: true
+  reason: The project boundary is a safety rule that a too-broad half-cleared test would silently break.
+- clause: no fetch or push reached the shared project of either project
+  needs_test: true
+  reason: A network call during finishing would reach the shared project, which a test can observe.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-iii
+  contract: The rule that clearing acts only inside this project's own landing place.
+package_surface: false
+test_required: true
+test_spec:
+- name: test_three_half_cleared_shapes_are_cleared_and_leave_nothing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: "Runs the real maker CLI as a subprocess. Fixture: shop's landing place gets ticket/alpha (empty), ticket/gamma (only the workspace record naming shop), ticket/delta (record plus empty sub-folder build), each made by ensure and then deleting the .git folder and the other content (force-rmtree helper). Each remove --path is answered ok and nothing remains at the location. Uses WorkspaceCase and make_project as in test_bo_4300e_2_iii.py."
+  proves_clause: "each of shop's three requests is answered cleared, and no folder or file of it remains at its location"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_half_cleared_folders_are_not_answered_not_found
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Same fixture; for each of the three requests assert the code is not NOT_FOUND (the observed defect) and the status is ok."
+  proves_clause: "none of shop's three requests is answered \"not found\""
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that still requires the folder's own .git to treat it as a workspace so it answers NOT_FOUND"
+  - "a maker that finishes any folder inside the landing place, ignoring the record's project"
+- name: test_other_projects_half_cleared_folder_is_refused_and_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: "Second project blog (make_project) whose landing place holds an empty ticket/alpha left half-cleared. remove from shop for that path is refused NOT_FOUND (exit 2) with a message saying shop has no workspace at that location, and the folder snapshot is identical before and after."
+  proves_clause: "the request for blog's \"ticket/alpha\" is refused, stating that shop has no workspace at that location, and that folder is identical before and after"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that finishes an empty folder in another project's landing place"
+- name: test_finishing_half_cleared_folders_sends_nothing_to_either_hub
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Hub refs of shop's and blog's bare hubs are identical before and after all four requests, and the requests carry --delete-remote-branch so a push would be visible."
+  proves_clause: "no fetch or push reached the shared project of either project"
+  code_file: templates/scripts/worktree_remove.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_i.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds cmd_remove, the holder check, the hub-branch and folder deletion and the unsent-work verdict that this record changes."
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed defect 1, second half (2026-10-25): after the partial delete, a retry answered
+  NOT_FOUND, so the maker could neither finish nor report the half-cleared workspace.
+  "Half-cleared" here means a folder at a workspace position (kind/slug) inside this
+  project's landing place whose repository is gone and which holds nothing but, at most,
+  its workspace record and empty folders. Finishing such a folder cannot lose any work. A
+  half-cleared folder that still holds other files is BO-4300e-2-vi. The blog arm keeps the
+  BO-4300e-2-iii safety rule: an empty folder in another project's landing place is never
+  touched, even though it carries no record at all.
