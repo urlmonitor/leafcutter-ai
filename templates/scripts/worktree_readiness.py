@@ -218,9 +218,9 @@ def compute_checks(workspace: Path, hub: str, *, branch: str, project_root: Path
     current = _git(workspace, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     head = _git(workspace, "rev-parse", "HEAD").stdout.strip()
     if line_of_work == "resumed":
-        remote = _git(workspace, "rev-parse", "--verify", "-q", f"origin/{branch}")
-        fresh = remote.returncode != 0 or _git(
-            workspace, "merge-base", "--is-ancestor", f"origin/{branch}", "HEAD").returncode == 0
+        target = base_ref or f"origin/{branch}"  # the SHA the line was built from, never a re-read ref
+        remote = _git(workspace, "rev-parse", "--verify", "-q", target)
+        fresh = remote.returncode != 0 or _git(workspace, "merge-base", "--is-ancestor", target, "HEAD").returncode == 0
     else:
         fresh = bool(head) and head == (base_ref or _git(workspace, "rev-parse", "origin/main").stdout.strip())
     origin = wg.origin_url(workspace)
@@ -272,7 +272,7 @@ def _refuse_structural(failed: list[str], checks: dict[str, Any], boot: dict[str
 
 
 def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_root: Path, config_path: Path,
-                line_of_work: str = "new") -> dict[str, Any]:
+                line_of_work: str = "new", base_ref: str | None = None) -> dict[str, Any]:
     """Build the install inside *workspace*, then prove every readiness ingredient.
 
     Returns a refusal answer (status/code/message, ``checks``, no location) when
@@ -294,7 +294,7 @@ def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_ro
     install_shims(workspace)
     stages = declared_stages(workspace)
     checks = {"build_ok": True, **compute_checks(workspace, hub, branch=branch, project_root=project_root,
-                                                 line_of_work=line_of_work)}
+                                                 line_of_work=line_of_work, base_ref=base_ref)}
     failed = _failed_structural(checks)
     if failed:
         return _refuse_structural(failed, checks, boot)
@@ -304,7 +304,8 @@ def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_ro
         return _refuse_structural(["tree_clean"], checks, boot)
     fired = {} if kind == "scratch" else run_canaries(workspace, stages, branch)
     checks.update(hook_checks(stages, fired, kind))
-    after = compute_checks(workspace, hub, branch=branch, project_root=project_root, line_of_work=line_of_work)
+    after = compute_checks(workspace, hub, branch=branch, project_root=project_root, line_of_work=line_of_work,
+                           base_ref=base_ref)
     checks.update(tree_clean=after["tree_clean"], working_tree_clean=after["tree_clean"])
     inactive = [] if kind == "scratch" else sorted(
         {s for s in stages if fired.get(s) is not True} | ({"pre-commit"} if "pre-commit" not in stages else set()))
@@ -337,6 +338,8 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
 
 # ===========================================================================
 # DECISION HISTORY
+# - 2026-10-25 [python-coder/EPIC-WorkspaceMakerHardening/11]: (#EPIC-WorkspaceMakerHardening/11)
+#   prove_ready takes ``base_ref`` (the SHA the line was built from) so base_is_fresh never reads a moved ref. (ADR-018)
 # ===========================================================================
 # - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]:
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)

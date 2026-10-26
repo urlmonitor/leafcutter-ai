@@ -137,8 +137,8 @@ except ImportError:
 # apples-to-apples. eval_selector lives beside this script.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_selector import resolve_trigger_shas  # noqa: E402
-from artifact_assertions import _ASSERTIONS  # noqa: E402
 from artifact_dependencies import checked_path, copy_sandbox_inputs  # noqa: E402
+from artifact_validation import _ASSERTIONS  # noqa: E402
 from artifact_validation import store_errors, target_errors  # noqa: E402
 from cli_envelope import envelope_result  # noqa: E402
 from label_scoring import OUTCOME_BY_COMBO as OUTCOME_BY_COMBO  # noqa: E402

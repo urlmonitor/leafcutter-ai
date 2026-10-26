@@ -190,7 +190,7 @@ def _git_steps(repo_root: Path, hub: str, branch: str, target: Path) -> str | No
     The legacy line is fetched from the main checkout after the pruning hub
     fetch, because a local-only line has no hub ref (A1).
     """
-    refusal = wst.clone_main_checkout(repo_root, target)
+    refusal = wst.clone_main_checkout(repo_root, target, hub)
     if refusal is None:
         _status, refusal = wst.sync_with_hub(hub, target, False)
     if refusal is not None:

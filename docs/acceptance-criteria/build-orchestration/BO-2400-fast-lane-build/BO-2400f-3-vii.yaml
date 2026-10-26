@@ -1,0 +1,117 @@
+id: BO-2400f-3-vii
+components:
+  - build_orchestration
+title: "The fast lane works inside the workspace it made: every step runs that workspace's own scripts, and a wrong-version step's reply is read even when log lines come before it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane build whose workspace was made and is ready, and whose step
+    agents run from a working directory that is not that workspace (for example
+    the parent project that holds its own, different install),
+  When the scratch-item step and the knowledge-routing stage step are dispatched,
+  Then each command names its script by the workspace's absolute path (the
+    workspace path plus the install's output root), quoted, never by a path
+    relative to the agent's working directory,
+  And so each runs the workspace's own installed script, not the parent's.
+
+  Given the same build reaches the Wrong-Version Runs phase,
+  When a wrong-version step (recover, list or finish) replies with stdout that
+    carries the script's log line(s) ahead of its one JSON object -- for example
+    "base ref HEAD: 0 names declared, 0 derived" followed by
+    {"owed": [], "error": null},
+  Then the step's result is that JSON object, taken from the last line of stdout
+    that parses as a JSON object,
+  And the build continues exactly as it would have for a clean reply.
+
+  Given a wrong-version step whose stdout holds no line that parses as a JSON object,
+  When the step's reply is read,
+  Then the run halts before commit with no pull request opened,
+  And the halt message quotes the reply that was received, never the bare word null.
+
+  And the bug symptom ("A /fast-lane-build FIN-100c-15 run (wf_d4381e19-613, 2026-10-24) halted at the Wrong-Version Runs 'fastlane-wv-list' step with 'Wrong-version list step did not pass: null' although wrong_version_writer.py list printed a valid {"owed": [], "error": null}; and the scratch and knowledge-routing steps ran the PARENT install's scripts (C:/Users/Hendrik/Code/leafcutter/.leafcutter/...) instead of the workspace's, because the agents' cwd is the parent, not the workspace") must not occur.
+depends_on: [BO-2400f-3]
+doc_links:
+- path: templates/workflows-js/fast-lane-ship.js
+  relationship: modifies
+  status: exists
+  relevance: Owns wvStep (strict JSON.parse of the whole stdout, catch returns null), wvHalt's message,
+    and the two cwd-relative command strings (scratch-item, knowledgeRoutingCli).
+- path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-1-ib.yaml
+  relationship: constrains
+  status: exists
+  relevance: Never a cwd-relative script path; the workspace's own install is the one that runs.
+- path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-v.yaml
+  relationship: related
+  status: exists
+  relevance: Specifies the fast lane's wrong-version steps and their fail-closed halts, which this
+    record keeps fail-closed while reading a reply with leading log lines.
+assigned_agent: python-coder
+estimated_complexity: S
+test_required: true
+test_spec:
+- name: test_wv_list_reply_with_leading_log_line_is_read_and_build_continues
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Run the fast-lane-ship template under the workflow engine harness with the fastlane-wv-list
+    reply's stdout set to "base ref HEAD: 0 names declared, 0 derived\n{\"owed\": [], \"error\": null}".
+    The run does not halt at the wrong-version list step and goes on to the finish step / commit, exactly
+    as it does for a clean reply.
+  must_catch:
+  - wvStep still JSON.parses the whole stdout, so the leading log line makes it return null and halt.
+- name: test_wv_reply_without_json_halts_quoting_the_received_reply
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: >-
+    With the fastlane-wv-list reply's stdout set to text holding no JSON object, the run halts
+    before commit, opens no pull request, releases the claim, and the halt message contains that received
+    text and does not end in "did not pass: null".
+  must_catch:
+  - The halt message still reports null instead of the reply that was received.
+  - The parse is loosened to accept anything, so a reply with no JSON object no longer halts.
+- name: test_wv_reply_takes_the_last_json_object_line
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: >-
+    With stdout holding two JSON object lines, the first {"owed": [], "error": "earlier"} and
+    the last {"owed": [], "error": null}, the run continues (the last line decides); with the order swapped
+    it halts.
+  must_catch:
+  - The first JSON-looking line is taken instead of the last.
+- name: test_scratch_and_knowledge_routing_commands_name_the_workspace_scripts_absolutely
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: >-
+    In the recorded dispatches of a harness run, the scratch-item and knowledge-routing-step
+    prompts each name their script as a quoted absolute path that starts with the run's workspace path
+    followed by the install's output root, and neither contains a bare cwd-relative ".leafcutter/scripts/"
+    invocation.
+  must_catch:
+  - Either command still runs `python {{config.output_root}}/scripts/...` relative to the agent's cwd.
+test_rationale: The defect lives in how the template reads one reply and spells two commands, so the
+  proof runs the real template under the workflow engine harness and asserts on its recorded dispatches
+  and terminal payload, never on the source text. The failure and discrimination tests stop a fix that
+  simply accepts any reply, or picks the wrong line, from passing.
+origin_agent: BrainCandy
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/workflows/test_bo2400f_3_vii_wv_parse_and_anchor.py]
+implemented_by: [templates/workflows-js/fast-lane-ship.js]
+change_target: pipeline
+risk_surface: internal
+notes: "Authored by /quick-fix. Root cause: (1) wvStep parses the whole reply.stdout with a strict JSON.parse; the step agent's stdout carried the script's stderr log line ('base ref HEAD: 0 names declared, 0 derived') ahead of the JSON, so parsing threw, the catch returned null and the halt message hid the actual reply. Fix: take the last line of stdout that parses as a JSON object, and on failure halt with the received reply quoted (never 'null'). (2) Two command strings run scripts by a cwd-relative `.leafcutter/scripts/...` path; anchor them to the workspace's absolute path the way the other fast-lane steps already do (workspace path + output root), quoted, so every step runs the workspace's own install (BO-4300a-1-ib: never a cwd-relative script path).."

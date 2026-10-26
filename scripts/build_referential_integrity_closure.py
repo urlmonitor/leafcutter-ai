@@ -76,9 +76,10 @@ from pathlib import Path
 
 from build_referential_integrity_closure_eval import (
     _annotate_parents,
-    _build_local_assignments,
     _enclosing_scope,
     _eval_static_path,
+    _scope_assignments,
+    _tree_nodes,
 )
 from build_referential_integrity_closure_resolvers import (
     _extract_dynamic_loader_paths,
@@ -244,14 +245,14 @@ def _extract_data_file_read_candidates(tree: ast.AST, script: Path) -> list[Path
     """
     _annotate_parents(tree)
     candidates: list[Path] = []
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if not isinstance(node, ast.Call):
             continue
         target = _is_data_read_call_target(node)
         if target is None:
             continue
         scope = _enclosing_scope(node, tree)
-        assignments = _build_local_assignments(scope, tree)
+        assignments = _scope_assignments(scope, tree)
         if isinstance(target, ast.Name) and target.id not in assignments:
             continue
         resolved = _eval_static_path(target, script, assignments)
@@ -279,11 +280,11 @@ def _extract_resolvable_binop_paths(tree: ast.AST, script: Path) -> list[Path]:
     """
     _annotate_parents(tree)
     candidates: list[Path] = []
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if not (isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)):
             continue
         scope = _enclosing_scope(node, tree)
-        assignments = _build_local_assignments(scope, tree)
+        assignments = _scope_assignments(scope, tree)
         resolved = _eval_static_path(node, script, assignments)
         if resolved is not None:
             candidates.extend(resolved)
@@ -328,7 +329,7 @@ def _extract_data_file_literal_candidates(
     """
     family_relative: set[str] = set()
     deploy_root_relative: set[str] = set()
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
             continue
         value = node.value
@@ -652,4 +653,12 @@ def _closure_walk(
 #   symlink_escape only fixed the first hop; this fixes every later one.
 #   The guard is not widened: the same Set B check runs, on the right path.
 #   (#BO-2900b-1)
+# - 2026-10-25 [python-coder/BP-900g-8-iv]: Every detector here and in
+#   _resolvers now iterates _tree_nodes(tree) (one ast.walk per tree, kept on
+#   the tree) and resolves names through _scope_assignments(scope, tree) (one
+#   map per scope, kept on the scope node), both in _eval. One file's analysis
+#   used to walk its tree seven times and rebuild its scope map, module rescan
+#   included, for every Call/BinOp/Assign it evaluated. Node order and every
+#   warning are unchanged: all 407 real roots gave byte-identical closures and
+#   the same 226 warnings before and after. (#BP-900g-8-iv)
 # ====================================================================

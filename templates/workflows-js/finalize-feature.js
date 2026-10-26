@@ -996,8 +996,6 @@ if (testPassed) {
   //   Tests in the recovered baseline → pre_existing; absent → regression.
   // Failure path: logs "targeted rerun unavailable" and falls back to the
   //   conservative null-baseline path (all failures = regressions, FIN-100c-9).
-  let recoveredBaselineFailures = null;
-
   if (baselineFailures === null && postMergeFailures.length > 0) {
     log(
       `[finalize-feature] step 3: baseline unavailable — attempting targeted rerun of ` +
@@ -1019,7 +1017,7 @@ if (testPassed) {
       // Success: forward recovered baseline to triage (FIN-100c-6).
       // recoveredBaselineFailures = intersection of post-merge failures and those
       // that ALSO fail on origin/main HEAD. Tests absent from it → regression.
-      recoveredBaselineFailures = recoveryInfo.recovered_failures;
+      const recoveredBaselineFailures = recoveryInfo.recovered_failures; // FIN-100c-15: scoped to its only use
       baselineFailures = recoveredBaselineFailures; // [] means clean baseline, never null
       log(
         `[finalize-feature] step 3 targeted rerun complete: ` +

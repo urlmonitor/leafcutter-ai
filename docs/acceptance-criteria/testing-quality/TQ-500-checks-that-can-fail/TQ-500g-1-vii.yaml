@@ -22,8 +22,9 @@ criteria: |
     commit,
   Then the /build-epic route makes the wrong-version runs through the one
       shared runner, with the same inputs the fast lane and /build-feature
-      pass, after asking the writer what is owed and, when anything is,
-      having test-breaker prepare it from that list unchanged,
+      pass, after asking the writer what is owed and, when anything needs
+      preparing, having test-breaker prepare those names from that list
+      unchanged,
     And K1 goes on to commit,
     And K2 does not reach commit: its drive stops with the runner's report
       naming the test and the surviving wrong version, and the ticket is
@@ -130,6 +131,11 @@ expects_from:
     ticket_key: <the ticket file's stem, already checked against ^[A-Za-z0-9._-]+$> and runs_alone:
     true|false (true when the ticket's chunk holds only this ticket). (c) build-epic.js runs the runner's
     recover step once at the drive head, so the supervisor runs no recover of its own.
+- ac_id: TQ-500g-1-xi
+  contract: >-
+    List step with --work-key "<ticket_key>" printing {owed, to_prepare, decisions, error}; the supervisor
+    spawns test-breaker only when to_prepare is non-empty and hands it to_prepare unchanged; finish gains
+    the additive key pins and may stop at "pin" (gate_passed false, a halt like any other).
 it_requirements:
 - >-
   Where: edit the ticket-level algorithm in templates/skills/building-epics/SKILL.md (section 2.1 step
@@ -170,6 +176,11 @@ it_requirements:
   python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py list --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD
   (2) Only when owed is non-empty: spawn test-breaker with the input JSON {work_key: <ticket_key>,
   repo_root: <root>, requirement_ids: [<ids>], wrong_versions: <owed, unchanged, scope included>}.
+  AMENDED 2026-10-23 (TQ-500g-1-xi; pending an llm-expert follow-up, see notes): the list command
+  gains --work-key "<ticket_key>" right after list; step (2) becomes "only when to_prepare is
+  non-empty", with wrong_versions = <to_prepare, unchanged, scope included>; with to_prepare []
+  test-breaker is not spawned and finish runs with an empty here-document. The supervisor never
+  decides by itself what needs preparing: only the list step's to_prepare says so.
   (3) Always, the finish step, exactly (for K3 drop the --ac-ids "<ids>" pair):
   python "<root>"/{{config.output_root}}/scripts/build_orchestration/wrong_version_gate.py finish --work-key "<ticket_key>" --reply - --ac-ids "<ids>" --ac-root "<root>/docs/acceptance-criteria" --test-root "<root>" --base-ref HEAD --record "<ticket_key>" <<'<DELIM>'
   followed by the reply, a newline when the reply is non-empty, and <DELIM> on its own line.
@@ -186,8 +197,9 @@ it_requirements:
   2026-10-23, replacing the strict "stdout must parse as one JSON object", the fast lane's
   JSON.parse(reply.stdout)): the whole trimmed output when it parses as one JSON object, otherwise the one
   distinct line that is on its own a JSON object; zero or two-plus such lines is no reply. The fast lane
-  keeps its own strict parse (out of scope). list: the answer must have owed an array and error
-  null, else halt with step "list". finish: gate_passed must be a boolean and true, else halt with step
+  keeps its own strict parse (out of scope). list: the answer must have owed an array, to_prepare an
+  array (amended 2026-10-23, pinning: TQ-500g-1-xi/-xii) and error null, else halt with step "list".
+  finish: gate_passed must be a boolean and true, else halt with step
   "finish". A non-zero exit, an empty stdout or prose counts as no reply. A writer stop (stopped_at
   "write") is a halt like any other; never retry by running the runner without a manifest.
 - >-
@@ -253,6 +265,14 @@ amended_by:
 - reason: "Technical alignment with main at adb0c2e61 (TQ-500g-1-v #1280, TQ-500g-1-vi #1299): pinned quoted command lines with --base-ref HEAD and the -viii record option; input check against ^[A-Za-z0-9._-]+$ and unsafe root characters; serial check on runs_alone (the user's one-ticket-per-chunk rule, applied to /build-epic); fail-closed parses; the fast lane's halt keys; wrong_version_outcome; re-run before every commit spawn incl. after a remedy agent; sequence inside the commit lock with section 5.9 under the same lock; no supervisor-side recover. expects_from gains TQ-500g-1-x and states that --record is not on main yet. package_surface false. estimated_complexity raised from S to M. Criteria unchanged."
   date: '2026-10-21'
   by: it-po
+  directed_by: user
+- reason: "Reconciled with the pinning ACs (IT-PO pass 2026-10-23): the supervisor's list command gains --work-key \"<ticket_key>\", test-breaker is spawned only for to_prepare and not at all when it is [], the list parse requires a to_prepare array, finish may stop at 'pin'. expects_from gains TQ-500g-1-xi. This record is done; the SKILL.md edit needs an llm-expert follow-up requirement (notes). Criteria unchanged."
+  date: '2026-10-23'
+  by: it-po
+  directed_by: orchestrator (wrong-version pinning IT-PO brief); not yet user-approved
+- reason: "Criteria wording follows TQ-500g-1-xi/-xii (user-approved decision set, BrainCandy, 2026-10-24): 'when anything is, having test-breaker prepare it from that list unchanged' now reads 'when anything needs preparing, having test-breaker prepare those names from that list unchanged', because with pins names can be owed while nothing is prepared and test-breaker is not spawned. The /build-epic behaviour is built under TQ-500g-1-xi's contract by the llm-expert follow-up TQ-500g-1-xviii. Only that clause changed; work_status and readiness unchanged."
+  date: '2026-10-24'
+  by: business-analyst
   directed_by: user
 superseded_by: null
 covered_by: []
@@ -338,3 +358,20 @@ notes: |
   strict form; aligning it is an llm-expert follow-up outside TQ-500f-3-v.
   fast-lane-ship.js keeps its own parse (out of scope). Criteria, work_status
   and readiness untouched.
+
+  IT-PO RECONCILIATION (2026-10-23): PINNING (TQ-500g-1-xi, -xii)
+  Before: the supervisor spawned test-breaker whenever the list's owed was
+  non-empty, with owed. After: the list command carries --work-key
+  "<ticket_key>", the supervisor spawns test-breaker only when to_prepare is
+  non-empty, with to_prepare unchanged, and not at all when it is []. The
+  "to prepare" list is an output of the shared list step, never the
+  supervisor's own judgement.
+  FOLLOW-UP NEEDED. This record is done and llm-expert's; TQ-500g-1-xi is
+  python-coder's and does not declare templates/skills/building-epics/SKILL.md
+  (one agent per requirement). A new llm-expert requirement must make the
+  SKILL.md section 5 edit (the pinned list command line and step (2)) and the
+  matching sentence in templates/agents/ticket-supervisor.md. Until it lands,
+  /build-epic keeps sending every owed name: safe (the writer ignores answers
+  for pinned names and builds them from the pin) but it pays the preparer
+  every run. build-epic.js itself has no wrong-version list or test-breaker
+  call and needs no change for this.

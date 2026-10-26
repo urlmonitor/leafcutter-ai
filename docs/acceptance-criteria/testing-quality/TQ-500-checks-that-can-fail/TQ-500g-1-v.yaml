@@ -25,7 +25,8 @@ criteria: |
   Then the fast lane makes the wrong-version runs through the one shared
       runner, with the same requirement ids, test root and base the other
       routes pass, after asking the writer what is owed and, when anything
-      is, having test-breaker prepare it from that list unchanged,
+      needs preparing, having test-breaker prepare those names from that
+      list unchanged,
     And F1 goes on to commit and open its pull request,
     And F2 stops before commit, no pull request is opened, and the stop
       carries the runner's report naming the test and the surviving wrong
@@ -133,6 +134,14 @@ expects_from:
     has no declared scope and the changed files cannot be worked out against the base ref. Write
     stdout and the alterations manifest are unchanged from TQ-500g-1-ix; when the changed files
     cannot be worked out, write stops with written false, manifest_path null and the base-ref error.
+- ac_id: TQ-500g-1-xi
+  contract: >-
+    List step with --work-key (to be built under TQ-500g-1-xi): wrong_version_writer.py list --work-key
+    <key> [--ac-ids <ids>] --ac-root <path> --test-root <path> --base-ref <ref> prints {owed: [...],
+    to_prepare: [owed items needing preparation, each unchanged, in owed order], decisions: [{name,
+    source, reason, alteration_id}], error}; exit 0 when printed, 1 on error with all arrays []. The
+    route sends to_prepare (never owed) to test-breaker unchanged and dispatches test-breaker only when
+    to_prepare is non-empty. finish gains the additive key pins and the stop "pin".
 it_requirements:
 - >-
   Placement: immediately before the commit dispatch, after verify_green_and_coverage and the Review
@@ -143,10 +152,14 @@ it_requirements:
   Sequence, every time, in this order. (0) On a resumed drive only: the runner's recover step,
   before the list step and before test-breaker reads any file. test-breaker would otherwise read
   a file a cut-short run left altered. (1) When the batch has source requirement ids: the writer's
-  list step for those ids, run fresh immediately before the dispatch and never taken from a cached
-  copy. (2) When owed is non-empty: dispatch agent test-breaker with work_key, repo_root (the
-  absolute worktree root), requirement_ids (the same ids) and wrong_versions, which is the list's
-  owed array unchanged (same entries, same order, same spellings, same files). (3) and (4) One
+  list step for those ids, with --work-key <the same work key finish gets> (amended 2026-10-23,
+  TQ-500g-1-xi), run fresh immediately before the dispatch and never taken from a cached copy.
+  (2) When to_prepare is non-empty (amended 2026-10-23; before: when owed is non-empty): dispatch
+  agent test-breaker with work_key, repo_root (the absolute worktree root), requirement_ids (the same
+  ids) and wrong_versions, which is the list's to_prepare array unchanged (same entries, same order,
+  same spellings, same files, same scope keys). When to_prepare is [] (every owed name comes from a
+  pin or a declaration, or nothing is owed), test-breaker is not dispatched at all. to_prepare that is
+  absent or not an array halts as a list failure, exactly like a missing owed array. (3) and (4) One
   dispatch of the wrapper's finish step. The reply goes in on stdin, and the wrapper runs the
   writer's write step and then, only if the writer did not stop, the runner's run step with
   --alterations <manifest path>. (5) Reach the commit dispatch only when finish's own gate_passed
@@ -193,6 +206,10 @@ it_requirements:
   The JS never interprets the test-breaker reply. A dispatch that throws, is refused or returns
   nothing is passed on as an empty reply. With names owed, the writer then stops and the work
   halts. The JS never decides that an empty reply means nothing is owed.
+- >-
+  Nothing to prepare (amended 2026-10-23): when the list returns to_prepare [] (owed [] included),
+  test-breaker is not dispatched, and finish still runs with an empty stdin; the writer then builds
+  the pinned and declared names itself from the plan.
 - >-
   Nothing owed: when the list returns owed [], test-breaker is not dispatched, and finish still
   runs with an empty stdin. The writer writes an empty manifest, and the runner then judges "the
@@ -257,7 +274,17 @@ it_requirements:
   forbids growth. Expected growth is about 55 to 75 lines: three command builders (recover, list,
   finish), the test-breaker dispatch, the fail-closed parses, release-on-failure and the resume
   call. Before commit this needs either an equal in-file shrink or an explicit, recorded ratchet
-  decision by the user (see the BO-3900 precedent).
+  decision by the user (see the BO-3900 precedent). Amended 2026-10-23: the to_prepare change
+  (TQ-500g-1-xi) is built with NO size skip. fast-lane-ship.js (1342 counted lines) keeps its own
+  block, and the ratchet accepts a change only when the new length is at most the previous length
+  minus the counted lines the change added (a replaced line counts as added), so the fastlane-wv-list
+  and test-breaker edits must be paid for by deleting at least twice as many counted lines elsewhere
+  in fast-lane-ship.js, measured with _file_size_ratchet.count_added_measured_lines.
+- >-
+  finish's JSON (amended 2026-10-23, TQ-500g-1-xi) gains the additive key pins (the writer pin step's
+  JSON, or null when the runner did not run) and stopped_at may also be "pin" (a pin write that failed,
+  gate_passed false). The route still reads only gate_passed and verdict; a "pin" stop halts like any
+  other gate_passed false, with finish's JSON verbatim in the payload.
 - >-
   The workflow tests that carry must_catch exercise fast-lane-ship.js as it stands in
   templates/workflows-js/ when they run, never a deployed copy left from an earlier build.
@@ -524,6 +551,14 @@ amended_by:
   date: '2026-10-21'
   by: it-po
   directed_by: user
+- reason: "Reconciled with the pinning ACs (IT-PO pass 2026-10-23): the list step is called with --work-key, test-breaker is dispatched only for the list's to_prepare names and not at all when to_prepare is [], wrong_versions is to_prepare unchanged, a missing to_prepare halts as a list failure; finish gains pins and the 'pin' stop; the fast-lane change is paid for in-file with no size skip. expects_from gains TQ-500g-1-xi. The build of this change is TQ-500g-1-xi's. Criteria unchanged: 'having test-breaker prepare it from that list unchanged' now reads the to_prepare part of that list."
+  date: '2026-10-23'
+  by: it-po
+  directed_by: orchestrator (wrong-version pinning IT-PO brief); not yet user-approved
+- reason: "Criteria wording follows TQ-500g-1-xi/-xii (user-approved decision set, BrainCandy, 2026-10-24): 'when anything is, having test-breaker prepare it from that list unchanged' now reads 'when anything needs preparing, having test-breaker prepare those names from that list unchanged', because with pins names can be owed while nothing is prepared and test-breaker is not dispatched. The behaviour is built under TQ-500g-1-xi. Only that clause changed; work_status and readiness unchanged."
+  date: '2026-10-24'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -610,3 +645,15 @@ notes: |
   + 1.0 s, catches a per-id rescan at any machine speed) plus a 15 s ceiling
   per run (catches the original 82 s defect). The 2 s figure stays a target
   measured on a developer machine, not a CI gate.
+
+  IT-PO RECONCILIATION (2026-10-23): PINNING (TQ-500g-1-xi, -xii)
+  Before: test-breaker dispatched whenever owed was non-empty, with owed.
+  After: the list step gets --work-key, test-breaker is dispatched only when
+  the list's to_prepare is non-empty, with to_prepare unchanged; with
+  to_prepare [] no test-breaker dispatch happens and finish runs with an
+  empty stdin. The "to prepare" list comes from the shared list step
+  (_wvp_plan via wrong_version_writer.py list --work-key), never from the JS.
+  The list-speed test runs list without --work-key and is unaffected. This
+  record is done; the change and its route tests are built under
+  TQ-500g-1-xi (which declares fast-lane-ship.js), so this record's own tests
+  need their list stubs to carry to_prepare in that same change.
