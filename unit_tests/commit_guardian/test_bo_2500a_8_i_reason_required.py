@@ -12,6 +12,7 @@ ARCHITECTURE: The real check_ac_schema.py runs as a subprocess (HOOK_ROOT + HOOK
 from __future__ import annotations
 
 import itertools
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,7 +24,7 @@ READINESS = ("draft", "reviewed", "approved")
 TARGETS = ("docs", "prompt", "code", "schema")
 
 
-def _verdict(rec: dict) -> "object":
+def _verdict(rec: dict) -> "subprocess.CompletedProcess[str]":
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         return S.run_authoring(root, [S.write_record(root, rec)])

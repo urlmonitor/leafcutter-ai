@@ -41,7 +41,6 @@ _DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
 _SUPERSEDED_RE = re.compile(r"^superseded(_by)?$")
 _COVERS_RE = re.compile(r"covers:\s*([A-Za-z0-9\-_,\s\"']+)")
 _TAG_SUFFIXES = {".py", ".ts", ".tsx", ".js"}
-_Loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 @dataclass
@@ -95,7 +94,7 @@ def _load_finished(ac_root: Path) -> tuple[list[dict], list[str]]:
         if not _DONE_RE.search(text):
             continue
         try:
-            data = yaml.load(text, Loader=_Loader)  # noqa: S506 - safe loader
+            data = yaml.safe_load(text)
         except yaml.YAMLError:
             unreadable.append(str(path))
             continue
