@@ -53,6 +53,7 @@ _CHILD = (
     "    sys.path[:0] = [os.path.dirname(path), root]\n"
     "    spec = importlib.util.spec_from_file_location(os.path.splitext(os.path.basename(path))[0], path)\n"
     "    module = importlib.util.module_from_spec(spec)\n"
+    "    sys.modules[spec.name] = module  # as a real import does: dataclasses look their module up here\n"
     "    try:\n"
     "        spec.loader.exec_module(module)\n"
     "    except (ImportError, NameError, AttributeError, SyntaxError):\n"
@@ -250,3 +251,6 @@ def check_candidates(items: list[Item], root: Path, git_directory: Path, tests: 
 #   the altered file under the runner's journalled gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)
 # - 2026-10-29 [coordinator]: Check (d) treats a holder that started a child process as not traceable (note,
 #   never a re-preparation), like the runner since fde974ed6; extracted _reach_word. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05)
+# - 2026-10-29 [coordinator]: The load check's child registers the module in sys.modules before executing it.
+#   Without that, any module with a dataclass under postponed annotations raised AttributeError and every pin
+#   on it read "did not load" (all of _wvp_plan.py's pins, seen on ticket 03's gate). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05)

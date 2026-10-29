@@ -44,8 +44,13 @@ REASONS = {P2: TWICE, P3: DID_NOT_LOAD, P4: NOTHING, P5: NO_LINE, P6: NOT_IN_SCO
 
 # The code as it NOW stands: the coder renamed old_limit_value to limit_value and added audit_gate, which
 # holds a second copy of the gate condition.
+# It also holds a dataclass under postponed annotations, which only executes when the module is registered
+# in sys.modules first, as a real import does (the load check once missed that and read every such file
+# as "did not load").
 CURRENT_SRC = (
-    '"""Refresh gate."""\nfrom settings import RETRY_LIMIT\n\n' + FLAG + "\n" + MAX_TRIES + "\n\n\n"
+    '"""Refresh gate."""\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass\n\n'
+    "from settings import RETRY_LIMIT\n\n" + FLAG + "\n" + MAX_TRIES + "\n\n\n"
+    "@dataclass\nclass GateState:\n    due: bool\n\n\n"
     "def limit_value():\n    return RETRY_LIMIT\n\n\n"
     f"def refresh_config(refresh_due, retry_due):\n    {COND}:\n        {RETURN_REFRESH}\n"
     '    return "skip"\n\n\n'
