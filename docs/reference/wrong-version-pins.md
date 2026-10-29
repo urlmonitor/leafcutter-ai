@@ -24,6 +24,27 @@ it is used, and how a pin is cleared. Where pins live and why is in ADR-079; the
 run are in [wrong-version-runs.md](wrong-version-runs.md). The problem pins solve is measured in
 the [analysis page](../analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md).
 
+## When a name goes back to the preparer (TQ-500g-1-xii)
+
+`list --work-key` sends a name to the preparer only when one of three things is true; every other
+owed name is rebuilt from its pin and its decision reads `pinned`:
+
+| Trigger | Decision on the row |
+|---|---|
+| The work holds no pin for the name (a new name) | `prepared: not pinned` |
+| The pinned old text no longer occurs exactly once in the current file | `re-prepared: target changed` (or another failed check below) |
+| The name's wording changed beyond trim and case | treated as a new name: `prepared: not pinned` |
+
+- **Lookup is by trim and case-fold only** (`_wvr_scope.norm_name`). A change of case or of
+  surrounding spaces keeps the pin; a change of inner wording or punctuation does not. A name is
+  never matched to a pin by entry position or similarity.
+- **The row and the manifest carry the name as the requirement now spells it**, not as the pin
+  stored it.
+- **A pin no run owes any more is left in the store untouched.** Nothing but the operator's reset
+  removes a pin.
+- **A pin with several replacements** is judged in order, each against the result of the one
+  before.
+
 ## Checks before a pin is used (TQ-500g-1-xiii)
 
 Every pinned candidate is checked against the code as now written, in the plan step

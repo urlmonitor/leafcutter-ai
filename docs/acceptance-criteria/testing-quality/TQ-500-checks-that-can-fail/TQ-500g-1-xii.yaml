@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -131,6 +131,7 @@ test_spec:
       - to_prepare items carrying different files from the owed list
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvw_list.py  # 2026-10-29: to_prepare is built here (list_payload)
   - name: test_case_and_trailing_space_difference_uses_pin_with_current_spelling
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -161,6 +162,7 @@ test_spec:
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
       - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/_wvp_checks.py  # 2026-10-29: the old-text check lives here (TQ-500g-1-xiii)
   - name: test_reworded_name_never_takes_the_old_wordings_pin
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -175,6 +177,7 @@ test_spec:
       - the unowed pin deleted from the store
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvp_store.py  # 2026-10-29: pins are written only here
   - name: test_unowed_pin_used_again_when_the_name_returns
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -187,6 +190,7 @@ test_spec:
       - a pin dropped by a run that does not owe it
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvp_store.py  # 2026-10-29: pins are written only here
   - name: test_any_inner_wording_change_counts_as_a_new_name
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -220,9 +224,12 @@ amended_by:
   agent: approve_acs
   date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xii.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/03_TICKET-20261024-TQ-500g-1-xii.md
+- scripts/build_orchestration/_wvp_plan.py
+- scripts/build_orchestration/_wvw_write.py
 change_target: code
 risk_surface: contract_boundary
 notes: |
