@@ -512,7 +512,7 @@
             ]
         },
         "test_rationale": {
-            "description": "Prose justification for the test contract in test_spec: why this shape of coverage is the right one, and why a weaker shape (typically a direct-import unit test) would be insufficient for this AC. Must be a string, never a list. Absent or null when no rationale has been authored.",
+            "description": "Prose with two meanings that depend on the record around it. With test_required false: the reason no test can prove the record (required there, and unique among test-free records; the commit-time record check refuses an absent or blank one, this schema stays permissive). Alongside test_spec: the justification for that test contract's shape, why this coverage is right and why a weaker shape (typically a direct-import unit test) would be insufficient. Must be a string, never a list. Optional when test_required is true or absent.",
             "oneOf": [
                 {
                     "type": "string"

@@ -1,0 +1,388 @@
+id: BO-2500f-3-ii
+components:
+  - build_orchestration
+  - ac_store
+title: "A dedicated inspection workflow shows the person what they are approving and, on approve, keeps the approval and completes the inspection record"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given record DK-210b-3, declared with test_required false, whose verification
+    record is an inspection draft holding a statement ("The guide names all four
+    refusal messages and their fixes.") and two inspected paths,
+    docs/how-to/prove-ac-done.md and docs/reference/test-free-declarations.md,
+    with no content fingerprints and no run reference yet,
+  When a person runs the inspection workflow for DK-210b-3,
+  Then the workflow computes the current content fingerprint of each inspected
+    path and shows the person the record id, the statement, and each path with
+    its fingerprint, before asking for an answer,
+  And it asks the person to approve or reject the inspection, as an interactive
+    question only a person at the gate can answer,
+  And on approve, it creates the approval file for this run in the tracked
+    approval folder, holding the run id, the gate id, the answer "approve", the
+    time the answer was given, the AC id DK-210b-3, and each inspected path with
+    the fingerprint that was shown,
+  And on approve, it fills the record's inspection with the run reference and the
+    shown fingerprint for each inspected path, leaving the statement and every
+    other field of the record unchanged,
+  And the approval file and the changed record are left for the person to commit
+    together, and the workflow reports both paths,
+  And on reject, it creates no approval file and leaves the record unchanged,
+    and reports that the inspection was rejected,
+  And when the answer is missing, cannot be read, or is anything other than
+    approve or reject, it creates no approval file, leaves the record unchanged,
+    and reports that no answer was recorded,
+  And when the record has no inspection draft, its draft has no statement, it
+    lists no inspected path, or a listed path does not exist, the workflow stops
+    before asking, names what is missing, and creates nothing,
+  And a record whose change_target rules inspection out (BO-2500f-1-i) is
+    stopped in the same way, naming the change_target,
+  And the workflow runs on its own, without the feature-planning workflow, and
+    starting it requires only the record id.
+depends_on: [BO-2500f-3, BO-2500f-3-i]
+doc_links:
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: related
+    status: exists
+    relevance: "How an interactive gate asks a person and resumes. The approval this workflow keeps is NOT stored in the pause/resume store; it is the tracked approval file BO-2500f-3-i reads."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500f-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the approval file this workflow creates and the mark-time check that reads it."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: templates/workflows-js/inspect.js
+    state: to_be_created
+  - path: scripts/ac_store/inspection_workflow.py
+    state: to_be_created
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+  - path: config/guardrail_gates.yaml
+    state: existing
+it_requirements:
+  - 'SURFACE (IT PO decision): a workflow script templates/workflows-js/inspect.js, run through
+    the Workflow tool, plus a thin slash-command shim templates/commands/inspect.md that passes
+    the one record id (the fast-lane-build.md / fast-lane-ship.js and commit.js packaging).
+    The build copies workflows-js/*.js to .claude/workflows/ (scripts/build_phases_workflows.py).
+    The shim is llm-expert''s surface (templates/commands/**/*.md in config/surface_craft_map.yaml),
+    so it is NOT declared here: a companion L3 for llm-expert is recommended (open question).
+    The workflow is independent of plan-feature.js.'
+  - Every new workflow must be listed in config/guardrail_gates.yaml knowledge_routing_wiring
+    (wired or excluded with a reason), or build.py aborts (the knowledge-routing guard in
+    scripts/build_phases_knowledge.py). /inspect makes no commit, so it is listed as excluded
+    with that reason.
+  - 'READ-ONLY HELPER. The workflow body has no filesystem access (ADR-024, E2), so scripts/ac_store/inspection_workflow.py
+    offers two read-only subcommands, run by a dispatched agent: ''prepare <AC-ID>'' validates
+    the draft (statement present, at least one path, every path exists, change_target allows
+    inspection via BO-2500f-1''s validator), computes each blob with BO-2500f-3''s fingerprint
+    function and prints JSON; ''verify <run_id>'' re-reads the written approval file and record
+    and confirms they match the shown payload byte for byte. Neither subcommand writes anything.'
+  - THE WRITE. On approve, the workflow body builds the approval file's exact JSON (run id,
+    gate id, 'approve', answered_at taken when the answer arrives, ac_id, the SHOWN path/blob
+    pairs, not recomputed) and the exact verified_by edit, and dispatches one write turn to
+    an agent with Write and Edit tools, then runs 'verify'. No project CLI writes an approval
+    file (BO-2500f-3-i clause 9). A mismatch at verify reports the failure and leaves the
+    files for the person to discard; nothing is committed.
+  - 'THE GATE IS LIVE-ONLY. The approve/reject question is asked through an interactive agent
+    turn, as the E2 gates in finalize-feature.js do, but it does NOT use resolveGate''s resume_answer
+    path: an answer supplied through workflow args could come from anyone. Headless or unanswered
+    means ''no answer was recorded'' and nothing is written.'
+  - 'Run id: ''insp-<YYYYMMDD>-<HHMM>-<AC-ID>''. If the approval file already exists, stop
+    and create nothing. The record edit inserts gate_run and the blob on each inspected entry
+    only, as a targeted edit: every other byte of the record is unchanged, and a test diffs
+    the file to prove it.'
+  - The approval folder holds .json only, never .yaml. Every AC-store walker found filters
+    to *.yaml or *.yml (check-ac-schema and check-done-proof hook regexes, scripts/ac_store/_rc_records.py
+    and _rc_changed.py, leafcutter-web/lib/data/ac-store.ts, templates/skills/ac-audit/scripts/audit_ac_area.py),
+    so none treats '_inspections' as a component folder. If a later walker groups by folder
+    name, it must skip folders starting with '_'.
+  - 'USER-FACING SURFACE. The generated ticket sets user_facing_surface: slash_command and
+    carries a Smoke Fixture. That field is a ticket field, not an AC field, so the AC store
+    cannot carry it. Because the gate is live-only, the smoker (headless) can exercise only
+    the stop paths: a record with no draft, a missing path, a code change_target, and an unanswered
+    gate, each asserting that NOTHING is created. Approve and reject are proven by tests through
+    unit_tests/_workflow_engine_harness.py with a scripted gate reply. The smoker''s ''git
+    restore'' does not remove untracked files, so the fixture''s cleanup must also delete
+    any file created under docs/acceptance-criteria/_inspections/.'
+  - Every new module under scripts/ac_store/ is added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py,
+    and its import is proven in the DEPLOYED .leafcutter/ layout, not only the source tree
+    (the BO-2500a-1-ii ModuleNotFoundError precedent).
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: the workflow computes the current content fingerprint of each inspected path and
+      shows the person the record id, the statement, and each path with its fingerprint, before
+      asking for an answer
+    needs_test: true
+    reason: The person must see what they approve; a test asserts the shown payload carries
+      the record id, statement and every path with its current fingerprint before any question
+      is asked.
+  - clause: it asks the person to approve or reject the inspection, as an interactive question
+      only a person at the gate can answer
+    needs_test: true
+    reason: The gate must not accept an answer passed in through workflow args; a run with
+      a resume answer supplied must still record nothing.
+  - clause: on approve, it creates the approval file for this run in the tracked approval
+      folder, holding the run id, the gate id, the answer "approve", the time the answer was
+      given, the AC id DK-210b-3, and each inspected path with the fingerprint that was shown
+    needs_test: true
+    reason: The approval file's content is the contract BO-2500f-3-i reads, and each field,
+      especially the shown fingerprints, must be asserted.
+  - clause: on approve, it fills the record's inspection with the run reference and the shown
+      fingerprint for each inspected path, leaving the statement and every other field of
+      the record unchanged
+    needs_test: true
+    reason: The record edit must add only gate_run and blobs; a byte diff of the record shows
+      every other field is untouched.
+  - clause: the approval file and the changed record are left for the person to commit together,
+      and the workflow reports both paths
+    needs_test: true
+    reason: Nothing is committed by the workflow, and both paths are reported; a test asserts
+      the git index is unchanged and both paths appear in the result.
+  - clause: on reject, it creates no approval file and leaves the record unchanged, and reports
+      that the inspection was rejected
+    needs_test: true
+    reason: Reject must create nothing; the git status of the fixture repo shows no new or
+      changed file.
+  - clause: when the answer is missing, cannot be read, or is anything other than approve
+      or reject, it creates no approval file, leaves the record unchanged, and reports that
+      no answer was recorded
+    needs_test: true
+    reason: Unreadable, missing and unexpected answers are three fail-closed routes, and each
+      must create nothing.
+  - clause: when the record has no inspection draft, its draft has no statement, it lists
+      no inspected path, or a listed path does not exist, the workflow stops before asking,
+      names what is missing, and creates nothing
+    needs_test: true
+    reason: Each incomplete-draft shape must stop before the question is asked, so a person
+      never approves fingerprints of nothing.
+  - clause: a record whose change_target rules inspection out (BO-2500f-1-i) is stopped in
+      the same way, naming the change_target
+    needs_test: true
+    reason: A code change_target must be stopped up front, or the workflow manufactures an
+      approval the done gate refuses later.
+  - clause: the workflow runs on its own, without the feature-planning workflow, and starting
+      it requires only the record id
+    needs_test: true
+    reason: The workflow must start from the record id alone, with no plan-feature run; a
+      harness run with only the id shows it.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-3-i
+    contract: 'The approval file docs/acceptance-criteria/_inspections/<run_id>.json with
+      shape {run_id: str, gate_id: str, answer: ''approve'', answered_at: ISO-8601 UTC str,
+      ac_id: str, inspected: [{path: str, blob: 40-hex str}]}, created only by this workflow''s
+      approve step, and the record''s verified_by inspection filled with gate_run and the
+      shown blob per inspected path; both left for the person to commit together.'
+  - agent: llm-expert
+    ac_id: BO-2500f-3-iii
+    contract: 'The /inspect workflow entry point: templates/workflows-js/inspect.js with meta.name
+      ''inspect'', started as Workflow(''inspect'', { ac: ''<AC-ID>'' }) with the record id
+      as its only input, returning one result object {status: ''approved''|''rejected''|''no_answer''|''stopped''|''error'',
+      reason: str, approval_path: str|null, record_path: str|null}.'
+expects_from:
+  - ac_id: BO-2500f-1
+    contract: 'validate_verification_record and the inspection draft shape (method: inspection,
+      statement, inspected [{path}]), including the change_target restriction BO-2500f-1-i
+      adds.'
+  - ac_id: BO-2500f-3
+    contract: The blob fingerprint function the mark-time comparison uses, so the shown fingerprint
+      and the later comparison are computed the same way.
+test_spec:
+  - name: test_bo_2500f_3_ii_person_sees_record_id_statement_and_each_path_with_fingerprint_before_the_question
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Runs the real inspect.js through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: the gate dispatch comes after the prepare dispatch and its prompt carries the record id, the statement and each inspected path with the blob the prepare step computed."
+    proves_clause: "the workflow computes the current content fingerprint of each inspected path and shows the person the record id, the statement, and each path with its fingerprint, before asking for an answer"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_gate_is_live_only_an_answer_passed_in_args_records_nothing
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Runs inspect.js through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo with args.resume_answer carrying an approve and with the interactive gate unanswered (headless): no write dispatch occurs, no approval file or record edit is produced, and the result says no answer was recorded; the gate is dispatched as an interactive agent turn."
+    proves_clause: "it asks the person to approve or reject the inspection, as an interactive question only a person at the gate can answer"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+    must_catch:
+      - "a gate that honours resume_answer from workflow args"
+      - "a gate that treats an unanswered turn as approve"
+  - name: test_bo_2500f_3_ii_approve_writes_the_approval_file_with_the_shown_fingerprints
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Scripted approve through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: the write dispatch carries the exact JSON {run_id 'insp-<YYYYMMDD>-<HHMM>-<AC-ID>', gate_id, answer 'approve', answered_at ISO-8601 UTC, ac_id, inspected [{path, blob}]} with the SHOWN blobs; the test writes it into a scratch git repo, runs inspection_workflow.py verify, and feeds it to check_done_proof.py --mode precommit, which accepts it."
+    proves_clause: "on approve, it creates the approval file for this run in the tracked approval folder, holding the run id, the gate id, the answer \"approve\", the time the answer was given, the AC id DK-210b-3, and each inspected path with the fingerprint that was shown"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_approve_edit_adds_only_gate_run_and_the_blobs_to_the_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Scripted approve through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: the edit instruction applied to the real record file adds gate_run and a blob on each inspected entry only; a byte diff of the file against its prior text shows no other line changed (statement, other fields, line endings)."
+    proves_clause: "on approve, it fills the record's inspection with the run reference and the shown fingerprint for each inspected path, leaving the statement and every other field of the record unchanged"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_approval_file_and_record_are_left_uncommitted_and_both_paths_are_reported
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Scripted approve through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: the scratch repo's index and HEAD are unchanged after the run and the result lists the approval file path and the record path."
+    proves_clause: "the approval file and the changed record are left for the person to commit together, and the workflow reports both paths"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_reject_creates_nothing_and_reports_rejected
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Scripted reject through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: no write dispatch, git status of the scratch repo shows no new or changed file, and the result reports the inspection was rejected."
+    proves_clause: "on reject, it creates no approval file and leaves the record unchanged, and reports that the inspection was rejected"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_missing_unreadable_or_unexpected_answer_records_nothing
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Scripted gate replies of nothing, an unparseable reply and an unexpected answer ('maybe') through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo: each creates no approval file, leaves the record unchanged and reports that no answer was recorded."
+    proves_clause: "when the answer is missing, cannot be read, or is anything other than approve or reject, it creates no approval file, leaves the record unchanged, and reports that no answer was recorded"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_incomplete_draft_or_missing_path_stops_before_the_question
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The real prepare subcommand run as a subprocess on records with no inspection draft, no statement, an empty path list and a listed path that does not exist exits non-zero naming what is missing; the workflow run on each such prepare output never dispatches the gate and creates nothing."
+    proves_clause: "when the record has no inspection draft, its draft has no statement, it lists no inspected path, or a listed path does not exist, the workflow stops before asking, names what is missing, and creates nothing"
+    code_file: scripts/ac_store/inspection_workflow.py
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_change_target_that_rules_inspection_out_stops_the_workflow_naming_it
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A record with change_target code (and [docs, schema]) run through the real prepare subcommand and the workflow stops before asking, names the ruling change_target value and creates nothing."
+    proves_clause: "a record whose change_target rules inspection out (BO-2500f-1-i) is stopped in the same way, naming the change_target"
+    code_file: scripts/ac_store/inspection_workflow.py
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_workflow_starts_from_the_record_id_alone
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the real inspect.js workflow dispatched with only the record id, through the E2 workflow engine harness"
+    description: "Runs the real inspect.js through unit_tests/_workflow_engine_harness.py run_workflow_under_e2 with a scripted gate reply, the prepare and verify replies being the real inspection_workflow.py output for a scratch repo with args holding only the record id: the run reaches the prepare dispatch without a plan-feature run or any other argument, and inspect.js is listed (excluded, with its reason) in config/guardrail_gates.yaml knowledge_routing_wiring so the build guard does not abort."
+    proves_clause: "the workflow runs on its own, without the feature-planning workflow, and starting it requires only the record id"
+    code_file: templates/workflows-js/inspect.js
+    to_be_created: true
+    convention_test_file: unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - name: test_bo_2500f_3_ii_inspection_workflow_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/inspection_workflow.py is in build_ac_store's deploy_map and its prepare subcommand runs from the deployed .leafcutter/scripts/ac_store directory in a fresh subprocess."
+    proves_clause: "the workflow runs on its own, without the feature-planning workflow, and starting it requires only the record id"
+    code_file: scripts/ac_store/inspection_workflow.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/inspect.js
+  - unit_tests/workflows/test_bo_400e_3_viii_workflow.py
+  - scripts/ac_store/inspection_workflow.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo400e3_finalize_harness.py
+  - scripts/pause_store.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new inspection_workflow module must be added."
+    decision: null
+  - file: config/guardrail_gates.yaml
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "Its knowledge_routing_wiring section lists every workflow under templates/workflows-js/ as wired or excluded, so inspect.js must be added there."
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_ac_store.py
+  - config/guardrail_gates.yaml
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+declares_side_effect: false
+notes: |
+  Wave 2. User decision 2026-10-25 (IT PO stage, point 3): a dedicated /inspect
+  workflow, independent of plan-feature.js, which is to be replaced. Given an AC
+  id and its verification-record inspection draft (statement and inspected
+  paths), it computes and shows each file's current blob and the statement and
+  asks the person approve or reject. On approve it writes the approval file and
+  fills gate_run plus the blobs into the record's verified_by. On reject or an
+  unreadable answer it writes nothing.
+
+  This workflow is the ONLY path that creates an approval file with the answer
+  "approve" (BO-2500f-3-i). The residual trust is accepted and recorded there: an
+  agent with shell access could still write one by hand.
+
+  The slash-command name /inspect is the user's; the IT PO confirms the surface
+  and the craft. The record id, statement and paths in the Given are examples.
+
+  Unasked-for clauses, kept deliberately: stop before asking when the draft is
+  incomplete or a path is missing (otherwise a person approves fingerprints of
+  nothing), and refuse a change_target that rules inspection out (otherwise the
+  workflow manufactures an approval the done gate must later refuse).
+
+  Contract for the IT PO to wire both ways (left out of delivers_to so the rule
+  check's symmetry family stays clean until BO-2500f-3-i declares the matching
+  expects_from): this record delivers to BO-2500f-3-i the approval file
+  docs/acceptance-criteria/_inspections/<run_id>.json {run_id, gate_id, answer,
+  answered_at, ac_id, inspected: [{path, blob}]} and the completed inspection
+  (gate run reference plus fingerprints) on the record.

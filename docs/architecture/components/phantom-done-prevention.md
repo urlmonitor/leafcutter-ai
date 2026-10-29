@@ -5,7 +5,7 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-09-28
+last_updated: 2026-10-25
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
@@ -20,6 +20,7 @@ related_docs:
   - docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
   - docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
   - docs/how-to/done-proof-enforcement.md
+  - docs/reference/test-free-declarations.md
   - docs/how-to/done-proof-reachability-gates.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md
@@ -120,6 +121,7 @@ for the full mechanism.
 
 ## Cross-References
 
+- [Reference: Test-Free Declarations](../../reference/test-free-declarations.md) — how a record declared test-free is accepted as done without a covering test, and the two meanings of `test_rationale`.
 - [AC-Driven Development — Coverage Resolution](ac-driven-dev.md#coverage-resolution--ac_coverage_resolver) — a sibling instance of this failure mode outside the five BP-1100f gates above: the `ac-fulfillment-gate` phase gate's coverage-resolution step signed off `ok` having verified zero ACs, because its "every AC in the working list passed or skipped" rule was vacuously true over an empty working list (`ACD-1900b-5-i`). Fixed by making the `ok` verdict structurally require at least one resolved AC.
 - [Build Orchestration — Epic & Ticket Dispatch Sequencing](build-orchestration.md) — owns the drive/verification-phase routing the gates plug into.
 - [Agent Code Delivery Workflows](../agent_delivery_workflows.md) — the supervisor dispatch topology and blocker adjudication these gates review.

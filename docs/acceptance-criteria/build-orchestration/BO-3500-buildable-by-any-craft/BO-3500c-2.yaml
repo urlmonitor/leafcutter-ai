@@ -76,8 +76,21 @@ it_requirements:
   - "DEPLOY MANIFEST: the derivation table module will be imported by both the lane and the commit-guardian receipt validator; add it to the deploy list in scripts/build_phases.py and verify by running the DEPLOYED hook, not the source-tree unit tests."
   - "NO PRESENCE-ONLY ASSERTIONS. Every test below resolves a real path against the real registries or executes a proof; a test that greps the table for a kind name passes on a table nothing consults."
 delivers_to:
-  agent: python-coder
-  contract: "derive_proof_kind(path) -> {kind: <one of the eleven change-target values plus diagram>, claimed_by: <registry id>, class: 'reading'|'comparing'} or a no-match sentinel that routes to BO-3500c-4's refusal. Single ordered resolution table, consumed by every per-kind proof (BO-3500c-2-i..v), by BO-3500c-1's receipt-shape validator (which checks the receipt against the DERIVED class), by BO-3500c-3's hollow guard and by BO-3500c-4's up-front refusal. One derivation call site for all of them."
+  - agent: python-coder
+    contract: 'derive_proof_kind(path) -> {kind: <one of the eleven change-target values plus
+      diagram>, claimed_by: <registry id>, class: ''reading''|''comparing''} or a no-match
+      sentinel that routes to BO-3500c-4''s refusal. Single ordered resolution table, consumed
+      by every per-kind proof (BO-3500c-2-i..v), by BO-3500c-1''s receipt-shape validator
+      (which checks the receipt against the DERIVED class), by BO-3500c-3''s hollow guard
+      and by BO-3500c-4''s up-front refusal. One derivation call site for all of them.'
+  - agent: python-coder
+    ac_id: BO-2500f-1-i
+    contract: 'derive_proof_kind(path) applied to a record''s declared_files: the derived
+      kind that decides whether inspection is ruled out, overriding a self-declared change_target.'
+  - agent: python-coder
+    ac_id: BO-2500f-2
+    contract: 'derive_proof_kind(path) -> {kind, claimed_by, class: ''reading''|''comparing''};
+      the class a check-method verification must meet for that kind.'
 expects_from:
   ac_id: ACD-1800a-1
   contract: "The shared change-target enum definition in config/ac_store_schema.json, reached by $ref rather than copied, already extended with `diagram` and already excluding `tests`. This record consumes that one definition; it must not restate the values."
