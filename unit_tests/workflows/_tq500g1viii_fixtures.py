@@ -55,7 +55,7 @@ def close_all_command(root: str = WT) -> str:
 
 
 def recover_command(root: str = WT) -> str:
-    return command("wrong_version_runner", "recover", root)
+    return command("wrong_version_runner", f'recover --test-root "{root}"', root)
 
 
 def ticket(n: int, source_ac=SENTINEL, *, stem: str | None = None) -> dict:

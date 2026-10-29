@@ -324,7 +324,7 @@ const gvBad = (...vals) => vals.flat().filter((s) => typeof s !== "string" || /[
   const halt = (step, detail) => ({ status: "blocked", message: `Wrong-version ${step} step did not pass: ${JSON.stringify(detail)}. No ticket was dispatched.`,
     epic_path: epicPath, gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail });
   if (gvBad().length) return halt("input-check", gvBad());
-  const recovered = await gvStep("be-wv-recover", gvPy("wrong_version_runner", "recover"), "drive-head");
+  const recovered = await gvStep("be-wv-recover", gvPy("wrong_version_runner", `recover --test-root "${gvRoot()}"`), "drive-head");
   if (!recovered || recovered.ok !== true) return halt("recover", recovered);
   await gvStep("be-gate-marker-close-all", gvPy("gate_verdict_records", `close --all --worktree "${gvRoot()}"`), "drive-head");
 }

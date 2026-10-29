@@ -1747,10 +1747,8 @@ const wvHalt = async (step, detail) => {
     failing_phase: "wrong-version", gate: "wrong_version_gate", wrong_version_step: step, wrong_version_detail: detail,
     worktree_path: worktreePath, branch, built_ac_ids: acIds, classification: "halt", ...released.fields };
 };
-if (workspaceCreated === false) {
-  const recovered = await wvStep("fastlane-wv-recover", `python ${wvDir}/wrong_version_runner.py recover`);
-  if (!recovered || recovered.ok !== true) return await wvHalt("recover", recovered);
-}
+const recovered = workspaceCreated === false ? await wvStep("fastlane-wv-recover", `python ${wvDir}/wrong_version_runner.py recover --test-root "${worktreePath}"`) : { ok: true };
+if (recovered.ok !== true) return await wvHalt("recover", recovered);
 let wvReply = "";
 if (acIds.length) {
   const listed = await wvStep("fastlane-wv-list", `python ${wvDir}/wrong_version_writer.py list ${wvIds}${wvFlags}`);
