@@ -227,12 +227,15 @@ def test_stale_plan_is_recomputed_never_trusted():
         f.edit_source(sb, f.COND, "if retry_due and refresh_due")  # the pinned old text is edited away before finish
         done, out = f.finish(sb, None, f.WK1)
         assert out["writer"]["written"] is True, out["writer"]
-        status = {e["name"]: (e["status"], e["reason"]) for e in out["writer"]["entries"]}
+        full = {e["name"]: (e["status"], e["reason"]) for e in out["writer"]["entries"]}
+        # TQ-500g-1-xiii: a stale pin is re-prepared, so its reason names the failed check first.
+        assert full == {n: ("could_not_prepare", "re-prepared: target changed; no alteration returned") for n in BOTH}, full
+        status = {n: (s, r.removeprefix("re-prepared: target changed; ")) for n, (s, r) in full.items()}
         assert status == {n: ("could_not_prepare", "no alteration returned") for n in BOTH}, status
         m = f.manifest(sb, f.WK1)
         for name in BOTH:
             e = ix.entry(m, name)
-            assert e["status"] == "could_not_prepare" and e["reason"] == "no alteration returned", e
+            assert e["status"] == "could_not_prepare" and e["reason"] == "re-prepared: target changed; no alteration returned", e
             assert e["files"] == [] and e["diff"] == "" and e["replacements"] == [] and e["alteration_id"] is None, e
         assert done.returncode == 1 and out["gate_passed"] is False, "a stale pin was applied or the gate passed on unprepared names"
         assert f.pin_bytes(sb, f.WK1) == raw_pin, "an unprepared name changed the pins"

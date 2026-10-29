@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -218,10 +218,13 @@ test_spec:
       For P3 the reply says could_not_prepare; for P4 the fresh replacement again changes nothing. Both are
       unfinished in the verdict with reasons starting "re-prepared: did not load" and "re-prepared: changes
       nothing", reason is unfinished, neither name is in survivors or reported caught, and the pin file's
-      entries for P3 and P4 are byte-identical to before the run.
+      entries for P3 and P4 are byte-identical to before the run. (2026-10-29: the name "a failed
+      re-preparation reported as survived" was left out of must_catch. The result words come from the
+      runner, and no change to this entry's in-scope files (_wvp_store.py, _wvp_plan.py) can turn a
+      could_not_prepare entry into a survivor; the preparer answered could_not_prepare. The test still
+      asserts neither name is in survivors.)
     must_catch:
       - the earlier pin deleted when re-preparation fails
-      - a failed re-preparation reported as survived
       - the earlier pin silently applied as a fallback
     in_scope_files:
       - scripts/build_orchestration/_wvp_store.py
@@ -304,9 +307,15 @@ amended_by:
     agent: approve_acs
     date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xiii.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/05_TICKET-20261024-TQ-500g-1-xiii.md
+- scripts/build_orchestration/_wvp_checks.py
+- scripts/build_orchestration/_wvp_plan.py
+- scripts/build_orchestration/_wvp_store.py
+- scripts/build_orchestration/_wvw_list.py
+- scripts/build_orchestration/_wvw_write.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

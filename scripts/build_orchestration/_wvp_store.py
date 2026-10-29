@@ -30,7 +30,13 @@ _LOG = logging.getLogger("wrong_version_writer")
 PIN_KEYS = ("name", "replacements", "alteration_id", "failed_check", "reset", "cleared_alteration_id")
 PINNED = "pinned"
 NOT_PINNED = "prepared: not pinned"
+RE_PREPARED = "re-prepared"
+CHANGES_NOTHING = "changes nothing"
+DID_NOT_LOAD = "did not load"
+NO_LINE = "changes no line the tests naming it run"
 _PASSING = frozenset({"caught", "survived"})
+# A pinned name the runner could not use: verdict result word -> the check it failed (first listed wins).
+_RUN_FAILED = {"did_not_load": DID_NOT_LOAD, "not_applied": CHANGES_NOTHING, "not_executed": NO_LINE}
 
 
 class PinError(Exception):
@@ -50,6 +56,19 @@ def git_dir(test_root: Path) -> Path:
     """
     try:
         return Path(gate_mod.git_text(test_root, "rev-parse", "--absolute-git-dir"))
+    except gate_mod.GateError as exc:
+        msg = f"internal error: {exc}"
+        raise PinError(msg) from exc
+
+
+def _toplevel(test_root: Path) -> Path:
+    """The working-tree root of *test_root*.
+
+    Raises:
+        PinError: When *test_root* is not inside a git working tree.
+    """
+    try:
+        return Path(gate_mod.git_text(test_root, "rev-parse", "--show-toplevel"))
     except gate_mod.GateError as exc:
         msg = f"internal error: {exc}"
         raise PinError(msg) from exc
@@ -112,6 +131,24 @@ def usable(entry: object) -> bool:
     return bool(repls) and all(isinstance(r, dict) and all(isinstance(r.get(k), str) for k in ("path", "old", "new")) for r in repls)
 
 
+def files_sha256(root: Path, replacements: list[dict]) -> str:
+    """SHA-256 over the bytes, as now written, of every file a pin's replacements name (sorted by path)."""
+    digest = hashlib.sha256()
+    for rel in sorted({r["path"] for r in replacements}):
+        target = root / rel
+        data = target.read_bytes() if target.is_file() else b"\0missing"
+        digest.update(rel.encode("utf-8") + b"\0" + data + b"\0")
+    return digest.hexdigest()
+
+
+def known_failure(pin: dict, root: Path) -> str | None:
+    """The check a run recorded as failed for this pin, while its files are byte for byte what they were then."""
+    recorded = pin.get("failed_check")
+    if not isinstance(recorded, dict) or not isinstance(recorded.get("check"), str):
+        return None
+    return recorded["check"] if recorded.get("files_sha256") == files_sha256(root, pin["replacements"]) else None
+
+
 def _write(git_directory: Path, work_key: str, pins: dict[str, dict]) -> None:
     """Write the whole pin file atomically."""
     path = pin_path(git_directory, work_key)
@@ -155,19 +192,62 @@ def _candidate(entry: object, passing: set[str], stored: dict[str, dict]) -> boo
         return False
     source = entry.get("source")
     key = norm_name(entry["name"])
-    return (isinstance(source, str) and source.startswith(("prepared", "re-prepared"))
-            and wrong_version_key(entry["name"]) != norm_name(UNDONE_NAME) and key in passing and key not in stored
+    replaces = isinstance(source, str) and source.startswith(RE_PREPARED)  # a passing re-preparation replaces the pin
+    return (isinstance(source, str) and source.startswith(("prepared", RE_PREPARED))
+            and wrong_version_key(entry["name"]) != norm_name(UNDONE_NAME) and key in passing and (key not in stored or replaces)
             and usable({"replacements": entry.get("replacements")}))
 
 
-def promote(git_directory: Path, work_key: str, manifest: dict, verdict: dict) -> dict:
+def _result_words(verdict: dict) -> dict[str, set[str]]:
+    """``{normalised name: every result word of its verdict rows}``."""
+    words: dict[str, set[str]] = {}
+    for r in verdict.get("results") or []:
+        key = norm_name(r.get("wrong_version") or "") if isinstance(r, dict) else ""
+        if key:
+            words.setdefault(key, set()).add(r.get("result"))
+    return words
+
+
+def _run_check(found: set[str]) -> str | None:
+    """The check a run's result words say a pinned replacement failed (``None`` when none of them does)."""
+    return next((check for word, check in _RUN_FAILED.items() if word in found), None)
+
+
+def _failed_marks(entries: list, verdict: dict, stored: dict[str, dict], root: Path | None) -> dict[str, dict]:
+    """Pins to rewrite after a run: ``failed_check`` set on a pin the run could not use, cleared on one that passed.
+
+    The pin's replacements are never touched: a pin that fails only at run time is neither used again
+    unchanged nor dropped, it is prepared again once the next plan reads ``failed_check``.
+    """
+    if root is None:
+        return {}
+    words, passing, marks = _result_words(verdict), _passing_names(verdict), {}
+    for e in entries:
+        named = isinstance(e, dict) and e.get("source") == PINNED and isinstance(e.get("name"), str)
+        key = norm_name(e["name"]) if named else ""
+        pin = stored.get(key)
+        if not named or not usable(pin):
+            continue
+        check = _run_check(words.get(key, set()))
+        if check:
+            marks[key] = {**pin, "failed_check": {"check": check, "files_sha256": files_sha256(root, pin["replacements"])}}
+        elif key in passing and pin.get("failed_check") is not None:
+            marks[key] = {**pin, "failed_check": None}
+    return marks
+
+
+def promote(git_directory: Path, work_key: str, manifest: dict, verdict: dict, root: Path | None = None) -> dict:
     """The pin step's rule: pin each preparation that passed; leave every other pin as it is.
+
+    A passing re-preparation replaces the name's earlier pin; a failing one leaves it byte for byte.
+    With *root*, a pinned replacement the run could not use gets ``failed_check`` recorded.
 
     Args:
         git_directory: The absolute git directory.
         work_key: The work key.
         manifest: The alterations manifest (``entries`` with name, status, source, replacements).
         verdict: The runner's run JSON.
+        root: The worktree root (the files are as written); ``None`` records no ``failed_check``.
 
     Returns:
         ``{pinned: [{name, alteration_id}], kept: [name], error: None}``.
@@ -182,8 +262,9 @@ def promote(git_directory: Path, work_key: str, manifest: dict, verdict: dict) -
     stored = parse(read_bytes(git_directory, work_key))
     passing = _passing_names(verdict)
     fresh = {norm_name(e["name"]): _new_pin(e) for e in entries if _candidate(e, passing, stored)}
-    if fresh:
-        _write(git_directory, work_key, {**stored, **fresh})
+    changes = {**_failed_marks(entries, verdict, stored, root), **fresh}
+    if changes:
+        _write(git_directory, work_key, {**stored, **changes})
     kept = [e["name"] for e in entries if isinstance(e, dict) and e.get("source") == PINNED and isinstance(e.get("name"), str)]
     return {"pinned": [{"name": p["name"], "alteration_id": p["alteration_id"]} for p in fresh.values()], "kept": kept, "error": None}
 
@@ -209,7 +290,7 @@ def run_pin(work_key: str, manifest_path: str, test_root: Path, verdict_text: st
     """Run the pin step: read the manifest and the runner's JSON, promote, return ``(payload, exit code)``."""
     try:
         manifest, verdict = _read_inputs(work_key, manifest_path, verdict_text)
-        return promote(git_dir(test_root), work_key, manifest, verdict), 0
+        return promote(git_dir(test_root), work_key, manifest, verdict, _toplevel(test_root)), 0
     except PinError as exc:
         return {"pinned": [], "kept": [], "error": str(exc)}, 1
 
@@ -220,3 +301,5 @@ def run_pin(work_key: str, manifest_path: str, test_root: Path, verdict_text: st
 # - 2026-10-25 18:40 [coordinator]: _candidate refused only the alias "revert the fix" (key != its
 #   canonical key) and let an entry named "the fix undone" through; it now refuses every spelling
 #   whose canonical key is the fix undone. Found by the wrong-version gate (a survivor). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02)
+# - 2026-10-25 22:00 [python-coder]: A pin the run could not use gets failed_check {check, files_sha256}; a passing
+#   re-preparation replaces the pin. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)

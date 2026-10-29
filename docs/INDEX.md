@@ -275,6 +275,7 @@ task, then pull only those files.
 | workflow authoring contract | [docs/reference/workflow-authoring-contract.md](reference/workflow-authoring-contract.md) | Copy-paste reference for workflow script authors covering the E2 canonical execution contract, E1-wrap shim pattern, primitive mapping table, and non-transparent edge handling conventions. |
 | workflow constraints | [docs/reference/workflow-constraints.md](reference/workflow-constraints.md) | Reference: Claude Code Workflow Script Constraints |
 | workspace maker answer | [docs/reference/workspace-maker-answer.md](reference/workspace-maker-answer.md) | Every field, status, exit code and outcome code of the answer the workspace maker prints, and the rules a caller must follow when acting on it. |
+| wrong version pins | [docs/reference/wrong-version-pins.md](reference/wrong-version-pins.md) | Lookup for the wrong-version pin store: the checks every pin passes before it is used on a run, what happens to a pin that fails one, and how an operator clears a pin. |
 | wrong version runs | [docs/reference/wrong-version-runs.md](reference/wrong-version-runs.md) | Lookup for the wrong-version runs every build route makes before it commits: which tests are in scope, which wrong versions run, every result word and stop reason, the put-back, the routes and the /build-epic backstop. |
 
 ## Explanation

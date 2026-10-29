@@ -27,11 +27,12 @@ from pathlib import Path
 
 import _wvr_gate as gate_mod
 import _wvw_reply as reply_mod
+from _wvp_checks import Item, static_check
 from _wvp_plan import Decision, plan_for_write
-from _wvp_store import PinError, alteration_id
+from _wvp_store import RE_PREPARED, PinError, alteration_id
 from _wvp_store import plain_segment as _plain_segment
 from _wvw_list import Derived, derive_owed
-from _wvw_prepare import Altered, alter, unified_diff
+from _wvw_prepare import Altered, unified_diff
 
 _LOG = logging.getLogger("wrong_version_writer")
 _MANIFEST = "alterations.json"
@@ -78,14 +79,20 @@ def _entry(index: int, name: str, files: list[str], decision: Decision, answer: 
     """Build the manifest entry of one owed name (copies are written only when it is prepared).
 
     A pinned name applies its pinned replacements to the code as it now stands; every other name
-    takes the preparer's answer. The entry also carries the replacements actually applied, their
-    identity and the source of the row.
+    takes the preparer's answer. Whatever is applied is held to checks (e), (a) and (c) first
+    (``_wvp_checks.static_check``); (b) and (d) are the run's. A name sent back to the preparer
+    (source ``re-prepared: <check>``) keeps that check at the start of its reason, then gives the
+    second failure. The entry also carries the replacements actually applied, their identity and
+    the source of the row.
     """
     pinned = decision.replacements is not None
     repls = decision.replacements if pinned else answer.replacements
     reason, altered = ("" if pinned else answer.reason), []
     if not reason:
-        altered, reason = alter(name, repls, derived.root, files, derived.test_root_rel)
+        checked = static_check(Item(name, repls, files), derived.root, derived.test_root_rel)
+        altered, reason = checked.altered, checked.detail
+    if reason and decision.source.startswith(RE_PREPARED):
+        reason = f"{decision.source}; {reason}"
     if reason:
         return {"name": name, "status": "could_not_prepare", "reason": reason, "files": [], "diff": "",
                 "replacements": [], "alteration_id": None, "source": decision.source}
@@ -152,7 +159,8 @@ def _run(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root
     derived = derive_owed(ac_ids, test_root, ac_root, base_ref)
     if derived.error:
         return _fail(derived.error)
-    decisions, sent = plan_for_write(work_dir, git_dir, work_key, derived.owed, derived.root, derived.test_root_rel)
+    decisions, sent = plan_for_write(work_dir, git_dir, work_key, derived.owed, derived.root, derived.test_root_rel,
+                                    derived.tests)
     needs_reply = any(d.replacements is None and (sent is None or d.name in sent) for d in decisions)
     work_dir.mkdir(parents=True, exist_ok=True)
     return _build(work_key, work_dir, derived, _prepare_reply(source, work_key, needs_reply), decisions)
@@ -196,3 +204,4 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
+# - 2026-10-25 22:00 [python-coder]: Every applied replacement goes through _wvp_checks.static_check; a re-prepared name keeps its failed pin check at the start of its reason. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)

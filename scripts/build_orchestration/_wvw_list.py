@@ -29,7 +29,7 @@ from pathlib import Path
 import _wvr_gate as gate_mod
 from _wvp_plan import Decision, make_plan, write_record
 from _wvp_store import PinError, git_dir, plain_segment
-from _wvr_scope import ChangesError, DiffCache, OwedName, changed_non_test_files, owed_names, resolve_scope
+from _wvr_scope import ChangesError, DiffCache, OwedName, ScopedTest, changed_non_test_files, owed_names, resolve_scope
 
 _LOG = logging.getLogger("wrong_version_writer")
 
@@ -42,6 +42,7 @@ class Derived:
     root: Path | None = None
     test_root_rel: str | None = None
     error: str = ""
+    tests: list[ScopedTest] = field(default_factory=list)  # the in-scope tests: their own entries say who holds a name
 
 
 def derive_owed(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str = "HEAD") -> Derived:
@@ -80,7 +81,7 @@ def derive_owed(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str
         return Derived(root=root, test_root_rel=test_root_rel, error=str(exc))
     derived = sum(o.scope == "derived" for o in owed)
     _LOG.info("base ref %s: %d names declared, %d derived", ref, len(owed) - derived, derived)
-    return Derived(owed, root, test_root_rel)
+    return Derived(owed, root, test_root_rel, tests=scope.tests)
 
 
 def list_payload(derived: Derived, decisions: list[Decision] | None = None) -> dict:
@@ -128,7 +129,7 @@ def keyed_decisions(derived: Derived, test_root: Path, work_key: str) -> list[De
         msg = f"the work key {work_key!r} is not one plain path segment"
         raise PinError(msg)
     git_directory = git_dir(test_root)
-    decisions, fp = make_plan(derived.owed, git_directory, work_key, derived.root, derived.test_root_rel)
+    decisions, fp = make_plan(derived.owed, git_directory, work_key, derived.root, derived.test_root_rel, derived.tests)
     write_record(git_directory / "leafcutter" / "work" / work_key, work_key, decisions, fp)
     return decisions
 
@@ -136,3 +137,4 @@ def keyed_decisions(derived: Derived, test_root: Path, work_key: str) -> list[De
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
+# - 2026-10-25 22:00 [python-coder]: Derived carries the in-scope tests so the plan's effect check knows which tests name a wrong version. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)

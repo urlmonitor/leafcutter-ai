@@ -92,6 +92,7 @@ below by hand.
 | [proof-claims-and-completeness.md](proof-claims-and-completeness.md) | For each of the seven `# angle:` test-proof kinds: what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | [documentation-coverage-guarantee.md](documentation-coverage-guarantee.md) | How the `documentation_gates` trigger policy, the `documentation-verifier` phase, and the `## Agent Contracts` brief combine to guarantee demanded documentation is real, not a placeholder. |
 | [wrong-version-runs.md](wrong-version-runs.md) | The wrong-version runs before every commit: tests in scope, the wrong versions run, every result word and stop reason, the put-back, the build routes and the /build-epic backstop. |
+| [wrong-version-pins.md](wrong-version-pins.md) | The wrong-version pin store: the checks every pin passes before it is used, what happens to a pin that fails one, and how an operator clears a pin. |
 | [consumer-test-sweep.md](consumer-test-sweep.md) | The sweep of edits to existing tests: the recorded list, the check, its reasons, and the weakened, loosened, removed and inconclusive items. |
 
 ## Code Review (Code-Smell Pipeline)
