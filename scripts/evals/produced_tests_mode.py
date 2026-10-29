@@ -20,6 +20,7 @@ ARCHITECTURE: ``run_produced_tests_mode`` is dispatched by run_agent_eval.main()
 from __future__ import annotations
 
 import argparse
+import importlib
 import logging
 import shutil
 import tempfile
@@ -73,6 +74,15 @@ def support_for(agent_cfg: dict, repo_root: Path) -> tuple[tuple[Path, str], ...
     return tuple((repo_root / rel, rel) for rel in agent_cfg.get("support_scripts", []))
 
 
+def row_input(row: dict, agent_cfg: dict, sandbox: Path) -> str:
+    """What the agent is asked: the row's input, or, when the config names an ``input_builder`` module, what its
+    ``build_dispatch_input(row, sandbox)`` makes of the built sandbox (TQ-200d-3)."""
+    builder = agent_cfg.get("input_builder")
+    if builder:
+        return importlib.import_module(builder).build_dispatch_input(row, sandbox)
+    return row[agent_cfg.get("input_field", "input")]
+
+
 def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, work_dir: Path, harness: ModuleType, timeout: int) -> Path:
     """Run the agent on *row* in a git sandbox and return the directory of what it produced (model call).
 
@@ -84,7 +94,7 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
     base = runs.build_sandbox(repo_root / expected["fixture"], agent_box, runs.hold_back_dirs(expected.get("assertions", [])),
                               support_for(agent_cfg, repo_root))
     try:
-        args = (render_prompt(system_prompt, agent_box), row[agent_cfg.get("input_field", "input")], agent_cfg.get("model", "sonnet"),
+        args = (render_prompt(system_prompt, agent_box), row_input(row, agent_cfg, agent_box), agent_cfg.get("model", "sonnet"),
                 timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
         transcript = None
         if agent_cfg.get("capture_transcript"):

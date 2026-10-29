@@ -64,7 +64,7 @@ task, then pull only those files.
 |------|------|-------------|
 | agent delivery workflows | [docs/architecture/agent_delivery_workflows.md](architecture/agent_delivery_workflows.md) | Visualises how the leafcutter-ai agent ecosystem orchestrates code delivery — slash-command entry points, supervisor dispatch topology, quick-fix workflow, and blocker adjudication flows. |
 | agent knowledge plane | [docs/architecture/agent_knowledge_plane.md](architecture/agent_knowledge_plane.md) | Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including the build-time check that every ability an agent is told to load exists. |
-| agent knowledge system | [docs/architecture/agent_knowledge_system.md](architecture/agent_knowledge_system.md) | Overview of Agent Knowledge System. |
+| agent knowledge system | [docs/architecture/agent_knowledge_system.md](architecture/agent_knowledge_system.md) | Reference for the post-execution knowledge pipeline - the knowledge record fields, the no-learning and failed-capture branches, where each is recorded, and the manual-versus-wired routing trigger. |
 | feedback lifecycle | [docs/architecture/feedback-lifecycle.md](architecture/feedback-lifecycle.md) | Overview of Feedback Lifecycle — Data Flow. |
 
 ## Architecture Decision Records (ADRs)
@@ -235,6 +235,7 @@ task, then pull only those files.
 | consumer test sweep | [docs/reference/consumer-test-sweep.md](reference/consumer-test-sweep.md) | Lookup for the consumer-test sweep: the list the test writer records, the check that runs before every commit, the reasons it stops the work, and the words of its weakened, loosened, removed and inconclusive items. |
 | decision kernel splits | [docs/reference/decision-kernel-splits.md](reference/decision-kernel-splits.md) | Short lookup for the decision kernel's routing-time outcomes for a request that may hold several questions: the four outcomes with an example each, the fewer-than-two-parts rule, what a rejected or too-small split falls back to, and gap accounting. |
 | decision record | [docs/reference/decision-record.md](reference/decision-record.md) | Every field of the decision record the kernel stages and publishes to docs/decisions/, with type, requiredness, default and meaning; consult it to read, validate or review a record. |
+| description field convention | [docs/reference/description-field-convention.md](reference/description-field-convention.md) | Lookup for the required description frontmatter field on documentation files: what it is for, how it is enforced, what to write, and which files are in scope. |
 | document length standard | [docs/reference/document-length-standard.md](reference/document-length-standard.md) | Lookup for the length limits the check-doc-length gate applies to docs/**/*.md, which locations are set aside from them and on what ground, and what a run reports. |
 | documentation coverage guarantee | [docs/reference/documentation-coverage-guarantee.md](reference/documentation-coverage-guarantee.md) | Lookup reference for the documentation-coverage guarantee: the declarative documentation_gates trigger policy, the documentation-verifier enforcement phase, and the Agent Contracts brief that is the single source of truth for what documentation is demanded and verified. |
 | example content separation | [docs/reference/example-content-separation.md](reference/example-content-separation.md) | The rule that decides which product an artifact or acceptance criterion belongs to (the product root, never the content), every surface that honours the separation and what each returns for example content, why the example content must keep existing, and how to add a new example artifact or a new example product. |
@@ -245,6 +246,7 @@ task, then pull only those files.
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
 | kernel request splitting 2 conversion gate runs config | [docs/reference/kernel-request-splitting-2-conversion-gate-runs-config.md](reference/kernel-request-splitting-2-conversion-gate-runs-config.md) | The full rules behind ADR-067 sections 5 to 11, read when building or reviewing a split: proposal conversion, the split gate, endings by trigger, bounds, order and budgets, the split output, gap accounting, and configuration with the staged rollout. |
 | kernel request splitting | [docs/reference/kernel-request-splitting.md](reference/kernel-request-splitting.md) | The full rules behind ADR-067 sections 1 to 4, read when building or reviewing a split: the mechanism of each step, bundle detection and its triggers, the host.decompose_goal operation and registry entry, and the fields of the four split schemas. |
+| knowledge graph visualization | [docs/reference/knowledge-graph-visualization.md](reference/knowledge-graph-visualization.md) | Lookup for visualise_knowledge_graph.py: what it generates, its output format, its command-line invocations and its failure exit. |
 | knowledge publication capacity | [docs/reference/knowledge-publication-capacity.md](reference/knowledge-publication-capacity.md) | Lookup for the capacity headroom gate that runs before a knowledge publication's first write: flags, ordering, what is measured, the result report and verdicts, refusal and read-only messages, and the workflow values. |
 | knowledge publication reclamation | [docs/reference/knowledge-publication-reclamation.md](reference/knowledge-publication-reclamation.md) | Lookup for how a successful knowledge publication reclaims superseded generations: entry points, ordering, result keys, retained reasons, guards including the pin rule, and failure results. |
 | knowledge retention bound | [docs/reference/knowledge-retention-bound.md](reference/knowledge-retention-bound.md) | Lookup for the declared generation retention bound of the knowledge graph: its two settings, the resolved bound, the read-only evaluation report, the reason vocabulary, the refusals and the retention command. |
@@ -290,9 +292,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -300,9 +302,10 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
+| EPIC ALearningAnAgentHasTodayActuallyGets | [docs/retrospectives/EPIC-ALearningAnAgentHasTodayActuallyGets.md](retrospectives/EPIC-ALearningAnAgentHasTodayActuallyGets.md) | Overview of Retrospective: EPIC-ALearningAnAgentHasTodayActuallyGets. |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

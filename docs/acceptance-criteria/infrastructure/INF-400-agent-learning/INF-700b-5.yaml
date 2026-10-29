@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
@@ -54,17 +54,15 @@ it_requirements:
   - "It must not describe route-learning or capture-learning as steps an agent takes (ADR-034 section 2 item 3). Note that after INF-700b-2 lands, scripts/check_skill_refs.py still does NOT cover this file — it scans templates/*.md only — so this clause is a review obligation here, and a scope-widening of that guard to docs/ is a recommended follow-up rather than this AC's cover."
   - "The 'no implied automatic routing' clause is the standing one from ADR-034 and INF-700a. Concretely: the document must not use present-tense automatic phrasing ('the harvester routes each emission') for a step with no caller. State plainly that routing is manual-invoke today and name INF-700a as the criterion that owns the trigger."
   - "Every path the document names must resolve at the moment of writing. Known trap: the harvester's default sink debugging/logs/knowledge_emissions.jsonl has never existed and the live records are in debugging/logs/agent_telemetry.jsonl. Do not document the default as though it were the sink — INF-400c-4 owns the reconciliation, and until it lands the reference must describe the discrepancy rather than pick a side."
-test_required: false
+test_required: true
 test_rationale: |
-  A reference document produces no executable behaviour. The clauses that could
-  in principle be mechanised — 'every directory, file and step the reference
-  names exists' and 'names no retired step' — are not covered by any gate that
-  reaches this file: check_skill_refs.py scans templates/*.md and the doc-links
-  hook checks Markdown links rather than prose-named paths. Asserting them with
-  a bespoke grep test would be the grep-only pattern CLAUDE.md forbids and would
-  pass on a document that names a path correctly while describing it wrongly.
-  They are therefore review obligations, and test_required is set false
-  explicitly so test-writer skips with an accurate reason.
+  Closed 2026-10-25 by doc-checking tests (tests/knowledge/test_inf_700b_4_5_docs.py,
+  tagged `# covers: INF-700b-5`) that read the reference documents and assert the
+  criteria's review obligations: the field table, the no-learning and
+  cannot-complete behaviour, named paths exist, no retired step is described as
+  an agent action, and no automatic routing is implied. A reference document has
+  no runtime behaviour; the tests check the document. check_skill_refs.py still
+  does not reach this file.
 delivers_to: null
 expects_from:
   - ac_id: INF-700b-1
@@ -81,10 +79,16 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Named the target document and the coordination hazard with INF-700b-4, which amends the same file. Expanded expects_from from one entry to four: the criteria require the reference to state the no-learning behaviour, the failure behaviour and where the failure is counted, none of which comes from INF-700b-1. Flagged that no existing gate covers this file's prose-named paths, so the 'everything named exists' clause is a review obligation, and recorded the sink-path discrepancy the writer will hit."
     by: it-po
     at: 2026-08-26
+  - reason: "Closed 2026-10-25 by doc-checking tests requested by BrainCandy; review obligations now enforced by tests (tests/knowledge/test_inf_700b_4_5_docs.py). Routing wording follows the code (INF-700a done, some routes wired) rather than the ticket's stale 'manual today' note. test_required flipped false -> true now that tests exist; test_rationale rewritten to match. Criteria unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-25
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_inf_700b_4_5_docs.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/08_TICKET-20261016-INF-700b-5.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/08_TICKET-20261016-INF-700b-5.md
+- docs/architecture/agent_knowledge_system.md
+- docs/architecture/components/knowledge-system.md
 notes: |
   Satisfies the reference-doc entry in INF-700b's documentation_triggers.
   The last clause is inherited from ADR-034's consequence ("Until the harvester

@@ -111,6 +111,14 @@ def _find_config_root() -> Path:
         Path: Absolute path to the config directory that contains
             feedback_categories.yaml.
     """
+    # Prefer the invoked (abspath) location when it sits inside a .leafcutter/:
+    # a symlinked deployed script must stay anchored there rather than follow
+    # the link out of it. (AC INF-100c-1-i)  Otherwise use the resolved
+    # location: the CI build shim <root>/scripts/feedback -> .leafcutter/...
+    # must land on .leafcutter/config, not <root>/config. (AC INF-100c-1)
+    invoked_root = Path(os.path.abspath(__file__)).parents[2]
+    if invoked_root.name == ".leafcutter":
+        return invoked_root / "config"
     return Path(__file__).resolve().parents[2] / "config"
 
 
@@ -503,6 +511,13 @@ if __name__ == "__main__":
 #   stay within the GE-127b-1 ratchet the validators and the id generator moved
 #   verbatim into feedback_validation.py (measured length 463 -> 371).
 #   (AC INF-500d-4-i, ADR-069)
+# - 2026-10-25 [python-coder/fastlane/inf-100c-1-i]:
+#   _find_config_root() now anchors on the invoked (abspath) location only when
+#   its parents[2] is a directory named .leafcutter; otherwise it uses the
+#   resolved location. The unconditional abspath form broke the CI build shim
+#   (<root>/scripts/feedback symlinked into .leafcutter/scripts/feedback), which
+#   resolved to <root>/config. Both INF-100c-1 and INF-100c-1-i hold.
+#   (AC INF-100c-1, INF-100c-1-i)
 # - 2026-07-08 [python-coder/EPIC-Phase1ReadyHardening/03_InfrastructureFixes]:
 #   Promoted scripts/feedback/submit_feedback.py to a tracked source file
 #   (removed scripts/feedback/ from .gitignore). The file was previously

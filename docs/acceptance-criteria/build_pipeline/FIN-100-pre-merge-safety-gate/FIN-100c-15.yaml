@@ -75,7 +75,7 @@ implemented_by: []
 change_target: code
 risk_surface: internal
 req_status: active
-work_status: todo
+work_status: done
 notes: |
   Follow-up hardening of the already-shipped null-baseline recovery (PR #324).
   Addresses code-review finding L-4: recoveredBaselineFailures should be declared

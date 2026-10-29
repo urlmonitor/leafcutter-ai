@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b.yaml"
@@ -50,17 +50,14 @@ it_requirements:
   - "The retired names route-learning and capture-learning must not appear as participants, messages, notes or artefacts (ADR-034 section 2 item 3). Note that a Mermaid participant name is prose and is NOT reachable by scripts/check_skill_refs.py even after INF-700b-2 wires it — that guard scans imperative skill-path references, not diagram labels. The 'names no retired step' clause is therefore enforced by review here, not by the gate."
   - "The routing-step boundary must be drawn as the end of the agent's obligation, with no arrow, note or activation implying when routing runs. ADR-034: 'Until the harvester has a caller, capture is not automatic and any documentation implying otherwise is wrong.' The trigger is INF-700a's and is unsettled."
   - "Must satisfy the repository's existing diagram gates: the mermaid-complexity hook and the diagram-naming hook both run at commit time on docs/*.md. Keep participant count within the complexity budget rather than discovering it at commit."
-test_required: false
+test_required: true
 test_rationale: |
-  A Mermaid sequence diagram in a Markdown document produces no executable
-  behaviour, so there is nothing for test-writer to make fail. The mechanically
-  checkable clauses of the criteria are already covered by gates rather than by
-  tests: the mermaid-complexity and diagram-naming pre-commit hooks check the
-  diagram's form, and the 'every artefact exists under the name given' clause is
-  a review obligation because diagram labels are prose that no reference guard
-  parses. test_required is set explicitly rather than left absent so test-writer
-  skips with an accurate reason rather than the omission being read as an
-  unauthored contract.
+  Closed 2026-10-25 by doc-checking tests (tests/knowledge/test_inf_700b_4_5_docs.py,
+  tagged `# covers: INF-700b-4`) that read the diagram and assert the criteria's
+  review obligations: two distinct branches, the agent/routing boundary, names
+  that exist, no retired step. A Mermaid diagram has no runtime behaviour; the
+  tests check the document. The mermaid-complexity and diagram-naming
+  pre-commit hooks still check the diagram's form.
 delivers_to: null
 expects_from:
   - ac_id: INF-700b-1
@@ -73,10 +70,16 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Named the target document and the sequencing hazard against INF-700b-5's prose amendment. Recorded that the 'names no retired step' clause is NOT covered by the INF-700b-2 gate — check_skill_refs.py scans imperative skill-path references in template prose, and a Mermaid participant label is neither — so it is a review obligation and must not be assumed mechanically enforced. Added the second expects_from entry for the failure-record branch, which the criteria require but the contract did not name."
     by: it-po
     at: 2026-08-26
+  - reason: "Closed 2026-10-25 by doc-checking tests requested by BrainCandy; review obligations now enforced by tests (tests/knowledge/test_inf_700b_4_5_docs.py). Routing wording follows the code (INF-700a done, some routes wired) rather than the ticket's stale 'manual today' note. test_required flipped false -> true now that tests exist; test_rationale rewritten to match. Criteria unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-25
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_inf_700b_4_5_docs.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md
+- docs/architecture/diagrams/c3-038-knowledge-capture-path-sequence.md
+- docs/architecture/agent_knowledge_system.md
 notes: |
   Satisfies the sequence-diagram entry in INF-700b's documentation_triggers.
   The "names no retired step" clause exists because the current architecture
