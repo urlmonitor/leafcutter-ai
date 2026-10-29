@@ -1,0 +1,52 @@
+id: BO-4400g-1-ii
+title: "A clearing request whose names disagree clears nothing"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given ready workspaces for the features "alpha" and "beta", each holding nothing unsent,
+  When clearing is requested naming the kind "feature" and short name "alpha" together
+    with the line-of-work name "feature/beta",
+  And clearing is requested naming the kind "feature" and short name "alpha" together
+    with the location of the "beta" workspace,
+  And clearing is requested naming only the kind "feature", with no short name,
+  Then each request is refused without clearing anything,
+  And the first two refusals name both identities they were given and state that they
+    point at different workspaces,
+  And the third refusal states that the work was not named completely,
+  And "alpha" and "beta" are identical before and after all three requests.
+depends_on: [BO-4400g-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The refusal is one readable answer.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-1
+  contract: "Clearing request accepted by work identity."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Wrong version this must catch: a request that applies one identity and silently ignores
+  the other (for example, "the line-of-work name wins"), which clears "beta" when the caller
+  meant "alpha".

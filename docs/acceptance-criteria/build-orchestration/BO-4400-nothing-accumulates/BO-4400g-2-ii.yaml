@@ -1,0 +1,54 @@
+id: BO-4400g-2-ii
+title: "A squash-merged workspace whose line was deleted on the shared project is cleared; an unmerged one is kept"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "sq-3" whose three commits reached the main line only as one combined
+    commit with the same content, and whose own line was then deleted on the shared
+    project when its pull request was merged,
+  And a workspace "gone-1" whose own line was deleted on the shared project without ever
+    being merged, so its two commits are on neither the shared project nor the main line,
+  And neither workspace holds an uncommitted change,
+  When the landed-work pass is run,
+  Then "sq-3" is cleared and no folder of it remains,
+  And "gone-1" is identical before and after,
+  And the answer lists "gone-1" as kept for holding unsent work, naming its two commits by
+    identifier.
+depends_on: [BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Content that reached the main line under a new identifier counts as on the main line.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Merging with "delete branch" is the normal end of a pull request here, so after a squash
+  merge the workspace's commits are reachable from nothing on the shared project. A pass
+  that only checks reachability would keep every squash-merged workspace forever (the
+  5.6 GB pile-up); a pass that treats "line gone" as "landed" would destroy "gone-1". Both
+  wrong versions are caught by this pair.

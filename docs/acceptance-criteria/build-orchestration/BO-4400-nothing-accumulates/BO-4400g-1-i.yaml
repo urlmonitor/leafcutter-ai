@@ -1,0 +1,56 @@
+id: BO-4400g-1-i
+title: "Clearing by an older spelling clears the one workspace for that work, and asking again is safe"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the epic "Files Stay Workable" has one workspace, made when it was requested by its
+    older spelling "EPIC-FilesStayWorkable", holding nothing unsent,
+  And the epic "Files Stay Workable Two" has its own workspace, holding nothing unsent,
+  When clearing is requested by the older spelling "EPIC-FilesStayWorkable",
+  Then the one workspace of "Files Stay Workable" is answered cleared and no folder of it
+    remains,
+  And the workspace of "Files Stay Workable Two" is identical before and after,
+  And a lookup of the epic by its current kind and short name then answers that no
+    workspace exists for it.
+
+  Given that workspace has already been cleared,
+  When clearing is requested again, once by the older spelling and once by the current
+    kind and short name,
+  Then each request is answered with a definite statement that no workspace exists for
+    that work, not with a failure,
+  And every remaining workspace of the project is identical before and after.
+depends_on: [BO-4400g-1, BO-4300a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: Older spellings are aliases of the same work; never orphaned, never twinned.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-1
+  contract: "Clearing request accepted by work identity."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A repeat clear must not be a failure: flows and the landed-work pass both clear, and the
+  second caller arriving after the first is the normal case, not an error.

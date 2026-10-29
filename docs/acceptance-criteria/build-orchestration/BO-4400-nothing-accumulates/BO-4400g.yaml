@@ -1,0 +1,90 @@
+id: BO-4400g
+title: "Workspaces are cleared once their work has landed, by naming the work, from one place every flow uses"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Say which work is finished -- the right workspace goes, and anything already landed is tidied for you.
+
+  Any flow, or you, can ask for a piece of work's workspace to be cleared just by naming
+  the work, the same way it was asked for in the first place. Every workspace of this
+  project whose work is already fully part of the shared main line, and that holds nothing
+  unsent, can be cleared in one unattended pass that never asks a question, can be
+  previewed first, and reports everything it kept and why. Every flow that makes a
+  workspace clears it through that same one place, so no flow carries its own way of
+  deleting one -- and unsent work, other projects' workspaces and the main checkout are
+  never touched.
+depends_on: [BO-4400, BO-4300e]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e.yaml
+    relationship: constrains
+    status: exists
+    relevance: The one clearing door and its unsent-work refusal; this record adds naming the work and the landed-work pass, it does not restate the door's safety rules.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: One piece of work is always recognised as the same workspace, older spellings included.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: The holds-work / holds-nothing verdict, including content that reached main under a new identifier (squash).
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4400g-4, BO-4400g-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: |
+  ORIGIN. /plan-feature request, 2026-10-25 (behavioral route, parent_l1_id BO-4300e):
+  "Workspaces are cleared once their work has landed, from one central place any flow can
+  call by the work's name." Evidence given: on 2026-10-25 the maker's landing place held 19
+  workspaces (6 ac, 3 epic, 3 fastlane, 7 feature), 5.6 GB, on a ~50 GB WSL disk budget; most
+  PRs were merged by hand after the flow had ended. Only finalize step 7 and the ship skill
+  call the maker's clearing today; plan-feature, the fast lane, build-feature without
+  finalize and quick-fix never clear.
+
+  WHY HERE AND NOT UNDER BO-4300e (placement decided by the BA, flag for the PO/user):
+  - BO-4300e holds 5 of 5 L2 children (L1 cap 5), so no new L2 fits under it.
+  - The request asked for a NEW SIBLING L1 of BO-4300e, but BO-4300 already holds 7 of 7
+    L1s (a..g; L0 cap 7, no child_limit_override). A BO-4300h would be refused by the
+    tree-limit hook.
+  - BO-4400 holds 6 of 7 L1s and its own boundary rule (PROJECT_CONTEXT, BO-4400 notes) says
+    "that it IS cleared, by every route" belongs to BO-4400. The name-based clearing request
+    and the landed-work pass are additions to the door that exist to serve that promise, so
+    this L1 depends on BO-4300e and reuses it rather than restating it. This takes BO-4400's
+    LAST L1 slot (7/7).
+  - BO-4400a (route-end clearing) and BO-4400d (routine sweep) are each at 5/5 and were not
+    usable hosts.
+
+  OUT OF SCOPE, OWNED ELSEWHERE: the rule for which caller may tell a workflow agent to
+  remove a workspace, and finalize step 7's authorization, belong to a separate record
+  family owned by another session; this L1 neither restates nor references it. The
+  discard token for unsent work stays BO-4300e-3 -- the landed-work pass never uses one.
+
+  OPEN CONFLICT (flagged, not resolved): BO-4400's approved KEY FRAMING DECISION
+  (2026-10-09) is that a route clears its workspace as soon as its PR is OPEN (pushed counts
+  as sent, BO-4400a-1). This request says a flow clears once its PR is MERGED, else leaves the
+  workspace to the landed-work pass. BO-4400g-4 is written so it holds under either answer;
+  the user must say which timing wins before BO-4400a-1 or BO-4400g-4 is built.

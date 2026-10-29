@@ -1,0 +1,114 @@
+id: BO-4400g-2
+title: "One unattended pass clears exactly this project's workspaces whose work has landed and holds nothing unsent"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with a shared project whose main line has been fetched, and these
+    workspaces of shop, each made by its workspace maker:
+    - "ff-1", whose two commits reached the main line unchanged (fast-forward merge),
+    - "mc-1", whose two commits reached the main line through a merge commit,
+    - "sq-1", whose three commits reached the main line only as one combined commit with
+      the same content under a new identifier (squash merge),
+    - "open-1", whose two commits are pushed to its own line on the shared project but
+      have not reached the main line (pull request open),
+    - "landed-dirty", whose commits reached the main line, holding one uncommitted change
+      to a tracked file,
+    - "landed-plus", whose first commit reached the main line, carrying one further commit
+      that is on neither its own line on the shared project nor the main line,
+    - "fresh-1", made from the main line tip an hour ago and carrying no commit of its own yet,
+    - "idle-1", made from an earlier main line commit eight days ago, carrying no commit of
+      its own, holding nothing uncommitted, with no file in it changed for eight days,
+  And a project "blog" in the same parent folder with a workspace "ff-9" whose commits
+    reached blog's main line,
+  And shop's main checkout, on its main line with nothing uncommitted,
+  When the landed-work pass is run for shop with no person available and no input given,
+  Then "ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single
+    clearing request uses, and no folder of them remains,
+  And "open-1", "landed-dirty", "landed-plus" and "fresh-1" are each identical before and
+    after,
+  And blog's "ff-9" and shop's main checkout are identical before and after, and neither
+    appears in the pass's answer,
+  And every line of work on the shared project, and the shared main line, are identical
+    before and after,
+  And the pass ends with exactly one answer, without asking any question, which lists each
+    cleared workspace by work name and location, and each kept workspace by work name,
+    location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding
+    unsent work naming the file by path, "landed-plus" as holding unsent work naming the
+    commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for
+    less than seven days.
+depends_on: [BO-4400g, BO-4400g-1, BO-4100c-1, BO-4300e-2, BO-4300e-2-iii, BO-4300c-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      The holds-work / holds-nothing verdict, including content that reached the main line under a
+      new identifier. This pass is stricter: holds-nothing AND every commit on the main line.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-iii.yaml
+    relationship: constrains
+    status: exists
+    relevance: Clearing only ever removes one of this project's own workspaces.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-1.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep; see notes on how its workspace criterion differs from this pass.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      A landed-work pass on the one workspace maker, answering one result listing cleared
+      workspaces (work name, location) and kept workspaces (work name, location, reason from a fixed
+      set: not-on-main, holds-unsent-work, no-own-work, in-use, landing-unconfirmed,
+      shared-project-unreachable). Consumed by BO-4400g-3 (preview), BO-4400g-4 (flows) and,
+      optionally, the routine sweep (BO-4400d).
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "Holds-work / holds-nothing verdict, with content-equivalent (squash) commits counted as on the main line."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400g-2-i, BO-4400g-2-ii, BO-4400g-2-iii, BO-4400g-2-iv]
+implemented_by: []
+notes: |
+  User request item (2). "Landed" = every commit of the workspace's own line is on the main
+  line (by identifier, or by content for squash merges) AND the workspace holds nothing
+  unsent. Stricter than BO-4100c-1's holds-nothing, which also accepts "open-1" (pushed,
+  unmerged).
+
+  "fresh-1" is an unasked-for boundary: a just-made workspace with no commits of its own is
+  trivially "contained in main". Without this clause an hourly pass would delete workspaces
+  a run has just been given. It is kept with reason no-own-work while it is younger than
+  seven days idle.
+
+  USER DECISION (2026-10-29, BA gate): a workspace with no commits of its own, nothing
+  uncommitted and no file changed for seven days is abandoned and is cleared ("idle-1").
+  Idle is measured from the newest change to any file in the workspace, not from when it
+  was made, so a run still writing to it is never cleared.
+
+  USER DECISION (2026-10-29, BA gate): the pass never deletes lines of work on the shared
+  project -- the request is about disk space on this machine; deleting merged lines on the
+  shared project stays an explicit, per-request choice on a single clearing request.
+
+  BOUNDARY vs BO-4400d (routine sweep): BO-4400d-1 removes workspaces "holding nothing
+  unsent", which includes pushed-but-unmerged ones; this pass removes only landed ones. If
+  the sweep is built on top of this pass, BO-4400d-1's "idle-1"/"idle-2" fixture must be
+  checked against the stricter rule. Flagged, not resolved.

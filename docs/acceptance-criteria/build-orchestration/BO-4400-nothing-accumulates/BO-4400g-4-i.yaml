@@ -1,0 +1,59 @@
+id: BO-4400g-4-i
+title: "No flow removes a workspace by any means other than the clearing door"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the five flows of BO-4400g-4 are each run as in its first scenario, pull request
+    merged and nothing unsent,
+  And the clearing door is made to refuse every clearing request during these runs, with
+    a refusal stating that the workspace is in use,
+  When each flow returns its final result,
+  Then every flow's workspace folder still exists, with its files identical to their state
+    when the clearing request was made,
+  And every flow's final result contains the door's refusal unchanged and reports the
+    workspace as kept,
+  And no flow retried the clearing with a discard token or by any other route.
+
+  Given the set of flows, skills, commands and agent instructions the install deploys, the
+    set being derived from what the install deploys and never from a hand-written list,
+  When each is run on its clearing path with the door replaced by a recorder,
+  Then every workspace that disappears during the run disappears only after a recorded
+    clearing request for it.
+depends_on: [BO-4400g-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-3.yaml
+    relationship: related
+    status: exists
+    relevance: The hand-run ways of clearing already go through the door; this extends the check to every flow.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-4
+  contract: "Every flow's name-based clearing request."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "No flow carries its own deletion logic" -- the user's words, made falsifiable: a flow
+  that deletes the folder itself, or falls back to a forced removal after a refusal, leaves
+  no folder in scenario 1 and fails. Verified by running the flows, never by searching their
+  text (CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep").

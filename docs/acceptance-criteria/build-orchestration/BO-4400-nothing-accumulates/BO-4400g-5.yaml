@@ -1,0 +1,60 @@
+id: BO-4400g-5
+title: "How-to: clearing a workspace by naming its work, and previewing and running the landed-work pass"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given clearing by work name (BO-4400g-1), the landed-work pass (BO-4400g-2) and its
+    preview (BO-4400g-3) are in place,
+  When a person opens the existing how-to guide for clearing a workspace,
+  Then it shows how to ask for a workspace to be cleared by naming the work -- by kind and
+    short name, by line-of-work name, and by an older spelling -- and states that asking
+    again after it is gone is answered "no workspace exists", not an error,
+  And it shows how to preview the landed-work pass and how to run it, with one example
+    answer listing a cleared workspace and a kept workspace with its reason,
+  And it lists every reason a workspace is kept -- not yet on the main line, holds unsent
+    work, no work of its own yet, in use, landing could not be confirmed, shared project
+    unreachable -- and what the person can do about each,
+  And it shows how to run the pass unattended from a timer or at session start,
+  And it states that the pass never touches another project's workspaces, the main
+    checkout, or lines of work on the shared project,
+  And there is still exactly one how-to guide for clearing a workspace.
+depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4300e-5]
+doc_links:
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: modifies
+    status: exists
+    relevance: The existing clearing guide (BO-4300e-5) is extended, not duplicated.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-4.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep's how-to; cross-link rather than repeat.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass answer shape and its fixed set of kept reasons."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400g documentation_triggers [how-to]. Clearing by hand and clearing by
+  name are the same user-facing action, so the guide BO-4300e-5 produced is extended rather
+  than a second one written.

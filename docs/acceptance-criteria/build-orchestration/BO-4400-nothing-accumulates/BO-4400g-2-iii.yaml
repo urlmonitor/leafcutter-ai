@@ -1,0 +1,58 @@
+id: BO-4400g-2-iii
+title: "A landed workspace that is in use, or gains work before its turn, is kept"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+declares_side_effect: true
+criteria: |
+  Given a workspace "busy-1" whose commits all reached the main line, in which a program
+    started from the workspace is still running and holding files open,
+  When the landed-work pass is run,
+  Then "busy-1" is identical before and after and the program is still running,
+  And the answer lists "busy-1" as kept with the reason that it is in use.
+
+  Given the landed-work pass has assessed workspace "idle-1" as landed and holding nothing
+    unsent,
+  And before the pass clears "idle-1", one new uncommitted file is written into it,
+  When the pass reaches "idle-1",
+  Then "idle-1" is not cleared and the new file is byte-identical to what was written,
+  And the answer lists "idle-1" as kept for holding unsent work, naming that file by path,
+  And the pass goes on to the remaining workspaces.
+depends_on: [BO-4400g-2, BO-4300e-2-ii]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: A single clearing request may stop a running program; the unattended pass never does.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: Same race for the routine sweep; this record applies it to the landed-work pass.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass with kept reason in-use."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Unattended means nobody is there to notice a stopped program. BO-4300e-2-ii allows a
+  single clearing request to stop a program and clear; the pass must not take that branch.

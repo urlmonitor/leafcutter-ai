@@ -1,0 +1,52 @@
+id: BO-4400g-2-iv
+title: "Two landed-work passes running at the same moment clear each workspace once and both report truthfully"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project with three landed workspaces "ff-1", "ff-2" and "ff-3", each holding
+    nothing unsent, and one workspace "open-1" not yet on the main line,
+  When two landed-work passes are started at the same moment, as an hourly timer and a
+    session start would,
+  Then afterwards no folder of "ff-1", "ff-2" or "ff-3" remains and "open-1" is identical
+    before and after,
+  And between the two answers each of "ff-1", "ff-2" and "ff-3" is reported cleared by
+    exactly one pass,
+  And the other pass reports each of them as already gone or not listed, never as a
+    failure,
+  And both passes end with exactly one answer each, and neither asks a question.
+depends_on: [BO-4400g-2, BO-4400g-1-i]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-3.yaml
+    relationship: related
+    status: exists
+    relevance: The session-start trigger that may run alongside a timer.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Safe to run unattended (e.g. from an hourly timer or at session start)" -- the user's
+  words. Both triggers firing together is the case that turns a half-cleared folder or a
+  false failure into a nightly alert.

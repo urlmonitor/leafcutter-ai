@@ -1,0 +1,95 @@
+id: BO-4400g-4
+title: "Every flow that makes a workspace clears it by naming its work, and leaves anything kept to the landed-work pass"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given each of these flows is run against a real test project with a real shared project,
+    each in a workspace obtained from the one workspace maker, and each driven to the point
+    where its pull request has been merged into the main line before the flow returns:
+    - requirements authoring, for the work "ac/clear-merged-workspaces",
+    - the fast lane, for the work "fastlane/tq-200d-3",
+    - the feature build followed by finalizing it, for the work "feature/alpha",
+    - the quick fix, for the work "ticket/fix-null-slug",
+    - ship, for the work "feature/beta",
+  When each flow returns its final result,
+  Then no folder remains at the location its workspace occupied,
+  And the flow's final result contains the clearing door's own answer for that workspace,
+    reporting it cleared,
+  And the clearing request the flow sent named its work by the same name it used to obtain
+    the workspace, and gave no location.
+
+  Given the fast lane for the work "fastlane/tq-200d-4" returns while its workspace is still
+    present, with the door's answer at the end of the flow stating the workspace was kept
+    and why,
+  And afterwards its pull request is merged into the main line by hand and the workspace
+    holds nothing unsent,
+  When the landed-work pass is next run,
+  Then the workspace of "fastlane/tq-200d-4" is cleared,
+  And no step of the fast lane, or of any other flow, was run between the flow's return and
+    that clearing.
+depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4300f-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Route-end clearing at PR-open time for six routes. This record adds ship and finalize,
+      requires the request to name the work, and hands kept workspaces to the landed-work pass.
+      See the timing conflict in notes.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300f-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Every route already gets its workspace from the one maker; this is the clearing end.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/finalize-feature.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: llm-expert
+    contract: "Skill and command prose for ship and quick fix that sends the one name-based clearing request and relays the door's answer unchanged; no other removal instruction."
+expects_from:
+  ac_id: BO-4400g-1
+  contract: "Clearing request accepted by work identity."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400g-4-i]
+implemented_by: []
+notes: |
+  User request item (3). The five flows are the user's list. BO-4400a-1 already covers the
+  single-ticket build, epic build, quick fix, requirements authoring, fast lane and backlog
+  build at PR-open time; this record adds ship and finalize, and makes the request carry the
+  work's name.
+
+  TIMING CONFLICT (flagged, not resolved -- user decision needed): BO-4400's approved framing
+  clears at PR OPEN (pushed counts as sent). The request says clear once MERGED, else leave
+  to the landed-work pass. The criteria above are written to hold under BOTH: scenario 1
+  uses flows whose PR is merged before return; scenario 2 starts from whatever the door kept
+  at flow end. If the user picks "merged", BO-4400a-1's PR-open clause needs amending (and a
+  workspace with an open PR becomes a "kept, not yet on main" answer); if "PR open" stands,
+  scenario 2 still covers halted or refused cases.
+
+  OUT OF SCOPE: whether a workflow agent is authorized to perform finalize's removal, and how
+  finalize step 7 names that authorization, is owned by a separate record family (another
+  session). This record only requires that the request names the work and goes through the
+  door.

@@ -1,0 +1,80 @@
+id: BO-4400g-1
+title: "A clearing request that names the work clears the same workspace the maker made for it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose workspace maker made, each holding nothing unsent:
+    - a workspace for the feature "alpha", on the line of work "feature/alpha",
+    - a workspace for the feature "alpha-v2", on the line of work "feature/alpha-v2",
+    - a workspace for the fast-lane fix "tq-200d-3", on the line of work "fastlane/tq-200d-3",
+  And a workspace for the feature "beta" holding one unpushed commit and one uncommitted
+    file,
+  And each of the four was first looked up through the maker by the same name used below,
+    and its answered location recorded,
+  When clearing is requested by naming the work, never by giving a location:
+    "alpha" by its kind "feature" and short name "alpha",
+    "tq-200d-3" by its line-of-work name "fastlane/tq-200d-3",
+    and "beta" by its kind "feature" and short name "beta",
+  Then "alpha" and "tq-200d-3" are each answered cleared, and each answer states the
+    location that was cleared, equal to the location their lookup answered,
+  And no folder remains at either of those two locations,
+  And "alpha-v2" is identical before and after,
+  And "beta" is refused exactly as a clearing request giving its location is refused:
+    the refusal names the unpushed commit by identifier and the uncommitted file by path,
+    and "beta" is identical before and after,
+  And every request ends with exactly one answer and asks no question.
+depends_on: [BO-4400g, BO-4300e-1, BO-4300e-2, BO-4300a-2, BO-4300c-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The clearing door whose refusal and no-prompt rules are reused unchanged for a name-based request.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Lookup by name answers a definite location; clearing by the same name must agree with it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The one identity rule (kinds, short names, older spellings) the clearing request resolves through.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: One readable answer per request.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    contract: "A clearing request accepted by work identity (kind + short name, or line-of-work name), resolved through the same identity rule the maker uses to make and look up workspaces; consumed by the landed-work pass (BO-4400g-2) and every flow (BO-4400g-4)."
+expects_from:
+  ac_id: BO-4300a-2
+  contract: "One identity rule mapping kind/short name, line-of-work name and older spellings to one workspace."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400g-1-i, BO-4400g-1-ii]
+implemented_by: []
+notes: |
+  User request item (1). Today the clearing request accepts only a location, while making
+  and looking up accept the work's identity; a caller therefore has to look up, parse and
+  re-send a path. Clearing by location keeps working (existing BO-4300e behaviour); this
+  record adds the name form. The "alpha" / "alpha-v2" pair is the prefix-bleed check that
+  BO-4300e-1 already applies to lookup.

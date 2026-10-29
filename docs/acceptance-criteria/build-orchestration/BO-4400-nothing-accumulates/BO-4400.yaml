@@ -47,7 +47,7 @@ origin_agent: BrainCandy
 created: 2026-10-09
 amended_by: []
 superseded_by: null
-covered_by: [BO-4400a, BO-4400b, BO-4400c, BO-4400d, BO-4400e, BO-4400f]
+covered_by: [BO-4400a, BO-4400b, BO-4400c, BO-4400d, BO-4400e, BO-4400f, BO-4400g]
 implemented_by: []
 notes: |
   ORIGIN. The user, 2026-10-09: "and same for the tmp files. we need clear ACs that provide

@@ -1,0 +1,58 @@
+id: BO-4400g-3
+title: "A preview of the landed-work pass lists what it would clear and keep, and changes nothing"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the project "shop" with the eight workspaces of BO-4400g-2 ("ff-1", "mc-1", "sq-1",
+    "idle-1", "open-1", "landed-dirty", "landed-plus", "fresh-1"),
+  When the landed-work pass is run as a preview,
+  Then every workspace folder, every line of work in the project and on the shared project,
+    and the shared main line are identical before and after,
+  And the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1",
+    "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four
+    as kept with the same reasons a real pass gives,
+  And when the real pass is run next, with nothing changed in between, it clears exactly
+    "ff-1", "mc-1", "sq-1" and "idle-1",
+  And given one more workspace "ff-4" whose commits reached the main line is added and the
+    preview is run again, "ff-4" is added to the would-be-cleared list and nothing else in
+    the answer changes.
+depends_on: [BO-4400g, BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-2.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep's preview and space tally; this preview reports the landed-work decision only.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass and its cleared/kept answer."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User request item (2), "a dry-run listing what it would clear". The preview and the real
+  pass must make the same decision from the same assessment -- the wrong version this
+  catches is a preview that uses a looser or separately written rule. Bytes freed are not
+  asked for here; BO-4400d-2 owns the space tally.

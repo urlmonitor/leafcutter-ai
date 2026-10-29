@@ -1,0 +1,57 @@
+id: BO-4400g-2-i
+title: "When landing cannot be confirmed, the landed-work pass keeps the workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "sq-2" whose two commits were squash-merged into the main line, after
+    which a later commit on the main line changed the same lines again, so that the main
+    line no longer holds sq-2's content in the form sq-2 made it,
+  And the maker cannot establish that sq-2's content reached the main line,
+  When the landed-work pass is run,
+  Then "sq-2" is identical before and after,
+  And the answer lists "sq-2" as kept with the reason that its landing could not be
+    confirmed, naming its two commits by identifier.
+
+  Given the shared project cannot be reached when the landed-work pass starts,
+  And the project has a workspace "ff-1" whose commits reached the main line as last
+    fetched,
+  When the landed-work pass is run,
+  Then no workspace is cleared, "ff-1" included,
+  And the pass ends with exactly one answer stating that the shared project could not be
+    reached and that nothing was cleared,
+  And the answer is distinguishable from a pass that found nothing to clear.
+depends_on: [BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: "Landed-work pass with kept reasons landing-unconfirmed and shared-project-unreachable."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The user's request says "including squash/merge-commit cases where detectable". This
+  record states what happens where it is NOT detectable: keep, never guess. Deciding from a
+  stale main line (no fetch) is the wrong version the second scenario catches.
