@@ -194,6 +194,21 @@ test_spec:
     in_scope_files:
       - scripts/build_orchestration/_wvr_trace.py
       - scripts/build_orchestration/_wvr_effect.py
+  - name: test_child_process_test_keeps_its_run_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      Added 2026-10-29 (coordinator) after the effect check read every CLI-driven test not_executed: T4 runs
+      the changed line only inside a child interpreter it starts, which the in-process trace cannot see. Its
+      row is decided by the run (caught) and its detail says run-or-not-run could not be traced for a child
+      process the test started; T2, which runs no changed line and starts no child, still reads not_executed.
+    must_catch:
+      - a test that runs the changed line in a child process read as not executed
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_trace.py
+      - scripts/build_orchestration/_wvr_trace_plugin.py
   - name: test_module_level_change_counts_as_reached
     target_dir: unit_tests/build_orchestration/
     framework: pytest

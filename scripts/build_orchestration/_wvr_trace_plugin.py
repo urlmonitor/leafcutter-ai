@@ -12,13 +12,17 @@ ARCHITECTURE: Standard library only (coverage.py is not a dependency). ``sys.mon
     record from env ``LEAFCUTTER_WVR_TRACE_PATHS`` (a JSON list) and writes one JSON file named by env
     ``LEAFCUTTER_WVR_TRACE_OUT``: ``{<abs path>::<test chain>: {<abs path>: [lines]}, "": {...}}``.
     Only code of the given files is observed; every other code location is switched off at its first
-    event, so the cost stays small.
+    event, so the cost stays small. Only THIS process is traced: a test that starts a child process
+    (subprocess, os.system, posix_spawn) may run a changed line out of sight, so its key is listed under
+    ``SPAWNED_KEY`` and the reader treats its run-or-not-run as not traceable.
 """
 
 from __future__ import annotations
 
+import functools
 import json
 import os
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -27,13 +31,32 @@ import pytest
 
 PATHS_ENV = "LEAFCUTTER_WVR_TRACE_PATHS"
 OUTPUT_ENV = "LEAFCUTTER_WVR_TRACE_OUT"
+SPAWNED_KEY = "::spawned"  # {test key: []} of every test that started a child process ("" = outside any test)
 _TOOL_ID = 4  # sys.monitoring ids 0, 1, 2 and 5 belong to debugger, coverage, profiler and optimizer
 
 _targets: set[str] = set()
 _canon: dict[str, str | None] = {}  # co_filename -> canonical target path, or None for code not observed
 _lines: dict[str, dict[str, set[int]]] = {"": {}}
+_spawned: set[str] = set()
 _current = ""
 _mode = ""
+
+
+def _noting_spawn(func):  # noqa: ANN001, ANN202 -- wraps callables of several signatures
+    """Wrap *func* so a call records that the current test started a child process."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        _spawned.add(_current)
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def _watch_spawns() -> None:
+    """Note every child process a test starts (the trace cannot see the lines a child runs)."""
+    subprocess.Popen.__init__ = _noting_spawn(subprocess.Popen.__init__)
+    for name in ("system", "posix_spawn", "posix_spawnp"):
+        if hasattr(os, name):
+            setattr(os, name, _noting_spawn(getattr(os, name)))
 
 
 def _canonical(filename: str) -> str | None:
@@ -111,6 +134,7 @@ def pytest_configure(config: pytest.Config) -> None:
         return
     _targets.update(os.path.realpath(p) for p in paths)
     if _targets:
+        _watch_spawns()
         _start()
 
 
@@ -132,6 +156,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         return
     _stop()
     data = {key: {path: sorted(lines) for path, lines in per.items()} for key, per in _lines.items()}
+    data[SPAWNED_KEY] = {key: [] for key in sorted(_spawned)}
     try:
         with open(out, "w", encoding="utf-8") as fh:
             json.dump(data, fh)
@@ -144,3 +169,5 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
 # ================================================================================
 # - 2026-10-25 20:30 [python-coder]: Created: per-test line trace (sys.monitoring, settrace fallback), import-time
 #   lines under "". (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)
+# - 2026-10-29 [coordinator]: A test that starts a child process is listed under "::spawned": its child may run a
+#   changed line this in-process trace never sees, so every CLI-driven test read not_executed. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

@@ -5,7 +5,8 @@ GOAL: Run the baseline pytest run with the line-trace plugin beside the other pl
 BUSINESS CONTEXT: TQ-500g-1-xiv. The runner must tell a test the wrong version could not reach from a
     weak test. Which lines a test ran comes only from the run on the code as written, per test; a file
     whose run-or-not-run cannot be traced (not Python, outside the repository, or an unreadable trace)
-    keeps the run-decided verdict, and an unreadable trace is logged at WARNING.
+    keeps the run-decided verdict, and an unreadable trace is logged at WARNING. So does a test that ran
+    no traced changed line but started a child process: the child's lines are out of the trace's sight.
 ARCHITECTURE: ``run_traced(nodes, files, root, extras)`` makes ONE ``_wvr_pytest.run_selected`` call that
     carries the trace plugin together with *extras* (the database plugin), so they share one run. It
     returns the :class:`_wvr_pytest.PytestRun` and a :class:`Traced`. The plugin's output is a temporary
@@ -41,11 +42,18 @@ class Traced:
         lines: ``{test identity: {repo-relative path: lines the test ran}}``.
         at_import: ``{repo-relative path: lines run outside any test}``; they count for every test.
         untraceable: The altered files whose run-or-not-run could not be traced.
+        spawned: Test identities that started a child process (``""``: one was started outside any test,
+            which makes every test's run-or-not-run untraceable).
     """
 
     lines: dict[str, dict[str, set[int]]] = field(default_factory=dict)
     at_import: dict[str, set[int]] = field(default_factory=dict)
     untraceable: set[str] = field(default_factory=set)
+    spawned: set[str] = field(default_factory=set)
+
+    def started_a_child(self, identity: str) -> bool:
+        """True when *identity* (or code outside any test) started a child process the trace cannot see."""
+        return identity in self.spawned or "" in self.spawned
 
     def executed(self, identity: str) -> dict[str, set[int]]:
         """The lines *identity* ran plus those run at import time, per repo-relative path."""
@@ -75,6 +83,8 @@ def _read(out_path: str, root: Path) -> Traced | None:
         _LOG.warning("wrong-version trace output unreadable (%s); run-or-not-run is not traced", exc)
         return None
     traced = Traced()
+    spawned = raw.pop(plugin.SPAWNED_KEY, {})
+    traced.spawned = {k if k == "" else kind_support._normalize_outcome_identity(k) for k in spawned}
     for key, per_file in raw.items():
         rooted = {_relative(path, root): set(found) for path, found in per_file.items()}
         if key == "":
@@ -142,8 +152,11 @@ def apply_reach(rows: list[dict], holders: dict[str, str], changes: dict[str, se
     for r in rows:
         identity = holders.get(r["test"])
         word = NOT_TRACEABLE if identity is None else reached(traced.executed(identity), changes, traced.untraceable)
-        if word == NOT_REACHED:
+        child = identity is not None and word == NOT_REACHED and traced.started_a_child(identity)
+        if word == NOT_REACHED and not child:
             out.append(row(r["test"], r["wrong_version"], "not_executed", NOT_EXECUTED))
+        elif child:
+            out.append({**r, "detail": f"{r['detail']}; {UNTRACED_NOTE} a child process the test started"})
         elif word == NOT_TRACEABLE and identity is not None:
             files = ", ".join(sorted(traced.untraceable & set(changes)))
             out.append({**r, "detail": f"{r['detail']}; {UNTRACED_NOTE} {files}"})
@@ -157,3 +170,5 @@ def apply_reach(rows: list[dict], holders: dict[str, str], changes: dict[str, se
 # ================================================================================
 # - 2026-10-25 20:30 [python-coder]: Created: one baseline run carries the trace plugin beside the other
 #   plugins; untraceable files and an unreadable trace fail safe to the run-decided verdict. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)
+# - 2026-10-29 [coordinator]: A test that ran no traced changed line but started a child process keeps its
+#   run-decided verdict (with the could-not-be-traced note) instead of reading not_executed. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

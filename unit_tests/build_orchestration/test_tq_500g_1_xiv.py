@@ -85,6 +85,23 @@ def test_untraceable_sql_alteration_keeps_its_run_verdict(tmp_path):
     assert not [u for u in verdict["unfinished"] if u["result"] == "not_executed"], verdict["unfinished"]
 
 
+def test_child_process_test_keeps_its_run_verdict(tmp_path):
+    # covers: TQ-500g-1-xiv
+    # angle: boundary
+    # Catches: 'a test that runs the changed line in a child process read as not executed'. T4 runs the
+    # chain only inside a child interpreter, which the in-process trace cannot see; it fails under the
+    # alteration, so it must read caught (with the could-not-be-traced note). Control: T2 never runs the
+    # line and starts no child, so it still reads not_executed.
+    spec = [f.entry(f.T4, f.WV_NAIVE), f.entry(f.T2, f.WV_NAIVE)]
+    sb = f.build(tmp_path, spec, NAIVE)
+    _proc, verdict = f.run(sb)
+    t4 = f.rows(verdict, f.T4, f.WV_NAIVE)
+    assert [r["result"] for r in t4] == ["caught"], f"T4 rows: {t4}"
+    assert f"{f.UNTRACED} a child process the test started" in t4[0]["detail"], t4[0]["detail"]
+    assert f.results_of(verdict, f.T2, f.WV_NAIVE) == ["not_executed"], verdict["results"]
+    assert (sb.work / f.MOD).read_bytes() == sb.written[f.MOD], "the code was not put back byte for byte"
+
+
 def test_module_level_change_counts_as_reached(tmp_path):
     # covers: TQ-500g-1-xiv
     # angle: boundary

@@ -31,6 +31,7 @@ WV_NAIVE = "naive chain re-invokes the previous sitecustomize"
 WV_SQL = "the migration leaves the column nullable"
 WV_CONST = "the module constant is altered"
 T1, T2, T3 = "test_t1_calls_the_chain", "test_t2_never_calls_the_chain", "test_t3_weak_chain_check"
+T4 = "test_t4_calls_the_chain_in_a_child_process"
 TS1, TS2 = "test_ts1_column_is_not_null", "test_ts2_unrelated_check"
 MOD, SQL_REL = "sitecustomize_chain.py", "migrations/001_add_col.sql"
 NOT_EXECUTED = "not executed: the test runs none of the changed lines"
@@ -53,6 +54,13 @@ _PY_BODIES = {
     T2: f'def {T2}():\n    # covers: {AC_ID}\n    assert sc.MODULE_CONST == "fix"\n',
     T3: (f'def {T3}(monkeypatch):\n    # covers: {AC_ID}\n    monkeypatch.setenv("PREV_SITE", "x")\n'
          f'    assert sc.chain_sitecustomize() == "chained"\n'),
+    # T4 runs the changed line only inside a child interpreter, out of the in-process trace's sight.
+    T4: (f'def {T4}(monkeypatch):\n    # covers: {AC_ID}\n    import os\n    import subprocess\n'
+         f'    monkeypatch.delenv("PREV_SITE", raising=False)\n'
+         f'    code = "import sitecustomize_chain as sc; print(sc.chain_sitecustomize())"\n'
+         f'    where = os.path.dirname(sc.__file__)\n'
+         f'    out = subprocess.run([sys.executable, "-c", code], cwd=where, capture_output=True, text=True)\n'
+         f'    assert out.stdout.strip() == "none", out\n'),
 }
 _SQL_HEAD = "from pathlib import Path\n\nSQL = Path(@WORK@) / @REL@\n"
 _SQL_BODIES = {
