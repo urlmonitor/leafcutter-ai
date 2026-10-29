@@ -1,0 +1,100 @@
+id: BO-4500a-4-viii
+title: "Check output in any encoding still ends in one answer -- a non-ASCII byte from a hook never crashes the step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given an unsupervised call of the shared commit step on a host whose locale code page is not
+    UTF-8 (cp1252 on Windows),
+    and a check that prints UTF-8 text outside that code page (an emoji, an arrow, or a byte
+    such as 0x8f) to its output and then passes,
+  When the step runs that commit,
+  Then the commit is recorded and the answer is committed with the new commit's sha,
+  And the step's whole standard output is exactly one JSON object,
+  And no index entry is left out of step with HEAD for the committed paths.
+
+  Given the same check prints the same bytes and then fails,
+  When the step runs that commit,
+  Then the answer is hook_failed with the check's output carried in hook_output, any
+    undecodable byte replaced rather than raised.
+
+  And the bug symptom ("On Windows the commit step (commit_changes.py) crashes with TypeError
+    at `output = proc.stdout + proc.stderr` (commit_changes.py line 336) because proc.stdout
+    is None; the commit itself lands but no JSON answer is printed and a stale index entry is
+    left behind. The subprocess reader thread raised UnicodeDecodeError: 'charmap' codec
+    can't decode byte 0x8f.") must not occur
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: templates/scripts/commit_step_base.py
+    relationship: describes
+    status: exists
+    relevance: "git() runs every git call with text=True and no encoding; run_without_input() already decodes with utf-8, errors='replace' -- the fix aligns git() with it."
+  - path: templates/scripts/commit_changes.py
+    relationship: describes
+    status: exists
+    relevance: "The fix-and-retry loop concatenates proc.stdout + proc.stderr, which crashes when the reader thread died and left stdout None."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    git() in templates/scripts/commit_step_base.py decodes the child's output with
+    encoding='utf-8', errors='replace' (the same decoding run_without_input() uses), never the
+    locale code page, so a non-UTF-8 or out-of-code-page byte in hook output cannot kill the
+    subprocess reader thread or leave stdout/stderr None.
+  - >-
+    Behaviour is otherwise unchanged: same arguments, same return type, same StepRefusal on an
+    unrunnable git.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract: every call ends in exactly one JSON object on stdout."
+test_required: true
+test_spec:
+  - name: test_git_decodes_non_locale_bytes_as_utf8_with_replacement
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "commit_step_base.git() run against a real git command whose output contains UTF-8 text outside cp1252 plus a raw 0x8f byte (e.g. via a fixture alias or a commit message read back with git log) returns a CompletedProcess whose stdout and stderr are str, never None, with the UTF-8 text intact and the undecodable byte replaced."
+    must_catch:
+      - "git() still uses text=True with the locale code page, so stdout is None or mojibake"
+      - "errors='strict' decoding that raises on 0x8f"
+  - name: test_check_printing_non_ascii_bytes_still_yields_one_committed_answer
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "An unsupervised real call of commit_changes.py with PYTHONIOENCODING/locale forced to cp1252 where a fixture pre-commit check prints a UTF-8 emoji and a raw 0x8f byte then passes ends with stdout parsing as exactly one JSON object with status committed and a sha; no TypeError traceback appears."
+    must_catch:
+      - "the step crashes at proc.stdout + proc.stderr and prints no answer"
+test_rationale: >-
+  The defect is a decoding choice in the one git wrapper, so the first test proves the wrapper
+  itself returns decoded strings for out-of-code-page bytes, and the second runs the real step
+  end to end through a check that prints those bytes, proving the one-answer contract holds.
+origin_agent: BrainCandy
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4500a_4_viii_git_utf8.py
+  - unit_tests/build_orchestration/test_bo_4500a_4_viii_handoff_utf8.py
+implemented_by:
+  - "templates/scripts/commit_step_base.py"
+  - "templates/scripts/commit_changes.py"
+notes: |
+  Authored by /quick-fix. Root cause: git() decodes the child's output with text=True and no encoding, i.e. the locale code page (cp1252 on Windows), so any non-cp1252 byte in hook output (UTF-8 emoji/arrows from pre-commit hooks) kills the reader thread and leaves stdout None. The supervised path run_without_input (line 234) already decodes with utf-8, errors='replace'; git() must do the same (encoding='utf-8', errors='replace')..
+
+  Placement: BO-4500a holds its five-L2 cap, so this technical constraint on the one-answer
+  contract is an L3 child of BO-4500a-4.

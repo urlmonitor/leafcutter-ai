@@ -25,15 +25,20 @@ ARCHITECTURE: Pure stdlib (json, os, subprocess, tempfile, contextlib,
 from __future__ import annotations
 
 import contextlib
+import functools
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
+import workspace_root
 import worktree_answer
 
 _log = logging.getLogger(__name__)
@@ -47,6 +52,52 @@ VALID_KINDS: tuple[str, ...] = ("ticket", "feature", "ac", "fastlane", "epic", "
 _CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
 _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
+
+
+def no_prompt_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Return a copy of *base* (default ``os.environ``) with every interactive prompt disabled.
+
+    Sets ``GIT_TERMINAL_PROMPT=0`` and ``GCM_INTERACTIVE=never``; adds
+    ``GIT_SSH_COMMAND="ssh -o BatchMode=yes"`` only when none of
+    ``GIT_SSH_COMMAND``, ``GIT_SSH`` or a configured ``core.sshCommand`` is
+    present, so a caller's own ssh setup is never overridden (BO-4300c-2).
+    """
+    env = dict(os.environ if base is None else base)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    if "GIT_SSH_COMMAND" not in env and "GIT_SSH" not in env and not workspace_root.ssh_command_configured():
+        env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+    return env
+
+
+def git_env() -> dict[str, str]:
+    """Environment for every maker child process: the caller's, with prompts disabled."""
+    return no_prompt_env()
+
+
+def read_only_verb(func):
+    """Decorate a read-only verb so every git child it spawns runs with optional locks off.
+
+    Git opportunistically refreshes and rewrites ``.git/index`` (e.g. during
+    ``git status``) unless ``GIT_OPTIONAL_LOCKS=0``; a read-only verb must leave the
+    index byte-for-byte untouched (BO-4300c-1). The variable is set in the process
+    environment for the call and restored afterwards, so ``git_env`` forwards it to
+    every child and ensure's behaviour is unchanged.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        had = "GIT_OPTIONAL_LOCKS" in os.environ
+        prior = os.environ.get("GIT_OPTIONAL_LOCKS")
+        os.environ["GIT_OPTIONAL_LOCKS"] = "0"
+        try:
+            return func(*args, **kwargs)
+        finally:
+            if had:
+                os.environ["GIT_OPTIONAL_LOCKS"] = prior
+            else:
+                os.environ.pop("GIT_OPTIONAL_LOCKS", None)
+    return wrapper
+
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
             encoding: str | None = None) -> subprocess.CompletedProcess:
@@ -74,6 +125,8 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
         proc = subprocess.run(
             ["git", *args],
             cwd=str(cwd),
+            stdin=subprocess.DEVNULL,
+            env=git_env(),
             capture_output=True,
             text=True,
             encoding=encoding,
@@ -88,8 +141,12 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
     return proc
 
 
-def copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
-    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace."""
+def copy_optional_files(repo_root: Path, workspace_path: Path) -> list[str]:
+    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace.
+
+    Returns the names actually copied (BO-4300c-2 ``bootstrap.env_copied``).
+    """
+    copied: list[str] = []
     for name in (".env", ".mcp.json"):
         src = repo_root / name
         if not src.is_file() or (workspace_path / name).exists():
@@ -98,6 +155,9 @@ def copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
             shutil.copy2(src, workspace_path / name)
         except OSError as exc:
             _log.warning("copy_optional_files: could not copy %s: %s", src, exc)
+        else:
+            copied.append(name)
+    return copied
 
 
 def marker_path(workspace: Path) -> Path:
@@ -189,12 +249,50 @@ def git_config_get(workspace: Path, key: str) -> str | None:
     return value or None
 
 
+_REMOTE_RE = re.compile(r"^([A-Za-z][A-Za-z0-9+.-]*://|[\w.-]+@[\w.-]+:)")
+_DRIVE_URL_RE = re.compile(r"^/[A-Za-z]:")
+
+
+def _trim_location(text: str) -> str:
+    """Strip trailing separators and one ``.git`` suffix (and the separators before it)."""
+    text = text.rstrip("/\\")
+    if text.endswith(".git"):
+        text = text[: -len(".git")].rstrip("/\\")
+    return text
+
+
+def _file_url_path(text: str) -> str | None:
+    """The local path a ``file://`` URL names (``file:///C:/x`` -> ``C:/x``), else ``None``."""
+    if text[:7].lower() != "file://":
+        return None
+    path = unquote(text[7:])
+    if _DRIVE_URL_RE.match(path):
+        return path[1:]
+    return path if path.startswith("/") else "//" + path  # file://host/share -> UNC
+
+
+def _canonical_location(text: str) -> str:
+    """Comparable form of a path-or-URL: local paths normalised, remote URLs exact bar ``/`` and ``.git``."""
+    text = text.strip()
+    local = _file_url_path(text)
+    if local is None and _REMOTE_RE.match(text):
+        return _trim_location(text)
+    local = _trim_location(text if local is None else local)
+    if not Path(local).is_absolute():
+        return local  # never resolved against the cwd
+    local = os.path.normpath(local)
+    if os.name == "nt":
+        try:
+            local = str(Path(local).resolve())
+        except OSError as exc:
+            _log.warning("same_location: cannot resolve %s: %s", local, exc)
+        local = os.path.normcase(local)
+    return local
+
+
 def same_location(a: str, b: str) -> bool:
-    """Best-effort equality of two path-or-URL strings, resolving filesystem paths."""
-    try:
-        return Path(a).resolve() == Path(b).resolve()
-    except OSError:
-        return a == b
+    """Equality of two path-or-URL strings: equal text first, then their canonical forms."""
+    return a == b or _canonical_location(a) == _canonical_location(b)
 
 
 def normalize_slug(raw: str, kind: str | None = None) -> str:

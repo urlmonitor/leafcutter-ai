@@ -1,0 +1,30 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    def setUp(self):
+        self.conn = psycopg2.connect(resolve_test_db_address(Path.cwd()))
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_every_row_has_non_negative_buy_volume(self):
+        # covers: TQ-9502
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "select count(*), count(*) filter (where buy_volume is not null), min(buy_volume) "
+                "from buy_volume_window"
+            )
+            processed, non_null, lowest = cur.fetchone()
+            self.assertEqual(processed, 3)
+            self.assertEqual(non_null, 3)
+            self.assertGreaterEqual(lowest, 0)

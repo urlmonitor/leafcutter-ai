@@ -14,8 +14,9 @@ Merge the current feature workspace back to main and clean up. The workspace com
 ## Pre-flight Checks
 
 1. **Confirm we're in a workspace** (not the main repo). Ask the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`:
+   Run ONE exact command with the ABSOLUTE, quoted path to the deployed maker, unchanged, and return its stdout verbatim. The path is `<project root>/.leafcutter/scripts/worktree.py`, with the project root from `git rev-parse --show-toplevel`. Never a cwd-relative path.
    ```
-   python scripts/worktree.py locate --kind feature --slug <name>
+   python "<project root>/.leafcutter/scripts/worktree.py" locate --kind feature --slug "<name>"
    ```
    The `workspace_path` of the ok answer must be the current directory. If we're in the main repo, abort with a clear message.
 
@@ -48,8 +49,8 @@ Merge the current feature workspace back to main and clean up. The workspace com
    - `git push origin main`
 
 8. **Clear the workspace** with the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`, never by hand:
-   - Switch working directory back to the main repo
-   - `python scripts/worktree.py remove --path "<workspace-path>"` (if it refuses with `UNSENT_WORK`, stop and report; see `docs/how-to/clear-a-workspace.md`)
+   - Switch working directory back to the main repo, then recompute the project root there: `git rev-parse --show-toplevel` (ONE exact command, run unchanged, stdout verbatim)
+   - `python "<project root>/.leafcutter/scripts/worktree.py" remove --path "<workspace-path>"` (ONE exact command: the absolute, quoted maker path built from the project root just recomputed, run unchanged, stdout verbatim) (if it refuses with `UNSENT_WORK`, stop and report; see `docs/how-to/clear-a-workspace.md`)
    - `git branch -d feature/<name>` in the main repo (only if merged)
 
 9. **Confirm** to the user (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`):

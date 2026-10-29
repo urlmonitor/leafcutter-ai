@@ -1,0 +1,36 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+class Log:
+    def __init__(self, cur):
+        self.cur = cur
+
+    def run(self, msg):
+        self.cur.execute(msg)
+
+
+def run(x):
+    return len(x)
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    def setUp(self):
+        self.conn = psycopg2.connect(resolve_test_db_address(Path.cwd()))
+        self.conn.autocommit = False
+        self.cur = self.conn.cursor()
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_counts(self):
+        # covers: TQ-9502
+        self.cur.execute("select buy_volume from buy_volume_window")
+        run("select count(*), count(buy_volume) from buy_volume_window")
+

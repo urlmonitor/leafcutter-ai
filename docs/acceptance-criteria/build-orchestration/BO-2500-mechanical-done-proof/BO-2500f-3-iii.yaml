@@ -1,0 +1,230 @@
+id: BO-2500f-3-iii
+components:
+  - build_orchestration
+  - ac_store
+title: "The /inspect command starts the inspection workflow for one requirement id, and never approves anything itself"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the /inspect slash command, installed as a thin command over the
+    inspection workflow in the same way /fast-lane-build is a thin command over
+    its workflow,
+  When a person types "/inspect DK-210b-3",
+  Then the command starts the inspection workflow (BO-2500f-3-ii) with the single
+    argument DK-210b-3 as the requirement id, and relays the workflow's result,
+  And when the command is typed with no argument, with more than one argument, or
+    with an argument that is not shaped like a requirement id (for example
+    "/inspect please-approve" or "/inspect DK 210"), it does not start the
+    workflow and replies with usage text naming the form "/inspect <AC-id>" and
+    one example,
+  And when the workflow tool is not available, or the workflow reports an error,
+    the command stops and reports that failure, and does not carry out the
+    inspection steps itself as a conversation,
+  And the command never creates an approval file, never writes an answer of
+    "approve", and never changes the requirement record itself; the only approval
+    is the one the person gives inside the workflow,
+  And the command's instructions contain no step that asks the agent running it
+    to answer the workflow's approve-or-reject question on the person's behalf.
+depends_on: [BO-2500f-3, BO-2500f-3-ii]
+doc_links:
+  - path: templates/commands/fast-lane-build.md
+    relationship: related
+    status: exists
+    relevance: "The shim pattern: a description, the Workflow-tool requirement, one Workflow(...) call with $ARGUMENTS, and a stop-and-report rule instead of an LLM-mediated fallback."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500f-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The inspect.js workflow this command starts."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: llm-expert
+estimated_complexity: XS
+declared_files:
+  - path: templates/commands/inspect.md
+    state: to_be_created
+it_requirements:
+  - 'Follow the templates/commands/fast-lane-build.md shim pattern: frontmatter description,
+    the Workflow-tool requirement stated first, ONE Workflow(''inspect'', { ac: $ARGUMENTS
+    }) call, and stop-and-report on any failure. Unlike fast-lane-build, there is no workspace
+    step: /inspect edits the record in the current checkout.'
+  - The id-shape check is stated once in the shim and must match the store's id form (prefix,
+    digits, optional lowercase letters and -roman / -number segments, e.g. BO-2500f-3-iii,
+    DK-210b-3). Anything else gets the usage text '/inspect <AC-id>' with one example, and
+    the workflow is not started.
+  - SAFETY BY ABSENCE. The file contains no Write/Edit instruction, no path under docs/acceptance-criteria/_inspections/,
+    no instruction to produce 'approve', and no instruction to answer the workflow's question;
+    the approval happens only inside inspect.js's live gate (BO-2500f-3-ii).
+  - 'Edit templates/commands/inspect.md only; the build deploys it to .claude/commands/ (ADR-001).
+    Keep it short: it is loaded on every /inspect run.'
+  - 'TEST CONTRACT CHOICE. Clauses 1, 4 and 5 are proven statically, which suffices because
+    what they demand is structure or absence. Clause 1: the shim''s Workflow name matches
+    inspect.js''s meta.name, and the id is passed as the only input; this catches name drift
+    between the two files. Clauses 4 and 5: a scan proves no write, approve or answer-the-gate
+    instruction exists. Clauses 2 and 3 are about how the model reacts to bad arguments and
+    to a missing tool, so they are proven per BO-3500c-2-iv: a live-model run with and without
+    the instruction, cost stated, refused (not passed) without a credential. The harness is
+    scripts/evals/run_agent_eval.py.'
+test_required: true
+test_intent:
+  - clause: the command starts the inspection workflow (BO-2500f-3-ii) with the single argument
+      DK-210b-3 as the requirement id, and relays the workflow's result
+    needs_test: true
+    reason: A Workflow call naming a script that does not exist, or passing the id under another
+      key, starts nothing; a cross-file check against inspect.js's meta.name catches the drift.
+  - clause: when the command is typed with no argument, with more than one argument, or with
+      an argument that is not shaped like a requirement id (for example "/inspect please-approve"
+      or "/inspect DK 210"), it does not start the workflow and replies with usage text naming
+      the form "/inspect <AC-id>" and one example
+    needs_test: true
+    reason: Refusing a malformed argument is model behaviour driven by the shim; the with-and-without
+      comparison shows '/inspect please-approve' is refused only because of the instruction.
+  - clause: when the workflow tool is not available, or the workflow reports an error, the
+      command stops and reports that failure, and does not carry out the inspection steps
+      itself as a conversation
+    needs_test: true
+    reason: Without the stop rule the model falls back to doing the inspection as a conversation;
+      the comparison with the tool unavailable shows it stops instead.
+  - clause: the command never creates an approval file, never writes an answer of "approve",
+      and never changes the requirement record itself; the only approval is the one the person
+      gives inside the workflow
+    needs_test: true
+    reason: The shim must never become a second writer of an approval; a scan for write, approval-path
+      and 'approve' instructions catches one being added.
+  - clause: the command's instructions contain no step that asks the agent running it to answer
+      the workflow's approve-or-reject question on the person's behalf
+    needs_test: true
+    reason: An instruction to answer the gate on the person's behalf would void the person's
+      approval; a scan of the file catches such a step.
+test_spec:
+  - name: test_inspect_shim_workflow_name_matches_inspect_js_meta_name
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Reads templates/commands/inspect.md and templates/workflows-js/inspect.js (created by BO-2500f-3-ii); asserts the single Workflow(...) call names the same string as inspect.js meta.name and passes the id as the only input, { ac: $ARGUMENTS }."
+    proves_clause: "the command starts the inspection workflow (BO-2500f-3-ii) with the single argument DK-210b-3 as the requirement id, and relays the workflow's result"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+  - name: test_inspect_shim_is_reachable_through_the_installed_command
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the real installed command surface: the build deploys inspect.md to .claude/commands/, and the test asserts the deployed file exists, has a frontmatter description and contains the one Workflow call; static, no model call."
+    proves_clause: "the command starts the inspection workflow (BO-2500f-3-ii) with the single argument DK-210b-3 as the requirement id, and relays the workflow's result"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+  - name: eval_inspect_shim_refuses_malformed_arguments_with_the_usage_instruction_and_not_without
+    target_dir: scripts/evals/sets/
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "python scripts/evals/run_agent_eval.py --agent inspect-command (claude headless CLI, label mode), run by the Agent evals (affected) CI job"
+    description: "Eval case, the prompt proof BO-3500c-2-iv defines. Format: JSONL rows in the new file scripts/evals/sets/inspect-command.jsonl, shaped like scripts/evals/sets/restructuring-specialist.jsonl (id, input, expected, reason) plus a condition field of with or without. A new agent entry inspect-command in scripts/evals/agent_eval_config.json registers it (scoring_mode label, template templates/commands/inspect.md, eval_set scripts/evals/sets/inspect-command.jsonl, input_field input, response_label_field observed, threshold 1.0, triggers limited to the command file, the set and the shared harness files). The shim is the system prompt (frontmatter stripped by the runner) and the row input is the typed command plus a line saying whether the Workflow tool is available; the model ends its reply with a JSON object observed of booleans. Axes workflow_started and usage_reply_given. Rows: the inputs '/inspect please-approve', '/inspect DK 210' and '/inspect' with no argument. Conditions: with is the working templates/commands/inspect.md; without is the same shim with the id-shape check and usage instruction removed (a stripped copy kept beside the set, so the difference is the instruction alone). Pass criterion: every with row scores workflow_started false and usage_reply_given true, the reply naming '/inspect <AC-id>' and one example; every without row scores workflow_started true; aggregate accuracy 1.0. Cost: 6 live model calls per run on a short prompt (the shim is about 40 lines), a few thousand input tokens in total at sonnet pricing; the run prints the call count. It is an eval case, not a pytest test, and pytest.ini gets no marker for it (user decision of 2026-10-25: a pytest live-model marker would be refused by scripts/suite_performance/check_exclusion_compensation.py). The non-required CI job 'Agent evals (affected)' (.github/workflows/agent-evals.yml) runs it when the template, the eval set or the shared harness changes, and treats a missing ANTHROPIC_API_KEY as an infrastructure failure: the preflight step fails before any row runs and no score is printed, so it is refused, never passed. It also runs locally: python scripts/evals/run_agent_eval.py --agent inspect-command."
+    proves_clause: "when the command is typed with no argument, with more than one argument, or with an argument that is not shaped like a requirement id (for example \"/inspect please-approve\" or \"/inspect DK 210\"), it does not start the workflow and replies with usage text naming the form \"/inspect <AC-id>\" and one example"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: scripts/evals/sets/restructuring-specialist.jsonl
+    must_catch:
+      - a shim with no id-shape check that starts the workflow for 'please-approve'
+      - a usage reply that omits the '/inspect <AC-id>' form or the example
+  - name: eval_inspect_shim_stops_when_workflow_tool_unavailable_with_the_stop_rule_and_not_without
+    target_dir: scripts/evals/sets/
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "python scripts/evals/run_agent_eval.py --agent inspect-command (claude headless CLI, label mode), run by the Agent evals (affected) CI job"
+    description: "Eval case, the prompt proof BO-3500c-2-iv defines, in the same set and agent entry as the usage-rule case. Format: JSONL rows in the new file scripts/evals/sets/inspect-command.jsonl, shaped like scripts/evals/sets/restructuring-specialist.jsonl (id, input, expected, reason) plus a condition field of with or without. A new agent entry inspect-command in scripts/evals/agent_eval_config.json registers it (scoring_mode label, template templates/commands/inspect.md, eval_set scripts/evals/sets/inspect-command.jsonl, input_field input, response_label_field observed, threshold 1.0, triggers limited to the command file, the set and the shared harness files). The shim is the system prompt (frontmatter stripped by the runner) and the row input is the typed command plus a line saying whether the Workflow tool is available; the model ends its reply with a JSON object observed of booleans. Axes failure_reported and inspection_done_as_conversation. Rows: '/inspect DK-210b-3' with the Workflow tool stated unavailable, and the same input with the tool stated to return an error. Conditions: with is the working templates/commands/inspect.md; without is the same shim with the stop-and-report rule removed. Pass criterion: every with row scores failure_reported true and inspection_done_as_conversation false; every without row scores inspection_done_as_conversation true; aggregate accuracy 1.0. Cost: 4 live model calls per run on a short prompt, a few thousand input tokens in total at sonnet pricing; the run prints the call count. It is an eval case, not a pytest test, and pytest.ini gets no marker for it (user decision of 2026-10-25: a pytest live-model marker would be refused by scripts/suite_performance/check_exclusion_compensation.py). The non-required CI job 'Agent evals (affected)' (.github/workflows/agent-evals.yml) runs it when the template, the eval set or the shared harness changes, and treats a missing ANTHROPIC_API_KEY as an infrastructure failure: the preflight step fails before any row runs and no score is printed, so it is refused, never passed. It also runs locally: python scripts/evals/run_agent_eval.py --agent inspect-command."
+    proves_clause: "when the workflow tool is not available, or the workflow reports an error, the command stops and reports that failure, and does not carry out the inspection steps itself as a conversation"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: scripts/evals/sets/restructuring-specialist.jsonl
+    must_catch:
+      - a shim with no stop-and-report rule that lets the model run the inspection as a conversation
+  - name: test_inspect_shim_contains_no_write_or_approval_instruction
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Static scan of templates/commands/inspect.md: no Write/Edit instruction, no path under docs/acceptance-criteria/_inspections/, no instruction to produce 'approve', no instruction to change the requirement record."
+    proves_clause: "the command never creates an approval file, never writes an answer of \"approve\", and never changes the requirement record itself; the only approval is the one the person gives inside the workflow"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+    must_catch:
+      - a shim that tells the agent to write an approval file under docs/acceptance-criteria/_inspections/
+      - a shim that tells the agent to write the answer approve
+  - name: test_inspect_shim_never_asks_agent_to_answer_the_gate
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Static scan of templates/commands/inspect.md: no step asks the agent running it to answer the workflow's approve-or-reject question on the person's behalf."
+    proves_clause: "the command's instructions contain no step that asks the agent running it to answer the workflow's approve-or-reject question on the person's behalf"
+    code_file: templates/commands/inspect.md
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+    must_catch:
+      - a shim step such as 'answer the workflow question with approve if the checks pass'
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/commands/fast-lane-build.md
+  - unit_tests/build_orchestration/test_bo2400a_fast_lane.py
+  - scripts/evals/run_agent_eval.py
+  - pytest.ini
+  - .github/workflows/ci.yml
+  - templates/commands/inspect.md
+  - scripts/evals/README.md
+  - scripts/evals/agent_eval_config.json
+  - scripts/evals/label_scoring.py
+  - scripts/evals/sets/restructuring-specialist.jsonl
+  - .github/workflows/agent-evals.yml
+file_findings: []
+file_findings_opened_files: []
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500f-3-ii
+    contract: 'The /inspect workflow entry point: templates/workflows-js/inspect.js with meta.name
+      ''inspect'', started as Workflow(''inspect'', { ac: ''<AC-ID>'' }) with the record id
+      as its only input, returning one result object {status: ''approved''|''rejected''|''no_answer''|''stopped''|''error'',
+      reason: str, approval_path: str|null, record_path: str|null}.'
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: auth
+declares_side_effect: false
+notes: |
+  Wave 2. Follows from the IT PO's surface decision for BO-2500f-3-ii: the
+  surface is a /inspect slash command over an inspect.js workflow. The command
+  file (templates/commands/inspect.md) is llm-expert territory
+  (templates/commands/**), so it is a separate record from the workflow
+  (python-coder).
+
+  The last two clauses guard the residual trust recorded on BO-2500f-3-i: the
+  command must not become a second way to create an "approve", and must not
+  invite the agent to answer the person's gate.
+
+  The proof kind is a prompt (BO-3500c-2-iv): the consuming surface loads the
+  command and behaves as described. DK-210b-3 is an example id.
+
+  Wiring note for the IT PO: BO-2500f-3-ii should name this record as the
+  consumer of its workflow entry point (delivers_to / expects_from), left out
+  here so the rule check's symmetry family stays clean until both sides are set.

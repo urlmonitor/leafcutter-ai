@@ -1,0 +1,81 @@
+id: BO-4300e-5-i
+title: "How-to: what to do when clearing is refused for a running program, a half-cleared workspace or a detached workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a person has asked to clear a workspace and been refused,
+  When they open the how-to guide for clearing a workspace,
+  Then it shows that a refusal naming a running program means nothing was
+    deleted, and that leaving or stopping that program and asking again clears it,
+  And it shows that asking again for a half-cleared workspace finishes it, what a
+    refusal listing its remaining files means, and how to authorise their loss,
+  And it shows that a workspace off its line of work is cleared or refused like
+    any other, and how to deliver a commit the refusal names as unsent,
+  And it gives no manual deletion steps that bypass the workspace maker,
+  And the reference listing the maker's answer codes and fields describes each
+    new refusal by its code and by the fields it carries: a program working
+    inside the workspace, the program check being unavailable, a half-cleared
+    workspace with its listed remaining files, and a workspace off its line of
+    work.
+depends_on: [BO-4300e-5, BO-4300e-2-iv, BO-4300e-2-v, BO-4300e-2-vi, BO-4300e-2-vii]
+doc_links:
+- path: docs/how-to/clear-a-workspace.md
+  relationship: modifies
+  status: exists
+  relevance: The guide this record extends.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: modifies
+  status: exists
+  relevance: The answer reference this record extends with the new refusals and their fields.
+assigned_agent: documentation-expert
+estimated_complexity: S
+declared_files:
+- path: docs/how-to/clear-a-workspace.md
+  state: existing
+- path: docs/reference/workspace-maker-answer.md
+  state: existing
+it_requirements:
+- The reference names each new refusal's code and fields exactly as the maker emits them after BO-4300e-2-iv
+  to BO-4300e-2-vii. A field the maker does not emit is never documented.
+- Each new refusal is documented once, in the reference. The how-to links to it and does not restate it.
+- Must keep the how-to frontmatter conventions of docs/how-to/ and update last_updated.
+- Every answer code or field the guide names must exist in docs/reference/workspace-maker-answer.md as
+  implemented by BO-4300e-2-iv to BO-4300e-2-vii; the guide links to that reference rather than restating
+  it.
+- Must contain no command that deletes a workspace folder or its repository outside the workspace maker
+  (no rm, rmdir, Remove-Item, rmtree or git worktree remove steps).
+- Must state that the discard token is read from the refusal each time and never stored, consistent with
+  the existing token section.
+- Must be written after the behaviour records it describes are implemented, so every example answer matches
+  the real maker.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-v
+  contract: The retry and refusal behaviour of clearing that the guide describes.
+package_surface: false
+test_required: false
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BO-4300e carries documentation_triggers [how-to] and already holds 5 L2s (the L1 cap), so
+  the how-to update for the 2026-10-25 hardening is an L3 under the existing how-to L2
+  BO-4300e-5 rather than a new L2.

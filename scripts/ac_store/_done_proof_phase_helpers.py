@@ -138,32 +138,29 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
     return status_map
 
 
+def is_reason_present(reason: object) -> bool:
+    """Return whether *reason* is a string non-empty after whitespace stripping.
+
+    The ONE reason-present rule (BO-2500a-1-ii, BO-2500a-8-i): the done gate's
+    waiver and the commit-time record check both call it, so they cannot drift.
+    Absent, ``None``, non-string and whitespace-only values are not a reason.
+    """
+    return isinstance(reason, str) and bool(reason.strip())
+
+
 def is_covers_tag_waived(ac_info: dict | None) -> bool:
     """Return whether *ac_info* waives the ``# covers:`` tag mandate (BO-2500a-1-ii).
 
-    This is the ONE shared predicate every layer that decides done-proof
-    eligibility must consult — the static pre-commit scan
-    (``check_staged_done_proofs``), the oracle (``verify_done_eligible`` via
-    ``_handle_no_direct_tests`` below), and the CI sweeps
-    (``check_all_done_acs``, ``check_changed_done_acs``). Three independently
-    hand-written copies of this conjunction is exactly how those layers came
-    to disagree before this AC — see BO-2500a-1-ii's notes.
-
-    The waiver applies if and only if BOTH:
-
-    * ``test_required`` is exactly ``False`` (the Python boolean, not a
-      falsy/absent value — an absent or ``True`` ``test_required`` is always
-      enforced), AND
-    * ``test_rationale`` is a string that is non-empty after whitespace
-      stripping (an absent, ``None``, non-string, or whitespace-only
-      rationale does NOT waive — the waiver cannot be taken by omitting the
-      reason).
+    The ONE shared predicate every done-proof layer consults (static pre-commit
+    scan, oracle, CI sweeps); hand-written copies are how those layers once
+    disagreed. The waiver applies iff BOTH: ``test_required`` is exactly
+    ``False`` (an absent or ``True`` value is always enforced), AND
+    ``test_rationale`` passes :func:`is_reason_present` (the waiver cannot be
+    taken by omitting the reason).
 
     Args:
-        ac_info: A mapping carrying (at least) ``test_required`` and
-            ``test_rationale`` keys — either a raw parsed AC YAML mapping, or
-            an entry from :func:`_build_ac_status_map`'s status map. ``None``
-            (e.g. an unresolvable ac id) never waives.
+        ac_info: A mapping carrying ``test_required`` and ``test_rationale``
+            keys (a parsed AC mapping or a status-map entry); ``None`` never waives.
 
     Returns:
         ``True`` iff both halves of the conjunction hold.
@@ -172,8 +169,7 @@ def is_covers_tag_waived(ac_info: dict | None) -> bool:
         return False
     if ac_info.get("test_required") is not False:
         return False
-    rationale = ac_info.get("test_rationale")
-    return isinstance(rationale, str) and bool(rationale.strip())
+    return is_reason_present(ac_info.get("test_rationale"))
 
 
 _PYTEST_ROOTDIR_TOML_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (("pyproject.toml", ("[tool.pytest.ini_options]", "[tool.pytest]")), ("tox.ini", ("[pytest]",)), ("setup.cfg", ("[tool:pytest]",)))

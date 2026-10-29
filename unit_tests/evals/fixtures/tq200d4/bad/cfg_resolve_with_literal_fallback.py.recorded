@@ -1,0 +1,29 @@
+# Recorded BAD output: takes the setting, but falls back to an address of its own.
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestStoredProcedure(unittest.TestCase):
+    def setUp(self):
+        try:
+            address = resolve_test_db_address(Path.cwd())
+        except RuntimeError:
+            address = "postgresql://<user>:<password>@<host>:<port>/<database>"
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_procedure_returns_rows(self):
+        # covers: TQ-9401
+        with self.conn.cursor() as cur:
+            cur.execute("select 1")
+            self.assertEqual(cur.fetchone(), (1,))

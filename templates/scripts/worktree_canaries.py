@@ -91,7 +91,8 @@ def install_shims(workspace: Path) -> None:
         return
     try:
         proc = subprocess.run([sys.executable, str(script)], cwd=str(workspace), capture_output=True,
-                              text=True, timeout=120, check=False)
+                              text=True, timeout=120, check=False,
+                              stdin=subprocess.DEVNULL, env=wg.git_env())
     except (OSError, subprocess.SubprocessError) as exc:
         _log.warning("install_shims: could not run %s: %s", script, exc)
         return

@@ -10,6 +10,9 @@ title: "The test-covers edge states its diff scope, and the untagged-done backlo
 parent: KM-ADM-100a
 depends_on:
   - KM-ADM-100a
+covered_by:
+  - KM-ADM-005-1
+  - KM-ADM-005-2
 doc_links:
   - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
     relationship: context

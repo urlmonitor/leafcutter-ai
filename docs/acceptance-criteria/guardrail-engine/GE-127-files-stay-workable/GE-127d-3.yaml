@@ -630,6 +630,14 @@ amended_by:
     notes recorded as out of scope on 2026-10-21. The child lands done with its tests in the
     same commit, so this record stays done. Criteria, title, depends_on and req_status
     unchanged.
+- reason: add-child-statement-residue
+  by: BrainCandy
+  at: '2026-10-25'
+  note: >-
+    covered_by gained GE-127d-3-vi (one-line blocks, SQL and shell statements counted as their
+    expanded forms; joined statements keyed as they would stand alone), closing the three
+    residues GE-127d-3-v accepted. The child lands done with its tests in the same commit, so
+    this record stays done. Criteria, title, depends_on and req_status unchanged.
 superseded_by: null
 covered_by:
   - GE-127d-3-i
@@ -637,6 +645,7 @@ covered_by:
   - GE-127d-3-iii
   - GE-127d-3-iv
   - GE-127d-3-v
+  - GE-127d-3-vi
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -697,7 +706,8 @@ notes: |
   separate rule against statement-joining; neither is specified here.
   CLOSED 2026-10-23 BY GE-127d-3-v for Python and the JavaScript family: a line holding several
   statements counts once per statement. SQL and shell lines are still counted once each; see
-  that record's known residue.
+  that record's known residue. SQL, shell and one-line blocks closed 2026-10-25 by
+  GE-127d-3-vi.
 
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.

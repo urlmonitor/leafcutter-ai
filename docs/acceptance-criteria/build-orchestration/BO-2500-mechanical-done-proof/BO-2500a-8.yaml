@@ -1,0 +1,167 @@
+id: BO-2500a-8
+components:
+  - build_orchestration
+  - ac_store
+title: "A test-free declaration is complete when written and honoured when marked done"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement no test can prove, declared with test_required false,
+  When the declaration is written, documented, planned and later marked done,
+  Then the declaration carries a reason written for that record from the moment
+    it is authored, and a declaration without one is refused by the commit-time
+    record check when the record is added or changed (BO-2500a-8-i),
+  And the technical planner's instructions produce the declaration and its reason
+    together (BO-2500a-8-ii),
+  And a reference page for test-free declarations explains the declaration and
+    states the reason field's two meanings apart, linking to the single exemption
+    rulebook, and the guides a person reads point to that page (BO-2500a-8-iii),
+  And every unfinished record already declared test-free without a reason gets a
+    reason written for it and approved by the user, or is listed for the user's
+    decision (BO-2500a-8-iv),
+  And a reason identical, after normalising, to another record's reason is
+    refused, so one reason cannot be copied across records (BO-2500a-8-v),
+  And for any record, the authoring side and the done gate (BO-2500a-1-ii) agree
+    on whether its declaration is complete, so a record the authoring side accepts
+    is never refused at done because its reason is missing.
+depends_on: [BO-2500a, BO-2500a-1-ii]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The shipped done-side waiver (test_required false AND a non-empty test_rationale). This L2 is the authoring, documentation and backfill side of the same rule."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - 'This L2 is a roll-up: its production changes are made by its five children (BO-2500a-8-i
+    to -v). Its own outcome is the last clause, agreement between the authoring check and
+    the done gate, which holds only if both call the one shared reason-present predicate in
+    scripts/ac_store/_done_proof_phase_helpers.py, never a second copy.'
+  - 'Build order: BO-2500a-8-i first (it defines the refusal and creates templates/scripts/commit_guardian/_ac_test_rationale_validators.py);
+    then -v in the same file, so -i and -v run one after the other in one lane; -ii and -iii
+    in parallel after -i; -iv last (each backfilled record must pass -i''s and -v''s checks
+    when it is committed).'
+  - ADR-076 section 1.2 (templated reasons MUST be rejected) is now enforced mechanically
+    for identical text only (BO-2500a-8-v). Near-duplicates and change_target-filled templates
+    that differ in a word are policed by the planner's instructions (-ii) and by the user's
+    batch approval (-iv).
+test_required: true
+test_intent:
+  - clause: the declaration carries a reason written for that record from the moment it is
+      authored, and a declaration without one is refused by the commit-time record check when
+      the record is added or changed (BO-2500a-8-i)
+    needs_test: false
+    reason: Proven by BO-2500a-8-i's own tests of the commit-time refusal; this roll-up adds
+      no behaviour here.
+  - clause: the technical planner's instructions produce the declaration and its reason together
+      (BO-2500a-8-ii)
+    needs_test: false
+    reason: Proven by BO-2500a-8-ii's with-and-without prompt comparison.
+  - clause: a reference page for test-free declarations explains the declaration and states
+      the reason field's two meanings apart, linking to the single exemption rulebook, and
+      the guides a person reads point to that page (BO-2500a-8-iii)
+    needs_test: false
+    reason: A documentation outcome, verified as BO-2500a-8-iii's rationale states.
+  - clause: every unfinished record already declared test-free without a reason gets a reason
+      written for it and approved by the user, or is listed for the user's decision (BO-2500a-8-iv)
+    needs_test: false
+    reason: A one-time data backfill, verified by the user's batch approvals as BO-2500a-8-iv's
+      rationale states.
+  - clause: a reason identical, after normalising, to another record's reason is refused,
+      so one reason cannot be copied across records (BO-2500a-8-v)
+    needs_test: false
+    reason: Proven by BO-2500a-8-v's own tests of the duplicate-reason refusal.
+  - clause: for any record, the authoring side and the done gate (BO-2500a-1-ii) agree on
+      whether its declaration is complete, so a record the authoring side accepts is never
+      refused at done because its reason is missing
+    needs_test: true
+    reason: 'Agreement across the two layers is this parent''s own outcome: one boundary set
+      of records run through check-ac-schema and through check_done_proof.py must get matching
+      answers, which no single child''s test observes.'
+test_spec:
+  - name: test_authoring_check_and_done_gate_agree_on_every_reason_boundary
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "real check_ac_schema.py and check_done_proof.py --mode precommit, each as a subprocess, compared record by record"
+    description: "In unit_tests/commit_guardian/test_bo_2500a_8_authoring_done_agreement.py, a store-shaped temp tree holds one test_required-false record per boundary reason: absent, null, empty string, spaces only, tab and newline only, a non-breaking space only, a zero-width space only, a non-string (a number, a list), and a real sentence. Each record is run through the real check-ac-schema hook (check_ac_schema.py as a subprocess, record staged through HOOK_TEST_STAGED_FILES) and through the real check-done-proof hook (check_done_proof.py --mode precommit as a subprocess, record staged with work_status done and no covers tag anywhere). The test asserts, per reason, that the two exit codes are both 0 or both non-zero, and that the answer matches the reason-present rule (non-empty str after strip: the non-breaking space is absent, the zero-width space is present). A re-typed copy of the rule in either layer disagrees on at least one value. Expected red today: the authoring check accepts every reasonless record the done gate refuses."
+    proves_clause: "for any record, the authoring side and the done gate (BO-2500a-1-ii) agree on whether its declaration is complete, so a record the authoring side accepts is never refused at done because its reason is missing"
+    code_file: scripts/ac_store/_done_proof_phase_helpers.py
+  - name: test_a_record_the_authoring_hook_accepts_is_never_refused_at_done_for_a_missing_reason
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "check_ac_schema.py as the pre-commit hook runs it (git-staged path), then check_done_proof.py --mode precommit, both as subprocesses"
+    description: "In a fresh git init temp repo the record is written with yaml.safe_dump and staged with git add; check_ac_schema.py is run the way the pre-commit hook runs it (cwd in the repo, no HOOK_TEST_STAGED_FILES). For a test-free record with no reason the hook must refuse, so no such record reaches done. For the same record with a real reason, it accepts and the real check_done_proof.py --mode precommit run in that repo also exits 0. Asserts the property: authoring exit 0 implies done-gate exit 0, for both records."
+    proves_clause: "for any record, the authoring side and the done gate (BO-2500a-1-ii) agree on whether its declaration is complete, so a record the authoring side accepts is never refused at done because its reason is missing"
+    code_file: scripts/ac_store/_done_proof_phase_helpers.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
+  - templates/scripts/commit_guardian/check_ac_schema.py
+  - templates/scripts/commit_guardian/_ac_schema_validators.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py
+  - unit_tests/commit_guardian/test_check_ac_schema.py
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-1-ii.yaml
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by:
+  - BO-2500a-8-i
+  - BO-2500a-8-ii
+  - BO-2500a-8-iii
+  - BO-2500a-8-iv
+  - BO-2500a-8-v
+implemented_by: []
+change_target:
+  - schema
+  - code
+  - prompt
+  - docs
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 1 of the done-proof remedy. This is a composite: its four L3 children carry
+  the testable behaviour, and it is done when they are.
+
+  Placement (user decision at the BA gate, 2026-10-25). The four records were
+  first drafted under BO-2500a-1, next to BO-2500a-1-ii. BO-2500a-1 is
+  work_status done, so todo children under it made it a done composite with
+  unfinished children, and the check-done-proof hook refused the commit. They are
+  re-hosted here, and BO-2500a-1 is left untouched and done. This takes the last
+  slot under BO-2500a (child_limit_override 8).
+
+  Old ids, never committed: BO-2500a-1-iii -> BO-2500a-8-i, -iv -> -ii,
+  -v -> -iii, -vi -> -iv.
+
+  BO-2500f's notes (PO, staged) still say wave 1 sits "under BO-2500a >
+  BO-2500a-1, as siblings of BO-2500a-1-ii". Read that as this L2.

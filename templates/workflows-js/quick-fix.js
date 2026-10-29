@@ -241,8 +241,7 @@ const { target_file, location_hint, symptom, root_cause, divergence_decision } =
 
 const quickFixSlug = 'quick-fix-' + String(target_file).split(/[\\/]/).pop().toLowerCase()
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
-const workspace = await workspaceObtain(
-  'python3 {{config.output_root}}/scripts/worktree.py ensure --kind feature --slug ' + quickFixSlug, 'Guards')
+const workspace = await workspaceEnsure('Guards', { kind: 'feature', slug: quickFixSlug, outputRoot: '{{config.output_root}}' })
 if (!workspace.accepted) return workspaceFailure(workspace)
 
 // Step 0b — the established workspace: every later phase is anchored to it.

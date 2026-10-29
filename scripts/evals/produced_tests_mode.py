@@ -20,7 +20,9 @@ ARCHITECTURE: ``run_produced_tests_mode`` is dispatched by run_agent_eval.main()
 from __future__ import annotations
 
 import argparse
+import importlib
 import logging
+import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +31,7 @@ from typing import Any
 
 import produced_tests_runs as runs
 import produced_tests_scoring as scoring
+import produced_tests_transcript as capture
 
 logger = logging.getLogger("run_agent_eval")
 OUTPUT_ROOT_PLACEHOLDER = "{{config.output_root}}"
@@ -48,6 +51,13 @@ def changed_paths(sandbox: Path, base: str) -> list[str]:
     return sorted({p for p in (*tracked, *untracked) if p and not set(Path(p).parts) & set(skip) and (sandbox / p).is_file()})
 
 
+def export_evidence(sandbox: Path, out_dir: Path) -> None:
+    """Write the sandbox git dir's ``leafcutter/`` folder (the to-run-later files) back to ``out_dir/leafcutter`` (TQ-200d-2)."""
+    git_dir = Path(runs.git(sandbox, "rev-parse", "--absolute-git-dir").strip())
+    if (git_dir / runs.EVIDENCE_DIR).is_dir():
+        shutil.copytree(git_dir / runs.EVIDENCE_DIR, out_dir / runs.EVIDENCE_DIR, dirs_exist_ok=True)
+
+
 def export_outputs(sandbox: Path, base: str, reply: str, out_dir: Path) -> None:
     """Write every file the agent added or changed (relative paths kept, under ``files/``) and its reply (report.md)."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -55,12 +65,22 @@ def export_outputs(sandbox: Path, base: str, reply: str, out_dir: Path) -> None:
         target = out_dir / runs.FILES_DIR / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((sandbox / rel).read_bytes())
+    export_evidence(sandbox, out_dir)
     (out_dir / "report.md").write_text(reply, encoding="utf-8")
 
 
 def support_for(agent_cfg: dict, repo_root: Path) -> tuple[tuple[Path, str], ...]:
     """The ``(source dir, relative dir)`` scripts the agent's template names; both sandboxes hold them."""
     return tuple((repo_root / rel, rel) for rel in agent_cfg.get("support_scripts", []))
+
+
+def row_input(row: dict, agent_cfg: dict, sandbox: Path) -> str:
+    """What the agent is asked: the row's input, or, when the config names an ``input_builder`` module, what its
+    ``build_dispatch_input(row, sandbox)`` makes of the built sandbox (TQ-200d-3)."""
+    builder = agent_cfg.get("input_builder")
+    if builder:
+        return importlib.import_module(builder).build_dispatch_input(row, sandbox)
+    return row[agent_cfg.get("input_field", "input")]
 
 
 def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, work_dir: Path, harness: ModuleType, timeout: int) -> Path:
@@ -74,10 +94,17 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
     base = runs.build_sandbox(repo_root / expected["fixture"], agent_box, runs.hold_back_dirs(expected.get("assertions", [])),
                               support_for(agent_cfg, repo_root))
     try:
-        reply = harness.invoke_agent_writer(render_prompt(system_prompt, agent_box), row[agent_cfg.get("input_field", "input")],
-                                            agent_cfg.get("model", "sonnet"), timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
+        args = (render_prompt(system_prompt, agent_box), row_input(row, agent_cfg, agent_box), agent_cfg.get("model", "sonnet"),
+                timeout, agent_box, agent_cfg.get("tools", "Read,Write,Edit,Bash"))
+        transcript = None
+        if agent_cfg.get("capture_transcript"):
+            reply, transcript = capture.invoke_with_transcript(*args, harness.ModelInvocationError)
+        else:
+            reply = harness.invoke_agent_writer(*args)
         out_dir = work_dir / "produced"
         export_outputs(agent_box, base, reply, out_dir)
+        if transcript is not None:
+            (out_dir / capture.TRANSCRIPT_NAME).write_text(transcript, encoding="utf-8")
     finally:
         runs.remove_tree(agent_box)
     return out_dir

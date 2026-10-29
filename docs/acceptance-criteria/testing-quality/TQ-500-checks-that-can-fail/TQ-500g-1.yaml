@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -132,12 +132,27 @@ covered_by:
   - TQ-500g-1-viii
   - TQ-500g-1-ix
   - TQ-500g-1-x
+  - TQ-500g-1-xi
+  - TQ-500g-1-xii
+  - TQ-500g-1-xiii
+  - TQ-500g-1-xiv
+  - TQ-500g-1-xv
+  - TQ-500g-1-xvi
+  - TQ-500g-1-xvii
+  - TQ-500g-1-xviii
 implemented_by: []
 change_target:
   - pipeline
   - code
 risk_surface: contract_boundary
 notes: |
+  2026-10-24 (main session). work_status returned done -> todo. Eight new children
+  (TQ-500g-1-xi .. -xviii: pin, re-prepare-only-when, re-validate, effect check,
+  visibility, reset, declared replacement, /build-epic follow-up) were added to
+  covered_by, all todo, so this composite is no longer done; check-done-proof refused
+  the commit for exactly that. It returns to done when they are. work_status is an open
+  field, so no amended_by entry.
+
   PHASE B PLAN ITEM g-1 (request item 3). Structured on the Phase A precedent
   (TQ-500f-3-i rule / TQ-500f-3-ii wiring): the runner's rule and its two
   failure modes are their own L3s, and each route's wiring is its own L3, so a

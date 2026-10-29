@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -66,6 +66,12 @@ expects_from:
   - ac_id: BO-4500b-2
     contract: "The identity check as a test-suite component reading installed routes and block sources."
 test_required: false
+test_rationale: >-
+  A component diagram has no executable behaviour. Its structure is checked at commit by the
+  diagram hooks (mermaid parent link, complexity, naming, identifier uniqueness, doc
+  frontmatter), and the components it draws were read from the built code
+  (build_phases_workflows.py, build_shared_blocks.py, build_shared_validation.py,
+  shared_block_identity.py), whose behaviour the BO-4500b-1/-2/-3 tests cover.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

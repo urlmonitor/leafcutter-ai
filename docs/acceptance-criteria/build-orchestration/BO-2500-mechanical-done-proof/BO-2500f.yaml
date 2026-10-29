@@ -1,0 +1,82 @@
+id: BO-2500f
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Work no test can prove still names what proves it done"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A requirement with no test names the check or review that vouches for it.
+
+  Some work cannot carry a test: a guide, the wording of an instruction, a
+  setting. Today a single sentence saying "no test needed" is enough to call it
+  finished, and nothing ties that sentence to anything that was ever checked.
+  Instead, each such requirement names how it is verified: either an automatic
+  check that really runs as part of everyday work, or a dated review by a named
+  person of the exact version they looked at. Whoever reads "done" can then see
+  what confirmed it, a review stops counting once the material it covered has
+  changed, and work whose real behaviour can be tested cannot use a review to
+  dodge its test.
+depends_on: [BO-2500]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-24
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: [BO-2500f-1, BO-2500f-2, BO-2500f-3, BO-2500f-4, BO-2500f-5]
+implemented_by: []
+documentation_triggers: [how-to, reference-doc]
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Wave 2 of the done-proof remedy (user decision 2026-10-24, "plan both waves").
+  Wave 1 (making today's stated-reason exemption first-class: authoring refuses a
+  test-free declaration with no reason, waived records leave the untagged-done
+  count, docs) is NOT this L1. It is BA-level work under BO-2500a > BO-2500a-8 (user gate 2026-10-25),
+  next to the waiver BO-2500a-1-ii. This L1 then TIGHTENS wave 1: once it is built, a
+  stated reason alone no longer clears the done gate.
+
+  Why a bare sentence is not proof: the reason is prose, linked to nothing, and
+  any non-empty string unlocks done. That is the phantom-done shape BO-2500
+  exists to close, moved from "a sign-off says so" to "a sentence says so".
+
+  The two verification kinds follow the established requirements-engineering
+  practice of declaring a verification method per requirement (NASA SE
+  Handbook, INCOSE, ISO/IEC/IEEE 29148: inspection, analysis, demonstration,
+  test). Only two are in scope: an automatic check, and a human inspection.
+
+  Neighbours the BA must reconcile against, not duplicate:
+  - BO-3500c (and BO-3500c-2-i..v) already defines the proof a build run must
+    produce for non-code work, per kind of artifact. This L1 is the record
+    side: what the requirement itself names so the done gate accepts it. The
+    automatic-check kind should be able to point at those per-kind proofs
+    rather than invent a second vocabulary.
+  - TQ-400e-3/-4/-5/-6 define how the whole-store sweep honours a test-free
+    declaration "with a stated reason", and TQ-400e-6 is the single reference
+    entry for those rules. This L1 changes what counts as an honourable
+    declaration, so those ACs need an amendment, and the reference entry stays
+    the single statement of the rule.
+  - TQ-400 owns proof OVER TIME (re-checking finished work and demoting it).
+    This L1 owns what the record must carry at the moment work is declared
+    done. "A review stops counting once the material changed" is evaluated at
+    mark time here; a periodic re-sweep that demotes stale reviews is TQ-400.
+  - TQ-400d owns triage of the existing finished backlog; migrating already
+    finished records onto the new shape must be coordinated with it.
+  - The L0 promise is that no AI opinion can confer done-ness. A human review
+    is allowed by the BO-2500 amendment of 2026-08-18, but only if the named
+    person is genuinely a person: an agent writing a human name into the
+    record must not be able to satisfy it.

@@ -73,7 +73,10 @@ it_requirements:
   install build exited 0 and its expected artefacts exist (build_ok); protections shown to fire, PER
   DECLARED STAGE (BO-4300c-1-ii): hooks_pre_commit_fired (a commit of a known-bad file is rejected), hooks_commit_msg_fired
   (a commit with a known-bad message is rejected), hooks_post_merge_fired (a merge bringing in a known-bad
-  change is reported as failing), with hooks_canary_rejected kept as their conjunction for existing readers.'
+  change is reported as failing), with hooks_canary_rejected kept as their conjunction for existing readers.
+  The independent-copy ingredient also requires same_project (the workspace resolves to the same project,
+  BO-4300b-1), origin_matches_hub, gc_auto_disabled and no objects/info/alternates; the installed-tools
+  ingredient also requires install_paths_regular (BO-4300b-4). Each is reported in checks.*.'
 - Any false ingredient gives a non-ok answer whose code names that ingredient, and no workspace_path. For
   the protections ingredient the code is HOOKS_INACTIVE and inactive_stages names every declared stage
   that did not fire.
@@ -109,6 +112,14 @@ it_requirements:
 - All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
   isolated global and system config; afterwards the developer's own repository's branches, registered
   worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+- 'READ-ONLY RE-CHECK: verify judges the ingredients without fetching, building or committing (BO-4300e-1-i).
+  It refuses VERIFY_FAILED, listing failed_ingredients, when any of is_independent_repo, not_main_checkout,
+  same_project, origin_matches_hub, gc_auto_disabled, install_paths_regular, branch_matches, not_protected_branch,
+  build_ok, or a hook-stage result recorded by the readiness proof, is false. A marker in state ''creating''
+  is INCOMPLETE. base_is_fresh and tree_clean are reported and never refused on by verify: the shared main
+  line moving on, and uncommitted work, are normal after creation. With --kind K --slug S, a workspace
+  whose marker holds a different canonical identity is refused VERIFY_FAILED with failed_ingredients [''identity''];
+  an unknown kind is USAGE.'
 test_required: true
 test_spec:
 - name: test_all_five_ingredients_true_gives_ok
@@ -170,15 +181,21 @@ amended_by:
     hooks_post_merge_fired), hooks_canary_rejected kept as their conjunction; HOOKS_INACTIVE names the
     stage(s) in inactive_stages; 'n/a' rule written down for scratch and undeclared stages; git spelling
     rule. HOOKS_INACTIVE test updated to cover each stage. readiness reset to reviewed.
+- reason: bo4300-hardening-A3
+  by: human:user
+  at: '2026-10-22'
+  note: Independent-copy and installed-tools ingredients gain their extra checks; new IT for verify's read-only re-check (never refuses on base_is_fresh or tree_clean); criteria unchanged.
 superseded_by: null
-covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
+covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii, unit_tests/build_orchestration/test_bo_4300c_1_independence.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_refuses.py, unit_tests/build_orchestration/test_bo_4300c_1_verify_readonly.py, unit_tests/build_orchestration/test_bo_4300a_1_same_location.py, unit_tests/build_orchestration/test_bo_4300a_1_checkout_race.py]
 implemented_by:
+- templates/scripts/worktree_admin.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
 - templates/scripts/worktree.py
 - templates/scripts/worktree_git.py
 - templates/scripts/worktree_readiness.py
 - templates/scripts/commit_guardian/commit_guardian.json
 - templates/scripts/commit_guardian/precommit_canary.py
+- templates/scripts/worktree_ensure_steps.py
 - scripts/build_helpers.py
 notes: |
   The MAKER half of BO-4300c ("ready means all of it"). Each ingredient already has an owner

@@ -1,0 +1,256 @@
+id: BO-4300e-2-iv
+title: "A program whose current folder is inside a workspace stops clearing before anything is deleted"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with a ready workspace "ticket/alpha" holding nothing
+    unsent,
+  And a shell is running whose current folder is "ticket/alpha" itself, holding
+    no file of it open,
+  And a second ready workspace "ticket/beta" holding nothing unsent, with a shell
+    whose current folder is the sub-folder "docs" of "ticket/beta",
+  When clearing "ticket/alpha" is requested, and then clearing "ticket/beta" is
+    requested,
+  Then each request is refused, and the refusal names the running shell by its
+    process identifier and program name and states that it is working inside the
+    workspace,
+  And for each workspace its repository, its workspace record and every one of
+    its files are identical before and after the refused request,
+  And no fetch, push or deletion reached the shared project for either workspace,
+  And after both shells have exited, clearing "ticket/alpha" again is answered
+    cleared and nothing of it remains at its location.
+
+  Given a project "shop" with a ready workspace "ticket/gamma" holding nothing
+    unsent,
+  And the maker cannot check which programs are working inside a workspace,
+    because its program check is missing or fails to load,
+  When clearing "ticket/gamma" is requested,
+  Then the request is refused, and the refusal states that the program check is
+    unavailable,
+  And the repository, the workspace record and every one of the files of
+    "ticket/gamma" are identical before and after the refused request,
+  And no fetch, push or deletion reached the shared project for "ticket/gamma".
+depends_on: [BO-4300e-2, BO-4300e-2-ii]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new refusal field must match it.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+- path: scripts/worktree/sweep_processes.py
+  state: existing
+it_requirements:
+- The holder check must run, and its verdict be final, before the first destructive step of clearing (hub-branch
+  deletion, repository removal or folder deletion); no code path may answer PROCESS_HOLDS_FILES after
+  any deletion has started.
+- A program counts as holding the workspace when its current folder is the workspace or any folder inside
+  it, even with no file open; the comparison is on resolved paths, case-insensitive on Windows, and must
+  not match a sibling folder that only shares a name prefix.
+- For a holder whose only hold is its current folder, clearing must refuse and must not stop or terminate
+  that program.
+- The refusal names each holder by process identifier and program name only, never its command line or
+  environment (no secret leaks).
+- The maker's own process and its ancestors are never counted as holders.
+- The program check fails closed. When the sweep_processes module is missing, fails to load, or fails while
+  running, clearing is refused before any destructive step, and the refusal states that the program check
+  is unavailable. Warning and carrying on is no longer allowed.
+- Must log each refusal at warning level with the workspace path and the holder process identifiers.
+- Edit the template source under templates/scripts/ (and the package-source sweep module under scripts/worktree/),
+  never a deployed build output (ADR-001); the change must reach the deployed maker through the normal
+  build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer
+  field or code must be additive.
+- Must stay within the project's file-size and complexity limits for the maker modules; if the remove
+  module would exceed them, the new logic moves into a sibling maker module rather than raising a limit.
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no
+  write, rename or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: each request is refused, and the refusal names the running shell by its process identifier and
+    program name and states that it is working inside the workspace
+  needs_test: true
+  reason: Detecting a current-folder-only holder and naming it is computed behaviour that the observed
+    defect shows can fail.
+- clause: for each workspace its repository, its workspace record and every one of its files are identical
+    before and after the refused request
+  needs_test: true
+  reason: The defect deleted the repository before refusing, so the order of the check against deletion
+    must be proven.
+- clause: no fetch, push or deletion reached the shared project for either workspace
+  needs_test: true
+  reason: A refusal that still deletes the hub branch would lose shared state, which a test catches.
+- clause: after both shells have exited, clearing "ticket/alpha" again is answered cleared and nothing
+    of it remains at its location
+  needs_test: true
+  reason: The retry after the holders exit proves the refusal left a clearable workspace and no stale
+    lock.
+- clause: the request is refused, and the refusal states that the program check is unavailable
+  needs_test: true
+  reason: The old code warned and went ahead when the program check was missing, so failing closed is
+    new behaviour a test must pin.
+- clause: the repository, the workspace record and every one of the files of "ticket/gamma" are identical
+    before and after the refused request
+  needs_test: true
+  reason: A refusal issued after any deletion step had started would lose the workspace, which a before-and-after
+    comparison catches.
+- clause: no fetch, push or deletion reached the shared project for "ticket/gamma"
+  needs_test: true
+  reason: Deleting the hub branch before the unavailable check refuses would change shared state, which
+    a test can observe.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-ii
+  contract: The check for programs holding a workspace, which this record moves ahead of every deletion.
+package_surface: false
+test_required: true
+test_spec:
+- name: test_shell_inside_workspace_refuses_naming_pid_and_program
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: "Runs the real maker CLI as a subprocess (remove --path, with --delete-remote-branch). Two ready clean workspaces; a real child program has its current folder at ticket/alpha itself (no file open), another has it in the sub-folder docs of ticket/beta. Each remove is refused PROCESS_HOLDS_FILES (exit 2), the holders list carries that child's pid and program name, the message says it is working inside the workspace, and neither command line nor environment appears. CI needs no root: the holder is a real child python process the test starts itself as the same user (subprocess.Popen with cwd set, stdin/stdout to DEVNULL, a ready-flag file written after the child checks os.getcwd(), no sleep-and-hope); the system reads a same-user process's current folder without elevated rights on Linux and Windows, and the cleanup kills the child before the temp folder is deleted (it locks the folder on Windows). Uses WorkspaceCase from test_bo_4300e_2.py."
+  proves_clause: "each request is refused, and the refusal names the running shell by its process identifier and program name and states that it is working inside the workspace"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_refused_workspaces_are_identical_before_and_after
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Same fixture; snapshot each workspace with with_git=True (repository, .leafcutter/workspace.json record, every file) before and after the refused request and require equality. This is the observed-defect guard: the old code deleted the repository before refusing."
+  proves_clause: "for each workspace its repository, its workspace record and every one of its files are identical before and after the refused request"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that runs the holder check after the repository or folder deletion has begun"
+  - "a maker that counts only programs with an open file and so lets a current-folder-only holder through to deletion"
+  - "a maker that terminates the holding shell instead of refusing"
+- name: test_refused_clearing_sends_no_fetch_push_or_deletion_to_the_shared_project
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Same fixture, both requests carry --delete-remote-branch and the workspace line is pushed to the hub first. Compare hub refs (for-each-ref on the bare hub) before and after both refusals, and the workspace .git digest (FETCH_HEAD, remote-tracking refs) so a fetch would show too."
+  proves_clause: "no fetch, push or deletion reached the shared project for either workspace"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that deletes the hub branch before the holder check refuses"
+- name: test_clearing_alpha_again_after_the_shells_exit_is_cleared
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "After both child programs are killed and waited for, remove of ticket/alpha is answered ok and nothing remains at its location (os.path.lexists is false). Proves the refusal left a clearable workspace and no stale lock."
+  proves_clause: "after both shells have exited, clearing \"ticket/alpha\" again is answered cleared and nothing of it remains at its location"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_unavailable_program_check_refuses_instead_of_carrying_on
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Copies the deployed maker folder into a temp folder (deployed_maker_path(override=copy) is the existing seam that materialises sibling modules) and runs the copy as a real subprocess three ways: worktree/sweep_processes.py deleted, replaced by a file that raises on import, replaced by one whose sweep() raises. Each remove is refused with a message stating the program check is unavailable (not answered ok, not NOT_FOUND). No real holder is needed, so this is root-free on both platforms."
+  proves_clause: "the request is refused, and the refusal states that the program check is unavailable"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that logs a warning and carries on when the sweep module is missing"
+  - "a maker that treats a load error of the sweep module as no holders"
+  - "a maker that lets an exception from sweep() become an empty holder list"
+- name: test_unavailable_check_leaves_gamma_identical
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Same three broken-check variants against a clean ticket/gamma; snapshot with_git=True before and after each refused request and require equality."
+  proves_clause: "the repository, the workspace record and every one of the files of \"ticket/gamma\" are identical before and after the refused request"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_unavailable_check_sends_nothing_to_the_shared_project
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Same three variants with --delete-remote-branch and gamma's line pushed; hub refs and the workspace .git digest are unchanged after each refusal."
+  proves_clause: "no fetch, push or deletion reached the shared project for \"ticket/gamma\""
+  code_file: templates/scripts/worktree_remove.py
+- name: test_current_folder_match_is_by_resolved_path_not_name_prefix
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: "Real child with its current folder in a sibling folder whose name only shares the workspace's name prefix (ticket/alpha2 beside ticket/alpha) does not block clearing of ticket/alpha, while one in ticket/alpha/docs does. Exercises the sweep's current-folder test (today a substring test on the resolved path). CI needs no root: the holder is a real child python process the test starts itself as the same user (subprocess.Popen with cwd set, stdin/stdout to DEVNULL, a ready-flag file written after the child checks os.getcwd(), no sleep-and-hope); the system reads a same-user process's current folder without elevated rights on Linux and Windows, and the cleanup kills the child before the temp folder is deleted (it locks the folder on Windows). "
+  proves_clause: "each request is refused, and the refusal names the running shell by its process identifier and program name and states that it is working inside the workspace"
+  code_file: scripts/worktree/sweep_processes.py
+  must_catch:
+  - "a sweep that matches the workspace path as a plain substring of the current folder so a name-prefix sibling blocks clearing"
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_i.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds cmd_remove, the holder check, the hub-branch and folder deletion and the unsent-work verdict that this record changes."
+  decision: null
+- file: scripts/worktree/sweep_processes.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds the sweep that decides which programs count as inside the workspace (current folder and command line) and the psutil-missing error path."
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed defect 1 (2026-10-25): clearing was refused because a shell's current folder was
+  inside the workspace, but the workspace's repository had already been deleted, leaving an
+  empty folder. BO-4300e-2-ii (done) already promises "identical before and after"; its proof
+  did not cover a program that only has its current folder inside the workspace (no file
+  open), nor require the check to come before the first deletion. For this case the record
+  narrows e-2-ii's "stop it or refuse" choice to refuse-with-nothing-deleted, as the user
+  asked; it picks one of e-2-ii's two permitted outcomes and does not contradict it.

@@ -42,7 +42,8 @@ origin_agent: BrainCandy
 created: 2026-07-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- TQ-200b-1-i
 implemented_by: []
 change_target:
   - code

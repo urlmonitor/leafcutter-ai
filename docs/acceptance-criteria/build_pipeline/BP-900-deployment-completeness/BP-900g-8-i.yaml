@@ -191,6 +191,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - unit_tests/test_bp_900g_8_i.py
+  - unit_tests/test_bp_900g_8_closure_cache.py
 implemented_by:
   - unit_tests/test_bp_900g_8_i.py
 change_target: pipeline
