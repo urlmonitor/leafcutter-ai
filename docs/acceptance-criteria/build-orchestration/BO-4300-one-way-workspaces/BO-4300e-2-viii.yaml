@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -99,6 +99,14 @@ test_spec:
   description: "Runs the real maker CLI as a subprocess with a sitecustomize.py on PYTHONPATH (extra_env of cli()) that wraps os.unlink and os.rmdir: on the first deletion inside build/tmp it removes the whole build/tmp tree itself, then lets the real call raise FileNotFoundError, which is the race of a program outside deleting 200 files and the folder. The fixture holds 200 files in build/tmp, listed in .git/info/exclude. remove of ticket/alpha is ok and nothing remains at its location. Deterministic, no timing, runs unprivileged on both platforms."
   proves_clause: "\"ticket/alpha\" is answered cleared, and no folder or file of it remains at its location"
   code_file: templates/scripts/worktree_remove.py
+- name: test_item_vanishing_between_delete_error_and_retry_still_answers_ok
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "flaky.bin first fails to delete with PermissionError, then vanishes before the maker's read-only retry, whose chmod raises FileNotFoundError (the maker's own vanished-item branch; Python 3.12+ shutil.rmtree absorbs plain vanishes itself, so the 200-file race alone never reaches it). The answer is ok and nothing of ticket/alpha remains."
+  proves_clause: "\"ticket/alpha\" is answered cleared, and no folder or file of it remains at its location"
+  code_file: templates/scripts/worktree_remove.py
   must_catch:
   - "a deletion that counts an item that no longer exists as a failure"
 - name: test_vanished_build_tmp_items_are_not_named_as_failures
@@ -143,7 +151,10 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: "wrong-version gate 2026-10-29: must_catch 'a deletion that counts an item that no longer exists as a failure' moved from test_alpha_clears_when_items_vanish_during_deletion (stdlib rmtree absorbs those vanishes, so it cannot observe the branch) to the new test_item_vanishing_between_delete_error_and_retry_still_answers_ok, which does."
+    by: test-writer
+    at: "2026-10-29"
 superseded_by: null
 covered_by: []
 implemented_by: []
