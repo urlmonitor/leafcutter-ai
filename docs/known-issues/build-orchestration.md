@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 77** (4 blocker, 42 high, 31 low) · **Resolved: 29** (recounted from the directory 2026-10-25, after KI-BO-20261025-wv-recover-depends-on-executor-cwd was filed resolved)
+**Open: 79** (4 blocker, 43 high, 32 low) · **Resolved: 29** (recounted from the directory 2026-10-29, after KI-BO-20261025-wv-recover-depends-on-executor-cwd was filed resolved)
 
 ## Open
 
@@ -148,6 +148,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20261023-g2-followups — PR #1316 leftovers: three mypy errors in new code (`wrong_version_runner.py`:274, `_tq500g2i_standin_pg.py`:90, `_tq500g2i_review_fixtures.py`:76), and `sql-test-writer` still declares `mutates: none` although it writes files | [open-low-ki-bo-20261023-g2-followups.md](build-orchestration/open-low-ki-bo-20261023-g2-followups.md) |
 | `low` | KI-BO-20261023-uxp-700d-3-i-scan-timeout-flake — `test_uxp_700d_3_i.py` runs `scan_ac_store.py --json` over the whole AC store in a subprocess with a 30 s timeout, and it timed out on CI shard 7 on three unrelated PRs (#1305, #1316, #1320) in two days; graded medium | [open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md](build-orchestration/open-low-ki-bo-20261023-uxp-700d-3-i-scan-timeout-flake.md) |
 | `low` | KI-BO-20261024-list-speed-test-flaky — `test_tq500g1v_list_speed.py` asserts the 50-id `wrong_version_writer.py list` run takes at most 2 x the 1-id run + 1 s from one timing each, and both are dominated by fixed costs, so the ratio fails at random (CI proof-of-done on PR #1330, run 39990944257, passed on rerun; locally t1 9.1 s vs t50 6.8 s) | [open-low-ki-bo-20261024-list-speed-test-flaky.md](build-orchestration/open-low-ki-bo-20261024-list-speed-test-flaky.md) |
+| `low` | KI-BO-20261025-workspace-maker-clone-head-stale — two fresh workspaces made by `worktree.py ensure` on 2026-10-25 (fastlane/tq-200d-3, scratch/tq-200d-before-score) answered `status ok` with `base_commit` = the current origin/main but left HEAD at the older origin/main `1a5c47cc3` with the newer tree staged (a later merge left ~350 staged files, no MERGE_HEAD); the scratch reflog shows an outside fetch rewinding origin/main between the maker's hub fetch and a tracking `checkout -B <branch> origin/main` — the race fixed by `1d316e0a0` (PR #1351) — so the maker that ran was most likely the stale in-repo install `leafcutter-ai/.leafcutter/scripts/worktree.py` (:86, deployed 2026-10-24 from `1a5c47cc3`); `MAKER_VERSION` and the answer do not show which copy answered; graded medium | [open-low-ki-bo-20261025-workspace-maker-clone-head-stale.md](build-orchestration/open-low-ki-bo-20261025-workspace-maker-clone-head-stale.md) |
 
 ## Resolved
 

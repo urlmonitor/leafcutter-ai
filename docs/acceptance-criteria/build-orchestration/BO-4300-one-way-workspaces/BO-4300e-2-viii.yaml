@@ -1,0 +1,155 @@
+id: BO-4300e-2-viii
+title: "Files that disappear while a workspace is being cleared count as already gone"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a ready workspace "ticket/alpha" holding nothing unsent, whose folder
+    "build/tmp" holds 200 files,
+  And a program outside the workspace deletes those 200 files and then the
+    folder "build/tmp" itself while the clearing of "ticket/alpha" is under way,
+  And a second ready workspace "ticket/beta" holding nothing unsent, one of whose
+    files "locked.bin" still exists and cannot be deleted during clearing,
+  When the clearing of "ticket/alpha" completes, and then the clearing of
+    "ticket/beta" completes,
+  Then "ticket/alpha" is answered cleared, and no folder or file of it remains
+    at its location,
+  And the answer for "ticket/alpha" names no file or folder of "build/tmp" as a
+    failure,
+  And "ticket/beta" is not answered cleared, and its answer names "locked.bin"
+    as the item that could not be deleted.
+depends_on: [BO-4300e-2, BO-4300e-2-i]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new refusal field must match it.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+it_requirements:
+- During whole-folder deletion an item that no longer exists counts as deleted; only errors on items that
+  still exist count as failures.
+- The post-check that nothing remains at the location stays the single arbiter of a cleared answer.
+- A failure answer names each item that could not be deleted by its workspace-relative path.
+- Retries on transient deletion errors are bounded in count and time; no unbounded loop.
+- Must keep the Windows extended-length path handling of BO-4300e-2-i.
+- Edit the template source under templates/scripts/, never a deployed build output (ADR-001); the change
+  must reach the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer
+  field or code must be additive.
+- Must stay within the project's file-size and complexity limits for the maker modules; if the remove
+  module would exceed them, the new logic moves into a sibling maker module rather than raising a limit.
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no
+  write, rename or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: '"ticket/alpha" is answered cleared, and no folder or file of it remains at its location'
+  needs_test: true
+  reason: A vanished item during deletion must not stop a clear, which is the observed defect.
+- clause: the answer for "ticket/alpha" names no file or folder of "build/tmp" as a failure
+  needs_test: true
+  reason: The answer must not report vanished items as failures, which is computed error handling.
+- clause: '"ticket/beta" is not answered cleared, and its answer names "locked.bin" as the item that could
+    not be deleted'
+  needs_test: true
+  reason: Tolerating vanished items must not swallow a real deletion failure, which this arm catches.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: The whole-folder deletion and its post-check that nothing is left at the location.
+package_surface: false
+test_required: true
+test_spec:
+- name: test_alpha_clears_when_items_vanish_during_deletion
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: "Runs the real maker CLI as a subprocess with a sitecustomize.py on PYTHONPATH (extra_env of cli()) that wraps os.unlink and os.rmdir: on the first deletion inside build/tmp it removes the whole build/tmp tree itself, then lets the real call raise FileNotFoundError, which is the race of a program outside deleting 200 files and the folder. The fixture holds 200 files in build/tmp, listed in .git/info/exclude. remove of ticket/alpha is ok and nothing remains at its location. Deterministic, no timing, runs unprivileged on both platforms."
+  proves_clause: "\"ticket/alpha\" is answered cleared, and no folder or file of it remains at its location"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a deletion that counts an item that no longer exists as a failure"
+- name: test_vanished_build_tmp_items_are_not_named_as_failures
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Same fixture; the answer (all string fields) names no path under build/tmp."
+  proves_clause: "the answer for \"ticket/alpha\" names no file or folder of \"build/tmp\" as a failure"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_locked_item_still_fails_and_is_named
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Beta with locked.bin: the same sitecustomize raises PermissionError on every delete of locked.bin (the file still exists, so it cannot be a vanished item). The answer is not ok, names locked.bin by workspace-relative path, and the post-check still arbitrates (the folder remains). Bounded: the test asserts the maker answers within the cli timeout."
+  proves_clause: "\"ticket/beta\" is not answered cleared, and its answer names \"locked.bin\" as the item that could not be deleted"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a deletion that ignores every error and so answers cleared while locked.bin remains"
+  - "a deletion that retries without bound on a transient error"
+  - "a deletion that names no item in the failure answer"
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_i.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds cmd_remove, the holder check, the hub-branch and folder deletion and the unsent-work verdict that this record changes."
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed defect 3 (2026-10-25): the whole-folder deletion treated a file or folder that
+  vanished mid-deletion as a failure. The beta arm is the boundary: tolerating a vanished
+  item must not swallow a real deletion failure, and the standing post-check (cleared only
+  when nothing is left at the location, BO-4300e-2) still governs. The beta arm also keeps
+  BO-4300e-2-ii's rule that a partial deletion is never reported as cleared.

@@ -1,0 +1,191 @@
+id: BO-4300e-2-vi
+title: "A half-cleared workspace that still holds files is finished only when their loss is authorised"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose landing place holds the folder "ticket/epsilon",
+    left by a clearing that stopped part-way, whose repository is gone and which
+    still holds its workspace record naming shop and the files "src/app.py" and
+    "notes.txt",
+  When clearing "ticket/epsilon" is requested with no authorisation to lose work,
+  Then the request is refused, stating that the workspace was half-cleared and
+    that its remaining files cannot be checked against the shared project,
+  And the refusal lists "src/app.py" and "notes.txt" by path and returns a
+    one-time token bound to that folder and exactly those two files,
+  And "ticket/epsilon" is identical before and after,
+  And when clearing is requested again with that token, it is answered cleared,
+    the answer lists both files as discarded, and nothing of "ticket/epsilon"
+    remains at its location,
+  And when, in a second run of the same setup, "notes.txt" is changed after the
+    refusal, clearing with the earlier token is refused and "ticket/epsilon" is
+    identical before and after that request.
+depends_on: [BO-4300e-2, BO-4300e-2-v, BO-4300e-3, BO-4300e-3-i]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new refusal field must match it.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+it_requirements:
+- Reuse the existing one-time discard-token mechanism of BO-4300e-3; no second token scheme.
+- The token is bound to the folder's resolved path and to a content digest of exactly the listed files;
+  any added, removed or changed file invalidates it.
+- The token never appears in a log line, a file on disk, an environment variable or a config setting;
+  only in the refusal answer.
+- Token comparison must be constant-time.
+- Remaining files are listed by workspace-relative forward-slash path in a deterministic order, and the
+  cleared answer lists the same paths as discarded.
+- A folder holding files other than its record and empty folders is never finished without a valid token
+  (the half-cleared rule of BO-4300e-2-v must not delete it).
+- Edit the template source under templates/scripts/, never a deployed build output (ADR-001); the change
+  must reach the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer
+  field or code must be additive.
+- Must stay within the project's file-size and complexity limits for the maker modules; if the remove
+  module would exceed them, the new logic moves into a sibling maker module rather than raising a limit.
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no
+  write, rename or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: the request is refused, stating that the workspace was half-cleared and that its remaining files
+    cannot be checked against the shared project
+  needs_test: true
+  reason: Telling a half-cleared folder with files from an empty one is a safety decision a test must
+    pin.
+- clause: the refusal lists "src/app.py" and "notes.txt" by path and returns a one-time token bound to
+    that folder and exactly those two files
+  needs_test: true
+  reason: The token's binding to exactly these files is computed, and a wrong binding would authorise
+    the wrong loss.
+- clause: '"ticket/epsilon" is identical before and after'
+  needs_test: true
+  reason: A refusal that alters the folder would lose unsent work, which a before-and-after comparison
+    catches.
+- clause: when clearing is requested again with that token, it is answered cleared, the answer lists both
+    files as discarded, and nothing of "ticket/epsilon" remains at its location
+  needs_test: true
+  reason: Finishing with a valid token and reporting the discarded files is computed behaviour.
+- clause: when, in a second run of the same setup, "notes.txt" is changed after the refusal, clearing
+    with the earlier token is refused and "ticket/epsilon" is identical before and after that request
+  needs_test: true
+  reason: Rejecting a stale token after a file change is the guard against discarding work that changed
+    after consent.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-3
+  contract: The one-time discard token, bound to a workspace and exactly the work it would lose.
+package_surface: false
+test_required: true
+test_spec:
+- name: test_half_cleared_folder_with_files_is_refused_as_unverifiable
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: "Runs the real maker CLI as a subprocess. ticket/epsilon is made by ensure, then its .git is deleted and src/app.py and notes.txt are added beside the record. remove with no token is refused (exit 2) stating the workspace was half-cleared and its remaining files cannot be checked against the shared project."
+  proves_clause: "the request is refused, stating that the workspace was half-cleared and that its remaining files cannot be checked against the shared project"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_refusal_lists_the_two_files_and_returns_a_token
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "The refusal lists exactly src/app.py and notes.txt (workspace-relative forward-slash, deterministic order) and carries a discard_token; the token is not found in stderr or in any file of the folder."
+  proves_clause: "the refusal lists \"src/app.py\" and \"notes.txt\" by path and returns a one-time token bound to that folder and exactly those two files"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_refused_half_cleared_folder_is_identical
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Snapshot with_git=True before and after the refusal and require equality."
+  proves_clause: "\"ticket/epsilon\" is identical before and after"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that finishes a half-cleared folder holding files without a valid token"
+  - "a maker that touches the folder while computing the token"
+- name: test_valid_token_clears_and_lists_both_files_as_discarded
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Repeat remove with the returned --discard-token: ok, the discarded files list both paths, nothing remains at the location."
+  proves_clause: "when clearing is requested again with that token, it is answered cleared, the answer lists both files as discarded, and nothing of \"ticket/epsilon\" remains at its location"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_token_goes_stale_when_a_file_changes
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Second run of the same setup: take the token, change notes.txt, remove with the earlier token; refused, and the folder snapshot is identical before and after that request. Variants: a file added and a file removed also invalidate it."
+  proves_clause: "when, in a second run of the same setup, \"notes.txt\" is changed after the refusal, clearing with the earlier token is refused and \"ticket/epsilon\" is identical before and after that request"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a token bound to the folder path only, not to the file content digest"
+  - "a token bound to the file names only, so a changed notes.txt still matches"
+  - "a second token scheme unrelated to the BO-4300e-3 discard token"
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_i.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds cmd_remove, the holder check, the hub-branch and folder deletion and the unsent-work verdict that this record changes."
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not asked for in the 2026-10-25 request; written so the "finish the job" fix of
+  BO-4300e-2-v cannot be implemented as "delete any folder whose repository is gone". With
+  the repository gone, whether the remaining files ever reached the shared project cannot be
+  checked, so they count as unsent work under the standing rule "never delete unsent work",
+  and the existing Q8 discard-token mechanism applies unchanged. Do not drop as scope creep.

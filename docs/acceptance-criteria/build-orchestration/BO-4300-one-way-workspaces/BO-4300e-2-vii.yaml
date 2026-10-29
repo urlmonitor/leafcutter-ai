@@ -1,0 +1,190 @@
+id: BO-4300e-2-vii
+title: "A workspace whose current commit is off its line of work is still found by its location and cleared safely"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with three ready workspaces, each switched off its line
+    of work onto a bare commit (detached), with no uncommitted changes:
+    "ticket/alpha", sitting on a commit the shared main line already holds, and
+      whose own line of work holds no unpushed commit,
+    "ticket/beta", sitting on commit "c1" that exists only in that workspace,
+    and "ticket/gamma", sitting on a commit the shared main line holds, while
+      its own line of work holds commit "c2" that was never pushed,
+  When clearing is requested for each workspace by its location,
+  Then no request is answered "not found",
+  And "ticket/alpha" is answered cleared and nothing of it remains at its
+    location,
+  And "ticket/beta" is refused, the refusal names commit "c1" by identifier as
+    unsent and states that the workspace is not on its line of work, and
+    "ticket/beta" is identical before and after,
+  And "ticket/gamma" is refused, the refusal names commit "c2" by identifier as
+    unsent, and "ticket/gamma" is identical before and after,
+  And clearing "ticket/beta" again with the one-time token its refusal returned
+    is answered cleared, listing "c1" as discarded.
+depends_on: [BO-4300e-2, BO-4300e-3]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new refusal field must match it.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+it_requirements:
+- Finding the workspace to clear by its location must not depend on the repository being on a branch;
+  ownership is decided from the workspace record and the location.
+- 'The unsent-work verdict covers both the current (detached) commit and the record''s own line of work:
+  commits reachable from either and from neither the line on the shared project nor the shared main line
+  count as unsent.'
+- Any branch handling during clearing uses the line of work named by the workspace record, never the checked-out
+  branch.
+- The discard token binds the detached commit identifier as part of the unsent work, so a moved current
+  commit invalidates it.
+- Commit identifiers in answers are full identifiers.
+- Edit the template source under templates/scripts/, never a deployed build output (ADR-001); the change
+  must reach the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer
+  field or code must be additive.
+- Must stay within the project's file-size and complexity limits for the maker modules; if the remove
+  module would exceed them, the new logic moves into a sibling maker module rather than raising a limit.
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no
+  write, rename or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: no request is answered "not found"
+  needs_test: true
+  reason: The observed defect answered not found for a detached workspace, so the regression must be pinned.
+- clause: '"ticket/alpha" is answered cleared and nothing of it remains at its location'
+  needs_test: true
+  reason: Clearing a detached workspace with nothing unsent is the main success path of the fix.
+- clause: '"ticket/beta" is refused, the refusal names commit "c1" by identifier as unsent and states
+    that the workspace is not on its line of work, and "ticket/beta" is identical before and after'
+  needs_test: true
+  reason: A commit that exists only at the detached position is the work the old check would lose.
+- clause: '"ticket/gamma" is refused, the refusal names commit "c2" by identifier as unsent, and "ticket/gamma"
+    is identical before and after'
+  needs_test: true
+  reason: Checking only the detached commit would miss unpushed commits on the own line, which this arm
+    catches.
+- clause: clearing "ticket/beta" again with the one-time token its refusal returned is answered cleared,
+    listing "c1" as discarded
+  needs_test: true
+  reason: The token path for a detached workspace must bind and discard the detached commit correctly.
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: The unsent-work verdict used by clearing (commits reachable from neither the line on the shared project nor the shared main line, plus uncommitted and untracked changes).
+package_surface: false
+test_required: true
+test_spec:
+- name: test_detached_workspaces_are_found_by_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: "Runs the real maker CLI as a subprocess. Three ready clean workspaces each switched with git checkout --detach: alpha at a commit the shared main already holds with nothing unpushed on its own line, beta on commit c1 made while detached, gamma at a shared commit while its own line holds unpushed c2. Each remove --path is not answered NOT_FOUND."
+  proves_clause: "no request is answered \"not found\""
+  code_file: templates/scripts/worktree_remove.py
+- name: test_detached_alpha_with_nothing_unsent_is_cleared
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "remove of alpha is ok and nothing remains at its location."
+  proves_clause: "\"ticket/alpha\" is answered cleared and nothing of it remains at its location"
+  code_file: templates/scripts/worktree_remove.py
+- name: test_detached_beta_is_refused_naming_c1_and_not_on_its_line
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Refused UNSENT_WORK; the unsent commits hold the full identifier of c1 and the message says the workspace is not on its line of work; snapshot with_git=True is identical before and after."
+  proves_clause: "\"ticket/beta\" is refused, the refusal names commit \"c1\" by identifier as unsent and states that the workspace is not on its line of work, and \"ticket/beta\" is identical before and after"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that checks only the checked-out branch and so finds no unsent work when detached"
+  - "a maker that answers NOT_FOUND for a detached workspace"
+  - "a maker that reports abbreviated commit identifiers"
+- name: test_detached_gamma_is_refused_naming_c2
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: "Refused UNSENT_WORK naming the full identifier of c2 (on the record's own line, not the detached commit); snapshot with_git=True identical before and after."
+  proves_clause: "\"ticket/gamma\" is refused, the refusal names commit \"c2\" by identifier as unsent, and \"ticket/gamma\" is identical before and after"
+  code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "a maker that checks only the detached commit and misses unpushed commits on the record's own line"
+- name: test_detached_beta_token_clears_and_lists_c1_as_discarded
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: "Repeat remove of beta with the returned token: ok, discarded commits list c1, nothing remains. Also a moved detached commit (new commit after the refusal) invalidates the earlier token."
+  proves_clause: "clearing \"ticket/beta\" again with the one-time token its refusal returned is answered cleared, listing \"c1\" as discarded"
+  code_file: templates/scripts/worktree_remove.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+- templates/scripts/worktree_remove.py
+- scripts/worktree/sweep_processes.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_i.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300e_2_iii.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: "It holds cmd_remove, the holder check, the hub-branch and folder deletion and the unsent-work verdict that this record changes."
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed defect 2 (2026-10-25): clearing a workspace whose current commit was detached
+  answered a misleading NOT_FOUND. The user allowed either "remove it with the usual
+  unsent-work checks against the commit it points at" or "refuse naming the detached state";
+  this record picks remove-with-checks and states the detached state in any refusal. The
+  gamma arm was not asked for: checking only the detached commit would miss unpushed commits
+  still on the workspace's own line, so both are checked. The same defect may affect finding
+  a workspace by location (BO-4300e-1); flagged to the orchestrator, not specified here.

@@ -77,7 +77,7 @@ superseded_by: null
 covered_by:
 - tests/knowledge/test_inf_700b_4_5_docs.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md
 - docs/architecture/diagrams/c3-038-knowledge-capture-path-sequence.md
 - docs/architecture/agent_knowledge_system.md
 notes: |

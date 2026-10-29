@@ -8,7 +8,7 @@ status: draft
 parent: docs/architecture/agent_knowledge_system.md
 created: 2026-10-25
 last_updated: 2026-10-25
-source_ticket: "tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md"
+source_ticket: "tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/07_TICKET-20261016-INF-700b-4.md"
 components:
   - knowledge_system
   - infrastructure
