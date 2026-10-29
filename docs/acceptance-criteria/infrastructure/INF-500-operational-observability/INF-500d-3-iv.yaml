@@ -1,0 +1,224 @@
+id: INF-500d-3-iv
+components:
+  - infrastructure
+  - feedback_collector
+title: "An agent that cannot find its own recovery file records that the id was not captured, never the newest id it can find"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent's submission printed nothing on standard output,
+  And the agent's own error-stream file holds no recovery-file line (the submission
+    exited before writing one),
+  And the shared temporary directory holds recovery files written in the last minute
+    by other agents' submissions, the newest holding fb_2026-08-25_9057159a,
+  When the agent follows the sign-off instructions to fill in its feedback id,
+  Then it records a failure marker whose reason comes from INF-500d-3's closed set,
+  And it does not record fb_2026-08-25_9057159a or any other id it did not read from
+    its own standard output or from the recovery file named in its own error stream,
+  And the sign-off instructions contain no step that lists, sorts, or searches the
+    shared temporary directory for recovery files by name pattern or modification
+    time.
+
+  Given an agent's own error-stream file names a recovery file that no longer exists
+    or is empty,
+  When the agent follows the sign-off instructions,
+  Then it records the failure marker with INF-500d-3's "written but not captured"
+    reason,
+  And it does not record any other id,
+  So that a missing id stays visible as missing instead of being replaced by a
+    plausible id that belongs to another agent.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-ii
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: implements
+    status: exists
+  - path: templates/agents/live-surface-tester.md
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+declared_files:
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/live-surface-tester.md
+    state: existing
+it_requirements:
+  - "Test home: unit_tests/feedback/test_inf_500d_3_iv.py (to be created by the test phase). It is not in declared_files because test files belong to python-coder/test-writer per the surface map and this record's own change is prompt-only."
+  - "The only id sources the instructions may name are the submission's own standard output and the recovery file named in that same submission's own per-run error-stream file. No step may list, sort, glob or search the shared temporary directory, and no step may take 'the newest' or 'the first' recovery file."
+  - "live-surface-tester's executable capture block must, when run as written, yield the failure marker (never a foreign id) both when its own error-stream file has no recovery line and when the named recovery file is missing or empty, even with other recovery files present in the temporary directory. It must not depend on 'first match wins'."
+  - "The marker reason identifiers come from INF-500d-3's closed set and are referenced, not redefined; this record adds no reason of its own. The 'written but not captured' reason is the one used whenever the error stream announced a recovery file."
+  - "The verdict and sign-off still complete when the id is missing (fail-open, BO-2000a-3 continue-anyway); recording the marker never aborts or downgrades the sign-off."
+  - "Edits land in the template sources only; deployed copies are refreshed by the build (ADR-001)."
+  - "Tests read the shared deployed reference layout (shared_layout_reader) and execute the shell form of the recovery recipe where the instruction provides one, with decoy recovery files planted in a confined temporary directory; a grep for forbidden words alone is not sufficient (CLAUDE.md 'Gate / Workflow ACs')."
+test_intent:
+  - clause: "it records a failure marker whose reason comes from INF-500d-3's closed set"
+    needs_test: true
+    reason: The executable recipe's fallback value decides what is recorded, and a wrong fallback writes a bare or invented marker.
+  - clause: "it does not record fb_2026-08-25_9057159a or any other id it did not read from its own standard output or from the recovery file named in its own error stream"
+    needs_test: true
+    reason: Running the recipe with a planted decoy file is the only way to show it never picks up another agent's id.
+  - clause: "the sign-off instructions contain no step that lists, sorts, or searches the shared temporary directory for recovery files by name pattern or modification time"
+    needs_test: true
+    reason: A newest-file fallback step is the improvisation this record forbids, and the deployed text can be checked for any such step.
+  - clause: "it records the failure marker with INF-500d-3's \"written but not captured\" reason"
+    needs_test: true
+    reason: Choosing this reason over the others drives whether the report is later re-filed, so a wrong choice duplicates records.
+  - clause: "it does not record any other id, So that a missing id stays visible as missing instead of being replaced by a plausible id that belongs to another agent"
+    needs_test: true
+    reason: A recipe that falls through to a directory search when the named file is empty would record a foreign id here.
+test_spec:
+  - name: test_capture_block_records_a_closed_set_failure_marker_when_the_own_error_file_has_no_recovery_line
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Lifts the executable capture block from the deployed live-surface-tester instruction (shared reference layout, shared_layout_reader), runs it with bash against a submit command that exits before writing a recovery line, with recent decoy feedback_id_*.txt files planted in the confined TMPDIR; FB_ID must be a failure marker whose reason is one of INF-500d-3's closed-set identifiers (read from the delivered vocabulary, not redefined here) and the block's last exit status is 0 (fail-open)."
+    proves_clause: it records a failure marker whose reason comes from INF-500d-3's closed set
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_capture_block_never_records_a_decoy_id_from_the_shared_temporary_directory
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Same run as above with the newest decoy recovery file holding fb_2026-08-25_9057159a (and older ones holding other ids); FB_ID must not contain any decoy id or any fb_ id at all, and must still be the marker."
+    proves_clause: it does not record fb_2026-08-25_9057159a or any other id it did not read from its own standard output or from the recovery file named in its own error stream
+    code_file: templates/agents/live-surface-tester.md
+    must_catch:
+      - a fallback that takes the newest feedback_id file in the temporary directory
+      - a fallback that globs feedback_id_*.txt and takes the first match
+      - a head -1 over a search that can see another agent's file
+  - name: test_signoff_recovery_step_returns_nothing_foreign_when_the_own_error_file_has_no_recovery_line
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Executes the deployed signoff Call 2 search (placeholders filled per the INF-500d-3-ii name) against the run's own error file, which holds no sidecar line, with decoy recovery files in the confined TMPDIR; it returns zero matches, so no id can be read."
+    proves_clause: it does not record fb_2026-08-25_9057159a or any other id it did not read from its own standard output or from the recovery file named in its own error stream
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - a Call 2 that searches the shared temporary directory instead of the run's own error file
+  - name: test_signoff_and_live_surface_tester_contain_no_step_that_lists_sorts_or_searches_the_shared_temp_directory
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Scans the deployed signoff skill and live-surface-tester (shared reference layout) for any command or prose step that lists, globs, sorts, finds or takes the newest or first recovery file by name pattern or modification time in the temporary directory, with synthetic positive controls so the scan is shown to fire; this scan is paired with the executed decoy tests above and never stands alone."
+    proves_clause: the sign-off instructions contain no step that lists, sorts, or searches the shared temporary directory for recovery files by name pattern or modification time
+    code_file: templates/skills/signoff/SKILL.md
+    must_catch:
+      - a step that runs ls -t over the temporary directory feedback_id files
+      - a prose step telling the agent to take the newest recovery file when its own is missing
+      - a find or glob over the temporary directory for feedback_id_*.txt
+  - name: test_capture_block_records_written_but_not_captured_when_the_named_recovery_file_is_missing
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Runs the live-surface-tester capture block with the own error file naming a sidecar path that does not exist and decoys present; FB_ID is the failure marker carrying INF-500d-3's 'written but not captured' reason identifier."
+    proves_clause: 'it records the failure marker with INF-500d-3''s "written but not captured" reason'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_capture_block_records_written_but_not_captured_when_the_named_recovery_file_is_empty
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Same run with the named recovery file present but empty; FB_ID is the marker with the 'written but not captured' reason and no other id."
+    proves_clause: 'it records the failure marker with INF-500d-3''s "written but not captured" reason'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_missing_or_empty_named_recovery_file_never_yields_another_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "With the named recovery file missing, then empty, and decoy files holding ids in the confined TMPDIR, FB_ID contains no fb_ id; the block does not fall through to a directory search or to a first-match-wins read."
+    proves_clause: it does not record any other id, So that a missing id stays visible as missing instead of being replaced by a plausible id that belongs to another agent
+    code_file: templates/agents/live-surface-tester.md
+    must_catch:
+      - a recipe that falls through to a directory search when the named file is empty
+      - a recipe that relies on head -1 first-match-wins over a shared search
+  - name: test_live_surface_tester_capture_block_is_reachable_as_a_bash_command
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the deployed live-surface-tester capture block as a real bash command (the way an agent runs it) against the copied layout's submit_feedback.py with its own declared sink and confined TMPDIR, and asserts a successful submission still yields its own id in FB_ID (the happy path stays intact)."
+    proves_clause: it records a failure marker whose reason comes from INF-500d-3's closed set
+    code_file: templates/agents/live-surface-tester.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/live-surface-tester.md
+  - templates/scripts/feedback/submit_feedback.py
+  - unit_tests/feedback/_inf_500d_4_vi_helpers.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+file_findings:
+  - file: templates/skills/signoff/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the Call 1 / Call 2 id-capture recipe and the submit-failed fallback (lines 174-201) that the criteria change.
+    decision: null
+  - file: templates/agents/live-surface-tester.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the executable capture block with the head -1 first-match search (lines 364-379) that the criteria change.
+    decision: null
+file_findings_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/live-surface-tester.md
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-3-ii
+    contract: "Every shipped submit instruction redirects the error stream to a per-run file named from the ticket base name and the phase (plus an event kind where one applies), and the same instruction's recovery search reads that same per-run file and nothing else."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EDGE MATTERS. The KI's stated harm: "a missing id is visible; a plausible
+  id belonging to another agent's phase is not". Once INF-500d-3-i makes recovery
+  files unique, an LLM whose fallback comes back empty has an obvious and WRONG
+  improvisation available: take the newest recovery file in the temporary
+  directory. Under parallel dispatch, that produces exactly the cross-agent id the
+  fix exists to prevent. The instructions must explicitly forbid that route.
+
+  Which marker: in the first scenario the agent cannot tell from its own side
+  whether the write happened. The reason comes from INF-500d-3's closed set, based on
+  the submission's exit status and error stream. Do not invent a new reason. In the
+  second scenario the error stream shows a recovery file was announced, so the write
+  succeeded and the reason is "written but not captured". Per INF-500d-3's second
+  scenario, that case must never be re-filed.
+
+  live-surface-tester currently runs 'head -1' over the search result, which takes
+  the first match whoever wrote it. Once its error-stream file is per-run
+  (INF-500d-3-ii) it can only ever hold one match. Even so, the instruction must not
+  rely on "first match wins".
+
+  BOUNDARY. INF-500d-3 owns the marker reason vocabulary. This record only requires
+  that the instructions record the marker rather than a foreign id.

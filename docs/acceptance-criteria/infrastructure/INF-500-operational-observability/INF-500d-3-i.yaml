@@ -1,0 +1,282 @@
+id: INF-500d-3-i
+components:
+  - infrastructure
+  - feedback_collector
+title: "Two submissions in the same second each leave their own id-recovery file, holding their own id"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given two agents, a python-coder on ticket A and a pr-reviewer on ticket B, each
+    submit one report,
+  And both submissions start within the same wall-clock second,
+  When both submissions complete successfully, printing ids fb_2026-08-25_869bc2f7
+    and fb_2026-08-25_9057159a respectively,
+  Then two distinct id-recovery files exist, one per submission,
+  And the recovery file announced on the first submission's error stream contains
+    exactly fb_2026-08-25_869bc2f7,
+  And the recovery file announced on the second submission's error stream contains
+    exactly fb_2026-08-25_9057159a,
+  And neither recovery file was overwritten by the other submission.
+
+  Given 20 submissions from 20 separate processes start within the same second,
+  When all 20 complete successfully,
+  Then 20 distinct recovery files exist,
+  And each printed id appears in exactly one recovery file,
+  And each submission's error stream names the recovery file that holds that
+    submission's own printed id.
+
+  Given any successful submission,
+  When the recovery search documented in the sign-off instructions is applied to that
+    submission's error stream,
+  Then it returns exactly one match,
+  And that match names the recovery file holding the id the submission printed,
+  So that the uniquely-named recovery file is still found by the recovery step agents
+    are told to run.
+depends_on:
+  - INF-500d-3
+doc_links:
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "Owns the documented recovery search. Whatever recovery-file name this AC adopts must still produce exactly one match for that search, or the search must change in the same delivery (see notes)."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRACT TENSION. Its criteria pin the recovery line's shape and the pattern 'sidecar:[^ ]*feedback_id_[0-9]*.txt'. A name with non-digit separators no longer matches that pattern. See notes."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_3_i.py
+    state: to_be_created
+it_requirements:
+  - "NAMING DECISION (IT PO, 2026-10-25): option (a). The recovery file keeps the form feedback_id_<D>.txt in the temporary directory, where <D> is a run of decimal digits only, so the documented search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' is unchanged. REASON: '[0-9]*' accepts a digit run of any length, so a digits-only name built from per-submission parts (for example high-resolution time, process id and random digits, all written as digits) gives uniqueness without touching any caller. The signoff skill, live-surface-tester, INF-500d-4-ii's and INF-500d-4-vi's tests and every existing recovery-pattern test stay valid as they are. Option (b) was rejected because it would edit two approved records' tests and two instruction surfaces for no gain in uniqueness."
+  - "No submission may ever replace or truncate a recovery file it did not create. Uniqueness must hold by construction (a name already present must yield a different name, never an overwrite), not only by low collision probability."
+  - "The error-stream recovery line keeps its existing shape: one line 'sidecar:<absolute path>' and nothing else on that line, emitted only after the file holds the complete id. The recovery file's content stays exactly the printed id."
+  - "Standard output is untouched by this change: still exactly one line, the id (INF-500d-4-ii, INF-500d-3-iii)."
+  - "A failed recovery-file write stays fail-open: a warning on the error stream, the id still printed on standard output, exit status unchanged (the existing WARNING path)."
+  - "The module docstring that documents the stderr contract and the DECISION HISTORY block must be updated to describe the new name and why (per the doc-enforcer conventions)."
+  - "templates/scripts/feedback/submit_feedback.py is over the 400-line check-file-size limit: the change must leave it within the ratchet. Never SKIP check-file-size."
+  - "scripts/feedback/submit_feedback.py is a tracked copy that is byte-identical to the template today: it must still be byte-identical after the change (ADR-001 template-first; refresh the copy, never hand-diverge it)."
+  - "Tests must run the real entry point as separate concurrent subprocesses against a copied temporary layout with its own declared sink and its own temporary directory; no test writes to a real sink or the real shared temporary directory (INF-500d-4)."
+  - "Accumulation of recovery files is out of scope (see notes); this record must not add deletion of other submissions' recovery files."
+test_intent:
+  - clause: "two distinct id-recovery files exist, one per submission"
+    needs_test: true
+    reason: The file name is computed per submission, and the current whole-second name makes both submissions share one file.
+  - clause: "the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7"
+    needs_test: true
+    reason: Linking each announced path to its own id is the property the overwrite currently breaks.
+  - clause: "the recovery file announced on the second submission's error stream contains exactly fb_2026-08-25_9057159a"
+    needs_test: true
+    reason: The second submission is the one whose write lands last today, so its file content proves no cross-write happened.
+  - clause: "neither recovery file was overwritten by the other submission"
+    needs_test: true
+    reason: An overwrite is silent and only a concurrent run can show that each file still holds its own id.
+  - clause: "20 distinct recovery files exist"
+    needs_test: true
+    reason: A naming scheme that only adds a coarse suffix can still collide under twenty-way concurrency.
+  - clause: "each printed id appears in exactly one recovery file"
+    needs_test: true
+    reason: A duplicated or missing id across files is the computed outcome a weak uniqueness scheme would produce.
+  - clause: "each submission's error stream names the recovery file that holds that submission's own printed id"
+    needs_test: true
+    reason: The announced path and the written path are produced separately, so they can drift apart under concurrency.
+  - clause: "it returns exactly one match"
+    needs_test: true
+    reason: A unique name that the documented search pattern no longer matches would silently break every caller's recovery step.
+  - clause: "that match names the recovery file holding the id the submission printed, So that the uniquely-named recovery file is still found by the recovery step agents are told to run"
+    needs_test: true
+    reason: A match on the wrong line or the wrong file would hand the agent a foreign id.
+test_spec:
+  - name: test_two_same_second_submissions_leave_two_distinct_recovery_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Two submissions (python-coder on ticket A, pr-reviewer on ticket B) are started back to back as separate subprocesses of the copied layout's submit_feedback.py, each with its own TMPDIR-confined temporary directory shared between the two and its own declared sink; both exit 0 and two distinct feedback_id_<digits>.txt files exist."
+    proves_clause: two distinct id-recovery files exist, one per submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_first_submissions_announced_recovery_file_holds_exactly_its_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The path on the first submission's 'sidecar:' stderr line is read back and its content equals that submission's printed stdout id exactly (no newline, no extra text)."
+    proves_clause: the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_second_submissions_announced_recovery_file_holds_exactly_its_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The path on the second submission's 'sidecar:' stderr line is read back and its content equals the second submission's printed id exactly; the two ids differ so a cross-write is visible."
+    proves_clause: the recovery file announced on the second submission's error stream contains exactly fb_2026-08-25_9057159a
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_neither_recovery_file_is_overwritten_by_the_other_submission
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "After both same-second submissions finish, each announced file still holds its own id and the two announced paths differ; repeated for several rounds so a probabilistic scheme is exposed."
+    proves_clause: neither recovery file was overwritten by the other submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - a recovery file name built from whole epoch seconds only, as today
+      - a recovery file name with a process id but no per-submission random part
+      - a recovery file written with open mode w over a name that already exists
+  - name: test_existing_recovery_file_is_never_replaced_or_truncated_on_a_forced_name_collision
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A subprocess runs the copied layout's main() twice with the clock, process id and random sources frozen so the first-choice name is identical for both runs; the first run's file must be left intact with its id and the second run must announce a different file holding the second id (uniqueness by construction, not by low collision probability)."
+    proves_clause: neither recovery file was overwritten by the other submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - check-then-write that tests for existence and then opens the same name with mode w
+      - a collision retry that truncates the existing file before choosing a new name
+  - name: test_twenty_same_second_submissions_leave_twenty_distinct_recovery_files
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Twenty separate processes are started back to back against one confined temporary directory; all exit 0 and exactly twenty distinct feedback_id_<digits>.txt files exist."
+    proves_clause: 20 distinct recovery files exist
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - a name built from epoch seconds plus a short random suffix that collides under twenty-way concurrency
+      - a name built from epoch seconds plus a counter that is local to each process
+  - name: test_each_printed_id_appears_in_exactly_one_recovery_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Across the twenty recovery files, every printed stdout id is found as the exact content of exactly one file and no file holds an id that was not printed."
+    proves_clause: each printed id appears in exactly one recovery file
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_error_stream_names_the_recovery_file_holding_its_own_printed_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "For each of the twenty submissions the single 'sidecar:' line on its own stderr names a file whose content equals that submission's own stdout id."
+    proves_clause: each submission's error stream names the recovery file that holds that submission's own printed id
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_documented_recovery_search_returns_exactly_one_match_per_submission
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The search pattern documented in the deployed signoff skill (read from the shared reference layout, grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt') is applied with grep to each submission's captured stderr; exactly one match comes back."
+    proves_clause: it returns exactly one match
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_documented_search_match_names_the_file_holding_the_printed_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The single match of the documented search, with its 'sidecar:' prefix removed, is a file whose content equals the id the submission printed; the sink line '[submit_feedback] sink:' is not matched."
+    proves_clause: that match names the recovery file holding the id the submission printed, So that the uniquely-named recovery file is still found by the recovery step agents are told to run
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_submit_feedback_is_reachable_as_a_subprocess_and_leaves_a_recovery_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the copied layout's scripts/feedback/submit_feedback.py as a real subprocess with real argv (h.submit via the _inf_500d_4_helpers layout), asserts exit 0, one stdout line and a sidecar line naming an existing file."
+    proves_clause: two distinct id-recovery files exist, one per submission
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_recovery_file_is_a_real_digits_only_artifact_in_the_confined_temp_directory
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Lets the entry point write its recovery file into the confined TMPDIR, reads the file back from disk, and asserts the name matches feedback_id_<digits only>.txt, the content is exactly the printed id, and no other file was created beside it; the real shared temporary directory and a real sink are never touched."
+    proves_clause: the recovery file announced on the first submission's error stream contains exactly fb_2026-08-25_869bc2f7
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/skills/signoff/SKILL.md
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/test_submit_feedback_concurrency.py
+file_findings:
+  - file: templates/scripts/feedback/submit_feedback.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It builds the whole-second sidecar name (feedback_id_<epoch>.txt at lines 419-423) that the criteria change, and it is the single write chokepoint for the id.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+delivers_to:
+  - agent: llm-expert
+    contract: "On every successful write the error stream carries exactly one line of the form 'sidecar:<absolute temp dir>/feedback_id_<digits>.txt' (digits only between 'feedback_id_' and '.txt'), naming a file unique to that submission whose content is exactly the printed id (fb_YYYY-MM-DD_xxxxxxxx). The documented search 'sidecar:[^ ]*feedback_id_[0-9]*.txt' matches that line exactly once. Consumed by INF-500d-3-ii."
+  - agent: python-coder
+    contract: "The recovery-file naming change touches only the error stream and the recovery file; standard output stays exactly one line holding the id. Consumed by INF-500d-3-iii."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by:
+  - unit_tests/feedback/test_inf_500d_3_i.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  SOURCE. KI-FC-002 half (1). The recovery file is named after whole epoch seconds,
+  so two submissions in the same second share a name and the later one overwrites
+  the earlier. Observed 2026-08-25: entries 869bc2f7 and 9057159a share timestamp
+  18:52:29Z, and only one recovery file exists for that second.
+
+  FIX DIRECTION (from the KI, not binding on the implementer): add the process id
+  and a random suffix to the name. The criteria require uniqueness per submission
+  and do not prescribe a scheme.
+
+  CONTRACT TENSION WITH INF-500d-4-ii / INF-500d-4-vi. Both pin the recovery search
+  'sidecar:[^ ]*feedback_id_[0-9]*.txt', and their tests apply that exact pattern.
+  A name such as feedback_id_<epoch>_<pid>_<hex>.txt does NOT match it: the run of
+  digits stops at the first underscore, and the single-character '.' wildcard is
+  followed by a literal 'txt' that is not there. Two ways to resolve this; the IT PO
+  chooses:
+    (a) keep the name all-digits (e.g. epoch, pid and a random number concatenated
+        as digits), so the existing pattern, the existing callers and both earlier
+        ACs keep working unchanged; or
+    (b) change the name freely and update the recovery search in every caller
+        (signoff skill, live-surface-tester) plus INF-500d-4-ii's and -4-vi's tests
+        in the same delivery.
+  The third criteria scenario holds under either option. It is the guard against
+  shipping a unique name that the documented recovery step can no longer find.
+  The BA did not edit INF-500d-4-ii or -4-vi.
+
+  Out of scope: removing recovery files after use. Unique names mean the files
+  accumulate in the temporary directory. That is a separate concern and is not
+  required for correctness.

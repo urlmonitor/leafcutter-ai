@@ -303,8 +303,10 @@ destination override; the script prints the sink it used on stderr.
 Run a single command (per the shell convention — no chaining):
 
 ```bash
-python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err.txt
+python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err_<ticket_basename>_user-surface-smoker.txt
 ```
+
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
 Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
 `(submit-failed)` as the fallback value.

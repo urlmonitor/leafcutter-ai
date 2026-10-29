@@ -369,14 +369,16 @@ FB_ID=$(python scripts/feedback/submit_feedback.py \
   --phase live-surface-tester \
   --category complete \
   --note "<one-sentence summary>" \
-  2>feedback_err.txt)
+  2>/tmp/feedback_err_<ticket_basename>_live-surface-tester.txt)
 if [ -z "$FB_ID" ]; then
-  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
+  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err_<ticket_basename>_live-surface-tester.txt \
             | sed 's/sidecar://' | head -1)
   [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
 fi
 FB_ID="${FB_ID:-(submit-failed)}"
 ```
+
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
 ## Sign-off (when ticket_path is provided)
 

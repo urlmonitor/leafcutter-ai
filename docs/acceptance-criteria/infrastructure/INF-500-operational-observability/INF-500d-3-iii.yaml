@@ -1,0 +1,193 @@
+id: INF-500d-3-iii
+components:
+  - infrastructure
+  - feedback_collector
+title: "Reading the feedback id from standard output keeps working unchanged, and still returns each agent its own id under concurrent submissions"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given 20 submissions from 20 separate processes start within the same second,
+  When all 20 complete successfully,
+  Then each submission's standard output is exactly one line,
+  And that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx,
+  And the 20 ids are pairwise distinct,
+  And each id names the record that its own submission appended, matched by that
+    record's category, phase and note.
+
+  Given a caller that captures the id from standard output and never consults the
+    recovery file, as the epic-supervisor and live-surface-tester instructions do
+    today,
+  When it runs the same submission command as before the recovery-file change and
+    the error-stream change,
+  Then it receives the same single-line id with no change to its command or parsing,
+  And the sign-off instructions still tell the agent to read standard output first
+    and to fall back to the recovery file only when standard output is empty.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-i
+doc_links:
+  - path: templates/scripts/feedback/submit_feedback.py
+    relationship: implements
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Already pins 'stdout is exactly one line, the id' for a single submission. This record adds the concurrent case and the unchanged-caller case. It does not restate the single-submission guarantee."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: unit_tests/feedback/test_inf_500d_3_iii.py
+    state: to_be_created
+it_requirements:
+  - "This record is a regression guard: it adds no behaviour to submit_feedback.py. If its tests fail after INF-500d-3-i or INF-500d-3-ii, the fix goes into the record that caused the regression, not into a workaround here."
+  - "Concurrent submissions must be real separate processes of the deployed entry point, started so that they overlap within one second, against a copied temporary layout with its own declared sink and temporary directory. An in-process helper call does not satisfy the first scenario."
+  - "The unchanged-caller scenario must run the exact capture form a shipped instruction uses today (FB_ID=$(...) in epic-supervisor and live-surface-tester) as written, without editing the command, and compare the captured value with the id the record holds."
+  - "The id-to-record match must use the record's own category, phase and note as appended in the declared sink, never position or timestamp order."
+  - "Tests reading deployed instructions use the shared deployed reference layout (shared_layout_reader); no test spawns its own build."
+  - "The suite must stay within its existing timeout budget: the twenty-process run must finish within the per-test timeout the feedback tests already use."
+test_intent:
+  - clause: "each submission's standard output is exactly one line"
+    needs_test: true
+    reason: A refactor that adds a second stdout line would corrupt every caller, and only running the real process shows it.
+  - clause: "that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx"
+    needs_test: true
+    reason: A stream mix-up can put the recovery line or a warning on stdout instead of the id.
+  - clause: "the 20 ids are pairwise distinct"
+    needs_test: true
+    reason: The id is generated per submission, and a time-seeded generator could repeat under same-second concurrency.
+  - clause: "each id names the record that its own submission appended, matched by that record's category, phase and note"
+    needs_test: true
+    reason: An id printed by one process but belonging to another's record is the cross-agent mix-up this feature exists to prevent.
+  - clause: "it receives the same single-line id with no change to its command or parsing"
+    needs_test: true
+    reason: Existing callers parse stdout directly, so executing their unchanged command is the only proof they still work.
+  - clause: "the sign-off instructions still tell the agent to read standard output first and to fall back to the recovery file only when standard output is empty"
+    needs_test: true
+    reason: The edits to the signoff skill in INF-500d-3-ii could reorder the steps, and the deployed text shows whether the order survived.
+test_spec:
+  - name: test_each_of_twenty_concurrent_submissions_prints_exactly_one_line_on_stdout
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Starts twenty separate processes of the copied layout's submit_feedback.py back to back (own declared sink, confined TMPDIR, distinct note/phase/category per process) and asserts every exit status is 0 and every stdout is exactly one line ending in a newline."
+    proves_clause: each submission's standard output is exactly one line
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_stdout_line_is_a_feedback_id_of_the_documented_form
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Each of the twenty stdout lines fully matches fb_YYYY-MM-DD_xxxxxxxx (eight lowercase hex digits); neither the 'sidecar:' line nor the '[submit_feedback] sink:' line appears on stdout."
+    proves_clause: that line is a feedback id of the form fb_YYYY-MM-DD_xxxxxxxx
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_twenty_concurrent_ids_are_pairwise_distinct
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The set of twenty printed ids has twenty members; the processes are started so that their record timestamps fall in one or two adjacent seconds, and the test asserts the overlap before asserting distinctness."
+    proves_clause: the 20 ids are pairwise distinct
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_each_printed_id_names_the_record_its_own_submission_appended
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Reads the declared sink back and, for each process, locates its record by that process's own category, phase and note (never by position or timestamp order) and asserts the record's feedback_id equals that process's stdout id and each record is matched exactly once."
+    proves_clause: each id names the record that its own submission appended, matched by that record's category, phase and note
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_declared_sink_holds_the_twenty_records_read_back_from_disk
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "The twenty submissions append to the copied layout's own declared sink file; the file is read back from disk and holds exactly twenty parseable JSON lines, one per process, and the real sink and the real shared temporary directory are untouched."
+    proves_clause: each id names the record that its own submission appended, matched by that record's category, phase and note
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_live_surface_tester_capture_block_runs_unchanged_and_returns_the_single_line_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Lifts the FB_ID=$(python scripts/feedback/submit_feedback.py ...) capture block from the deployed live-surface-tester instruction (shared reference layout, shared_layout_reader), runs it as written with only placeholders filled and the script path pointed at the copied layout, and asserts FB_ID equals the id of the record in the declared sink."
+    proves_clause: it receives the same single-line id with no change to its command or parsing
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_epic_supervisor_capture_form_runs_unchanged_and_returns_the_single_line_id
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Lifts the FB_ID=$(... 2>/dev/null) || FB_ID=\"(submit-failed)\" form from the deployed epic-supervisor instruction (it sits as a comment line inside a pseudo-code block, so only the leading comment marker is removed and placeholders filled), runs it with bash as written, and asserts FB_ID equals the id in the declared sink and is not the failure marker."
+    proves_clause: it receives the same single-line id with no change to its command or parsing
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_signoff_reads_stdout_first_and_falls_back_to_the_recovery_file_only_when_stdout_is_empty
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Reads the deployed signoff skill from the shared reference layout, lifts Call 1 and Call 2, asserts Call 1 precedes Call 2 and Call 2 is conditioned on empty stdout, then runs the pair as an agent would: with a normal stdout the recovery step is not needed, with stdout forced empty the Call 2 search recovers the id."
+    proves_clause: the sign-off instructions still tell the agent to read standard output first and to fall back to the recovery file only when standard output is empty
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_submit_feedback_is_reachable_as_twenty_concurrent_subprocesses
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the deployed entry point scripts/feedback/submit_feedback.py of the copied layout as real subprocesses with real argv (popen_py) and asserts the single-line id output occurs for each."
+    proves_clause: each submission's standard output is exactly one line
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/live-surface-tester.md
+  - templates/agents/epic-supervisor.md
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/test_submit_feedback_concurrency.py
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-3-i
+    contract: "The recovery-file naming change touches only the error stream and the recovery file; standard output stays exactly one line holding the id."
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by:
+  - unit_tests/feedback/test_inf_500d_3_iii.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN RECORD. The user request requires that the existing
+  parallel-safe capture through standard output keep working unchanged. Standard
+  output is per-process, so it was never part of the collision. The risk is a
+  regression: a refactor of the recovery-file naming adds a second line to standard
+  output, or reorders the writes, and corrupts every caller that captures the id
+  directly. That includes FB_ID=$(...) in epic-supervisor and live-surface-tester.
+
+  Run the real entry point as subprocesses and start them concurrently. An
+  in-process helper call cannot show a stream mix-up. Use a copied temporary layout
+  with its own declared sink, so no test writes into a real sink (INF-500d-4).
