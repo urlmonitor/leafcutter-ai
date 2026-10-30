@@ -2,9 +2,9 @@
 MODULE: scripts/build_orchestration/_wvw_write.py
 GOAL: The writer's ``write`` step: the preparer's reply becomes the alterations manifest
     (and the altered copies) under ``<git-dir>/leafcutter/work/<work-key>/``.
-BUSINESS CONTEXT: TQ-500g-1-ix. The first filesystem action removes whatever an earlier
-    preparation of the same work left, so an unreadable reply can never leave an old
-    manifest to be read in its place. The manifest is written last, atomically, and holds
+BUSINESS CONTEXT: TQ-500g-1-ix / -xv. The first filesystem action moves whatever an earlier
+    preparation of the same work left into ``history/<NNNN>/`` (kept, never deleted), so an
+    unreadable reply can never leave an old manifest at the current path to be read in its place. The manifest is written last, atomically, and holds
     exactly the owed names (derived from the test entries, never from the reply) built only
     from the writer's own values: name, status, reason, files and the computed diff.
 ARCHITECTURE: Uses ``_wvw_list`` (owed names), ``_wvp_plan`` (pinned or prepared, TQ-500g-1-xi:
@@ -50,12 +50,38 @@ def _read_reply(source: str) -> str:
     return raw.decode("utf-8-sig")
 
 
-def _clean(work_dir: Path) -> None:
-    """Remove the manifest and copies an earlier preparation of the same work left."""
-    for stale in (work_dir / _MANIFEST, work_dir / f"{_MANIFEST}.tmp"):
-        stale.unlink(missing_ok=True)
+def _discard_partial(work_dir: Path) -> None:
+    """Delete a partial write of THIS run: the temporary manifest and the copies (never a kept manifest)."""
+    (work_dir / f"{_MANIFEST}.tmp").unlink(missing_ok=True)
     if (work_dir / "copies").exists():
         shutil.rmtree(work_dir / "copies")
+
+
+def _next_history(history: Path) -> Path:
+    """The next ``history/<NNNN>`` folder: one more than the highest existing four-digit number."""
+    taken = [int(p.name) for p in history.iterdir() if re.fullmatch(r"\d{4}", p.name)] if history.is_dir() else []
+    return history / f"{max(taken, default=0) + 1:04d}"
+
+
+def _keep_earlier(work_dir: Path) -> None:
+    """Move the manifest and copies an earlier preparation left into ``history/<NNNN>/`` (TQ-500g-1-xv).
+
+    The manifest moves first, so a failure part-way never leaves it at the current path to be read
+    in place of this run's. Nothing already in history is touched; a leftover temporary manifest
+    (a partial write, never a manifest) is deleted.
+
+    Raises:
+        OSError: When a move fails (the step stops with no new manifest).
+    """
+    (work_dir / f"{_MANIFEST}.tmp").unlink(missing_ok=True)
+    old = [p for p in (work_dir / _MANIFEST, work_dir / "copies") if p.exists()]
+    history = work_dir / "history"
+    if old:
+        target = _next_history(history)
+        target.mkdir(parents=True)
+        for item in old:
+            os.replace(item, target / item.name)
+    _LOG.info("%d earlier run(s) kept under %s", sum(1 for _ in history.iterdir()) if history.is_dir() else 0, history)
 
 
 def _slug(index: int, name: str) -> str:
@@ -155,7 +181,11 @@ def _run(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root
     (or, with no plan record of the work, for any name to prepare).
     """
     work_dir = git_dir / "leafcutter" / "work" / work_key
-    _clean(work_dir)
+    try:
+        _keep_earlier(work_dir)
+    except OSError as exc:
+        _LOG.warning("an earlier manifest could not be kept: %s", exc)
+        return _fail(f"an earlier manifest could not be moved to history: {exc}")
     derived = derive_owed(ac_ids, test_root, ac_root, base_ref)
     if derived.error:
         return _fail(derived.error)
@@ -195,7 +225,7 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
     except Exception as exc:  # noqa: BLE001 -- the JSON shape must print whatever went wrong
         _LOG.warning("the write step failed: %r", exc)
         try:
-            _clean(work_dir)
+            _discard_partial(work_dir)
         except OSError:
             _LOG.warning("partial copies of %s could not be removed", work_dir)
         return _fail(f"internal error: {exc!r}")
@@ -204,4 +234,5 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
+# - 2026-10-25 22:30 [python-coder]: An earlier manifest and its copies move to history/<NNNN>/ instead of being deleted; only a partial write is discarded. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/06) (ADR-079)
 # - 2026-10-25 22:00 [python-coder]: Every applied replacement goes through _wvp_checks.static_check; a re-prepared name keeps its failed pin check at the start of its reason. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)

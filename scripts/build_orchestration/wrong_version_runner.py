@@ -55,7 +55,7 @@ from _wvr_scope import (
     wrong_version_key,
 )
 from _wvr_trace import Traced, apply_reach, run_traced
-from _wvr_verdict import NO_SOURCE_OUTCOME, NOT_APPLIED, NOT_PREPARED, assemble, classify_run, row
+from _wvr_verdict import NO_SOURCE_OUTCOME, NOT_APPLIED, NOT_PREPARED, assemble, classify_run, identity, label_rows, row
 
 _LOG = logging.getLogger("wrong_version_runner")
 NO_TESTS_OUTCOME = "wrong-version runs not applicable: no covering test declares a wrong version or the discrimination angle"
@@ -281,24 +281,31 @@ def _baseline(ctx: Context, versions: list[WrongVersion], tests: list[ScopedTest
     return rows, not rows
 
 
+def _undone_files(ctx: Context) -> dict[str, bytes] | None:
+    """The base content "the fix undone" puts back, or ``None`` when it was not prepared."""
+    return ctx.undone[0] if ctx.undone is not None and ctx.undone[1] == "ready" else None
+
+
 def _drive(ctx: Context, versions: list[WrongVersion], runnable: list[ScopedTest], rows: list[dict]) -> dict:
     """Run each wrong version in turn and return the verdict; a failed put-back stops the drive."""
     for wv in versions:
         files, early = _files_for(wv, ctx)
+        ident = identity(None if wv.is_undone else ctx.manifest.get(wv.key), _undone_files(ctx) if wv.is_undone else None)
         if early:
-            rows += early
+            rows += label_rows(early, wv.name, ident)
             continue
         try:
             run = _apply_run_restore(ctx, wv, files, runnable if wv.is_undone else wv.holders)
         except PutBackFailed as exc:
-            rows += [row(t.label, wv.name, "not_run", str(exc)) for t in wv.holders] or [row("", wv.name, "not_run", str(exc))]
+            rows += label_rows([row(t.label, wv.name, "not_run", str(exc)) for t in wv.holders]
+                               or [row("", wv.name, "not_run", str(exc))], wv.name, ident)
             return _stopped(str(exc), rows)
         ran = runnable if wv.is_undone else wv.holders
         new = classify_run(ran, wv.holders, run, wv.name, wv.is_undone)
         judged = db_mod.judge(new, *ctx.db_seen, ran, ctx.db_names, wv.name)
         if not wv.is_undone and run.status == "ran" and ctx.changes.get(wv.key):
             judged = apply_reach(judged, {t.label: t.node.identity for t in wv.holders}, ctx.changes[wv.key], ctx.traced)
-        rows += demote(judged, wv.extra_labels)
+        rows += label_rows(demote(judged, wv.extra_labels), wv.name, ident)
         if ctx.interrupted:
             break
     return assemble(rows)
@@ -484,5 +491,6 @@ if __name__ == "__main__":
 # ================================================================================
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-25 22:30 [python-coder]: Rows of each wrong version are labelled with the identity keys from its own manifest entry only. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/06)
 # - 2026-10-25 20:30 [python-coder]: Baseline run traces the altered files; rows of tests that ran no changed
 #   line become not_executed. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

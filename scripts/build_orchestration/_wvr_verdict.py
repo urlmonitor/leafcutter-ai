@@ -19,6 +19,9 @@ ARCHITECTURE: Pure functions over :class:`_wvr_pytest.PytestRun`; no I/O. The
 
 from __future__ import annotations
 
+import hashlib
+
+from _wvp_store import alteration_id
 from _wvr_pytest import PytestRun
 from _wvr_scope import ScopedTest
 
@@ -40,7 +43,35 @@ def row(test: str, wrong_version: str, result: str, detail: str) -> dict:
         "result": result,
         "blocking": result not in NON_BLOCKING,
         "detail": detail,
+        **NO_IDENTITY,
     }
+
+
+NO_IDENTITY = {"alteration_id": None, "source": None, "replacements": None}
+UNDONE_SOURCE = "fix undone"
+
+
+def identity(entry: dict | None, undone: dict[str, bytes] | None = None) -> dict:
+    """The three identity keys a wrong version's rows carry (TQ-500g-1-xv).
+
+    Args:
+        entry: The wrong version's manifest entry, or ``None`` (the runner only copies, never derives).
+        undone: For "the fix undone", the base content it puts back per file, else ``None``.
+
+    Returns:
+        ``{alteration_id, source, replacements}``; all null when there is nothing to name.
+    """
+    if undone is not None:
+        shown = [{"path": rel, "old": "", "new": hashlib.sha256(undone[rel]).hexdigest()} for rel in sorted(undone)]
+        return {"alteration_id": alteration_id(shown), "source": UNDONE_SOURCE, "replacements": None}
+    if entry is None:
+        return dict(NO_IDENTITY)
+    return {key: entry.get(key) for key in NO_IDENTITY}
+
+
+def label_rows(rows: list[dict], wrong_version: str, ident: dict) -> list[dict]:
+    """Return *rows* with the identity keys set on every row of *wrong_version*."""
+    return [{**r, **ident} if r["wrong_version"] == wrong_version else r for r in rows]
 
 
 def read_one(test: ScopedTest, run: PytestRun, wrong_version: str) -> tuple[str, str]:
@@ -133,6 +164,7 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
     Returns:
         The verdict dict in TQ-500g-1-i's shape.
     """
+    rows = [{**NO_IDENTITY, **r} for r in rows]  # every row carries the three identity keys
     blocking = [r for r in rows if r["blocking"]]  # a to-run-later extra (blocking false) never decides the gate
     survivors = [{"test": r["test"], "wrong_version": r["wrong_version"]} for r in blocking if r["result"] == "survived"]
     side = [{"test": r["test"], "wrong_version": r["wrong_version"]} for r in rows if not r["blocking"] and r["result"] == "survived"]
@@ -154,5 +186,6 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
 # ================================================================================
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-25 22:30 [python-coder]: Every row carries alteration_id, source and replacements, copied from the manifest entry (fix undone: hashed base content). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/06)
 # - 2026-10-25 20:30 [python-coder]: not_executed is an unfinished result; its unfinished entry names the test.
 #   (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)

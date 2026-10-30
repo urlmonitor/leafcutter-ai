@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -172,10 +172,23 @@ test_spec:
       history/.
     must_catch:
       - the runner falling back to the newest history manifest
-      - the earlier manifest left at the current path after a failed move
     in_scope_files:
       - scripts/build_orchestration/_wvw_write.py
       - scripts/build_orchestration/wrong_version_runner.py
+  - name: test_failed_move_never_leaves_the_earlier_manifest_at_the_current_path
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Added 2026-10-29 (coordinator) after the wrong-version gate found this name survived the test above,
+      which never makes a move fail. Run 1's copies folder is made unmovable (no write permission), so the
+      move to history stops part-way: the writer stops with no new manifest, nothing is at the current path,
+      and run 1's manifest is in history/0001/. Skipped when run as root.
+    must_catch:
+      - the earlier manifest left at the current path after a failed move
+    in_scope_files:
+      - scripts/build_orchestration/_wvw_write.py
 test_required: true
 test_rationale: >-
   Identity, source and history are observable on disk and in the verdict, so every entry drives the real
@@ -200,9 +213,13 @@ amended_by:
     agent: approve_acs
     date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xv.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/06_TICKET-20261024-TQ-500g-1-xv.md
+- scripts/build_orchestration/_wvw_write.py
+- scripts/build_orchestration/_wvr_verdict.py
+- scripts/build_orchestration/wrong_version_runner.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

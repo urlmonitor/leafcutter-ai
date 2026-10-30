@@ -1,6 +1,6 @@
 ---
 title: "Reference: Wrong-Version Pins"
-description: "Lookup for the wrong-version pin store: the checks every pin passes before it is used on a run, what happens to a pin that fails one, and how an operator clears a pin."
+description: "Lookup for the wrong-version pin store: when a name goes back to the preparer, the checks every pin passes before it is used, what each verdict row names, the kept manifests, and how an operator clears a pin."
 type: reference
 status: active
 created: 2026-10-29
@@ -72,3 +72,23 @@ dispatched and before any wrong version runs. The first failure wins, in this or
 - **A fresh preparation** (a name with no pin) is held to the same checks and becomes its pin only
   when it passes all of them. This is what refuses a pinned no-op, the round-III naive-chain
   survivor in the analysis page: checks 3 and 5.
+
+## What each verdict row names, and the kept manifests (TQ-500g-1-xv)
+
+Every verdict row carries three keys beside `test`, `wrong_version`, `result`, `blocking` and
+`detail`, copied by the runner from that wrong version's own manifest entry (never derived):
+
+| Key | Value |
+|---|---|
+| `alteration_id` | `sha256:` and 16 hex digits over the replacements alone, so a change elsewhere in the file keeps it and a different `new` text changes it; for "the fix undone", a hash over the base content it puts back |
+| `source` | `prepared: not pinned`, `pinned`, `re-prepared: <check>`, or `fix undone` |
+| `replacements` | the applied `{path, old, new}` list (null for "the fix undone") |
+
+Rows of two runs of the same work compare directly: the same `alteration_id` means the same
+alteration was judged.
+
+**Earlier manifests are kept.** The write step's first action moves the manifest and copies an
+earlier run left into `<git-dir>/leafcutter/work/<work-key>/history/<NNNN>/` (one more than the
+highest number there), manifest first. A move that fails stops the step with no new manifest, and
+never leaves the earlier manifest at the current path. The runner reads only the current path; it
+never falls back to `history/`.

@@ -20,7 +20,7 @@ import unit_tests.build_orchestration._tq500g1_fixtures as fx
 
 RESULT_VALUES = {"caught", "survived", "did_not_load", "not_applied", "invalid", "not_run",
                  "not_in_scope", "not_applicable"}
-ROW_KEYS = {"test", "wrong_version", "result", "blocking", "detail"}
+ROW_KEYS = {"test", "wrong_version", "result", "blocking", "detail", "alteration_id", "source", "replacements"}  # TQ-500g-1-xv adds the last three
 VERDICT_KEYS = {"gate_passed", "applicable", "verified", "outcome", "reason", "results",
                 "survivors", "unfinished", "non_blocking_survivors"}
 
