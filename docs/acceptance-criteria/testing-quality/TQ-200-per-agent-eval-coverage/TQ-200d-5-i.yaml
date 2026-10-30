@@ -1,0 +1,86 @@
+id: TQ-200d-5-i
+components:
+  - testing_quality
+title: "A row whose agent could not be launched records the operating-system reason in the results file"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three live rows whose agent launch is refused by the operating system:
+      R1 with Windows error 206, "the file name or extension is too long",
+      R2 with Windows error 2, "the system cannot find the file specified",
+      R3 with a permission error on Linux,
+  When each row is written to the results file,
+  Then each row's error says the agent CLI could not be launched and carries
+      the operating-system error number and message exactly as raised,
+    And R1 and R2 can be told apart from the results file alone, without the
+      run's log,
+    And the error text has the same form whichever of the three ways the
+      harness starts an agent was used (label, artifact or produced-tests,
+      produced-tests with recorded commands),
+    And a row that launched and then failed (a timeout, a non-zero exit, a
+      reply that cannot be read) keeps its current error text unchanged.
+depends_on:
+  - TQ-200d-5
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-eval-harness-system-prompt-exceeds-windows-command-line.md
+    relationship: describes
+    status: exists
+    relevance: "Where: invoke_agent_writer turns the OSError into the constant 'agent CLI could not be launched' (~:730-733), so WinError 206 survives only in the log; invoke_with_transcript already appends repr(exc) (~:112-115). Suggested fix: 'Keep the cause in the record'."
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: "The results-file section states what a launch-failure row carries and gives the two Windows examples (206, 2)."
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by TQ-200d-5. Gains 'Reading a launch failure': what 206 and 2 mean on Windows and what to do about each."
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The launch-failure error carrying its operating-system reason (e.g. WinError 206), which TQ-200d-5-iii's stop message repeats."
+expects_from:
+  ac_id: TQ-200d-5
+  contract: "The shared launch builder used by all three invokers, so the error form is set in one place."
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    The cause text comes from the raised exception (for example repr of the
+    OSError, carrying winerror/errno and strerror); the IT PO fixes the exact
+    form. Unit tests raise each error from a patched process start and read
+    the written results file, never the log.
+  - >-
+    DOCUMENTATION (part of done): scripts/evals/README.md states what a
+    launch-failure row records, with the 206 and 2 examples;
+    docs/how-to/run-a-live-agent-eval.md gains a 'Reading a launch failure'
+    section.
+  - >-
+    DOC-DRIFT TEST: a unit test produces a launch-failure row and asserts the
+    prefix the README quotes ("agent CLI could not be launched" or the form the
+    IT PO fixes) is the prefix actually written.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-i through scripts/changelog/emit_entry.py.
+  - >-
+    KNOWN ISSUE: no file moves here (TQ-200d-5 moves the 206 entry). If
+    TQ-200d-5 has already moved it, append "launch-failure cause now kept in
+    the results file by TQ-200d-5-i" to the resolved entry's Status line.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal

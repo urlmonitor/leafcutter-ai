@@ -1,0 +1,102 @@
+id: TQ-200d-5-iii
+components:
+  - testing_quality
+title: "A live run whose agent cannot be started stops as a harness failure instead of reporting a 0% score"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a live eval run of an agent with 8 rows on a machine where the agent
+      CLI cannot be started (no claude is found, or the operating system
+      refuses to start it),
+  When the first row's launch fails,
+  Then the run scores no further row and stops with one message that names
+      the launch failure and its operating-system reason,
+    And the run ends with an exit status different from the one a run that
+      scored below its threshold ends with,
+    And the results file marks the run as a harness failure and carries no
+      accuracy or pass-rate figure, so nothing in it reads as a 0% score,
+    And a run in which the agent started and then failed on a row (a timeout,
+      a non-zero exit after start, a reply that cannot be read) still scores
+      every row as before, with that row counted as failed.
+depends_on:
+  - TQ-200d-5
+  - TQ-200d-5-i
+doc_links:
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: relates-to
+    status: exists
+    relevance: "'The CLI could not be launched' reported as a quality score. This AC fixes the launch-failure case of it; the entry's pre-commit-gate half is not covered here."
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    relationship: relates-to
+    status: exists
+    relevance: "Suggested fix 'Fail fast' (every row recorded as a failed answer today)."
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Its current line 'Classifier invocation or malformed-response failures stay in the accuracy denominator' must be rewritten: a failure to start the CLI now stops the run; failures after start stay in the denominator."
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by TQ-200d-5. States what a harness-failure run looks like and that it is not a score."
+  - path: .github/workflows/agent-evals.yml
+    relationship: relates-to
+    status: exists
+    relevance: "The CI job reads the exit status; check the new harness-failure status is reported as a failure there and not as a pass."
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-5-i
+  contract: "The launch-failure error with its operating-system reason, which the stop message repeats."
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    Applies to label, artifact and produced-tests runs. The row loops that
+    today record a launch failure as a failed row (run_agent_eval.py, KI
+    entries cite ~:1125-1128 and ~:1328-1339) distinguish a launch failure
+    from a failure after start. The IT PO fixes the exit status value and the
+    results-file field that marks a harness failure.
+  - >-
+    DOCUMENTATION (part of done): scripts/evals/README.md rewrites the
+    'invocation failures stay in the accuracy denominator' sentence to state
+    the split (launch failure stops the run; failures after start stay in the
+    denominator) and names the exit status; the how-to describes a
+    harness-failure run.
+  - >-
+    DOC-DRIFT TEST: a unit test asserts the exit status the README names is the
+    one a launch-failure run returns.
+  - >-
+    KNOWN ISSUES: in
+    docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md add to
+    the Status line that the launch-failure-as-score case is fixed by
+    TQ-200d-5-iii; the entry stays open while its pre-commit-gate case remains.
+    If KI-TQ-20261024-eval-harness-cannot-launch-claude-on-windows is already
+    resolved by TQ-200d-5-ii, append the same note to its resolved Status line.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-iii through scripts/changelog/emit_entry.py.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  Not asked for in the request text directly; it is the "Fail fast" direction
+  in all three Windows-launch known issues, included because the user said to
+  do all of the suggestions. It changes a stated README rule (invocation
+  failures stay in the denominator) for the launch case only; flagged to the
+  orchestrator for confirmation at the gate.

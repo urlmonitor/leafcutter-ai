@@ -1,0 +1,102 @@
+id: TQ-200d-4-ii
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test runner runs a named test file through the project's configured test command, never as a plain script"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project whose testing_context.test_command is "pytest",
+    And a file tests/check_window_total.py that defines
+      test_window_total_adds_the_values and never calls it,
+    And the request "Run tests/check_window_total.py and report.",
+  When the test runner runs the file,
+  Then the command it runs is the configured test command with the file as
+      its argument, "pytest tests/check_window_total.py" (options may be
+      added),
+    And in a project with no testing_context.test_command it runs
+      "python -m pytest tests/check_window_total.py",
+    And it never runs a test file as a plain script, such as
+      "python tests/check_window_total.py" or
+      "PYTHONPATH=. python tests/check_window_total.py",
+    And the test runner's instructions list testing_context.test_command among
+      the settings it reads, and offer no plain-script form for running one
+      file.
+depends_on:
+  - TQ-200d-4
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: modifies
+    status: exists
+    relevance: "The single-file action (~:104-105) offers 'python unit_tests/live_trader/<file>.py' first; config_keys (~:27-33) declares only test_command_live_trader and test_output_dir; testing_context.test_command is never named. Both change here."
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    relationship: describes
+    status: exists
+    relevance: "The live W2-row run: 'python tests/check_window_total.py', then with PYTHONPATH=., then 'Status: PASS'. Fixed by this AC with TQ-200d-4-iii; moved to resolved by TQ-200d-4-iv."
+  - path: docs/reference/skills-config-fields.md
+    relationship: modifies
+    status: exists
+    relevance: "If it documents testing_context keys and their readers, it names the test runner as a reader of testing_context.test_command."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: relates-to
+    status: exists
+    relevance: "How config_keys are declared in a template's frontmatter."
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: planned
+    relevance: "Created by TQ-200d-1-ii. Its commands_ran_pytest entry quotes the template sentence this AC writes; update the quote if the entry already exists."
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "The rewritten single-file instruction and the testing_context.test_command config key, which TQ-200d-4-iv's eval row and drift test hold in place."
+expects_from: null
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    templates/agents/test-runner.md is a shipped agent template: the change is
+    to the template source, the build regenerates any deployed copy, and no
+    deployed copy is edited by hand.
+  - >-
+    The live-trader routing table (~:96-102) is a separate baked-in-command
+    problem the KI mentions; it is out of scope here unless the IT PO finds it
+    must change for the single-file rule to read consistently.
+  - >-
+    DOCUMENTATION (part of done): the template itself is the primary document.
+    docs/reference/skills-config-fields.md names the test runner as a reader of
+    testing_context.test_command if that page lists readers per key.
+  - >-
+    DOC-DRIFT TESTS (the template makes checkable claims): a unit test asserts
+    the template's frontmatter config_keys includes testing_context.test_command,
+    and that the template body contains no plain-script run of a test file
+    (no "python <path>.py" form in the run instructions).
+  - >-
+    KNOWN ISSUE: add to the Status line of
+    docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    "configured-command part fixed by TQ-200d-4-ii"; the file moves when
+    TQ-200d-4-iv lands.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-ii through scripts/changelog/emit_entry.py.
+  - >-
+    Behavioural proof is the test-runner eval: the W2 row's commands_ran_pytest
+    on a live run (user-triggered, local result) and TQ-200d-4-iv's trap row.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+  - docs
+risk_surface: contract_boundary

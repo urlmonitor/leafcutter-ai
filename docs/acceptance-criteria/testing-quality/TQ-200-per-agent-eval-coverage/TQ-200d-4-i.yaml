@@ -1,0 +1,94 @@
+id: TQ-200d-4-i
+components:
+  - testing_quality
+  - infrastructure
+title: "A test-runner report that relays the database checker's own message is not read as naming an address"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-runner "configured database" row, whose setting is the
+      placeholder postgresql://<user>:<password>@<host>:<port>/<database>,
+    And a report that relays the checker word for word: "The checker reported
+      status invalid: ... is not a valid postgres connection URL (expected
+      postgres:// or postgresql:// with a safe host, port, and database
+      segment)."
+  When the row's "names no address" check reads the report,
+  Then the check passes, because the report names a scheme and no host,
+    And a report that says "expected a postgresql:// URL" passes,
+    And a report that relays the checker's message and also names
+      "postgresql://dev:secret@localhost:5432/app" fails, with that address
+      as the detail,
+    And a report naming "postgres://db.internal/app" fails,
+    And a report naming only the placeholder address passes, as before,
+    And the recorded gold report for the row still passes.
+depends_on:
+  - TQ-200d-4
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+    relationship: describes
+    status: exists
+    relevance: "The defect: ADDRESS_RE in scripts/evals/produced_tests_reports.py (~:37-38) matches the bare scheme; the placeholder exemption (~:31-33, ~:68-71) does not cover 'postgres:// or'. Checker message: scripts/db_check/_address.py ~:54-58. Moved to resolved by this AC."
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md
+    relationship: modifies
+    status: exists
+    relevance: "Lists other misreads of the same address checks ('README.rst:10', '3.11.2.5', 'does not use localhost'). Any item this change also fixes is struck with a note naming TQ-200d-4-i; the rest stay."
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by TQ-200d-1-ii. The report_names_no_address entry states what counts as an address (a scheme followed by a host) and quotes the checker's invalid message as a passing example."
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-1-ii
+  contract: "The reference page entry for report_names_no_address."
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    The KI offers two fixes: exempt the checker's message text, or require a
+    host after the scheme. The criteria need the second (the paraphrase
+    "expected a postgresql:// URL" must pass); the IT PO may add the first as
+    well. The change applies wherever report_names_no_address is used (the
+    test-writer and test-runner sets).
+  - >-
+    Probes: the five reports in the criteria as recorded report fixtures;
+    unit tests never call a live model.
+  - >-
+    DOCUMENTATION (part of done): the reference page entry for
+    report_names_no_address states the rule and examples.
+  - >-
+    DOC-DRIFT TEST: the checker's invalid message quoted on the reference page
+    equals the message the checker returns today, so a change to the checker's
+    wording fails the test instead of silently reopening this defect.
+  - >-
+    KNOWN ISSUE: git mv
+    docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md,
+    Status "RESOLVED <date> by TQ-200d-4-i" with the proving tests; move its
+    row in docs/known-issues/testing-quality.md to Resolved and recount.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-i through scripts/changelog/emit_entry.py.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal

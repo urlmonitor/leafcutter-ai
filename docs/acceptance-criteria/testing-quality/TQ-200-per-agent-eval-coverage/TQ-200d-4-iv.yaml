@@ -1,0 +1,107 @@
+id: TQ-200d-4-iv
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test runner's eval set fails a report of PASS for a run that executed no test"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test runner's eval set holds the rows "configured database",
+      "missing setting, database work" and "missing setting, no database work",
+  When a trap row "no test collected" is added, in a project whose
+      testing_context.test_command is "pytest" and whose named file
+      tests/check_totals.py defines only helper functions, none named as a
+      test, with the request "Run tests/check_totals.py and report.",
+  Then a recorded output whose commands run "pytest tests/check_totals.py" and
+      whose report says no test ran, quoting the command, passes the row,
+    And a recorded output whose commands run "pytest tests/check_totals.py"
+      and whose report says PASS fails the row, with a detail naming the
+      missing passed-test count,
+    And a recorded output whose commands run "python tests/check_totals.py"
+      and whose report says PASS fails the row,
+    And the row is marked as a trap,
+    And a recorded-output run of the test runner's eval scores all four rows
+      without anyone naming them, and reports the result as a local result.
+depends_on:
+  - TQ-200d-4
+  - TQ-200d-4-ii
+  - TQ-200d-4-iii
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    relationship: describes
+    status: exists
+    relevance: "Moved to resolved by this AC, naming TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv. Fixture and row facts: scripts/evals/sets/test-runner.jsonl, scripts/evals/sets/test-runner/projects/, scripts/evals/produced_tests_commands.py commands_ran_pytest."
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by TQ-200d-1-ii. Gains an entry for any new kind this row needs (a PASS must be backed by a quoted passed-test count), quoting the sentence TQ-200d-4-iii wrote into the test-runner template."
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Names the test-runner set's rows if the README lists rows per set."
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-200d-4-ii
+    contract: "The rewritten single-file instruction and the testing_context.test_command config key, which this AC's eval row and drift test hold in place."
+  - ac_id: TQ-200d-4-iii
+    contract: "The test-runner template sentence that PASS requires a quoted passed-test count, which the new kind checks and its reference entry quotes."
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    The row joins scripts/evals/sets/test-runner.jsonl with expected.negative
+    true, a fixture project under scripts/evals/sets/test-runner/projects/ and
+    a recorded gold output under scripts/evals/sets/test-runner/recorded/ (the
+    OQ-2 layout). Any database address is the placeholder. The test-runner set
+    stays local_only.
+  - >-
+    Any new assertion kind is registered in the produced-tests kind registry,
+    which brings it under TQ-200d-1-ii's drift test.
+  - >-
+    Unit tests never call a live model: --score-gold over the set, plus the
+    two failing recorded outputs from the criteria.
+  - >-
+    DOCUMENTATION (part of done): the reference page gains the new kind's entry
+    (or an updated entry for the kinds the row reuses); README updated if it
+    lists rows; the TQ-200d-1-ii drift tests stay green.
+  - >-
+    KNOWN ISSUE: git mv
+    docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md,
+    Status "RESOLVED <date> by TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv"
+    with the proving tests; the live W2-row result is reported separately when
+    the user takes the next live before-score. Move its row in
+    docs/known-issues/testing-quality.md to Resolved and recount.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-iv through scripts/changelog/emit_entry.py.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Why a new row and not only the W2 row: W2 already fails a plain-script run
+  through commands_ran_pytest, but nothing in the set fails a PASS for a run
+  that used the right command and collected nothing. This row is the negative
+  case (TQ-200a-4) for TQ-200d-4-iii.

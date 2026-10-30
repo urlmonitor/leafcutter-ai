@@ -1,0 +1,96 @@
+id: TQ-200d-5-ii
+components:
+  - testing_quality
+title: "A live eval starts the installed claude on Windows when the install provides only a claude.cmd launcher on the path"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a Windows 11 machine where the standard npm install put claude,
+      claude.cmd and claude.ps1 on the path, and no folder holding claude.exe
+      is on the path,
+  When a live eval run starts the agent for a row,
+  Then the agent session starts, found the same way the Windows command
+      shell finds claude (by the path and the executable extensions it lists),
+      and the row is scored,
+    And when the CLI location is set explicitly through the eval's CLI-location
+      setting, that program is started instead of the one found on the path,
+      on every platform,
+    And on Linux, with no explicit setting, the program started is the one
+      named claude on the path, as before this change,
+    And the same lookup is used by all three ways the harness starts an agent.
+depends_on:
+  - TQ-200d-5
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    relationship: describes
+    status: exists
+    relevance: "The defect: bare 'claude' through subprocess.run without a shell cannot start claude.cmd (WinError 2). Suggested fix: resolve with shutil.which (honours PATHEXT), run a .cmd/.bat through the shell or prefer a native claude.exe, allow an override. Moved to resolved by this AC."
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Names how the harness finds claude, the name of the CLI-location setting and when to use it."
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by TQ-200d-5. Its Windows notes replace the old 'prefix PATH with the claude.exe folder' workaround with the lookup and the setting."
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+    relevance: "If the IT PO makes the CLI location a config field rather than an environment variable, this reference gains it."
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-5
+  contract: "The shared launch builder used by all three invokers; the lookup is added there once."
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    The IT PO decides the setting's form (environment variable or eval config
+    key) and name, and how a resolved .cmd is started (through the shell or by
+    preferring a native claude.exe). A .cmd started through the shell must not
+    reintroduce the command-line limit TQ-200d-5 removed: the instructions
+    still do not travel on the command line.
+  - >-
+    Unit tests patch the lookup and the process start; they prove a .cmd-only
+    path is started, the setting wins over the path, and Linux behaviour is
+    unchanged. No test calls a live model.
+  - >-
+    DOCUMENTATION (part of done): scripts/evals/README.md and
+    docs/how-to/run-a-live-agent-eval.md name the lookup and the setting; the
+    how-to's Windows section no longer tells the reader to prefix PATH.
+  - >-
+    DOC-DRIFT TEST: a unit test asserts the setting name written in the README
+    is the name the harness reads.
+  - >-
+    KNOWN ISSUE: git mv
+    docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md,
+    Status "RESOLVED <date> by TQ-200d-5-ii" with the proving tests, and move
+    its row in docs/known-issues/testing-quality.md from Open to Resolved with
+    counts recounted from the directory.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-ii through scripts/changelog/emit_entry.py.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal

@@ -1,0 +1,122 @@
+id: TQ-200d-1-ii
+components:
+  - testing_quality
+  - documentation_system
+title: "Every produced-tests assertion kind is described on one reference page that a test keeps in step with the scorers and the agent templates"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the produced-tests eval scores the test-writer, sql-test-writer,
+      test-designer and test-runner rows by assertion kinds, and today those
+      kinds are listed only by name in the eval README,
+  When the produced-tests assertion-kinds reference page is written,
+  Then the page has exactly one entry per registered assertion kind, and each
+      entry states: which agents' sets use it, what it reads (produced test
+      files, the completion report, the recorded commands, the to-run-later
+      file, or a wrong-version run verdict), what makes it pass and what makes
+      it fail, one passing and one failing example, and the agent-template
+      sentence it checks, quoted word for word with the template it comes from,
+    And a test fails when a kind is registered with no entry on the page, or
+      the page has an entry for a kind that is no longer registered,
+    And a test fails when a quoted template sentence no longer appears, word
+      for word, in the template it is attributed to,
+    And the eval README's produced-tests section links to the page instead of
+      repeating the list of kind names, and the reference index lists the page
+      with one line.
+depends_on:
+  - TQ-200d-1
+doc_links:
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: modifies
+    status: planned
+    relevance: "New reference page created by this AC. Later L3s (TQ-200d-2-i, TQ-200d-2-ii, TQ-200d-4-i, TQ-200d-4-iv) update the entries for the kinds they change or add."
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Its 'Produced-tests mode (local only)' section lists kind names inline (and only the test-writer ones). Replace the list with a link to the page."
+  - path: docs/reference/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Hand-written grouped index of docs/reference/: add one line for the new page."
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+  - path: templates/agents/sql-test-writer.md
+    relationship: relates-to
+    status: exists
+  - path: templates/agents/test-runner.md
+    relationship: relates-to
+    status: exists
+  - path: templates/agents/test-designer.md
+    relationship: relates-to
+    status: exists
+  - path: docs/reference/wrong-version-runs.md
+    relationship: relates-to
+    status: exists
+    relevance: "The wrong_version_run kind reuses the shared runner; link rather than restate."
+  - path: docs/reference/document-length-standard.md
+    relationship: relates-to
+    status: exists
+    relevance: "Page length limit; split by agent if the page outgrows it."
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A reference page with one entry per kind and the two drift tests, which the
+    scorer L3s (TQ-200d-2-i, TQ-200d-2-ii, TQ-200d-4-i, TQ-200d-4-iv) update in
+    the same change as their scorer edits.
+expects_from: null
+test_required: true
+package_surface: false
+it_requirements:
+  - >-
+    The registry of kinds is the produced-tests scoring module's KINDS mapping
+    (scripts/evals/produced_tests_scoring.py), which also spreads in the
+    sql-test-writer kinds (scripts/evals/sql_test_writer_eval/) and the
+    test-designer kinds (scripts/evals/designer_eval/). The drift test reads
+    that mapping, not a hand-kept list.
+  - >-
+    Entry format is the documentation-expert's call, but each entry carries a
+    machine-findable heading (for example the kind name in backticks as an H3)
+    and a quoted template sentence the test can locate and match against the
+    named template.
+  - >-
+    DOCUMENTATION (this AC's deliverable): docs/reference/produced-tests-eval-assertion-kinds.md
+    with frontmatter (title, description, components) so build.py indexes it;
+    scripts/evals/README.md links to it; docs/reference/README.md lists it.
+  - >-
+    DOC-DRIFT TESTS (two): (1) the set of kind headings on the page equals the
+    registry's keys; (2) every quoted template sentence appears verbatim in the
+    template it names. Both under unit_tests/evals/.
+  - >-
+    GLOSSARY: 'assertion kind' and 'produced-tests mode' go through the
+    check-glossary-coverage hook and glossary-triage if the hook flags them; no
+    hand-added entries.
+  - >-
+    CHANGELOG: one entry for TQ-200d-1-ii through scripts/changelog/emit_entry.py.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+  - code
+risk_surface: internal
+notes: |
+  Placed under TQ-200d-1 because TQ-200d-1 introduced the produced-tests mode
+  and its kind registry. Built first among the scorer fixes: they depend on it
+  so each updates its own entry, and the drift test then holds the page to the
+  registry and to the templates (the 2026-10-25 scorer defects were all "the
+  check is stricter than the template sentence it checks").
