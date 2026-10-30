@@ -177,7 +177,6 @@ class TestHubBranchGuards(WorkspaceCase):
         args = argparse.Namespace(path=str(ws), repo_root=str(self.project), landing_root=None,
                                   delete_remote_branch=delete_remote, discard_token=None)
         with deployed_worktree_remove() as wr, mock.patch.dict(os.environ, self.env()), \
-                mock.patch.object(wr, "_holding_programs", return_value=[]), \
                 mock.patch.object(wr, "delete_whole_folder", return_value="Could not remove all of it (injected)") as gone:
             answer = wr.cmd_remove(args)
         self.assertEqual(gone.call_count, 1, msg="the local delete was not attempted exactly once")

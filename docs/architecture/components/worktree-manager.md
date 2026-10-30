@@ -169,6 +169,7 @@ deploy-manifest entry:
 | `worktree_ticket_record.py` | Recording which ticket a `ticket` workspace's line is built for, and the `BUILT_FOR_OTHER_TICKET` refusal |
 | `worktree_readiness.py`, `worktree_canaries.py` | The readiness proof and the per-stage canary commits |
 | `worktree_admin.py`, `worktree_remove.py` | `locate`, `list`, `remove` and the unsent-work check |
+| `worktree_remove_checks.py` | The program check that runs before a clearing (it fails closed) and the half-cleared-folder listing and token |
 | `worktree_migrate.py` | `migrate-legacy` |
 | `worktree_migrate_guards.py` | The cut-over's keep-as-is checks (lock, operation in progress, stash, staged and hidden changes; all fail closed) and the ignored-file listing |
 | `worktree_migrate_carry.py` | The cut-over's clone, carry (changed, ignored, empty folders, symlinks) and prove steps, and the snapshot that shows the old folder unchanged before it is deleted |

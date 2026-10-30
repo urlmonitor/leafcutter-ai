@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -61,6 +61,9 @@ declared_files:
 - path: templates/scripts/worktree_remove.py
   state: existing
 it_requirements:
+- A folder in this project's landing place with no repository AND no workspace record is finished only when it
+  holds no file at all; one holding any file is refused NOT_FOUND with no discard token (it cannot be told to
+  be this project's workspace), even when a token is presented, and stays unchanged (user decision 2026-10-29).
 - A folder qualifies as half-cleared only when it sits at a workspace position inside this project's own
   landing place, its repository is gone, and it holds nothing but at most a workspace record naming this
   project and empty folders; the decision derives from the folder's contents, never from a name list.
@@ -162,7 +165,10 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: "user decision 2026-10-29 on the fast-lane review finding: a record-less folder holding files is refused outright, never finished with a token; added as an it_requirement."
+    by: user
+    at: "2026-10-29"
 superseded_by: null
 covered_by: []
 implemented_by: []
