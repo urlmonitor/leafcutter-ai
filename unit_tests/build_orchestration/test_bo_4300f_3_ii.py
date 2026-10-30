@@ -53,7 +53,8 @@ class HousekeepingCase(MigrateCase):
 
     def seed_loose_objects(self, repo: Path) -> None:
         """Write LOOSE_IN_DIR_17 distinct blobs whose ids start with '17'."""
-        found, i = [], 0
+        found: list[Path] = []
+        i = 0
         scratch = repo.parent / f"{repo.name}-blobs"
         scratch.mkdir(exist_ok=True)
         while len(found) < LOOSE_IN_DIR_17:
