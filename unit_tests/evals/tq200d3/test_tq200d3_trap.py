@@ -105,6 +105,7 @@ TRAP_BAD.update({
 @pytest.mark.parametrize("how", sorted(TRAP_BAD))
 def test_new_behaviour_trap_fails_invented_wrong_versions(tmp_path, how):
     # covers: TQ-200d-3
+    # covers: TQ-500f-2-ii
     # angle: discrimination
     # must_catch: new-behaviour trap passes a design that names 'revert the fix'
     row = h.real_row("new")
