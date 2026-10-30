@@ -175,6 +175,55 @@ def _must_catch_field_errors(path: Path, entry_name: str, item: dict[str, Any]) 
     ]
 
 
+def _replacement_error(item: Any) -> str | None:
+    """Return why one declared replacement is malformed, or ``None`` when it is well formed."""
+    if not isinstance(item, dict):
+        return f"a replacement must be an object, got {type(item).__name__}"
+    extra = sorted(map(str, set(item) - {"path", "old", "new"}))
+    if extra:
+        return f"a replacement has unknown key(s) {extra}"
+    for key in ("path", "old", "new"):
+        if not isinstance(item.get(key), str):
+            return f"a replacement needs a string {key!r}"
+    if not item["path"].strip() or not item["old"].strip():
+        return "a replacement's 'path' and 'old' need at least one non-whitespace character"
+    return None
+
+
+def _declared_replacements_errors(path: Path, entry_name: str, item: dict[str, Any]) -> list[str]:
+    """Report ``test_spec[].declared_replacements`` violations, naming entry/field/name/rule (TQ-500g-1-xvii).
+
+    The value is an object whose keys are names this entry's ``must_catch`` lists (spelled exactly)
+    and whose values are non-empty lists of ``{path, old, new}``. The generic schema check cannot
+    name the entry or the name, so the gate that actually runs (this module) does.
+
+    Args:
+        path: The AC YAML file being validated (for error prefixing).
+        entry_name: The ``test_spec`` entry's ``name`` (or a placeholder).
+        item: The ``test_spec`` entry dict.
+
+    Returns:
+        Error message strings; empty when the field is absent or valid.
+    """
+    if "declared_replacements" not in item:
+        return []
+    declared = item["declared_replacements"]
+    head = f"{path}: test_spec entry {entry_name!r} field 'declared_replacements'"
+    if not isinstance(declared, dict) or not declared:
+        return [f"{head} must be a non-empty object keyed by must_catch names, got {declared!r}."]
+    listed = item.get("must_catch")
+    listed = listed if isinstance(listed, list) else []
+    errors: list[str] = []
+    for name, repls in declared.items():
+        if name not in listed:
+            errors.append(f"{head} names {name!r}, which this entry's must_catch does not list.")
+        elif not isinstance(repls, list) or not repls:
+            errors.append(f"{head} for name {name!r} must be a non-empty list of replacements.")
+        else:
+            errors.extend(f"{head} for name {name!r}: {why}." for why in map(_replacement_error, repls) if why)
+    return errors
+
+
 def test_spec_entry_errors(
     path: Path, data: dict[str, Any], schema: dict[str, Any] | None
 ) -> list[str]:
@@ -208,6 +257,7 @@ def test_spec_entry_errors(
         entry_name = item.get("name", "<unnamed test_spec entry>")
         errors.extend(_angle_field_errors(path, entry_name, item, permitted_angles))
         errors.extend(_must_catch_field_errors(path, entry_name, item))
+        errors.extend(_declared_replacements_errors(path, entry_name, item))
         errors.extend(_unknown_key_errors(path, entry_name, item, declared_keys))
     return errors
 
@@ -220,5 +270,8 @@ DECISION HISTORY
   validate_ac_schema.py (which was already over its 400-line ratchet limit
   at HEAD) so the entry-naming test_spec[].angle / .must_catch checks could
   be added without growing that file past its GE-127b-1 previous length.
+- 2026-10-30 [python-coder/TQ-500g-1-xvii]: Added the entry-naming check of the
+  optional test_spec[].declared_replacements field (keys must be listed by the
+  entry's must_catch; shape of each replacement). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/08) (ADR-080)
 ====================================================================
 """

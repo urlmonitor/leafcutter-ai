@@ -101,7 +101,7 @@ def list_payload(derived: Derived, decisions: list[Decision] | None = None) -> d
     owed = [_item(o) for o in derived.owed]
     if decisions is None:
         return {"owed": owed, "to_prepare": list(owed), "decisions": [], "error": None}
-    prepare = [item for item, d in zip(owed, decisions, strict=True) if d.replacements is None]
+    prepare = [item for item, d in zip(owed, decisions, strict=True) if d.to_prepare]
     return {"owed": owed, "to_prepare": prepare, "decisions": [d.shown() for d in decisions], "error": None}
 
 

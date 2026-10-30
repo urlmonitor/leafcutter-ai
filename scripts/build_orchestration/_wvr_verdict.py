@@ -66,7 +66,8 @@ def identity(entry: dict | None, undone: dict[str, bytes] | None = None) -> dict
         return {"alteration_id": alteration_id(shown), "source": UNDONE_SOURCE, "replacements": None}
     if entry is None:
         return dict(NO_IDENTITY)
-    return {key: entry.get(key) for key in NO_IDENTITY}
+    shown = {key: entry.get(key) for key in NO_IDENTITY}
+    return {**shown, "declared_by": entry["declared_by"]} if entry.get("declared_by") else shown  # TQ-500g-1-xvii: additive
 
 
 def label_rows(rows: list[dict], wrong_version: str, ident: dict) -> list[dict]:
@@ -189,3 +190,4 @@ def assemble(rows: list[dict], *, reason_override: str | None = None, applicable
 # - 2026-10-25 22:30 [python-coder]: Every row carries alteration_id, source and replacements, copied from the manifest entry (fix undone: hashed base content). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/06)
 # - 2026-10-25 20:30 [python-coder]: not_executed is an unfinished result; its unfinished entry names the test.
 #   (#EPIC-OnceANamedWrongVersionIsPreparedAnd/04)
+# - 2026-10-30 12:00 [python-coder]: A declared wrong version's rows also carry declared_by [{ac_id, entry}], copied from its manifest entry; undeclared rows do not have the key. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/08) (ADR-080)

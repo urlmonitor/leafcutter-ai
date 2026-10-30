@@ -63,6 +63,7 @@ class ScopedTest:
     issue: str = ""
     files: list[str] = field(default_factory=list)
     extras: dict[str, str] = field(default_factory=dict)  # {key: name} the test writer left "to run later" (non-blocking)
+    declared: list[dict] = field(default_factory=list)  # TQ-500g-1-xvii: [{ac_id, name, replacements}] this entry declares
 
     @property
     def versions(self) -> dict[str, str]:
@@ -123,7 +124,38 @@ def _in_scope_by_name(records: dict[str, dict | None]) -> dict[str, list[str]]:
     return out
 
 
-def _scoped_test(tag: dict, must_catch: dict[str, list[str]], in_scope: dict[str, list[str]] | None = None) -> ScopedTest:
+def _replacement_list(value: object) -> list[dict] | None:
+    """The ``{path, old, new}`` list of a declaration, or ``None`` when it is not well formed (the validator refuses those)."""
+    if not isinstance(value, list) or not value:
+        return None
+    keys = ("path", "old", "new")
+    if not all(isinstance(r, dict) and all(isinstance(r.get(k), str) for k in keys) for r in value):
+        return None
+    return [{k: r[k] for k in keys} for r in value]
+
+
+def _declared_by_entry(records: dict[str, dict | None]) -> dict[str, list[dict]]:
+    """Collect ``declared_replacements`` (TQ-500g-1-xvii) per test_spec entry name, from the records already loaded.
+
+    Only a key that the same entry's ``must_catch`` lists is read. Result items are
+    ``{ac_id, name, replacements}``.
+    """
+    out: dict[str, list[dict]] = {}
+    for ac_id, record in records.items():
+        for entry in (record or {}).get("test_spec") or []:
+            declared = entry.get("declared_replacements") if isinstance(entry, dict) and entry.get("name") else None
+            if not isinstance(declared, dict):
+                continue
+            listed = [m for m in entry.get("must_catch") or [] if isinstance(m, str)]
+            for name, repls in declared.items():
+                clean = _replacement_list(repls)
+                if name in listed and clean is not None:
+                    out.setdefault(entry["name"], []).append({"ac_id": ac_id, "name": name, "replacements": clean})
+    return out
+
+
+def _scoped_test(tag: dict, must_catch: dict[str, list[str]], in_scope: dict[str, list[str]] | None = None,
+                 declared: dict[str, list[dict]] | None = None) -> ScopedTest:
     """Build one :class:`ScopedTest`, resolving the node id from the test's source."""
     file, function = Path(tag["file"]), tag["function"]
     label = f"{file.as_posix()}::{function}"
@@ -135,7 +167,8 @@ def _scoped_test(tag: dict, must_catch: dict[str, list[str]], in_scope: dict[str
         return ScopedTest(None, label, function, issue=f"{function} resolves to {len(chains)} tests, not one")
     node = NodeSpec(file, chains[0])
     files = list((in_scope or {}).get(function, []))
-    return ScopedTest(node, f"{file.as_posix()}::{'::'.join(chains[0])}", function, list(must_catch.get(function, [])), files=files)
+    return ScopedTest(node, f"{file.as_posix()}::{'::'.join(chains[0])}", function, list(must_catch.get(function, [])), files=files,
+                      declared=list((declared or {}).get(function, [])))
 
 
 def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
@@ -159,6 +192,7 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
     wanted = set(ac_ids)
     must_catch = _must_catch_by_name(records)
     in_scope = _in_scope_by_name(records)
+    declared_repls = _declared_by_entry(records)
     scope, seen, found = Scope(), set(), set()
     for tag in tags:
         if tag["ac_id"] not in wanted or not tag.get("function") or Path(tag["file"]).suffix != ".py":
@@ -169,7 +203,7 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
         seen.add(key)
         found.add(_nodeid_function_name(f"{tag['file']}::{tag['function']}"))
         if _nodeid_function_name(f"{tag['file']}::{tag['function']}") in declared:
-            scope.tests.append(_scoped_test(tag, must_catch, in_scope))
+            scope.tests.append(_scoped_test(tag, must_catch, in_scope, declared_repls))
         else:
             scope.out_of_scope.append(f"{Path(tag['file']).as_posix()}::{tag['function']}")
     scope.missing = sorted(declared - found)
@@ -255,6 +289,26 @@ class OwedName:
     files: list[str] = field(default_factory=list)
     scope: str = "declared"
     extra: bool = False  # a to-run-later extra: owed, never blocking
+    declared: list[dict] | None = None  # TQ-500g-1-xvii: the declared replacements, when exactly one declaration stands
+    declared_by: list[dict] = field(default_factory=list)  # [{ac_id, entry}] that declare this name
+    declared_error: str = ""  # set when declarations disagree: the name is unfinished
+
+
+def declared_text(declared_by: list[dict]) -> str:
+    """``<ac id>, entry <entry>`` for each declaring entry, joined with ``and`` (the wording of a declared row's reason)."""
+    return " and ".join(f"{b['ac_id']}, entry {b['entry']}" for b in declared_by)
+
+
+def _resolve_declarations(item: OwedName, found: list[dict]) -> None:
+    """Set *item*'s declaration from every ``{ac_id, entry, replacements}`` in *found* (identical ones are one)."""
+    for f in found:
+        by = {"ac_id": f["ac_id"], "entry": f["entry"]}
+        if by not in item.declared_by:
+            item.declared_by.append(by)
+    if len({json.dumps(f["replacements"], sort_keys=True) for f in found}) == 1:
+        item.declared = found[0]["replacements"]
+    else:
+        item.declared_error = f"declared on {declared_text(item.declared_by)}: conflicting declarations for this name"
 
 
 def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
@@ -271,6 +325,7 @@ def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
     """
     owed: dict[str, OwedName] = {}
     declared: set[str] = set()
+    declarations: dict[str, list[dict]] = {}
     for test in tests:
         for key, name in test.versions.items() if test.names else ():
             if key == wrong_version_key(UNDONE_NAME):
@@ -279,6 +334,12 @@ def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
             if test.files:
                 declared.add(key)
             item.files += [f for f in dict.fromkeys(test.files) if f not in item.files and not is_test_path(f, test_root_rel)]
+        for d in test.declared:
+            if wrong_version_key(d["name"]) in owed:
+                declarations.setdefault(wrong_version_key(d["name"]), []).append(
+                    {"ac_id": d["ac_id"], "entry": test.function, "replacements": d["replacements"]})
+    for key, found in declarations.items():
+        _resolve_declarations(owed[key], found)
     for test in tests:
         for key, name in test.extras.items():
             owed.setdefault(key, OwedName(name, extra=True))
@@ -448,3 +509,8 @@ def prepare_fix_undone(root: Path, base_ref: str, test_root_rel: str | None,
     if not files:
         return {}, "not_applicable", f"every changed non-test file is new ({created} created); the fix undone does not apply"
     return files, "ready", ""
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-30 12:00 [python-coder]: Reads test_spec declared_replacements beside must_catch/in_scope_files from the same records; OwedName carries declared, declared_by and declared_error (conflicting declarations). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/08) (ADR-080)

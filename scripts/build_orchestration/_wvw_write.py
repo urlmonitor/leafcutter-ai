@@ -28,7 +28,7 @@ from pathlib import Path
 import _wvr_gate as gate_mod
 import _wvw_reply as reply_mod
 from _wvp_checks import Item, static_check
-from _wvp_plan import Decision, plan_for_write
+from _wvp_plan import Decision, declared_refusal, plan_for_write
 from _wvp_store import RE_PREPARED, PinError, alteration_id
 from _wvp_store import plain_segment as _plain_segment
 from _wvw_list import Derived, derive_owed
@@ -111,21 +111,34 @@ def _entry(index: int, name: str, files: list[str], decision: Decision, answer: 
     second failure. The entry also carries the replacements actually applied, their identity and
     the source of the row.
     """
+    if decision.refused:  # a declared name that failed a check: unfinished, never prepared, never the pin
+        return _unfinished_entry(name, decision.refused, decision)
     pinned = decision.replacements is not None
     repls = decision.replacements if pinned else answer.replacements
     reason, altered = ("" if pinned else answer.reason), []
     if not reason:
         checked = static_check(Item(name, repls, files), derived.root, derived.test_root_rel)
-        altered, reason = checked.altered, checked.detail
+        altered = checked.altered
+        reason = declared_refusal(decision.declared_by, checked) if decision.declared_by and checked.reason else checked.detail
     if reason and decision.source.startswith(RE_PREPARED):
         reason = f"{decision.source}; {reason}"
     if reason:
-        return {"name": name, "status": "could_not_prepare", "reason": reason, "files": [], "diff": "",
-                "replacements": [], "alteration_id": None, "source": decision.source}
+        return _unfinished_entry(name, reason, decision)
     applied = [{"path": r["path"], "old": r["old"], "new": r["new"]} for r in repls]
     return {"name": name, "status": "prepared", "reason": None,
             "files": _write_copies(copies / _slug(index, name), altered), "diff": unified_diff(altered),
-            "replacements": applied, "alteration_id": alteration_id(applied), "source": decision.source}
+            "replacements": applied, "alteration_id": alteration_id(applied), "source": decision.source, **_declared_key(decision)}
+
+
+def _declared_key(decision: Decision) -> dict:
+    """``{declared_by}`` for a declared name (TQ-500g-1-xvii), else nothing: undeclared entries keep their shape."""
+    return {"declared_by": decision.declared_by} if decision.declared_by else {}
+
+
+def _unfinished_entry(name: str, reason: str, decision: Decision) -> dict:
+    """The manifest entry of a name that could not be prepared."""
+    return {"name": name, "status": "could_not_prepare", "reason": reason, "files": [], "diff": "",
+            "replacements": [], "alteration_id": None, "source": decision.source, **_declared_key(decision)}
 
 
 def _write_manifest(work_dir: Path, manifest: dict) -> Path:
@@ -161,7 +174,7 @@ def _build(work_key: str, work_dir: Path, derived: Derived, reply: reply_mod.Rep
            decisions: list[Decision]) -> tuple[dict, int]:
     """Build every entry, write the copies and then the manifest; return the payload."""
     owed = derived.owed
-    asked = [o.name for o, d in zip(owed, decisions, strict=True) if d.replacements is None]
+    asked = [o.name for o, d in zip(owed, decisions, strict=True) if d.to_prepare]
     groups, ignored = reply_mod.group_by_name(reply.entries, asked)
     copies = work_dir / "copies"
     entries = [_entry(i, o.name, o.files, d, reply_mod.answer_for(groups[o.name]) if o.name in groups else reply_mod.Answer(),
@@ -191,7 +204,7 @@ def _run(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root
         return _fail(derived.error)
     decisions, sent = plan_for_write(work_dir, git_dir, work_key, derived.owed, derived.root, derived.test_root_rel,
                                     derived.tests)
-    needs_reply = any(d.replacements is None and (sent is None or d.name in sent) for d in decisions)
+    needs_reply = any(d.to_prepare and (sent is None or d.name in sent) for d in decisions)
     work_dir.mkdir(parents=True, exist_ok=True)
     return _build(work_key, work_dir, derived, _prepare_reply(source, work_key, needs_reply), decisions)
 
@@ -236,3 +249,4 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
 # - 2026-10-25 22:30 [python-coder]: An earlier manifest and its copies move to history/<NNNN>/ instead of being deleted; only a partial write is discarded. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/06) (ADR-079)
 # - 2026-10-25 22:00 [python-coder]: Every applied replacement goes through _wvp_checks.static_check; a re-prepared name keeps its failed pin check at the start of its reason. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)
+# - 2026-10-30 12:00 [python-coder]: A declared name is built from its declaration (source "declared", declared_by on the entry) and, when it failed a check, is could_not_prepare with "declared on <ac>, entry <entry>: <check>"; it never reads the reply or the pin. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/08) (ADR-080)

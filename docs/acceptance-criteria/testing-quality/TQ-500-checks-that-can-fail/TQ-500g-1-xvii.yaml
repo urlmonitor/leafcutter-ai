@@ -8,7 +8,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -154,6 +154,7 @@ test_spec:
       - scripts/build_orchestration/_wvp_plan.py
       - scripts/build_orchestration/_wvr_scope.py
       - scripts/build_orchestration/_wvw_write.py
+      - scripts/build_orchestration/_wvp_store.py  # 2026-10-30: pins are written only here
   - name: test_failing_declaration_is_unfinished_never_prepared_never_the_pin
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -170,6 +171,7 @@ test_spec:
       - a declaration allowed to alter a test file
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvp_checks.py  # 2026-10-30: the test-file refusal is made here (static_check)
   - name: test_undeclared_name_still_comes_from_pin_or_preparer
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -194,6 +196,7 @@ test_spec:
       - the pin cleared while the declaration existed
     in_scope_files:
       - scripts/build_orchestration/_wvp_plan.py
+      - scripts/build_orchestration/_wvp_store.py  # 2026-10-30: pins are written and cleared only here
   - name: test_schema_refuses_a_declaration_for_an_unlisted_name
     target_dir: unit_tests/ac_store/
     framework: pytest
@@ -247,9 +250,17 @@ amended_by:
   agent: approve_acs
   date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/ac_store/test_tq_500g_1_xvii.py
+- unit_tests/build_orchestration/test_tq_500g_1_xvii.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/08_TICKET-20261024-TQ-500g-1-xvii.md
+- config/ac_store_schema.json
+- scripts/ac_store/_ac_schema_test_spec_validators.py
+- scripts/build_orchestration/_wvr_scope.py
+- scripts/build_orchestration/_wvp_plan.py
+- scripts/build_orchestration/_wvw_write.py
+- scripts/build_orchestration/_wvr_verdict.py
 change_target:
   - schema
   - code

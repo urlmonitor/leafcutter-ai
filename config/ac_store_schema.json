@@ -491,6 +491,25 @@
                                     "pattern": "\\S"
                                 },
                                 "description": "TQ-500g-1-ix: the repo-relative POSIX paths of the files a wrong version named in this entry's must_catch may alter. Optional; when present it must be a non-empty list and every item must contain at least one non-whitespace character. The wrong-version writer (scripts/build_orchestration/wrong_version_writer.py) reads it through the runner's declared-scope reader: a name's in-scope files are the union over every entry carrying that exact name, minus any test file. A declaration on any entry naming the name wins. A name whose entries carry no in_scope_files takes the non-test files the work changed relative to the writer's --base-ref (TQ-500g-1-x), and the list marks each name declared or derived; an empty derived scope refuses every replacement. Not copied onto the generated ticket."
+                            },
+                            "declared_replacements": {
+                                "type": "object",
+                                "minProperties": 1,
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "items": {
+                                        "type": "object",
+                                        "required": ["path", "old", "new"],
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "path": {"type": "string", "pattern": "\\S"},
+                                            "old": {"type": "string", "pattern": "\\S"},
+                                            "new": {"type": "string"}
+                                        }
+                                    }
+                                },
+                                "description": "TQ-500g-1-xvii: the exact replacement of a wrong version this entry's must_catch names. Optional; an object whose keys are must_catch names of THE SAME entry, spelled exactly as that entry spells them, and whose values are non-empty lists of {path, old, new} (path and old need a non-whitespace character; new may be empty; no other key). Applied in list order, each against the result of the one before. A declared replacement wins over a pinned or prepared one and is held to the same checks as a pin; it is never written to the pin store. The entry-naming check (a key the must_catch does not list, a malformed value) lives in scripts/ac_store/_ac_schema_test_spec_validators.py, which is the gate the check-ac-schema hook runs."
                             }
                         }
                     }

@@ -113,3 +113,33 @@ python scripts/build_orchestration/wrong_version_writer.py reset --work-key <key
 - **Nothing else clears a pin:** not list, write, pin or finish, not `wrong_version_runner.py
   recover` or the put-back after a cut-short run, not a new or resumed workflow, not a code change.
   A reset made while a gate run of the same work is in progress takes effect from the next run.
+
+## Declared replacements (TQ-500g-1-xvii)
+
+A `test_spec` entry may carry an optional `declared_replacements` field: the exact replacement for
+a wrong version named in its own `must_catch`. The decision and its alternatives: ADR-080. (The
+field belongs in the `test_spec` table of [ac-schema.md](ac-schema.md); that page is over its
+length limit, so the field is described here.)
+
+**Shape.** An object whose keys are `must_catch` names of **the same entry**, spelled exactly as
+that entry spells them; each value is a **non-empty** list of `{path, old, new}` objects. `path`
+and `old` need at least one non-whitespace character; `new` may be empty; no other key is allowed
+inside a replacement, and any other unknown `test_spec` key is still refused. Replacements apply
+in list order, each against the result of the one before. A key the entry's `must_catch` does not
+list is refused, and the `check-ac-schema` error names the entry and the name. The checks live in
+`scripts/ac_store/_ac_schema_test_spec_validators.py` (run by `validate_ac_schema.py` and the
+hook); `config/ac_store_schema.json` carries the property too, but the hook does not enforce that
+file alone.
+
+- **Precedence is declared > pinned > prepared.** A declared name is never sent to the preparer
+  (`list` decides it `declared`); its pin is neither applied, changed nor cleared while the
+  declaration exists, and the declaration is never written to the pin store. Once the declaration
+  is removed, the pin is planned again through every pin check.
+- **A declaration is checked like a pin** (the checks above) and by the writer's path refusals. A
+  failure makes the name unfinished (`could_not_prepare`) with the reason
+  `declared on <ac_id>, entry <entry name>: <failed check>`, with no fallback to the pin or the
+  preparer. Two entries declaring different replacements for one name make it unfinished;
+  identical declarations count as one.
+- **Rows say so.** The manifest entry and every result row for the name carry source `declared`
+  and `declared_by` (`[{ac_id, entry}]`).
+- `generate_ticket_from_ac.py` does not copy the field onto the ticket.
