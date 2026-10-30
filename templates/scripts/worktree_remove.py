@@ -232,10 +232,23 @@ def delete_whole_folder(path: Path) -> str | None:
             shutil.rmtree(target, onerror=_rmtree_onerror)
     except OSError as exc:
         _log.warning("delete_whole_folder: rmtree failed for %s: %s", path, exc)
-        return f"Could not remove all of {path} (a program may hold files): {exc}"
+        left = _left_behind(path)  # rmtree reports its LAST error (on POSIX the non-empty folder), not the item
+        return f"Could not remove all of {path} (a program may hold files): {exc}{left}"
     if os.path.lexists(target):
         return f"Part of {path} remains after removal; it is not cleared."
     return None
+
+
+def _left_behind(path: Path, shown: int = 5) -> str:
+    """`` Still there: a, b`` naming the files a failed delete left in *path* (empty text when none can be listed)."""
+    try:
+        files = wrc.remaining_files(path)
+    except OSError:
+        return ""
+    if not files:
+        return ""
+    more = f" and {len(files) - shown} more" if len(files) > shown else ""
+    return f". Still there: {', '.join(files[:shown])}{more}"
 
 
 def _delete_tree(workspace: Path) -> dict[str, Any] | None:
