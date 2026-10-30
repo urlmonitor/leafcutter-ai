@@ -27,7 +27,7 @@ from pathlib import Path
 
 import _wvr_gate as gate_mod
 from _wvp_checks import Item, check_candidates
-from _wvp_store import NOT_PINNED, PINNED, RE_PREPARED, PinError, alteration_id, known_failure, parse, read_bytes, usable
+from _wvp_store import NOT_PINNED, PINNED, RE_PREPARED, RESET_SOURCE, PinError, alteration_id, known_failure, parse, read_bytes, usable
 from _wvr_scope import OwedName, ScopedTest, norm_name
 
 _LOG = logging.getLogger("wrong_version_writer")
@@ -72,7 +72,8 @@ def decide(owed: list[OwedName], pins: dict[str, dict], root: Path, test_root_re
     for item in owed:
         verdict = checked.get(item.name)
         if verdict is None:
-            out.append(Decision(item.name, NOT_PINNED))
+            marked = isinstance(pins.get(norm_name(item.name)), dict) and pins[norm_name(item.name)].get("reset") is True
+            out.append(Decision(item.name, RESET_SOURCE if marked else NOT_PINNED))
         elif verdict.reason:
             out.append(Decision(item.name, f"{RE_PREPARED}: {verdict.reason}", f"the pinned replacement failed a check: {verdict.detail}"))
         else:
@@ -157,3 +158,4 @@ def plan_for_write(work_dir: Path, git_directory: Path, work_key: str, owed: lis
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
 # - 2026-10-25 22:00 [python-coder]: decide() runs the five checks on every pin; a failing pin becomes "re-prepared: <check>". (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)
+# - 2026-10-26 09:00 [python-coder]: A reset marker is decided as "re-prepared: pin reset by the operator", not "prepared: not pinned". (#EPIC-OnceANamedWrongVersionIsPreparedAnd/07) (ADR-079)

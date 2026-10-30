@@ -92,3 +92,24 @@ earlier run left into `<git-dir>/leafcutter/work/<work-key>/history/<NNNN>/` (on
 highest number there), manifest first. A move that fails stops the step with no new manifest, and
 never leaves the earlier manifest at the current path. The runner reads only the current path; it
 never falls back to `history/`.
+
+## Clearing a pin (TQ-500g-1-xvi)
+
+```
+python scripts/build_orchestration/wrong_version_writer.py reset --work-key <key> [--name "<must_catch name>"] --test-root <root>
+```
+
+- **With `--name`**, only that name's pin of that work is cleared, matched by trim and case-fold
+  (the plan's own lookup). **Without it**, every pin of that work is cleared.
+- **Clearing leaves a reset marker** (`reset: true`, `cleared_alteration_id`) in place of the pin,
+  written atomically. Only `<git-dir>/leafcutter/pins/<work-key>.json` of the named work changes:
+  no other work's pins, no kept manifests, current manifest, copies or working tree.
+- **The next plan sends the name to the preparer** with the decision
+  `re-prepared: pin reset by the operator`; a re-preparation that passes every check replaces the
+  marker.
+- **Output:** one JSON object `{work_key, cleared: [{name, alteration_id}], not_pinned: [name], error}`.
+  A name the work holds no pin for clears nothing and is listed under `not_pinned`. Exit 0 whenever
+  the step ran; exit 1 when the work key, git directory or pin file cannot be used.
+- **Nothing else clears a pin:** not list, write, pin or finish, not `wrong_version_runner.py
+  recover` or the put-back after a cut-short run, not a new or resumed workflow, not a code change.
+  A reset made while a gate run of the same work is in progress takes effect from the next run.

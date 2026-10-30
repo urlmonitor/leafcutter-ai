@@ -17,7 +17,9 @@ ARCHITECTURE: Public module with its own CLI (flags only; the runner's CLI is un
     --work-key <key>`` (TQ-500g-1-xi) plans against the work's pins so ``to_prepare`` holds only the names still
     to be prepared. ``write`` exits 0 when the manifest was written and 1 when the step stopped. ``pin
     --work-key <key> --manifest <path> --test-root <path>`` (runner JSON on stdin) prints ``{pinned, kept,
-    error}`` and exits 1 when the pins could not be saved. Logging goes to stderr only. Never uses git stash.
+    error}`` and exits 1 when the pins could not be saved. ``reset --work-key <key> [--name <n>] --test-root <path>``
+    (TQ-500g-1-xvi) prints ``{work_key, cleared, not_pinned, error}``, leaves a reset marker for each cleared pin and
+    exits 1 only when the step could not run. Logging goes to stderr only. Never uses git stash.
 """
 
 from __future__ import annotations
@@ -30,7 +32,7 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from _wvp_store import PinError, run_pin
+from _wvp_store import PinError, run_pin, run_reset
 from _wvw_list import Derived, derive_owed, keyed_decisions, list_payload
 from _wvw_write import run_write
 
@@ -57,6 +59,10 @@ def _parser() -> argparse.ArgumentParser:
     pin.add_argument("--work-key", required=True)
     pin.add_argument("--manifest", required=True)
     pin.add_argument("--test-root", required=True)
+    rst = sub.add_parser("reset", help="Clear one work's pins, all of them or one name's (operator command)")
+    rst.add_argument("--work-key", required=True)
+    rst.add_argument("--name", default=None, help="the name to clear (default: every pin of the work)")
+    rst.add_argument("--test-root", required=True)
     return parser
 
 
@@ -85,7 +91,7 @@ def _run_pin(args: argparse.Namespace) -> tuple[dict, int]:
     return run_pin(args.work_key, args.manifest, Path(args.test_root), verdict_text)
 
 
-def _guarded(step: Callable[[], tuple[dict, int]], command: str) -> tuple[dict, int]:
+def _guarded(step: Callable[[], tuple[dict, int]], command: str, work_key: str = "") -> tuple[dict, int]:
     """Run *step*; any error, even KeyboardInterrupt, still gives the step's failure shape."""
     try:
         return step()
@@ -96,6 +102,8 @@ def _guarded(step: Callable[[], tuple[dict, int]], command: str) -> tuple[dict, 
             return {"owed": [], "to_prepare": [], "decisions": [], "error": message}, 1
         if command == "pin":
             return {"pinned": [], "kept": [], "error": message}, 1
+        if command == "reset":
+            return {"work_key": work_key, "cleared": [], "not_pinned": [], "error": message}, 1
         return {"written": False, "manifest_path": None, "error": message, "entries": [],
                 "ignored_reply_names": [], "preparer_anomalies": []}, 1
 
@@ -116,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = _guarded(lambda: _run_list(args), "list")
         elif args.command == "pin":
             payload, code = _guarded(lambda: _run_pin(args), "pin")
+        elif args.command == "reset":
+            payload, code = _guarded(lambda: run_reset(args.work_key, args.name, Path(args.test_root)), "reset", args.work_key)
         else:
             ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
             payload, code = _guarded(lambda: run_write(args.work_key, args.reply, ids, Path(args.test_root), Path(args.ac_root), args.base_ref or "HEAD"), "write")
@@ -130,3 +140,4 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
+# - 2026-10-26 09:00 [python-coder]: Added the reset step (argument parsing only; clearing lives in _wvp_store). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/07) (ADR-079)

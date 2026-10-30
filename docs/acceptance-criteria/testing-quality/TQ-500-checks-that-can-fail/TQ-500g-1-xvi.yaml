@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -174,6 +174,7 @@ test_spec:
       - a reset that deletes kept manifests
     in_scope_files:
       - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvw_write.py  # 2026-10-29: where the kept manifests live (history/<NNNN>/)
   - name: test_no_other_step_clears_a_pin
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -190,6 +191,7 @@ test_spec:
     in_scope_files:
       - scripts/build_orchestration/_wvp_store.py
       - scripts/build_orchestration/wrong_version_writer.py
+      - scripts/build_orchestration/wrong_version_runner.py  # 2026-10-29: the recover step lives here
 test_required: true
 test_rationale: >-
   The reset is a deterministic file operation with an exact JSON report, so every entry runs the real reset
@@ -209,9 +211,13 @@ amended_by:
   agent: approve_acs
   date: '2026-10-24'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_tq_500g_1_xvi.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/07_TICKET-20261024-TQ-500g-1-xvi.md
+- scripts/build_orchestration/wrong_version_writer.py
+- scripts/build_orchestration/_wvp_store.py
+- scripts/build_orchestration/_wvp_plan.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

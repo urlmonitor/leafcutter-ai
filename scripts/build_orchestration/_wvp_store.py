@@ -31,6 +31,7 @@ PIN_KEYS = ("name", "replacements", "alteration_id", "failed_check", "reset", "c
 PINNED = "pinned"
 NOT_PINNED = "prepared: not pinned"
 RE_PREPARED = "re-prepared"
+RESET_SOURCE = f"{RE_PREPARED}: pin reset by the operator"
 CHANGES_NOTHING = "changes nothing"
 DID_NOT_LOAD = "did not load"
 NO_LINE = "changes no line the tests naming it run"
@@ -295,6 +296,50 @@ def run_pin(work_key: str, manifest_path: str, test_root: Path, verdict_text: st
         return {"pinned": [], "kept": [], "error": str(exc)}, 1
 
 
+def _marker(pin: dict) -> dict:
+    """The reset marker left in place of *pin*, in the fixed key order."""
+    cleared = pin.get("alteration_id") or alteration_id(pin["replacements"])
+    return dict(zip(PIN_KEYS, (pin["name"], [], None, None, True, cleared), strict=True))
+
+
+def reset(git_directory: Path, work_key: str, name: str | None) -> dict:
+    """The operator's reset: leave a reset marker in place of one name's pin, or of every pin of the work.
+
+    Only the pin file of *work_key* is rewritten (atomically), and only when a pin was cleared. A name
+    the work holds no usable pin for (or only a marker) clears nothing and is listed under ``not_pinned``.
+
+    Args:
+        git_directory: The absolute git directory.
+        work_key: The work key (one plain path segment).
+        name: The name to clear (trim and case-fold, like the plan's lookup), or ``None`` for every pin.
+
+    Returns:
+        ``{work_key, cleared: [{name, alteration_id}], not_pinned: [name], error: None}``.
+
+    Raises:
+        PinError: When the work key is not one plain path segment, or the pins cannot be read or saved.
+    """
+    if not plain_segment(work_key):
+        msg = f"the work key {work_key!r} is not one plain path segment"
+        raise PinError(msg)
+    stored = parse(read_bytes(git_directory, work_key))
+    keys = [k for k, p in stored.items() if usable(p)] if name is None else [norm_name(name)]
+    hits = [k for k in keys if usable(stored.get(k))]
+    markers = {k: _marker(stored[k]) for k in hits}
+    if markers:
+        _write(git_directory, work_key, {**stored, **markers})
+    return {"work_key": work_key, "cleared": [{"name": m["name"], "alteration_id": m["cleared_alteration_id"]} for m in markers.values()],
+            "not_pinned": [name] if name is not None and not hits else [], "error": None}
+
+
+def run_reset(work_key: str, name: str | None, test_root: Path) -> tuple[dict, int]:
+    """Run the reset step: return ``(payload, exit code)``; exit 1 only when the step could not run."""
+    try:
+        return reset(git_dir(test_root), work_key, name), 0
+    except PinError as exc:
+        return {"work_key": work_key, "cleared": [], "not_pinned": [], "error": str(exc)}, 1
+
+
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-25 15:50 [python-coder]: Pins keep applied replacements per work key and are replayed on the current code; a pin-write failure fails the gate. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02) (ADR-079)
@@ -303,3 +348,4 @@ def run_pin(work_key: str, manifest_path: str, test_root: Path, verdict_text: st
 #   whose canonical key is the fix undone. Found by the wrong-version gate (a survivor). (#EPIC-OnceANamedWrongVersionIsPreparedAnd/02)
 # - 2026-10-25 22:00 [python-coder]: A pin the run could not use gets failed_check {check, files_sha256}; a passing
 #   re-preparation replaces the pin. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/05) (ADR-079)
+# - 2026-10-26 09:00 [python-coder]: Added reset/run_reset: the operator command leaves a reset marker in place of a pin, touching only that work's pin file. (#EPIC-OnceANamedWrongVersionIsPreparedAnd/07) (ADR-079)
