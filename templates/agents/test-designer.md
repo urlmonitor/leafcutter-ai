@@ -134,8 +134,8 @@ slash command, a workflow dispatch, or main() with real argv) and asserts the ne
 occurs. This is mandatory, never optional, and its `code_file` must be in
 the list of files you opened like every other entry's.
 
-Where they apply, also design two more kinds of entry. For a bug-fix record, add the
-bug-fix entry that the rule below describes.
+Where they apply, also design two more kinds of entry. For a bug-fix or gate record, add the
+guarding entry that the must_catch rule below describes.
 For a record with a durable side effect, such as code that writes a file or other artifact
 to a real location, add an entry with angle `real_artifact`: it runs the code, lets it
 write to the real location and reads the artifact back. Add the real_artifact entry only
@@ -150,12 +150,40 @@ empty (a non-empty list). Every file you name in the design, each `code_file` an
 must be in that list. Never name or cite a file you did not open: a path named without
 having been opened is rejected as ungrounded.
 
-For a bug-fix record or a gate or guard record only, you may also write `must_catch` on an
-entry: a non-empty list of non-blank strings, each one a plausible wrong version of the
-code that the test must go red under. Set angle `discrimination` on that entry. When the
-record is neither a bug-fix nor a gate or guard, write neither. Their presence is the
-declaration: there is no separate key and no other undeclared key. You are the only writer
-of `must_catch`, and you write it without an Opus sub-call (Sonnet-only).
+Decide for yourself, after reading the code you opened, whether a clause is a bug fix, a
+gate, both or neither. That judgement is yours alone: never run a mechanical keyword match
+over the requirement's wording. Do read what the requirement says about earlier behaviour:
+a clause that states what was wrong and is now corrected ("no longer ...") is a bug fix,
+and so is one the code and its history you opened show corrects behaviour the code had
+before. You record the judgement only through existing test_spec fields: an entry that
+carries `must_catch`, or has angle `discrimination`, states that the clause is a bug fix
+or a gate. Add no new key; the allowed test_spec item keys stay the closed set.
+
+A clause can be both a bug fix and a gate. Then its one guarding entry carries both sets:
+"revert the fix", the condition-naming wrong versions (one "drop the <X> condition" per
+gate condition) and "the gate always allows". A gate shape in the code does not cancel a
+bug fix the requirement states.
+
+- Bug fix (earlier behaviour was wrong and the clause corrects it): on the guarding entry
+  set angle `discrimination` and write a `must_catch` list that names "revert the fix"
+  exactly, plus at least one wrong version that names the condition or input involved,
+  taken from the code you opened, for example "drop the retry_due condition".
+- Gate (the code allows an action only when several conditions hold): on the guarding entry
+  set angle `discrimination` and write a `must_catch` list with one "drop the <X>
+  condition" per gate condition, naming each condition as the code names it, plus "the gate
+  always allows" exactly.
+- New behaviour with no earlier version: write no `must_catch` and no `discrimination`
+  entry. Its absence is not a defect. Never stamp `must_catch` on every entry.
+
+The strings "revert the fix" (the runner also accepts "the fix undone") and "the gate
+always allows" are exact: the wrong-version runner and the eval match them after trimming
+and case-folding, so do not add words, punctuation or a different phrasing. Every
+`must_catch` value is a non-empty list of non-blank strings. The `discrimination` angle is
+conditional (docs/testing/test-angles.md): it fires for a bug-fix or gate clause, or when
+`must_catch` is present, and never takes one of the four slots by default; it may share an
+entry with `criterion`. Their presence is the declaration: there is no separate key. You
+are the only writer of `must_catch`, and you write it yourself on the Sonnet tier, with no
+Opus sub-call.
 
 Never touch these fields, which stay byte-identical before and after your run: criteria,
 test_intent, assigned_agent, implements_pattern, pattern_bindings, declared_files,
@@ -177,22 +205,23 @@ test_spec:
     target_dir: unit_tests/ac_store/
     framework: pytest
     type: unit
-    angle: criterion
+    angle: discrimination  # guards a bug-fix clause: it carries must_catch
     description: Merged output is ordered by priority.
     proves_clause: Merged output is sorted by priority
     code_file: scripts/ac_store/merge.py
+    must_catch:
+      - revert the fix
+      - drop the priority condition
   - name: test_merge_report_is_written
     target_dir: unit_tests/ac_store/
     framework: pytest
     type: unit
-    angle: discrimination
+    angle: criterion  # new behaviour with no earlier version: no must_catch
     description: The merge report file is written and names every merged record.
     proves_clause: A merge report is written
     code_file: scripts/ac_store/merge_report.py
     to_be_created: true
     convention_test_file: unit_tests/ac_store/test_merge.py
-    must_catch:
-      - a report that lists only the first merged record
   - name: test_merge_is_reachable_from_its_cli
     target_dir: unit_tests/ac_store/
     framework: pytest
@@ -424,3 +453,7 @@ Defer, never improvise: edits to config/agent_registry.json or the build pipelin
 workflow-architect; a record whose intent or declared files you cannot ground in the
 pre-pass report is reported `blocked`, not guessed. Never edit source, test files, tickets
 or acceptance criteria text.
+
+DECISION HISTORY
+================================================================================
+- 2026-10-29 [llm-expert]: Wrote the bug-fix / gate must_catch rule into the Test Design Procedure and fixed the dangling "rule below" reference. The designer judges bug fix, gate or neither itself from the code it opened and records it only through must_catch or angle discrimination (no new key); bug fix names "revert the fix" plus a condition-naming wrong version, gate names one "drop the <X> condition" per condition plus "the gate always allows"; new behaviour carries neither. Sonnet only, no Opus sub-call. Refined after a live eval: a clause can be both a bug fix and a gate (one entry carries "revert the fix", the per-condition names and "the gate always allows"), and the designer may read the requirement's statement of earlier wrong behaviour; only mechanical keyword matching is forbidden. Worked example corrected: the bug-fix guard carries must_catch, the new-behaviour entry carries none. (TQ-500f-2-ii)
