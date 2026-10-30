@@ -225,30 +225,38 @@ def delete_whole_folder(path: Path) -> str | None:
     its own answer).
     """
     target = _long_path(path)
+    failed: list[str] = []
+
+    def _collect(func: Any, item: str, exc: Any) -> None:
+        # An item that still cannot go is noted and rmtree carries on with the rest; raising here would
+        # abort the whole delete (on POSIX) and leave rmtree's last error, the non-empty folder, as the reason.
+        try:
+            _rmtree_onerror(func, item, exc)
+        except OSError as err:
+            _log.warning("delete_whole_folder: could not delete %s: %s", item, err)
+            failed.append(item)
+
     try:
         if sys.version_info >= (3, 12):
-            shutil.rmtree(target, onexc=_rmtree_onerror)
+            shutil.rmtree(target, onexc=_collect)
         else:
-            shutil.rmtree(target, onerror=_rmtree_onerror)
+            shutil.rmtree(target, onerror=_collect)
     except OSError as exc:
         _log.warning("delete_whole_folder: rmtree failed for %s: %s", path, exc)
-        left = _left_behind(path)  # rmtree reports its LAST error (on POSIX the non-empty folder), not the item
-        return f"Could not remove all of {path} (a program may hold files): {exc}{left}"
+        return f"Could not remove all of {path} (a program may hold files): {exc}"
+    if failed:
+        return f"Could not remove all of {path} (a program may hold files): {_named(target, failed)}"
     if os.path.lexists(target):
         return f"Part of {path} remains after removal; it is not cleared."
     return None
 
 
-def _left_behind(path: Path, shown: int = 5) -> str:
-    """`` Still there: a, b`` naming the files a failed delete left in *path* (empty text when none can be listed)."""
-    try:
-        files = wrc.remaining_files(path)
-    except OSError:
-        return ""
-    if not files:
-        return ""
+def _named(root: str, failed: list[str], shown: int = 5) -> str:
+    """The items that could not be deleted, workspace-relative; files first (their folders fail only as non-empty)."""
+    rel = [os.path.relpath(item, root).replace("\\", "/") for item in failed]
+    files = [r for r, item in zip(rel, failed, strict=True) if not os.path.isdir(item)] or rel
     more = f" and {len(files) - shown} more" if len(files) > shown else ""
-    return f". Still there: {', '.join(files[:shown])}{more}"
+    return f"could not delete {', '.join(files[:shown])}{more}"
 
 
 def _delete_tree(workspace: Path) -> dict[str, Any] | None:
