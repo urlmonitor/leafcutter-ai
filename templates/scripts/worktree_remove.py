@@ -209,8 +209,8 @@ def _rmtree_onerror(func: Any, target: str, exc: Any) -> None:
     error = exc[1] if isinstance(exc, tuple) else exc
     if isinstance(error, FileNotFoundError):
         return  # something else removed it first: the folder is that much emptier, not a failure
-    try:
-        os.chmod(target, stat.S_IWRITE)
+    try:  # add the owner-write bit only: a bare S_IWRITE would strip a POSIX folder's read and search bits
+        os.chmod(target, stat.S_IMODE(os.lstat(target).st_mode) | stat.S_IWRITE)
         func(target)
     except FileNotFoundError:
         return  # vanished while retrying
