@@ -28,6 +28,9 @@ config_keys:
   test_command_live_trader:
     required: false
     description: "Command to run the fast unit test suite"
+  testing_context.test_command:
+    required: false
+    description: "The project's test command; a named test file runs as <test_command> <file>"
   test_output_dir:
     required: false
     description: "Folder for test output; empty means the scratch home (scratch.py test-output-dir)"
@@ -101,8 +104,9 @@ to enumerate changed paths, then route using this fixed table:
 | Docs / tickets / config only | no-op | *(see No-op rule below)* |
 | Mixed (live_trader + sql_functions) | both suites | Run live-trader first, then sql-functions |
 
-For the **single-file** action: `python unit_tests/live_trader/<file>.py` or
-`poetry run python -m pytest <path> -v`.
+For the **single-file** action: read `testing_context.test_command` from the project's
+skills_config and run `<testing_context.test_command> <file>`; when the setting is absent
+or empty, run `python -m pytest <file>`.
 
 ## Actions
 
@@ -115,7 +119,8 @@ of these named actions:
 - **`manual`**: run `python -m pytest unit_tests/ -k "_MANUAL"`.
 - **`all`**: run live-trader first, then sql-functions (warn up front that the
   SQL suite requires a running DB).
-- **`single <path>`**: run one specific test file.
+- **`single <path>`**: run one specific test file as `<testing_context.test_command> <path>`, or
+  `python -m pytest <path>` when `testing_context.test_command` is unset.
 
 When the user does not specify an action, default to `auto`.
 
@@ -199,10 +204,39 @@ temporary file (e.g. for a longer run log), use the system temp path
 
 Status: PASS
 Tests run: <N>   Failures: 0   Errors: 0   Skipped: <S>
+Runner summary: "<the runner's own summary line, e.g. 1 passed in 0.02s>"
 Elapsed: <T>s
 ```
 
+Report PASS only when the report quotes a passed-test count greater than zero from the
+runner's own summary.
+
+An exit status of 0 alone is not a pass: a command can exit 0 without executing a test.
+
+For unittest, "Ran N tests ... OK" with N above zero is the passed count.
+
 One-liner only. Do not include raw stdout.
+
+## Output: No Test Ran
+
+When the command ran but executed no test, never report PASS. Report that no test ran,
+quote the command that was run, and give the reason:
+
+```
+## Test Results — <suite-name>
+
+Status: NO TEST RAN
+Command: <the command that was run>
+Reason: <nothing collected | no passed test | no runner summary>
+```
+
+Use "nothing collected" when the runner's summary reads "no tests ran" (0 collected), and
+"no runner summary" when the command exited 0 and printed no runner summary at all. Use
+"no passed test" when the runner's summary shows no passed test, for example
+"0 passed, 1 skipped", every test deselected, or unittest's "Ran 0 tests".
+
+This is distinct from the No-op Rule above: the No-op Rule means nothing was run because
+nothing test-relevant changed; here a command did run and executed no test.
 
 ## Output: Failure
 
@@ -257,8 +291,8 @@ Final summary keyed by suite:
 
 | Suite | Status | Tests | Failures |
 |---|---|---|---|
-| live-trader | PASS/FAIL | <N> | <F> |
-| sql-functions | PASS/FAIL | <N> | <F> |
+| live-trader | PASS/FAIL/NO TEST RAN | <N> | <F> |
+| sql-functions | PASS/FAIL/NO TEST RAN | <N> | <F> |
 ```
 
 ## Delegation Rule
@@ -283,6 +317,10 @@ completion_manifest:
   all_tests_passing: true
   failure_report_structured: true   # or false with reason/remediation if tests failed
 ```
+
+When no test ran, `test_suite_executed` is `false` (a command ran but no test executed),
+with the reason (nothing collected, no passed test, or no runner summary) and a
+remediation (for example, run the file through the project's test command). `all_tests_passing` is also `false`.
 
 A `false` item MUST expand to a nested object with `result`, `reason`, and `remediation`
 sub-keys (bare `false` values are rejected by the supervisor). See `signoff` §2b for the
@@ -333,6 +371,11 @@ value and nothing else:
   }
   ```
 
+When no test ran, `passed` is `false` and the reason goes in `anomalies`.
+
+When no test ran and the reply shape has an `outcome` field, `outcome` is `"error"`,
+never `"failed"` or `"passed"`.
+
 The machine-parsed path is active when the task prompt specifies a JSON return shape
 or you are dispatched with a `schema:` constraint. The human/interactive path keeps
 its normal markdown output — on the interactive path, flag unusual conditions in an
@@ -346,3 +389,7 @@ If you were invoked with a `ticket_path` argument:
 2. On success: follow the atomic sign-off recipe for your agent name.
 3. On failure: follow the failed-path recipe; set status to `failed` and append a `blocker` comment.
 4. Skip this section entirely if no `ticket_path` was provided.
+
+DECISION HISTORY
+================================================================================
+- 2026-11-01 10:00 [llm-expert]: A named test file now runs as `<testing_context.test_command> <file>` (fallback `python -m pytest <file>`), never as a plain script; PASS now requires a passed-test count above zero quoted from the runner's own summary; a run that executed no test reports `Status: NO TEST RAN`, and machine-parsed callers get `passed: false` with the reason in `anomalies` and, where the reply shape has an `outcome` field, `outcome: "error"` (no new key). Reasons: nothing collected, no passed test, no runner summary; unittest "Ran N tests ... OK" counts as the passed count. (#TQ-200d-4-ii, #TQ-200d-4-iii)

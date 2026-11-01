@@ -7,20 +7,26 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given three finished runs of a named test file:
+  Given five finished runs of a named test file:
       A: the runner's summary reads "no tests ran" (0 collected),
       B: the command exited 0 and printed no runner summary at all,
       C: the runner's summary reads "1 passed",
+      D: the runner's summary reads "0 passed, 1 skipped",
+      E: a unittest run's summary reads "Ran 3 tests ... OK",
   When the test runner writes its report for each,
-  Then the reports for A and B do not say PASS; each says no test ran, quotes
-      the command that was run, and gives the reason (nothing collected, or no
-      runner summary),
+  Then the reports for A, B and D do not say PASS; each says no test ran,
+      quotes the command that was run, and gives the reason (nothing
+      collected, no passed test, or no runner summary),
     And the report for C says PASS and quotes "1 passed" from the run,
+    And the report for E says PASS and quotes "Ran 3 tests ... OK"; for a
+      unittest run the count of tests run is the passed count,
+    And when no test ran, a machine-parsed reply that has an outcome field
+      gives outcome "error", never "failed" or "passed",
     And no report says PASS unless it quotes a count of passed tests, greater
       than zero, from the runner's own summary.
 depends_on:
@@ -166,6 +172,10 @@ amended_by:
       untouched.
     by: it-po
     at: '2026-10-30'
+  - reason: "User decisions 2026-11-01 (fast-lane review of TQ-200d-4-iii): add a third no-test reason, no passed test (a runner summary showing no passed test, such as 0 passed with skips, all deselected, or unittest Ran 0 tests); a unittest Ran N tests ... OK with N above zero is the passed count; and when no test ran a machine-parsed reply with an outcome field gives outcome error, because quick-fix reads outcome before passed. Criteria gain runs D and E and the outcome clause; nothing else changed."
+    by: business-analyst
+    at: 2026-11-01
+    note: "Applied by the orchestrator on the user's decision at the review gate."
 superseded_by: null
 covered_by: []
 implemented_by: []
