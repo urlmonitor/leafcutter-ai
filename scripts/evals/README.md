@@ -61,10 +61,10 @@ payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs
   `*.py.recorded` so a bare `pytest` never collects them. Fixture projects live under
   `sets/test-writer/projects/`, recorded outputs under `sets/test-writer/recorded/`, and
   only the placeholder database address is used.
-- **Scoring is deterministic.** Kinds: `fixture_seeds_moved_input`,
-  `counts_rows_and_non_null`, `asserts_known_seeded_value`, `test_fails_on_wrong_result`,
-  `produced_test_green`, `report_mentions`, `report_lists_wrong_version` and
-  `wrong_version_run`. The refresh-gate row's test half is a real run of the shared
+- **Scoring is deterministic.** Every assertion kind reads the output and calls no model;
+  each kind is described, with its rules and examples, in the
+  [assertion-kinds reference](../../docs/reference/produced-tests-eval-assertion-kinds.md).
+  The refresh-gate row's test half is a real run of the shared
   wrong-version runner (`halves.test` carries the runner's verdict, `halves.report` the
   report check). A judge, if a row has a rubric, is secondary and never decides a test half.
 - **Offline.** `python scripts/evals/run_agent_eval.py --agent test-writer --score-gold`
