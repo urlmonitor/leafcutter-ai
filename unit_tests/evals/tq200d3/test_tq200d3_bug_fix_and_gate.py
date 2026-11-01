@@ -27,6 +27,7 @@ BUG_BAD = {
 @pytest.mark.parametrize("how", sorted(BUG_BAD))
 def test_bug_fix_row_requires_revert_and_a_condition_naming_version(tmp_path, how):
     # covers: TQ-200d-3
+    # covers: TQ-500f-2-ii
     # angle: criterion
     # must_catch: bug-fix row passes with 'revert the fix' alone
     # must_catch: alias spelling 'the fix undone' not matched
@@ -136,6 +137,7 @@ GATE_BAD = {
 @pytest.mark.parametrize("how", sorted(GATE_BAD))
 def test_gate_row_requires_one_wrong_version_per_condition(tmp_path, how):
     # covers: TQ-200d-3
+    # covers: TQ-500f-2-ii
     # angle: criterion
     # must_catch: gate row passes with one condition's wrong version missing
     # must_catch: gate row passes without 'the gate always allows'
