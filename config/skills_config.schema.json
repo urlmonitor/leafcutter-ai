@@ -271,6 +271,10 @@
           "type": "string",
           "description": "Connection string for the test database environment. Used in test setUp for DB-requiring tests. No default is shipped: a project must set its own address, e.g. postgresql://<user>:<password>@<host>:<port>/<database>."
         },
+        "test_command": {
+          "type": "string",
+          "description": "The command that runs the project's tests. The test-runner agent runs a named test file as <test_command> <file>, and falls back to python -m pytest <file> when it is unset."
+        },
         "naming_pattern": {
           "type": "string",
           "description": "Glob pattern that test files must match.",

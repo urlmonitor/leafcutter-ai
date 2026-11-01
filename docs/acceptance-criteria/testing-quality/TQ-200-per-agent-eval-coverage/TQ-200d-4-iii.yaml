@@ -43,7 +43,7 @@ doc_links:
       Output (action: all)' (Status column vocabulary PASS / FAIL / NO TEST RAN); '## Machine-Parsed Dispatch
       Output Contract' ('passed' is false when no test ran, with the reason in 'anomalies'); '## Completion
       Manifest' (test_suite_executed is false, with reason and remediation, when no test ran).
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     relationship: describes
     status: exists
     relevance: >-

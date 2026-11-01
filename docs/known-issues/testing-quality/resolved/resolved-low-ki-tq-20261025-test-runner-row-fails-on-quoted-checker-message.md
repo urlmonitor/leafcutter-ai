@@ -23,7 +23,7 @@ related_docs:
 - **Severity:** low. One row, one assertion, one wording, and the failure is falsely red, never
   falsely green. Recorded gold scoring is unaffected. It does hold the test-runner live score
   below its 1.0 threshold whenever the agent quotes the checker.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-01 by TQ-200d-4-i. Proved by unit_tests/evals/tq200d4/test_tq200d4_scheme_host.py.
 - **Occurrences:** 2, both in the live before-score on 2026-10-25 (Windows 11,
   `run_agent_eval.py --agent test-runner` without `--score-gold`): the one-row smoke run
   (results timestamp `2026-10-25T20:57:07Z`) and the full run (`2026-10-25T20:58:19Z`). In both,

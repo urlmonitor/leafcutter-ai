@@ -185,7 +185,7 @@
         "scripts/evals/produced_tests_commands.py",
         "scripts/evals/produced_tests_reports.py"
       ],
-      "notes": "TQ-200d-4. LOCAL ONLY like test-writer. The test runner writes no files, so its rows are scored on its report and on the Bash commands of a stream-json transcript (capture_transcript true): the checker was run against the project, and no command carries a postgresql:// literal or a host, port or database flag. --score-gold replays scripts/evals/sets/test-runner/recorded/ with no model call."
+      "notes": "TQ-200d-4. LOCAL ONLY like test-writer. The test runner writes no files, so its rows are scored on its report and on the Bash commands of a stream-json transcript (capture_transcript true): the checker was run against the project, and no command carries a postgresql:// literal or a host, port or database flag. The trap row no-test-collected (TQ-200d-4-iv) fails a report of PASS for a run that executed no test. --score-gold replays scripts/evals/sets/test-runner/recorded/ with no model call."
     },
     "sql-test-writer": {
       "template": "templates/agents/sql-test-writer.md",
