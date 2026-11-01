@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test-runner "configured database" row, whose setting is the
@@ -34,18 +34,34 @@ doc_links:
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
     relationship: describes
     status: exists
-    relevance: "The defect: ADDRESS_RE in scripts/evals/produced_tests_reports.py (~:37-38) matches the bare scheme; the placeholder exemption (~:31-33, ~:68-71) does not cover 'postgres:// or'. Checker message: scripts/db_check/_address.py ~:54-58. Moved to resolved by this AC."
+    relevance: >-
+      The defect: ADDRESS_RE in scripts/evals/produced_tests_reports.py matches the bare scheme; the placeholder
+      exemption does not cover 'postgres:// or'. Checker message: scripts/db_check/_address.py. Moved
+      to resolved by this AC.
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md
     relationship: modifies
     status: exists
-    relevance: "Lists other misreads of the same address checks ('README.rst:10', '3.11.2.5', 'does not use localhost'). Any item this change also fixes is struck with a note naming TQ-200d-4-i; the rest stay."
-  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relevance: >-
+      Other misreads of the same address checks ('README.rst:10', '3.11.2.5', 'does not use localhost').
+      Any item this change also fixes is struck with a note naming TQ-200d-4-i; the rest stay.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
     relationship: modifies
     status: planned
-    relevance: "Created by TQ-200d-1-ii. The report_names_no_address entry states what counts as an address (a scheme followed by a host) and quotes the checker's invalid message as a passing example."
+    relevance: >-
+      Created by TQ-200d-1-ii. The report_names_no_address entry states what counts as an address and
+      quotes the checker's invalid message as a passing example.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The produced-tests section gains one line stating this rule, linking the entry.
   - path: docs/known-issues/testing-quality.md
     relationship: modifies
     status: exists
+    relevance: The row moves from Open to Resolved; counts recounted.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: Resolution convention.
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -54,37 +70,139 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: TQ-200d-1-ii
-  contract: "The reference page entry for report_names_no_address."
+  contract: >-
+    docs/reference/produced-tests-eval-assertion-kinds-database-setting.md with a '### `report_names_no_address`'
+    entry in the seven-part format, held by the TQ-200d-1-ii drift tests.
 test_required: true
 package_surface: false
+declared_files:
+  - path: scripts/evals/produced_tests_reports.py
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+    state: to_be_created
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md
+    state: existing
 it_requirements:
   - >-
-    The KI offers two fixes: exempt the checker's message text, or require a
-    host after the scheme. The criteria need the second (the paraphrase
-    "expected a postgresql:// URL" must pass); the IT PO may add the first as
-    well. The change applies wherever report_names_no_address is used (the
-    test-writer and test-runner sets).
+    Decision (IT PO, 2026-10-30): an address is a postgres:// or postgresql:// scheme followed by a host
+    (optionally user:password@ before it); a bare scheme followed by a space, 'or', ')' or the end of
+    the text is not an address. The checker-message exemption is not added: the host rule covers the relayed
+    message and the paraphrase, and keeps a real address after the message detectable. The placeholder
+    exemption stays.
   - >-
-    Probes: the five reports in the criteria as recorded report fixtures;
-    unit tests never call a live model.
+    The change applies wherever report_names_no_address runs (the test-writer and test-runner sets); ADDRESS_RE
+    users in the same module are checked for the same misread.
   - >-
-    DOCUMENTATION (part of done): the reference page entry for
-    report_names_no_address states the rule and examples.
+    Unit tests never call a live model; recorded outputs and probe fixtures only. The five reports in
+    the criteria are recorded report fixtures.
   - >-
-    DOC-DRIFT TEST: the checker's invalid message quoted on the reference page
-    equals the message the checker returns today, so a change to the checker's
-    wording fails the test instead of silently reopening this defect.
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched; no new
+    module is added at the top of scripts/evals/ (15-file density cap). Tests go in unit_tests/evals/tq200d4/
+    (12 files; this AC adds one).
   - >-
-    KNOWN ISSUE: git mv
-    docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
-    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md,
-    Status "RESOLVED <date> by TQ-200d-4-i" with the proving tests; move its
-    row in docs/known-issues/testing-quality.md to Resolved and recount.
+    DOCUMENTATION (part of done) - the report_names_no_address entry on docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    must state that an address is a scheme followed by a host, give the relayed checker message as a passing
+    example and 'postgresql://dev:secret@localhost:5432/app' after the message as the failing example,
+    and quote the checker's invalid message with its source scripts/db_check/_address.py. The entry names
+    its passing and failing examples by the recorded probe files that the unit tests score, so a doc-drift
+    test can score the named files and check each gives the result the page states.
   - >-
-    CHANGELOG: one entry for TQ-200d-4-i through scripts/changelog/emit_entry.py.
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains (or updates) one
+    line for report_names_no_address: a report names an address only when a scheme is followed by a host,
+    so relaying the checker's own message passes, with a link to the kind's entry on the reference page.
+    It states the rule in one sentence and does not restate the entry.
+  - >-
+    DOC-DRIFT TEST: the checker's invalid message quoted on the entry equals the message the checker returns
+    today for an invalid address, so a change to the checker's wording fails the test instead of silently
+    reopening this defect.
+  - >-
+    KNOWN ISSUES: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md;
+    Status 'RESOLVED <date> by TQ-200d-4-i' with the proving test files; move its row in docs/known-issues/testing-quality.md
+    to Resolved and recount the Open/Resolved line from the directory. Strike any item of docs/known-issues/testing-quality/open-low-ki-tq-20261024-produced-tests-db-scoring-residual-misreads.md
+    this change fixes, with a note.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-i written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the address rule, its reference entry and the resolved
+    KI.
+test_spec:
+  - name: test_relayed_checker_message_and_paraphrase_pass
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The report relaying the checker's invalid message word for word passes, and a report saying 'expected
+      a postgresql:// URL' passes.
+    must_catch:
+      - revert the fix
+      - bare scheme read as an address
+      - only the exact checker message exempted, so the paraphrase still fails
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_real_addresses_still_fail_with_the_address_as_detail
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A report relaying the message and also naming 'postgresql://dev:secret@localhost:5432/app' fails
+      with that address as detail; a report naming 'postgres://db.internal/app' fails; a report naming
+      only the placeholder passes.
+    must_catch:
+      - any report that quotes the checker skipped entirely
+      - host-only postgres:// address missed
+      - detail no longer names the found address
+      - placeholder exemption dropped
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_test_runner_and_test_writer_gold_still_pass
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-runner --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the test-runner gold outputs (and the test-writer gold in a second call); the
+      configured-database rows pass.
+  - name: test_quoted_checker_message_matches_the_checker
+    target_dir: unit_tests/evals/tq200d4/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The invalid message quoted on the report_names_no_address entry equals the message the db_check
+      checker returns for an invalid address today.
+    must_catch:
+      - checker wording changed without updating the reference entry
+    in_scope_files:
+      - scripts/db_check/_address.py
+      - docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+test_rationale: >-
+  The defect reads the checker's own guidance as a leak, so the positive tests use the exact relayed text
+  and a paraphrase, while the negative tests keep a real address after that text detectable. The checker
+  quote test ties the scorer's example to the checker, which is where this defect would quietly return.
 origin_agent: business-analyst
 created: 2026-10-29
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -92,3 +210,13 @@ change_target:
   - code
   - docs
 risk_surface: internal
+notes: |
+  IT-PO (2026-10-30). Decided: require a host after the scheme; no message
+  exemption (the host rule covers both the relayed message and the paraphrase).
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.

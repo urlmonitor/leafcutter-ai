@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a project whose testing_context.test_command is "pytest",
@@ -34,23 +34,34 @@ doc_links:
   - path: templates/agents/test-runner.md
     relationship: modifies
     status: exists
-    relevance: "The single-file action (~:104-105) offers 'python unit_tests/live_trader/<file>.py' first; config_keys (~:27-33) declares only test_command_live_trader and test_output_dir; testing_context.test_command is never named. Both change here."
+    relevance: >-
+      Sections changed: frontmatter config_keys (adds testing_context.test_command); '## Routing Table',
+      the 'For the **single-file** action' sentence under the table (now: the configured test command
+      with the file as its argument, else 'python -m pytest <file>'; the plain 'python unit_tests/live_trader/<file>.py'
+      form removed); '## Actions', the 'single <path>' bullet (names the same command).
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     relationship: describes
     status: exists
-    relevance: "The live W2-row run: 'python tests/check_window_total.py', then with PYTHONPATH=., then 'Status: PASS'. Fixed by this AC with TQ-200d-4-iii; moved to resolved by TQ-200d-4-iv."
+    relevance: >-
+      The live W2-row run: 'python tests/check_window_total.py', then with PYTHONPATH=., then 'Status:
+      PASS'. Fixed by this AC with TQ-200d-4-iii; moved to resolved by TQ-200d-4-iv.
   - path: docs/reference/skills-config-fields.md
     relationship: modifies
     status: exists
-    relevance: "If it documents testing_context keys and their readers, it names the test runner as a reader of testing_context.test_command."
+    relevance: >-
+      Its 'Testing Context (testing_context object)' table lists every testing_context key with its readers
+      but has no testing_context.test_command row, although adopters and the eval fixtures set it. Gains
+      that row, naming the test runner as a reader.
   - path: docs/reference/agent-template-frontmatter.md
-    relationship: relates-to
+    relationship: describes
     status: exists
-    relevance: "How config_keys are declared in a template's frontmatter."
-  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relevance: How config_keys are declared in a template's frontmatter.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
     relationship: relates-to
     status: planned
-    relevance: "Created by TQ-200d-1-ii. Its commands_ran_pytest entry quotes the template sentence this AC writes; update the quote if the entry already exists."
+    relevance: >-
+      Created by TQ-200d-1-ii. If it exists when this AC lands, the commands_ran_pytest entry's quote
+      is updated to the sentence this AC writes.
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -58,41 +69,118 @@ assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to:
   agent: python-coder
-  contract: "The rewritten single-file instruction and the testing_context.test_command config key, which TQ-200d-4-iv's eval row and drift test hold in place."
+  contract: >-
+    templates/agents/test-runner.md whose frontmatter config_keys holds 'testing_context.test_command'
+    (required: false) and whose single-file sentence under '## Routing Table' and 'single <path>' bullet
+    under '## Actions' name '<testing_context.test_command> <file>' with 'python -m pytest <file>' as
+    the fallback and no plain-script form; TQ-200d-4-iv's eval row and the reference entry quote that
+    sentence.
 expects_from: null
 test_required: true
 package_surface: false
+declared_files:
+  - path: templates/agents/test-runner.md
+    state: existing
+  - path: docs/reference/skills-config-fields.md
+    state: existing
 it_requirements:
   - >-
-    templates/agents/test-runner.md is a shipped agent template: the change is
-    to the template source, the build regenerates any deployed copy, and no
-    deployed copy is edited by hand.
+    templates/agents/test-runner.md is a shipped agent template: only the template source changes; the
+    build regenerates the deployed .claude/agents/test-runner.md, which is never edited by hand.
   - >-
-    The live-trader routing table (~:96-102) is a separate baked-in-command
-    problem the KI mentions; it is out of scope here unless the IT PO finds it
-    must change for the single-file rule to read consistently.
+    Sections in scope: frontmatter config_keys; the single-file sentence under '## Routing Table'; the
+    'single <path>' bullet under '## Actions'. The live-trader routing table rows (the baked-in poetry
+    commands) and the '## Output: Failure' rerun commands are out of scope unless they offer a plain-script
+    run of a test file, which they do not today.
   - >-
-    DOCUMENTATION (part of done): the template itself is the primary document.
-    docs/reference/skills-config-fields.md names the test runner as a reader of
-    testing_context.test_command if that page lists readers per key.
+    The instruction reads the setting at run time from the project's skills_config and gives the fallback
+    'python -m pytest <file>' only when the setting is absent or empty.
   - >-
-    DOC-DRIFT TESTS (the template makes checkable claims): a unit test asserts
-    the template's frontmatter config_keys includes testing_context.test_command,
-    and that the template body contains no plain-script run of a test file
-    (no "python <path>.py" form in the run instructions).
+    DOCUMENTATION (part of done) - the template is the primary document. docs/reference/skills-config-fields.md
+    gains a 'testing_context.test_command' row in the Testing Context table: type string, optional, no
+    shipped default, 'The command that runs the project's tests; the test runner runs a named file as
+    <test_command> <file>, and falls back to python -m pytest <file> when it is unset.'
   - >-
-    KNOWN ISSUE: add to the Status line of
-    docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
-    "configured-command part fixed by TQ-200d-4-ii"; the file moves when
-    TQ-200d-4-iv lands.
+    DOC-DRIFT TESTS (part of done), in unit_tests/agents/test_runner_prompt/ (new folder): the template's
+    frontmatter config_keys includes testing_context.test_command; the template body contains no plain-script
+    run of a test file ('python <path>.py' or 'PYTHONPATH=. python <path>.py' in a run instruction); the
+    single-file sentence names testing_context.test_command and the python -m pytest fallback; skills-config-fields.md
+    has the testing_context.test_command row naming the test runner.
   - >-
-    CHANGELOG: one entry for TQ-200d-4-ii through scripts/changelog/emit_entry.py.
+    If docs/reference/produced-tests-eval-assertion-kinds-database-setting.md exists when this lands,
+    the commands_ran_pytest entry's quoted template sentence is updated in the same change so the TQ-200d-1-ii
+    quote test stays green.
   - >-
-    Behavioural proof is the test-runner eval: the W2 row's commands_ran_pytest
-    on a live run (user-triggered, local result) and TQ-200d-4-iv's trap row.
+    KNOWN ISSUE: add to the Status line of docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    'configured-command part fixed by TQ-200d-4-ii'; the file moves when TQ-200d-4-iv lands.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-ii written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the test runner's single-file command rule and the skills-config
+    reference row.
+  - >-
+    Behavioural proof is the test-runner eval: the W2 row's commands_ran_pytest on a live run (user-triggered,
+    local result) and TQ-200d-4-iv's trap row with recorded outputs.
+test_spec:
+  - name: test_template_declares_testing_context_test_command
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The frontmatter config_keys of templates/agents/test-runner.md includes testing_context.test_command.
+    must_catch:
+      - config key left out of the frontmatter
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_template_offers_no_plain_script_run_of_a_test_file
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      No run instruction in the template body runs a test file as 'python <path>.py' or 'PYTHONPATH=.
+      python <path>.py'.
+    must_catch:
+      - revert the fix
+      - plain 'python <file>.py' single-file form offered as an alternative
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_single_file_instruction_names_configured_command_and_fallback
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The single-file sentence under '## Routing Table' and the 'single <path>' action name testing_context.test_command
+      with the file as its argument and 'python -m pytest <file>' as the fallback.
+    must_catch:
+      - fallback named as plain python instead of python -m pytest
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_skills_config_reference_lists_test_command
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      docs/reference/skills-config-fields.md has a testing_context.test_command row naming the test runner
+      as a reader.
+test_rationale: >-
+  A prompt change cannot be unit-tested for behaviour; these tests hold the template's checkable claims
+  (the declared key, the absent plain-script form, the named fallback) and the reference row. The behaviour
+  is proved by the test-runner eval: the W2 row live and TQ-200d-4-iv's recorded trap row.
 origin_agent: business-analyst
 created: 2026-10-29
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -100,3 +188,21 @@ change_target:
   - prompt
   - docs
 risk_surface: contract_boundary
+notes: |
+  IT-PO (2026-10-30). testing_context.test_command is set by the eval fixtures and
+  adopters but is absent from config/skills_config.schema.json (testing_context allows
+  extra keys) and from skills-config-fields.md. The doc row is added here; adding the
+  schema property is an OQ. The shipped key test_command_single_file_pattern still
+  defaults to the plain-script form 'python unit_tests/live_trader/<file>.py'; no
+  template reads it today; raised as an OQ, not changed here.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.
+    - OQ-2 accepted: the schema property for testing_context.test_command is added
+      by TQ-200d-4-iv; this AC still adds the skills-config-fields.md row.
+    - OQ-3 accepted: test_command_single_file_pattern is out of scope; filed as
+      KI-TQ-20261030-test-command-single-file-pattern-defaults-to-plain-script.

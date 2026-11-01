@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the sql-test-writer "empty window, database shape" row, whose fixture
@@ -42,22 +42,39 @@ doc_links:
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
     relationship: describes
     status: exists
-    relevance: "Part (b): counts_rows_and_non_null (scripts/evals/sql_test_writer_eval/evidence_kinds.py ~:74-89) accepts only count(*)/count(col)/filter/case-when inside executed SQL; template remedy at templates/agents/sql-test-writer.md ~:219-224. Contains the live test used as the passing example. Moved to resolved by this AC."
+    relevance: >-
+      Part (b): sql_counts_rows_and_non_null accepts only aggregates in executed SQL; the template remedy
+      names no SQL form. Holds the live test used as the passing example. Moved to resolved by this AC.
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md
     relationship: modifies
     status: exists
-    relevance: "Lists fetchall / read_sql not treated as executing calls. If this AC's change fixes any listed misread, that item is struck from the entry with a note naming TQ-200d-2-ii."
-  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relevance: >-
+      Lists fetchall / read_sql not treated as executing calls. Any listed misread this change fixes is
+      struck with a note naming TQ-200d-2-ii; the rest stay.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
     relationship: modifies
     status: planned
-    relevance: "Created by TQ-200d-1-ii. The sql_counts_rows_and_non_null entry states both accepted forms (SQL aggregates, or counts asserted on fetched rows) and the failing forms above."
+    relevance: >-
+      Created by TQ-200d-1-ii. The sql_counts_rows_and_non_null entry states both accepted forms and the
+      failing forms.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The produced-tests section gains one line stating this rule, linking the entry.
   - path: templates/agents/sql-test-writer.md
     relationship: relates-to
     status: exists
-    relevance: "Not changed. Its empty-window remedy sentence is quoted on the reference page and held there by the drift test."
+    relevance: >-
+      Not changed. Its remedy 'assert an exact count of processed rows plus a non-NULL count' (line ~224)
+      is quoted on the entry.
   - path: docs/known-issues/testing-quality.md
     relationship: modifies
     status: exists
+    relevance: The row moves from Open to Resolved; counts recounted.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: Resolution convention.
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -66,37 +83,147 @@ estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: TQ-200d-1-ii
-  contract: "The reference page entry for sql_counts_rows_and_non_null and its template-quote drift test."
+  contract: >-
+    docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md with a '### `sql_counts_rows_and_non_null`'
+    entry in the seven-part format, held by the TQ-200d-1-ii drift tests.
 test_required: true
 package_surface: false
+declared_files:
+  - path: scripts/evals/sql_test_writer_eval/evidence_kinds.py
+    state: existing
+  - path: scripts/evals/sql_test_writer_eval/sql_resolve.py
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
+    state: to_be_created
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md
+    state: existing
 it_requirements:
   - >-
-    The check stays structural on the produced test (no database is available
-    to the eval; OQ-9). The IT PO decides how the Python-side form is
-    recognised (rows fetched from the view, an equality assertion on their
-    number against a fixed or seeded number, and an equality assertion on the
-    number of non-None values).
+    The check stays structural on the produced test; no database is available to the eval. Two forms pass:
+    (a) the SQL form already accepted (count(*) and count(<column>) or equivalents in executed SQL), and
+    (b) the Python form: rows fetched from the row's view, an equality assertion on their number against
+    a fixed or seeded number, and an equality assertion on the number of non-None values of the row's
+    column. Both assertions must be equalities; '>= 0' over values, 'at least one row', or only one of
+    the two counts fails.
   - >-
-    The live test from the KI symptom is added as a recorded positive probe,
-    with a recorded negative probe for each failing case in the criteria.
-    Unit tests never call a live model.
+    Unit tests never call a live model; recorded outputs and probe fixtures only. The live test from the
+    KI symptom is a recorded positive probe; each failing case in the criteria has a recorded negative
+    probe.
   - >-
-    DOCUMENTATION (part of done): the reference page entry states both
-    accepted forms with one example each and the failing forms, and quotes the
-    template's remedy sentence; scripts/evals/README.md is changed only if it
-    still states this rule; the TQ-200d-1-ii drift tests stay green.
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched; no new
+    module is added at the top of scripts/evals/ (15-file density cap). Tests go in unit_tests/evals/tq200d2/.
   - >-
-    KNOWN ISSUE: git mv
-    docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
-    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md,
-    Status "RESOLVED <date> by TQ-200d-2-i (part a) and TQ-200d-2-ii (part b)"
-    with the proving tests; move its row in docs/known-issues/testing-quality.md
-    to Resolved and recount from the directory.
+    DOCUMENTATION (part of done) - the sql_counts_rows_and_non_null entry on docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    must state both accepted forms with one example each, the four failing forms from the criteria, and
+    the quoted template remedy. The entry names its passing and failing examples by the recorded probe
+    files that the unit tests score, so a doc-drift test can score the named files and check each gives
+    the result the page states.
   - >-
-    CHANGELOG: one entry for TQ-200d-2-ii through scripts/changelog/emit_entry.py.
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains (or updates) one
+    line for sql_counts_rows_and_non_null: the exact processed-row count and the non-NULL count may be
+    computed in SQL or asserted on the fetched rows; a '>= 0' or 'at least one row' assertion is not a
+    count, with a link to the kind's entry on the reference page. It states the rule in one sentence and
+    does not restate the entry.
+  - >-
+    DOC-DRIFT TEST: the example files named on the entry score as the entry says; the TQ-200d-1-ii drift
+    tests stay green.
+  - >-
+    KNOWN ISSUES: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md;
+    Status 'RESOLVED <date> by TQ-200d-2-i (part a) and TQ-200d-2-ii (part b)' with the proving test files;
+    move its row in docs/known-issues/testing-quality.md to Resolved and recount the Open/Resolved line
+    from the directory. In docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md
+    strike any misread this change fixes (for example fetchall now read as an executing call) with a note
+    naming TQ-200d-2-ii.
+  - >-
+    CHANGELOG: one entry for TQ-200d-2-ii written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the Python-side count form, its reference entry and the
+    resolved KI.
+test_spec:
+  - name: test_python_side_counts_on_fetched_rows_pass
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The recorded live test (fetches buy_volume rows, asserts len(rows) == seeded and the non-None count
+      == seeded) passes sql_counts_rows_and_non_null.
+    must_catch:
+      - revert the fix
+      - only SQL aggregates accepted as counts
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_sql_aggregate_counts_still_pass
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      A test that runs 'select count(*), count(buy_volume) from buy_volume_window' and asserts both still
+      passes.
+    must_catch:
+      - SQL aggregate form dropped when the Python form was added
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_weak_python_side_checks_fail
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each fails: only '>= 0' over fetched values; only 'at least one row'; an exact row count with no
+      non-None count; a non-None count with no exact row count.
+    must_catch:
+      - '''>= 0'' over fetched values accepted as a count'
+      - '''at least one row'' accepted as an exact count'
+      - row count accepted without a non-None count
+      - non-None count accepted without an exact row count
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_sql_test_writer_gold_still_passes_after_count_change
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent sql-test-writer --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the recorded gold outputs and the empty-window-database-shape row passes.
+  - name: test_count_entry_examples_score_as_stated_and_remedy_unchanged
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The example files named on the sql_counts_rows_and_non_null entry score as the entry says, and the
+      template still holds 'assert an exact count of processed rows plus a non-NULL count'.
+test_rationale: >-
+  The fix widens a check, so most of the weight is on the negative probes: each names one weak test that
+  the widened check could let through, which is the incident-2 failure the row exists to catch. The SQL
+  form keeps its own boundary test so the widening cannot replace it.
 origin_agent: business-analyst
 created: 2026-10-29
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -107,3 +234,13 @@ risk_surface: internal
 notes: |
   depends_on TQ-200d-2-i is an ordering edge only: both fix the same known
   issue, and this AC moves it to resolved once both parts are fixed.
+
+  IT-PO (2026-10-30). Both forms require equality assertions on both counts. The KI
+  moves to resolved here, naming TQ-200d-2-i and TQ-200d-2-ii.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.

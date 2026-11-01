@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the sql-test-writer "stored-procedure regression" row for TQ-9501 and
@@ -38,22 +38,31 @@ doc_links:
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
     relationship: describes
     status: exists
-    relevance: "Part (a): _real_wrong_version (scripts/evals/sql_test_writer_eval/evidence_kinds.py ~:42-46) looks for wrong_version_contains (row 1 of scripts/evals/sets/sql-test-writer.jsonl: fn_refresh_due) inside the prose; the template (templates/agents/sql-test-writer.md ~:330) asks for 'the wrong version in your own words'. Contains the live output used as the passing example."
-  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relevance: >-
+      Part (a): _real_wrong_version in scripts/evals/sql_test_writer_eval/evidence_kinds.py looks for
+      wrong_version_contains (row 1 of sets/sql-test-writer.jsonl: fn_refresh_due) inside the prose; the
+      template asks for the wrong version 'in your own words'. Holds the live output used as the passing
+      example.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
     relationship: modifies
     status: planned
-    relevance: "Created by TQ-200d-1-ii. The sql_to_run_later_names_wrong_version entry is rewritten: the function is checked in the test id, the wrong version only for being non-empty; the live output is the passing example."
+    relevance: >-
+      Created by TQ-200d-1-ii. The sql_to_run_later_names_wrong_version entry is rewritten: the function
+      is checked in the test id, the wrong version only for being non-empty.
   - path: scripts/evals/README.md
     relationship: modifies
     status: exists
-    relevance: "Only if its produced-tests section still states this rule after TQ-200d-1-ii; otherwise no change."
+    relevance: The produced-tests section gains one line stating this rule, linking the entry.
   - path: templates/agents/sql-test-writer.md
     relationship: relates-to
     status: exists
-    relevance: "Not changed. Its to-run-later format sentence is quoted on the reference page and held there by the drift test."
+    relevance: >-
+      Not changed. Its to-run-later format line ('the wrong version in your own words, non-empty', line
+      ~330) is quoted on the reference entry.
   - path: docs/known-issues/testing-quality.md
-    relationship: modifies
+    relationship: relates-to
     status: exists
+    relevance: Not changed here; TQ-200d-2-ii moves the row when both parts are fixed.
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -62,33 +71,130 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: TQ-200d-1-ii
-  contract: "The reference page entry for sql_to_run_later_names_wrong_version and its template-quote drift test."
+  contract: >-
+    docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md with a '### `sql_to_run_later_names_wrong_version`'
+    entry in the seven-part format, and the two drift tests in unit_tests/evals/tq200d1ii/ that hold it
+    to the registry and to templates/agents/sql-test-writer.md.
 test_required: true
 package_surface: false
+declared_files:
+  - path: scripts/evals/sql_test_writer_eval/evidence_kinds.py
+    state: existing
+  - path: scripts/evals/sets/sql-test-writer.jsonl
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    state: to_be_created
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
+    state: existing
 it_requirements:
   - >-
-    The row spec in scripts/evals/sets/sql-test-writer.jsonl drops
-    wrong_version_contains (or the kind stops reading it); the IT PO decides
-    which, and whether any other row uses the key.
+    Decision (IT PO, 2026-10-30): the kind stops reading wrong_version_contains, and the key is removed
+    from row 1 of scripts/evals/sets/sql-test-writer.jsonl, its only user. An entry counts when its ac_id
+    matches, its test has a '::' test id whose path or name names the row's function (the row's 'contains'
+    value), and its wrong version has at least one non-whitespace character.
   - >-
-    The live output from the KI symptom (all four entries) is added as a
-    recorded positive probe, alongside negative probes for each failing case in
-    the criteria. Unit tests never call a live model.
+    The failing detail for a file whose entries cover a different function names the uncovered function
+    (fn_refresh_due).
   - >-
-    DOCUMENTATION (part of done): the reference page entry for
-    sql_to_run_later_names_wrong_version states the new rule, the live output
-    as its passing example and the wrong-function file as its failing example,
-    and quotes the template's to-run-later format sentence; the drift tests of
-    TQ-200d-1-ii stay green.
+    Unit tests never call a live model; recorded outputs and probe fixtures only. The live to-run-later
+    file from the KI symptom (all four entries) is added as a recorded positive probe; each failing case
+    in the criteria gets a negative probe. The existing review test that pins wrong_version_contains (unit_tests/evals/tq200d2/test_tq200d2_review.py)
+    is updated in the same change and listed in the consumer-test sweep, the reason being that the rule
+    it pinned is this defect.
   - >-
-    KNOWN ISSUE: the entry covers parts (a) and (b). This AC adds to its Status
-    line "part (a) fixed by TQ-200d-2-i" and leaves the file open;
-    TQ-200d-2-ii moves it to resolved.
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched; no new
+    module is added at the top of scripts/evals/ (15-file density cap). Tests go in unit_tests/evals/tq200d2/.
   - >-
-    CHANGELOG: one entry for TQ-200d-2-i through scripts/changelog/emit_entry.py.
+    DOCUMENTATION (part of done) - the sql_to_run_later_names_wrong_version entry on docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    must state: the function is checked in the test id, the wrong version only for being non-empty, ac_id
+    must match; the live entry 'select refresh_due (retry_due parameter ignored entirely)' as the passing
+    example; the wrong-function file as the failing example; and the quoted template line. The entry names
+    its passing and failing examples by the recorded probe files that the unit tests score, so a doc-drift
+    test can score the named files and check each gives the result the page states.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains (or updates) one
+    line for sql_to_run_later_names_wrong_version: a to-run-later entry counts when its test id names
+    the function and its wrong version is non-empty; the wrong-version text is free prose, with a link
+    to the kind's entry on the reference page. It states the rule in one sentence and does not restate
+    the entry.
+  - >-
+    DOC-DRIFT TEST: the passing and failing example files the entry names score as the entry says; the
+    TQ-200d-1-ii drift tests stay green.
+  - >-
+    KNOWN ISSUE: add to the Status line of docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md
+    'part (a) fixed by TQ-200d-2-i'; the file stays open until TQ-200d-2-ii moves it.
+  - >-
+    CHANGELOG: one entry for TQ-200d-2-i written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the to-run-later rule change and its reference entry.
+test_spec:
+  - name: test_live_to_run_later_entry_in_own_words_passes
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The recorded live to-run-later file (ac_id TQ-9501, test id naming test_fn_refresh_due, wrong version
+      'select refresh_due (retry_due parameter ignored entirely)') passes sql_to_run_later_names_wrong_version.
+    must_catch:
+      - revert the fix
+      - function name required inside the wrong-version text
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sets/sql-test-writer.jsonl
+  - name: test_to_run_later_entries_that_must_not_count
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each fails: a file whose only entry tests a different function (detail names fn_refresh_due), an
+      entry with an empty or whitespace wrong version, an entry whose test has no '::' test id, a file
+      whose ac_id is not TQ-9501.
+    must_catch:
+      - test-id function check dropped with the prose check
+      - blank wrong version counted
+      - entry without a '::' test id counted
+      - ac_id not checked
+      - failing detail omits the uncovered function
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+  - name: test_sql_test_writer_gold_still_passes
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent sql-test-writer --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the recorded gold outputs; the stored-procedure-regression row and every other
+      row pass.
+  - name: test_reference_entry_examples_score_as_stated_and_template_line_unchanged
+    target_dir: unit_tests/evals/tq200d2/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The passing and failing example files named on the entry score pass and fail as the entry says,
+      and templates/agents/sql-test-writer.md still holds 'the wrong version in your own words'.
+test_rationale: >-
+  The defect is a check stricter than the template, so the first test is the real live output that was
+  wrongly failed, carrying 'revert the fix'. The negative probes keep the loosened check from becoming
+  no check: each names one way the remaining rules could be dropped with the prose rule. Gold replay through
+  the real CLI proves the row spec change is wired.
 origin_agent: business-analyst
 created: 2026-10-29
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -104,3 +210,13 @@ notes: |
   own framing). The other option, an any-of keyword list, would leave the check
   stricter than the template again (the "select true (hardcoded true ...)"
   entry names neither the function nor retry_due).
+
+  IT-PO (2026-10-30). Decided: drop wrong_version_contains from the kind and from the
+  row (its only user). The KI index row is not touched here (TQ-200d-2-ii moves it).
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.

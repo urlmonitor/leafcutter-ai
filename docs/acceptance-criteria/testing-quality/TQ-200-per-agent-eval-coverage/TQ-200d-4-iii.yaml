@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given three finished runs of a named test file:
@@ -30,49 +30,142 @@ doc_links:
   - path: templates/agents/test-runner.md
     relationship: modifies
     status: exists
-    relevance: "Gains the rule: PASS rests on the runner's own summary with at least one passed test; zero collected or no summary is reported as no test ran. Names how the report states it."
+    relevance: >-
+      Sections changed: '## Output: Success' (PASS only with a passed-test count above zero quoted from
+      the runner's own summary); a new '## Output: No Test Ran' section placed after it (says no test
+      ran, quotes the command, gives the reason: nothing collected, or no runner summary); '## Combined
+      Output (action: all)' (Status column vocabulary PASS / FAIL / NO TEST RAN); '## Machine-Parsed Dispatch
+      Output Contract' ('passed' is false when no test ran, with the reason in 'anomalies'); '## Completion
+      Manifest' (test_suite_executed is false, with reason and remediation, when no test ran).
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     relationship: describes
     status: exists
-    relevance: "Mechanism step 3 ('exit 0 is read as a pass') and the suggested fix 'Never report PASS without a test count'."
-  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relevance: >-
+      Mechanism step 3 ('exit 0 is read as a pass') and the suggested fix 'Never report PASS without a
+      test count'.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
     relationship: relates-to
     status: planned
-    relevance: "Created by TQ-200d-1-ii. TQ-200d-4-iv's new kind quotes the sentence this AC writes."
+    relevance: >-
+      Created by TQ-200d-1-ii. TQ-200d-4-iv's new kind entry quotes the PASS-rule sentence this AC writes.
+  - path: templates/agents/ticket-supervisor.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Reads the test-runner's sign-off; checked to accept a run that executed no test as not passed.
+  - path: templates/skills/signoff/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: Completion-manifest rules for a false item (result, reason, remediation).
   - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+  - path: docs/glossary.md
     relationship: relates-to
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to:
   agent: python-coder
-  contract: "The template sentence stating when PASS may be reported, which TQ-200d-4-iv's eval row scores and its reference-page entry quotes."
+  contract: >-
+    One sentence in templates/agents/test-runner.md '## Output: Success' stating that PASS is reported
+    only when the report quotes a passed-test count greater than zero from the runner's own summary, and
+    the '## Output: No Test Ran' block; TQ-200d-4-iv's new kind checks reports against that rule and its
+    reference entry quotes the sentence verbatim.
 expects_from: null
 test_required: true
 package_surface: false
+declared_files:
+  - path: templates/agents/test-runner.md
+    state: existing
 it_requirements:
   - >-
-    The status vocabulary the test runner reports is the template's own; the
-    IT PO checks that callers that parse the status (ticket-supervisor, the
-    coder inner loop, any build gate reading the report) accept the
-    'no test ran' outcome and do not read it as PASS. If a caller would break,
-    that is flagged before this AC is built.
+    Caller-contract decision (IT PO, 2026-10-30): the machine-parsed reply keeps its keys (passed, output,
+    failing_tests, anomalies); a run that executed no test sets passed false and names the reason in anomalies.
+    No new required key is added, so the callers that parse the reply (build-feature.js, build-ticket.js,
+    quick-fix.js, finalize-feature.js, ticket-supervisor, the python-coder inner loop) keep parsing it
+    and read the outcome as not passed. The llm-expert confirms from those templates and workflow prompts
+    that none treats a non-PASS markdown status other than FAIL as a pass; if one would, that is reported
+    before this AC is built.
   - >-
-    DOCUMENTATION (part of done): the template is the primary document. If any
-    doc lists the test runner's report statuses, it gains the new outcome.
+    The '## No-op Rule' (no test-relevant changes, nothing run) is unchanged and stays distinct from 'no
+    test ran' (a command ran and executed nothing).
   - >-
-    DOC-DRIFT TEST: a unit test asserts the template contains the sentence that
-    PASS requires a quoted passed-test count, and that the sentence matches the
-    quote on the reference page once TQ-200d-4-iv has added it.
+    templates/agents/test-runner.md is a shipped template: only the source changes; the deployed copy
+    is regenerated by the build.
   - >-
-    KNOWN ISSUE: add to the Status line of the test-runner script KI
-    "no-test-is-not-a-pass part fixed by TQ-200d-4-iii"; TQ-200d-4-iv moves the
-    file.
+    DOCUMENTATION (part of done) - the template is the primary document. No doc under docs/ lists the
+    test runner's report statuses today (checked 2026-10-30); if the implementer finds one, it gains 'NO
+    TEST RAN'.
   - >-
-    CHANGELOG: one entry for TQ-200d-4-iii through scripts/changelog/emit_entry.py.
+    DOC-DRIFT TESTS (part of done), in unit_tests/agents/test_runner_prompt/: the template contains the
+    PASS-rule sentence; the No Test Ran block names the command and the two reasons; the machine-parsed
+    section says passed is false when no test ran; and, once TQ-200d-4-iv has added its entry, the sentence
+    equals the entry's quote (held by the TQ-200d-1-ii quote test).
+  - >-
+    KNOWN ISSUE: add to the Status line of docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+    'no-test-is-not-a-pass part fixed by TQ-200d-4-iii'; TQ-200d-4-iv moves the file.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-iii written with scripts/changelog/emit_entry.py (type manual,
+    components [testing_quality]) into changelogs/, naming the PASS-needs-a-count rule and the No Test
+    Ran report.
+  - >-
+    GLOSSARY: new terms in the docs this AC writes ('no test ran') reach docs/glossary.md only through
+    the check-glossary-coverage hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+test_spec:
+  - name: test_template_requires_a_quoted_passed_count_for_pass
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      '## Output: Success' states that PASS needs a passed-test count above zero quoted from the runner's
+      own summary.
+    must_catch:
+      - revert the fix
+      - exit status 0 alone allowed to report PASS
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_template_has_a_no_test_ran_report
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      '## Output: No Test Ran' exists, quotes the command run and names both reasons (nothing collected;
+      no runner summary).
+    must_catch:
+      - no-test-ran report drops the command that was run
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_machine_parsed_reply_is_not_passed_when_no_test_ran
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The machine-parsed section says passed is false when no test ran, with the reason in anomalies,
+      and the combined summary vocabulary includes NO TEST RAN.
+    must_catch:
+      - machine-parsed reply allowed to set passed true when no test ran
+    in_scope_files:
+      - templates/agents/test-runner.md
+test_rationale: >-
+  The behaviour is a model's report, so the unit tests hold the template's rules and TQ-200d-4-iv's trap
+  row proves the behaviour against recorded outputs. The machine-parsed test guards the caller contract,
+  which is where a 'no test ran' run could still be read as a pass.
 origin_agent: business-analyst
 created: 2026-10-29
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -80,3 +173,16 @@ change_target:
   - prompt
   - docs
 risk_surface: contract_boundary
+notes: |
+  IT-PO (2026-10-30). Decided: keep the machine-parsed keys; no test ran => passed
+  false + anomaly. Whether machine callers should see a distinct outcome instead is
+  raised as an OQ.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.
+    - OQ-5 accepted: for a run that executed no test, machine-parsed callers get
+      passed false with the reason in anomalies; no new outcome field.
