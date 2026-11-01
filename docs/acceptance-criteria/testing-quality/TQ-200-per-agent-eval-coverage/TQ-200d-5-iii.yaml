@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -34,11 +34,11 @@ doc_links:
     relevance: >-
       'The CLI could not be launched' reported as a quality score. This AC fixes the launch-failure case;
       the entry's pre-commit-gate half stays open.
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
     relationship: relates-to
     status: exists
     relevance: Suggested fix 'Fail fast'.
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-eval-harness-system-prompt-exceeds-windows-command-line.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-eval-harness-system-prompt-exceeds-windows-command-line.md
     relationship: relates-to
     status: exists
     relevance: Suggested fix 'Fail fast'.

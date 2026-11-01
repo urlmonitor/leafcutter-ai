@@ -20,6 +20,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from agent_launch import command as agent_command
 from cli_envelope import failure_detail
 
 logger = logging.getLogger("run_agent_eval")
@@ -98,20 +99,15 @@ def final_reply(text: str) -> str | None:
 def invoke_with_transcript(system_prompt: str, user_input: str, model: str, timeout: int, sandbox: Path, tools: str,
                            error: type[Exception]) -> tuple[str, str]:
     """Run the agent headlessly in *sandbox* (model call); return ``(reply, stream-json transcript)``."""
-    cmd = ["claude", "-p", user_input, "--model", model, "--append-system-prompt", system_prompt, "--tools", tools,
-           "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose"]
+    flags = ["--model", model, "--tools", tools, "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose"]
     env = dict(os.environ, LEAFCUTTER_REPO_ROOT=str(sandbox))
     try:
-        done = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
-                              cwd=str(sandbox), env=env, check=False)  # noqa: S603
+        done = agent_command.launch(flags, instructions=system_prompt, user_input=user_input, replace=False, timeout=timeout,
+                                    error=error, cwd=str(sandbox), env=env)
     except subprocess.TimeoutExpired as exc:
         partial = exc.output.decode("utf-8", "replace") if isinstance(exc.output, bytes) else (exc.output or "")
         msg = f"agent CLI timed out after {timeout}s; partial stdout: {partial[-300:]}"
         logger.warning(msg)
-        raise error(msg) from exc
-    except OSError as exc:
-        logger.warning("agent CLI could not be launched: %r", exc)
-        msg = f"agent CLI could not be launched: {exc!r}"
         raise error(msg) from exc
     stdout = done.stdout or ""
     event = result_event(stdout)

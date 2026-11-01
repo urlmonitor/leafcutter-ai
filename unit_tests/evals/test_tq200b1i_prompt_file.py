@@ -38,6 +38,8 @@ def _flag_value(cmd: list[str], flag: str) -> str | None:
 def _record_run(monkeypatch: pytest.MonkeyPatch, file_flag: str, *, raises: bool = False) -> dict:
     """Replace subprocess.run; capture argv and the prompt file's content mid-call."""
     seen: dict = {"cmd": None, "path": None, "content": None}
+    monkeypatch.setattr(sys, "platform", "linux")  # TQ-200d-5-ii: the argv is a list, whatever claude this host has on PATH
+    monkeypatch.delenv("LEAFCUTTER_EVAL_CLAUDE_CLI", raising=False)
 
     def fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess:
         seen["cmd"] = list(cmd)
@@ -81,7 +83,7 @@ def test_artifact_mode_passes_the_template_through_an_append_file(
 def test_prompt_file_is_removed_when_the_cli_call_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     # covers: TQ-200b-1-i
     seen = _record_run(monkeypatch, "--system-prompt-file", raises=True)
-    with pytest.raises(ev.ModelInvocationError, match="claude CLI could not be launched"):
+    with pytest.raises(ev.ModelInvocationError, match="agent CLI could not be launched"):
         ev.invoke_via_cli(_PROMPT, "anything", "haiku", 5)
     assert seen["path"] is not None, "argv has no --system-prompt-file"
     assert seen["content"] == _PROMPT

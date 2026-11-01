@@ -32,6 +32,8 @@ from typing import Any
 import produced_tests_runs as runs
 import produced_tests_scoring as scoring
 import produced_tests_transcript as capture
+from agent_launch.command import AgentLaunchError
+from agent_launch.harness_failure import launch_failed, stop_run
 
 logger = logging.getLogger("run_agent_eval")
 OUTPUT_ROOT_PLACEHOLDER = "{{config.output_root}}"
@@ -124,6 +126,7 @@ def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, h
             return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
                                      support=support_for(agent_cfg, repo_root))
         except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:
+            launch_failed(exc, row.get("id", "?"))
             logger.warning("row %s could not be scored: %r", row.get("id"), exc)
             record = {"passed": False, "assertions": [], "judge": None}
             return {"id": row.get("id", "?"), "negative": bool(expected.get("negative")), "score": record, "error": repr(exc)}
@@ -171,7 +174,10 @@ def run_produced_tests_mode(args: argparse.Namespace, agent_cfg: dict, rows: lis
         return 2
     selected = select_rows(rows, args)
     timeout = args.timeout or int(agent_cfg.get("timeout", 900))
-    scored = [score_one(r, agent_cfg, system_prompt, repo_root, harness, score_gold=args.score_gold, timeout=timeout) for r in selected]
+    try:
+        scored = [score_one(r, agent_cfg, system_prompt, repo_root, harness, score_gold=args.score_gold, timeout=timeout) for r in selected]
+    except AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, harness.write_results, run_context="local")
     if not scored:
         logger.error("No produced-tests rows were scored")
         return 2

@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -27,7 +27,7 @@ criteria: |
 depends_on:
   - TQ-200d-5
 doc_links:
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
     relationship: describes
     status: exists
     relevance: >-
@@ -84,7 +84,7 @@ declared_files:
     state: to_be_created
   - path: docs/known-issues/testing-quality.md
     state: existing
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
     state: existing
   - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
     state: to_be_created
@@ -120,7 +120,7 @@ it_requirements:
     DOC-DRIFT TEST: the setting name written in the README and the how-to is the name the harness reads,
     taken from the lookup module, and the how-to holds no 'prefix PATH' workaround.
   - >-
-    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
     to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md;
     Status 'RESOLVED <date> by TQ-200d-5-ii' with the proving test files; move its row in docs/known-issues/testing-quality.md
     from Open to Resolved and recount the Open/Resolved line from the directory.

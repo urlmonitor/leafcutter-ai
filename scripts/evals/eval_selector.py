@@ -54,8 +54,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger("eval_selector")
+from agent_launch.harness_failure import receipt_shas
 
+logger = logging.getLogger("eval_selector")
 
 # ---------------------------------------------------------------------------
 # Typed exceptions (Error Handling Policy: wrap external I/O, log + raise typed)
@@ -302,11 +303,10 @@ def read_recorded_shas(results_dir: Path, agent: str) -> dict[str, str] | None:
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("Cannot read/parse result %s: %s", result_path, exc)
         return None
-    shas = payload.get("trigger_shas") if isinstance(payload, dict) else None
-    if not isinstance(shas, dict):
-        logger.warning("Result %s has no trigger_shas map", result_path)
-        return None
-    return {str(k): str(v) for k, v in shas.items()}
+    shas = receipt_shas(payload)
+    if shas is None:
+        logger.warning("Result %s has no trigger_shas map (or is a harness failure)", result_path)
+    return shas
 
 
 def check_freshness(
