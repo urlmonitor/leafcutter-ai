@@ -6,7 +6,10 @@ TICKET: 12_TICKET-20260928-BO-4300-legacy-cut-over.md
 
 Real git auto-gc is triggered for real: the test's isolated global config lowers `gc.auto` to 5 with
 `gc.autoDetach=false`, and a batch of loose objects that all land in `objects/17` (found by hashing
-in memory) is written so git's estimate (> 1 object in objects/17) is exceeded. The CONTROL project
+in memory) is written so git's estimate (> 1 object in objects/17) is exceeded. Since git 2.54 the
+default auto-maintenance strategy is `geometric`, which ignores `gc.auto` and triggers on
+`maintenance.geometric-repack.auto` (default 100, raised to 6700 in git 2.56), so the global config
+lowers that threshold to 5 as well; the control then packs whichever strategy is the default. The CONTROL project
 (no cut-over) proves the trigger genuinely packs; the cut-over project (repo-local `gc.auto 0`,
 `maintenance.auto false`, which outrank the global config) must stay byte-for-byte unpacked.
 
@@ -18,6 +21,9 @@ DECISION HISTORY
 ====================================================================
 - 2026-10-12 19:00 [test-writer/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12,
   BO-4300f-3-ii]: Created the red baseline. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+- 2026-10-30 [TICKET-20261030-HousekeepingTestTriggersOnGit256, BO-4300f-3-ii]: The global
+  config also sets maintenance.geometric-repack.auto = 5, so the control packs on git 2.54+ (geometric
+  default strategy; 2.56 raised its threshold to 6700) as well as on gc-strategy versions.
 ====================================================================
 """
 from __future__ import annotations
@@ -37,7 +43,7 @@ class HousekeepingCase(MigrateCase):
     def setUp(self) -> None:
         super().setUp()
         with open(self.home / ".gitconfig", "a", encoding="utf-8", newline="\n") as fh:
-            fh.write("[gc]\n\tauto = 5\n\tautoDetach = false\n[maintenance]\n\tautoDetach = false\n")
+            fh.write("[gc]\n\tauto = 5\n\tautoDetach = false\n[maintenance]\n\tautoDetach = false\n[maintenance \"geometric-repack\"]\n\tauto = 5\n")
 
     def object_state(self, repo: Path) -> tuple[int, list[str]]:
         """(loose-object count, sorted pack files)."""
@@ -47,7 +53,8 @@ class HousekeepingCase(MigrateCase):
 
     def seed_loose_objects(self, repo: Path) -> None:
         """Write LOOSE_IN_DIR_17 distinct blobs whose ids start with '17'."""
-        found, i = [], 0
+        found: list[Path] = []
+        i = 0
         scratch = repo.parent / f"{repo.name}-blobs"
         scratch.mkdir(exist_ok=True)
         while len(found) < LOOSE_IN_DIR_17:
