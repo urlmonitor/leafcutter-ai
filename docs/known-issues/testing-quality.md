@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-25'
+last_updated: '2026-10-30'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 42** (1 blocker, 15 high, 26 low) · **Resolved: 5** (recounted from the directory 2026-10-25, after KI-TQ-20261025-eval-harness-system-prompt-exceeds-windows-command-line, KI-TQ-20261025-test-runner-row-fails-on-quoted-checker-message, KI-TQ-20261025-sql-test-writer-eval-rejects-valid-live-outputs and KI-TQ-20261025-test-runner-runs-a-test-file-as-a-script were filed)
+**Open: 43** (1 blocker, 15 high, 27 low) · **Resolved: 5** (recounted from the directory 2026-10-30, after KI-TQ-20261030-test-designer-trap-fixture-has-no-reference-test was filed)
 
 ## Open
 
@@ -101,6 +101,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20261025-test-runner-row-fails-on-quoted-checker-message — the db_check checker's `invalid` message says "expected postgres:// or postgresql:// with a safe host…", and `report_names_no_address` (`produced_tests_reports.py` `ADDRESS_RE` :37-38; placeholder exemption only for `<...>` DSNs, :68-71) reads the bare scheme as an address, so a test-runner report that relays the message fails the `configured-database` row although its commands were clean (smoke and full live run, 2026-10-25); recorded gold scoring stays green | [open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md](testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md) |
 | `low` | KI-TQ-20261025-sql-test-writer-eval-rejects-valid-live-outputs — two sql-test-writer evidence kinds fail correct live outputs (live before-score 2026-10-25, both database rows): `sql_to_run_later_names_wrong_version` (`evidence_kinds.py` :42-46, with `"wrong_version_contains": "fn_refresh_due"` on `sql-test-writer.jsonl` row 1) wants the function name inside the `wrong_version` prose the template asks for "in your own words" (`sql-test-writer.md`:330), so "select refresh_due (retry_due parameter ignored entirely)" fails; `sql_counts_rows_and_non_null` (:74-89, `ROW_COUNT_RE` :28, `non_null_re` :67-71) accepts only aggregates in executed SQL, so a test that fetches the window and asserts the row and non-`None` counts in Python fails although the template's remedy (:219-224) names no SQL form; recorded gold scoring stays green; graded medium | [open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md](testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-rejects-valid-live-outputs.md) |
 | `low` | KI-TQ-20261025-test-runner-runs-a-test-file-as-a-script — agent finding: on the W2 row (`missing-setting-no-database-work`) the live test-runner ran `python tests/check_window_total.py` (then with `PYTHONPATH=.`), which defines the test and never calls it, and reported "Status: PASS"; `test-runner.md`:104-105 offers `python unit_tests/live_trader/<file>.py` for single files and the template never names `testing_context.test_command` (the fixture's `pytest`), only `test_command_live_trader` (:28); `commands_ran_pytest` correctly failed the row; graded medium | [open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md](testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md) |
+| `low` | KI-TQ-20261030-test-designer-trap-fixture-has-no-reference-test — the test-designer new-behaviour row (TDE-9703) declares only the to_be_created `scripts/report_export.py`, so the template requires a `convention_test_file` the designer opened (`test-designer.md`:125-128); `design_prepass.py` reports `reference_files: []` (only `reference_file_path` or pending-marker source siblings, :121-128) and `unit_tests/scripts` with `exists: false` (derived from the declared file's parent name, :139-143), while the fixture's neighbour is `unit_tests/reporting/existing_reporting.py.recorded`; the pre-pass never lists test files and `dispatch.py` adds none, so under the search ban (:67-73) a rule-following designer reports `blocked` (:452-454) and the row fails `designer_design_written` (live run 2026-10-30; three other live runs passed). Live scores can be falsely red; recorded gold scoring is unaffected | [open-low-ki-tq-20261030-test-designer-trap-fixture-has-no-reference-test.md](testing-quality/open-low-ki-tq-20261030-test-designer-trap-fixture-has-no-reference-test.md) |
 
 ## Resolved
 
