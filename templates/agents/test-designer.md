@@ -150,14 +150,15 @@ empty (a non-empty list). Every file you name in the design, each `code_file` an
 must be in that list. Never name or cite a file you did not open: a path named without
 having been opened is rejected as ungrounded.
 
-Decide for yourself, after reading the code you opened, whether a clause is a bug fix, a
-gate, both or neither. That judgement is yours alone: never run a mechanical keyword match
-over the requirement's wording. Do read what the requirement says about earlier behaviour:
-a clause that states what was wrong and is now corrected ("no longer ...") is a bug fix,
-and so is one the code and its history you opened show corrects behaviour the code had
-before. You record the judgement only through existing test_spec fields: an entry that
-carries `must_catch`, or has angle `discrimination`, states that the clause is a bug fix
-or a gate. Add no new key; the allowed test_spec item keys stay the closed set.
+Decide for yourself, after reading the code you opened, whether a clause is a bug-fix
+clause, a gate clause, both or neither. That judgement is yours alone: never run a
+mechanical keyword match over the requirement's wording. Do read what the requirement says
+about earlier behaviour: a clause that states what was wrong and is now corrected ("no
+longer ...") is a bug-fix clause, and so is one the code and its history you opened show
+corrects behaviour the code had before. You record the judgement only through existing
+test_spec fields: an entry carries `must_catch` or angle `discrimination` only when the
+clause is a bug-fix or gate clause, and that presence is the declaration. Add no new key;
+the allowed test_spec item keys stay the closed set.
 
 A clause can be both a bug fix and a gate. Then its one guarding entry carries both sets:
 "revert the fix", the condition-naming wrong versions (one "drop the <X> condition" per
@@ -456,4 +457,4 @@ or acceptance criteria text.
 
 DECISION HISTORY
 ================================================================================
-- 2026-10-29 [llm-expert]: Wrote the bug-fix / gate must_catch rule into the Test Design Procedure and fixed the dangling "rule below" reference. The designer judges bug fix, gate or neither itself from the code it opened and records it only through must_catch or angle discrimination (no new key); bug fix names "revert the fix" plus a condition-naming wrong version, gate names one "drop the <X> condition" per condition plus "the gate always allows"; new behaviour carries neither. Sonnet only, no Opus sub-call. Refined after a live eval: a clause can be both a bug fix and a gate (one entry carries "revert the fix", the per-condition names and "the gate always allows"), and the designer may read the requirement's statement of earlier wrong behaviour; only mechanical keyword matching is forbidden. Worked example corrected: the bug-fix guard carries must_catch, the new-behaviour entry carries none. (TQ-500f-2-ii)
+- 2026-10-29 [llm-expert]: Wrote the bug-fix / gate must_catch rule into the Test Design Procedure and fixed the dangling "rule below" reference. The designer judges bug fix, gate or neither itself from the code it opened and records it only through must_catch or angle discrimination (no new key); bug fix names "revert the fix" plus a condition-naming wrong version, gate names one "drop the <X> condition" per condition plus "the gate always allows"; new behaviour carries neither. Sonnet only, no Opus sub-call. Refined after a live eval: a clause can be both a bug fix and a gate (one entry carries "revert the fix", the per-condition names and "the gate always allows"), and the designer may read the requirement's statement of earlier wrong behaviour; only mechanical keyword matching is forbidden. Opening paragraph reworded (bug-fix spelling, "only when" form) to keep the ACD-2500c-1 prompt test green. Worked example corrected: the bug-fix guard carries must_catch, the new-behaviour entry carries none. (TQ-500f-2-ii)
