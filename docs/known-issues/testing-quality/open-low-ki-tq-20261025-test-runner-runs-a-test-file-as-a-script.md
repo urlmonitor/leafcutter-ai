@@ -23,7 +23,7 @@ related_docs:
 - **Severity:** medium. This is the agent, not the eval: a report of PASS for a run in which no
   test executed. Any caller that trusts the test-runner's status (a coder's inner loop, a build
   gate reading the report) would take untested code as tested. The eval caught it.
-- **Status:** open, no AC.
+- **Status:** open. Configured-command part fixed by TQ-200d-4-ii; no-test-is-not-a-pass part fixed by TQ-200d-4-iii. TQ-200d-4-iv adds the eval row and moves this file to resolved.
 - **Occurrences:** 1 (the live before-score on 2026-10-25, Windows 11, `run_agent_eval.py
   --agent test-runner` without `--score-gold`, results timestamp `2026-10-25T20:58:19Z`): the
   `missing-setting-no-database-work` row (the W2 trap of TQ-200d-4) failed only
