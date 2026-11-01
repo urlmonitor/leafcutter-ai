@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a finished record for which a covering test is structurally impossible —
@@ -22,7 +22,12 @@ criteria: |
   And the run's report shows the stated reason next to the record, so a reader can
     judge the exemption without opening the record,
   And the number of exempt records is stated separately in the report rather than
-    being absorbed into the proven total.
+    being absorbed into the proven total,
+  And once the typed verification record of BO-2500f is in force, a declaration is
+    honoured as exempt only when it also carries a verification record that holds
+    (BO-2500f-4), so a written reason alone no longer makes a record exempt,
+  And the run's report then shows the verification method, check or inspection,
+    next to the stated reason.
 depends_on:
   - TQ-400e
 doc_links:
@@ -46,6 +51,11 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The real_artifact angle. The 37 records that already carry test_required: false are the authentic fixture for this AC; hand-built dicts would reproduce the bias that hid the files_touched no-op."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -56,10 +66,27 @@ it_requirements:
   - "THE EXEMPT COUNT MUST BE STATED SEPARATELY AND MUST NEVER BE ABSORBED INTO PROVEN. Folding exempt into proven lets a test-free declaration inflate the good news, which is the specific dishonesty the parent L0 exists to remove."
   - "THE EXEMPT RECORD'S FILE MUST BE BYTE-IDENTICAL AFTER THE RUN. Same write discipline as TQ-400e-1: do not open the file for writing at all, including to record that the exemption was confirmed — TQ-400e-5 depends on that."
   - "Must handle errors gracefully per the project error handling policy. The refusal path for a reasonless declaration is TQ-400e-4's subject and must be built as part of the same entry point, not as a separate validator."
+  - 'CURRENCY NOTE (IT PO, 2026-10-25). Since BO-2500a-1-ii (done) the honouring point is no
+    longer a bare `test_required is False` skip: check_done_proof.py consults the shared predicate
+    is_covers_tag_waived (templates/scripts/commit_guardian/check_done_proof.py :462, :534,
+    :600), which already requires a non-empty reason. Line numbers above are history. The sweep
+    calls the shared predicate; it never re-implements it.'
+  - WAVE-2 CLAUSES (appended 2026-10-25). The exempt outcome is decided by the shared rule BO-2500f-4
+    installs (is_done_proof_waived), so when its switch is on a reason alone stops producing
+    exempt with no change here. Do not add a second verified_by reader to the sweep.
+  - The report's method column reads verified_by.method as BO-2500f-1 defines it. Before BO-2500f-4's
+    switch is on, the column is empty, never guessed.
+  - ORDERING. The two appended clauses can only be proven after BO-2500f-4 lands. If this record
+    is built first, the first four clauses are built and the last two wait (open question).
+  - TEST CONTRACT GAP. The protected test_spec covers the first four clauses only; the test-designer
+    must add descriptors for the two appended clauses before approval.
 delivers_to:
   - agent: python-coder
     contract: "The honoured-exemption outcome: a record carrying test_required: false AND a positively-confirmed non-empty test_rationale is classified `exempt`, reported with its reason text, counted separately, and never written to. This is (a) the population TQ-400d-1 must exclude from the triage pile, (b) the entry point TQ-400e-4 feeds a reasonless declaration through, and (c) the outcome TQ-400e-5 requires to be stable across consecutive runs."
-expects_from: null
+expects_from:
+  - ac_id: BO-2500f-4
+    contract: The shared rule the exempt classification calls; with its switch on, a stated
+      reason alone no longer yields exempt, and verdict.method feeds the report's method column.
 test_spec:
   - name: test_tq_400e_3_reasoned_declaration_is_reported_exempt_with_its_reason
     target_dir: unit_tests/ac_store/
@@ -85,6 +112,34 @@ test_spec:
     type: integration
     angle: reachability
     description: "PRODUCTION ENTRY POINT. Run the sweep as a subprocess and assert every exempt record is PRESENT in the report artifact written to disk. The current behaviour is a bare `continue`, so 'skipped' is the default an implementation falls back into, and skipped versus exempt is invisible to any test that only inspects the unproven list."
+  - name: test_tq_400e_3_reason_alone_is_not_exempt_once_the_typed_record_is_in_force
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_done_proof.py --mode ci, as a subprocess, asserting exit code and report"
+    description: "Runs the whole-store sweep as the real check_done_proof.py --mode ci subprocess in a temporary git repo with BO-2500f-4's switch turned on through its declared mechanism: a done test-free record with a reason and a holding verification record is exempt (no violation, exit 0); the same record with only the reason is not exempt and is reported unproven. With the switch off both are exempt as today."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration is honoured as exempt only when it also carries a verification record that holds (BO-2500f-4), so a written reason alone no longer makes a record exempt"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_3_exempt_outcome_follows_the_shared_rule_not_a_second_reader
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, the sweep's exempt set equals the set of records for which is_done_proof_waived returns waived (patching the rule changes the exempt set), and the sweep contains no verified_by reader of its own."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration is honoured as exempt only when it also carries a verification record that holds (BO-2500f-4), so a written reason alone no longer makes a record exempt"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_3_report_shows_the_verification_method_next_to_the_stated_reason
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, the report written for the sweep names method 'check' or 'inspection' (read from verdict.method) on the same line as each exempt record's stated reason; before the switch is on the method column is empty, never guessed."
+    proves_clause: "the run's report then shows the verification method, check or inspection, next to the stated reason"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
 test_rationale: |
   The dominant risk here is not a wrong answer but a duplicated mechanism: an implementer who
   does not know that test_required: false is already live at check_done_proof.py:463 will build
@@ -114,6 +169,24 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-18'
+- reason: scope-addition
+  by: business-analyst
+  at: 2026-10-25
+  directed_by: user
+  note: >-
+    Wave 2 of the done-proof remedy (BO-2500f) changes what an honourable declaration is. Appended two clauses: after BO-2500f is in force, exemption also needs a verification record that holds, and the report shows its method. No existing clause altered or removed. Directed by the user at the PO gate 2026-10-25 (scope change 3: amend TQ-400e where wave 2 changes an acceptable declaration).
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-25'
+  note: 'Re-checked against the two clauses the BA appended on 2026-10-25. Added it_requirements:
+    a currency note (the honouring point is now the shared predicate, not the bare skip),
+    the wave-2 clauses ride BO-2500f-4''s shared rule, ordering, and the test-contract gap
+    (protected test_spec covers the first four clauses only). expects_from BO-2500f-4 added;
+    readiness returned to reviewed because the appended clauses have no test design yet. criteria
+    and test_spec untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -121,6 +194,7 @@ change_target:
   - code
   - config
 risk_surface: internal
+declares_side_effect: false
 notes: |
   Build on the mechanism that already exists — do NOT mint a new one. A test-free
   declaration is already honoured today: check_all_done_acs and

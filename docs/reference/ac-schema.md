@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-21
+last_updated: 2026-10-25
 components:
   - build_pipeline
 related_docs:
@@ -77,7 +77,7 @@ Each AC file is a single YAML document with the following fields.
 | `declared_files` | list of objects | no | Files the work changes, each `{path, state}` with `state` `existing` or `to_be_created`. Absent = "no declared files". See [The `declared_files` Field](#the-declared_files-field). |
 | `test_spec` | list or null | no | Source-of-truth test contract for this AC — the AC, not the ticket, owns what must be tested. Authored by it-po on L2/L3 code ACs; `generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section from it. Null/absent means "no contract authored yet" and the generator falls back to deriving one descriptor per Gherkin `Then` clause plus a mandatory reachability descriptor; an empty list is **not** permitted (use `test_required: false` for genuinely test-free ACs). See the item fields below. |
 | `test_required` | boolean or null | no | Whether `test-writer` must produce failing tests. Distinguishes "intentionally no tests" (`false`) from "contract not yet authored" (null/absent). Defaults to true for code/schema ACs. When `false` the generator omits the `## Test Requirements` section entirely and `test-writer` skips with an accurate reason. |
-| `test_rationale` | string or null | no | Prose justification for the shape of `test_spec`: why this coverage is right and why a weaker shape (typically a direct-import unit test) would not be. Must be a string, never a list. |
+| `test_rationale` | string or null | no | The reason no test can prove the record (with `test_required: false`) or the justification of the `test_spec` shape; a string, never a list. Both meanings: [test-free-declarations.md](test-free-declarations.md). |
 | `test_intent` | list | no | ACD-2500b-1-i: what the IT PO says must be tested, one `{clause, needs_test, reason}` entry per outcome clause of `criteria` (a `Then`, or an `And` after the first `Then`), including clauses that need no test. Intent only, NOT a test contract; a plain closed array (no `oneOf`, no null, `minItems: 1`) so both validators name the bad key. Matching rule and the pending/legacy predicates: [test-intent.md](test-intent.md). |
 | `test_design_authorship` | object | no | ACD-2500c-3: `{step, date}` mark of a design produced by the code-aware step; `step` a non-empty string, `date` `YYYY-MM-DD` (an unquoted YAML date is accepted). Absent means a legacy design. Null is rejected. |
 | `test_design_opened_files` | list of strings | no | ACD-2500c-3: repo-root-relative paths the code-aware step opened. An empty list is schema-valid on purpose (the test-design rule check reports it as not grounded). |

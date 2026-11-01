@@ -1,0 +1,257 @@
+id: BO-2500f-3
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "An inspection stops counting once the material it covered has changed, checked when the work is marked done"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a test-free record verified by an inspection that lists two files, each
+    with the content fingerprint of the version the reviewer inspected,
+  When the record is marked done,
+  Then each listed file is fingerprinted as it stands in the version being marked
+    done and compared with its recorded fingerprint,
+  And when both fingerprints match, the inspection holds,
+  And when either differs, marking done is refused with the verdict
+    "re-inspection needed", naming each changed file with its recorded and its
+    current fingerprint,
+  And a listed file that no longer exists at its recorded path refuses marking done
+    in the same way, reported as missing rather than as changed,
+  And this comparison is made at every layer that decides done for a record being
+    marked done: the mark command, the commit-time done check and the CI check over
+    changed records,
+  And the inspection's age plays no part in the verdict, so an inspection of
+    unchanged content holds however old it is,
+  And re-checking records that are already finished, and demoting those whose
+    inspected content has since changed, is not done here; it belongs to TQ-400a
+    and TQ-400b.
+depends_on: [BO-2500f, BO-2500f-1]
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns re-examining every finished record over time. This record decides decay only at mark time."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400b.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns returning a finished record whose proof lapsed to the to-do pile."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/ac_store/_inspection_fingerprint.py
+    state: to_be_created
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+it_requirements:
+  - 'Fingerprint = the git blob sha (the sha-1 object id git hash-object computes), as the
+    brief proposed; confirmed. Each layer fingerprints the version it decides on: the pre-commit
+    check uses the staged index entry, the CI changed-records check uses the PR head tree,
+    and the mark command hashes the working-tree file with the repository''s own clean filters
+    (git hash-object --path semantics), so a Windows CRLF checkout yields the committed blob''s
+    sha.'
+  - Compare every listed file and report every difference in one refusal (not first-failure),
+    each with its recorded and current sha; a missing path is reported as missing.
+  - 'No clock: no date or age is read for this verdict.'
+  - Called only at mark time, for the record being marked done. The whole-store CI sweep over
+    finished records does not re-compare (TQ-400a/b, and TQ-400e-5's open question).
+  - git unavailable, not a repository, or a sha that cannot be computed gives 'could not evaluate'
+    (BO-2500f-4-i), never 'holds'. Paths are repo-root-relative POSIX; a path escaping the
+    repo root is refused.
+  - The verdict also carries BO-2500f-3-i's approval result, so the shared rule receives one
+    inspection verdict.
+  - Every new module under scripts/ac_store/ is added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py,
+    and its import is proven in the DEPLOYED .leafcutter/ layout, not only the source tree
+    (the BO-2500a-1-ii ModuleNotFoundError precedent).
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: each listed file is fingerprinted as it stands in the version being marked done
+      and compared with its recorded fingerprint
+    needs_test: true
+    reason: The fingerprint must be of the version being decided; staged and working-tree
+      content that differ show which one is read.
+  - clause: when both fingerprints match, the inspection holds
+    needs_test: true
+    reason: The positive case shows an unchanged inspection is honoured, so the rule does
+      not refuse everything.
+  - clause: when either differs, marking done is refused with the verdict "re-inspection needed",
+      naming each changed file with its recorded and its current fingerprint
+    needs_test: true
+    reason: 'Decay is the point of this record: a changed file must refuse with both fingerprints
+      named.'
+  - clause: a listed file that no longer exists at its recorded path refuses marking done
+      in the same way, reported as missing rather than as changed
+    needs_test: true
+    reason: A deleted or moved file is a separate failure that a lookup error could turn into
+      a crash or a pass.
+  - clause: 'this comparison is made at every layer that decides done for a record being marked
+      done: the mark command, the commit-time done check and the CI check over changed records'
+    needs_test: true
+    reason: Each layer must reach the same verdict, and only one record run through the mark
+      command, pre-commit and the CI changed check shows that they agree.
+  - clause: the inspection's age plays no part in the verdict, so an inspection of unchanged
+      content holds however old it is
+    needs_test: true
+    reason: An old inspection of unchanged content must still hold, and an old record guards
+      against a clock creeping in.
+  - clause: re-checking records that are already finished, and demoting those whose inspected
+      content has since changed, is not done here; it belongs to TQ-400a and TQ-400b
+    needs_test: false
+    reason: This states what is out of scope (TQ-400a/b own re-checking finished records),
+      and there is nothing here to run.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-4
+    contract: 'inspection_verdict(record, repo_root, layer) -> {ac_id, holds: bool, reason,
+      changed: [{path, recorded, current}], missing: [path], review_date: str|None}, never
+      raising.'
+  - agent: python-coder
+    ac_id: BO-2500f-3-i
+    contract: 'The inspection under evaluation: verified_by.gate_run, verified_by.inspected
+      [{path, blob}] and the record''s id, for a record being marked done.'
+  - agent: python-coder
+    ac_id: BO-2500f-3-ii
+    contract: The blob fingerprint function (git blob sha of a path's working-tree content
+      with the repository's clean filters), reused by /inspect to compute the fingerprints
+      it shows.
+expects_from:
+  - ac_id: BO-2500f-1
+    contract: A valid inspection-form record with its gate run reference, file list and blob
+      shas.
+  - ac_id: BO-2500f-3-i
+    contract: 'approval_verdict(gate_run, ac_id, inspected, repo_root, layer) -> {holds: bool,
+      review_date: str|None, reason: str}, read from the tracked approval file.'
+test_spec:
+  - name: test_bo_2500f_3_each_layer_fingerprints_the_version_it_decides_on
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In a temporary git repo, a listed file whose staged content, committed content and working-tree content differ: the pre-commit layer fingerprints the staged index entry, the ci-changed layer the head tree, and the mark command the working-tree file through the repository's clean filters (git hash-object --path), so a CRLF checkout yields the committed blob sha. Each verdict names the sha it computed."
+    proves_clause: "each listed file is fingerprinted as it stands in the version being marked done and compared with its recorded fingerprint"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_unchanged_inspection_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "An inspection listing two files whose current blobs equal the recorded ones holds at all three layers; the positive control that the rule does not refuse everything."
+    proves_clause: "when both fingerprints match, the inspection holds"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_changed_files_refuse_with_re_inspection_needed_naming_each_pair
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "With one file changed the verdict is 're-inspection needed' naming that file with its recorded and current sha; with both changed one refusal names both (not first-failure); the unchanged file is not named."
+    proves_clause: "when either differs, marking done is refused with the verdict \"re-inspection needed\", naming each changed file with its recorded and its current fingerprint"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a comparison that reports only the first differing file"
+      - "a refusal without the recorded and current fingerprints"
+      - "a refusal that names unchanged files"
+  - name: test_bo_2500f_3_a_listed_file_that_no_longer_exists_is_reported_missing_not_changed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A listed path deleted from the version being decided is refused as missing in the missing list, not in changed; a path escaping the repo root is refused; git unavailable gives 'could not evaluate', never holds."
+    proves_clause: "a listed file that no longer exists at its recorded path refuses marking done in the same way, reported as missing rather than as changed"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_one_record_reaches_one_verdict_at_mark_precommit_and_ci_changed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "mark_ac_done.py, check_done_proof.py --mode precommit and --mode ci-changed, each as a subprocess"
+    description: "One fixture repo with BO-2500f-4's switch turned on through its declared mechanism, run through the real mark_ac_done.py CLI, check_done_proof.py --mode precommit and --mode ci-changed as subprocesses: unchanged content gives accept at all three, a changed listed file gives refusal at all three with the same 're-inspection needed' text and shas."
+    proves_clause: "this comparison is made at every layer that decides done for a record being marked done: the mark command, the commit-time done check and the CI check over changed records"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_3_an_old_inspection_of_unchanged_content_still_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An inspection whose approval answered_at and commits are dated years in the past (GIT_AUTHOR_DATE and GIT_COMMITTER_DATE set back) holds when the content is unchanged; the verdict is identical with the system clock advanced, so no clock is read."
+    proves_clause: "the inspection's age plays no part in the verdict, so an inspection of unchanged content holds however old it is"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a rule that expires an inspection after a number of days"
+  - name: test_bo_2500f_3_fingerprint_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_inspection_fingerprint.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "when both fingerprints match, the inspection holds"
+    code_file: scripts/ac_store/_inspection_fingerprint.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_inspection_fingerprint.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - scripts/ac_store/mark_ac_done.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new fingerprint module must be added."
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_ac_store.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by:
+  - BO-2500f-3-i
+  - BO-2500f-3-ii
+  - BO-2500f-3-iii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. User scope change 4 (PO gate 2026-10-25): a review expiring is checked
+  at mark time here; the periodic re-check of finished work stays in TQ-400
+  (TQ-400a/b). The brief's fingerprint is the git blob sha; the IT PO confirms.
+
+  The age clause is deliberate: decay is driven by content, not by a clock. That
+  matches the ACS-1100b-1 staleness ruling (age is declared, not a halt trigger).

@@ -155,7 +155,7 @@ def _acquire_windows(lock_fh, lock_path: Path, timeout_s: float) -> None:
     while True:
         try:
             lock_fh.seek(0)
-            msvcrt.locking(lock_fh.fileno(), msvcrt.LK_NBLCK, 1)
+            msvcrt.locking(lock_fh.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
             return
         except OSError as exc:
             if time.monotonic() >= deadline:
@@ -277,6 +277,10 @@ def read_failure_record(run_base: Path) -> str | None:
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-11-01 [python-coder]: Added `# type: ignore[attr-defined]` to the
+#   msvcrt.locking / msvcrt.LK_NBLCK call in _acquire_windows. typeshed declares
+#   msvcrt members for win32 only, so mypy on Linux flagged them; same idiom as
+#   the module's other ignores. No behaviour change. (#TICKET-20261030-HousekeepingTestTriggersOnGit256)
 # - 2026-10-23 [python-coder]: Added a real Windows lock (msvcrt.locking
 #   byte-range, LK_NBLCK polled to a 1800s bound) so the shared-layout
 #   producer works on the Windows maker proof arm (BO-4300b-4). POSIX flock

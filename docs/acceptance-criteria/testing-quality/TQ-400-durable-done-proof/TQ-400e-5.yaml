@@ -134,3 +134,13 @@ notes: |
   confirmation write on run 1 followed by an identical write on run 2 gives
   identical bytes between runs 1 and 2 and still churns the store, so the
   before-run-1 hash has to be in the comparison.
+
+  OPEN TQ-400 QUESTION (business-analyst, 2026-10-25, recorded at the user's
+  direction; criteria NOT amended). Once BO-2500f is in force, an exemption can rest
+  on an inspection whose files may change after the record is finished. BO-2500f-3
+  decides expiry only at MARK time. Whether a whole-store sweep should re-raise an
+  honoured exemption when a file it inspected has changed, against this record's
+  "stays settled ... with no change to that record, to the test tree, or to the
+  declaration", is a periodic re-check question for TQ-400 (TQ-400a/b), to be
+  settled there later. Until then, a changed inspected file is not one of the changes
+  listed above, so this record does not re-raise it.

@@ -15,6 +15,7 @@ related_docs:
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-rule-check-resolves-the-store-root-against-the-session-cwd.md
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
   - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
 ---
 
 # KI-BO-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace — /plan-feature returned pause_persist_failed at gate-ba from a workspace-maker workspace because worktree-agent declined the pause-store write, and the code still carries two more ways to produce it

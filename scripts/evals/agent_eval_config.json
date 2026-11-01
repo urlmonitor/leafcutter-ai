@@ -257,6 +257,52 @@
         "scripts/evals/designer_eval/**"
       ],
       "notes": "TQ-200d-3. PRODUCED-TESTS mode for the test designer (Bash, Read, Write, Edit only). The designer writes no test file: its output is the requirement record it edits in place (test_spec, test_design_authorship, test_design_opened_files), so each row's sandbox holds a one-record store (eval_store/) and the scorer reads the edited record. Three rows: a bug fix (must_catch names 'revert the fix' and a retry_due wrong version), a gate (one wrong version per condition plus 'the gate always allows') and the new-behaviour trap (any must_catch name or discrimination angle fails the row: neither a bug fix nor a gate). Condition tokens also match fixed word-sequence variants carried in the row spec. The bug fix / gate / neither judgement is read from the record fields (must_catch, angle discrimination), never from the reply. input_builder 'designer_eval' makes the live input the plan-feature dispatchTestDesign ingredients (ids, the verbatim design_prepass.py report, ac_store_path, test-design group only). LOCAL ONLY: local_only true keeps this agent out of eval_selector's affected set and --check; every payload carries run_context 'local'. --score-gold replays scripts/evals/sets/test-designer/recorded/ and makes no model call; the live before-score is deferred (OQ-11)."
+    },
+    "it-po": {
+      "template": "templates/agents/it-po.md",
+      "eval_set": "scripts/evals/sets/it-po.jsonl",
+      "scoring_mode": "label",
+      "input_field": "input",
+      "expected_field": "expected",
+      "response_label_field": "declares",
+      "model": "sonnet",
+      "label_axes": [
+        "test_required_false",
+        "test_rationale"
+      ],
+      "threshold": 1.0,
+      "triggers": [
+        "templates/agents/it-po.md",
+        "scripts/evals/sets/it-po.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "BO-2500a-8-ii prompt proof, the WITH condition: the real template. Every row must write test_required false and a non-empty test_rationale (threshold 1.0). Informational, like the other live evals; with no credential the run reports 'no model credentials', not a score."
+    },
+    "it-po-without-reason-rule": {
+      "template": "scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md",
+      "eval_set": "scripts/evals/sets/it-po.jsonl",
+      "scoring_mode": "label",
+      "input_field": "input",
+      "expected_field": "expected",
+      "response_label_field": "declares",
+      "model": "sonnet",
+      "label_axes": [
+        "test_required_false",
+        "test_rationale"
+      ],
+      "threshold": 1.0,
+      "triggers": [
+        "scripts/evals/fixtures/it-po.before-bo-2500a-8-ii.md",
+        "scripts/evals/sets/it-po.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "BO-2500a-8-ii prompt proof, the WITHOUT condition: a stored byte copy of it-po.md from before the reason rule (never regenerated). It is expected to score BELOW threshold (test_required false alone); the proof holds only when it-po meets its threshold and this entry does not."
     }
   }
 }

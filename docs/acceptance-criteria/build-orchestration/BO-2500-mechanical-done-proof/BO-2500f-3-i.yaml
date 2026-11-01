@@ -1,0 +1,353 @@
+id: BO-2500f-3-i
+components:
+  - build_orchestration
+  - ac_store
+title: "The reviewer of an inspection is the person whose gate approval is kept in a committed approval file, checked at mark time"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an inspection verification record for record DK-210b-3 that references
+    the workflow run "insp-20261025-0912",
+  And the tracked approval file for that run, committed with the record, holding
+    the run id, the gate id, the answer, the time the answer was given, the AC id
+    DK-210b-3, and each inspected file with its content fingerprint,
+  When the record is marked done, at any layer that decides done,
+  Then the approval file for the referenced run is read from the committed tree,
+    with no network call and no read of any local, untracked store,
+  And the inspection holds only if the file's answer is "approve", its AC id is
+    the record being marked done, and its run id is the one the inspection
+    references,
+  And the inspected files and fingerprints in the approval file are exactly the
+    files and fingerprints the inspection lists,
+  And the review date is the time the answer was given as the approval file
+    records it, and a date written into the inspection that differs from it is
+    refused, naming both,
+  And an answer other than "approve", or an approval file for a different record,
+    does not count and marking done is refused as unreviewed,
+  And when the approval file is missing, cannot be read, or any of the checks
+    above does not match, marking done is refused, naming the run id and what was
+    missing or did not match, and the inspection's own text is never accepted in
+    place of the approval file,
+  And because the approval file is committed with the record, the mark command,
+    the commit-time done check and the CI checks read the same file on every
+    machine and reach the same verdict for the same record,
+  And an approval file is never deleted or cleared by any cleanup of workflow runs,
+  And an approval file is created only by the inspection workflow's own approval
+    step (BO-2500f-3-ii); no command-line or general-purpose write command offered
+    by the project creates an approval file with the answer "approve",
+  And this check is made only at mark time; checking the record without marking it
+    done does not read the approval file (BO-2500f-1).
+depends_on: [BO-2500f-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500.yaml
+    relationship: constrains
+    status: exists
+    relevance: "The 2026-08-18 amendment: no AI opinion may confer done-ness. A human review is allowed only if the named person is genuinely a person."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/ac_store/_inspection_approval.py
+    state: to_be_created
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+it_requirements:
+  - 'THE APPROVAL FILE (user decision 2026-10-25): docs/acceptance-criteria/_inspections/<run_id>.json,
+    a tracked file committed with the record, shape {run_id: str, gate_id: str, answer: ''approve'',
+    answered_at: ISO-8601 UTC str, ac_id: str, inspected: [{path: str, blob: 40-hex str}]}.
+    It is NOT the ADR-024 pause/resume store (.leafcutter/paused_runs/, gitignored, cleared
+    on resume); this module never imports or reads scripts/pause_store.py.'
+  - 'READ FROM GIT, NEVER FROM AN UNTRACKED FILE. Each layer reads the version it decides
+    on, through git: the pre-commit check reads the index ('':<path>'', what is being committed),
+    the CI checks read the head commit, and the mark command reads the index, falling back
+    to HEAD. An approval file present only as an untracked working-tree file is ''missing'',
+    so the person stages it with the record before marking done. No network call anywhere.'
+  - 'Matching: answer is exactly ''approve''; ac_id is the record being marked done; run_id
+    equals the inspection''s gate_run (and the file name); the inspected list equals the inspection''s
+    list as a set of (path, blob) pairs; the review date is answered_at, and a date in the
+    inspection that differs is refused, naming both.'
+  - 'FAIL CLOSED: a missing, unreadable, non-JSON or wrongly shaped file, or any mismatch,
+    refuses with the run id and what was missing or did not match. The inspection''s own text
+    is never used in place of the file.'
+  - 'No cleanup touches docs/acceptance-criteria/_inspections/: pause_store.py clear, worktree
+    close and run-cleanup paths operate on their own stores only. Nothing in the project deletes
+    an approval file.'
+  - 'Single writer: the only code that produces an approval file is BO-2500f-3-ii''s approve
+    step. No CLI subcommand, script or general-purpose helper in scripts/ or templates/ writes
+    into the approval folder; a test asserts this by scanning those trees. Residual trust
+    is accepted and recorded (user decision 2026-10-25): an agent with shell access could
+    still write a file by hand.'
+  - TESTS USE COMMITTED FIXTURES, NO NETWORK. Each test builds a temporary git repository
+    holding a record, its approval file and the inspected files, commits or stages them, and
+    drives the real check_done_proof.py --mode precommit and ci-changed CLIs as subprocesses,
+    plus the reader directly for the edge cases. The same fixture run through all layers must
+    give one verdict.
+  - Called only from mark-time paths (the shared done rule of BO-2500f-4). check-ac-schema
+    and requirement_rule_check never call it, so checking a record without marking it done
+    is never refused on these grounds (BO-2500f-1).
+  - Every new module under scripts/ac_store/ is added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py,
+    and its import is proven in the DEPLOYED .leafcutter/ layout, not only the source tree
+    (the BO-2500a-1-ii ModuleNotFoundError precedent).
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: the approval file for the referenced run is read from the committed tree, with
+      no network call and no read of any local, untracked store
+    needs_test: true
+    reason: Reading through git is the mechanism; an untracked file with the right content
+      must be refused, which shows the committed tree is what is read.
+  - clause: the inspection holds only if the file's answer is "approve", its AC id is the
+      record being marked done, and its run id is the one the inspection references
+    needs_test: true
+    reason: Answer, record id and run id are three bindings, and each needs a case that breaks
+      it.
+  - clause: the inspected files and fingerprints in the approval file are exactly the files
+      and fingerprints the inspection lists
+    needs_test: true
+    reason: The approved file set must equal the inspected set; one different fingerprint
+      must refuse.
+  - clause: the review date is the time the answer was given as the approval file records
+      it, and a date written into the inspection that differs from it is refused, naming both
+    needs_test: true
+    reason: The review date comes from the approval file, and an inspection date that differs
+      must refuse naming both.
+  - clause: an answer other than "approve", or an approval file for a different record, does
+      not count and marking done is refused as unreviewed
+    needs_test: true
+    reason: A non-approve answer and an approval for another record are the two routes to
+      a false approval this clause names.
+  - clause: when the approval file is missing, cannot be read, or any of the checks above
+      does not match, marking done is refused, naming the run id and what was missing or did
+      not match, and the inspection's own text is never accepted in place of the approval
+      file
+    needs_test: true
+    reason: 'Failing closed is the safety property: missing, unreadable and mismatched files
+      each need a case, and the inspection text must never stand in.'
+  - clause: because the approval file is committed with the record, the mark command, the
+      commit-time done check and the CI checks read the same file on every machine and reach
+      the same verdict for the same record
+    needs_test: true
+    reason: Same verdict on every layer is the reason the file is tracked; one fixture through
+      the mark command, pre-commit and CI modes shows they agree.
+  - clause: an approval file is never deleted or cleared by any cleanup of workflow runs
+    needs_test: true
+    reason: A cleanup that removed approval files would silently un-prove finished records;
+      running the run-cleanup paths over a fixture shows the file survives.
+  - clause: an approval file is created only by the inspection workflow's own approval step
+      (BO-2500f-3-ii); no command-line or general-purpose write command offered by the project
+      creates an approval file with the answer "approve"
+    needs_test: true
+    reason: A second writer would reopen forgery by command; a scan of scripts/ and templates/
+      for writes into the approval folder catches one being added.
+  - clause: this check is made only at mark time; checking the record without marking it done
+      does not read the approval file (BO-2500f-1)
+    needs_test: true
+    reason: Reading the file outside marking is behaviour a write path could add; committing
+      an unfinished record with no approval file must pass.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-3
+    contract: 'approval_verdict(gate_run, ac_id, inspected, repo_root, layer) -> {holds: bool,
+      review_date: str|None (the file''s answered_at), reason: str}; never raising; refuses
+      with the run id when the approval file is missing, unreadable or does not match.'
+expects_from:
+  - ac_id: BO-2500f-3
+    contract: 'The inspection under evaluation: verified_by.gate_run, verified_by.inspected
+      [{path, blob}] and the record''s id.'
+  - ac_id: BO-2500f-3-ii
+    contract: 'The approval file docs/acceptance-criteria/_inspections/<run_id>.json with
+      shape {run_id: str, gate_id: str, answer: ''approve'', answered_at: ISO-8601 UTC str,
+      ac_id: str, inspected: [{path: str, blob: 40-hex str}]}, created only by the /inspect
+      workflow''s approve step, and the record''s inspection filled with gate_run and the
+      shown blobs.'
+test_spec:
+  - name: test_bo_2500f_3_i_approval_file_is_read_from_the_committed_tree_never_from_an_untracked_file
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In a temporary git repo, an approval file with correct content that is only an untracked working-tree file is 'missing' at every layer; staged it satisfies the pre-commit layer (index) but not ci-changed (HEAD); committed it satisfies both. A scratch socket guard (sitecustomize patching socket.socket to raise) proves no network call, and a planted file in a local untracked store is never read."
+    proves_clause: "the approval file for the referenced run is read from the committed tree, with no network call and no read of any local, untracked store"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_answer_record_id_and_run_id_are_three_bindings
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "approval_verdict holds for answer 'approve', ac_id equal to the record and run_id equal to both gate_run and the file name; each of 'approved', 'APPROVE', 'reject', a different ac_id, a run_id differing from gate_run and a run_id differing from the file name breaks it alone."
+    proves_clause: "the inspection holds only if the file's answer is \"approve\", its AC id is the record being marked done, and its run id is the one the inspection references"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_inspected_set_must_equal_the_approval_set
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "One different blob, an extra file, a missing file in the approval file refuse; the same pairs in another order hold (set equality of (path, blob))."
+    proves_clause: "the inspected files and fingerprints in the approval file are exactly the files and fingerprints the inspection lists"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_review_date_is_answered_at_and_a_differing_inspection_date_is_refused_naming_both
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "review_date equals the approval file's answered_at; an inspection date key equal to it holds, one that differs is refused with a message naming both dates; no date key is also fine."
+    proves_clause: "the review date is the time the answer was given as the approval file records it, and a date written into the inspection that differs from it is refused, naming both"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_non_approve_answer_or_other_record_is_refused_as_unreviewed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "An approval file with answer 'reject', and one written for a different record, are each refused with a message saying the record is unreviewed."
+    proves_clause: "an answer other than \"approve\", or an approval file for a different record, does not count and marking done is refused as unreviewed"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_missing_unreadable_or_mismatching_file_fails_closed_naming_the_run_id
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "A missing file, a non-JSON file, a JSON array, a file missing keys and a file with a mismatch are each refused naming the run id and what was missing or did not match; an inspection whose own statement and blobs are internally complete never stands in for the file. Nothing raises."
+    proves_clause: "when the approval file is missing, cannot be read, or any of the checks above does not match, marking done is refused, naming the run id and what was missing or did not match, and the inspection's own text is never accepted in place of the approval file"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a reader that falls back to the inspection's own text when the file is missing"
+      - "a reader that raises on bad JSON and lets the hook skip"
+      - "a reader that treats an unreadable file as holds"
+  - name: test_bo_2500f_3_i_one_fixture_gets_one_verdict_at_mark_precommit_and_ci_changed
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "mark_ac_done.py, check_done_proof.py --mode precommit and --mode ci-changed, each as a subprocess"
+    description: "One committed fixture repo with BO-2500f-4's switch turned on through its declared mechanism, driven through the real mark_ac_done.py CLI, check_done_proof.py --mode precommit and --mode ci-changed as subprocesses: a valid approval accepted at all three, and a forged mismatch (different blob) refused at all three with the same message text."
+    proves_clause: "because the approval file is committed with the record, the mark command, the commit-time done check and the CI checks read the same file on every machine and reach the same verdict for the same record"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_3_i_run_cleanup_paths_leave_the_approval_file_byte_identical
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "With a real committed approval file under docs/acceptance-criteria/_inspections/ next to a paused-run record with the same run id, run pause_store clear and the project's run-cleanup and worktree-close paths as subprocesses against the repo, then read the approval file back: it still exists and its sha256 is unchanged."
+    proves_clause: "an approval file is never deleted or cleared by any cleanup of workflow runs"
+    code_file: scripts/pause_store.py
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_3_i_no_script_or_template_other_than_the_inspect_workflow_writes_an_approval_file
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "A scan of scripts/ and templates/ finds no code that writes into docs/acceptance-criteria/_inspections/ except templates/workflows-js/inspect.js's dispatched write turn, and the read-only prepare and verify subcommands of inspection_workflow.py leave the folder unchanged when run as subprocesses in a fresh repo."
+    proves_clause: "an approval file is created only by the inspection workflow's own approval step (BO-2500f-3-ii); no command-line or general-purpose write command offered by the project creates an approval file with the answer \"approve\""
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a CLI subcommand or helper that writes an approval file with answer approve"
+      - "a second writer added under scripts/ac_store"
+  - name: test_bo_2500f_3_i_an_unfinished_record_never_reads_the_approval_file
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "An in_progress record carrying an inspection whose approval file does not exist passes check-ac-schema and the precommit done check (exit 0); with a git-read spy (GIT_TRACE written to a file) the approval path is never requested during the check."
+    proves_clause: "this check is made only at mark time; checking the record without marking it done does not read the approval file (BO-2500f-1)"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_3_i_approval_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_inspection_approval.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "the inspection holds only if the file's answer is \"approve\", its AC id is the record being marked done, and its run id is the one the inspection references"
+    code_file: scripts/ac_store/_inspection_approval.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_inspection_approval.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - scripts/pause_store.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - scripts/ac_store/mark_ac_done.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP, to which the new approval module must be added."
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_ac_store.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: auth
+declares_side_effect: false
+notes: |
+  Wave 2. User scope change 5 (PO gate 2026-10-25), then the user's decisions of
+  2026-10-25 at the IT PO stage: (1) the identity an agent cannot forge is a
+  person's approval at an interactive inspection gate; (2) that approval is KEPT
+  as a small retained JSON file in a tracked folder,
+  docs/acceptance-criteria/_inspections/<run_id>.json, committed together with
+  the record, so CI and every machine read the same evidence. It is NOT the
+  gitignored ADR-024 pause/resume store, and it is never cleared.
+
+  Folder choice, checked 2026-10-25: tracked JSON files already live under the AC
+  store (the TQ-600a-13-xviii scenario fixtures, merged in #1149), and the record
+  scanner keeps only YAML suffixes and skips the registry file, so a JSON file in
+  _inspections/ is not read as a record. No alternative path is needed. If a
+  scanner that walks component folders by name reports _inspections/ as an
+  unknown component, that scanner should skip folders starting with "_"; the
+  IT PO confirms.
+
+  Why not a GitHub pull-request approval (an earlier draft): GitHub never lets a
+  PR's author approve it, and the user is a solo maintainer. Why not the commit
+  author: agents commit under the user's own git identity.
+
+  RESIDUAL TRUST, accepted by the user and stated plainly: approval files are
+  written only by the inspection gate's own code path, and no CLI or general
+  write command creates an "approve". Even so, an agent with shell access could
+  still write a forged approval file by hand. Nothing in this record prevents that.
+  A later upgrade to signed commits for approval files stays possible and is not
+  ruled out by this design.
+
+  The run id and record id in the Given are examples.
