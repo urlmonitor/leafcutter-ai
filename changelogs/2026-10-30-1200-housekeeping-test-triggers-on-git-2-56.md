@@ -11,9 +11,7 @@ description: >-
   config adds [maintenance "geometric-repack"] auto = 5. Filed
   KI-BO-20261030-verify-trusts-gc-auto-alone: workspace readiness checks
   gc.auto 0 but not maintenance.auto false, the setting that actually blocks
-  housekeeping on git 2.54+. scripts/suite_performance/_shared_layout_coordination.py:
-  a type-ignore on the win32-only msvcrt call, so the informational mypy job is
-  green (no behaviour change). Ticket TICKET-20261030-HousekeepingTestTriggersOnGit256.
+  housekeeping on git 2.54+. Ticket TICKET-20261030-HousekeepingTestTriggersOnGit256.
 breaking: false
 ---
 
