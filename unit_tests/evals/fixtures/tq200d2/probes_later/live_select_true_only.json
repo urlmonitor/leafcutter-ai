@@ -1,0 +1,10 @@
+{
+ "ac_id": "TQ-9501",
+ "to_run_later": [
+  {
+   "test": "unit_tests/sql_functions/test_fn_refresh_due.py::TestFnRefreshDue::test_both_false_returns_false",
+   "wrong_version": "select true (hardcoded true, ignoring both parameters)",
+   "reason": "the test seeds retry_due false"
+  }
+ ]
+}

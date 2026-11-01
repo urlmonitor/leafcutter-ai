@@ -38,19 +38,23 @@ The sql-test-writer set also uses `test_files_present` and `db_test_uses_setting
 
 **Used by:** the sql-test-writer set, row `stored-procedure-regression`.
 
-**Reads:** the to-run-later file `<git dir>/leafcutter/to-run-later/<ac_id>.json` of the row's sandbox (the output's `leafcutter/` directory is copied there). Spec keys: `ac_id`, `contains`, optional `wrong_version_contains` (default `contains`).
+**Reads:** the to-run-later file `<git dir>/leafcutter/to-run-later/<ac_id>.json` of the row's sandbox (the output's `leafcutter/` directory is copied there). Spec keys: `ac_id`, `contains`.
 
-**Passes when:** the file exists, is valid JSON (a BOM is allowed), is for the spec's AC (its own `ac_id`, when present, matches), and its `to_run_later` list holds an entry whose `wrong_version` holds `wrong_version_contains` and whose `test` holds `::` and `contains`.
+**Passes when:** the file exists, is valid JSON (a BOM is allowed), is for the spec's AC (its own `ac_id`, when present, matches), and its `to_run_later` list holds an entry whose `test` is a `::` test id holding `contains` (the function is checked in the test id) and whose `wrong_version` is non-empty. The wrong version is free prose: it is checked only for being non-empty (a whitespace-only or missing one does not count).
 
-**Fails when:** the file is absent, is not valid JSON, is for another AC, or no entry matches (an empty list, or a `test` without a `::` node id).
+**Fails when:** the file is absent, is not valid JSON, is for another `ac_id`, or no entry counts (an empty list, a `test` without a `::` test id, a `test` naming another function, or a blank `wrong_version`); the detail names the function no entry covers.
 
-**Passing example:** for AC `TQ-9501` and `contains` `fn_refresh_due`, the entry `{"test": "unit_tests/sql_functions/test_fn_refresh_due.py::TestFnRefreshDue::test_retry_due_gate", "wrong_version": "fn_refresh_due returns refresh_due alone, without the retry_due condition", "reason": "the test seeds retry_due false"}` passes.
+**Passing example:** `unit_tests/evals/fixtures/tq200d2/probes_later/live_own_words.json` passes: its entry `select refresh_due (retry_due parameter ignored entirely)` names the function only in its test id.
 
-**Failing example:** `{"ac_id": "TQ-9501", "to_run_later": []}` fails with "names no wrong version of fn_refresh_due".
+**Failing example:** `unit_tests/evals/fixtures/tq200d2/probes_later/wrong_function.json` fails with "names no wrong version of fn_refresh_due": its only test id names `test_fn_other.py`.
 
 **Template sentence:**
 
 > `<git-dir>/leafcutter/to-run-later/<ac-id>.json`, where `<git-dir>` is the output of `git rev-parse --absolute-git-dir` in the worktree you work in.
+
+- templates/agents/sql-test-writer.md
+
+> the wrong version in your own words, non-empty
 
 - templates/agents/sql-test-writer.md
 
@@ -60,13 +64,13 @@ The sql-test-writer set also uses `test_files_present` and `db_test_uses_setting
 
 **Reads:** the produced test file `file`, parsed and not run. The SQL is what reaches `execute` or `executemany` (also through a helper that executes its parameter) and selects `from` or `join`s the spec's `view`, with names, f-strings, `+` joins and `text()` or `dedent()` wrappers resolved. Counts in comments, docstrings, assert messages and unexecuted strings do not count. Spec keys: `file`, `view`, `column`.
 
-**Passes when:** that SQL holds a row count (`count(*)` or `count(1)`, not followed by `filter`) and a non-NULL count of `column` (`count(<column>)`, `filter (where <column> is not null`, or `case when <column> is not null`).
+**Passes when:** the executed SQL over the view holds a row count (`count(*)` or `count(1)`, not followed by `filter`) and a non-NULL count of `column` (`count(<column>)`, `filter (where <column> is not null`, or `case when <column> is not null`), or the test fetches rows from the view and asserts an equality on their number and an equality on the number of values that are not None (a `len` over a comprehension with `is not None`, or a `sum` of such tests).
 
-**Fails when:** either count is missing, or the file is absent or does not parse.
+**Fails when:** either count is missing, the file is absent or does not parse, the rows are not fetched from the view, or a count is not an equality: only `>= 0` over the fetched values, only "at least one row", an exact row count with no non-None count, and a non-None count with no exact row count all fail.
 
-**Passing example:** `select count(*), count(buy_volume), min(buy_volume) from buy_volume_window` passes for `column` `buy_volume` and `view` `buy_volume_window`.
+**Passing example:** `unit_tests/evals/fixtures/tq200d2/probes_counts/sql_aggregate.py.recorded` (counts in SQL) and `unit_tests/evals/fixtures/tq200d2/probes_counts/live_python_side.py.recorded` (fetched rows counted in Python) pass.
 
-**Failing example:** `select min(buy_volume) from buy_volume_window` fails with "counts no processed rows and no non-NULL buy_volume values".
+**Failing example:** `unit_tests/evals/fixtures/tq200d2/probes_counts/only_ge_zero.py.recorded`, `unit_tests/evals/fixtures/tq200d2/probes_counts/at_least_one_row.py.recorded`, `unit_tests/evals/fixtures/tq200d2/probes_counts/row_count_only.py.recorded` and `unit_tests/evals/fixtures/tq200d2/probes_counts/non_none_count_only.py.recorded` fail with "counts no processed rows and no non-NULL buy_volume values" (or the one missing count).
 
 **Template sentence:**
 

@@ -1,7 +1,8 @@
 """
 MODULE: scripts/evals/sql_test_writer_eval/evidence_kinds.py
 GOAL: The evidence-reading assertion kinds of the sql-test-writer set: the wrong version named in
-    the to-run-later file, and the processed-row and non-NULL counts in the executed SQL.
+    the to-run-later file (TQ-200d-2-i: the function in the test id, the wrong version free prose), and
+    the processed-row and non-NULL counts, in the executed SQL or asserted on the fetched rows (TQ-200d-2-ii).
 BUSINESS CONTEXT: TQ-200d-2. "Names a wrong version to run" is checked on the machine-readable
     file the template mandates, never on report prose, which a careless agent can fill without
     writing the file. No database is available to the eval, so the empty-window query is checked
@@ -40,10 +41,10 @@ def _entries(data: object) -> list[dict]:
 
 
 def _real_wrong_version(entry: dict, spec: dict) -> bool:
-    """The entry names the keyword in its wrong_version and a ``::`` node id of the named function in its test."""
-    keyword = spec.get("wrong_version_contains", spec["contains"])
+    """The entry's test is a ``::`` test id naming the function, and its wrong version is non-empty prose."""
     test = str(entry.get("test", ""))
-    return keyword in str(entry.get("wrong_version", "")) and "::" in test and spec["contains"] in test
+    wrong = entry.get("wrong_version")
+    return isinstance(wrong, str) and bool(wrong.strip()) and "::" in test and spec["contains"] in test
 
 
 def to_run_later_names_wrong_version(ctx: RowContext, spec: dict) -> dict:
@@ -71,8 +72,34 @@ def non_null_re(column: str) -> re.Pattern[str]:
     return re.compile(rf"count\(\s*{alias}\"?{col}\"?\s*\)|filter\s*\(\s*where\s+{alias}{col}\s+is\s+not\s+null|case\s+when\s+{alias}{col}\s+is\s+not\s+null")
 
 
+NAME_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+NONE_CHECK_RE = re.compile(r"is\s+not\s+None|!=\s*None")
+
+
+def _equality_statements(tree: ast.AST) -> list[str]:
+    """The source of every equality assertion: ``assert a == b`` (each ``==`` of its test) and ``assertEqual(a, b)``."""
+    found: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assert):
+            found += [ast.unparse(c) for c in ast.walk(node.test) if isinstance(c, ast.Compare) and any(isinstance(o, ast.Eq) for o in c.ops)]
+        elif isinstance(node, ast.Call) and getattr(node.func, "attr", "") in ("assertEqual", "assertEquals") and len(node.args) >= 2:
+            found.append(" == ".join(ast.unparse(a) for a in node.args[:2]))
+    return found
+
+
+def _python_side_counts(tree: ast.AST) -> dict[str, bool]:
+    """Whether the test asserts an equality on a row count and one on a count of non-None values (names expanded one level)."""
+    values = {t.targets[0].id: ast.unparse(t.value) for t in ast.walk(tree) if isinstance(t, ast.Assign) and len(t.targets) == 1 and isinstance(t.targets[0], ast.Name)}
+    kinds = set()
+    for text in _equality_statements(tree):
+        expanded = NAME_RE.sub(lambda m: values.get(m.group(0), m.group(0)), text)
+        if "len(" in expanded or "sum(" in expanded:
+            kinds.add("non_null" if NONE_CHECK_RE.search(expanded) else "rows")
+    return {"rows": "rows" in kinds, "non_null": "non_null" in kinds}
+
+
 def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
-    """The executed SQL over the view counts the processed rows and the non-NULL values of the column."""
+    """The executed SQL over the view, or equality assertions on the fetched rows, count the processed rows and the non-NULL values of the column."""
     path = ctx.test_files.get(spec["file"])
     if path is None:
         return _outcome(False, "", f"the output holds no test file {spec['file']!r}")
@@ -83,7 +110,8 @@ def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
     column = spec["column"]
     from_view = re.compile(rf"\b(?:from|join)\s+(?:\"?\w+\"?\.)?\"?{re.escape(spec['view'])}\"?(?!\w)")
     sql = " ".join(q for q in executed_queries(tree) if from_view.search(q))
-    found = {"processed rows": bool(ROW_COUNT_RE.search(sql)), f"non-NULL {column} values": bool(non_null_re(column).search(sql))}
+    python = _python_side_counts(tree) if sql.strip() else {"rows": False, "non_null": False}
+    found = {"processed rows": bool(ROW_COUNT_RE.search(sql)) or python["rows"], f"non-NULL {column} values": bool(non_null_re(column).search(sql)) or python["non_null"]}
     missing = [what for what, ok in found.items() if not ok]
     return _outcome(not missing, f"the SQL counts the processed rows and the non-NULL {column} values",
                     "the SQL counts no " + " and no ".join(missing) + ", so an empty or all-NULL window passes it")

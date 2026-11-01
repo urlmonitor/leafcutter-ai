@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/testing-quality.md
   - docs/known-issues/README.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
 ---
 
 # KI-TQ-20261025-test-runner-runs-a-test-file-as-a-script — a pytest file run as a script passes without testing anything
@@ -23,7 +23,7 @@ related_docs:
 - **Severity:** medium. This is the agent, not the eval: a report of PASS for a run in which no
   test executed. Any caller that trusts the test-runner's status (a coder's inner loop, a build
   gate reading the report) would take untested code as tested. The eval caught it.
-- **Status:** open. Configured-command part fixed by TQ-200d-4-ii; no-test-is-not-a-pass part fixed by TQ-200d-4-iii. TQ-200d-4-iv adds the eval row and moves this file to resolved.
+- **Status:** RESOLVED 2026-11-01 by TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv. Proved by unit_tests/evals/tq200d4/test_tq200d4_no_test_collected.py (this AC) and the TQ-200d-4-ii and TQ-200d-4-iii tests.
 - **Occurrences:** 1 (the live before-score on 2026-10-25, Windows 11, `run_agent_eval.py
   --agent test-runner` without `--score-gold`, results timestamp `2026-10-25T20:58:19Z`): the
   `missing-setting-no-database-work` row (the W2 trap of TQ-200d-4) failed only
