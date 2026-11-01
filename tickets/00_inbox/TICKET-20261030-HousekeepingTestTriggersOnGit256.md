@@ -4,7 +4,7 @@ status: done
 components:
   - build_orchestration
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-11-01
 depends_on: []
 priority: high
 roadmap_phase: phase_1
@@ -49,6 +49,8 @@ maintenance on every supported git version, so that the test still proves the cu
 - [x] AC-2: The cut-over half still exercises git's real default strategy against the repo-local
   `maintenance.auto false` / `gc.auto 0`, with no other test or production change.
 - [x] AC-3: The module docstring states which setting drives the trigger on which git versions.
+- [x] AC-4: The informational mypy job is green on this PR. `msvcrt.locking` in `_shared_layout_coordination.py` carries the same
+  `# type: ignore` idiom as the rest of that file (typeshed declares msvcrt for win32 only). No behaviour change.
 
 ## Implementation Tasks
 - [x] Add `geometric-repack.auto = 5` to the `[maintenance]` section that `HousekeepingCase.setUp` writes.
