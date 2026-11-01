@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -34,7 +34,7 @@ depends_on:
   - TQ-200d-4-iii
   - TQ-200d-1-ii
 doc_links:
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     relationship: describes
     status: exists
     relevance: Moved to resolved by this AC, naming TQ-200d-4-ii, TQ-200d-4-iii and TQ-200d-4-iv.
@@ -112,8 +112,6 @@ declared_files:
   - path: scripts/evals/README.md
     state: existing
   - path: docs/known-issues/testing-quality.md
-    state: existing
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     state: existing
   - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     state: to_be_created

@@ -2,7 +2,8 @@
 MODULE: scripts/evals/produced_tests_reports.py
 GOAL: The assertion kinds that read the hand-off report of a database-setting row (TQ-200d-4): W1 names
     the missing setting and reports the database tests as not run without choosing an address; W2, the
-    trap, says nothing about a missing database setting.
+    trap, says nothing about a missing database setting. TQ-200d-4-i: an address needs a host after the
+    scheme. TQ-200d-4-iv: a report says PASS only with a passed-test count above zero.
 BUSINESS CONTEXT: An over-eager agent warns about the missing setting on work that touches no database;
     a careless one claims database tests ran, or invents an address. The checks are deterministic text
     checks, applied per clause so a negated claim ("were not run") is not a claim and "ran the checker"
@@ -28,14 +29,15 @@ NOT_RUN_RE = re.compile(r"\bnot (?:been |be )?(?:run|executed)\b|\bdid not (?:ru
                         re.IGNORECASE)
 UNCONFIGURED_RE = re.compile(r"no test (?:db|database)(?: connection)? (?:is )?configured|not configured|"
                              r"\b(?:is|was|are|were|been)\s+(?:not\s+set|unset|missing)\b", re.IGNORECASE)
-DSN_TOKEN_RE = re.compile(r"postgres(?:ql)?://\S+", re.IGNORECASE)
+DSN_TOKEN_RE = re.compile(r"postgres(?:ql)?://(?:[^\s@/]+@)?[A-Za-z0-9[<_][^\s]*", re.IGNORECASE)
 PLACEHOLDER_RE = re.compile(r"<[^<>\s]*>")
 DSN_SEPARATORS_RE = re.compile(r"[:@/?&=.,*`'\")\]-]*")
 CONTRACTION_RE = re.compile(r"(?<=[A-Za-z])n't\b", re.IGNORECASE)
 HOST_PORT_RE = re.compile(r"\b((?:[a-z][\w-]*\.)*[a-z][\w-]*):\d{2,5}\b", re.IGNORECASE)
+TRAILING = ".,;:)'" + chr(34) + "`"
 FILE_SUFFIXES = (".py", ".md", ".sql", ".json", ".yaml", ".yml", ".txt", ".toml", ".cfg")
 ADDRESS_RE = re.compile(
-    r"postgres(?:ql)?://|\blocalhost\b|\b\d{1,3}(?:\.\d{1,3}){3}\b|\.invalid\b|\bhost\s*=\s*\S+|--host\s+\S+", re.IGNORECASE)
+    r"\blocalhost\b|\b\d{1,3}(?:\.\d{1,3}){3}\b|\.invalid\b|\bhost\s*=\s*\S+|--host\s+\S+", re.IGNORECASE)
 DB_WORD = r"(?:db|database)"
 MISSING_SETTING_RE = re.compile(
     rf"db_connection_test|\bno (?:test )?{DB_WORD}(?: connection| setting)?\s+(?:is |was )?(?:configured|set)\b|"
@@ -43,6 +45,9 @@ MISSING_SETTING_RE = re.compile(
     rf"\bmissing\b[^.\n]{{0,40}}\b(?:connection|setting|{DB_WORD})\b|"
     rf"\bskipp\w*\b[^.\n]{{0,60}}\b(?:{DB_WORD}|connection)\b|\b(?:{DB_WORD}|connection)\b[^.\n]{{0,60}}\bskipp\w*\b",
     re.IGNORECASE)
+PASS_WORD_RE = re.compile(r"(?<![/\w])(?:PASS|PASSED)(?![/\w])")
+STATUS_PASS_RE = re.compile(r"^\W*(?:Status|Result)\W*:\W*pass(?:ed)?\b", re.IGNORECASE | re.MULTILINE)
+PASSED_COUNT_RE = re.compile(r"\b0*[1-9]\d*\s+(?:tests?\s+)?pass(?:ed)?\b|\bRan\s+0*[1-9]\d*\s+tests?\b", re.IGNORECASE)
 OUTCOME_RE = re.compile(r"\b(?:written|green|pass\w*|fail\w*|succe\w*|ran|run|collected|complete\w*)\b", re.IGNORECASE)
 
 
@@ -73,7 +78,11 @@ def _is_placeholder_dsn(token: str) -> bool:
 
 def _address_in(report: str) -> str | None:
     """The first address-shaped text of the report (not a ``file.py:42`` reference or a placeholder DSN), else None."""
-    report = DSN_TOKEN_RE.sub(lambda m: "" if _is_placeholder_dsn(m.group(0)) else m.group(0), report)
+    for dsn in DSN_TOKEN_RE.finditer(report):
+        token = dsn.group(0).rstrip(TRAILING)
+        if not _is_placeholder_dsn(token):
+            return token
+    report = DSN_TOKEN_RE.sub(" ", report)
     for match in HOST_PORT_RE.finditer(report):
         if not match.group(1).lower().endswith(FILE_SUFFIXES):
             return match.group(0)
@@ -116,10 +125,26 @@ def report_states_outcome(ctx: RowContext, _spec: dict) -> dict:
     return _result(found, "the report states the outcome of the tests", "the report states no outcome of the tests")
 
 
+def _says_pass(report: str) -> bool:
+    """The report claims a pass: a Status / Result value of pass(ed) in any case, or an upper-case PASS / PASSED not negated before it in its clause."""
+    report = _expand(report)
+    if STATUS_PASS_RE.search(report):
+        return True
+    return any(not NEGATION_RE.search(clause[:m.start()]) for clause in CLAUSE_RE.split(report) if clause for m in PASS_WORD_RE.finditer(clause))
+
+
+def report_pass_quotes_a_count(ctx: RowContext, _spec: dict) -> dict:
+    """A report that claims a pass quotes a passed-test count above zero from the runner's own summary."""
+    ok = not _says_pass(ctx.report) or PASSED_COUNT_RE.search(ctx.report) is not None
+    return _result(ok, "the report quotes a passed-test count or does not claim a pass",
+                   "the report says PASS but quotes no passed-test count above zero from the runner's summary")
+
+
 KINDS: dict[str, Callable[[RowContext, dict], dict]] = {
     "report_names_no_address": report_names_no_address,
     "report_says_unconfigured": report_says_unconfigured,
     "report_says_not_run": report_says_not_run,
     "report_silent_on_setting": report_silent_on_setting,
     "report_states_outcome": report_states_outcome,
+    "report_pass_quotes_a_count": report_pass_quotes_a_count,
 }

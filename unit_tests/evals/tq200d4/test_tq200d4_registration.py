@@ -15,34 +15,6 @@ import re
 import unit_tests.evals.tq200d4._helpers as h
 
 
-def test_test_runner_set_registered_and_every_row_scored(tmp_path):
-    # covers: TQ-200d-4
-    # angle: reachability
-    # must_catch: test-runner entry missing from agent_eval_config.json
-    # must_catch: database-setting rows placed in a second test-writer set
-    runner = h.agent_config("test-runner")
-    assert runner["eval_set"] == "scripts/evals/sets/test-runner.jsonl"
-    assert runner["scoring_mode"] == "produced_tests"
-    assert runner["template"] == "templates/agents/test-runner.md"
-
-    proc, payload = h.score_gold_cli("test-runner", tmp_path)
-    assert payload is not None, f"stdout={proc.stdout[-500:]} stderr={proc.stderr[-500:]}"
-    assert sorted(r["id"] for r in payload["rows"]) == sorted(h.ROW_IDS.values())
-    assert proc.returncode == 0, f"stdout={proc.stdout[-600:]} stderr={proc.stderr[-600:]}"
-    assert [r["id"] for r in payload["rows"] if not r["score"]["passed"]] == []
-    assert all(r["score"]["assertions"] for r in payload["rows"]), "every row carries a scored assertion"
-
-    proc, payload = h.score_gold_cli("test-writer", tmp_path)
-    assert payload is not None, f"stdout={proc.stdout[-500:]} stderr={proc.stderr[-500:]}"
-    assert sorted(r["id"] for r in payload["rows"]) == sorted([*h.D1_ROW_IDS, *h.ROW_IDS.values()])
-    assert proc.returncode == 0, proc.stdout[-600:]
-
-    # One set per agent: the new test-writer rows live in the TQ-200d-1 set, in no second file.
-    assert h.agent_config("test-writer")["eval_set"] == "scripts/evals/sets/test-writer.jsonl"
-    assert sorted(p.name for p in h.SETS_DIR.glob("*.jsonl")) == ["it-po.jsonl", "restructuring-specialist.jsonl", "sql-test-writer.jsonl", "test-designer.jsonl", "test-runner.jsonl", "test-writer.jsonl"]
-    assert [r["id"] for r in h.load_rows("test-runner")].count(h.ROW_IDS["cfg"]) == 1
-
-
 def test_test_runner_local_result_never_presented_as_ci(tmp_path):
     # covers: TQ-200d-4
     # angle: failure

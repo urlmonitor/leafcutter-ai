@@ -53,19 +53,6 @@ def _q1_label(tmp_path, label: str, keep_reasoned: bool = False):
     return row, h.with_report(row, tmp_path, h.relabel(h.report_of(row), 1, f"[reasoned] {label}" if keep_reasoned else label))
 
 
-def test_review_new_spec_keys_are_in_the_real_rows():
-    # covers: TQ-200d-2
-    # angle: seam
-    # must_catch: the empty-window SQL checked without naming the view
-    # must_catch: the wrong version checked without a keyword
-    assert _spec("empty", h.K_COUNTS).get("view") == VIEW, _spec("empty", h.K_COUNTS)
-    spec = _spec("reg", h.K_TO_RUN_LATER)
-    assert spec.get("wrong_version_contains") == KEYWORD, spec
-    assert spec.get("ac_id") == h.AC_IDS["reg"] and spec.get("contains") == KEYWORD
-    gold = _later_gold()["to_run_later"][0]
-    assert KEYWORD in gold["wrong_version"] and "::" in gold["test"]
-
-
 # ---------------------------------------------------------------------------------------- H-1
 
 
@@ -198,9 +185,9 @@ def test_review_h3_empty_window_sql_accepts_the_ways_an_agent_writes_the_query(t
 @pytest.mark.parametrize(
     ("changes", "words"),
     [
-        ({"wrong_version": "n/a"}, (f"names no wrong version of {KEYWORD}",)),
-        ({"wrong_version": "unrelated change to other_fn"}, (f"names no wrong version of {KEYWORD}",)),
-        ({"wrong_version": "the fix undone"}, (f"names no wrong version of {KEYWORD}",)),
+        ({"wrong_version": ""}, (f"names no wrong version of {KEYWORD}",)),
+        ({"test": "unit_tests/sql_functions/test_fn_other.py::TestFnOther::test_x"}, (f"names no wrong version of {KEYWORD}",)),
+        ({"wrong_version": "   "}, (f"names no wrong version of {KEYWORD}",)),
         ({"test": f"unit_tests/sql_functions/test_{KEYWORD}.py"}, (f"names no wrong version of {KEYWORD}",)),
         ({"ac_id": "TQ-9999"}, ("TQ-9999", "TQ-9501")),
     ],
@@ -209,8 +196,8 @@ def test_review_h3_empty_window_sql_accepts_the_ways_an_agent_writes_the_query(t
 def test_review_h4_to_run_later_entry_must_name_a_real_wrong_version(tmp_path, changes, words):
     # covers: TQ-200d-2
     # angle: discrimination
-    # must_catch: a placeholder wrong_version ("n/a", "the fix undone") accepted
-    # must_catch: a wrong version that names neither fn_refresh_due nor the spec keyword accepted
+    # must_catch: an empty or whitespace-only wrong_version accepted (TQ-200d-2-i: the prose is free, only non-empty)
+    # must_catch: an entry whose test id names another function accepted
     # must_catch: a file written for another requirement id accepted
     # must_catch: a test field with no :: node id accepted
     row = h.real_row("reg")

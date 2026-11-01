@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/testing-quality.md
   - docs/known-issues/README.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
   - docs/reference/skills-config-fields.md
   - docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200d-4-ii.yaml
 ---

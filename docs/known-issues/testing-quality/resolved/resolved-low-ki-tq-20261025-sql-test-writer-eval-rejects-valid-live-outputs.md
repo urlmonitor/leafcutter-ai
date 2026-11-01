@@ -25,7 +25,7 @@ related_docs:
   reach its threshold for these reasons alone. The failures are falsely red, never falsely green.
   Recorded gold scoring (`--score-gold`) is unaffected: the gold outputs happen to use the forms
   the kinds accept.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-01 by TQ-200d-2-i (part a) and TQ-200d-2-ii (part b). Proved by unit_tests/evals/tq200d2/test_tq200d2_later_prose.py and unit_tests/evals/tq200d2/test_tq200d2_python_counts.py.
 - **Occurrences:** 1 (the live before-score on 2026-10-25, Windows 11, `run_agent_eval.py
   --agent sql-test-writer` without `--score-gold`, results timestamp `2026-10-25T21:05:42Z`):
   - `stored-procedure-regression` failed only `sql_to_run_later_names_wrong_version`: "the

@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -31,7 +31,7 @@ depends_on:
   - TQ-200d-4
   - TQ-200d-1-ii
 doc_links:
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
     relationship: describes
     status: exists
     relevance: >-
@@ -83,8 +83,6 @@ declared_files:
   - path: scripts/evals/README.md
     state: existing
   - path: docs/known-issues/testing-quality.md
-    state: existing
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
     state: existing
   - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-row-fails-on-quoted-checker-message.md
     state: to_be_created

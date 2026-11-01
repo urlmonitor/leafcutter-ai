@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -39,7 +39,7 @@ doc_links:
       the 'For the **single-file** action' sentence under the table (now: the configured test command
       with the file as its argument, else 'python -m pytest <file>'; the plain 'python unit_tests/live_trader/<file>.py'
       form removed); '## Actions', the 'single <path>' bullet (names the same command).
-  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-test-runner-runs-a-test-file-as-a-script.md
     relationship: describes
     status: exists
     relevance: >-
