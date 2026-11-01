@@ -161,7 +161,7 @@ test_spec:
       - any report that quotes the checker skipped entirely
       - host-only postgres:// address missed
       - detail no longer names the found address
-      - placeholder exemption dropped
+      - exemption for the <user>:<password> template address dropped
     in_scope_files:
       - scripts/evals/produced_tests_reports.py
   - name: test_test_runner_and_test_writer_gold_still_pass
