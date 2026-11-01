@@ -7,7 +7,7 @@ component: testing-quality
 level: L1
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -63,6 +63,7 @@ covered_by:
   - TQ-200d-2
   - TQ-200d-3
   - TQ-200d-4
+  - TQ-200d-5
 implemented_by: []
 change_target:
   - config

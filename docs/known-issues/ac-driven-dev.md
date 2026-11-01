@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-12'
+last_updated: '2026-11-01'
 components:
   - ac_driven_dev
 related_docs:
@@ -69,7 +69,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 34** (0 blocker, 26 high, 8 low) · **Resolved: 7** (recounted from the directory 2026-10-12)
+**Open: 36** (0 blocker, 28 high, 8 low) · **Resolved: 7** (recounted from the directory 2026-11-01)
 
 ## Open
 
@@ -103,6 +103,8 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 | `high` | KI-ACD-20261009-resume-reclassifies — a resumed /plan-feature run asks the product-truth classifier again, gets a different answer, and silently drops the owner's answer at the product-truth gate it was paused at | [open-high-ki-acd-20261009-resume-reclassifies.md](ac-driven-dev/open-high-ki-acd-20261009-resume-reclassifies.md) |
 | `high` | KI-ACD-20261009-resume-reads-own-drafts-as-orphans — a resumed /plan-feature run stops at the partial-run recovery prompt and offers the paused run's own reviewed drafts as orphans; every answer undoes the review | [open-high-ki-acd-20261009-resume-reads-own-drafts-as-orphans.md](ac-driven-dev/open-high-ki-acd-20261009-resume-reads-own-drafts-as-orphans.md) |
 | `high` | KI-ACD-20261012-ids-mode-names-the-epic-after-its-first-prerequisite — goal_to_epic --ids takes the epic's folder name, Master_Plan title and source_ac from whichever id comes first, and on the documented path that is a prerequisite, not the goal | [open-high-ki-acd-20261012-ids-mode-names-the-epic-after-its-first-prerequisite.md](ac-driven-dev/open-high-ki-acd-20261012-ids-mode-names-the-epic-after-its-first-prerequisite.md) |
+| `high` | KI-ACD-20261022-plan-feature-entry-omits-the-permission-verdict — the /plan-feature command and skill pass only args.workspace, but the workflow halts unless args.workspace_setup_permission is also passed, so every run started as documented stops before Stage 0 (2 occurrences, last 2026-10-29; row added 2026-11-01, the file had no index row) | [open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md](ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md) |
+| `high` | KI-ACD-20261022-rule-check-resolves-the-store-root-against-the-session-cwd — /plan-feature's stage rule check passes a relative --store-root and never enters the workspace, so the store resolves against the session's cwd, "outside the repository", and the stage fails on good records (2 occurrences, last 2026-10-30; row added 2026-11-01, the file had no index row) | [open-high-ki-acd-20261022-rule-check-resolves-the-store-root-against-the-session-cwd.md](ac-driven-dev/open-high-ki-acd-20261022-rule-check-resolves-the-store-root-against-the-session-cwd.md) |
 | `low` | KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article | [open-low-ki-acd-011.md](ac-driven-dev/open-low-ki-acd-011.md) |
 | `low` | KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by` | [open-low-ki-acd-014.md](ac-driven-dev/open-low-ki-acd-014.md) |
 | `low` | KI-ACD-015 — Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer | [open-low-ki-acd-015.md](ac-driven-dev/open-low-ki-acd-015.md) |

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-25'
-last_updated: '2026-10-25'
+last_updated: '2026-11-01'
 components:
   - ac_driven_dev
 related_docs:
@@ -14,6 +14,7 @@ related_docs:
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
   - docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
+  - docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
 ---
 
 # KI-ACD-20261022-rule-check-resolves-the-store-root-against-the-session-cwd — /plan-feature's stage rule check passes a relative --store-root and never enters the workspace, so from the workspace parent the store resolves "outside the repository" and the stage fails on good records
@@ -23,9 +24,11 @@ related_docs:
   message re-authors or discards good work.
 - **Status:** open. No AC. Traced to code. The cwd of the dispatched shell is inferred from the
   observed path; it is not printed by the workflow.
-- **Occurrences:** 1 (IT PO stage, `/plan-feature` for KM-400d-4-i..iii from a workspace made by
-  `.leafcutter/scripts/worktree.py ensure --kind ac`, 2026-10-22)
-- **First seen:** 2026-10-22 · **Last seen:** 2026-10-22
+- **Occurrences:** 2 (IT PO stage, `/plan-feature` for KM-400d-4-i..iii from a workspace made by
+  `.leafcutter/scripts/worktree.py ensure --kind ac`, 2026-10-22; BA stage, `/plan-feature` run
+  `wf_4a8567df-505` in workspace `ac/tq-200d-before-score-fixes`, 2026-10-29 and 2026-10-30, see
+  [the occurrence section](#occurrence-2026-10-29-to-2026-10-30--ba-stage-two-different-session-cwds))
+- **First seen:** 2026-10-22 · **Last seen:** 2026-10-30
 - **Where:** `templates/workflows-js/plan-feature.js:1999-2021` (`runRuleCheck()`, command built at
   `:2003-2005`) and `:2283` (`acStoreDir`). The same relative store root goes to
   `runStageScript()` (`:2025-2030`, design pre-pass and approval holds). The refusal is
@@ -102,3 +105,28 @@ workspace should also avoid it (inferred, not tried).
 
 **Pattern:** a relative path handed across a process boundary. The caller meant "relative to the
 workspace"; the callee read "relative to wherever I started".
+
+## Occurrence 2026-10-29 to 2026-10-30 — BA stage, two different session cwds
+
+`/plan-feature` run `wf_4a8567df-505` (workspace `ac/tq-200d-before-score-fixes`, base
+`d62440669`). Every `rule-check-ba` that ran sent `--store-root "docs/acceptance-criteria"
+--repo-root "<workspace>"` with no `cd`, and each one failed the same way, with
+`records_checked: 0`:
+
+| when (UTC) | session cwd | store root the check resolved |
+|---|---|---|
+| 10-29 20:08 (before `gate-ba`) | `C:\Users\Hendrik\Code\leafcutter` | `C:\Users\Hendrik\Code\leafcutter\docs\acceptance-criteria` |
+| 10-30 07:33 (after the gate, on resume) | `...\leafcutter-ai-worktrees\fastlane\tq-500f-2-ii` | `...\fastlane\tq-500f-2-ii\docs\acceptance-criteria` |
+
+The session moved between the pause and the resume, and the resolved store root moved with it.
+That confirms the inference in Status: the check resolves against the session's cwd, not the
+workspace.
+
+The 10-30 failure set `reapprove` and forced an `edit` (`plan-feature.js:2917`), so the
+business-analyst re-ran on drafts the user had just approved. The next check was declined by
+`worktree-agent` (`KI-BO-20261101-plan-feature-script-steps-declined-by-worktree-agent`) and the
+stage aborted "business-analyst failed to produce satisfactory ACs after 2 attempts". As in
+Mechanism step 5, the abort listed flat paths that do not exist
+(`docs/acceptance-criteria/TQ-200d-5.yaml` and ten more); the records live under
+`docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/`. The stage was
+committed by hand as `dd053b3fa`.
