@@ -5,26 +5,26 @@ type: reference
 category: reference
 status: active
 created: '2026-10-25'
-last_updated: '2026-10-25'
+last_updated: '2026-11-01'
 components:
   - testing_quality
 related_docs:
   - docs/known-issues/testing-quality.md
   - docs/known-issues/README.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
   - docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
 ---
 
 # KI-TQ-20261025-eval-harness-system-prompt-exceeds-windows-command-line — the test-writer template is too long for a Windows command line
 
-> Filed 2026-10-25. Index: [testing-quality.md](../testing-quality.md).
+> Filed 2026-10-25. Index: [testing-quality.md](../../testing-quality.md).
 > Filename severity is the three-level index bucket (`low`); the original grading is the
 > `**Severity:**` line below.
 
 - **Severity:** medium. The test-writer live eval cannot be taken on Windows at all, and the
   failure is reported as a 0% score, not as a harness failure. Recorded gold scoring
   (`--score-gold`) makes no model call and is unaffected; Linux CI is not affected at this size.
-- **Status:** open, no AC.
+- **Status:** **RESOLVED 2026-11-01** by TQ-200b-1-i (template through a file for label and artifact runs) and TQ-200d-5 (shared launch builder `scripts/evals/agent_launch/command.py`, transcript invoker, row input on stdin). Proving tests: unit_tests/evals/test_tq200b1i_prompt_file.py (template through a file), unit_tests/evals/tq200d5/test_tq200d5_launch.py (no command line over 32,767 characters; instructions and input byte for byte), test_tq200d5i_launch_failure.py (the cause kept in the results file), test_tq200d5iii_harness_failure.py (stop at the first launch failure). Fail fast: TQ-200d-5-iii (a launch failure stops the run as a harness failure, exit status 3).
 - **Occurrences:** 1 (the live before-score on 2026-10-25, Windows 11, `run_agent_eval.py
   --agent test-writer` without `--score-gold`, results timestamp `2026-10-25T21:10:20Z`): all 8
   rows failed with `ModelInvocationError('agent CLI could not be launched')`, each logged with

@@ -140,6 +140,8 @@ from eval_selector import resolve_trigger_shas  # noqa: E402
 from artifact_dependencies import checked_path, copy_sandbox_inputs  # noqa: E402
 from artifact_validation import _ASSERTIONS  # noqa: E402
 from artifact_validation import store_errors, target_errors  # noqa: E402
+from agent_launch import command as agent_command  # noqa: E402
+from agent_launch.harness_failure import launch_failed, stop_run  # noqa: E402
 from cli_envelope import envelope_result  # noqa: E402
 from label_scoring import OUTCOME_BY_COMBO as OUTCOME_BY_COMBO  # noqa: E402
 from label_scoring import aggregate_label, derive_outcome, print_report, score_label_row  # noqa: E402
@@ -257,35 +259,15 @@ def _strip_frontmatter(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Model invocation
 # ---------------------------------------------------------------------------
-def _run_cli(label: str, cmd: list[str], prompt_flag: str, system_prompt: str, timeout: int, **run_kwargs: Any) -> str:
-    """Run the claude CLI with the prompt passed by temp file, not argv; return its reply.
-
-    A command-line argument is capped at ~32,767 chars on Windows, so the template is
-    written to a UTF-8 temp file (exact text) and handed over as `prompt_flag <path>` on
-    every platform. The file is deleted in `finally` (success, failure and OSError).
-    """
-    fd, pfile = tempfile.mkstemp(prefix="agent_eval_prompt_", suffix=".txt")
+def _run_cli(label: str, flags: list[str], system_prompt: str, user_input: str, replace: bool, timeout: int, **run_kwargs: Any) -> str:
+    """Start the agent through the shared launch builder (prompt file + stdin) and return its reply."""
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
-            fh.write(system_prompt)
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            [*cmd, prompt_flag, pfile],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-            **run_kwargs,
-        )
+        completed = agent_command.launch(flags, instructions=system_prompt, user_input=user_input, replace=replace,
+                                         timeout=timeout, error=ModelInvocationError, **run_kwargs)
     except subprocess.TimeoutExpired as exc:
         logger.exception("%s timed out after %ss", label, timeout)
         msg = f"{label} timed out after {timeout}s"
         raise ModelInvocationError(msg) from exc
-    except OSError as exc:
-        logger.exception("%s could not be launched", label)
-        msg = f"{label} could not be launched"
-        raise ModelInvocationError(msg) from exc
-    finally:
-        Path(pfile).unlink(missing_ok=True)
     return envelope_result(completed, label, ModelInvocationError)
 
 
@@ -301,19 +283,8 @@ def invoke_via_cli(
     and dynamic system-prompt sections are excluded for determinism. Raises
     ModelInvocationError on any subprocess or output-parse failure.
     """
-    cmd = [
-        "claude",
-        "-p",
-        user_input,
-        "--model",
-        model,
-        "--tools",
-        "",
-        "--exclude-dynamic-system-prompt-sections",
-        "--output-format",
-        "json",
-    ]
-    return _run_cli("claude CLI", cmd, "--system-prompt-file", system_prompt, timeout)
+    flags = ["--model", model, "--tools", "", "--exclude-dynamic-system-prompt-sections", "--output-format", "json"]
+    return _run_cli("claude CLI", flags, system_prompt, user_input, True, timeout)
 
 
 def invoke_via_api(
@@ -712,21 +683,9 @@ def invoke_agent_writer(
     the sandbox and LEAFCUTTER_REPO_ROOT points at it, so writes stay contained.
     Permissions are bypassed because the sandbox is a throwaway /tmp copy.
     """
-    cmd = [
-        "claude",
-        "-p",
-        user_input,
-        "--model",
-        model,
-        "--tools",
-        tools,
-        "--permission-mode",
-        "bypassPermissions",
-        "--output-format",
-        "json",
-    ]
+    flags = ["--model", model, "--tools", tools, "--permission-mode", "bypassPermissions", "--output-format", "json"]
     env = dict(os.environ, LEAFCUTTER_REPO_ROOT=str(sandbox))
-    return _run_cli("agent CLI", cmd, "--append-system-prompt-file", system_prompt, timeout, cwd=str(sandbox), env=env)
+    return _run_cli("agent CLI", flags, system_prompt, user_input, False, timeout, cwd=str(sandbox), env=env)
 
 
 def _parse_report(reply: str) -> dict[str, Any]:
@@ -875,6 +834,7 @@ def run_artifact_row(
             score_gold=score_gold,
         )
     except ModelInvocationError as exc:
+        launch_failed(exc, row_id)
         logger.warning("Row %s: %s", row_id, exc)
         record["score"] = {"passed": False, "assertions": [], "judge": None}
         record["error"] = str(exc)
@@ -1084,6 +1044,7 @@ def run_label_eval(
                 if any(not isinstance(predicted.get(axis), bool) for axis in axes):
                     raise ModelInvocationError("Model response must supply an explicit boolean for every label axis")
             except ModelInvocationError as exc:
+                launch_failed(exc, row_id)
                 logger.warning("Row %s: model invocation/parse failed: %s", row_id, exc)
                 predicted = {}
                 parse_error = str(exc) or "Model invocation or response validation failed"
@@ -1211,6 +1172,8 @@ def _run_label_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dict],
         row_results = run_label_eval(
             rows, system_prompt, agent_cfg, self_test=args.self_test, timeout=timeout, backend=backend
         )
+    except agent_command.AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, write_results)
     except EvalHarnessError:
         logger.exception("Eval run failed")
         return 2
@@ -1259,6 +1222,8 @@ def _run_artifact_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dic
         row_results = run_artifact_eval(
             rows, system_prompt, agent_cfg, repo_root, timeout=timeout, score_gold=args.score_gold
         )
+    except agent_command.AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, write_results)
     except EvalHarnessError:
         logger.exception("Eval run failed")
         return 2

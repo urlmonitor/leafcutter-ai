@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-24'
-last_updated: '2026-10-24'
+last_updated: '2026-11-01'
 components:
   - testing_quality
 related_docs:
@@ -16,14 +16,14 @@ related_docs:
 
 # KI-TQ-20261024-eval-harness-cannot-launch-claude-on-windows — bare 'claude' does not start on Windows
 
-> Filed 2026-10-24. Index: [testing-quality.md](../testing-quality.md).
+> Filed 2026-10-24. Index: [testing-quality.md](../../testing-quality.md).
 > Filename severity is the three-level index bucket (`low`); the original grading is the
 > `**Severity:**` line below.
 
 - **Severity:** medium. No live agent eval can run on a Windows machine with the standard npm
   install, and the failure is reported as a 0% quality score, not as a harness failure. CI
   (Linux) is not affected.
-- **Status:** open, no AC.
+- **Status:** **RESOLVED 2026-11-01** by TQ-200d-5-ii (`scripts/evals/agent_launch/locate.py`: the setting `LEAFCUTTER_EVAL_CLAUDE_CLI`, else the PATH/PATHEXT lookup on Windows, and a `.cmd`/`.bat` launcher started through the command processor). Proving tests: unit_tests/evals/tq200d5/test_tq200d5ii_locate.py. Fail fast: TQ-200d-5-iii (a launch failure stops the run as a harness failure, exit status 3).
 - **Occurrences:** 4 on 2026-10-24: every live eval run that day (flow-author, mock-data-author,
   pt-classifier, restructuring-specialist) scored 0% with every row "claude CLI could not be
   launched" / "agent CLI could not be launched", until `PATH` was prefixed with the `bin` folder
