@@ -4,7 +4,7 @@ description: "Every field, status, exit code and outcome code of the answer the 
 type: reference
 status: active
 created: 2026-10-13
-last_updated: 2026-10-22
+last_updated: 2026-11-02
 components:
   - worktree_manager
   - build_orchestration
@@ -70,7 +70,7 @@ These are all the codes. No answer carries a generic `REFUSED` code.
 | Code | Status | Meaning |
 |---|---|---|
 | `OK` | ok | The request was done. |
-| `NOT_FOUND` | refused | No workspace with a marker at that place. |
+| `NOT_FOUND` | refused | No workspace with a marker at that place. On `remove`, a folder with no record that holds files also gets this code, with `files` listing them; see [Refusals of remove](#refusals-of-remove). |
 | `INCOMPLETE` | refused | The workspace is half-made and could not be finished safely; see `remnant_path`. |
 | `OCCUPIED` | refused | The place already holds other work; left as it is. See `occupant`. |
 | `OCCUPIED_LEGACY_WORKTREE` | refused | An old-style worktree occupies the work's place. See `occupant`. |
@@ -86,8 +86,8 @@ These are all the codes. No answer carries a generic `REFUSED` code.
 | `WORK_AT_RISK` | refused | Finishing the workspace in place would endanger work in it; see `unsent`. |
 | `HOOKS_INACTIVE` | refused | The declared commit protections did not fire in the workspace; see `inactive_stages`. |
 | `VERIFY_FAILED` | refused | A readiness check failed; the answer names the `failed_ingredients` and carries the `checks`. |
-| `UNSENT_WORK` | refused | `remove` found unpushed commits or uncommitted files; see `unsent` and `discard_token`. |
-| `PROCESS_HOLDS_FILES` | refused | Programs hold files, so the folder could not be cleared; see `holders`. |
+| `UNSENT_WORK` | refused | `remove` found unpushed commits or uncommitted files, or a half-cleared workspace still holds files; see `unsent` and `discard_token`. |
+| `PROCESS_HOLDS_FILES` | refused | `remove` was stopped by programs: one is working inside the workspace (see `holders`), the program check is unavailable, or some items could not be deleted. See [Refusals of remove](#refusals-of-remove). |
 | `ON_PROTECTED_BRANCH` | refused | The workspace is on a protected branch, or `remove --delete-remote-branch` names a protected branch of the shared project. |
 | `TICKET_NOT_ON_BASE` | refused | The named ticket file is not on the shared project's base; see `ticket_path` and `reason`. |
 | `AMBIGUOUS_LINE` | refused | More than one line of work exists on the shared project for this work; the answer lists the `lines`. Name one. |
@@ -188,18 +188,74 @@ post-merge checks are `n/a` only when the project does not declare that stage.
 | `searched_from` | `NO_REPO` | where the search started |
 | `occupant` | `OCCUPIED`, `OCCUPIED_LEGACY_WORKTREE` | `{path, kind, branch}`; `kind` is `other-line`, `other-project`, `plain-folder` or `legacy-worktree`; `branch` may be null |
 | `remnant_path` | `INCOMPLETE` | the half-made workspace |
-| `unsent` | `UNSENT_WORK`, `WORK_AT_RISK` | `{commits, files}` |
+| `unsent` | `UNSENT_WORK`, `WORK_AT_RISK` | `{commits, files}`; for a half-cleared workspace `commits` is always empty |
+| `files` | `NOT_FOUND` from `remove` of a record-less folder holding files | the files in the folder: paths relative to the folder, forward slashes, sorted |
 | `discard_token` | `UNSENT_WORK` on `remove` only | see [Discard token](#discard-token) |
-| `holders` | `PROCESS_HOLDS_FILES` | `[{pid, name}]`, one entry per program holding files |
+| `holders` | `PROCESS_HOLDS_FILES` when a program is working inside the workspace | `[{pid, name}]`, one entry per program: `pid` is an integer, `name` the program's name, never its command line. Absent on the other two `PROCESS_HOLDS_FILES` refusals |
 | `lines` | `AMBIGUOUS_LINE` | the lines of work that hold this identity |
 | `branch`, `recorded_ticket`, `ticket_path` | `BUILT_FOR_OTHER_TICKET` | the line, the repo-relative POSIX ticket path it is recorded as built for, and the path as requested |
 | `failed_ingredients`, `checks` | `VERIFY_FAILED` | the names of the false checks, and all the checks; `failed_ingredients` may also hold `identity` when `--kind`/`--slug` differ from the marker's canonical identity |
 | `hub_branch_deleted` | `remove --delete-remote-branch` whose local delete failed | true: the branch on the shared project was already deleted |
 
+## Refusals of remove
+
+Every refusal here has status `refused` and exit code 2. The maker reports programs; it never
+stops them.
+
+| Situation | Code | Fields | Message says |
+|---|---|---|---|
+| A program is working inside the workspace | `PROCESS_HOLDS_FILES` | `holders`: `[{pid, name}]` | `Programs are working inside <workspace>: <pid> (<name>), .... Stop them and ask again; nothing was removed.` |
+| The program check is unavailable | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `The program check is unavailable (<reason>), so it cannot be told whether programs are working inside <workspace>; nothing was removed.` |
+| Some items could not be deleted | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `Could not remove all of <workspace> (a program may hold files): could not delete a, b, c and N more` |
+| A half-cleared workspace still holds files | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | says the workspace was half-cleared and its remaining files cannot be checked against the shared project |
+| A folder with no record holds files | `NOT_FOUND` | `files`; no `discard_token` | says the folder cannot be told to be a workspace of this project |
+| A workspace off its line of work (detached) has commits that are on neither `origin/<branch>` nor `origin/main` | `UNSENT_WORK` | `unsent` (`commits` as full 40-character ids, `files`), `discard_token` | adds that the workspace is not on its line of work (detached), so the commit it sits on was checked too |
+
+Details:
+
+- **Program working inside the workspace.** The program check runs first: nothing is fetched,
+  pushed or deleted before it. The answer is the same whether one program or several.
+- **Program check unavailable.** The check fails closed. It is unavailable when its script is
+  not deployed beside the maker, fails to load, raises, or reports an error. The `<reason>` in
+  the message names which.
+- **Some items could not be deleted.** The message names the items relative to the workspace,
+  files first, up to 5, then "and N more". With `remove --delete-remote-branch` the message also
+  ends `The branch on the shared project was already deleted.` and the answer adds
+  `hub_branch_deleted: true`. Asking again continues the clearing, which is then a
+  half-cleared workspace.
+- **Half-cleared workspace.** The repository is gone and an earlier clearing stopped part-way.
+  `unsent.files` lists the remaining files (relative paths, forward slashes, sorted, the
+  workspace record left out). They count as unsent because they cannot be checked against the
+  shared project. Repeating the request with the matching `--discard-token` finishes the
+  clearing; the ok answer's `discarded` is then `{commits: [], files: [...]}`. A token that does
+  not match repeats the refusal with a fresh token. A half-cleared folder with no files left is
+  simply finished with an ok answer. The shared project is never touched.
+- **Folder with no record holding files.** Nothing was changed and no token is offered, because
+  the folder cannot be told to belong to this project. A record-less folder with no files in this
+  project's landing place is finished with an ok answer. A plain `NOT_FOUND` without `files`
+  means the place is not a workspace of this project.
+- **Workspace off its line of work.** Being detached is not a refusal by itself; `remove` treats
+  such a workspace like any other. There is no separate field for it; the only sign is the extra
+  sentence in the message.
+
+Example: the answer for a half-cleared workspace holding two files (trimmed to the fields that
+matter).
+
+```json
+{
+  "status": "refused",
+  "code": "UNSENT_WORK",
+  "verb": "remove",
+  "unsent": {"commits": [], "files": ["notes.txt", "src/app.py"]},
+  "discard_token": "<32 hex characters, read from this answer>"
+}
+```
+
 ## Discard token
 
 On an `UNSENT_WORK` refusal of `remove`, the answer carries `unsent` (`commits` and `files`)
-and `discard_token`. Repeat the request with `--discard-token <token>` to discard. The token
+and `discard_token`. A half-cleared workspace's refusal carries them too: `unsent.commits` is
+always empty, and the token is bound to exactly those files and their content. Repeat the request with `--discard-token <token>` to discard. The token
 is one-time, bound to that workspace and exactly the listed unsent set, valid only on the
 `remove` request for that workspace while the set is unchanged. It is never an environment
 variable or config setting and is never remembered. It never appears on `ensure`'s
