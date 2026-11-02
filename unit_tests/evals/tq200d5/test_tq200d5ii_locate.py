@@ -183,5 +183,6 @@ def test_docs_name_the_setting_the_harness_reads():
     assert "PATHEXT" in windows and ".cmd" in windows
     assert not PREFIX_PATH.search(how_to) and not PREFIX_PATH.search(readme), "the prefix-PATH workaround is still documented"
     assert PREFIX_PATH.search("First prefix PATH with the folder of claude.exe.") and not PREFIX_PATH.search("Set the CLI location instead.")
-    other = set(re.findall(r"LEAFCUTTER_EVAL_[A-Z_]+", how_to + readme)) - {name, "LEAFCUTTER_EVAL_USE_API"}
+    read_elsewhere = {"LEAFCUTTER_EVAL_USE_API", fk.module("produced_tests_mode").KEEP_OUTPUTS_ENV}  # TQ-200d-1-iii
+    other = set(re.findall(r"LEAFCUTTER_EVAL_[A-Z_]+", how_to + readme)) - {name, *read_elsewhere}
     assert not other, f"setting names the code does not read: {sorted(other)}"

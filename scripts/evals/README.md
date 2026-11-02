@@ -169,3 +169,10 @@ payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs
   fresh result. Every payload carries `run_context: "local"` and the printed report says
   "LOCAL RUN". A live run (`--agent test-writer` without `--score-gold`) needs model
   credentials and is never run in CI.
+- **Keeping a live run's outputs.** A live row's output lives in a temporary folder that
+  is deleted after scoring. To check a failed row against what the agent really wrote, set
+  `LEAFCUTTER_EVAL_KEEP_OUTPUTS` to a directory before the run. Each live row's output
+  (`files/` with every file the agent changed, `report.md`, the to-run-later `leafcutter/`
+  folder and, when captured, the transcript) is then copied to
+  `<dir>/<set name>/<row id>/`, for passing and failing rows alike. A re-run replaces a
+  row's folder. Unset, or with `--score-gold`, nothing is kept.
