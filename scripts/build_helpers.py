@@ -1061,8 +1061,8 @@ def _package_relative_key(tpl_path: Path, package_root: Path, package_offset: st
     Returns:
         The manifest key string.
     """
-    rel = tpl_path.relative_to(package_root).as_posix()
-    return f"{package_offset}/{rel}" if package_offset else rel
+    # BP-1500d-2: package-relative, survives a move; reader re-applies package_root (offset now unused).
+    return tpl_path.relative_to(package_root).as_posix()
 
 
 def write_build_manifest(

@@ -436,6 +436,25 @@ def _hash_recorded(out_key: str, out_path: Path) -> tuple[str, str | None]:
         return "unreadable", None
 
 
+def _is_location_keyed(key: str) -> bool:
+    """Return True when a record key only means something at the place the
+    record was written: an absolute path (POSIX or drive-lettered) or one
+    that steps outside the project with a ``..`` segment (BP-1500d-2).
+
+    Args:
+        key: A manifest ``output_mappings`` key.
+
+    Returns:
+        True when the key is not project-relative.
+    """
+    norm = key.replace("\\", "/")
+    return (
+        norm.startswith("/")
+        or (len(norm) > 1 and norm[1] == ":")
+        or ".." in norm.split("/")
+    )
+
+
 def _reconcile_recorded(
     output_mappings: dict, repo_root: Path, exemptions: dict[str, str]
 ) -> tuple[dict[str, int], int, list[tuple[str, str]]]:
@@ -460,7 +479,15 @@ def _reconcile_recorded(
     counts = {"verified": 0, "unreadable": 0, "missing": 0}
     drift_exempt = 0
     violations: list[tuple[str, str]] = []
+    location_keyed = 0
     for out_key, entry in output_mappings.items():
+        if _is_location_keyed(out_key) and not (repo_root / out_key).exists():
+            # BP-1500d-2: an entry keyed to the place the record was written
+            # (absolute, or reaching outside the project) that no longer
+            # resolves is an UNREADABLE record, not a deleted artifact.
+            counts["unreadable"] += 1
+            location_keyed += 1
+            continue
         status, current_hash = _hash_recorded(out_key, repo_root / out_key)
         counts[status] += 1
         if status != "verified":
@@ -474,6 +501,14 @@ def _reconcile_recorded(
             _err(f"DIRECT-DRIFT: EXEMPT {out_key} ground={ground}")
         else:
             violations.append((out_key, fields.get("template", "<unknown>")))
+    if location_keyed:
+        _err(
+            f"{_GATE_NAME}: UNREADABLE - the record {repo_root / '.build_manifest.json'} "
+            f"for the project at {repo_root} has {location_keyed} entr(ies) keyed to "
+            "the location it was written in (absolute or outside the project), "
+            "which do not resolve here. The record did not travel with the "
+            "project; re-run build.py in this project to rewrite it."
+        )
     return counts, drift_exempt, violations
 
 
