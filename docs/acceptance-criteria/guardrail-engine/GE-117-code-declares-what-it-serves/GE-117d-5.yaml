@@ -37,6 +37,13 @@ assigned_agent: architecture-diagram-author
 estimated_complexity: S
 change_target: docs
 test_required: false
+test_rationale: 'A Mermaid sequence page for the declaration guardrail: a commit sends the staged
+  diff to the guardrail, which looks up docs/components.json and, as a separate step, the AC
+  store through the shared id resolver, then lets the commit through or rejects it with a report,
+  and the developer comes back by fix or opt-out. Keeping those two lookups visibly apart instead
+  of merged into one registry actor is a drawing choice that only a reader can assess. Review
+  against GE-117d-1 and GE-117e covers it now; in wave 2 a verified_by inspection replaces that
+  review.'
 it_requirements:
   - "Author the diagram as a Mermaid sequenceDiagram with check_doc_frontmatter-compliant architecture frontmatter (title, type, status, created, last_updated, components, flight_level; diagram_type: sequence)."
   - "Depict the two DISTINCT registries the guardrail consults: docs/components.json (module-component validity) and the AC store via the shared GE-124c-2-i id resolver (AC-reference validity) — do not conflate them into one 'registry' actor."

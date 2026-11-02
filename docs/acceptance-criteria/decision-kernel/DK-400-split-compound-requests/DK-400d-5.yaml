@@ -70,7 +70,7 @@ it_requirements:
     -> rejected_clarify, run waiting_human on today''s clarification question; bundled_accepted or mid_run -> rejected_kept_whole).
     The phase before the host''s proposal arrives is shown only if product truth gains a state for it.'
 risk_surface: internal
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:
@@ -94,6 +94,10 @@ amended_by:
     by: it-po
     summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
       named leafcutter.split_answer.v1 and leafcutter.decomposition.v1; ADR-067 doc_link set to exists.'
+  - action: amended
+    agent: it-po
+    date: '2026-11-02'
+    reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

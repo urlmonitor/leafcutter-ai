@@ -32,6 +32,13 @@ it_requirements:
 - Show the mining job, the mining store, grouping (code, then Jev), the review capability, the run root's staged area, publish, the category library docs/criteria/ with its generated index, the optional learning-store aggregates (ADR-065) and the knowledge graph import (ADR-062 native kind criterion_category).
 - Mark the Neo4j aggregates and the knowledge graph as optional. Show no edge from the decision run to Langfuse or to the mining store.
 test_required: false
+test_rationale: This is a C4 component page that sets criteria mining apart as an offline component
+  beside the decision kernel, with grouping, review, publish, the category library and its generated
+  index around it, the Neo4j aggregates and knowledge-graph import marked optional, and no edge
+  from a decision run to Langfuse or the mining store. That the drawing conveys the separation
+  ADR-058 section 6 demands, and marks the optional parts so nobody takes them for required,
+  can only be weighed by someone reading it. The check is a reviewer reading it against DK-500a-1,
+  ADR-058 and ADR-062, carried from wave 2 by a verified_by inspection.
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs

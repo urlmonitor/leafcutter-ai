@@ -38,10 +38,14 @@ it_requirements:
   - "Document in docs/pre-commit-hooks.md (the commit_guardian reference doc): the guard rule (requires_verification: true requires Edit or Write), what triggers a block, and the two valid fixes (add Edit/Write to tools, or set requires_verification: false)."
   - "Record that this contradiction was previously caught only post-merge by build.py's registry self-description validation, and is now caught fail-closed at commit time."
   - "Keep docs/how-to/managing-pre-commit-hooks.md consistent if it enumerates hooks (add the new guard where hooks are listed)."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-07-20
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-02'
+  reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by:

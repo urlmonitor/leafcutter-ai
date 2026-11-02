@@ -33,7 +33,7 @@ risk_surface: internal
 it_requirements:
 - A Mermaid stateDiagram-v2 on a new docs/architecture/diagrams/ page with frontmatter, linked from docs/architecture/components/decision-kernel.md and from the criterion category reference (DK-500c-5).
 - 'States and transitions as built: candidate (mining store) to staged (run root) by a person''s approval in a criteria.review run; staged to published by decisions publish; published back to staged on an edit, merge or split, keeping the id; published to retired with replaced_by. Show the rejected exit, and label each transition with its actor and command.'
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -54,6 +54,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-02'
+  reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500c's state-diagram trigger (four lifecycle stages with explicit transitions).
