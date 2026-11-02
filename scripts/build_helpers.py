@@ -986,7 +986,7 @@ def _compute_output_mappings(
 def _relative_package_offset(package_root: Path, repo_root: Path) -> str | None:
     """Return where ``package_root`` stands relative to ``repo_root``, in the
     one vocabulary both the manifest's ``package_root`` field and its
-    template-account keys share (BP-1500d-1-i).
+    template-account keys are anchored by (BP-1500d-1-i, BP-1500d-2).
 
     Uses ``os.path.relpath`` rather than ``Path.relative_to`` because
     ``relative_to`` only succeeds when one path is a literal subpath of the
@@ -1036,19 +1036,19 @@ def _relative_package_offset(package_root: Path, repo_root: Path) -> str | None:
 
 
 def _package_relative_key(tpl_path: Path, package_root: Path, package_offset: str) -> str:
-    """Compose a template's manifest key from the SAME offset recorded as
-    ``package_root`` (BP-1500d-1-i's agreement requirement).
+    """Compose a template's manifest key relative to the PACKAGE, never to
+    where the package stood (BP-1500d-2; agreement kept per BP-1500d-1-i).
 
     ``tpl_path`` is always a real descendant of ``package_root`` here (every
     caller enumerates it via ``package_root``-rooted ``rglob()``), so
-    ``relative_to(package_root)`` cannot raise. Prefixing that with
-    ``package_offset`` (already expressed relative to the manifest's own
-    directory by ``_relative_package_offset``) produces exactly the key
-    space ``check_build_drift.py``'s ``family_prefix`` derivation expects:
-    ``package_offset`` itself, whatever shape it takes, IS what
-    ``templates_dir.relative_to(repo_root)`` yields on the reading side, so
-    a key built the same way agrees with it lexically with no reader-side
-    translation required.
+    ``relative_to(package_root)`` cannot raise. The key is that relative
+    path alone ("templates/agents/x.md"), so it means the same thing after
+    the project is moved. The package's position is recorded once, as the
+    ``package_root`` field, from the SAME ``package_offset`` value, and
+    ``check_build_drift.py`` re-applies it (``_anchor_package_keys``) before
+    its ``family_prefix`` comparison, so the two halves still agree. Records
+    written before BP-1500d-2 carry the offset in each key and still read.
+    ``package_offset`` stays in the signature but is no longer used here.
 
     Args:
         tpl_path: Absolute path to a template file under ``package_root``.
