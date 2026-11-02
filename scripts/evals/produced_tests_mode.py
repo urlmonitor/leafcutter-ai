@@ -14,7 +14,8 @@ ARCHITECTURE: ``run_produced_tests_mode`` is dispatched by run_agent_eval.main()
     a git sandbox (the fixture plus the scripts the template names, ``{{config.output_root}}``
     rendered to the sandbox), exports the test files it wrote as ``*.py.recorded`` beside its
     reply as report.md, and scores them exactly like a recorded gold output. Gold mode makes no
-    model call.
+    model call. When LEAFCUTTER_EVAL_KEEP_OUTPUTS names a directory, each live row's produced
+    folder is copied to <dir>/<eval set name>/<row id>/ before scoring, so a failed row can be checked.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import logging
+import os
 import shutil
 import tempfile
 from datetime import datetime, timezone
@@ -37,6 +39,7 @@ from agent_launch.harness_failure import launch_failed, stop_run
 
 logger = logging.getLogger("run_agent_eval")
 OUTPUT_ROOT_PLACEHOLDER = "{{config.output_root}}"
+KEEP_OUTPUTS_ENV = "LEAFCUTTER_EVAL_KEEP_OUTPUTS"
 LOCAL_NOTE = "LOCAL RUN: scored on this machine only; the CI eval gate has not run this eval."
 
 
@@ -112,6 +115,19 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
     return out_dir
 
 
+def keep_outputs(out_dir: Path, agent_cfg: dict, row_id: str) -> Path | None:
+    """Copy a live row's produced folder to ``$KEEP_OUTPUTS_ENV/<eval set name>/<row id>/`` (replacing an older copy)."""
+    root = os.environ.get(KEEP_OUTPUTS_ENV, "")
+    if not root:
+        return None
+    target = Path(root) / Path(agent_cfg["eval_set"]).stem / str(row_id)
+    if target.exists():
+        runs.remove_tree(target)
+    shutil.copytree(out_dir, target)
+    logger.info("kept live outputs of row %s at %s", row_id, target)
+    return target
+
+
 def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, *, score_gold: bool, timeout: int) -> dict[str, Any]:
     """Score one row; a harness or sandbox failure is a failed row carrying its error, never a skip."""
     field_name = agent_cfg.get("expected_field", "expected")
@@ -123,6 +139,7 @@ def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, h
                 output_dir = repo_root / expected["gold_output"]
             else:
                 output_dir = live_output(row, agent_cfg, system_prompt, repo_root, work_dir, harness, timeout)
+                keep_outputs(output_dir, agent_cfg, row.get("id", "?"))
             return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
                                      support=support_for(agent_cfg, repo_root))
         except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:

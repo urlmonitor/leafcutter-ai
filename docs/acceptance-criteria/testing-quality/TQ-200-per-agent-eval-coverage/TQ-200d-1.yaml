@@ -392,6 +392,7 @@ superseded_by: null
 covered_by:
   - TQ-200d-1-i
   - TQ-200d-1-ii
+  - TQ-200d-1-iii
 implemented_by: []
 change_target:
   - config
