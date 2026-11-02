@@ -1,0 +1,147 @@
+id: TQ-200d-1-iv
+components:
+  - testing_quality
+title: "A test-writer test that asserts its counts or its seeded value with unittest assertion calls passes the two static test-writer checks"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer "empty-window" row, whose window holds 3 values,
+    And a produced unittest test that asserts
+      self.assertEqual(len(volumes), len(window)) and
+      self.assertEqual(sum(v is not None for v in volumes), len(window)),
+      where window is the 3-value list the test itself built,
+  When the row's exact-row-count and non-NULL-count check reads the test,
+  Then the check passes,
+    And the same test written with bare assert statements and the literal 3
+      still passes,
+    And self.assertTrue(len(volumes) == 3) is read the same as
+      assert len(volumes) == 3,
+    And self.assertGreater(non_null, 0) and self.assertGreaterEqual(non_null, 1)
+      count as a non-NULL count under the same bounds as "> 0" and ">= 1",
+    And a test whose only checks are self.assertGreaterEqual(non_null, 0),
+      self.assertTrue(len(volumes)) or self.assertIsNotNone(volumes) fails,
+    And a test that compares a count with itself, such as
+      self.assertEqual(len(volumes), len(volumes)), fails, because it holds
+      for an empty window,
+    And a test that asserts the exact row count but no non-NULL count fails,
+      whichever assertion style it uses.
+
+  Given the test-writer "presence-is-not-correctness" row,
+    And a produced unittest test that seeds
+      feed = {"AAPL": 190.12, "MSFT": 410.55, "TSLA": 248.50}
+      and asserts self.assertEqual(result["AAPL"], 190.12),
+  When the row's seeded-value check reads the test,
+  Then the check passes,
+    And self.assertEqual(190.12, result["AAPL"]) (seeded value first) passes,
+    And self.assertIsNotNone(result["AAPL"]) alone fails, as presence and not
+      correctness,
+    And self.assertEqual(result["AAPL"], 9.0) fails when no assignment in the
+      file holds 9.0,
+    And a number that appears only inside assertion calls is not counted as a
+      seed.
+
+  Given the kept live outputs of the 2026-11-02 re-runs for both rows,
+      recorded as probe fixtures,
+  When the two checks score them,
+  Then the re-run 1 empty-window test and both re-runs'
+      presence-is-not-correctness tests pass, the re-run 2 empty-window test
+      (bare asserts) still passes, the recorded gold outputs for both rows
+      still pass, and for each kept output a copy weakened to assert only
+      presence fails (no false green).
+
+  Given the change is done,
+  Then the counts_rows_and_non_null and asserts_known_seeded_value entries on
+      the test-writer assertion-kind reference page state that unittest
+      assertion calls are read, name the accepted calls and the bound rules,
+      state that an exact count may compare against a non-literal integer
+      expression such as len(seed), and carry a unittest passing example,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the produced-tests section of the evals README states the rule in one
+      line linking the entries,
+    And the known issue "test-writer scorer reads only bare asserts" is moved
+      to resolved naming this AC and its proving tests, with the Open/Resolved
+      count of the testing-quality known-issue register recounted,
+    And one changelog entry names this AC, the widened kinds and the resolved
+      known issue,
+    And no glossary term is added except through the glossary-triage flow,
+    And the test-writer template's remedies "assert an exact count of
+      processed rows plus a non-NULL count" and "assert at least one known
+      expected value seeded in the fixture" are unchanged.
+depends_on:
+  - TQ-200d-1
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Source of the defect, mechanism, kept-output evidence and fix direction. Filed by PR #1389
+      (branch origin/feature/eval-rerun-kis); moved to resolved/ by this AC.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: The counts_rows_and_non_null (:58-83) and asserts_known_seeded_value (:85-110) entries say 'an `assert`'; both are rewritten.
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page and drift guarantee; kind count unchanged.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section gains one rule line.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register row moves to Resolved; counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: Resolution convention.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: Not changed. Steers the agent to unittest.TestCase (Step 2a) and holds both quoted remedies.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-1-ii
+  contract: >-
+    The test-writer family reference page with one entry per registered kind, held equal to the registry
+    and the quoted template sentences by drift tests.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 1 of the 2026-11-02 re-run fixes. Scorer: scripts/evals/produced_tests_scoring.py
+  (_count_side, _count_kind, counts_rows_and_non_null, asserts_known_seeded_value). The
+  sql-test-writer twin (_equality_statements in sql_test_writer_eval/evidence_kinds.py)
+  already reads assertEqual and a non-literal right side; reuse is an IT-PO call.
+
+  BA additions beyond the request (unasked-for, keep): the self-comparison case
+  (len(x) == len(x)) and the ">= 0" bound in unittest form are the false-green
+  boundaries a widened check could let through; the seed-only-in-assertions rule keeps
+  "numbers inside assertions are not seeds" true for assertion calls.
+
+  Kept outputs are local to the run machine (session scratchpad kept_runs/), not
+  committed; the implementer copies the named files into recorded probe fixtures.
+  The Completion-Report-format omission noted in the KI is an agent-side weakness and
+  out of scope here.

@@ -1,0 +1,115 @@
+id: TQ-200d-2-iii
+components:
+  - testing_quality
+title: "A database test that counts rows with COUNT(*) filtered to non-NULL values in the same statement passes the non-NULL count check"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the sql-test-writer "empty window, database shape" row, whose fixture
+      seeds 3 buy_volume rows,
+    And a produced test that asserts an exact processed-row count and runs
+      "SELECT COUNT(*) FROM buy_volume_window WHERE symbol = ANY(%s) AND
+      buy_volume IS NOT NULL" and asserts its result with
+      self.assertEqual(self.cur.fetchone()[0], len(_SEEDED_ROWS)),
+  When the row's count check reads the produced test,
+  Then the check passes,
+    And the same query with the predicate as "WHERE buy_volume IS NOT NULL",
+      with a table alias ("WHERE w.buy_volume IS NOT NULL") or with COUNT(1)
+      passes,
+    And the forms accepted before (count(buy_volume), FILTER (WHERE buy_volume
+      IS NOT NULL), CASE WHEN buy_volume IS NOT NULL) still pass,
+    And a test whose "buy_volume IS NOT NULL" sits in a different statement
+      from its COUNT(*) fails,
+    And a COUNT(*) filtered on "buy_volume IS NULL" or on another column's
+      "IS NOT NULL" fails,
+    And a filtered COUNT(*) whose result is asserted only with ">= 0" or
+      "at least one row" fails,
+    And a test whose filtered COUNT(*) is its only count, with no exact
+      processed-row count, fails.
+
+  Given the kept live output of the 2026-11-02 first live run and re-run 1
+      for this row, recorded as a probe fixture,
+  When the check scores it,
+  Then it passes, a copy with the "AND buy_volume IS NOT NULL" predicate
+      removed fails (no false green), and the recorded gold output for the
+      row still passes.
+
+  Given the change is done,
+  Then the sql_counts_rows_and_non_null entry on the sql-test-writer
+      assertion-kind reference page lists the filtered COUNT(*) form among
+      the accepted forms with a passing example, and the different-statement
+      and wrong-column forms among the failing ones,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the "Counts" line of the produced-tests section of the evals README
+      still describes the rule, updated if it names the accepted SQL forms,
+    And the known issue "sql non-NULL count misses COUNT(*) WHERE NOT NULL" is
+      moved to resolved naming this AC and its proving tests, with the
+      Open/Resolved count of the testing-quality known-issue register
+      recounted,
+    And one changelog entry names this AC and the resolved known issue,
+    And no glossary term is added except through the glossary-triage flow,
+    And the sql-test-writer template's remedy "assert an exact count of
+      processed rows plus a non-NULL count" is unchanged.
+depends_on:
+  - TQ-200d-2
+  - TQ-200d-2-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-sql-non-null-count-misses-count-star-where-not-null.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Source of the defect, the kept test (:78-83) and fix direction. Filed by PR #1389
+      (branch origin/feature/eval-rerun-kis); moved to resolved/ by this AC.
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md
+    relationship: relates-to
+    status: exists
+    relevance: Records count(all col) as another missed form; not in scope unless fixed in passing (then struck with a note naming this AC).
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: The sql_counts_rows_and_non_null entry (:61-79) lists the accepted forms.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Counts.' line (:162) of the produced-tests section.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register row moves to Resolved; counts recounted from the directory.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/sql-test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: Not changed. Holds the quoted remedy.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-2-ii
+  contract: sql_counts_rows_and_non_null accepting the SQL and Python count forms, with its reference entry.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 3. Code: scripts/evals/sql_test_writer_eval/evidence_kinds.py (non_null_re,
+  counts_rows_and_non_null). The same-statement rule is the false-green boundary: a
+  "col IS NOT NULL" anywhere else in the file must not turn an unfiltered COUNT(*) into
+  a non-NULL count. The filtered COUNT(*) does not double as the exact processed-row
+  count, matching the template remedy's "plus".

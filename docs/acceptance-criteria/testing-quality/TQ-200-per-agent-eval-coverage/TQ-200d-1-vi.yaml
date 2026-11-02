@@ -1,0 +1,107 @@
+id: TQ-200d-1-vi
+components:
+  - testing_quality
+title: "The empty-window and presence rows accept a test-writer report that names the hazard in equivalent words"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer "empty-window" row,
+  When its report check reads a report,
+  Then a report saying "non-NULL", "non-None" or "non-null" (any case,
+      with or without backticks around None) passes,
+    And the kept re-run 1 report ("exact-count and non-`None`-count guards")
+      and the kept re-run 2 report ("exact non-None count") pass,
+    And a report that says only "the check counts the values" fails,
+    And a report that names "NULL" or "None" only outside a non-NULL phrase,
+      such as "returns None when the feed is empty", fails.
+
+  Given the test-writer "presence-is-not-correctness" row,
+  When its report check reads a report,
+  Then a report saying "known value", "expected value" or "seeded value"
+      (any case, including "known expected value") passes,
+    And the kept re-run 1 and re-run 2 reports ("exact expected value from the
+      feed") pass,
+    And a report that says only "the test checks that each symbol has a
+      value" fails,
+    And a report that says only "the value is present" fails.
+
+  Given every other row in the test-writer and test-runner sets that checks
+      report wording,
+  When the sets are scored,
+  Then each still checks its one term exactly as before, and the recorded
+      gold outputs of both sets still pass.
+
+  Given the change is done,
+  Then the report_mentions entry on the test-writer assertion-kind reference
+      page states how a row lists equivalent wordings, with the empty-window
+      passing and failing examples updated,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the produced-tests section of the evals README states the rule in one
+      line linking the entry,
+    And the empty-window and presence-is-not-correctness parts of the known
+      issue "test-writer rows check unrequested report wording" are struck
+      with a note naming this AC (the issue is moved to resolved by
+      TQ-200d-4-vi, which fixes its last part, or by this AC if it lands last),
+    And one changelog entry names this AC and the two widened rows,
+    And no glossary term is added except through the glossary-triage flow,
+    And the test-writer template is unchanged (user decision 2026-11-02).
+depends_on:
+  - TQ-200d-1
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    relationship: modifies
+    status: planned
+    relevance: >-
+      Parts 1 and 2 (non-NULL, known value) with the kept-report quotes and the user's 2026-11-02 decision
+      to widen the checks. Filed by PR #1389 (branch origin/feature/eval-rerun-kis).
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: The report_mentions entry (:183-197) uses empty-window 'non-NULL' as its passing example.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section gains one rule line.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register updated when the issue resolves; counts recounted from the directory.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: Not changed (user decision 2026-11-02).
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 4, parts 1 and 2 (rows empty-window and presence-is-not-correctness in
+  scripts/evals/sets/test-writer.jsonl). Part 3 (missing-setting-database-work) is
+  TQ-200d-4-vi, placed under the database-setting L2 that owns that row.
+
+  The test-runner set also uses report_mentions; the third scenario keeps every other
+  row's single-term check unchanged so the widening cannot spread. Whether the
+  alternatives are a list on the row or a new spec key is an IT-PO call.

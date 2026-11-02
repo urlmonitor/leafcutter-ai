@@ -1,0 +1,112 @@
+id: TQ-200d-4-v
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test runner's 'Database Not Configured' message says the database tests were not run"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the database checker reports not_configured to the test runner,
+  When the test runner stops and emits its fixed "Database Not Configured"
+      message,
+  Then the message names testing_context.db_connection_test by its full path,
+      tells the user to set it in the project's skills_config.json, and holds
+      the sentence "The database tests were not run.",
+    And the rest of the fixed message is unchanged.
+
+  Given a test-runner report for the "missing-setting-database-work" row that
+      consists of the fixed message copied word for word and nothing else,
+  When the row is scored,
+  Then all six of the row's checks pass, including the not-run check,
+    And the same report with the sentence "The database tests were not run."
+      removed still fails the not-run check (proof that the sentence, and not
+      a widened check, makes it pass),
+    And a report holding the fixed message plus "The database tests ran and
+      passed." fails the not-run check.
+
+  Given the kept re-run 1 and re-run 2 test-runner reports for the row,
+      recorded as probe fixtures,
+  When the row is scored,
+  Then both still pass, and the recorded gold output for the test-runner set
+      still passes.
+
+  Given the change is done,
+  Then the report_says_not_run entry on the database-setting assertion-kind
+      reference page quotes "The database tests were not run." as the
+      test-runner template sentence and uses it as the passing example,
+    And the drift test that holds each quoted template sentence equal to the
+      template text stays green against the updated template,
+    And the produced-tests section of the evals README names the sentence
+      where it describes the test-runner set,
+    And the known issue "test-runner not-configured block has no not-run
+      sentence" is moved to resolved naming this AC and its proving tests,
+      with the Open/Resolved count of the testing-quality known-issue register
+      recounted,
+    And one changelog entry names this AC, the template sentence and the
+      resolved known issue,
+    And no glossary term is added except through the glossary-triage flow.
+depends_on:
+  - TQ-200d-4
+  - TQ-200d-4-ii
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: modifies
+    status: exists
+    relevance: The not_configured fenced block (:150-155) gains the sentence; the 'Do NOT attempt to run the SQL suite' line stays.
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Source of the defect and fix direction. Filed by PR #1389 (branch origin/feature/eval-rerun-kis);
+      moved to resolved/ by this AC.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    relationship: modifies
+    status: exists
+    relevance: The report_says_not_run entry (:162-181) quotes the test-runner template sentence the drift test checks.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section's test-runner line.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register row moves to Resolved; counts recounted from the directory.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The test-runner template's not_configured block holding "The database tests were not run.", quoted on
+    the report_says_not_run reference entry; TQ-200d-4-vi adds the test-writer sentence to the same entry.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+  - docs
+risk_surface: internal
+notes: |
+  Work item 5. Only the not_configured block changes (as requested). The invalid /
+  config_error branch relays the checker's message verbatim and cannot carry an added
+  sentence; the unreachable block is not scored by any row today, so it is left as is
+  (assumption; add it if a row starts scoring it).
+
+  If the template is installed into a generated agent copy, the copy is regenerated
+  with the template (IT-PO to confirm package_surface).
+
+  The "sentence removed still fails" clause is unasked-for and kept: without it, a
+  widened not-run check would pass this AC without the template change.

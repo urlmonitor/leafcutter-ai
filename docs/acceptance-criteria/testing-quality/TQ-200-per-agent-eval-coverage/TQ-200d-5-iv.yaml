@@ -1,0 +1,116 @@
+id: TQ-200d-5-iv
+components:
+  - testing_quality
+title: "A temp folder that cannot be deleted after a row never ends a produced-tests run; every row is scored and the results file is written"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a live produced-tests run of a set with 2 rows,
+    And deleting the first row's temporary folder raises PermissionError
+      [WinError 32] ("the file is in use by another process") on every
+      attempt,
+  When the run proceeds,
+  Then the second row is run and scored,
+    And the results file is written with a scored entry for both rows,
+    And the aggregate score is printed,
+    And a warning names the folder left behind,
+    And the first row's result is the one its agent run and checks produced,
+      not a failure caused by the folder.
+
+  Given deleting the folder fails on the first attempt and succeeds on a
+      later retry,
+  When the row finishes,
+  Then the folder is gone and no warning is logged.
+
+  Given a row whose agent run fails ("agent CLI exited 1: API Error:
+      Connection closed mid-response") and whose agent sandbox then cannot be
+      deleted,
+  When the row is recorded,
+  Then the row's recorded error names the agent failure, not the locked
+      folder.
+
+  Given a row that fails for a reason other than folder cleanup,
+  Then the row is recorded as failed with that reason (cleanup tolerance
+      never turns a failed row into a pass).
+
+  Given an agent that cannot be launched at all,
+  Then the run still stops as a harness failure, as TQ-200d-5-iii requires.
+
+  Given the --score-gold replay of the test-writer, sql-test-writer and
+      test-runner sets with folder deletion failing,
+  When the replay runs,
+  Then it completes with the same scores as without the failure.
+
+  Given the change is done,
+  Then the live-eval how-to or the produced-tests section of the evals
+      README states that a temp folder left behind is warned about and does
+      not stop the run,
+    And the known issue "eval temp cleanup error crashes the run" is moved to
+      resolved naming this AC and its proving tests, with the Open/Resolved
+      count of the testing-quality known-issue register recounted,
+    And one changelog entry names this AC and the resolved known issue,
+    And no glossary term is added except through the glossary-triage flow.
+depends_on:
+  - TQ-200d-5
+  - TQ-200d-5-iii
+  - TQ-200d-1-iii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-eval-temp-cleanup-error-crashes-the-run.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Source of the defect: the traceback, mechanism (live_output finally, score_one TemporaryDirectory,
+      only AgentLaunchError caught) and fix direction. Filed by PR #1389 (branch origin/feature/eval-rerun-kis);
+      moved to resolved/ by this AC.
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260914-tempdir-cleanup-race-fails-a-green-test-run.md
+    relationship: relates-to
+    status: exists
+    relevance: Earlier temp-cleanup race on Windows; not resolved by this AC unless the same change fixes it.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section.
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: exists
+    relevance: Live-run guide; states the left-behind-folder warning if it describes run failures.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register row moves to Resolved; counts recounted from the directory.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-5-iii
+  contract: An agent that cannot be started stops the run as a harness failure.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+declares_side_effect: true
+notes: |
+  Work item 6. Code: scripts/evals/produced_tests_mode.py (live_output, score_one,
+  run_produced_tests_mode) and scripts/evals/produced_tests_runs.py (remove_tree).
+  Tests must fake the lock (deletion raising PermissionError) so they run on Linux CI.
+
+  BA additions (unasked-for, keep): the real-error-not-masked scenario (re-run 2's row
+  recorded the lock instead of the API failure), the never-a-pass scenario, and the
+  harness-failure scenario that keeps TQ-200d-5-iii intact. The score-gold scenario
+  covers the Windows flake in the gold unit tests named in the KI.

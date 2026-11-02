@@ -1,0 +1,131 @@
+id: TQ-200d-4-vi
+components:
+  - testing_quality
+title: "The test writer's missing-setting row passes a report that says the database tests stopped before any connection, alongside its required red verification run"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer "missing-setting-database-work" row, where
+      testing_context.db_connection_test is unset,
+    And a test-writer report that names testing_context.db_connection_test,
+      holds its required red verification run (for example "Ran 2 tests in
+      0.004s" and "FAILED (errors=2)"), and says the database tests raised the
+      not-configured error in setUp before any connection was attempted,
+  When the row's not-run check reads the report,
+  Then the check passes,
+    And a report saying the database tests "did not run against a database",
+      "stopped before any connection" or "never reached the database" passes,
+    And the red verification-run lines are not read as a claim that the
+      database tests ran.
+
+  Given the same row,
+  When the not-run check reads a report that
+      (a) says "The database tests ran and passed.", or
+      (b) says the tests connected to a database, or
+      (c) holds the red verification-run lines but does not say the database
+          part stopped before any connection or did not run against a
+          database,
+  Then the check fails in each case.
+
+  Given the test-runner "missing-setting-database-work" row,
+  When its not-run check reads a report,
+  Then it applies the same rule as before this change (a report claiming a
+      run fails it), with the test-runner template sentence added by
+      TQ-200d-4-v.
+
+  Given the kept re-run 1 and re-run 2 test-writer reports for the row,
+      recorded as probe fixtures,
+  When the row is scored,
+  Then both pass all four of the row's checks, and a copy of each with the
+      "before any connection" / "before ever reaching" sentence removed fails
+      the not-run check (no false green), and the recorded gold outputs of
+      the test-writer and test-runner sets still pass.
+
+  Given the change is done,
+  Then the database-setting assertion-kind reference page describes the
+      test-writer rule (in the report_says_not_run entry or a new entry for a
+      new kind), with passing and failing examples, and quotes a sentence the
+      test-writer template actually holds, not the test-runner sentence,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the produced-tests section of the evals README states the
+      test-writer rule in one line linking the entry,
+    And the known issue "test-writer rows check unrequested report wording"
+      has its missing-setting part struck with a note naming this AC, and is
+      moved to resolved naming TQ-200d-1-vi and this AC once both have
+      landed, with the Open/Resolved count of the testing-quality known-issue
+      register recounted,
+    And one changelog entry names this AC,
+    And no glossary term is added except through the glossary-triage flow,
+    And the test-writer template is unchanged (user decision 2026-11-02).
+depends_on:
+  - TQ-200d-4
+  - TQ-200d-4-v
+  - TQ-200d-1-vi
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Part 3 (missing-setting-database-work), the kept reports' wording and the 2026-11-02 user decision.
+      Filed by PR #1389 (branch origin/feature/eval-rerun-kis); moved to resolved/ by this AC.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    relationship: modifies
+    status: exists
+    relevance: The report_says_not_run entry (:162-181) is used by both the test-writer and test-runner rows and cites a test-runner sentence.
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Not changed. Step 4 'Verify the Tests Are Red' (:1090) requires the red run; the DB pattern lets the
+      not-configured error propagate from setUp (:854-857). The quoted sentence comes from here.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section gains one rule line.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: Register row moves to Resolved; counts recounted from the directory.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-4-v
+  contract: The report_says_not_run reference entry quoting the updated test-runner sentence.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 4, part 3 (row missing-setting-database-work in
+  scripts/evals/sets/test-writer.jsonl). Placed under TQ-200d-4, which owns the
+  database-setting kinds and this row.
+
+  The shared report_says_not_run kind serves the test-runner row too, and there a
+  report claiming a run must keep failing. So the widening is scoped to the
+  test-writer row (a test-writer-specific kind or spec key is an IT-PO call); the third
+  scenario pins that.
+
+  Clause (c) is the false-green boundary the user asked for: the red verification run
+  alone is not evidence that the database part stopped at the missing setting.
+
+  Ordering: depends on TQ-200d-4-v because both edit the report_says_not_run entry,
+  and on TQ-200d-1-vi because this AC resolves the shared known issue last.
