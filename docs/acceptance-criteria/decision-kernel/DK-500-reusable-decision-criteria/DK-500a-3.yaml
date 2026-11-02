@@ -37,7 +37,7 @@ it_requirements:
 - 'Describe grouping as dec-a070edfb6465bced decided it: exact matches by code, one Jev choice per wording, merges only at p >= 0.8, code-made one-member candidates, no LLM, no broader-link suggestions.'
 - Every step names the observable result to check (a JSON field, a file path or an exit code).
 - Write it only after DK-500a-1, DK-500c-1, DK-500c-2 and DK-500c-3 are implemented. The guide documents behaviour and closes no behavioural AC.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -66,6 +66,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC. It answers the how-to trigger of DK-500a AND the how-to trigger of DK-500c in one guide: DK-500c also carries state-diagram and reference-doc triggers plus three behavioural L2s, and the 5-children cap leaves it no slot for a separate how-to. One guide also avoids two drifting copies of the same journey.

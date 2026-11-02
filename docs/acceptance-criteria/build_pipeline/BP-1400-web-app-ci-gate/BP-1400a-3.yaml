@@ -35,7 +35,7 @@ it_requirements:
   - "The diagram MUST depict the shared web-app pull-request flow: PR changes leafcutter-web/ -> CI runs the build/type-check check -> pass/fail result reported on the PR -> merge gate decision. Show both the failing path (build/type error -> blocking failure -> not mergeable) and the passing path (clean build -> passing check -> merge not blocked by this check)."
   - "Actor and check naming MUST match BP-1400a-1: the build/type-check check's label must be the same stable ci.yml job name that BP-1400a-4 wires into the required-status-checks list — no divergent labels. Name the actors: the pull request, the CI system, and the merge gate."
   - "Diagram is documentation only — it must not assert behavior beyond what BP-1400a-1 / BP-1400a-4 specify (no invented retry/notification steps). The same diagram may cover all three web-app checks' shared PR flow; BP-1400c-2 documents the route-render-specific headless-load interaction separately."
-test_required: false
+test_required: true
 delivers_to: null
 expects_from:
   ac_id: BP-1400a-1
@@ -46,6 +46,10 @@ amended_by:
   - reason: "it-po-technical-enrichment"
     entry: "Confirmed assigned_agent architecture-diagram-author (correct docs/diagram surface, kept per direction). Added it_requirements (Mermaid sequenceDiagram via write-c4-diagram; shared web-app PR flow with both failing and passing paths; check-name/actor parity with BP-1400a-1 and the BP-1400a-4 required-check name; docs-only, no invented steps; distinct from BP-1400c-2). Set test_required: false (documentation AC, change_target docs — no executable behavior). Criteria, contracts, doc_links, readiness, and components unchanged."
     by: it-po
+  - action: amended
+    agent: it-po
+    date: '2026-11-01'
+    reason: "BO-2500a-8-iv backfill batch A, user decision of 2026-11-01: a diagram label must match a real artefact, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by:

@@ -32,10 +32,14 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1700a-1
   contract: "The role-scoped delivery rule (content classes each role does/does not receive at spawn) that the reference documents."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

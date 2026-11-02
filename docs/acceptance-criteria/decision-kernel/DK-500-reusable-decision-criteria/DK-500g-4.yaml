@@ -33,7 +33,7 @@ change_target: docs
 risk_surface: internal
 it_requirements:
 - Extend docs/how-to/run-knowledge-retrieval.md with a section rather than writing a second guide, unless the documentation expert judges otherwise. Use the operation names, request JSON and answer fields as built, with worked examples for dec-d53e1c52cd47c832 and cat-1dc11c5a2ffa7310.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -60,6 +60,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500g's how-to trigger. Extend the existing knowledge-retrieval how-to (on origin/main) rather than writing a second one, if the documentation expert judges that the better home. Its deliverable is the document only.

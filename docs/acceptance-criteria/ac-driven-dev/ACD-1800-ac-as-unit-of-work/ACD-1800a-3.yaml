@@ -51,7 +51,7 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1800a-1
   contract: "The implemented deliverable-checklist field ({kind, craft}), the responsible-craft attribute, and -- crucially -- the fact that the kind enum is a $ref to the SHARED change-target enum definition (eleven values: the existing ten plus `diagram`, with no `tests`) rather than a list of its own. This record documents that indirection; it does not restate the values."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by:
@@ -64,6 +64,10 @@ amended_by:
   - date: 2026-08-31
     agent: it-po
     reason: "RESOLVES THE CONTRADICTION THE ENTRY ABOVE FLAGGED, on the record the BA correctly identified as the most dangerous carrier. criteria untouched. it_requirements: the instruction to document 'the allowed kinds {code, tests, docs, diagram, config}' is DELETED and replaced by an instruction to define no list at all -- point at the change-target vocabulary, record `diagram` as the one value added to it, and state that a test is a proof and no `tests` kind exists. A separate entry makes the pointer property an obligation rather than a style preference: adding or removing a value must not require this section to be edited, so a prose enumeration is forbidden even when currently accurate, because a stale correct-looking list is indistinguishable from a current one. The spec-parity entry is kept but its scope narrowed in writing: this section stays the single normative definition of the checklist's SHAPE and of the fact that kinds come from the change-target vocabulary, and stops being the definition of that vocabulary's VALUES. expects_from restated so the documentation-expert receives the indirection ($ref to the shared enum) rather than a list to transcribe. test_required stays false -- this is a prose surface -- and the mechanical guard for the pointer property is deliberately attached to ACD-1800a-1's schema tests (test_kind_added_in_one_place_appears_in_both_enums) rather than invented here as a doc grep, which this repo rejects as coverage."
+  - action: amended
+    agent: it-po
+    date: '2026-11-01'
+    reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

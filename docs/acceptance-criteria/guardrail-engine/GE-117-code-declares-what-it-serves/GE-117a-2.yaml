@@ -34,7 +34,7 @@ doc_links:
 assigned_agent: documentation-expert
 estimated_complexity: S
 change_target: docs
-test_required: false
+test_required: true
 it_requirements:
   - "Author the guide under docs/how-to/ as a Markdown file with the frontmatter fields check_doc_frontmatter requires for docs/** (title, type: how-to, status, created, last_updated, components); keep the doc body within the doc-length hook budget."
   - "The registered component id the guide teaches developers to write is a docs/components.json id (e.g. 'commit_guardian') — the same registry GE-117a-1 validates against; do NOT point developers at docs/acceptance-criteria/index.yaml ids."
@@ -45,7 +45,11 @@ expects_from:
   contract: "The module-component declaration behavior (valid vs missing vs invalid) that the how-to documents"
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

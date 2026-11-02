@@ -48,6 +48,10 @@ origin_agent: BrainCandy
 created: 2026-08-13
 amended_by:
   - "2026-08-13 [commit/ac-pattern-steward]: added child_limit_override: 7. check-ac-tree-limits (ACS-100c-1) blocked the commit because ACS-500g has 7 L2 children (ACS-500g-1 through ACS-500g-7) against the default L1 cap of 5. The AC's own notes already describe designing 'so this L1 stays at the seven-child cap' — this override formalises that intent as the documented temporary waiver (see ACS-100h for the same pattern) rather than triggering a Pattern-C split mid-authoring."
+  - action: amended
+    agent: it-po
+    date: '2026-11-01'
+    reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by:
   - ACS-500g-1
@@ -70,7 +74,7 @@ change_target: prompt
 risk_surface: contract_boundary
 documentation_triggers:
   - how-to
-test_required: false
+test_required: true
 notes: |
   THE MISSING PRODUCER HALF OF ACS-500 (load-bearing — carry into L2/L3).
   ACS-500a-f all presuppose that patterns ALREADY EXIST: 500a says where a

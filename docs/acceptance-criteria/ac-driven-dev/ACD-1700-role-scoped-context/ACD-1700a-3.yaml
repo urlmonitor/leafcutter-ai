@@ -33,6 +33,11 @@ expects_from:
   ac_id: ACD-1700a-1
   contract: "The role-scoped injection behaviour (which content classes are gated per role) that the component diagram depicts."
 test_required: false
+test_rationale: What ships is a component diagram of the channels that feed an agent at spawn,
+  marking which of authoring memory, the pre-drive checklist and authoring-pipeline instructions
+  each role is denied. Judging whether those gates are drawn truthfully for each role, in the
+  channel vocabulary agent_knowledge_plane.md already defines, takes a reader holding both side
+  by side. The reviewer does that against ACD-1700a-1, later recorded as a verified_by inspection.
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

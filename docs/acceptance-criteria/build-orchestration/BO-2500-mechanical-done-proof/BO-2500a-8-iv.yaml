@@ -13,12 +13,28 @@ priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the unfinished records declared test-free with no stated reason, measured
-    2026-10-25 over docs/acceptance-criteria, active records only, reason counted
-    present when non-empty after whitespace stripping: 96 with work_status todo
-    (ACD 36, DK 19, BO 17, ACS 14, GE 8, BP 2) and 3 with work_status in_progress,
+    2026-11-01 over docs/acceptance-criteria, active records only, reason counted
+    present when non-empty after whitespace stripping: 97 records, 94 with
+    work_status todo and 3 with work_status in_progress (ACD 35, BO 19, DK 19,
+    ACS 14, GE 8, BP 2), and measured again by the same rule when the backfill
+    starts,
   When the backfill is carried out,
-  Then each record is given a test_rationale written for that record alone, naming
-    what its deliverable is and why no executable test can observe it,
+  Then every record in the starting population is sorted into a class before any
+    reason is proposed, and the user decides by class whether that class gets
+    reasons,
+  And records with change_target prompt are given no reason: they are listed on
+    the decision list as one class, to be proved by eval cases, and need no
+    per-record decision,
+  And a reason is proposed only for a record in a class that gets reasons, and is
+    written for that record alone, naming what its deliverable is, the judgement
+    no test can make about it, and what verifies that judgement instead,
+  And a reason may cover a record's prose clauses; it need not claim that every
+    clause of the record is out of a test's reach,
+  And a deliverable has behaviour a test can observe only when a test could fail
+    for a reason outside the page's own text, that is by comparing the deliverable
+    to a real artefact or by running its example through a real hook or step; a
+    check that only matches words on a page or the shape of a diagram does not
+    observe it,
   And no two records are given the same text, and no text is produced by filling
     a template from change_target or any other field,
   And proposed reasons are shown to the user in batches, each entry listing the
@@ -26,9 +42,15 @@ criteria: |
     is written to a record only after the user has approved the batch holding it,
   And a record for which the user rejects the reason, or for which no honest
     reason can be written because its deliverable has behaviour a test can observe,
-    is not given a reason and is listed with that finding for the user's decision,
-  And when the backfill ends, every one of the 99 records either carries an
-    approved reason or appears on that list with the user's decision recorded,
+    is not given a reason and is listed on the decision list with that finding for
+    the user's decision,
+  And the records of a class the user decides gets no reason are listed on the
+    decision list with that decision,
+  And a record given a reason by this backfill is not marked done until BO-2500f-4
+    is built; the reason alone does not release it,
+  And when the backfill ends, every record in the starting population either
+    carries an approved reason or appears on the decision list with the user's
+    decision recorded, for the record or for its class,
   And the 46 finished test-free records with no reason are not given a reason by
     this backfill; they go to TQ-400d triage or to the wave-2 migration
     (BO-2500f-4-ii), so a finished claim is never justified after the fact by a
@@ -55,7 +77,7 @@ estimated_complexity: L
 it_requirements:
   - 'Measure the population, never copy it: at the start re-run the inclusion rule (active
     records, test_required false, test_rationale empty after strip, work_status todo or in_progress)
-    and report the count, date and rule. The 99 of 2026-10-25 is the expected figure, not
+    and report the count, date and rule. The 97 of 2026-11-01 is the expected figure, not
     an input.'
   - 'Write only the test_rationale key into each approved record: a targeted insert, never
     a load-and-dump rewrite (criteria bytes, key order and comments unchanged). A second run
@@ -94,6 +116,20 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-25'
+- action: amended
+  agent: business-analyst
+  date: '2026-11-01'
+  reason: "User decisions of 2026-11-01. (1) 'No executable test can observe it' now means
+    behaviour: a test could fail for a reason outside the page's own text; a check that only
+    matches words or a diagram's shape does not count. (2) A record given a reason here is
+    not marked done until BO-2500f-4 is built. (3) All records are sorted into classes first,
+    the user decides by class, and reasons are proposed in batches only for classes that get
+    them. (4) Records with change_target prompt get no reason and are listed as one class,
+    to be proved by eval cases. (5) A reason may cover a record's prose clauses, and names
+    the judgement no test can make and what verifies it instead. The population is restated
+    as re-measured on 2026-11-01. Changed: criteria, it_requirements (expected figure only),
+    notes. readiness stays approved because the user made these decisions; the user approved
+    the amendment before seeing its final wording."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -110,6 +146,16 @@ notes: |
   recount on 2026-10-25 finds 96 active todo (ACD 36) plus 3 in_progress records
   that also lack a reason. The 3 in_progress records are included because they are
   just as stuck at mark time; see the open question in the BA report.
+
+  Population drift, second recount. Re-measuring on 2026-11-01 by the same rule gives
+  97: 94 todo plus 3 in_progress (BO-2400a-6, -7, -8). Against the
+  99 of 2026-10-25, todo fell by 2 (ACD 36 to 35, BO 17 to 16); the other prefixes are
+  unchanged. The prefix figures in the criteria now cover all 97 records, so BO reads
+  19 there (16 todo plus 3 in_progress); the 2026-10-25 figures covered todo only. The
+  46 finished records are unchanged.
+
+  The done hold in the criteria (user decision 2026-11-01) states what this record
+  requires. Nothing in this record enforces it.
 
   assigned_agent is it-po because test_rationale is a field the technical planner
   owns. The planner drafts; the user approves; nothing is written before approval.

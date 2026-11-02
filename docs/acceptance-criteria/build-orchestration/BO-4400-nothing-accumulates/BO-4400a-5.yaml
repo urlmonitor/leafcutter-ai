@@ -49,6 +49,12 @@ it_requirements:
     maker (remove verb), verdict (BO-4100c-1), hub. Linked from
     docs/architecture/components/worktree-manager.md and docs/architecture/agent_delivery_workflows.md.
 test_required: false
+test_rationale: A sequence diagram under docs/architecture/diagrams/ that follows a route from
+  pushing and opening its pull request, through the clearing door and its holds-work verdict,
+  to the removed or refused-and-kept outcome, plus the nothing-to-deliver path and the single
+  clearing after an epic's last ticket. Whether those branches are told faithfully to the built
+  route is a reading judgement. The architecture reviewer checks the drawing against BO-4400a-1,
+  BO-4400a-1-i and BO-4400a-2; after wave 2, a verified_by inspection does.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []
