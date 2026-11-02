@@ -66,7 +66,7 @@ could not be scored: PermissionError(13, 'Der Prozess kann nicht auf die Datei z
 von einem anderen Prozess verwendet wird')`; then a chained traceback through
 `produced_tests_mode.py", line 195, in run_produced_tests_mode` → `line 135, in score_one` (`with
 tempfile.TemporaryDirectory(prefix="produced-tests-") as tmp:`) → `tempfile.py", line 971, in
-__exit__` → `shutil.rmtree`, ending in `PermissionError: [WinError 32] … 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\produced-tests-5k0_msc_\\score\\sandbox'`.
+__exit__` → `shutil.rmtree`, ending in `PermissionError: [WinError 32] … '%TEMP%\produced-tests-…\score\sandbox'`.
 No `run2-sql-test-writer.json` exists beside the log, and the second row (`no-test-database`) was
 never run; `done.txt` records `run2 sql-test-writer 1`.
 
