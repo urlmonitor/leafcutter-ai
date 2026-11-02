@@ -4,7 +4,7 @@ description: "A requirement record with test_required false is proven done by a 
 type: "adr"
 status: "active"
 created: "2026-10-25"
-last_updated: 2026-10-25
+last_updated: 2026-11-02
 deciders:
   - BrainCandy
   - adr-author
@@ -18,6 +18,7 @@ related_docs:
   - docs/architecture/adrs/ADR-075-requirement-rule-check.md
   - docs/architecture/components/commit-guardian.md
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500f.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500f-4.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-ii.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-iv.yaml
@@ -43,10 +44,16 @@ related_code:
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Proposed, amended |
 | **Date** | 2026-10-25 |
+| **Amended** | 2026-11-02 — Amendment 1 (what earns a Wave 1 reason; prompt records; done hold on backfilled records). See [Amendment 1](#amendment-1--2026-11-02--wave-1-reasons-and-the-done-hold-for-backfilled-records). |
 | **Author** | adr-author (branch `ac-authoring/done-proof-verification`; decision approved by the user 2026-10-24/25) |
 | **Supersedes** | None |
+
+> **Read Decision §1 together with [Amendment 1](#amendment-1--2026-11-02--wave-1-reasons-and-the-done-hold-for-backfilled-records).** It defines
+> which records may be given a Wave 1 reason, takes prompt records out of the waiver, and
+> holds the records given a reason by the BO-2500a-8-iv backfill back from done until
+> BO-2500f-4 is built. The decision text below is unchanged.
 
 ---
 
@@ -105,6 +112,9 @@ Recorded under the new requirement
 1.1. The BO-2500a-1-ii waiver (`test_required: false` AND a non-empty `test_rationale`,
 evaluated by the single shared `is_covers_tag_waived`) MUST be treated as a first-class
 done-proof outcome, not as a silent exemption.
+
+> Narrowed by [Amendment 1](#amendment-1--2026-11-02--wave-1-reasons-and-the-done-hold-for-backfilled-records) for the records given a reason by the
+> BO-2500a-8-iv backfill: they are not marked done until BO-2500f-4 is built.
 
 1.2. Authoring a record with `test_required: false` MUST supply a per-record
 `test_rationale` that states why this specific record needs no test. The refusal of
@@ -303,6 +313,85 @@ TQ-400b / TQ-400d. Wave 2 MUST NOT retroactively demote finished records on its 
   test with a `# covers:` tag satisfies the done-proof mechanically while proving
   nothing, and no checker can see the difference. This anti-pattern is what triggered
   this decision.
+
+---
+
+## Amendment 1 — 2026-11-02 — Wave 1 reasons and the done hold for backfilled records
+
+| Field | Value |
+|---|---|
+| Amends | Decision §1 (Wave 1): §1.1 and the Wave 1 expectation for the backfilled records; adds the rule for which records may be given a reason |
+| Status | Decided by the user (2026-11-01 and 2026-11-02); the ADR as a whole stays Proposed until promoted |
+| Deciders | BrainCandy |
+| Driven by | [BO-2500a-8-iv](../../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-iv.yaml) (the hand-written reason backfill) |
+| Supersedes this ADR? | No. Wave 1 and Wave 2 stand as decided; this amendment narrows Wave 1 only. |
+
+### Why this had to change
+
+Carrying out BO-2500a-8-iv meant deciding, record by record, whether a test-free reason
+was honest. The original §1 says a reason must state why the record needs no test, but
+not when a record has behaviour a test could observe. Without that line, a reason could
+be written for a record whose deliverable must match something built, which is the
+kind of record a test exists for. Prompt records needed their own answer, and §1.1 would
+have let a freshly backfilled reason mark a record done before Wave 2 can check any
+proof behind it.
+
+### A1. What earns a Wave 1 reason
+
+A1.1. A deliverable has behaviour a test can observe only when a test could fail for a
+reason outside the page's own text: by comparing the deliverable to a real artefact, or
+by running its example through a real hook or step.
+
+A1.2. A check that only matches words on a page or the shape of a diagram does not
+observe that behaviour. A record whose only possible test is such a check has no
+behaviour a test can observe, and is the kind of record a Wave 1 reason is for.
+
+A1.3. Where a doc's label, name or value must equal something built (a config key, a
+schema id, a code default, a CI job name, a hook's marker), the record MUST carry
+`test_required: true` and MUST NOT be given a reason.
+
+### A2. Prompt records
+
+A2.1. A record with `change_target: prompt` MUST NOT be given a reason. It carries
+`test_required: true` and is proved by agent eval cases, as
+[BO-2500a-8-ii](../../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-8-ii.yaml)
+was.
+
+### A3. Done hold on backfilled records
+
+A3.1. The records given a reason by the BO-2500a-8-iv backfill (15 records) MUST NOT be
+marked done until
+[BO-2500f-4](../../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500f-4.yaml)
+is built. For those records only, this narrows §1.1 (the waiver as a first-class done
+outcome) and the Wave 1 expectation that a stated reason is enough to mark done. A
+finished claim is never justified after the fact by a reason written later.
+
+A3.2. **Accepted risk.** Nothing enforces this hold mechanically. The waiver predicate
+still accepts these records, so a mark command run before BO-2500f-4 lands would mark one
+done. The user chose to build Wave 2 next rather than add a temporary guard. Until
+BO-2500f-4 is built, the hold rests on the people and agents who mark records done.
+
+### A4. Outcome of the backfill
+
+Of the 97 records in BO-2500a-8-iv's population:
+
+| Outcome | Records |
+|---|---|
+| Given a hand-written reason (held back from done, A3) | 15 |
+| Set to `test_required: true` (A1.3, or behaviour a test can observe) | 59 |
+| Prompt records, `test_required: true`, proved by eval cases (A2) | 20 |
+| Parents proved through their children | 3 |
+| **Total** | **97** |
+
+### Consequences of this amendment
+
+- Positive: most of the population (79 of 97) now heads to a real test or eval case
+  instead of a reason, and the 15 reasons are held back from done until Wave 2 can
+  check the proof behind them.
+- Negative: the 15 backfilled records stay unfinished until BO-2500f-4 is built, and the
+  hold is a rule, not a guard (A3.2).
+- Operational: the 59 records set to `test_required: true` and the 20 prompt records
+  need tests or eval cases before they can be marked done.
 
 ---
 

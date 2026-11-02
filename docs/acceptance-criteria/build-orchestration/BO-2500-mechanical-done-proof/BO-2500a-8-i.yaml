@@ -380,3 +380,7 @@ notes: |
 
   Wave 2 (BO-2500f-1) adds a typed verification record on top of this reason; it
   does not remove this rule.
+
+  2026-11-02: the "99 stored records" in the criteria is the 2026-10-25 figure. The
+  backfill population measured 97 on 2026-11-01 and was resolved by BO-2500a-8-iv's
+  run report (see its notes); criteria unchanged.
