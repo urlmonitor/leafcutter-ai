@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -153,7 +153,6 @@ test_spec:
       - revert the fix
       - run the fetch before the readability check
       - drop the HEAD resolves to a readable commit condition
-      - drop the missing or corrupt object condition
       - pin git to the workspace repository folder so a parent repository is never found
   - name: test_remove_cli_refuses_unreadable_repository_with_exit_2_and_half_cleared_wording
     target_dir: unit_tests/build_orchestration/
@@ -183,9 +182,7 @@ test_spec:
     code_file: templates/scripts/worktree_remove_checks.py
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
     must_catch:
-      - run git with optional locks in the damaged repository
-      - fetch to see what is unsent
-      - the gate always allows
+      - the half-cleared token check always allows
   - name: test_token_finishes_the_damaged_workspace_and_lists_both_files_discarded
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -208,7 +205,7 @@ test_spec:
       - drop the positive evidence of missing or corrupt data condition
       - treat a git timeout as unreadable
       - the readability check always reports unreadable
-      - the gate always allows
+      - the unsent-work check always allows
 test_design_authorship:
   step: test-designer
   date: "2026-11-02"

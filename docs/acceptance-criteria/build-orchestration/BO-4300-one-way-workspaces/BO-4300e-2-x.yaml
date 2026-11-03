@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -132,9 +132,8 @@ test_spec:
     must_catch:
       - drop the clearing-started state condition
       - drop the unreadable repository condition
-      - drop the repository gone while the record remains condition
       - answer INCOMPLETE instead of HALF_CLEARED
-      - the gate always allows
+      - the half-cleared refusal never refuses
   - name: test_ensure_cli_is_reachable_and_exits_2_on_half_cleared_leftover
     target_dir: unit_tests/build_orchestration/
     framework: pytest
@@ -197,7 +196,7 @@ test_spec:
     must_catch:
       - run the half-cleared decision after the fetch
       - run the half-cleared decision after the completion of a half-made workspace
-      - the gate always allows
+      - the half-cleared refusal never refuses
 test_design_authorship:
   step: test-designer
   date: "2026-11-02"

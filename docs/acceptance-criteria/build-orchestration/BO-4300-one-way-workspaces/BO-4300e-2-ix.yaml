@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -216,7 +216,7 @@ test_spec:
       - drop the unsent-work check condition
       - drop the program check condition
       - write the clearing marker before the checks have passed
-      - the gate always allows
+      - the unsent-work check always allows
   - name: test_started_clearing_whose_line_of_work_moved_is_checked_normally
     target_dir: unit_tests/build_orchestration/
     framework: pytest

@@ -65,6 +65,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_ensure_state.py",
     "worktree_remove.py",
     "worktree_remove_checks.py",
+    "worktree_remove_half.py",
     "worktree_migrate.py",
     "worktree_migrate_guards.py",
     "worktree_migrate_carry.py",
@@ -115,6 +116,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry, BO-4300e): the remove verb and the definite locate answer.
     - ``templates/scripts/worktree_remove_checks.py`` → ``scripts/worktree_remove_checks.py``
       (NAMED entry, BO-4300e-2-iv/-v/-vi): the program check and half-cleared-folder helpers of remove.
+    - ``templates/scripts/worktree_remove_half.py`` → ``scripts/worktree_remove_half.py``
+      (NAMED entry, BO-4300e-2-ix..xii): recognising what a stopped clearing left (HALF_CLEARED, finishing it).
     - ``templates/scripts/worktree_migrate.py`` → ``scripts/worktree_migrate.py``
       (NAMED entry, BO-4300f-3): the ``migrate-legacy`` cut-over verb.
     - ``templates/scripts/worktree_migrate_guards.py`` → ``scripts/worktree_migrate_guards.py``

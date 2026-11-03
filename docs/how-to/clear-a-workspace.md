@@ -79,8 +79,11 @@ ask again; the clearing continues where it stopped.
 
 ## If an earlier clearing stopped part-way
 
-A workspace whose repository is already gone is half-cleared. Ask again with the same request
-as in step 2 and the maker finishes it. If the folder holds no files, it is simply finished.
+A workspace whose clearing stopped is half-cleared: its repository is gone or can no longer be
+read, or the clearing was marked started. Ask again with the same request as in step 2 (or name
+the work with `remove --kind <kind> --slug <slug>`) and the maker finishes it. If the folder
+holds no files, or the clearing had already checked the work, it is finished without a token.
+Asking for such a workspace with `ensure` or `locate` is refused `HALF_CLEARED`: clear it first.
 
 If it still holds files, the refusal is `UNSENT_WORK` and lists them under `unsent`. They
 cannot be checked against the shared project, so they would be lost. Save any you want to

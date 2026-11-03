@@ -143,6 +143,8 @@ test_spec:
   description: "Hub refs of shop's and blog's bare hubs are identical before and after all four requests, and the requests carry --delete-remote-branch so a push would be visible."
   proves_clause: "no fetch or push reached the shared project of either project"
   code_file: templates/scripts/worktree_remove.py
+  must_catch:
+  - "drop the repository gone while the record remains condition"
 test_design_authorship:
   step: test-designer
   date: "2026-10-25"
