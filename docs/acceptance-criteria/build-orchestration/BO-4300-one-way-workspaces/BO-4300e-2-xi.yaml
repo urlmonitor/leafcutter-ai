@@ -1,0 +1,276 @@
+id: BO-4300e-2-xi
+title: "A workspace whose repository can no longer be read is recognised as half-cleared, not fetched"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose landing place holds "feature/zeta", whose
+    workspace record names shop and says it is ready, whose repository folder
+    still exists but has lost the stored objects of its history so that its
+    commits can no longer be read, and which still holds the files
+    "src/app.py" and "README.md",
+  When clearing "feature/zeta" is requested with no authorisation to lose work,
+  Then the request is not refused because the shared project could not be
+    fetched or because the repository is damaged,
+  And the request is refused, stating that the workspace was half-cleared, that
+    its repository can no longer be read so its commits cannot be checked, and
+    that its remaining files cannot be checked against the shared project,
+  And the refusal lists "README.md" and "src/app.py" by path and returns a
+    one-time token bound to that folder and exactly those two files,
+  And "feature/zeta" is identical before and after the refusal,
+  And when clearing is requested again with that token, it is answered cleared,
+    the answer lists both files as discarded, and nothing of "feature/zeta"
+    remains at its location,
+  And when, in a second run of the same setup, a workspace "feature/eta" whose
+    repository is intact and holds one commit not on the shared project is
+    cleared with no authorisation, it is refused for that unsent commit by
+    identifier and is not treated as half-cleared.
+depends_on: [BO-4300e-2, BO-4300e-2-vi, BO-4300e-3, BO-4300e-3-i]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: The half-cleared UNSENT_WORK refusal and discard-token fields this record reuses.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove.py
+  state: existing
+- path: templates/scripts/worktree_remove_checks.py
+  state: existing
+it_requirements:
+- 'Design decision (what "can no longer be read" means): the workspace''s repository folder exists, and a local read
+  that the unsent-work check depends on fails because repository data is missing or corrupt: the current commit
+  (HEAD) does not resolve to a readable commit object, or listing the commits of HEAD that are not on the
+  last-fetched shared-project refs stops on a missing or corrupt object. A missing HEAD file or objects folder
+  counts the same.'
+- The readability check runs before any fetch or push in the remove path and is local only, with no network access
+  including git's on-demand fetching of missing objects.
+- Every git read of the check is pinned to the workspace's own repository folder and never discovers a repository
+  in a parent folder (a .git without HEAD otherwise makes git climb to a parent repository).
+- The check runs before remove's own-workspace check, which today runs git (current branch, symbolic ref) in the
+  damaged repository ahead of any half-cleared branch.
+- The half-cleared shape test and the workspace-position test both change, because today the first rejects any
+  folder that has a .git and the second requires one, so a damaged repository falls to NOT_FOUND; the remaining-files
+  listing leaves out the whole .git folder.
+- The half-cleared refusal message gets a variant that says the repository can no longer be read (instead of that it
+  is gone); both variants keep the words "cannot be checked" that the BO-4300e-2-vi test requires.
+- The check concludes "cannot be read" only on positive evidence of missing or corrupt repository data. A git failure
+  for any other reason (git not found, timeout, lock held) keeps its existing error answer and is never treated as
+  half-cleared.
+- The check is bounded in time so the request never hangs; running out of time counts as a git failure under the
+  rule above, never as "cannot be read".
+- A workspace whose repository cannot be read is answered by the half-cleared refusal of BO-4300e-2-vi (code
+  UNSENT_WORK, unsent.commits empty, unsent.files the remaining files, discard_token), with no second token scheme.
+  The listed files are the folder's files outside the repository folder and the workspace record, chosen by the same
+  ignore treatment as BO-4300e-2-vi.
+- The refusal message additionally states that the repository can no longer be read, so its commits cannot be
+  checked; the token then authorises the loss of whatever the folder holds.
+- A readable repository always goes through the normal unsent-work check of BO-4300e-2, so an intact repository with
+  unsent commits is refused for those commits by identifier and never treated as half-cleared.
+- A folder whose record is in the clearing-started state of BO-4300e-2-ix is finished by that record's rule, not by
+  this one.
+- The check has one home, templates/scripts/worktree_remove_checks.py (187 lines), as a shared helper that ensure and
+  locate also import through the half-cleared decision of BO-4300e-2-x; no second copy. It lives there rather than in
+  worktree_clearing.py because this record does not depend on BO-4300e-2-ix, which creates that module.
+- Edit the template sources under templates/scripts/, never a deployed build output (ADR-001); the change must reach
+  the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer field or code
+  must be additive.
+- 'File sizes: worktree_remove.py (490 lines, over the 400-line limit, the ratchet forbids growth), worktree.py (425)
+  and worktree_ensure_state.py (399) take wiring only, with a net line count that does not grow; the logic goes into
+  templates/scripts/worktree_clearing.py or worktree_remove_checks.py. No limit is raised.'
+- Every refusal must leave the workspace folder, its repository and its workspace record unmodified (no write, rename
+  or delete of any item), consistent with the standing never-delete-unsent-work rule.
+test_intent:
+- clause: the request is not refused because the shared project could not be fetched or because the repository is
+    damaged
+  needs_test: true
+  reason: The observed defect answered FETCH_FAILED for exactly this folder, so the check-before-fetch order must be
+    pinned.
+- clause: the request is refused, stating that the workspace was half-cleared, that its repository can no longer be
+    read so its commits cannot be checked, and that its remaining files cannot be checked against the shared project
+  needs_test: true
+  reason: Telling an unreadable repository from an intact one is new computed behaviour, and the warning about
+    unchecked commits is what makes the token an informed consent.
+- clause: the refusal lists "README.md" and "src/app.py" by path and returns a one-time token bound to that folder
+    and exactly those two files
+  needs_test: true
+  reason: The listed set excludes the repository folder and the record, and a wrong set would bind the token to the
+    wrong loss.
+- clause: '"feature/zeta" is identical before and after the refusal'
+  needs_test: true
+  reason: A refusal that alters the folder would lose work, which a before-and-after snapshot catches.
+- clause: when clearing is requested again with that token, it is answered cleared, the answer lists both files as
+    discarded, and nothing of "feature/zeta" remains at its location
+  needs_test: true
+  reason: Finishing with the token must also delete the damaged repository, which is computed behaviour.
+- clause: when, in a second run of the same setup, a workspace "feature/eta" whose repository is intact and holds one
+    commit not on the shared project is cleared with no authorisation, it is refused for that unsent commit by identifier
+    and is not treated as half-cleared
+  needs_test: true
+  reason: A check loose enough to call an intact repository unreadable would skip the commit check, which this arm
+    catches.
+test_spec:
+  - name: test_unreadable_repository_is_neither_fetch_failed_nor_a_damage_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: A ready workspace feature/zeta is made, its stored objects (loose objects and packs) are deleted so HEAD no longer resolves to a readable commit, and everything but README.md and src/app.py outside the repository and record is removed. The shared project folder is also moved away so any fetch would fail. remove with no token is refused UNSENT_WORK, never FETCH_FAILED and never GIT_FAILED, because the readability check runs locally before any fetch.
+    proves_clause: the request is not refused because the shared project could not be fetched or because the repository is damaged
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+    must_catch:
+      - revert the fix
+      - run the fetch before the readability check
+      - drop the HEAD resolves to a readable commit condition
+      - drop the missing or corrupt object condition
+      - pin git to the workspace repository folder so a parent repository is never found
+  - name: test_remove_cli_refuses_unreadable_repository_with_exit_2_and_half_cleared_wording
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real maker CLI (worktree.py remove --path) as a subprocess on the damaged workspace. Exit code 2, status refused, code UNSENT_WORK, and a message that says the workspace was half-cleared, that its repository can no longer be read so its commits cannot be checked, and that its remaining files cannot be checked against the shared project.
+    proves_clause: the request is refused, stating that the workspace was half-cleared, that its repository can no longer be read so its commits cannot be checked, and that its remaining files cannot be checked against the shared project
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_refusal_lists_exactly_the_two_files_and_binds_the_token_to_them
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: unsent.files is exactly [README.md, src/app.py] (sorted, forward slashes; nothing under .git and not the workspace record), unsent.commits is empty, and discard_token is a 32-character lowercase hex string of the same shape as the BO-4300e-3 token (shape check as in test_bo_4300e_2_vi.py, no second token scheme). The token goes stale when README.md changes after the refusal, and the folder is identical after that stale request.
+    proves_clause: the refusal lists "README.md" and "src/app.py" by path and returns a one-time token bound to that folder and exactly those two files
+    code_file: templates/scripts/worktree_remove_checks.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_refused_damaged_workspace_is_identical_before_and_after
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: A snapshot with_git=True of feature/zeta (the damaged .git included) before and after the refusal is equal. Catches a readability check that runs git in a way that writes (index refresh, FETCH_HEAD, gc or a lock) inside the damaged repository, and one that touches the folder while computing the token. Control, covered by the finishing test, is that the same request with the token clears it.
+    proves_clause: '"feature/zeta" is identical before and after the refusal'
+    code_file: templates/scripts/worktree_remove_checks.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+    must_catch:
+      - run git with optional locks in the damaged repository
+      - fetch to see what is unsent
+      - the gate always allows
+  - name: test_token_finishes_the_damaged_workspace_and_lists_both_files_discarded
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Repeating the request with the returned --discard-token is answered ok (exit 0), discarded.files is [README.md, src/app.py], discarded.commits is empty, and nothing of feature/zeta (the damaged repository included) remains at its location.
+    proves_clause: when clearing is requested again with that token, it is answered cleared, the answer lists both files as discarded, and nothing of "feature/zeta" remains at its location
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_intact_repository_with_an_unsent_commit_is_not_treated_as_half_cleared
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: In a second run feature/eta is a ready workspace with an intact repository and one unpushed commit. remove with no token is refused UNSENT_WORK with unsent.commits holding the full 40-character identifier of that commit, the message does not say half-cleared or that the repository cannot be read, and the folder is identical. A second case where git itself fails for another reason (the git call times out or git is not found, simulated in the maker process by a sitecustomize wrapper) keeps its error answer and is not reported as half-cleared.
+    proves_clause: when, in a second run of the same setup, a workspace "feature/eta" whose repository is intact and holds one commit not on the shared project is cleared with no authorisation, it is refused for that unsent commit by identifier and is not treated as half-cleared
+    code_file: templates/scripts/worktree_remove_checks.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vii.py
+    must_catch:
+      - drop the positive evidence of missing or corrupt data condition
+      - treat a git timeout as unreadable
+      - the readability check always reports unreadable
+      - the gate always allows
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-02"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vii.py
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove runs _own_workspace (git branch and symbolic-ref in the damaged repository) before the half-cleared branch, and is_half_slot rejects any folder with a .git, so the unreadable-repository decision must be added ahead of these; the file is 490 lines, so the code goes to a sibling module.
+    decision: null
+  - file: templates/scripts/worktree_remove_checks.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds remaining_files (which does not yet leave out the repository folder), half_token and half_refusal (whose message says the repository is gone), the pieces this record reuses and changes, with 187 lines of room.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-vi
+  contract: >-
+    The half-cleared refusal (remaining files listed, one-time token bound to the folder and
+    exactly those files) and finishing with that token.
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed 2026-11-02: leafcutter-ai-worktrees/feature/assemble-bundle-utf8-stdout keeps its
+  record (state "ready") and its full working files, but its repository lost its pack objects
+  (139 of its files left), so every retry fetched and failed FETCH_FAILED "pack has
+  unresolved deltas". This record makes such a folder count as half-cleared, so the existing
+  BO-4300e-2-vi flow (list the remaining files, one-time token, finish with it) applies to it
+  instead of a fetch that can never succeed. After this ships, that real folder is finished by
+  asking the maker again with the token from its refusal (operational check, not a CI test:
+  the folder exists only on the user's machine).
+
+  Safety: a damaged repository can hold commits nobody can read any more, so the refusal must
+  say that commits cannot be checked -- the token then authorises the loss of whatever the
+  folder holds, and the person is told so. The "feature/eta" arm is the boundary: an intact
+  repository with unsent commits keeps the normal UNSENT_WORK check of BO-4300e-2 and is never
+  treated as half-cleared; recognition must not be loose enough to skip the commit check.
+
+  Files the project's ignore rules exclude (build outputs, the installed tools) are treated
+  the same way as BO-4300e-2-vi treats them; this record does not change which files are
+  listed. Whether remaining files whose exact content the shared project already holds may
+  be finished without a token is an open question (Q2 in the BA sign-off) and is NOT part of
+  these criteria.
+
+  Interaction with BO-4300e-2-ix: a clearing that stops inside the repository under the new
+  maker is finished without a token by -ix. This record covers leftovers that carry no sign
+  of a clearing that passed the unsent-work check -- such as the observed folder, left by the
+  older maker, or a repository damaged by other means.
