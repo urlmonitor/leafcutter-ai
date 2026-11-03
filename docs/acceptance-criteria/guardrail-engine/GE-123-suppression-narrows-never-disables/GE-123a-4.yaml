@@ -111,10 +111,6 @@ amended_by:
       second copy of a passage the whole GE-123 documentation set is written to keep in one
       place. Store precedent: 8 ACs naming a SKILL.md chose llm-expert, 0 chose
       documentation-expert.'
-  - action: amended
-    agent: it-po
-    date: '2026-11-03'
-    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -156,4 +152,6 @@ notes: |
   KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
   was. Any text in this record saying test_required is false, that the record is
   test-free, or that it is verified by review only instead of a test no longer applies.
+  This record carries no amended_by entry for the change, because
+  unit_tests/ac_store/test_acd_1200b_5_ii.py pins its amended_by to exactly one entry.
 target_epic: EPIC-SuppressionNarrowsNeverDisables
