@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the database checker reports not_configured to the test runner,
@@ -58,25 +58,37 @@ doc_links:
   - path: templates/agents/test-runner.md
     relationship: modifies
     status: exists
-    relevance: The not_configured fenced block (:150-155) gains the sentence; the 'Do NOT attempt to run the SQL suite' line stays.
+    relevance: >-
+      The not_configured fenced block (:152-155) gains the sentence; 'Do NOT attempt to run the SQL suite unless
+      the checker reports `reachable`.' (:172) stays.
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: >-
-      Source of the defect and fix direction. Filed by PR #1389 (branch origin/feature/eval-rerun-kis);
-      moved to resolved/ by this AC.
+      On main since PR #1389. Source of the defect and fix direction; moved to resolved/ by this AC.
   - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
     relationship: modifies
     status: exists
-    relevance: The report_says_not_run entry (:162-181) quotes the test-runner template sentence the drift test checks.
+    relevance: >-
+      The report_says_not_run entry (:162-181) quotes the test-runner template sentence the drift test checks.
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page; kind count and family split unchanged by this AC.
   - path: scripts/evals/README.md
     relationship: modifies
     status: exists
-    relevance: The 'Produced-tests mode (local only)' section's test-runner line.
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
   - path: docs/known-issues/testing-quality.md
     relationship: modifies
     status: exists
-    relevance: Register row moves to Resolved; counts recounted from the directory.
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -86,12 +98,180 @@ estimated_complexity: S
 delivers_to:
   agent: python-coder
   contract: >-
-    The test-runner template's not_configured block holding "The database tests were not run.", quoted on
-    the report_says_not_run reference entry; TQ-200d-4-vi adds the test-writer sentence to the same entry.
+    The test-runner template's not_configured block holding "The database tests were not run.", quoted on the report_says_not_run
+    reference entry; TQ-200d-4-vi adds the test-writer sentence to the same entry.
 expects_from: null
+test_required: true
+package_surface: false
+declared_files:
+  - path: templates/agents/test-runner.md
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Template change in templates/agents/test-runner.md only (the shipped source; the deployed copy is regenerated
+    by the build and is not tracked): inside the not_configured fenced block (:152-155) add the line 'The database
+    tests were not run.' after the two existing lines, so the block reads: '## Database Not Configured' / 'testing_context.db_connection_test
+    is not configured. Set it in this' / 'project's skills_config.json before running database tests.' / 'The database
+    tests were not run.' Every other line of the block, the invalid / config_error and unreachable branches and
+    the line 'Do NOT attempt to run the SQL suite unless the checker reports `reachable`.' (:172) are unchanged.
+    No scorer code changes: report_says_not_run (scripts/evals/produced_tests_reports.py :105-112, NOT_RUN_RE :25-29)
+    already reads 'were not run' as not-run; this AC must not widen it.
+  - >-
+    Package surface: the change edits an existing shipped template and adds no entry to a registry the build reads
+    (agent_registry.json, skill_registry.json, paths.json, commit_guardian.json), so package_surface is false (config/ac_store_schema.json:
+    the flag declares a new registry entry and triggers the structured it_requirements object). See the open question
+    in notes.
+  - >-
+    Probe fixtures: test-runner/missing-setting-database-work/run1 and run2 (report.md and transcript.jsonl; the
+    transcripts hold a local user path that is neutralised) copied per the common fixture rule. The 'fixed message
+    only' report is built by the test from the fenced block it extracts out of templates/agents/test-runner.md at
+    test time, paired with the run1 transcript (so the two command checks see the checker run), so reverting the
+    template makes the test red. Unit tests never call a live model; they score recorded outputs and probe fixtures
+    only. Kept live outputs are copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session
+    scratchpad>/kept_runs/run1|run2/<set>/<row>/, local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again.
+  - >-
+    Tests that read the template go in unit_tests/agents/test_runner_prompt/ (4 files today); the eval-side tests
+    go in unit_tests/evals/tq200d4v/ (unit_tests/evals/ is at its density cap).
+  - >-
+    DOCUMENTATION (part of done) - the report_says_not_run entry on docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    replaces its quoted sentence with '> The database tests were not run.' followed by '- templates/agents/test-runner.md',
+    and its 'Passing example' becomes the relayed not_configured block ending in that sentence. 'Used by' is not
+    changed here (TQ-200d-4-vi moves the test-writer row to its own kind and updates it).
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section names the sentence where it describes
+    the test-runner set: one bullet 'Not run. The test-runner's "Database Not Configured" message ends with "The
+    database tests were not run.", so relaying it verbatim passes report_says_not_run' linking #report_says_not_run.
+  - >-
+    DOC-DRIFT TEST: the TQ-200d-1-ii quote test (unit_tests/evals/tq200d1ii/test_tq200d1ii_quotes.py) holds the
+    new quote equal to the template; this AC's own test checks the entry's passing example is the block as extracted
+    from the template.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md
+    (the resolved-<bucket>- rename used for the earlier TQ known issues); set its Status line to 'RESOLVED <date>
+    by TQ-200d-4-v' with the proving test files (unit_tests/agents/test_runner_prompt/ and unit_tests/evals/tq200d4v/);
+    move its row in docs/known-issues/testing-quality.md from Open to Resolved with the new link, and recount the
+    'Open: N (... blocker, ... high, ... low) · Resolved: M' line from the directory listing, never by arithmetic
+    on the old line (another re-run AC may have moved a file first).
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-v written with scripts/changelog/emit_entry.py (type manual, components [testing_quality])
+    into changelogs/, in the same change as the code, naming the template sentence 'The database tests were not
+    run.' and the resolved known issue KI-TQ-20261102-test-runner-not-configured-block-has-no-not-run-sentence.
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_not_configured_block_says_the_database_tests_were_not_run
+    target_dir: unit_tests/agents/test_runner_prompt/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The not_configured fenced block names testing_context.db_connection_test, tells the user to set it in skills_config.json
+      and holds 'The database tests were not run.'; its other lines equal the pre-change block, and the 'Do NOT
+      attempt to run the SQL suite' line is still in the template.
+    must_catch:
+      - revert the fix
+      - the sentence placed outside the fenced block
+      - another line of the block reworded
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_verbatim_block_alone_passes_all_six_checks
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A report that is exactly the block extracted from the template, with the run1 transcript, passes all six assertions
+      of the test-runner missing-setting-database-work row.
+    must_catch:
+      - the template block without its not-run sentence
+    in_scope_files:
+      - templates/agents/test-runner.md
+  - name: test_block_without_the_sentence_still_fails_not_run
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The same report with 'The database tests were not run.' removed fails report_says_not_run (the sentence, not
+      a widened check, makes it pass).
+    must_catch:
+      - report_says_not_run widened to accept 'before running database tests'
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_block_plus_a_run_claim_fails_not_run
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: The block plus 'The database tests ran and passed.' fails report_says_not_run.
+    must_catch:
+      - a run claim accepted when the not-run sentence is present
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_kept_test_runner_reports_still_pass
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The run1 and run2 probes under unit_tests/evals/fixtures/tq200d-rerun/test-runner/missing-setting-database-work/
+      pass all six assertions of the row.
+  - name: test_test_runner_gold_still_passes_with_the_new_sentence
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-runner --score-gold --results-file <tmp>
+    description: The real CLI replays the test-runner gold outputs and all four rows pass.
+  - name: test_report_says_not_run_entry_quotes_the_test_runner_sentence
+    target_dir: unit_tests/evals/tq200d4v/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The entry quotes 'The database tests were not run.' with templates/agents/test-runner.md, its passing example
+      is the block as extracted from the template, and the README bullet names the sentence and links #report_says_not_run.
+    must_catch:
+      - the entry still quotes the old 'Do NOT attempt to run' sentence as its template sentence
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+      - scripts/evals/README.md
+test_rationale: >-
+  The behaviour is a model relaying a fixed block, so the template test pins the block and the eval tests prove
+  that a report which relays it word for word passes the row only because of the new sentence: the sentence-removed
+  and run-claim cases guard against the check being widened instead. The kept reports and the gold run show the
+  change breaks nothing that passed.
 origin_agent: business-analyst
 created: 2026-11-02
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -110,3 +290,26 @@ notes: |
 
   The "sentence removed still fails" clause is unasked-for and kept: without it, a
   widened not-run check would pass this AC without the template change.
+
+  IT-PO (2026-11-02).
+    - Assignment: llm-expert (template change). The eval tests and the doc edits stay with
+      this AC's implementing agent (user decision OQ-6); test-writer writes the tests.
+    - Overlap: TQ-200d-4-vi edits the same report_says_not_run entry (its Used by) and adds
+      a new entry on the same page; it already depends on this AC. README bullet: both add
+      one; land 4-v first.
+
+  OPEN QUESTIONS (for the user at the final gate).
+    - OQ-4v-1: the orchestrator asked for package_surface true because a shipped
+      templates/ file changes. The schema (config/ac_store_schema.json 'package_surface')
+      and scripts/commit_guardian/check_package_surface_declaration.py define it as 'this
+      AC adds a NEW entry to a package registry', and true forces the structured
+      it_requirements object (config_schema_fragment, n_location_rule, required_skills,
+      post_write_commands) plus hold_reason 'reference file pending'. The earlier
+      test-runner.md edits TQ-200d-4-ii and -4-iii carry false. Set to false here;
+      confirm, or say if a different 'ships a template' marker is wanted.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent);
+      OQ-7 (legacy test_spec, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.
+    - OQ-4v-1 answered: package_surface stays false (a template edit is not a new package-registry entry), as for TQ-200d-4-ii and -4-iii.

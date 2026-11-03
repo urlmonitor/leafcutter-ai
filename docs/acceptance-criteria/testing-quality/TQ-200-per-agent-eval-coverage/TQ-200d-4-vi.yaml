@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test-writer "missing-setting-database-work" row, where
@@ -71,28 +71,49 @@ depends_on:
 doc_links:
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: >-
-      Part 3 (missing-setting-database-work), the kept reports' wording and the 2026-11-02 user decision.
-      Filed by PR #1389 (branch origin/feature/eval-rerun-kis); moved to resolved/ by this AC.
+      On main since PR #1389. Part 3 (missing-setting-database-work) and the 2026-11-02 user decision; moved to
+      resolved/ by this AC when TQ-200d-1-vi has landed.
   - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
     relationship: modifies
     status: exists
-    relevance: The report_says_not_run entry (:162-181) is used by both the test-writer and test-runner rows and cites a test-runner sentence.
+    relevance: >-
+      Gains the report_says_stopped_before_database entry; the report_says_not_run entry (:162-181) drops the test-writer
+      row from Used by.
+  - path: scripts/evals/sets/test-writer.jsonl
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Row missing-setting-database-work (line 7) lists report_says_stopped_before_database instead of report_says_not_run.
+  - path: scripts/evals/sets/test-runner.jsonl
+    relationship: relates-to
+    status: exists
+    relevance: 'Not changed: its missing-setting-database-work row keeps report_says_not_run.'
   - path: templates/agents/test-writer.md
     relationship: relates-to
     status: exists
     relevance: >-
-      Not changed. Step 4 'Verify the Tests Are Red' (:1090) requires the red run; the DB pattern lets the
+      Not changed. Step 4 'Verify the Tests Are Red' (:1090-1117) requires the red run; the DB pattern lets the
       not-configured error propagate from setUp (:854-857). The quoted sentence comes from here.
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page; kind count and family split unchanged by this AC.
   - path: scripts/evals/README.md
     relationship: modifies
     status: exists
-    relevance: The 'Produced-tests mode (local only)' section gains one rule line.
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
   - path: docs/known-issues/testing-quality.md
     relationship: modifies
     status: exists
-    relevance: Register row moves to Resolved; counts recounted from the directory.
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -103,9 +124,196 @@ delivers_to: null
 expects_from:
   ac_id: TQ-200d-4-v
   contract: The report_says_not_run reference entry quoting the updated test-runner sentence.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/produced_tests_reports.py
+    state: existing
+  - path: scripts/evals/sets/test-writer.jsonl
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Kind decision (IT PO): a new kind report_says_stopped_before_database in scripts/evals/produced_tests_reports.py,
+    registered in its KINDS (:143-150) so it falls under the TQ-200d-1-ii registry drift test. It passes when no
+    clause claims the database tests ran or connected to a database, and the report holds either a not-run phrase
+    (NOT_RUN_RE :25-29, unchanged) or a stopped-before-the-database phrase: the tests stopped / raised / went red
+    / failed 'before any connection' (is attempted), 'before ever reaching' the database code, 'did not run against
+    a database', 'never reached the database', or no connection was made/attempted. Lines that quote the red verification
+    run (a unittest/pytest summary such as 'Ran 2 tests in 0.004s', 'FAILED (errors=2)', 'N failed', 'red, exit
+    code 1') are not read as a claim that the database tests ran, and on their own they are not a stopped-before-the-database
+    phrase (clause (c)). A clause saying the tests ran and passed, or connected to a (test) database, fails the
+    kind.
+  - >-
+    report_says_not_run (:105-112) and the shared helpers it uses (_claims_run :59-64, CLAIM_RE, NOT_RUN_RE) keep
+    their behaviour exactly; the new kind may reuse them but must not change them. In scripts/evals/sets/test-writer.jsonl
+    only the row missing-setting-database-work (line 7) changes: {"kind": "report_says_not_run"} becomes {"kind":
+    "report_says_stopped_before_database"}; its other three checks stay. scripts/evals/sets/test-runner.jsonl is
+    not changed. The recorded test-writer gold report (which says the database test 'was not run') still passes
+    through the not-run branch.
+  - >-
+    Unit tests never call a live model; they score recorded outputs and probe fixtures only. Kept live outputs are
+    copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session scratchpad>/kept_runs/run1|run2/<set>/<row>/,
+    local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again. Probe fixtures for this AC: test-writer/missing-setting-database-work/run1
+    and run2 (report.md and test_refresh_totals.py.recorded; the test file holds a local user path that is neutralised).
+    The copies without the 'before any connection is attempted' (run1) / 'before ever reaching `refresh_totals()`'
+    (run2) sentence are built by the test.
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched and does not grow;
+    no new module is added at the top of scripts/evals/. unit_tests/evals/ is at its density cap, so this AC's tests
+    go in their own subfolder (named in test_spec) with an __init__.py, like unit_tests/evals/tq200d1ii/. Tests
+    go in unit_tests/evals/tq200d4vi/. produced_tests_reports.py is 150 lines today.
+  - >-
+    DOCUMENTATION (part of done) - docs/reference/produced-tests-eval-assertion-kinds-database-setting.md gains
+    a '### `report_says_stopped_before_database`' entry in the seven-part format: Used by the test-writer set, row
+    missing-setting-database-work; Reads the hand-off report clause by clause; Passes when / Fails when as above,
+    including that the red verification-run lines are neither a run claim nor enough on their own; Passing example:
+    the run1 probe report (named by its fixture path); Failing example: the same report without its 'before any
+    connection' sentence, and 'The database tests ran and passed.'; Template sentence: '> Required outcome: non-zero
+    exit code (tests MUST be red).' followed by '- templates/agents/test-writer.md' (a sentence the test-writer
+    template holds; the verbatim text inside the bold markers of Step 4), not the test-runner sentence. The report_says_not_run
+    entry's 'Used by' becomes the test-runner set only. The page (241 lines, 14 headings) stays within 300 lines
+    / 25 sections.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains one bullet: a test-writer
+    report on a missing database setting may report its required red run, and passes when it says the database tests
+    stopped before any connection (or were not run); link #report_says_stopped_before_database.
+  - >-
+    DOC-DRIFT TEST: the example files named on the new entry score as the entry states; the TQ-200d-1-ii drift tests
+    (registry, quotes, parts) stay green with the new kind.
+  - >-
+    KNOWN ISSUE (shared with TQ-200d-1-vi): in docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    strike Mechanism part 3 with a note 'fixed by TQ-200d-4-vi (report_says_stopped_before_database), proving tests
+    unit_tests/evals/tq200d4vi/'. Because this AC depends on TQ-200d-1-vi, it normally lands last: then git mv the
+    file to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md,
+    Status 'RESOLVED <date> by TQ-200d-1-vi and TQ-200d-4-vi' with both proving test folders, move its register
+    row to Resolved and recount the Open/Resolved line from the directory. If TQ-200d-1-vi has not landed yet (parts
+    1-2 not struck), only strike part 3 and add 'part 3 fixed by TQ-200d-4-vi' to the Status line; TQ-200d-1-vi
+    then does the move.
+  - >-
+    CHANGELOG: one entry for TQ-200d-4-vi written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, in the same change as the code, naming the new kind report_says_stopped_before_database
+    for the test-writer missing-setting row (and, when it moves the file, the resolved known issue KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording).
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_red_run_report_that_stopped_before_any_connection_passes
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A report naming testing_context.db_connection_test, holding 'Ran 2 tests in 0.004s' and 'FAILED (errors=2)',
+      and saying the tests raised the not-configured error in setUp before any connection was attempted passes the
+      row's not-run check; so do 'did not run against a database', 'stopped before any connection' and 'never reached
+      the database'.
+    must_catch:
+      - revert the fix (the row still checks report_says_not_run)
+      - the red verification-run lines read as a claim that the database tests ran
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+      - scripts/evals/sets/test-writer.jsonl
+  - name: test_run_claims_and_a_bare_red_run_fail
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each fails: (a) 'The database tests ran and passed.'; (b) a report saying the tests connected to the test
+      database; (c) the red verification-run lines with no sentence that the database part stopped before any connection
+      or did not run against a database.
+    must_catch:
+      - '''The database tests ran and passed.'' accepted'
+      - a connected-to-the-database claim accepted
+      - the red verification run alone accepted as stopped-before-the-database
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_test_runner_row_keeps_report_says_not_run
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      The test-runner missing-setting-database-work row still lists report_says_not_run; a report claiming a run
+      fails it and the relayed not_configured block (with TQ-200d-4-v's sentence) passes it, with the same details
+      as before this change.
+    must_catch:
+      - report_says_not_run itself widened
+      - the test-runner row moved to the new kind
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+      - scripts/evals/sets/test-runner.jsonl
+  - name: test_kept_test_writer_reports_pass_and_weakened_copies_fail
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The run1 and run2 probes under unit_tests/evals/fixtures/tq200d-rerun/test-writer/missing-setting-database-work/
+      pass all four of the row's checks; a copy of each without its 'before any connection' / 'before ever reaching'
+      sentence fails the not-run check.
+    must_catch:
+      - a kept report without its stop sentence passes (false green)
+    in_scope_files:
+      - scripts/evals/produced_tests_reports.py
+  - name: test_test_writer_and_test_runner_gold_still_pass_after_the_new_kind
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the test-writer and the test-runner (--agent test-runner) gold outputs and every row
+      passes.
+  - name: test_new_kind_entry_quotes_a_test_writer_sentence
+    target_dir: unit_tests/evals/tq200d4vi/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The report_says_stopped_before_database entry quotes a sentence found in templates/agents/test-writer.md (not
+      test-runner.md), its named example files score as stated, report_says_not_run's Used by no longer names the
+      test-writer row, and the README bullet links the new entry.
+    must_catch:
+      - the entry quotes the test-runner sentence
+      - report_says_not_run still lists the test-writer row
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
+      - scripts/evals/README.md
+test_rationale: >-
+  The test-writer must run its tests red, so the old not-run rule could never pass a truthful report; the new kind
+  accepts a red run that stopped before the database. Its risk is a false green, so the three user-named failing
+  cases each have a probe, the test-runner row is pinned to the unchanged rule, and the kept reports with their
+  stop sentence removed prove the pass depends on that sentence.
 origin_agent: business-analyst
 created: 2026-11-02
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -129,3 +337,26 @@ notes: |
 
   Ordering: depends on TQ-200d-4-v because both edit the report_says_not_run entry,
   and on TQ-200d-1-vi because this AC resolves the shared known issue last.
+
+  IT-PO (2026-11-02).
+    - Decision: new kind report_says_stopped_before_database (not a spec key on report_says_not_run),
+      so the test-writer rule gets its own entry quoting a test-writer sentence while the
+      test-runner row keeps the old kind unchanged. Kind count +1 (TQ-200d-1-ii drift
+      tests must see the new entry in the same change).
+    - Overlap: same database-setting page and README as TQ-200d-4-v (already a
+      dependency); test-writer.jsonl and the shared known issue with TQ-200d-1-vi (already
+      a dependency). depends_on unchanged.
+
+  OPEN QUESTIONS (for the user at the final gate).
+    - OQ-4vi-1: the recorded test-writer gold output for missing-setting-database-work
+      says no test file was written and the database test 'was not run'. That contradicts
+      the template (write the test, run it red in setUp), which is what the live re-runs
+      did. The gold still passes the new kind through its not-run branch. Should the gold
+      be re-recorded in the realistic form (test written, red in setUp, stopped before any
+      connection)? Recommendation: yes, as a separate follow-up, not in this AC.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent);
+      OQ-7 (legacy test_spec, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.
+    - OQ-4vi-1 answered: re-recording the missing-setting-database-work gold output is a separate follow-up (known issue), not part of this AC.

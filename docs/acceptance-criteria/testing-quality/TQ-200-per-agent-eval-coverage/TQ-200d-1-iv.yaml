@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test-writer "empty-window" row, whose window holds 3 values,
@@ -80,30 +80,34 @@ depends_on:
 doc_links:
   - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: >-
-      Source of the defect, mechanism, kept-output evidence and fix direction. Filed by PR #1389
-      (branch origin/feature/eval-rerun-kis); moved to resolved/ by this AC.
+      On main since PR #1389. Source of the defect, the kept-output evidence and the fix direction; moved to resolved/
+      by this AC.
   - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
     relationship: modifies
     status: exists
-    relevance: The counts_rows_and_non_null (:58-83) and asserts_known_seeded_value (:85-110) entries say 'an `assert`'; both are rewritten.
+    relevance: >-
+      The counts_rows_and_non_null (:58-83) and asserts_known_seeded_value (:85-110) entries say 'an `assert`';
+      both are rewritten.
   - path: docs/reference/produced-tests-eval-assertion-kinds.md
     relationship: relates-to
     status: exists
-    relevance: Hub page and drift guarantee; kind count unchanged.
+    relevance: Hub page; kind count and family split unchanged by this AC.
   - path: scripts/evals/README.md
     relationship: modifies
     status: exists
-    relevance: The 'Produced-tests mode (local only)' section gains one rule line.
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
   - path: docs/known-issues/testing-quality.md
     relationship: modifies
     status: exists
-    relevance: Register row moves to Resolved; counts recounted from the directory.
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
   - path: docs/known-issues/README.md
     relationship: describes
     status: exists
-    relevance: Resolution convention.
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
   - path: scripts/changelog/README.md
     relationship: relates-to
     status: exists
@@ -111,18 +115,243 @@ doc_links:
   - path: templates/agents/test-writer.md
     relationship: relates-to
     status: exists
-    relevance: Not changed. Steers the agent to unittest.TestCase (Step 2a) and holds both quoted remedies.
+    relevance: >-
+      Not changed. Step 2a steers the agent to unittest.TestCase (:824); holds both quoted remedies (:1156, :1159).
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: TQ-200d-1-ii
   contract: >-
-    The test-writer family reference page with one entry per registered kind, held equal to the registry
-    and the quoted template sentences by drift tests.
+    The test-writer family reference page with one entry per registered kind, held equal to the registry and the
+    quoted template sentences by drift tests.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/produced_tests_scoring.py
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Code change, all in scripts/evals/produced_tests_scoring.py: (1) a helper that turns every assertion of the
+    file into the comparison it states - a bare assert (as today) and the unittest calls self.assertEqual / assertEquals(a,
+    b) as a == b, assertTrue(<compare>) as that comparison, assertGreater(a, b) as a > b and assertGreaterEqual(a,
+    b) as a >= b; assertTrue of a non-comparison, assertIsNotNone and any other call give no comparison. (2) counts_rows_and_non_null
+    (:111-121) and _count_kind (:97-108) read those comparisons instead of walking only ast.Assert (:117). (3) _count_side
+    (:87-94) accepts the count on either side of an == and, for an exact count (processed or non-NULL), a non-literal
+    integer expression on the other side (len(window), len(seed), or a name assigned from one) as well as an int
+    literal; a comparison whose two sides are the same expression (len(volumes) == len(volumes)) is no count. The
+    > n / >= n bounds stay literal-only with the existing rules (> n for n >= 0, >= n for n >= 1). (4) asserts_known_seeded_value
+    (:130-141) reads equality comparisons from the same helper, seeded value on either side; _numbers (:124-127)
+    keeps reading seeds only from assignments, so a number that appears only inside assertion calls is never a seed.
+  - >-
+    Reuse decision (IT PO): the sql-side _equality_statements (sql_test_writer_eval/evidence_kinds.py :79-87) returns
+    unparsed strings and cannot carry the bound rules, so it is not imported; the new helper accepts the same call
+    names (assertEqual, assertEquals) so the two families read unittest the same way. sql_test_writer_eval/ is not
+    changed by this AC.
+  - >-
+    The rows in scripts/evals/sets/test-writer.jsonl are unchanged; the recorded gold outputs of the test-writer
+    set still pass, and the existing bad-output probes in unit_tests/evals/fixtures/tq200d1/bad/ (empty_window_len_literals,
+    empty_window_null_skipping, presence_*) keep failing.
+  - >-
+    Unit tests never call a live model; they score recorded outputs and probe fixtures only. Kept live outputs are
+    copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session scratchpad>/kept_runs/run1|run2/<set>/<row>/,
+    local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again. Probe fixtures for this AC: test-writer/empty-window/run1 and run2 (test_buy_volume_window.py)
+    and test-writer/presence-is-not-correctness/run1 and run2 (test_live_value_presence.py); each weakened copy
+    (asserting only presence) is built by the test from the fixture, not stored.
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched and does not grow;
+    no new module is added at the top of scripts/evals/. unit_tests/evals/ is at its density cap, so this AC's tests
+    go in their own subfolder (named in test_spec) with an __init__.py, like unit_tests/evals/tq200d1ii/.
+  - >-
+    DOCUMENTATION (part of done) - on docs/reference/produced-tests-eval-assertion-kinds-test-writer.md the counts_rows_and_non_null
+    entry's 'Passes when' must state that bare asserts and the unittest calls assertEqual/assertEquals, assertTrue(<comparison>),
+    assertGreater and assertGreaterEqual are read; that the > / >= bounds are the same as for assert; that an exact
+    count may compare against a non-literal integer expression such as len(seed) but not against the same expression;
+    and it gains a unittest passing example (self.assertEqual(len(volumes), len(window)) with self.assertEqual(sum(v
+    is not None for v in volumes), len(window))) and the self-comparison and assertGreaterEqual(non_null, 0) failing
+    cases. The asserts_known_seeded_value entry must state that assertEqual/assertEquals with the seeded value on
+    either side counts, that numbers inside assertion calls are not seeds, and carry a unittest passing example
+    (self.assertEqual(result["AAPL"], 190.12) against a seeded feed) and assertIsNotNone as the failing case. Both
+    quoted template remedies stay as they are. Budget: the page is 245 lines and TQ-200d-1-v and -1-vi edit it too;
+    this AC adds at most 20 lines so the page stays within the 300-line / 25-section limit after all three.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md 'Produced-tests mode (local only)' gains one bullet:
+    the test-writer count and seeded-value checks read unittest assertion calls as well as bare asserts, and an
+    exact count may compare against len(seed), linking the two entries (#counts_rows_and_non_null, #asserts_known_seeded_value).
+    One sentence, the entry is not restated.
+  - >-
+    DOC-DRIFT TEST: every python code block of the two entries is scored by its kind and gives the result the entry
+    states (passing example passes, failing example fails); the TQ-200d-1-ii drift tests (unit_tests/evals/tq200d1ii/)
+    stay green.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
+    (the resolved-<bucket>- rename used for the earlier TQ known issues); set its Status line to 'RESOLVED <date>
+    by TQ-200d-1-iv' with the proving test files (unit_tests/evals/tq200d1iv/); move its row in docs/known-issues/testing-quality.md
+    from Open to Resolved with the new link, and recount the 'Open: N (... blocker, ... high, ... low) · Resolved:
+    M' line from the directory listing, never by arithmetic on the old line (another re-run AC may have moved a
+    file first).
+  - >-
+    CHANGELOG: one entry for TQ-200d-1-iv written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, in the same change as the code, naming the two widened kinds (unittest
+    calls read, non-literal exact counts) and the resolved known issue KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts.
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_unittest_counts_against_the_seed_length_pass
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A test asserting self.assertEqual(len(volumes), len(window)) and self.assertEqual(sum(v is not None for v
+      in volumes), len(window)), window a 3-value list it built, passes counts_rows_and_non_null.
+    must_catch:
+      - revert the fix
+      - only bare assert statements read
+      - only an int literal accepted on the other side of an exact count
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_bare_assert_and_assert_true_forms_still_pass
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      The same test with bare asserts and the literal 3 still passes, and self.assertTrue(len(volumes) == 3) is
+      read as assert len(volumes) == 3.
+    must_catch:
+      - bare-assert path dropped when the call path was added
+      - assertTrue(<comparison>) not read as the comparison
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_unittest_bounds_follow_the_assert_bounds
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      assertGreater(non_null, 0) and assertGreaterEqual(non_null, 1) count as a non-NULL count; assertGreaterEqual(non_null,
+      0) does not.
+    must_catch:
+      - assertGreaterEqual(non_null, 0) accepted as a non-NULL count
+      - assertGreater(non_null, 0) rejected
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_weak_or_self_comparing_counts_fail
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each fails: only assertGreaterEqual(non_null, 0); only assertTrue(len(volumes)); only assertIsNotNone(volumes);
+      self.assertEqual(len(volumes), len(volumes)); an exact row count with no non-NULL count, in bare-assert and
+      in unittest form.
+    must_catch:
+      - a count compared with itself accepted
+      - assertTrue(len(x)) accepted as an exact count
+      - assertIsNotNone accepted as a count
+      - exact row count accepted without a non-NULL count
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_unittest_seeded_value_assertions_pass
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      With feed = {"AAPL": 190.12, ...}, self.assertEqual(result["AAPL"], 190.12) and self.assertEqual(190.12, result["AAPL"])
+      each pass asserts_known_seeded_value.
+    must_catch:
+      - revert the fix
+      - assertEqual with the seeded value first rejected
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_presence_and_unseeded_values_fail_in_unittest_form
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      self.assertIsNotNone(result["AAPL"]) alone fails; self.assertEqual(result["AAPL"], 9.0) fails when no assignment
+      holds 9.0; a number that appears only inside assertion calls is not a seed.
+    must_catch:
+      - numbers inside assertion calls counted as seeds
+      - assertIsNotNone accepted as correctness
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_kept_rerun_outputs_pass_and_presence_only_copies_fail
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The probe fixtures under unit_tests/evals/fixtures/tq200d-rerun/test-writer/: run1 empty-window (unittest),
+      run2 empty-window (bare asserts) and run1/run2 presence-is-not-correctness pass their kind; a copy of each
+      weakened to assert only presence fails (no false green).
+    must_catch:
+      - a presence-only copy of a kept output passes (false green)
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+  - name: test_test_writer_gold_still_passes_with_unittest_reading
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the test-writer gold outputs; the empty-window and presence-is-not-correctness rows still
+      pass.
+  - name: test_count_and_seed_entries_describe_unittest_reading
+    target_dir: unit_tests/evals/tq200d1iv/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      Both entries name the accepted unittest calls and the bound rules, every python block on them scores as the
+      entry states, the two template remedies are still in templates/agents/test-writer.md, and the README bullet
+      links both entries.
+    must_catch:
+      - entry still says only 'an `assert`'
+      - an example on the page that the kind no longer scores as stated
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+      - scripts/evals/README.md
+test_rationale: >-
+  The fix widens two static checks, so half the weight is on the false-green boundaries a widened check could let
+  through: a count compared with itself, a '>= 0' bound and a presence-only assertion, each in unittest form. The
+  kept live outputs prove the defect is gone on real agent output, and their presence-only copies prove the widening
+  did not open a false green; the gold run proves the rows are wired through the real CLI.
 origin_agent: business-analyst
 created: 2026-11-02
-amended_by: []
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -145,3 +374,24 @@ notes: |
   committed; the implementer copies the named files into recorded probe fixtures.
   The Completion-Report-format omission noted in the KI is an agent-side weakness and
   out of scope here.
+
+  IT-PO (2026-11-02).
+    - Grounded in produced_tests_scoring.py on this branch (243 lines): _count_side
+      :87-94, _count_kind :97-108, counts_rows_and_non_null :111-121, _numbers :124-127,
+      asserts_known_seeded_value :130-141.
+    - Overlap: TQ-200d-1-vi also edits produced_tests_scoring.py (report_mentions
+      :152-156 only) and the same reference page; TQ-200d-1-v edits the same page. No
+      functional dependency, so depends_on is unchanged; land one after the other and
+      rebase. Page budget: this AC <= +20 lines, -1-v <= +15, -1-vi <= +8 (page 245 -> <= 288).
+    - Shared fixture folder unit_tests/evals/fixtures/tq200d-rerun/test-writer/empty-window/
+      and presence-is-not-correctness/ is also read by TQ-200d-1-vi (report.md); the first
+      AC to land creates it, the second adds only its missing files.
+    - Recommended landing order of the seven re-run fixes: TQ-200d-5-iv first (it removes
+      the Windows temp-folder flake from the score-gold tests every other AC runs), then
+      -1-iv, -1-v, -1-vi, -2-iii, -4-v, -4-vi.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent; a
+      'specialist versus surface' finding on a declared .md path is settled 'assignment
+      stands'); OQ-7 (legacy test_spec with must_catch/in_scope_files, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.
