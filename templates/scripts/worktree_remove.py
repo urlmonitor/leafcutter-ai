@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import logging
 import os
@@ -48,11 +47,11 @@ import worktree_answer as wa
 import worktree_git as wg
 import worktree_layout as wl
 import worktree_paths as wp
+import worktree_remove_checks as wrc
 
 _log = logging.getLogger(__name__)
 
 _err = wa.error_answer
-_EXTENDED_PREFIX = "\\\\?\\"
 
 
 def incomplete_answer(workspace: Path, marker: dict[str, Any]) -> dict[str, Any]:
@@ -70,12 +69,8 @@ def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:
     return {**incomplete_answer(Path(answer.get("workspace_path", "")), marker), **carried}
 
 
-def _long_path(path: Path) -> str:
-    """Return *path* spelled so a path over 260 characters is reachable (Windows extended-length prefix)."""
-    text = str(path)
-    if os.name != "nt" or text.startswith(_EXTENDED_PREFIX):
-        return text
-    return _EXTENDED_PREFIX + "UNC\\" + text[2:] if text.startswith("\\\\") else _EXTENDED_PREFIX + text
+_long_path = wrc.long_path
+_holder_entry = wrc.holder_entry
 
 
 def parse_status_z(raw: str) -> list[tuple[str, str]]:
@@ -114,19 +109,24 @@ def status_entries(workspace: Path, no_optional_locks: bool = False,
     return parse_status_z(proc.stdout), None
 
 
-def _unsent_commits(workspace: Path) -> tuple[list[str], str | None]:
-    """Return the commits on HEAD reachable from neither ``origin/<branch>`` nor ``origin/main``."""
+def _unsent_commits(workspace: Path, line: str | None = None) -> tuple[list[str], str | None]:
+    """Return the commits on HEAD (and, when detached, on the workspace's own *line*) reachable from neither
+    ``origin/<branch>`` nor ``origin/main``."""
     if wg.run_git(["rev-parse", "--verify", "--quiet", "HEAD"], workspace).returncode != 0:
         return [], None  # no commit yet (half-made): nothing can be unsent
-    branch = wg.run_git(["symbolic-ref", "--quiet", "--short", "HEAD"], workspace).stdout.strip()
+    attached = wg.run_git(["symbolic-ref", "--quiet", "--short", "HEAD"], workspace).stdout.strip()
+    branch = attached or line or ""
     cmd = ["rev-list", "HEAD"]
+    if not attached and branch and wg.run_git(["rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
+                                              workspace).returncode == 0:
+        cmd.append(f"refs/heads/{branch}")
     for ref in ("origin/main", f"origin/{branch}" if branch else ""):
         if ref and wg.run_git(["rev-parse", "--verify", "--quiet", f"refs/remotes/{ref}"], workspace).returncode == 0:
             cmd.append(f"^refs/remotes/{ref}")
     proc = wg.run_git(cmd, workspace)
     if proc.returncode != 0:
         return [], "git rev-list"
-    return [line for line in proc.stdout.split() if line], None
+    return [sha for sha in proc.stdout.split() if sha], None
 
 
 def _fetch_origin(workspace: Path) -> Any:
@@ -152,33 +152,27 @@ def _fetch_origin(workspace: Path) -> Any:
     return proc
 
 
-def unsent_work(workspace: Path) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+def unsent_work(workspace: Path, line: str | None = None) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     """The BO-4100c-1 verdict, taken after a fetch: ``(unsent, refusal)``.
 
     ``unsent`` is ``{"commits": [sha], "files": [path]}`` plus the private
     ``entries`` used for the token binding; ``refusal`` is set (and ``unsent``
-    ``None``) when the verdict cannot be reached, so unknown is never "nothing".
+    ``None``) when the verdict cannot be reached, so unknown is never "nothing". *line* is the
+    workspace's recorded line of work, checked too when the workspace is detached (``detached`` key).
     """
     fetch = _fetch_origin(workspace)
     if fetch.returncode != 0:
         return None, _err("FETCH_FAILED", f"The step 'git fetch origin' failed in {workspace}; cannot tell what is "
                                           "unsent (git's own message is on stderr).", step="git fetch origin")
-    commits, commit_err = _unsent_commits(workspace)
+    commits, commit_err = _unsent_commits(workspace, line)
     entries, status_err = status_entries(workspace)
     failed = commit_err or status_err
     if failed:
         return None, _err("GIT_FAILED", f"Could not classify the work in {workspace}: the step {failed!r} failed "
                           "(git's own message is on stderr).", step=failed)
-    return {"commits": commits, "files": [path for _xy, path in entries], "entries": entries}, None
-
-
-def _content_digest(workspace: Path, rel: str) -> str:
-    """sha256 of the file's bytes, or a marker string when it is absent or unreadable."""
-    target = workspace / rel
-    try:
-        return hashlib.sha256(Path(_long_path(target)).read_bytes()).hexdigest()
-    except OSError:
-        return "<absent>"
+    detached = wg.run_git(["symbolic-ref", "--quiet", "HEAD"], workspace).returncode == 1
+    return {"commits": commits, "files": [path for _xy, path in entries], "entries": entries,
+            "detached": detached}, None
 
 
 def discard_token(workspace: Path, marker: dict[str, Any], unsent: dict[str, Any]) -> str:
@@ -191,7 +185,7 @@ def discard_token(workspace: Path, marker: dict[str, Any], unsent: dict[str, Any
         "path": os.path.normcase(str(workspace)),
         "marker": marker,
         "commits": sorted(unsent["commits"]),
-        "files": sorted([xy, path, _content_digest(workspace, path)] for xy, path in unsent["entries"]),
+        "files": sorted([xy, path, wrc.content_digest(workspace, path)] for xy, path in unsent["entries"]),
     }
     return hashlib.sha256(json.dumps(binding, sort_keys=True).encode("utf-8")).hexdigest()[:32]
 
@@ -200,6 +194,8 @@ def _unsent_refusal(workspace: Path, unsent: dict[str, Any], token: str, present
     """UNSENT_WORK refusal listing what would be lost and carrying the fresh ``discard_token``."""
     why = (" The discard token presented does not match this workspace's current unsent work."
            if presented else "")
+    if unsent.get("detached"):
+        why += " The workspace is not on its line of work (detached), so the commit it sits on was checked too."
     return _err(
         "UNSENT_WORK",
         f"{workspace} holds work not on the shared project: {len(unsent['commits'])} unpushed commit(s), "
@@ -208,50 +204,16 @@ def _unsent_refusal(workspace: Path, unsent: dict[str, Any], token: str, present
     )
 
 
-def _ancestor_pids() -> frozenset[int]:
-    """This process and its ancestors (their command line names the workspace being cleared)."""
-    pids = {os.getpid(), os.getppid()}
-    try:
-        import psutil  # noqa: PLC0415 - optional dependency
-        pids.update(p.pid for p in psutil.Process().parents())
-    except (ImportError, OSError, ValueError) as exc:
-        _log.warning("_ancestor_pids: could not walk ancestors: %s", exc)
-    return frozenset(pids)
-
-
-def _load_sweep() -> Any | None:
-    """Load the deployed ``worktree/sweep_processes.py`` beside this maker, or ``None`` when absent."""
-    path = Path(__file__).resolve().parent / "worktree" / "sweep_processes.py"
-    if not path.is_file():
-        _log.warning("_load_sweep: %s is not deployed; running programs are not checked", path)
-        return None
-    spec = importlib.util.spec_from_file_location("leafcutter_sweep_processes", path)
-    if spec is None or spec.loader is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    try:
-        spec.loader.exec_module(module)
-    except (ImportError, SyntaxError, OSError) as exc:
-        _log.warning("_load_sweep: could not load %s: %s", path, exc)
-        return None
-    return module
-
-
-def _holding_programs(workspace: Path) -> list[dict[str, Any]]:
-    """Programs started from, or holding files in, *workspace* (reported, never killed)."""
-    sweep = _load_sweep()
-    if sweep is None:
-        return []
-    config = {"kill_residual_processes": False, "protected_paths": []}
-    result = sweep.sweep(str(workspace), config=config, exclude_pids=_ancestor_pids())
-    return list(result.conflict_pids)
-
-
-def _rmtree_onerror(func: Any, target: str, _exc: Any) -> None:
-    """Clear the read-only bit (git objects on Windows) and retry the failed deletion once."""
-    os.chmod(target, stat.S_IWRITE)
-    func(target)
+def _rmtree_onerror(func: Any, target: str, exc: Any) -> None:
+    """Tolerate an item that vanished; clear the read-only bit (git objects on Windows) and retry once otherwise."""
+    error = exc[1] if isinstance(exc, tuple) else exc
+    if isinstance(error, FileNotFoundError):
+        return  # something else removed it first: the folder is that much emptier, not a failure
+    try:  # add the owner-write bit only: a bare S_IWRITE would strip a POSIX folder's read and search bits
+        os.chmod(target, stat.S_IMODE(os.lstat(target).st_mode) | stat.S_IWRITE)
+        func(target)
+    except FileNotFoundError:
+        return  # vanished while retrying
 
 
 def delete_whole_folder(path: Path) -> str | None:
@@ -263,17 +225,38 @@ def delete_whole_folder(path: Path) -> str | None:
     its own answer).
     """
     target = _long_path(path)
+    failed: list[str] = []
+
+    def _collect(func: Any, item: str, exc: Any) -> None:
+        # An item that still cannot go is noted and rmtree carries on with the rest; raising here would
+        # abort the whole delete (on POSIX) and leave rmtree's last error, the non-empty folder, as the reason.
+        try:
+            _rmtree_onerror(func, item, exc)
+        except OSError as err:
+            _log.warning("delete_whole_folder: could not delete %s: %s", item, err)
+            failed.append(item)
+
     try:
         if sys.version_info >= (3, 12):
-            shutil.rmtree(target, onexc=_rmtree_onerror)
+            shutil.rmtree(target, onexc=_collect)
         else:
-            shutil.rmtree(target, onerror=_rmtree_onerror)
+            shutil.rmtree(target, onerror=_collect)
     except OSError as exc:
         _log.warning("delete_whole_folder: rmtree failed for %s: %s", path, exc)
         return f"Could not remove all of {path} (a program may hold files): {exc}"
+    if failed:
+        return f"Could not remove all of {path} (a program may hold files): {_named(target, failed)}"
     if os.path.lexists(target):
         return f"Part of {path} remains after removal; it is not cleared."
     return None
+
+
+def _named(root: str, failed: list[str], shown: int = 5) -> str:
+    """The items that could not be deleted, workspace-relative; files first (their folders fail only as non-empty)."""
+    rel = [os.path.relpath(item, root).replace("\\", "/") for item in failed]
+    files = [r for r, item in zip(rel, failed, strict=True) if not os.path.isdir(item)] or rel
+    more = f" and {len(files) - shown} more" if len(files) > shown else ""
+    return f"could not delete {', '.join(files[:shown])}{more}"
 
 
 def _delete_tree(workspace: Path) -> dict[str, Any] | None:
@@ -285,7 +268,7 @@ def _delete_tree(workspace: Path) -> dict[str, Any] | None:
 def _authorise(workspace: Path, marker: dict[str, Any], presented: str | None,
                ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """Return ``(refusal, discarded)``: refuse unsent work unless *presented* matches its exact binding."""
-    unsent, refusal = unsent_work(workspace)
+    unsent, refusal = unsent_work(workspace, str(marker.get("branch") or "") or None)
     if refusal is not None or unsent is None:
         return refusal, {}
     discarded = {"commits": unsent["commits"], "files": unsent["files"]}
@@ -297,21 +280,19 @@ def _authorise(workspace: Path, marker: dict[str, Any], presented: str | None,
     return _unsent_refusal(workspace, unsent, token, presented), discarded
 
 
-def _holder_entry(entry: dict[str, Any]) -> dict[str, Any]:
-    """Reduce a sweep entry to ``{"pid": int, "name": str}`` (the program's name, never its command line).
-
-    Never raises: any failure to ask the system for the name falls back to the command line's first word.
-    """
-    pid = 0
-    try:
-        pid = int(entry.get("pid", 0))
-        import psutil  # noqa: PLC0415 - optional dependency
-        name = psutil.Process(pid).name()
-    except Exception as exc:  # noqa: BLE001 - psutil.Error is not an OSError; the answer must still be built
-        _log.warning("_holder_entry: no process name for pid %s: %s", pid, exc)
-        words = str(entry.get("cmdline", "")).split()
-        name = Path(words[0]).name if words else "unknown"
-    return {"pid": pid, "name": str(name)}
+def _project_and_root(args: argparse.Namespace, workspace: Path,
+                      marker: dict[str, Any] | None) -> tuple[Path | None, Path | None]:
+    """The project (``--repo-root``, else the one *marker* records) and its resolved landing place, or ``(None, None)``."""
+    project = None
+    if args.repo_root:
+        project, refusal = wl.resolve_repo_root(args.repo_root)
+        project = None if refusal is not None else project
+    elif marker is not None:
+        project = wl.project_of(workspace, marker)
+    if project is None:
+        return None, None
+    place, usage = wl.landing_for(getattr(args, "landing_root", None), project)
+    return (None, None) if usage is not None or place is None else (project, place.resolve())
 
 
 def _own_workspace(args: argparse.Namespace, workspace: Path) -> dict[str, Any] | None:
@@ -319,26 +300,38 @@ def _own_workspace(args: argparse.Namespace, workspace: Path) -> dict[str, Any] 
 
     The project is ``--repo-root`` when given, else the one the marker records.
     The path must lie inside that project's landing place (honouring
-    ``--landing-root``) and the marker must record that same project.
+    ``--landing-root``) and the marker must record that same project. A
+    workspace switched onto a bare commit (detached) is still its own.
     """
     marker = wg.read_marker(workspace)
-    if marker is None:
+    project, root = _project_and_root(args, workspace, marker)
+    if marker is None or project is None or root is None:
         return None
-    if args.repo_root:
-        project, refusal = wl.resolve_repo_root(args.repo_root)
-        if refusal is not None or project is None:
-            return None
-    else:
-        project = wl.project_of(workspace, marker)
-        if project is None:
-            return None
-    place, usage = wl.landing_for(getattr(args, "landing_root", None), project)
-    if usage is not None or place is None:
-        return None
-    resolved, root = workspace.resolve(), place.resolve()
+    resolved = workspace.resolve()
     if wl.other_project_occupant(workspace, marker, project) or not _is_workspace_slot(resolved, root):
         return None
-    return marker if _checked_out_branch(resolved) == marker.get("branch") else None
+    return marker if _on_own_line(resolved, marker) else None
+
+
+def _on_own_line(resolved: Path, marker: dict[str, Any]) -> bool:
+    """True when the checked-out branch is the recorded one, or HEAD is detached (not on any branch)."""
+    current = _checked_out_branch(resolved)
+    if current is not None:
+        return current == marker.get("branch")
+    return wg.run_git(["symbolic-ref", "--quiet", "HEAD"], resolved).returncode == 1
+
+
+def _own_half_cleared(args: argparse.Namespace, workspace: Path) -> dict[str, Any] | None:
+    """The record (``{}`` when none) of a half-cleared folder in this project's own landing place, else ``None``."""
+    marker = wg.read_marker(workspace)
+    project, root = _project_and_root(args, workspace, marker)
+    if project is None or root is None or not wrc.is_half_slot(workspace.resolve(), root):
+        return None
+    if marker is None:
+        return {}
+    kind, slug = workspace.resolve().parts[-2:]  # a record that names another slot is a copy, not a leftover
+    same_slot = (marker.get("kind"), marker.get("slug")) == (kind, slug)
+    return None if wl.other_project_occupant(workspace, marker, project) or not same_slot else marker
 
 
 def _is_workspace_slot(resolved: Path, root: Path) -> bool:
@@ -381,12 +374,54 @@ def _delete_hub_branch(workspace: Path, branch: str) -> dict[str, Any] | None:
                 step=step)
 
 
+def _blocked_by_programs(workspace: Path) -> dict[str, Any] | None:
+    """PROCESS_HOLDS_FILES refusal when programs work inside *workspace* or the program check cannot run."""
+    holders, unavailable = wrc.program_check(workspace)
+    if unavailable is not None:
+        return _err("PROCESS_HOLDS_FILES", f"The program check is unavailable ({unavailable}), so it cannot be "
+                    f"told whether programs are working inside {workspace}; nothing was removed.")
+    if not holders:
+        return None
+    named = ", ".join(f"{h['pid']} ({h['name']})" for h in holders)
+    return _err("PROCESS_HOLDS_FILES", f"Programs are working inside {workspace}: {named}. "
+                "Stop them and ask again; nothing was removed.", holders=holders)
+
+
+def _remove_half_cleared(args: argparse.Namespace, workspace: Path) -> dict[str, Any]:
+    """Finish a folder a clearing left part-way (repository gone), or NOT_FOUND when it is not this project's.
+
+    Files in it cannot be checked against the shared project, so they count as
+    unsent: they go only with the one-time token bound to exactly them. The
+    shared project is never touched (there is no repository to ask).
+    """
+    marker = _own_half_cleared(args, workspace)
+    if marker is None:
+        return _err("NOT_FOUND", f"This project has no workspace at {workspace}; nothing was changed.")
+    blocked = _blocked_by_programs(workspace)
+    if blocked is not None:
+        return blocked
+    files = wrc.remaining_files(workspace)
+    if files and not marker:  # no record: only an empty folder is a leftover; one holding files may not be ours
+        return _err("NOT_FOUND", f"{workspace} holds files but no workspace record, so it cannot be told to be a "
+                    "workspace of this project; nothing was changed.", files=files)
+    presented = getattr(args, "discard_token", None)
+    token = wrc.half_token(workspace, marker or None, files) if files else ""
+    if files and presented != token:
+        return wrc.half_refusal(workspace, files, token, presented)
+    failure = _delete_tree(workspace.resolve())
+    if failure is not None:
+        return failure
+    return {"status": "ok", **wp.path_fields(workspace), "removed_path": str(workspace),
+            "discarded": {"commits": [], "files": files}}
+
+
 def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
     """Clear the workspace at ``--path``; never reads stdin or prompts.
 
-    The hub branch (when asked for) is deleted first and the local folder only
-    after; if the local delete then fails the answer says the hub branch is
-    already gone (``hub_branch_deleted``).
+    Programs working inside it are checked first (nothing is fetched, pushed or
+    deleted while one runs). The hub branch (when asked for) is deleted before
+    the local folder; if the local delete then fails the answer says the hub
+    branch is already gone (``hub_branch_deleted``).
     """
     bad_override = wl.override_refusal(args)
     if bad_override is not None:
@@ -394,19 +429,17 @@ def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
     workspace = wp.resolve_arg(args.path)
     marker = _own_workspace(args, workspace)
     if marker is None:
-        return _err("NOT_FOUND", f"This project has no workspace at {workspace}; nothing was changed.")
+        return _remove_half_cleared(args, workspace)
     if args.delete_remote_branch:
         unsafe = _unsafe_hub_branch(workspace, str(marker.get("branch") or ""))
         if unsafe is not None:
             return unsafe
+    blocked = _blocked_by_programs(workspace)
+    if blocked is not None:
+        return blocked
     refusal, discarded = _authorise(workspace, marker, getattr(args, "discard_token", None))
     if refusal is not None:
         return refusal
-    holders = [_holder_entry(h) for h in _holding_programs(workspace)]
-    if holders:
-        named = ", ".join(f"{h['pid']} ({h['name']})" for h in holders)
-        return _err("PROCESS_HOLDS_FILES", f"Programs are running in or holding files of {workspace}: {named}. "
-                    "Stop them and ask again; nothing was removed.", holders=holders)
     if args.delete_remote_branch:
         failure = _delete_hub_branch(workspace, marker["branch"])
         if failure is not None:
@@ -423,6 +456,12 @@ def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-10-26 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-iv..viii]:
+#   Program check moved to worktree_remove_checks and runs FIRST, failing
+#   closed; half-cleared folders (no .git) are finished or token-refused;
+#   a detached workspace is found and its own line is checked too; a
+#   vanished item is not a deletion failure (a real failure still is).
+#   (#fast-lane/BO-4300e-2) (ADR-018)
 # - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/04 rework]:
 #   "Already gone" rule: before deleting the hub branch, ``git ls-remote
 #   --exit-code --heads origin <branch>``; exit 2 (no such ref) counts as

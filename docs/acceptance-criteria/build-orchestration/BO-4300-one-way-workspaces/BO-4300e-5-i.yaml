@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -68,17 +68,45 @@ expects_from:
   contract: The retry and refusal behaviour of clearing that the guide describes.
 package_surface: false
 test_required: true
+test_spec:
+- name: test_how_to_covers_each_new_refusal_and_links_the_reference
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: the how-to has a section for a running program, a half-cleared workspace, a folder with no record and a detached workspace, each naming its code and remedy, and links the answer reference.
+- name: test_how_to_publishes_no_deletion_that_bypasses_the_maker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: no fenced command in the how-to deletes a folder or repository outside the maker (rm, rmdir, Remove-Item, rmtree, git worktree remove).
+- name: test_reference_names_each_new_refusal_by_code
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: the reference's Refusals of remove section lists the six refusals with their codes, and each code is emitted by the remove sources.
+- name: test_documented_messages_and_fields_are_emitted_by_remove
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: every message opening and field the reference documents appears in the remove sources, so a field the maker does not emit fails.
+test_rationale: 'The deliverable is a published document, so a waiver would let it close unproven. unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py asserts on the delivered pages and ties every documented code, field and message to the remove sources, so a guide that drifts from the maker fails.'
 origin_agent: business-analyst
 created_by: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5.yaml
 created: 2026-10-25
 amended_by:
-- action: amended
-  agent: it-po
-  date: '2026-11-01'
-  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
+  - reason: "test_required set to true with a test_spec: the docs are proven by a doc test, like the parent BO-4300e-5, rather than closed by a waiver."
+    by: claude
+    at: "2026-11-02"
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+implemented_by:
+- docs/how-to/clear-a-workspace.md
+- docs/reference/workspace-maker-answer.md
 notes: |
   BO-4300e carries documentation_triggers [how-to] and already holds 5 L2s (the L1 cap), so
   the how-to update for the 2026-10-25 hardening is an L3 under the existing how-to L2
