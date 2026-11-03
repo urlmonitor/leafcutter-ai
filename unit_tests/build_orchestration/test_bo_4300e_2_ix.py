@@ -114,7 +114,9 @@ class StopCase(HolderCase):
         return ws
 
     def stop_env(self, ws: Path, point: str) -> dict[str, str]:
-        everything, outside_repo, repo = [ws.name], set(), set()
+        everything = [ws.name]
+        outside_repo: set[str] = set()
+        repo: set[str] = set()
         for root, dirs, files in os.walk(ws):
             inside = ".git" in Path(root).relative_to(ws).parts or Path(root).name == ".git"
             for name in (*dirs, *files):
