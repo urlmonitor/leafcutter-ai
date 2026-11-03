@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-11-02'
+last_updated: '2026-11-03'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 46** (1 blocker, 15 high, 30 low) · **Resolved: 10** (recounted from the directory 2026-11-02, after filing the six 2026-11-02 eval re-run KIs)
+**Open: 47** (1 blocker, 15 high, 31 low) · **Resolved: 10** (recounted from the directory 2026-11-03, after filing KI-TQ-20261103-missing-setting-gold-output-contradicts-the-template)
 
 ## Open
 
@@ -105,6 +105,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording — three test-writer row checks want wording the test-writer template never asks for: `report_mentions` 'non-NULL' on `empty-window` (reports say "non-None count" / "all-`None` window"), 'known value' on `presence-is-not-correctness` (reports say "exact expected value from the feed"), and `report_says_not_run` on `missing-setting-database-work` although Step 4 (`test-writer.md`:1090) requires a red run and the reports truthfully say it went red in `setUp` before any connection (the rule's cited sentence is in `test-runner.md`:172); falsely red in all three live runs of 2026-11-02; fix (widen/drop the checks or add template sentences) pending a decision; graded medium | [open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md](testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md) |
 | `low` | KI-TQ-20261102-test-runner-not-configured-block-has-no-not-run-sentence — the verbatim "Database Not Configured" block (`test-runner.md`:152-155) holds no not-run phrase, so the test-runner row `missing-setting-database-work` passes `report_says_not_run` only when the agent adds its own sentence; falsely red once (2026-11-02 first live run), passed in re-runs 1 and 2 ("I can't run the `refresh_totals()` SQL suite …"); fix: add "The database tests were not run." to the block | [open-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md](testing-quality/open-low-ki-tq-20261102-test-runner-not-configured-block-has-no-not-run-sentence.md) |
 | `low` | KI-TQ-20261102-eval-temp-cleanup-error-crashes-the-run — `score_one` (`produced_tests_mode.py`:115-132) scores each row inside `tempfile.TemporaryDirectory(prefix="produced-tests-")`; a `PermissionError [WinError 32]` on `…\produced-tests-*\score\sandbox` during cleanup escapes the row's `except` and `run_produced_tests_mode` (catches only `AgentLaunchError`), so the run ends with a traceback, writes no results and skips the remaining rows (sql-test-writer re-run 2, 2026-11-02); the same error flakes the score-gold unit tests on Windows; fix: tolerant cleanup (`ignore_cleanup_errors=True` or retries plus a logged warning); graded medium | [open-low-ki-tq-20261102-eval-temp-cleanup-error-crashes-the-run.md](testing-quality/open-low-ki-tq-20261102-eval-temp-cleanup-error-crashes-the-run.md) |
+| `low` | KI-TQ-20261103-missing-setting-gold-output-contradicts-the-template — the recorded test-writer gold output for row `missing-setting-database-work` writes no test and says the test was not run, while `templates/agents/test-writer.md` requires the test to be written and run red in `setUp` (what both live re-runs did), so `--score-gold` proves the row's checks against a shape the real agent never produces; fix: re-record from a kept re-run after TQ-200d-4-vi | [open-low-ki-tq-20261103-missing-setting-gold-output-contradicts-the-template.md](testing-quality/open-low-ki-tq-20261103-missing-setting-gold-output-contradicts-the-template.md) |
 
 ## Resolved
 
