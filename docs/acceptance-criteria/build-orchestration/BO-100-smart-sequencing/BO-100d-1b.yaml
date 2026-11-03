@@ -71,6 +71,10 @@ amended_by:
   - by: BrainCandy
     at: "2026-10-16"
     reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -83,17 +87,11 @@ notes: |
 
   Lineage: repeat of TICKET-20260527-FeedbackSinkPreDriveCheck — warn-only was
   insufficient; this raises the prose gate to a hard block.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
 change_target: prompt
 risk_surface: internal
-test_required: false
-test_rationale: >-
-  The deliverable is command prose in templates/workflows/build-feature.md, read by
-  an agent; no unit test can execute it, and a test that checks the prose for the
-  probe step would be the grep-only form the repo CLAUDE.md forbids for gates. The
-  executable behaviour the prose invokes (location resolved through the query, no
-  relative fallback, nothing created on refusal, typed block with sink_path and
-  remediation) lives in the shared probe helper and is proven behaviorally by
-  BO-100d-1a, BO-100d-1a-i and BO-100d-1a-ii. The prose path is to be checked at
-  drive time by a behavioral spot-check: run /build-feature against an install
-  whose declared stream is unwritable and confirm no ticket-supervisor is
-  dispatched.
+test_required: true

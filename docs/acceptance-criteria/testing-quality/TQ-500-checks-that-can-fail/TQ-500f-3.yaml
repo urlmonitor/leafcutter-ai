@@ -72,16 +72,7 @@ it_requirements:
   - 'Step 4''s zero-exit row: replace ''or a TODO comment'' with ''a stronger assertion'' for
     the under-asserting cause only. TQ-500d-1''s reading of the same row (tests correct on arrival
     owe substitute evidence) stays intact: one row, both readings.'
-test_required: false
-test_rationale: 'Prompt-only: the deliverable is the test writer''s instruction text. The
-  falsifiable half (absence-only red is refused for a test that declares wrong versions to
-  catch) is enforced mechanically by the red-baseline reader in TQ-500f-3-i, which classifies
-  the kind of red from the run itself, and is wired into /build-feature by TQ-500f-3-ii. Neither
-  trusts the writer''s label. The writer''s conduct (rewriting test B to reach refresh_config(),
-  preferring a stronger assertion over a comment) cannot be unit-tested without a template-text
-  search, which CLAUDE.md forbids. Substitutes: pr-reviewer against the Then clauses, plus
-  a recommended test-writer eval row (test A new summarise_window / test B regression of existing
-  refresh_config) once a test-writer eval set exists (follow-up AC).'
+test_required: true
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
@@ -92,6 +83,10 @@ amended_by:
       Parent link for the new L3 that fixes the done_proof test-identity collision
       behind the TQ-500f-3 build's "ambiguous_test_identity" fail-closed path.
       criteria, depends_on and title unchanged.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by:
   - TQ-500f-3-i
@@ -124,3 +119,8 @@ notes: |
   written by the writer. That contradicts TQ-500f-3-i ("uses only what the test requirements
   declare and the outcome of the run") and TQ-500f-3-ii ("does not take the test writer's word
   for it"). The reader classifies from the run; this AC delivers only the shared definitions.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

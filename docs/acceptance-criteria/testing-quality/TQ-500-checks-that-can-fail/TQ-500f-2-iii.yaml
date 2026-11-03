@@ -108,14 +108,7 @@ it_requirements:
   - >-
     The edit passes prompt-audit, keeps each agent's frontmatter valid for registry_validator, and adds no
     new section headings to test-breaker.md's reply contract.
-test_required: false
-test_rationale: >-
-  Prompt-only (change_target: prompt): whether an agent follows a judgement rule cannot be unit-tested without a
-  template text search, which CLAUDE.md forbids. The proof is an agent eval in the TQ-200d family over the C1 to
-  C5 candidate set, scored on which names end in must_catch, which code-side names replace C1 and C2, and that
-  C3, C4 and C5 are kept; the eval set (scripts/evals/sets/, run by scripts/evals/run_agent_eval.py) is a
-  recommended follow-up requirement, not part of this record's declared files. Substitutes until then:
-  pr-reviewer against the Then clauses, and a dry design run on BO-2900a-1-ii.
+test_required: true
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
@@ -124,6 +117,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-24'
+- action: amended
+  agent: it-po
+  date: '2026-11-03'
+  reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -171,3 +168,8 @@ notes: |
   set to null: the dependency on TQ-500f-2-ii is an ordering on the same
   template (kept in depends_on), not a data contract, and TQ-500f-2-ii
   (approved) declares no delivers_to.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
