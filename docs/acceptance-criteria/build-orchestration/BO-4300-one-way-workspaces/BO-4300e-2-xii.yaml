@@ -1,0 +1,253 @@
+id: BO-4300e-2-xii
+title: "A folder that lost its workspace record but still holds a piece of this project's repository is treated as half-cleared"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose landing place holds the folder "ac/omega" with no
+    workspace record, whose repository is gone except one leftover file inside
+    the repository folder that names shop's shared project as the place it last
+    fetched from, and which still holds the files "CLAUDE.md" and "README.md",
+  And, in a second run, the same folder "ac/omega" whose one leftover
+    repository file names a different shared project "blog-hub",
+  And, in a third run, the same folder "ac/omega" with no workspace record, no
+    repository folder at all, and the files "CLAUDE.md" and "README.md",
+  When clearing "ac/omega" is requested in each run with no authorisation to
+    lose work,
+  Then in the first run the request is refused, stating that the workspace was
+    half-cleared and that its remaining files cannot be checked against the
+    shared project, the refusal lists "CLAUDE.md" and "README.md" by path and
+    returns a one-time token bound to that folder and exactly those two files,
+    and the request is not answered "not found",
+  And in the first run, clearing again with that token is answered cleared, the
+    answer lists both files as discarded, and nothing of "ac/omega" remains at
+    its location,
+  And in the second and third runs the request is answered "not found" with the
+    two files listed and no token, and "ac/omega" is identical before and after,
+  And in the second and third runs, a repeated request carrying the token from
+    the first run is refused the same way and "ac/omega" is identical before and
+    after.
+depends_on: [BO-4300e-2, BO-4300e-2-iii, BO-4300e-2-v, BO-4300e-2-vi, BO-4300e-3-i]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: The NOT_FOUND refusal of a record-less folder and the half-cleared UNSENT_WORK refusal.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree_remove_checks.py
+  state: existing
+- path: templates/scripts/worktree_remove.py
+  state: existing
+it_requirements:
+- 'Scope of the narrowing (user decision 2026-11-02, token only): the rule applies only to a folder with no workspace
+  record that sits at a workspace position (kind/slug) inside this project''s own landing place, holds files, and
+  whose repository folder (.git) is a folder, not a file, and is not a readable repository. Every other record-less
+  folder keeps the BO-4300e-2-v rule unchanged: NOT_FOUND with its files listed, no token, untouched.'
+- 'Design decision (which leftover names the shared project): only two repository files are evidence: .git/FETCH_HEAD
+  (the source URL at the end of each line, after " of ", or the line''s only URL) and .git/config (the url of remote
+  "origin"). Both are read as plain text with a bounded size; git is never run in the folder for this, because with
+  the repository gone it would fail or find a repository in a parent folder.'
+- 'Design decision (how the hub URL is compared): the folder is identified only when at least one URL is found and
+  every URL found equals this project''s hub (the main checkout''s origin URL, the answer''s hub field) under the same
+  comparison the maker already uses for origin_matches_hub (a trailing "/", a ".git" suffix and file:// against a
+  plain local path are not differences), that is same_location in templates/scripts/worktree_git.py. That comparison
+  is reused unchanged, never copied or edited. Any URL naming another place, an
+  unreadable or unparsable evidence file, or no URL at all leaves the folder unidentified.'
+- An identified folder is answered by the half-cleared refusal of BO-4300e-2-vi (code UNSENT_WORK, unsent.commits
+  empty, unsent.files the remaining files, discard_token), with no second token scheme; the listed files leave out
+  everything inside the repository folder, and finishing with the token deletes the repository leftovers with the
+  folder.
+- The identification has one home, templates/scripts/worktree_remove_checks.py, beside the readability check of
+  BO-4300e-2-xi, and the half-cleared decision of BO-4300e-2-x imports it from there; no second copy.
+- The half-cleared shape test and the workspace-position test both change, because today the first rejects any
+  folder that has a .git and the second requires one, so a leftover repository folder falls to NOT_FOUND; the
+  remaining-files listing leaves out the whole .git folder.
+- The identification is made again on every request, the token request included; the NOT_FOUND path never honours a
+  token, whichever folder or run it came from.
+- The NOT_FOUND answer and message for an unidentified record-less folder stay exactly as today.
+- No network call is made; the shared project is never contacted to identify a folder.
+- Nothing outside this project's landing place is touched, whatever it holds (BO-4300e-2-iii).
+- Edit the template sources under templates/scripts/, never a deployed build output (ADR-001); the change must reach
+  the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer field or code
+  must be additive.
+- 'File sizes: worktree_remove.py (490 lines, over the 400-line limit, the ratchet forbids growth), worktree.py (425)
+  and worktree_ensure_state.py (399) take wiring only, with a net line count that does not grow; the logic goes into
+  templates/scripts/worktree_clearing.py or worktree_remove_checks.py. No limit is raised.'
+- Every refusal must leave the folder and every item in it unmodified (no write, rename or delete of any item).
+test_intent:
+- clause: in the first run the request is refused, stating that the workspace was half-cleared and that its remaining
+    files cannot be checked against the shared project, the refusal lists "CLAUDE.md" and "README.md" by path and returns
+    a one-time token bound to that folder and exactly those two files, and the request is not answered "not found"
+  needs_test: true
+  reason: Identifying the folder from its leftover repository file is new computed behaviour, and today's answer is
+    the NOT_FOUND this arm rules out.
+- clause: in the first run, clearing again with that token is answered cleared, the answer lists both files as
+    discarded, and nothing of "ac/omega" remains at its location
+  needs_test: true
+  reason: Finishing with the token must also delete the leftover repository file, which is computed behaviour.
+- clause: in the second and third runs the request is answered "not found" with the two files listed and no token,
+    and "ac/omega" is identical before and after
+  needs_test: true
+  reason: The narrowing must not reach a folder of another shared project or one with no evidence, which a too-loose
+    comparison would silently break.
+- clause: in the second and third runs, a repeated request carrying the token from the first run is refused the same
+    way and "ac/omega" is identical before and after
+  needs_test: true
+  reason: A token honoured on the not-found path would delete a folder nobody could tell to be this project's.
+test_spec:
+  - name: test_record_less_folder_with_hub_named_leftover_is_half_cleared_not_not_found
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: First run. A record-less folder at a workspace position of shop's landing place (the shared KIND constant stands in for ac/omega unless ac is a valid kind) holds CLAUDE.md, README.md and a .git folder whose only file is FETCH_HEAD ending in shop's hub URL. remove with no token is refused UNSENT_WORK (exit 2), never NOT_FOUND, with a message saying the workspace was half-cleared and that its remaining files cannot be checked against the shared project. unsent.files is exactly [CLAUDE.md, README.md] (nothing under .git), unsent.commits is empty, and a 32-hex discard_token is returned. The folder is identical afterwards. A variant takes the URL from .git/config (remote origin) with a trailing .git or a file:// spelling of the same hub, which is not a difference.
+    proves_clause: in the first run the request is refused, stating that the workspace was half-cleared and that its remaining files cannot be checked against the shared project, the refusal lists "CLAUDE.md" and "README.md" by path and returns a one-time token bound to that folder and exactly those two files, and the request is not answered "not found"
+    code_file: templates/scripts/worktree_remove_checks.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_v.py
+    must_catch:
+      - revert the fix
+      - drop the hub URL comparison condition
+      - drop the repository folder is a folder condition
+      - drop the workspace position inside this project's landing place condition
+      - list the files inside the repository folder
+  - name: test_remove_cli_reaches_the_record_less_identification
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real maker CLI (worktree.py remove --path --repo-root) as a subprocess on the first-run folder, with the shared project folder moved away, and asserts exit 2 with UNSENT_WORK. No network is needed to identify the folder, and git is never run in it (the folder's .git has no HEAD, so a git call would fail or climb to a parent repository).
+    proves_clause: in the first run the request is refused, stating that the workspace was half-cleared and that its remaining files cannot be checked against the shared project, the refusal lists "CLAUDE.md" and "README.md" by path and returns a one-time token bound to that folder and exactly those two files, and the request is not answered "not found"
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_v.py
+  - name: test_token_finishes_the_identified_folder_including_its_repository_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: In the first run the request repeated with the returned token is answered ok, discarded.files is [CLAUDE.md, README.md], and nothing of the folder remains at its location, which includes the leftover .git/FETCH_HEAD (read back from disk with lexists on the folder and on the file).
+    proves_clause: in the first run, clearing again with that token is answered cleared, the answer lists both files as discarded, and nothing of "ac/omega" remains at its location
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_other_hub_and_no_repository_folders_stay_not_found_and_untouched
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: Second run, the leftover names a different shared project blog-hub; third run, no repository folder at all. Both are answered refused NOT_FOUND with files [CLAUDE.md, README.md], no discard_token, and the folder is identical before and after, as today. Extra cases in the same test, each identical afterwards, are mixed evidence (one URL equal and one different), no URL at all, an unparsable FETCH_HEAD, a .git that is a file, and a folder outside shop's landing place or at a depth other than kind/slug.
+    proves_clause: in the second and third runs the request is answered "not found" with the two files listed and no token, and "ac/omega" is identical before and after
+    code_file: templates/scripts/worktree_remove_checks.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_v.py
+    must_catch:
+      - drop the every URL found equals the hub condition
+      - drop the at least one URL found condition
+      - drop the repository folder is a folder condition
+      - identify a folder outside this project's landing place
+      - the gate always allows
+  - name: test_token_from_the_first_run_is_never_honoured_on_the_not_found_path
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: The token returned in the first run is presented on the second-run and third-run folders (same file names, so the same set could match). Each request is refused NOT_FOUND again with the files listed and no new token, and the folder is identical. Catches a NOT_FOUND path that honours any token and a token scheme that ignores the folder path.
+    proves_clause: in the second and third runs, a repeated request carrying the token from the first run is refused the same way and "ac/omega" is identical before and after
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_v.py
+    must_catch:
+      - honour the token on the not-found path
+      - bind the token to the file names only and not to the folder
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-02"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_v.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+file_findings:
+  - file: templates/scripts/worktree_remove_checks.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds is_half_slot (which rejects any folder that has a .git, so a leftover repository folder is never half-cleared today) and remaining_files (which would list the repository leftovers), the two pieces this record narrows.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _remove_half_cleared holds the record-less NOT_FOUND branch and the origin_matches_hub-style comparison is not here but in worktree_git (same_location), so this file only wires the decision and is 490 lines, over the limit.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-vi
+  contract: >-
+    The half-cleared refusal (remaining files listed, one-time token bound to the folder and
+    exactly those files) and finishing with that token.
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: "user decision 2026-11-02 (BA gate Q1): the 2026-10-29 rule is narrowed -- a record-less folder holding files whose leftover repository file names this project's shared project is half-cleared and is deleted only with the one-time token; every other record-less folder holding files stays NOT_FOUND and untouched."
+    by: user
+    at: "2026-11-02"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed 2026-11-02: leafcutter-ai-worktrees/ac/maker-remove-hardening lost its workspace
+  record and almost all of its repository; 18 files remain -- 17 top-level files of the
+  project (CLAUDE.md, README.md, .gitignore, build outputs ...) and one leftover repository
+  file (.git/FETCH_HEAD, which names the shared project it last fetched from). Today a retry
+  answers NOT_FOUND because a record-less folder holding files is refused by design (user
+  decision 2026-10-29), so the maker can never finish it.
+
+  NEEDS USER CONFIRMATION (Q1 in the BA sign-off) -- this record NARROWS the 2026-10-29
+  decision. That decision's reason was "the folder cannot be told to be a workspace of this
+  project". A leftover repository file naming this project's shared project, inside this
+  project's own landing place at a workspace position, tells exactly that. The narrowing is
+  kept minimal: identity only makes the folder half-cleared, so the BO-4300e-2-vi rule still
+  applies in full -- its files are listed and are deleted only with a one-time token. The
+  second and third arms pin that the 2026-10-29 rule is unchanged for every other record-less
+  folder: one whose leftover names another shared project, and one with no repository
+  leftover at all, are still refused "not found" with no token and never touched.
+
+  The project boundary of BO-4300e-2-iii still applies on top: a folder in another project's
+  landing place is never touched, whatever it holds.
+
+  If the user rejects the narrowing, drop this record; the observed folder then stays a
+  manual cleanup (outside the maker), which the user's request of 2026-11-02 asked to avoid.
+
+  After this ships, the real folder is finished by asking the maker again with the token from
+  its refusal (operational check, not a CI test: the folder exists only on the user's machine).

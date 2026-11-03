@@ -1,0 +1,219 @@
+id: BO-4300e-5-ii
+title: "How-to: what to do when a clearing stopped part-way, or a leftover has a damaged repository or no workspace record"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a person whose request to clear a workspace stopped part-way, or who
+    finds a leftover folder in the landing place whose repository is damaged or
+    whose workspace record is gone,
+  When they open the how-to guide for clearing a workspace,
+  Then it shows that a clearing that stopped part-way is finished by making the
+    same request again, with no token,
+  And it shows that asking for the workspace of that work, or asking where it
+    is, while a clearing has stopped part-way reports it as half-cleared and
+    tells them to clear it again,
+  And it shows that a leftover whose repository can no longer be read is refused
+    as half-cleared with its remaining files listed, that its commits cannot be
+    checked, and how to authorise the loss with the token from that refusal,
+  And it shows that a leftover with no workspace record is treated as
+    half-cleared only when a leftover piece of its repository names this
+    project's shared project, and is otherwise refused "not found" with nothing
+    changed,
+  And it gives no manual deletion steps that bypass the workspace maker,
+  And the reference listing the maker's answer codes and fields describes each
+    new or changed answer by its code and by the fields it carries.
+depends_on: [BO-4300e-5, BO-4300e-5-i, BO-4300e-2-ix, BO-4300e-2-x, BO-4300e-2-xi, BO-4300e-2-xii]
+doc_links:
+- path: docs/how-to/clear-a-workspace.md
+  relationship: modifies
+  status: exists
+  relevance: The guide this record extends ("If an earlier clearing stopped part-way", "If the folder has no workspace record").
+- path: docs/reference/workspace-maker-answer.md
+  relationship: modifies
+  status: exists
+  relevance: The answer reference this record extends with the new or changed answers.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/diagrams/c3-031-workspace-request-states.md
+  relationship: modifies
+  status: exists
+  relevance: The state diagram gains the half-cleared state and the HALF_CLEARED refusal (user decision 2026-11-03).
+assigned_agent: documentation-expert
+estimated_complexity: S
+declared_files:
+- path: docs/how-to/clear-a-workspace.md
+  state: existing
+- path: docs/reference/workspace-maker-answer.md
+  state: existing
+- path: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  state: existing
+- path: docs/architecture/diagrams/c3-031-workspace-request-states.md
+  state: existing
+it_requirements:
+- unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py asserts exactly six rows in "Refusals of remove" and a fixed
+  tuple of messages, so it is updated in the same change as the pages; its scan of the maker sources also covers
+  templates/scripts/worktree_answer.py and templates/scripts/worktree_clearing.py, so a code or message the pages
+  name is proven to be emitted.
+- The reference names each new or changed answer's code, fields and message exactly as the maker emits them after
+  BO-4300e-2-ix to BO-4300e-2-xii (among them the half-cleared refusal of ensure and locate, the stopped-part-way
+  wording of the remove refusal, and the unreadable-repository and record-less half-cleared refusals). A code or
+  field the maker does not emit is never documented.
+- Each new or changed answer is documented once, in the reference; the how-to links to it and does not restate its
+  fields.
+- Must keep the frontmatter conventions of docs/how-to/ and docs/reference/ and update last_updated on both pages.
+- Must contain no command that deletes a workspace folder or its repository outside the workspace maker (no rm,
+  rmdir, Remove-Item, rmtree or git worktree remove steps).
+- Must state that the discard token is read from the refusal each time and never stored, consistent with the
+  existing token section.
+- Must be written after the behaviour records it describes are implemented, so every example answer matches the
+  real maker; if BO-4300e-2-xii is dropped, the guide describes the record-less rule as unchanged.
+- Must stay within the project's document length limits for docs/ pages; neither page may grow past its limit.
+test_intent:
+- clause: it shows that a clearing that stopped part-way is finished by making the same request again, with no token
+  needs_test: true
+  reason: The guide's promise must match the maker, and a doc test against the delivered page catches drift.
+- clause: it shows that asking for the workspace of that work, or asking where it is, while a clearing has stopped
+    part-way reports it as half-cleared and tells them to clear it again
+  needs_test: true
+  reason: The guide must name the answer code the maker really emits for ensure and locate, which a doc test ties to
+    the sources.
+- clause: it shows that a leftover whose repository can no longer be read is refused as half-cleared with its remaining
+    files listed, that its commits cannot be checked, and how to authorise the loss with the token from that refusal
+  needs_test: true
+  reason: The consent step depends on the person being told commits cannot be checked, which a doc test can assert on
+    the page.
+- clause: it shows that a leftover with no workspace record is treated as half-cleared only when a leftover piece of
+    its repository names this project's shared project, and is otherwise refused "not found" with nothing changed
+  needs_test: true
+  reason: The narrowed rule is a safety boundary, and a page that overstates it would mislead a person into expecting
+    a token.
+- clause: it gives no manual deletion steps that bypass the workspace maker
+  needs_test: true
+  reason: A published deletion command would bypass the unsent-work check, and a scan of the fenced commands catches
+    it.
+- clause: the reference listing the maker's answer codes and fields describes each new or changed answer by its code
+    and by the fields it carries
+  needs_test: true
+  reason: Every documented code and field must be emitted by the maker, which a doc test checks against the sources.
+test_spec:
+  - name: test_how_to_says_a_stopped_clearing_is_finished_by_asking_again_with_no_token
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: In the section of docs/how-to/clear-a-workspace.md on an earlier clearing that stopped part-way (read with the _section helper of the BO-4300e-5-i test), the text says the same request is made again, that no token is needed, and links to ../reference/workspace-maker-answer.md instead of restating the answer fields.
+    proves_clause: it shows that a clearing that stopped part-way is finished by making the same request again, with no token
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_names_the_code_ensure_and_locate_really_emit_for_a_half_cleared_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The how-to names HALF_CLEARED for a request for the workspace and for the question where it is, and tells the person to clear it again. The code HALF_CLEARED must appear in templates/scripts/worktree_answer.py (the code table) and in the sources that emit it, so a page naming a code the maker does not emit fails.
+    proves_clause: it shows that asking for the workspace of that work, or asking where it is, while a clearing has stopped part-way reports it as half-cleared and tells them to clear it again
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_warns_that_an_unreadable_repository_means_commits_cannot_be_checked
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The how-to has a section stating that a leftover whose repository can no longer be read is refused as half-cleared (UNSENT_WORK) with its remaining files listed under unsent, that its commits cannot be checked, and how to authorise the loss with the discard_token read from that refusal each time and never stored. The phrase about commits not being checkable must also be a phrase the remove sources emit.
+    proves_clause: it shows that a leftover whose repository can no longer be read is refused as half-cleared with its remaining files listed, that its commits cannot be checked, and how to authorise the loss with the token from that refusal
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_states_the_narrowed_record_less_rule_without_overstating_it
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: The section on a folder with no workspace record says it is half-cleared only when a leftover piece of its repository names this project's shared project, and is otherwise refused NOT_FOUND with nothing changed and no token. It must not promise a token for every record-less folder, which a page that kept only the old wording or only the new one would do.
+    proves_clause: it shows that a leftover with no workspace record is treated as half-cleared only when a leftover piece of its repository names this project's shared project, and is otherwise refused "not found" with nothing changed
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_neither_page_publishes_a_deletion_step_that_bypasses_the_maker
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: No fenced block in the how-to or the reference matches the delete-command pattern (rm, rmdir, Remove-Item, rmtree, del, git worktree remove), as in the BO-4300e-5-i test, so a published manual deletion that skips the unsent-work check fails.
+    proves_clause: it gives no manual deletion steps that bypass the workspace maker
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_reference_documents_each_new_or_changed_answer_by_code_and_fields_the_maker_emits
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The reference lists HALF_CLEARED (ensure and locate, with remnant_path and no workspace_path), the stopped-part-way wording of the PROCESS_HOLDS_FILES refusal, the unreadable-repository refusal and the record-less half-cleared refusal, each once, by code and fields. Every code, field and message opening it documents must be found in the maker sources (worktree_answer.py, worktree_remove.py, worktree_remove_checks.py and worktree_clearing.py), and the count-of-six-rows assertion of the BO-4300e-5-i test must be updated with it. Both pages carry a last_updated of the date of the change.
+    proves_clause: the reference listing the maker's answer codes and fields describes each new or changed answer by its code and by the fields it carries
+    code_file: docs/reference/workspace-maker-answer.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_documented_half_cleared_answers_are_what_the_real_maker_cli_prints
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real maker CLI as a subprocess to produce the stopped-part-way remove refusal and the HALF_CLEARED ensure answer (fixtures of BO-4300e-2-ix and -x), and asserts every field and message opening the reference documents for them is present in the printed JSON. This is the check that the examples match the real maker.
+    proves_clause: the reference listing the maker's answer codes and fields describes each new or changed answer by its code and by the fields it carries
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_viii.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-02"
+test_design_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - docs/reference/workspace-maker-answer.md
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_viii.py
+file_findings:
+  - file: docs/how-to/clear-a-workspace.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the sections "If an earlier clearing stopped part-way" and "If the folder has no workspace record" that this record extends.
+    decision: null
+  - file: docs/reference/workspace-maker-answer.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the code table and the "Refusals of remove" table (six rows, asserted by the BO-4300e-5-i test) that gain the new answers.
+    decision: null
+file_findings_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - docs/reference/workspace-maker-answer.md
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-ix
+  contract: The retry, half-cleared and refusal behaviour of clearing that the guide describes, as implemented by BO-4300e-2-ix to BO-4300e-2-xii.
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: "user decision 2026-11-03 (final gate): the state diagram docs/architecture/diagrams/c3-031-workspace-request-states.md is updated in this record with the half-cleared state and the HALF_CLEARED refusal; no separate diagram record."
+    by: user
+    at: "2026-11-03"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  documentation_trigger how-to on BO-4300e. Extends BO-4300e-5-i for the interrupted-clearing
+  records BO-4300e-2-ix to -xii. Must be written after those are implemented, so every example
+  answer matches the real maker; any answer code or field the guide names must exist in the
+  reference as the maker emits it. If BO-4300e-2-xii is dropped at the user gate (Q1), drop the
+  fourth Then-clause with it.

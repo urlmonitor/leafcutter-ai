@@ -1,0 +1,275 @@
+id: BO-4300e-2-x
+title: "A partly cleared workspace is never handed out again as a ready workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose landing place holds two leftovers of the
+    feature work "invoice-export":
+    in one run, the leftover of a clearing of "feature/invoice-export" that
+    stopped part-way after 10 of its items were deleted,
+    and in a second run, the folder "feature/invoice-export" whose workspace
+    record still says it is ready but part of whose repository has been
+    deleted, so that the repository's history can no longer be read,
+  When, in each run, the workspace for "invoice-export" is asked for, and then
+    the workspace maker is asked where the workspace for "invoice-export" is,
+  Then the request for the workspace is not answered ready with the leftover
+    folder, and its answer states that an earlier clearing of that workspace
+    stopped part-way and that asking to clear it again finishes it,
+  And the question where the workspace is is not answered with the leftover as
+    a ready workspace, and its answer states that the workspace is half-cleared,
+  And the leftover folder is identical before and after both requests,
+  And neither request fetches from or pushes to shop's shared project.
+depends_on: [BO-4300e-2, BO-4300e-2-ix, BO-4300e-2-xi, BO-4300e-1]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; ensure, locate and remove verbs and the marker.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new answer field or code must match it and be additive.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/diagrams/c3-031-workspace-request-states.md
+  relationship: describes
+  status: exists
+  relevance: State view of what ensure does at the work's place; half-made is finished in place, which a half-cleared leftover must never be.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: templates/scripts/worktree.py
+  state: existing
+- path: templates/scripts/worktree_remove.py
+  state: existing
+- path: templates/scripts/worktree_clearing.py
+  state: to_be_created
+- path: templates/scripts/worktree_admin.py
+  state: existing
+- path: templates/scripts/worktree_answer.py
+  state: existing
+it_requirements:
+- 'ensure, locate and remove use one half-cleared decision, never a second copy: a folder at the work''s position is
+  half-cleared when its record is in the clearing-started state of BO-4300e-2-ix, when its repository folder exists
+  but cannot be read (the local check of BO-4300e-2-xi), or when its repository is gone while its record remains
+  (the shapes of BO-4300e-2-v and BO-4300e-2-vi). That decision has one home, templates/scripts/worktree_clearing.py
+  (created by BO-4300e-2-ix), which uses the readability check of BO-4300e-2-xi in worktree_remove_checks.py.'
+- That decision runs before any fetch, clone, set-aside of the work's changes, completion of a half-made workspace
+  (BO-4300d-2) or resume of a line of work (BO-4300d-4); none of those is ever applied to a half-cleared folder. In
+  ensure it runs inside the per-work lock, before the occupied-place refusal and before the resume, so a
+  clearing-state record no longer falls through to the generic INCOMPLETE refusal for an unknown state.
+- locate is answered through the locate wrapper of the remove module, which today turns every non-ready record into
+  INCOMPLETE; a half-cleared folder gets HALF_CLEARED there instead. The list entry never maps it to ready.
+- 'Design decision (answer code): ensure and locate answer a half-cleared folder with a new refused code HALF_CLEARED
+  (exit 2) carrying remnant_path (the leftover, as on INCOMPLETE) and no workspace_path; the message says that an
+  earlier clearing of that workspace stopped part-way and that asking to clear it again finishes it. Chosen over
+  reusing INCOMPLETE because the remedy for INCOMPLETE is asking ensure again, which here would never succeed.
+  The code is additive: the schema version stays, and every caller already stops on any non-ok answer.'
+- 'Neither verb finishes the clearing or changes the leftover (user decision 2026-11-02): no write, rename or delete
+  of any item inside it. A per-work lock or log written by ensure lives outside the leftover folder and is released
+  before the answer.'
+- locate stays read-only (BO-4300e-1-i), and list never reports a half-cleared folder with state ready; a new list
+  state value, if one is added, is additive.
+- A half-made workspace of BO-4300d-2 (repository readable, record in the creating state, no clearing-started state)
+  is still completed in place; the half-cleared decision must not capture it.
+- Neither verb makes a network call on a half-cleared folder; the decision itself is local only.
+- If this record is built before BO-4300e-2-xi, the unreadable-repository check is introduced once in the shared
+  half-cleared helpers and BO-4300e-2-xi reuses it.
+- Edit the template sources under templates/scripts/, never a deployed build output (ADR-001); the change must reach
+  the deployed maker through the normal build.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer field or code
+  must be additive.
+- 'File sizes: worktree_remove.py (490 lines, over the 400-line limit, the ratchet forbids growth), worktree.py (425)
+  and worktree_ensure_state.py (399) take wiring only, with a net line count that does not grow; the logic goes into
+  templates/scripts/worktree_clearing.py or worktree_remove_checks.py. No limit is raised.'
+test_intent:
+- clause: the request for the workspace is not answered ready with the leftover folder, and its answer states that
+    an earlier clearing of that workspace stopped part-way and that asking to clear it again finishes it
+  needs_test: true
+  reason: Without the half-cleared decision ensure would resume or complete the leftover and hand it out as ready,
+    which is the danger this record exists for.
+- clause: the question where the workspace is is not answered with the leftover as a ready workspace, and its answer
+    states that the workspace is half-cleared
+  needs_test: true
+  reason: locate reads the record, which may still say ready, so recognising the leftover is computed behaviour.
+- clause: the leftover folder is identical before and after both requests
+  needs_test: true
+  reason: The user decided these requests never change the leftover, and a before-and-after snapshot catches a
+    write, rename or delete.
+- clause: neither request fetches from or pushes to shop's shared project
+  needs_test: true
+  reason: ensure always fetches today, so refusing before the fetch is ordering a test can observe on the hub's refs.
+test_spec:
+  - name: test_ensure_refuses_both_half_cleared_leftovers_with_half_cleared_code
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: Run one builds the leftover of a real clearing stopped part-way (the BO-4300e-2-ix stop hook after 10 items, state clearing). Run two builds a record that still says ready beside a repository whose stored objects are deleted. In each, the real ensure CLI for the same work answers refused HALF_CLEARED (exit 2) with remnant_path naming the leftover, no workspace_path, and a message saying an earlier clearing stopped part-way and that asking to clear it again finishes it. It is never ok, never INCOMPLETE, never resumed or completed.
+    proves_clause: the request for the workspace is not answered ready with the leftover folder, and its answer states that an earlier clearing of that workspace stopped part-way and that asking to clear it again finishes it
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+    must_catch:
+      - drop the clearing-started state condition
+      - drop the unreadable repository condition
+      - drop the repository gone while the record remains condition
+      - answer INCOMPLETE instead of HALF_CLEARED
+      - the gate always allows
+  - name: test_ensure_cli_is_reachable_and_exits_2_on_half_cleared_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real maker CLI (worktree.py ensure --kind feature --slug invoice-export) as a subprocess against the leftover and asserts the printed JSON has code HALF_CLEARED, status refused and exit code 2, and that HALF_CLEARED is part of the answer code table (additive; schema_version unchanged).
+    proves_clause: the request for the workspace is not answered ready with the leftover folder, and its answer states that an earlier clearing of that workspace stopped part-way and that asking to clear it again finishes it
+    code_file: templates/scripts/worktree_answer.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_half_made_workspace_is_still_completed_not_captured
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Control for the new decision. A workspace made half-way with the abort seam LEAFCUTTER_WORKSPACE_ABORT_AT=after_clone (repository readable, record in the creating state, no clearing-started state) is asked for again with ensure and is completed in place (ok, workspace_action completed), not refused HALF_CLEARED.
+    proves_clause: the request for the workspace is not answered ready with the leftover folder, and its answer states that an earlier clearing of that workspace stopped part-way and that asking to clear it again finishes it
+    code_file: templates/scripts/worktree_ensure_state.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_locate_reports_half_cleared_not_ready_for_both_leftovers
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: The real locate CLI for the same work (by --kind/--slug and by --path) over each leftover is never status ok and never carries the leftover as workspace_path; it answers HALF_CLEARED stating the workspace is half-cleared. Today a ready record with a damaged repository is located ok and a clearing-started record would read as INCOMPLETE, so both wrong versions are caught. locate stays read-only, the snapshot is unchanged.
+    proves_clause: the question where the workspace is is not answered with the leftover as a ready workspace, and its answer states that the workspace is half-cleared
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+    must_catch:
+      - revert the fix
+      - drop the clearing-started state condition
+      - drop the unreadable repository condition
+      - answer INCOMPLETE instead of HALF_CLEARED
+  - name: test_list_never_reports_a_half_cleared_leftover_as_ready
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: The real list CLI over each leftover never reports an entry for it with state ready; a new state value is accepted if present (additive), but ready is a failure. The ready record with the damaged repository is the case that lists ready today.
+    proves_clause: the question where the workspace is is not answered with the leftover as a ready workspace, and its answer states that the workspace is half-cleared
+    code_file: templates/scripts/worktree_admin.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_leftover_is_identical_before_and_after_ensure_and_locate
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: In both runs a snapshot of the whole leftover (snap with_git=True plus the empty folders and the file modes) before and after the ensure request and the locate request is equal, with no write, rename or delete inside it, no rescue folder, no rewritten record. The per-work lock lives outside the leftover and is gone after the answer. Catches an ensure that completes or resumes the leftover or sets its changes aside.
+    proves_clause: the leftover folder is identical before and after both requests
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_neither_request_fetches_or_pushes_on_a_half_cleared_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: The shared project folder is moved away so any fetch fails, and the refs of the shared project are recorded before and after. Both requests still answer HALF_CLEARED (never FETCH_FAILED, never a clone) and the shared project's refs are identical. Catches a half-cleared decision placed after the fetch in ensure or after the refresh in the resume path.
+    proves_clause: neither request fetches from or pushes to shop's shared project
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+    must_catch:
+      - run the half-cleared decision after the fetch
+      - run the half-cleared decision after the completion of a half-made workspace
+      - the gate always allows
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-02"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_ensure_state.py
+  - templates/scripts/worktree_admin.py
+  - templates/scripts/worktree_answer.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+file_findings:
+  - file: templates/scripts/worktree_ensure_state.py
+    verdict: behaviour found elsewhere
+    line_range: null
+    found_in: templates/scripts/worktree.py
+    reason: It holds the lock, the set-aside and the half-made helpers but not the state decision of ensure, which is _ensure_locked and _resume_workspace in worktree.py (this file is 399 lines, at the limit).
+    decision:
+      choice: assignment stands
+      reason: The decision lives in worktree.py, which is Python owned by the same agent, so declared_files now names worktree.py instead of this file.
+      by: it-po
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the locate lookups, _located_answer and the list entry whose ready-or-incomplete mapping must never report a half-cleared leftover as ready, although the locate verb is dispatched through the wrapper in worktree_remove.py.
+    decision: null
+  - file: templates/scripts/worktree_answer.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the single owner of the code table (ALL_CODES and REFUSED_CODES), where the new refused code HALF_CLEARED must be declared.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_ensure_state.py
+  - templates/scripts/worktree_admin.py
+  - templates/scripts/worktree_answer.py
+  - templates/scripts/worktree.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2-ix
+  contract: >-
+    The record of a clearing that has started carries state "clearing" (BO-4300e-2-ix), recognised through the one
+    half-cleared decision; a workspace whose repository can no longer be read is recognised by the local check of
+    BO-4300e-2-xi.
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: "user decision 2026-11-03 (final gate): ensure and locate answer a half-cleared leftover with the new refused code HALF_CLEARED (exit 2, remnant_path), not INCOMPLETE."
+    by: user
+    at: "2026-11-03"
+  - reason: "user decision 2026-11-02 (BA gate Q3): while a clearing has stopped part-way, a request for that workspace is refused, names the remedy (clear it again) and never changes the leftover; it never finishes the clearing itself."
+    by: user
+    at: "2026-11-02"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not asked for in the 2026-11-02 request; written because the fix for an interrupted
+  clearing creates a new danger. BO-4300d-2 completes a half-MADE copy of the same work and
+  BO-4300d-4 resumes an existing line of work. Without this record, a request for the same
+  work arriving after an interrupted clearing -- the second observed folder still carries a
+  record saying "ready" -- could be resumed or "completed" into a workspace with a broken or
+  half-deleted repository and handed out as ready, which is exactly what BO-4300 promises
+  never happens. Do not drop as scope creep.
+
+  The criteria leave open whether the request for the workspace finishes the clearing first
+  and then makes a fresh workspace, or refuses; this record pins only that the leftover is
+  never answered ready and is not changed by these two requests. Default chosen: the request
+  is refused and names the remedy (ask to clear again), because deleting from a "make" request
+  would be a surprise to the caller. See question Q3 in the BA sign-off.
+
+  Locate stays read-only (BO-4300e-1-i): it must report the half-cleared state without
+  changing anything.

@@ -1,0 +1,333 @@
+id: BO-4300e-2-ix
+title: "A clearing that stops part-way always leaves something the next clearing request finishes"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" with a ready workspace "ticket/alpha" holding nothing
+    that has not reached the shared project, with 300 files in 40 folders
+    besides its repository and its workspace record,
+  And the clearing of "ticket/alpha" is made to stop with "directory not empty"
+    at one of these points, one point per run of the same setup:
+    on the very first item it deletes,
+    on an item inside the repository after 10 items of the repository were deleted,
+    on the workspace record,
+    and on the last item it would delete,
+  When the clearing request that stopped has answered, and the same clearing
+    request is then made again without any discard token, once addressed by the
+    workspace's location and, in a second run, by the name of its line of work,
+  Then the request that stopped is not answered cleared, and its answer states
+    that the clearing stopped part-way and that asking again finishes it,
+  And for every stop point the repeated request is answered cleared, and no
+    folder or file of "ticket/alpha" remains at its location or anywhere else in
+    shop's landing place,
+  And for no stop point is the repeated request answered "not found", refused
+    for unsent work, or refused because the shared project could not be reached,
+  And no item of "ticket/alpha" was deleted before the check for unsent work had
+    passed in the request that stopped.
+depends_on: [BO-4300e-2, BO-4300e-2-v, BO-4300e-2-viii]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: modifies
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints. Its module table gains worktree_clearing.py.
+- path: docs/components.json
+  relationship: modifies
+  status: exists
+  relevance: worktree_manager primary_code gains templates/scripts/worktree_clearing.py.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The user-facing clearing guide whose promises this record must keep.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: Answer codes and fields of the maker; any new answer field or code must match it and be additive.
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+- path: templates/scripts/worktree_clearing.py
+  state: to_be_created
+- path: templates/scripts/worktree_remove.py
+  state: existing
+- path: templates/scripts/worktree_remove_checks.py
+  state: existing
+- path: templates/scripts/worktree.py
+  state: existing
+- path: scripts/build_phases_script_deploy_standalone.py
+  state: existing
+- path: docs/components.json
+  state: existing
+- path: docs/architecture/components/worktree-manager.md
+  state: existing
+it_requirements:
+- 'Design decision (mark first, clear in place): once the program check and the unsent-work check have passed,
+  and before anything is deleted (no folder item, no local branch, no branch on the shared project), the
+  clearing rewrites the workspace record in one atomic replace to a clearing-started state ("clearing") that
+  names this project, the workspace''s location and the line-of-work commit the check passed at. The folder is
+  cleared where it is and is never renamed or moved aside. Chosen over move-aside because Windows refuses to
+  rename a folder while any program holds a file or working directory inside it, a move across volumes is not
+  atomic, and an aside name would have to be mapped back to the original location and line-of-work name.'
+- The clearing-started marker is folder content (the record's state), so recognising it is a decision from the
+  folder's contents as BO-4300e-2-v requires; no list of folder names, prefixes or suffixes is consulted.
+- The workspace record is deleted after every other file of the workspace and before only the then-empty
+  folders, so every stop point leaves either the record in the clearing-started state or a folder holding
+  nothing but empty folders (the BO-4300e-2-v shape that is finished with an ok answer).
+- A repeated clear of a folder whose record is in the clearing-started state for this project and this location
+  finishes the deletion with no discard token and no network call. It repeats neither the fetch nor the
+  unsent-work check over the folder's files, because tracked files already deleted would read as uncommitted
+  changes.
+- 'Safety guard on the marker: when the repository is still readable on the repeated request and its line-of-work
+  commit differs from the commit recorded in the marker, the marker is not honoured and the normal unsent-work
+  check of BO-4300e-2 applies, so work committed after the stopped clearing is never lost without a token.'
+- The program check (BO-4300e-2-iv) still runs first on every request, a repeated one included; a program
+  working inside the workspace is refused as today and nothing is deleted.
+- A request that stops part-way keeps the existing answer for items that could not be deleted (code
+  PROCESS_HOLDS_FILES, the "Could not remove all" refusal); its message additionally says that the clearing
+  stopped part-way and that making the same request again finishes it. No code is renamed; any field is
+  additive.
+- A request addressed by the line-of-work name reaches the same leftover as one addressed by its location,
+  including when the record is already gone; the name resolves to the workspace position by the landing rule,
+  not by reading the record. The remove parser gains --kind and --slug, mutually exclusive with --path (which
+  becomes optional, one of the two forms being required); --branch is not added for remove, because it finds
+  workspaces through their records and so fails exactly when the record is gone. --path keeps its meaning.
+- The post-check that nothing is left at the location stays the single arbiter of a cleared answer
+  (BO-4300e-2, BO-4300e-2-ii, BO-4300e-2-viii), and retries on deletion errors stay bounded in count and time.
+- Nothing outside this project's landing place is deleted (BO-4300e-2-iii), and a record-less folder holding
+  files is still refused unchanged unless BO-4300e-2-xii identifies it.
+- Must log at info level when a clearing marks itself started and when a started clearing is finished, each with
+  the workspace path; a discard token never appears in a log line.
+- Must keep the Windows extended-length path handling of BO-4300e-2-i.
+- Edit the template sources under templates/scripts/, never a deployed build output (ADR-001); the change must
+  reach the deployed maker through the normal build.
+- worktree_remove.py (490 lines, over the 400-line limit, so the ratchet forbids growth) and worktree.py (425) take
+  wiring only, with a net line count that does not grow. The marker write, the ordered deletion, the marker
+  recognition, the one half-cleared decision shared with ensure and locate (BO-4300e-2-x), and the existing
+  half-cleared finishing of remove (moved out of worktree_remove.py) go into the new sibling module templates/scripts/worktree_clearing.py, registered like
+  every maker module, with a named entry in scripts/build_phases_script_deploy_standalone.py, a primary_code entry of
+  worktree_manager in docs/components.json, and a row in the module table of
+  docs/architecture/components/worktree-manager.md. No limit is raised.
+- Must keep the existing answer envelope and existing answer codes backward compatible; any new answer field or
+  code must be additive.
+- Every refusal made before the marker is written leaves the workspace folder, its repository and its workspace
+  record unmodified (no write, rename or delete of any item).
+test_intent:
+- clause: the request that stopped is not answered cleared, and its answer states that the clearing stopped
+    part-way and that asking again finishes it
+  needs_test: true
+  reason: A stopped deletion must never read as cleared, and the remedy wording is a computed answer a caller acts
+    on.
+- clause: for every stop point the repeated request is answered cleared, and no folder or file of "ticket/alpha"
+    remains at its location or anywhere else in shop's landing place
+  needs_test: true
+  reason: Finishing from each of the four stop points depends on the deletion order and the marker, which a wrong
+    order would silently break.
+- clause: for no stop point is the repeated request answered "not found", refused for unsent work, or refused because
+    the shared project could not be reached
+  needs_test: true
+  reason: These are the two observed defects (NOT_FOUND and FETCH_FAILED) plus the deleted-tracked-files trap, so
+    each must be pinned.
+- clause: no item of "ticket/alpha" was deleted before the check for unsent work had passed in the request that
+    stopped
+  needs_test: true
+  reason: Deleting before the check would lose unsent work, and the ordering of check, marker and deletion is
+    observable.
+test_spec:
+  - name: test_stopped_clearing_is_refused_not_cleared_and_says_ask_again
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For each of the four stop points (first item, an item inside the repository after 10 repository items, the workspace record, the last item) a sitecustomize hook on the maker process raises OSError directory-not-empty once at that item (counter-based, modelled on the locked.bin hook of test_bo_4300e_2_viii.py). The remove request that stopped is refused PROCESS_HOLDS_FILES (exit 2), is never status ok, and its message says the clearing stopped part-way and that making the same request again finishes it. The 300-file, 40-folder fixture is built under the workspace beside its repository and record.
+    proves_clause: the request that stopped is not answered cleared, and its answer states that the clearing stopped part-way and that asking again finishes it
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_viii.py
+  - name: test_remove_cli_stops_and_the_repeat_finishes_it_end_to_end
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Runs the real maker CLI (worktree.py remove --path) as a subprocess twice with the stop hook on the first run only; the first answer is refused, the second is ok with exit 0 and nothing of the workspace remains at its location. Proves the new behaviour is reached through the production entry point and not only through module calls.
+    proves_clause: for every stop point the repeated request is answered cleared, and no folder or file of "ticket/alpha" remains at its location or anywhere else in shop's landing place
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_repeat_finishes_from_every_stop_point_by_location_and_by_name
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For all four stop points and in two runs of the same setup, the repeat carries no --discard-token and is addressed once by --path and once by the name of the line of work, as remove must then accept it (--kind/--slug resolved by the landing rule, the same form locate accepts; --branch cannot work once the record is gone). Each repeat is ok and a walk of the whole landing place finds no entry named alpha. The record-gone stop point covers the by-name arm when no record exists.
+    proves_clause: for every stop point the repeated request is answered cleared, and no folder or file of "ticket/alpha" remains at its location or anywhere else in shop's landing place
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_viii.py
+  - name: test_repeat_is_never_not_found_unsent_or_fetch_failed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: After each stop point the shared project folder is moved away before the repeat (so any fetch fails) and the repeat carries no token. It must be ok and never NOT_FOUND (record deleted first), never FETCH_FAILED (repeat fetched), never UNSENT_WORK (tracked files already deleted would read as uncommitted changes, so the stop on the record and on the last item run with the tracked files already gone). Also asserts the shared project refs are identical, so no network call was made.
+    proves_clause: for no stop point is the repeated request answered "not found", refused for unsent work, or refused because the shared project could not be reached
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - revert the fix
+      - delete the workspace record before the repository files
+      - repeat the fetch on the repeated request
+      - repeat the unsent-work check over the remaining files of a started clearing
+      - drop the clearing-started marker condition
+  - name: test_clearing_marker_is_written_atomically_before_any_deletion
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: With the stop hook at the very first item, runs the real maker and then reads .leafcutter/workspace.json back from disk. It must parse as JSON, carry state clearing, name this project and the workspace location, and record the line-of-work commit equal to git rev-parse HEAD taken before the request. No temp file .workspace-*.json.tmp is left beside it. This is the durable record the repeat depends on.
+    proves_clause: no item of "ticket/alpha" was deleted before the check for unsent work had passed in the request that stopped
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - name: test_nothing_is_deleted_or_marked_before_the_unsent_work_check_passes
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: A workspace holding one unpushed commit and one uncommitted file (make_unsent) is refused UNSENT_WORK, and a workspace with a program running inside it is refused PROCESS_HOLDS_FILES; in both the folder, its repository and its record are byte-identical before and after (snapshot with_git=True), so the record was not rewritten to the clearing state and no item was deleted. A control with nothing unsent clears, so identical does not mean nothing ran.
+    proves_clause: no item of "ticket/alpha" was deleted before the check for unsent work had passed in the request that stopped
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - drop the unsent-work check condition
+      - drop the program check condition
+      - write the clearing marker before the checks have passed
+      - the gate always allows
+  - name: test_started_clearing_whose_line_of_work_moved_is_checked_normally
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Safety guard of the marker. After a stop in the repository (repository still readable) a new commit is made on the line of work, so its commit differs from the one recorded in the marker. The repeat without a token must not honour the marker; the normal unsent-work check applies and the answer is UNSENT_WORK naming the full identifier of the new commit, with the folder unchanged.
+    proves_clause: no item of "ticket/alpha" was deleted before the check for unsent work had passed in the request that stopped
+    code_file: templates/scripts/worktree_remove.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_vii.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-02"
+test_design_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_vii.py
+  - unit_tests/build_orchestration/test_bo_4300e_2_viii.py
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds cmd_remove, the unsent-work check, delete_whole_folder and the post-check that the criteria change, but at 490 lines it has no room and the new ordering must live in the sibling module.
+    decision: null
+  - file: templates/scripts/worktree_remove_checks.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the program check, remaining_files, half_token and is_half_slot that the clearing order and the half-cleared shapes build on, and at 187 lines it still has room.
+    decision: null
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It owns the remove sub-parser where --path is required, so addressing a clearing by the name of its line of work is only possible after this file changes, and it is already 425 lines.
+    decision: null
+  - file: scripts/build_phases_script_deploy_standalone.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its NAMED_STANDALONE_SCRIPTS tuple lists every maker module and gains worktree_clearing.py so the new sibling deploys.
+    decision: null
+  - file: docs/components.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: The worktree_manager entry holds the primary_code list that must gain templates/scripts/worktree_clearing.py.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its module table (rows for worktree_admin.py, worktree_remove.py and worktree_remove_checks.py) is where the worktree_clearing.py row goes.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_checks.py
+  - templates/scripts/worktree.py
+  - scripts/build_phases_script_deploy_standalone.py
+  - docs/components.json
+  - docs/architecture/components/worktree-manager.md
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The workspace record .leafcutter/workspace.json of a clearing that has started carries state "clearing",
+    names this project and the workspace location, and records the line-of-work commit the unsent-work check
+    passed at; it is written by one atomic replace before any deletion and is the last workspace file deleted.
+    BO-4300e-2-x reads this state (through the one half-cleared decision in templates/scripts/worktree_clearing.py)
+    to refuse ensure and locate on the leftover.
+expects_from:
+  ac_id: BO-4300e-2
+  contract: The whole-folder deletion, the unsent-work check that runs before it, and the post-check that nothing is left at the location.
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: "user decision 2026-11-03 (final gate): the retry guard is accepted as designed -- a folder marked 'clearing' is finished with no token and no second unsent-work check; it is re-checked normally only if its repository is still readable and its line-of-work commit moved since the marker."
+    by: user
+    at: "2026-11-03"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Observed 2026-11-02 on two merged, clean workspaces (Windows, WinError 145 "directory not
+  empty" part-way through deletion): one lost its workspace record and nearly all of its
+  repository first, so a retry answered NOT_FOUND; the other lost part of its repository
+  (pack objects) while the record stayed, so a retry fetched and failed FETCH_FAILED. Both
+  stop points are among the four arms above. This record is PREVENTION: whatever point
+  deletion stops at, the leftover is one the next plain request finishes.
+
+  "Without any discard token" is load-bearing: the workspace held nothing unsent when the
+  first request checked it, so finishing must not turn into an unsent-work refusal (deleted
+  tracked files would otherwise look like uncommitted changes) and must not need a network
+  call that can fail. An unattended caller (finalize) must never have to authorise a loss to
+  finish a clean workspace.
+
+  How is for the IT PO. The user offered: move the folder aside to a recognisable
+  to-be-deleted name before deleting anything; delete the record and repository last; or
+  recognise a broken repository as half-cleared. Note for the IT PO: BO-4300e-2-v says
+  half-cleared is decided "from the folder's contents, never from a name list" -- a
+  to-be-deleted name chosen by the maker itself is a different thing from a name list, but
+  if move-aside is chosen, the moved folder must still sit inside this project's landing
+  place (BO-4300e-2-iii) and must still be found by a request addressed by the original
+  location or line-of-work name (the second addressing arm above).
+
+  Standing rules kept unchanged: unsent-work check before any deletion (BO-4300e-2,
+  BO-4100c-1); a record-less folder holding files is never deleted (user decision
+  2026-10-29, BO-4300e-2-v); nothing outside this project's landing place is deleted
+  (BO-4300e-2-iii); cleared only when nothing is left (BO-4300e-2, -ii, -viii).
