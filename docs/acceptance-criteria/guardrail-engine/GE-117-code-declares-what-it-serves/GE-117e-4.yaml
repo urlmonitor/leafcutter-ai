@@ -36,7 +36,7 @@ doc_links:
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 change_target: docs
-test_required: false
+test_required: true
 it_requirements:
   - "Author the diagram as a Mermaid sequenceDiagram with check_doc_frontmatter-compliant architecture frontmatter (title, type, status, created, last_updated, components, flight_level; diagram_type: sequence)."
   - "Depict both recovery paths: the autofix path (invoke -> resolve component from components.json OR AC from commit context via the AC store -> insert -> guardrail re-checks to pass) INCLUDING the prompt-on-ambiguity branch (GE-117e-1-i), and the deliberate `AC-EXEMPT: <reason>` per-item opt-out path (GE-117e-2)."
@@ -47,7 +47,11 @@ expects_from:
   contract: "The autofix and opt-out recovery flow the diagram depicts"
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-02'
+  reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

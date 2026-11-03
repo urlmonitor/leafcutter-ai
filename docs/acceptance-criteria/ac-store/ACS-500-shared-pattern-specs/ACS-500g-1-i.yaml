@@ -54,10 +54,15 @@ expects_from:
   contract: "Pattern candidates emitted by the store-wide scan, each naming its source AC ids, the shared behavior body, the recurrence count, and the proposed slots."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: internal
-test_required: false
+declares_side_effect: true
+test_required: true

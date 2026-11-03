@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-11-01'
+last_updated: '2026-11-02'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 81** (4 blocker, 43 high, 34 low) · **Resolved: 28** (recounted from the directory 2026-11-01, after KI-BO-20261101-plan-feature-script-steps-declined-by-worktree-agent and KI-BO-20261101-shell-reply-schema-admits-a-wrapped-reply were filed)
+**Open: 84** (4 blocker, 43 high, 37 low or medium) · **Resolved: 28** (recounted from the directory 2026-11-02, after KI-BO-20261102-it-po-test-free-instruction-predates-the-backfill-definition was filed; the 2026-11-01 figure of 81 was already 2 short)
 
 ## Open
 
@@ -153,6 +153,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20261025-workspace-maker-clone-head-stale — two fresh workspaces made by `worktree.py ensure` on 2026-10-25 (fastlane/tq-200d-3, scratch/tq-200d-before-score) answered `status ok` with `base_commit` = the current origin/main but left HEAD at the older origin/main `1a5c47cc3` with the newer tree staged (a later merge left ~350 staged files, no MERGE_HEAD); the scratch reflog shows an outside fetch rewinding origin/main between the maker's hub fetch and a tracking `checkout -B <branch> origin/main` — the race fixed by `1d316e0a0` (PR #1351) — so the maker that ran was most likely the stale in-repo install `leafcutter-ai/.leafcutter/scripts/worktree.py` (:86, deployed 2026-10-24 from `1a5c47cc3`); `MAKER_VERSION` and the answer do not show which copy answered; graded medium | [open-low-ki-bo-20261025-workspace-maker-clone-head-stale.md](build-orchestration/open-low-ki-bo-20261025-workspace-maker-clone-head-stale.md) |
 | `low` | KI-BO-20261101-plan-feature-script-steps-declined-by-worktree-agent — /plan-feature hard-codes worktree-agent for its pause-store reads and clear (`plan-feature.js`:1579, :1654) and its stage-end script steps (`scriptStepAgentId`, :2202); the agent declines them on its two-action charter, a declined rule check reads as "no readable report" (:2020), forces a BA re-run and aborts the stage "business-analyst failed ... after 2 attempts" with the approved drafts uncommitted and a stale pause record left behind (run `wf_4a8567df-505`, 2026-10-30); graded medium | [open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md](build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md) |
 | `low` | KI-BO-20261101-shell-reply-schema-admits-a-wrapped-reply — shell-runner put its whole reply, serialised, inside `stdout`; `SHELL_REPLY_SCHEMA` (`_shared/workspace-answer.js`:7-18) requires no field, so the reply passed it and `shellStepReply()` halted the run at :88 "the reply carries no exit status", with no retry (`read-workspace-marker`, run `wf_51e76d5e-04e`, 2026-10-29; a fresh run worked) | [open-low-ki-bo-20261101-shell-reply-schema-admits-a-wrapped-reply.md](build-orchestration/open-low-ki-bo-20261101-shell-reply-schema-admits-a-wrapped-reply.md) |
+| `low` | KI-BO-20261102-it-po-test-free-instruction-predates-the-backfill-definition — the technical planner's test-free instruction (`templates/agents/it-po.md`:517-528 and self-review item 12, built by BO-2500a-8-ii) still gives prompt wording as test-free work and asks a reason to say "why no executable test can observe it", against BO-2500a-8-iv's definition and the 2026-11-01 prompt-class decision; draft requirement included; graded medium | [open-low-ki-bo-20261102-it-po-test-free-instruction-predates-the-backfill-definition.md](build-orchestration/open-low-ki-bo-20261102-it-po-test-free-instruction-predates-the-backfill-definition.md) |
 
 ## Resolved
 

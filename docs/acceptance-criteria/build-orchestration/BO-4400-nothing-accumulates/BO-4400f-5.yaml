@@ -44,10 +44,14 @@ it_requirements:
     module's real entry points (BO-4400f-1) and the test-runner plugin's real behaviour
     (BO-4400f-2); link the reference page (BO-4400f-4) and
     docs/how-to/write-a-test-that-catches-the-wrong-version.md.
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

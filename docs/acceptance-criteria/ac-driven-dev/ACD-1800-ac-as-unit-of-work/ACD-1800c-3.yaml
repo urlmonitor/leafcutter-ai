@@ -37,6 +37,11 @@ expects_from:
   ac_id: ACD-1800c-1
   contract: "The implemented thin grouping-ticket behaviour (enumerate by reference, no sign-offs) to document."
 test_required: false
+test_rationale: Text added to ac-schema.md presenting the ticket as a container that lists its
+  requirements and holds no sign-offs, done only when they all are, set against the superseded
+  fat-ticket model of ACD-400b. How well that contrast teaches a reader used to the old model
+  cannot be scored by a test. A reviewer reads it for consistency with ADR-026 and ACD-1600a,
+  and a wave-2 verified_by inspection records the result.
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

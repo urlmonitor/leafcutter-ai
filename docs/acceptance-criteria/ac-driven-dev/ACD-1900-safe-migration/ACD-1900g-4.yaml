@@ -32,10 +32,14 @@ expects_from:
 it_requirements:
   - "Canonical source: a how-to under docs/how-to/. Must document running the full self-host epic the new way, the real-ticket fresh-process spot-check, the consecutive-green-merge requirement, and the complete go/no-go checklist."
   - "Must give a reproducible procedure by which a reader evaluates cutover readiness against every criterion; the criteria listed must match the go/no-go evaluator (ACD-1900g-2) and ADR-026's Go/No-Go section exactly."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

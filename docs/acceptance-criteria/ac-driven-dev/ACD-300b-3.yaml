@@ -40,7 +40,7 @@ it_requirements:
   - "After reconciliation, no reader can find two mutually exclusive instructions for how /plan-feature runs across the three artifacts."
   - "This is a prompt/spec consistency change owned by llm-expert; do not add behavioral runtime logic to the .js workflow. If reconciliation turns out to require editing plan-feature.js control flow (a .js surface llm-expert does not own), that portion must be split to a JS-capable implementer — flag rather than silently edit."
   - "Preserve portability of the affected templates (front-matter, trigger phrases) so build.py deploys them unchanged in shape."
-test_required: false
+test_required: true
 notes: |
   Verification method (spec-only, no executable behaviour): this AC is a
   documentation/consistency reconciliation, so test_required is false. Verify by
@@ -52,13 +52,22 @@ notes: |
   exactly one canonical execution path. This is the v3 convention for spec-only
   ACs (test-writer skips with this recorded reason rather than misclassifying it
   as docs-only).
+
+  2026-11-02: superseded. The BO-2500a-8-iv backfill decision of 2026-11-01 (class
+  prompt) set test_required true, proved by an agent eval case as BO-2500a-8-ii was,
+  with change_target prompt. The sentences above saying test_required is false and
+  describing a spec-only verification method no longer apply.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. change_target pipeline changed to prompt. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: [ACD-300b-3-i]
 implemented_by: []
-change_target: pipeline
+change_target: prompt
 risk_surface: contract_boundary

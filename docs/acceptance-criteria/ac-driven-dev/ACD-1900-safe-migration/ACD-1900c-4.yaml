@@ -32,10 +32,14 @@ expects_from:
 it_requirements:
   - "Canonical source: a how-to under docs/how-to/ (or docs/reference/). Must document how to set emit and enforce, the precondition for enabling enforce (zero schema_version < 2 records remaining), and the one-commit rollback for each kill-switch (enforce=false -> dual-read/advisory; emit=false -> fat tickets)."
   - "Must give a reproducible procedure by which a reader flips enforce = false and observes a previously failing gate return to green with no code change; the config path and flag names must match config/guardrail_gates.yaml exactly."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

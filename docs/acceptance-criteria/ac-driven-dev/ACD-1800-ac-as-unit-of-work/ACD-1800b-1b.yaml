@@ -40,10 +40,14 @@ delivers_to: null
 expects_from:
   ac_id: ACD-1800b-1a
   contract: "Per-deliverable sign-off record schema on the AC: deliverables[].signoff = {status: needed|signed_off|not_applicable, by, at, reason?}. The skill writes this exact shape onto the AC in place of the ticket-body Sign-offs section."
-test_required: false
+test_required: true
 origin_agent: it-po
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

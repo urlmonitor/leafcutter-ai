@@ -32,7 +32,7 @@ change_target: docs
 risk_surface: internal
 it_requirements:
 - Extend docs/reference/knowledge-retrieval-answers.md, or add a sibling reference page. Field names, link types and non-answers exactly as built; state that the Decision kind is read unchanged.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -59,6 +59,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500g's reference-doc trigger. Its deliverable is the document only.

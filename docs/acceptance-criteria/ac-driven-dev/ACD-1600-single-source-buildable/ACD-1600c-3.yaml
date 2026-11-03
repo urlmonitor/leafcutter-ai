@@ -59,12 +59,16 @@ amended_by:
     date: '2026-09-27'
     by: it-po
     directed_by: user
+  - action: amended
+    agent: it-po
+    date: '2026-11-01'
+    reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
-test_required: false
+test_required: true
 notes: |
   AMENDMENT (2026-09-25, ACD-2500): the doc now covers the full hold-reason list. It
   depends_on ACD-2500b-2, ACD-2500d-2-i and ACD-2500d-3-i so it is written only after

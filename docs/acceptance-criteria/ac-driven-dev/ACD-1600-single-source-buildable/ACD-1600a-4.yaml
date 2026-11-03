@@ -41,3 +41,8 @@ implemented_by: []
 change_target: docs
 risk_surface: internal
 test_required: false
+test_rationale: This record delivers a docs/reference/ page on the reference-not-copy ticket
+  convention, including the note that it supersedes ACD-400b and ACD-400b-1. No test can tell
+  whether someone holding only a ticket could follow the page from its source_ac pointer to
+  the authoritative record. That is settled by a reviewer walking the page with a thin ticket
+  in hand, with a verified_by inspection taking over once wave 2 lands.

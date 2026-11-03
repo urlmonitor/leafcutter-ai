@@ -35,6 +35,11 @@ expects_from:
   ac_id: ACD-1800c-1
   contract: "The implemented thin grouping-ticket + ticket-done-derivation behaviour whose flow the diagram depicts."
 test_required: false
+test_rationale: 'Ticket completion drawn as a derivation: an agent finishes requirements one
+  by one, and the ticket''s done state follows from all of them with no step aimed at the ticket.
+  Whether a viewer would read the derived state as automatic, not as a hidden completion action,
+  is an interpretive question outside any test. It is answered by reviewing the diagram against
+  ACD-1800c-1 and ACD-1800c-2 now, and by verified_by inspection once wave 2 arrives.'
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

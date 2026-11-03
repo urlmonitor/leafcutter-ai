@@ -41,3 +41,8 @@ implemented_by: []
 change_target: docs
 risk_surface: internal
 test_required: false
+test_rationale: 'Store-wins resolution drawn as a sequence: the phase agent reads source_ac
+  off the ticket, fetches the record, and trusts the record when the ticket body disagrees.
+  A test cannot decide whether the conflict branch is shown clearly enough that a reader would
+  not mistake the ticket for the authority. Review against ACD-1600b-1 and ACD-1600b-2 settles
+  it today; a wave-2 verified_by inspection settles it after.'

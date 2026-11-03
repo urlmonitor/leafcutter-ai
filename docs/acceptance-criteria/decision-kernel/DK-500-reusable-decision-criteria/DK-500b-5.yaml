@@ -37,7 +37,7 @@ it_requirements:
 - 'It describes the method exactly as dec-a070edfb6465bced decided it and DK-500b-3 builds it, including the parts the criteria leave implicit: the shared wording normalisation (Unicode NFC, trimmed, whitespace collapsed, case-folded, punctuation significant), criterion-id placements shown with reason criterion_id, the one-choice-question bound (reason library_exceeds_choice_bound, never a shortlist), the configured 0.8 threshold and the cold start with no Jev call.'
 - Precision, recall and the none share are defined exactly as the evaluation command computes them (DK-500b-2). The trial figures and caveats come from the committed trial summary (linked in doc_links) and are linked rather than restated loosely.
 - Write it only after DK-500b-1 to DK-500b-4 are implemented. The reference documents behaviour and closes no behavioural AC.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -78,6 +78,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'BA amendment of the first and last Then clauses received: the ENRICHMENT-BLOCKED it_requirement and note are removed, it_requirements are aligned with the amended criteria (no broader in the suggestion fields; the decided method), a related link to the committed trial evidence is added, and readiness draft -> reviewed. Criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500b's reference-doc trigger. Its deliverable is the document only.

@@ -50,6 +50,12 @@ expects_from:
   ac_id: BO-4500a-5
   contract: "The migrated topology as built."
 test_required: false
+test_rationale: 'The component view of committing after the migration: one shared commit step,
+  the routes that reach it through the commit agent, the split of duties between agent and step,
+  and the checks and serialisation guard the step leans on. That no route is drawn with its
+  own path to version control, and that the duty split matches what was built, can only be confirmed
+  by someone reading it against BO-4500a-5. That reviewer''s reading, and in wave 2 a verified_by
+  inspection, is the check.'
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

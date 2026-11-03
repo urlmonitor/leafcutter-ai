@@ -62,10 +62,14 @@ delivers_to: null
 expects_from:
   ac_id: BO-4500a-4
   contract: "The one-answer contract (answer_version 1, reason_code families, remedy/handoff) and the behaviours of BO-4500a-1..-4 as built."
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-10-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -34,10 +34,14 @@ expects_from:
 it_requirements:
   - "Canonical source: a how-to under docs/how-to/. Must document the advisory (strict: false) start, the 10-consecutive-green-self-host-merge promotion threshold, the deploy-manifest prerequisite (scripts/build_phases.py deploy_map), and diff-scoping for done-accounting gates."
   - "Must give a reproducible procedure that takes a new gate from advisory to required without retroactively failing pre-existing ACs; config keys and thresholds cited must match config/guardrail_gates.yaml and scripts/build_phases.py."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

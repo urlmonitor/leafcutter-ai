@@ -35,7 +35,7 @@ doc_links:
 assigned_agent: documentation-expert
 estimated_complexity: S
 change_target: docs
-test_required: false
+test_required: true
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "Document the EXTENDED tail-tag (existing ticket ref + new AC ref); do NOT re-document the existing ticket-tag mechanics — layer the AC dimension on top, consistent with the GE-117c-1 implementation."
@@ -46,7 +46,11 @@ expects_from:
   contract: "The extended tail-tag behavior (ticket + AC, diff-only, inheritance) the how-to documents"
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

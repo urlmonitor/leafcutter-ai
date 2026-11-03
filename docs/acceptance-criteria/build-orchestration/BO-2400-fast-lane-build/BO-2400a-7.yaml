@@ -30,18 +30,22 @@ estimated_complexity: S
 it_requirements:
   - "The sequence diagram must show the ordered interactions selection -> single test-writer -> red-baseline gate -> single coder -> green + coverage gate -> commit staging."
   - "It must include the halt/refuse paths (red-baseline halt, green-gate commit refusal) as alternate flows."
-test_required: false
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-1
   contract: "The implemented fast-lane loop flow whose runtime message sequence this diagram depicts."
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class in-progress composite proved through its children: test_required false line removed and change_target docs added. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: [BO-2400a-7-i, BO-2400a-7-ii]
 implemented_by:
   - "docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md"
+change_target: docs
 notes: |
   2026-09-27: reset from done to in_progress (user-approved documentation update).
   The fast lane gains a command-step-runner, a declined-step halt and launch from
