@@ -1,0 +1,320 @@
+id: TQ-200d-1-vi
+components:
+  - testing_quality
+title: "The empty-window and presence rows accept a test-writer report that names the hazard in equivalent words"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer "empty-window" row,
+  When its report check reads a report,
+  Then a report saying "non-NULL", "non-None" or "non-null" (any case,
+      with or without backticks around None) passes,
+    And the kept re-run 1 report ("exact-count and non-`None`-count guards")
+      and the kept re-run 2 report ("exact non-None count") pass,
+    And a report that says only "the check counts the values" fails,
+    And a report that names "NULL" or "None" only outside a non-NULL phrase,
+      such as "returns None when the feed is empty", fails.
+
+  Given the test-writer "presence-is-not-correctness" row,
+  When its report check reads a report,
+  Then a report saying "known value", "expected value" or "seeded value"
+      (any case, including "known expected value") passes,
+    And the kept re-run 1 and re-run 2 reports ("exact expected value from the
+      feed") pass,
+    And a report that says only "the test checks that each symbol has a
+      value" fails,
+    And a report that says only "the value is present" fails.
+
+  Given every other row in the test-writer and test-runner sets that checks
+      report wording,
+  When the sets are scored,
+  Then each still checks its one term exactly as before, and the recorded
+      gold outputs of both sets still pass.
+
+  Given the change is done,
+  Then the report_mentions entry on the test-writer assertion-kind reference
+      page states how a row lists equivalent wordings, with the empty-window
+      passing and failing examples updated,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the produced-tests section of the evals README states the rule in one
+      line linking the entry,
+    And the empty-window and presence-is-not-correctness parts of the known
+      issue "test-writer rows check unrequested report wording" are struck
+      with a note naming this AC (the issue is moved to resolved by
+      TQ-200d-4-vi, which fixes its last part, or by this AC if it lands last),
+    And one changelog entry names this AC and the two widened rows,
+    And no glossary term is added except through the glossary-triage flow,
+    And the test-writer template is unchanged (user decision 2026-11-02).
+depends_on:
+  - TQ-200d-1
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      On main since PR #1389. Parts 1 and 2 (non-NULL, known value) are struck by this AC; moved to resolved/ by
+      TQ-200d-4-vi, or by this AC if it lands last.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: The report_mentions entry (:183-197) uses empty-window 'non-NULL' as its passing example.
+  - path: scripts/evals/sets/test-writer.jsonl
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Rows empty-window (line 3) and presence-is-not-correctness (line 4) gain the equivalent wordings.
+  - path: scripts/evals/sets/test-runner.jsonl
+    relationship: relates-to
+    status: exists
+    relevance: 'Not changed: its report_mentions rows keep their one term.'
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page; kind count and family split unchanged by this AC.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: Not changed (user decision 2026-11-02).
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/produced_tests_scoring.py
+    state: existing
+  - path: scripts/evals/sets/test-writer.jsonl
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+it_requirements:
+  - >-
+    Spec-key decision (IT PO): report_mentions (scripts/evals/produced_tests_scoring.py :152-156) gains one optional
+    spec key 'also_accepts', a list of strings. The check passes when the report holds 'contains' or any 'also_accepts'
+    term as a substring, ignoring case; the detail names the term found, or lists every term when none is found.
+    A row without 'also_accepts' is scored exactly as today (same result, same detail text). No new kind is registered.
+  - >-
+    Row edits in scripts/evals/sets/test-writer.jsonl only: empty-window keeps contains 'non-NULL' and gains also_accepts
+    ['non-None', 'non-`None`'] (case-insensitive substring, so 'non-null' is covered by 'non-NULL'); presence-is-not-correctness
+    changes to contains 'known value' with also_accepts ['expected value', 'seeded value'] ('known expected value'
+    is covered by 'expected value'). Every other report_mentions spec in test-writer.jsonl and test-runner.jsonl
+    keeps its single 'contains' and no 'also_accepts' (the earlier lesson: a row needing new kind options must leave
+    every other row's check exactly as before). A bare 'None' or 'NULL' ("returns None when the feed is empty")
+    or a bare 'value' never passes.
+  - >-
+    Unit tests never call a live model; they score recorded outputs and probe fixtures only. Kept live outputs are
+    copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session scratchpad>/kept_runs/run1|run2/<set>/<row>/,
+    local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again. Probe fixtures for this AC: report.md of test-writer/empty-window/run1
+    and run2 and of test-writer/presence-is-not-correctness/run1 and run2 (shared with TQ-200d-1-iv).
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched and does not grow;
+    no new module is added at the top of scripts/evals/. unit_tests/evals/ is at its density cap, so this AC's tests
+    go in their own subfolder (named in test_spec) with an __init__.py, like unit_tests/evals/tq200d1ii/. Tests
+    go in unit_tests/evals/tq200d1vi/.
+  - >-
+    DOCUMENTATION (part of done) - the report_mentions entry on docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    must state the 'also_accepts' spec key (Reads: 'Spec keys: contains, also_accepts'; Passes when: 'contains'
+    or any 'also_accepts' term, ignoring case), that only the empty-window and presence-is-not-correctness rows
+    use it, and update the examples: passing 'exact non-None count' on empty-window, failing 'returns None when
+    the feed is empty'. Template sentence stays 'none'. Budget <= 8 added lines on the shared page.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains one bullet: a report_mentions
+    row may list equivalent wordings in 'also_accepts' (empty-window, presence-is-not-correctness); every other
+    row checks its one term; link #report_mentions.
+  - >-
+    DOC-DRIFT TEST: the passing and failing example sentences on the entry score as stated against the empty-window
+    row's spec read from test-writer.jsonl; the TQ-200d-1-ii drift tests stay green.
+  - >-
+    KNOWN ISSUE (shared with TQ-200d-4-vi): in docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+    strike Mechanism parts 1 and 2 (empty-window, presence-is-not-correctness) with '~~...~~' and a note 'fixed
+    by TQ-200d-1-vi (also_accepts), proving tests unit_tests/evals/tq200d1vi/', and add 'parts 1-2 fixed by TQ-200d-1-vi'
+    to the Status line. Landing order: TQ-200d-4-vi depends on this AC, so normally TQ-200d-4-vi lands last and
+    moves the file to resolved/ (resolved-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md)
+    naming both ACs. Only if this AC lands after TQ-200d-4-vi (its part 3 already struck) does this AC do the move:
+    git mv to resolved/, Status 'RESOLVED <date> by TQ-200d-1-vi and TQ-200d-4-vi', register row to Resolved, Open/Resolved
+    recounted from the directory.
+  - >-
+    CHANGELOG: one entry for TQ-200d-1-vi written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, in the same change as the code, naming the also_accepts spec key and the
+    two widened rows (empty-window, presence-is-not-correctness).
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_empty_window_report_accepts_equivalent_non_null_wordings
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Reports saying 'non-NULL', 'non-None', 'non-null' or 'non-`None`' in any case pass the empty-window row's
+      report check (spec read from test-writer.jsonl), and the kept run1 and run2 reports pass.
+    must_catch:
+      - revert the fix
+      - the backticked form 'non-`None`' rejected
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+      - scripts/evals/sets/test-writer.jsonl
+  - name: test_empty_window_report_without_a_non_null_phrase_fails
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: '''the check counts the values'' fails, and so does ''returns None when the feed is empty''.'
+    must_catch:
+      - a bare 'None' or 'NULL' outside a non-NULL phrase accepted
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+      - scripts/evals/sets/test-writer.jsonl
+  - name: test_presence_report_accepts_known_expected_or_seeded_value
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      'known value', 'expected value', 'seeded value' and 'known expected value' in any case pass the presence-is-not-correctness
+      row's report check, and the kept run1 and run2 reports pass.
+    must_catch:
+      - '''known expected value'' rejected'
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+      - scripts/evals/sets/test-writer.jsonl
+  - name: test_presence_report_without_a_value_phrase_fails
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: '''the test checks that each symbol has a value'' and ''the value is present'' fail.'
+    must_catch:
+      - a bare 'value' accepted
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+      - scripts/evals/sets/test-writer.jsonl
+  - name: test_other_report_mentions_rows_keep_their_one_term
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      Every other report_mentions spec in test-writer.jsonl and test-runner.jsonl has no also_accepts, and a report
+      holding only an equivalent wording of its term (for example 'non-None' against a row whose term is 'refresh_config')
+      fails it with today's detail.
+    must_catch:
+      - the widening applied to every report_mentions row
+      - also_accepts added to another row
+    in_scope_files:
+      - scripts/evals/produced_tests_scoring.py
+      - scripts/evals/sets/test-writer.jsonl
+      - scripts/evals/sets/test-runner.jsonl
+  - name: test_test_writer_and_test_runner_gold_still_pass
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --results-file <tmp>
+    description: >-
+      The real CLI replays the test-writer and the test-runner gold outputs (--agent test-runner too) and every
+      row passes.
+  - name: test_report_mentions_entry_states_equivalent_wordings
+    target_dir: unit_tests/evals/tq200d1vi/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The entry names also_accepts and the two rows using it, its examples score as stated, the README bullet links
+      #report_mentions, and the known issue's parts 1 and 2 are struck with a note naming TQ-200d-1-vi.
+    must_catch:
+      - entry still describes a single term only
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+      - scripts/evals/README.md
+test_rationale: >-
+  The fix widens a substring check, so the weight is on what must still fail: a bare None or value, and every other
+  row that must keep its single term (the boundary test is the guard against the widening spreading). The kept reports
+  prove the falsely red rows now pass on real agent output.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 4, parts 1 and 2 (rows empty-window and presence-is-not-correctness in
+  scripts/evals/sets/test-writer.jsonl). Part 3 (missing-setting-database-work) is
+  TQ-200d-4-vi, placed under the database-setting L2 that owns that row.
+
+  The test-runner set also uses report_mentions; the third scenario keeps every other
+  row's single-term check unchanged so the widening cannot spread. Whether the
+  alternatives are a list on the row or a new spec key is an IT-PO call.
+
+  IT-PO (2026-11-02).
+    - declared_files leaves out the open known-issue file this AC edits (it strikes
+      parts 1-2): the file is on main (PR #1389) but not yet on this branch, and the
+      validator refuses an 'existing' path that is absent. After origin/main is merged
+      into the build branch, add it as 'existing' (and the resolved/ path as
+      'to_be_created' if this AC turns out to land last).
+    - Decision: optional spec key also_accepts on report_mentions (no new kind, kind
+      count unchanged, no drift-test entry added).
+    - Overlap: produced_tests_scoring.py with TQ-200d-1-iv (different functions);
+      test-writer.jsonl with TQ-200d-4-vi (row 7 there, rows 3-4 here); the shared known
+      issue with TQ-200d-4-vi (which depends on this AC and therefore normally moves it).
+      depends_on unchanged.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent);
+      OQ-7 (legacy test_spec, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.

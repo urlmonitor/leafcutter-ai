@@ -1,0 +1,329 @@
+id: TQ-200d-2-iii
+components:
+  - testing_quality
+title: "A database test that counts rows with COUNT(*) filtered to non-NULL values in the same statement passes the non-NULL count check"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the sql-test-writer "empty window, database shape" row, whose fixture
+      seeds 3 buy_volume rows,
+    And a produced test that asserts an exact processed-row count and runs
+      "SELECT COUNT(*) FROM buy_volume_window WHERE symbol = ANY(%s) AND
+      buy_volume IS NOT NULL" and asserts its result with
+      self.assertEqual(self.cur.fetchone()[0], len(_SEEDED_ROWS)),
+  When the row's count check reads the produced test,
+  Then the check passes,
+    And the same query with the predicate as "WHERE buy_volume IS NOT NULL",
+      with a table alias ("WHERE w.buy_volume IS NOT NULL") or with COUNT(1)
+      passes,
+    And the forms accepted before (count(buy_volume), FILTER (WHERE buy_volume
+      IS NOT NULL), CASE WHEN buy_volume IS NOT NULL) still pass,
+    And a test whose "buy_volume IS NOT NULL" sits in a different statement
+      from its COUNT(*) fails,
+    And a COUNT(*) filtered on "buy_volume IS NULL" or on another column's
+      "IS NOT NULL" fails,
+    And a filtered COUNT(*) whose result is asserted only with ">= 0" or
+      "at least one row" fails,
+    And a test whose filtered COUNT(*) is its only count, with no exact
+      processed-row count, fails.
+
+  Given the kept live output of the 2026-11-02 first live run and re-run 1
+      for this row, recorded as a probe fixture,
+  When the check scores it,
+  Then it passes, a copy with the "AND buy_volume IS NOT NULL" predicate
+      removed fails (no false green), and the recorded gold output for the
+      row still passes.
+
+  Given the change is done,
+  Then the sql_counts_rows_and_non_null entry on the sql-test-writer
+      assertion-kind reference page lists the filtered COUNT(*) form among
+      the accepted forms with a passing example, and the different-statement
+      and wrong-column forms among the failing ones,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the "Counts" line of the produced-tests section of the evals README
+      still describes the rule, updated if it names the accepted SQL forms,
+    And the known issue "sql non-NULL count misses COUNT(*) WHERE NOT NULL" is
+      moved to resolved naming this AC and its proving tests, with the
+      Open/Resolved count of the testing-quality known-issue register
+      recounted,
+    And one changelog entry names this AC and the resolved known issue,
+    And no glossary term is added except through the glossary-triage flow,
+    And the sql-test-writer template's remedy "assert an exact count of
+      processed rows plus a non-NULL count" is unchanged.
+depends_on:
+  - TQ-200d-2
+  - TQ-200d-2-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-sql-non-null-count-misses-count-star-where-not-null.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      On main since PR #1389. The kept test (:78-83) and fix direction; moved to resolved/ by this AC.
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Records count(all col) as another missed form; not in scope (struck with a note naming this AC only if fixed
+      in passing).
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The sql_counts_rows_and_non_null entry (:61-79) lists the accepted forms and names its probe files.
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page; kind count and family split unchanged by this AC.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/sql-test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: Not changed. Holds the quoted remedy.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-2-ii
+  contract: >-
+    sql_counts_rows_and_non_null accepting the SQL and Python count forms, with its reference entry.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/sql_test_writer_eval/evidence_kinds.py
+    state: existing
+  - path: scripts/evals/sql_test_writer_eval/sql_resolve.py
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-sql-non-null-count-misses-count-star-where-not-null.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Code change in scripts/evals/sql_test_writer_eval/evidence_kinds.py, counts_rows_and_non_null (:101-117): classify
+    each executed query over the view on its own instead of only the joined text (:112 joins every query with spaces,
+    which would let a 'col IS NOT NULL' in one statement qualify a COUNT(*) in another). A query whose count(*)
+    or count(1) sits in a statement whose WHERE clause holds '[<alias>.]<column> is not null' (as the first predicate
+    or after AND) is a non-NULL count of the column; it is NOT also the processed-row count (ROW_COUNT_RE :29 must
+    not count it), so the exact processed-row count must come from another query or from the Python-side form (_python_side_counts
+    :90-98). 'is null', another column's 'is not null', and a predicate in a different statement do not count. non_null_re
+    (:68-72) keeps its three existing forms.
+  - >-
+    A filtered COUNT(*) counts only when the value it fetches is asserted with an equality (assert ==, assertEqual/assertEquals)
+    against a fixed or seeded number: the assertion that reads that query's fetched result (fetchone()/fetchall()
+    after its execute and before the next execute in the same test function, directly or through a name assigned
+    from it). A '>= 0' or 'at least one row' assertion on it fails. If pairing an execute with its assertion needs
+    sql_resolve.py (:172 executed_queries returns strings only), the pairing helper goes there; both files stay
+    at or under 400 lines.
+  - >-
+    The row empty-window-database-shape in scripts/evals/sets/sql-test-writer.jsonl is unchanged; its gold output
+    and the TQ-200d-2/-2-ii probes in unit_tests/evals/fixtures/tq200d2/ keep their results.
+  - >-
+    Unit tests never call a live model; they score recorded outputs and probe fixtures only. Kept live outputs are
+    copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session scratchpad>/kept_runs/run1|run2/<set>/<row>/,
+    local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again. Probe fixture for this AC: sql-test-writer/empty-window-database-shape/run1
+    (test_buy_volume_window.py.recorded plus report.md; line 16 holds a sys.path to a local temp folder and is neutralised).
+    The copy with 'AND buy_volume IS NOT NULL' removed and the other negative variants are built by the test from
+    the fixture.
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched and does not grow;
+    no new module is added at the top of scripts/evals/. unit_tests/evals/ is at its density cap, so this AC's tests
+    go in their own subfolder (named in test_spec) with an __init__.py, like unit_tests/evals/tq200d1ii/. Tests
+    go in unit_tests/evals/tq200d2iii/.
+  - >-
+    DOCUMENTATION (part of done) - the sql_counts_rows_and_non_null entry on docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+    must list the filtered form among the accepted non-NULL counts: 'count(*) or count(1) in a statement whose WHERE
+    holds <column> is not null (alias allowed), asserted with an equality; it does not double as the processed-row
+    count', name the run1 probe fixture as a passing example, and add to 'Fails when' the predicate in a different
+    statement, 'is null' or another column, and a filtered count asserted with '>= 0' or 'at least one row'. The
+    quoted remedy is unchanged.
+  - >-
+    DOCUMENTATION (part of done) - the 'Counts.' bullet of scripts/evals/README.md (:162) still describes the rule;
+    it changes only if it names SQL forms (today it does not), so it is expected to stay as is. If edited, it stays
+    one sentence linking #sql_counts_rows_and_non_null.
+  - >-
+    DOC-DRIFT TEST: every probe file the entry names exists and scores as the entry states; the template remedy
+    'assert an exact count of processed rows plus a non-NULL count' is still in templates/agents/sql-test-writer.md;
+    the TQ-200d-1-ii drift tests stay green.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261102-sql-non-null-count-misses-count-star-where-not-null.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-sql-non-null-count-misses-count-star-where-not-null.md
+    (the resolved-<bucket>- rename used for the earlier TQ known issues); set its Status line to 'RESOLVED <date>
+    by TQ-200d-2-iii' with the proving test files (unit_tests/evals/tq200d2iii/); move its row in docs/known-issues/testing-quality.md
+    from Open to Resolved with the new link, and recount the 'Open: N (... blocker, ... high, ... low) · Resolved:
+    M' line from the directory listing, never by arithmetic on the old line (another re-run AC may have moved a
+    file first). count(all col) in the 2026-10-25 residual-misreads known issue stays open unless this change happens
+    to fix it, in which case it is struck there with a note naming TQ-200d-2-iii.
+  - >-
+    CHANGELOG: one entry for TQ-200d-2-iii written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, in the same change as the code, naming the filtered COUNT(*) non-NULL form
+    and the resolved known issue KI-TQ-20261102-sql-non-null-count-misses-count-star-where-not-null.
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_where_filtered_count_star_counts_non_null
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The criteria's test (exact processed-row count plus 'SELECT COUNT(*) ... AND buy_volume IS NOT NULL' asserted
+      with assertEqual(fetchone()[0], len(_SEEDED_ROWS))) passes, and so do 'WHERE buy_volume IS NOT NULL', 'WHERE
+      w.buy_volume IS NOT NULL' and COUNT(1).
+    must_catch:
+      - revert the fix
+      - alias-qualified predicate rejected
+      - COUNT(1) rejected
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_earlier_non_null_forms_still_pass
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      count(buy_volume), FILTER (WHERE buy_volume IS NOT NULL) and CASE WHEN buy_volume IS NOT NULL still pass,
+      and the tq200d2 probes keep their results.
+    must_catch:
+      - an earlier form dropped when the filtered form was added
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_filtered_count_star_false_greens_fail
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each fails: 'buy_volume IS NOT NULL' in a different statement from its COUNT(*); a COUNT(*) filtered on 'buy_volume
+      IS NULL'; one filtered on another column's IS NOT NULL; a filtered COUNT(*) asserted only with '>= 0' or 'at
+      least one row'; a filtered COUNT(*) as the only count with no exact processed-row count.
+    must_catch:
+      - '''is not null'' anywhere in the file accepted for an unfiltered COUNT(*)'
+      - '''is null'' accepted as a non-NULL filter'
+      - another column's 'is not null' accepted
+      - a filtered count asserted with '>= 0' accepted
+      - the filtered COUNT(*) counted as the processed-row count too
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_kept_rerun1_output_passes_and_predicate_removed_fails
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The run1 probe under unit_tests/evals/fixtures/tq200d-rerun/sql-test-writer/empty-window-database-shape/ passes;
+      a copy without 'AND buy_volume IS NOT NULL' fails.
+    must_catch:
+      - the kept output without its predicate passes (false green)
+    in_scope_files:
+      - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+      - scripts/evals/sql_test_writer_eval/sql_resolve.py
+  - name: test_sql_test_writer_gold_still_passes_with_filtered_counts
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent sql-test-writer --score-gold --results-file <tmp>
+    description: The real CLI replays the sql-test-writer gold outputs and every row passes.
+  - name: test_count_entry_lists_the_filtered_form
+    target_dir: unit_tests/evals/tq200d2iii/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The entry lists the filtered COUNT(*) form and the new failing forms, every probe file it names scores as
+      stated, and the template remedy is unchanged.
+    must_catch:
+      - entry still lists only three non-NULL forms
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md
+test_rationale: >-
+  A WHERE-filtered COUNT(*) is easy to accept too widely: a predicate anywhere in the file, a NULL test, another
+  column or a weak assertion would each turn an unfiltered count into a false green, so each has its own negative
+  probe. The kept re-run 1 file is the real output that was falsely red; its copy without the predicate proves the
+  widening is tied to the predicate.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 3. Code: scripts/evals/sql_test_writer_eval/evidence_kinds.py (non_null_re,
+  counts_rows_and_non_null). The same-statement rule is the false-green boundary: a
+  "col IS NOT NULL" anywhere else in the file must not turn an unfiltered COUNT(*) into
+  a non-NULL count. The filtered COUNT(*) does not double as the exact processed-row
+  count, matching the template remedy's "plus".
+
+  IT-PO (2026-11-02).
+    - Complexity raised from S to M: the same-statement rule needs per-query
+      classification (today the queries are joined), and the 'asserted only with >= 0'
+      clause needs each filtered query paired with the assertion on its fetched result,
+      which the SQL-side form does not do today.
+    - No overlap with the other six re-run ACs in code; shares only README and the
+      register (recount on rebase).
+
+  OPEN QUESTIONS (for the user at the final gate).
+    - OQ-2iii-1: the second Given names the kept output of the first live run and re-run 1,
+      but only re-run 1 was kept (the first live run predates PR #1386's keep-outputs). The
+      KI quotes the same test text for both runs. Recommendation: build with re-run 1 only;
+      the BA may reword the Given.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent);
+      OQ-7 (legacy test_spec, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.
+    - OQ-2iii-1 answered: build with the kept re-run 1 output only; the first live run's output was never kept.

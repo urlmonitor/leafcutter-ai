@@ -1,0 +1,363 @@
+id: TQ-200d-1-v
+components:
+  - testing_quality
+title: "The refresh-gate row passes when one of its tagged tests catches the wrong version, and the tagged tests that rightly pass under it do not block"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test-writer "refresh-gate" row, whose wrong version is "drop the
+      retry_due condition",
+    And a produced test file with four tests tagged "# covers: TQ-9201":
+      test_refresh_fires_when_both_due, test_refresh_blocked_when_retry_not_due,
+      test_refresh_blocked_when_refresh_not_due and
+      test_refresh_blocked_when_neither_due,
+    And all four pass on the fixed version, and under the wrong version only
+      test_refresh_blocked_when_retry_not_due fails,
+  When the row's wrong-version check runs the tests,
+  Then the check passes,
+    And its detail names test_refresh_blocked_when_retry_not_due as the test
+      that caught "drop the retry_due condition",
+    And the three tagged tests that pass under the wrong version are not
+      counted as blocking survivors,
+    And a file whose tagged tests all pass under the wrong version fails with
+      "not caught by the runner (survivor)",
+    And a file in which a tagged test fails on the fixed version fails the
+      check, even when another tagged test catches the wrong version,
+    And a file with no "# covers:" tagged test still fails with "no
+      '# covers: <AC-ID>' tagged test in the output",
+    And a file whose only catching test is untagged fails.
+
+  Given an acceptance criterion of real build work (not an eval row) whose
+      record names a wrong version under must_catch on two tests,
+  When the shared wrong-version runner judges a run in which one of the two
+      survives,
+  Then that verdict is unchanged by this fix: the survivor still blocks the
+      gate.
+
+  Given the kept live outputs of the 2026-11-02 first live run, re-run 1 and
+      re-run 2 for the refresh-gate row, recorded as probe fixtures,
+  When the check scores them,
+  Then the re-run 1 and re-run 2 files pass, and a copy of each with the
+      catching test removed fails (no false green),
+    And the recorded gold output for the row still passes.
+
+  Given the change is done,
+  Then the wrong_version_run entry on the test-writer assertion-kind
+      reference page states the one-catching-test rule, which tagged tests
+      are blocking and which are not, and carries a passing example with
+      more than one tagged test,
+    And the wrong-version runs reference keeps describing the build-pipeline
+      verdict as before,
+    And the drift tests that hold the reference entries equal to the kind
+      registry and to the quoted template sentences stay green,
+    And the produced-tests section of the evals README states the rule in one
+      line linking the entry,
+    And the known issue "wrong-version run requires every tagged test to
+      catch" is moved to resolved naming this AC and its proving tests, with
+      the Open/Resolved count of the testing-quality known-issue register
+      recounted,
+    And one changelog entry names this AC and the resolved known issue,
+    And no glossary term is added except through the glossary-triage flow.
+depends_on:
+  - TQ-200d-1
+  - TQ-200d-1-i
+  - TQ-200d-1-ii
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20261102-wrong-version-run-requires-every-tagged-test-to-catch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      On main since PR #1389. The per-run tagged-test table and fix direction; moved to resolved/ by this AC.
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The wrong_version_run entry (:219-236) says every tagged test gets must_catch and has a single-test example.
+  - path: docs/reference/wrong-version-runs.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Not changed. The shared runner and its verdict (survivor rule :133, result rows :88); the build-pipeline verdict
+      must not change.
+  - path: docs/reference/produced-tests-eval-assertion-kinds.md
+    relationship: relates-to
+    status: exists
+    relevance: Hub page; kind count and family split unchanged by this AC.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      'Produced-tests mode (local only)' section (:141-178) gains one rule bullet linking the entry.
+  - path: docs/known-issues/testing-quality.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Register (on main: Open 46 / Resolved 10 on 2026-11-02); counts recounted from the directory.
+  - path: docs/known-issues/README.md
+    relationship: describes
+    status: exists
+    relevance: 'Resolution convention: move to <component>/resolved/ and rename open- to resolved-.'
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+    relevance: Changelog entry via scripts/changelog/emit_entry.py.
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Not changed. Teaches several test angles (:109-122), which is why several tagged tests are expected.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-200d-1-i
+  contract: >-
+    The refresh-gate row scored by running the produced tests against the wrong version through the shared runner.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/produced_tests_runs.py
+    state: existing
+  - path: docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/known-issues/testing-quality.md
+    state: existing
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-wrong-version-run-requires-every-tagged-test-to-catch.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Fix-location decision (IT PO): the fix is on the eval side only, in judge_verdict (scripts/evals/produced_tests_runs.py
+    :265-275). scripts/build_orchestration/_wvr_verdict.py (assemble :114-143, classify_run :73-101) and wrong_version_runner.py
+    are not changed, so a must_catch survivor in real build work keeps blocking the gate. write_ac_records (:242-250)
+    keeps giving every tagged test a test_spec entry with must_catch [wrong_version], so every tagged test is in
+    scope, runs on the fixed version in the runner's baseline and runs under the wrong version.
+  - >-
+    judge_verdict passes the row when, and only when: (a) at least one result row is 'caught' for the row's wrong_version
+    from a tagged test; (b) the verdict has no reason_override (a tagged test failing on the fixed version, a stopped
+    run or an internal error - reason 'failing on the code as written' or any reason other than null or 'survivor'
+    - fails the row); (c) verdict['unfinished'] is empty; and (d) every blocking row that is not 'caught' is a 'survived'
+    row of a tagged test under the row's wrong_version. Its detail names the catching test and the wrong version
+    ("caught '<wrong version>' by <test>") and lists the tagged tests that passed under the wrong version as not
+    blocking in the eval. Every other case keeps today's failing detail, including "not caught by the runner (survivor)"
+    when all tagged tests survive and "no '# covers: <AC-ID>' tagged test in the output" (wrong_version_run :278-291
+    unchanged). An untagged catching test never counts, because only tagged tests are written to the AC records.
+  - >-
+    scripts/evals/sets/test-writer.jsonl row refresh-gate is unchanged; its recorded gold output still passes.
+  - >-
+    Unit tests never call a live model; they score recorded outputs and probe fixtures only. Kept live outputs are
+    copied by the test-writer from the kept-outputs folder of the 2026-11-02 runs (<session scratchpad>/kept_runs/run1|run2/<set>/<row>/,
+    local to the run machine, as the known issue names it) into unit_tests/evals/fixtures/tq200d-rerun/<set>/<row>/run1|run2/
+    as flat '<name>.py.recorded' files plus report.md (and transcript.jsonl where the row reads commands), the gold-output
+    form place_outputs reads, so a bare pytest never collects them. Absolute local paths in a copied file (for example
+    a sys.path line naming a user temp folder) are replaced with a neutral placeholder and nothing else is changed.
+    No committed file names the scratchpad path. If another TQ-200d re-run AC has already created a needed fixture
+    file, it is reused, not copied again. Probe fixtures for this AC: test-writer/refresh-gate/run1 and run2 (test_refresh_gate.py.recorded
+    plus report.md; run2's tests/__init__.py is not needed in the flat form). The first live run's output was not
+    kept (see notes); the copies with the catching test removed are built by the test. Tests run the real shared
+    runner against the row's fixture project (scripts/evals/sets/test-writer/projects/refresh-gate) like unit_tests/evals/test_tq200d1i_refresh_row.py.
+  - >-
+    Every changed .py file stays at or under 400 counted lines; run_agent_eval.py is not touched and does not grow;
+    no new module is added at the top of scripts/evals/. unit_tests/evals/ is at its density cap, so this AC's tests
+    go in their own subfolder (named in test_spec) with an __init__.py, like unit_tests/evals/tq200d1ii/.
+  - >-
+    DOCUMENTATION (part of done) - the wrong_version_run entry on docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+    must state: every tagged test is written with must_catch and runs on the fixed version and under the wrong version;
+    the row passes when at least one tagged test is caught and no tagged test fails on the fixed version or leaves
+    the run unfinished; tagged tests that pass under the wrong version are not blocking in the eval (they would
+    be in build work); and a passing example with more than one tagged test (the four refresh-gate tests of the
+    criteria, naming test_refresh_blocked_when_retry_not_due as the catcher), naming the probe fixture it comes
+    from. Budget <= 15 added lines on the shared page. docs/reference/wrong-version-runs.md is not edited (the build-pipeline
+    verdict is unchanged).
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md produced-tests section gains one bullet: the refresh-gate
+    row passes when one tagged test catches the wrong version; tagged tests that pass under it do not block, a tagged
+    test failing on the fixed version does; link #wrong_version_run.
+  - >-
+    DOC-DRIFT TEST: the probe fixture the entry names exists and scores as the entry states; wrong-version-runs.md
+    still states that a blocking survived row makes the reason 'survivor'; the TQ-200d-1-ii drift tests stay green.
+  - >-
+    KNOWN ISSUE: git mv docs/known-issues/testing-quality/open-low-ki-tq-20261102-wrong-version-run-requires-every-tagged-test-to-catch.md
+    to docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-wrong-version-run-requires-every-tagged-test-to-catch.md
+    (the resolved-<bucket>- rename used for the earlier TQ known issues); set its Status line to 'RESOLVED <date>
+    by TQ-200d-1-v' with the proving test files (unit_tests/evals/tq200d1v/); move its row in docs/known-issues/testing-quality.md
+    from Open to Resolved with the new link, and recount the 'Open: N (... blocker, ... high, ... low) · Resolved:
+    M' line from the directory listing, never by arithmetic on the old line (another re-run AC may have moved a
+    file first).
+  - >-
+    CHANGELOG: one entry for TQ-200d-1-v written with scripts/changelog/emit_entry.py (type manual, components [testing_quality])
+    into changelogs/, in the same change as the code, naming the one-catching-test rule of the refresh-gate row
+    and the resolved known issue KI-TQ-20261102-wrong-version-run-requires-every-tagged-test-to-catch.
+  - >-
+    GLOSSARY: any new term in the docs this AC writes reaches docs/glossary.md only through the check-glossary-coverage
+    hook and the glossary-triage flow; no entry is added by hand (CLAUDE.md).
+  - >-
+    The six 2026-11-02 known issues landed on main with PR #1389 after this branch was cut; the build branch merges
+    origin/main first so the open-low-ki-tq-20261102-*.md files and the register rows exist.
+test_spec:
+  - name: test_one_catching_tagged_test_passes_the_row
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A file with the four tagged tests of the criteria, all green on the fixed version and only test_refresh_blocked_when_retry_not_due
+      failing under the wrong version, passes wrong_version_run; the detail names that test and 'drop the retry_due
+      condition', and the three others are not counted as blocking survivors.
+    must_catch:
+      - revert the fix
+      - detail names a surviving test instead of the catching one
+    in_scope_files:
+      - scripts/evals/produced_tests_runs.py
+  - name: test_all_tagged_tests_surviving_still_fails
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A file whose tagged tests all pass under the wrong version fails with 'not caught by the runner (survivor)'.
+    must_catch:
+      - row passes with no catching test
+    in_scope_files:
+      - scripts/evals/produced_tests_runs.py
+  - name: test_tagged_test_failing_on_the_fixed_version_fails_the_row
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: >-
+      A file in which one tagged test fails on the fixed version fails the check although another tagged test catches
+      the wrong version.
+    must_catch:
+      - a baseline failure ignored when another test catches
+      - an unfinished run accepted
+    in_scope_files:
+      - scripts/evals/produced_tests_runs.py
+  - name: test_untagged_or_missing_tags_fail
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A file with no '# covers:' tagged test fails with "no '# covers: <AC-ID>' tagged test in the output"; a file
+      whose only catching test is untagged fails.
+    must_catch:
+      - an untagged catching test counted
+    in_scope_files:
+      - scripts/evals/produced_tests_runs.py
+  - name: test_build_gate_still_blocks_on_a_must_catch_survivor
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      For an AC record (not an eval row) naming a wrong version under must_catch on two tests, a run where one survives
+      gives gate_passed false with reason 'survivor' from the shared runner, as before.
+    must_catch:
+      - shared verdict loosened so a must_catch survivor no longer blocks
+    in_scope_files:
+      - scripts/build_orchestration/_wvr_verdict.py
+      - scripts/build_orchestration/wrong_version_runner.py
+  - name: test_kept_refresh_gate_reruns_pass_and_catcher_removed_fails
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The run1 and run2 probe fixtures under unit_tests/evals/fixtures/tq200d-rerun/test-writer/refresh-gate/ pass
+      wrong_version_run; a copy of each with the catching test removed fails.
+    must_catch:
+      - a kept output without its catching test passes (false green)
+    in_scope_files:
+      - scripts/evals/produced_tests_runs.py
+  - name: test_test_writer_gold_refresh_gate_still_passes
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --row refresh-gate --results-file
+      <tmp>
+    description: The real CLI replays the refresh-gate gold output and the row passes with both halves.
+  - name: test_wrong_version_run_entry_states_the_one_catching_test_rule
+    target_dir: unit_tests/evals/tq200d1v/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The entry states the rule and which tagged tests block, its passing example has more than one tagged test
+      and names a probe fixture that exists, wrong-version-runs.md still holds the survivor rule, and the README
+      bullet links #wrong_version_run.
+    must_catch:
+      - entry still says a single test must catch with every tagged test blocking
+    in_scope_files:
+      - docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
+      - scripts/evals/README.md
+test_rationale: >-
+  The fix loosens how the eval reads a verdict that also gates real builds, so the tests pin both sides: the eval
+  passes with one catching test and still fails on all-survivors, on a fixed-version failure and on an untagged
+  catcher, while the shared runner's must_catch survivor still blocks build work. The kept re-run files and their
+  catcher-removed copies prove the change on the outputs that were falsely red.
+origin_agent: business-analyst
+created: 2026-11-02
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the 2026-11-02 eval re-run
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each naming the functions
+      to change and each doc update with what it must state), delivers_to/expects_from, doc_links with checked status,
+      test_required, test_spec in the legacy form (must_catch with in_scope_files; user decision OQ-7 on the TQ-200d
+      tree, no test_intent), test_rationale, change_target, risk_surface and package_surface, and readiness reviewed.
+      Criteria, title and depends_on untouched.
+    by: it-po
+    at: '2026-11-02'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  Work item 2. Code: scripts/evals/produced_tests_runs.py (write_ac_records,
+  judge_verdict, wrong_version_run) and possibly scripts/build_orchestration/_wvr_verdict.py.
+
+  BA addition (unasked-for, keep): the second scenario. The request names "the shared
+  wrong-version runner verdict"; that verdict also gates real builds, where every
+  must_catch test that survives must keep blocking. The fix is to be made on the
+  eval side (which entries carry must_catch / are blocking, or how the eval judges
+  the verdict), never by loosening the build gate. If the IT PO finds the shared
+  verdict must change, it needs its own AC under the build-orchestration tree.
+
+  The "tagged test fails on the fixed version" clause keeps a broken test set from
+  passing because one test happens to fail under the wrong version.
+
+  IT-PO (2026-11-02).
+    - Decision: eval-side fix in judge_verdict; the shared verdict is not touched, so no
+      build-orchestration AC is needed. The alternative in the KI (must_catch only on the
+      test meant to catch, or to-run-later extras) was not chosen: it needs the eval to
+      guess the catching test before the run and would drop the other tagged tests from the
+      fixed-version baseline, which the 'tagged test fails on the fixed version' clause needs.
+    - Overlap: TQ-200d-5-iv also edits produced_tests_runs.py (a tolerant delete helper
+      next to remove_tree :133-141); different functions, no ordering needed. Same reference
+      page as TQ-200d-1-iv and -1-vi (budget <= +15 lines here).
+
+  OPEN QUESTIONS (for the user at the final gate).
+    - OQ-1v-1: the third Given names the first live run's refresh-gate output as a probe
+      fixture, but only re-run 1 and re-run 2 were kept (the first live run predates the
+      keep-outputs change of PR #1386). The Then clause names only the re-run 1 and re-run
+      2 files. Recommendation: build with the two kept re-runs and treat the first-live-run
+      mention as covered by them (same row, same three survivors per the KI table); the BA
+      may reword the Given.
+    - USER DECISIONS carried over: OQ-6 (docs stay with this AC's implementing agent);
+      OQ-7 (legacy test_spec, no test_intent).
+
+  USER DECISIONS (2026-11-03, final gate).
+    - Approved, priority high. Build order: TQ-200d-5-iv first, then 1-iv, 1-v, 1-vi, 2-iii, 4-v, 4-vi.
+    - OQ-1v-1 answered: build with the kept re-run 1 and re-run 2 outputs only; the first live run's output was never kept.
