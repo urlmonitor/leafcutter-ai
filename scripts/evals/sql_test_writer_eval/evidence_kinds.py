@@ -23,7 +23,7 @@ from pathlib import Path
 
 import produced_tests_runs as runs
 from produced_tests_runs import RowContext
-from sql_test_writer_eval.sql_resolve import executed_queries
+from sql_test_writer_eval.sql_resolve import executed_pairs
 
 LATER_DIR = ("leafcutter", "to-run-later")
 ROW_COUNT_RE = re.compile(r"count\(\s*(?:\*|1)\s*\)(?!\s*filter)")
@@ -76,10 +76,15 @@ NAME_RE = re.compile(r"\b[A-Za-z_]\w*\b")
 NONE_CHECK_RE = re.compile(r"is\s+not\s+None|!=\s*None")
 
 
-def _equality_statements(tree: ast.AST) -> list[str]:
-    """The source of every equality assertion: ``assert a == b`` (each ``==`` of its test) and ``assertEqual(a, b)``."""
+def _equality_statements(tree: ast.AST, lines: tuple[int, int] | None = None) -> list[str]:
+    """The source of every equality assertion: ``assert a == b`` (each ``==`` of its test) and ``assertEqual(a, b)``.
+
+    With *lines* ``(after, before)`` only assertions starting strictly between those line numbers are read.
+    """
     found: list[str] = []
     for node in ast.walk(tree):
+        if lines is not None and not lines[0] < getattr(node, "lineno", 0) < lines[1]:
+            continue
         if isinstance(node, ast.Assert):
             found += [ast.unparse(c) for c in ast.walk(node.test) if isinstance(c, ast.Compare) and any(isinstance(o, ast.Eq) for o in c.ops)]
         elif isinstance(node, ast.Call) and getattr(node.func, "attr", "") in ("assertEqual", "assertEquals") and len(node.args) >= 2:
@@ -93,9 +98,45 @@ def _python_side_counts(tree: ast.AST) -> dict[str, bool]:
     kinds = set()
     for text in _equality_statements(tree):
         expanded = NAME_RE.sub(lambda m: values.get(m.group(0), m.group(0)), text)
-        if "len(" in expanded or "sum(" in expanded:
+        if ("len(" in expanded or "sum(" in expanded) and "fetchone" not in expanded:  # a fetched scalar is a SQL count, not rows
             kinds.add("non_null" if NONE_CHECK_RE.search(expanded) else "rows")
     return {"rows": "rows" in kinds, "non_null": "non_null" in kinds}
+
+
+def _is_row_count(query: str) -> bool:
+    """The query counts rows (``count(*)`` / ``count(1)`` not followed by ``filter``)."""
+    return bool(ROW_COUNT_RE.search(query))
+
+
+def _filtered_count(query: str, column: str) -> bool:
+    """A ``count(*)`` / ``count(1)`` whose own WHERE holds ``[alias.]<column> is not null`` (first predicate or after AND)."""
+    predicate = rf"(?:where|and)\s+(?:\w+\.)?\"?{re.escape(column)}\"?\s+is\s+not\s+null"
+    return _is_row_count(query) and bool(re.search(rf"\b{predicate}", query))
+
+
+def _asserted_equal(pair: tuple[str, ast.Call, ast.AST | None], later: int) -> bool:
+    """The result fetched by the call is asserted with an equality before the next execute (line *later*)."""
+    _, call, fn = pair
+    if fn is None:
+        return False
+    lines = (call.end_lineno or call.lineno, later)
+    values = {t.targets[0].id: ast.unparse(t.value) for t in ast.walk(fn) if isinstance(t, ast.Assign) and len(t.targets) == 1
+              and isinstance(t.targets[0], ast.Name) and lines[0] < t.lineno < lines[1]}
+    texts = (NAME_RE.sub(lambda m: values.get(m.group(0), m.group(0)), s) for s in _equality_statements(fn, lines))
+    return any("fetch" in text for text in texts)
+
+
+def _classify(pairs: list[tuple[str, ast.Call, ast.AST | None]], column: str) -> tuple[bool, str]:
+    """Whether a query is an exact-asserted filtered non-NULL count, and the joined text of the other queries."""
+    starts = sorted(c.lineno for _, c, _ in pairs)
+    kept, filtered = [], False
+    for pair in pairs:
+        if _filtered_count(pair[0], column):
+            later = min((n for n in starts if n > pair[1].lineno), default=10**9)
+            filtered = filtered or _asserted_equal(pair, later)
+        else:
+            kept.append(pair[0])
+    return filtered, " ".join(kept)
 
 
 def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
@@ -109,9 +150,11 @@ def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
         return _outcome(False, "", f"{path.name} does not parse, so its SQL cannot be checked: {exc}")
     column = spec["column"]
     from_view = re.compile(rf"\b(?:from|join)\s+(?:\"?\w+\"?\.)?\"?{re.escape(spec['view'])}\"?(?!\w)")
-    sql = " ".join(q for q in executed_queries(tree) if from_view.search(q))
-    python = _python_side_counts(tree) if sql.strip() else {"rows": False, "non_null": False}
-    found = {"processed rows": bool(ROW_COUNT_RE.search(sql)) or python["rows"], f"non-NULL {column} values": bool(non_null_re(column).search(sql)) or python["non_null"]}
+    pairs = [p for p in executed_pairs(tree) if from_view.search(p[0])]
+    filtered, sql = _classify(pairs, column)
+    python = _python_side_counts(tree) if pairs else {"rows": False, "non_null": False}
+    found = {"processed rows": bool(ROW_COUNT_RE.search(sql)) or python["rows"],
+            f"non-NULL {column} values": filtered or bool(non_null_re(column).search(sql)) or python["non_null"]}
     missing = [what for what, ok in found.items() if not ok]
     return _outcome(not missing, f"the SQL counts the processed rows and the non-NULL {column} values",
                     "the SQL counts no " + " and no ".join(missing) + ", so an empty or all-NULL window passes it")

@@ -17,16 +17,16 @@ related_docs:
 
 # KI-TQ-20261102-sql-non-null-count-misses-count-star-where-not-null — a WHERE-filtered COUNT(*) is not read as a non-NULL count
 
-> Filed 2026-11-02. Index: [testing-quality.md](../testing-quality.md). Filename severity is the
+> Filed 2026-11-02. Index: [testing-quality.md](../../testing-quality.md). Filename severity is the
 > three-level index bucket (`low`); the original grading is the `**Severity:**` line below.
 
 - **Severity:** low. One SQL form of a correct non-NULL count is rejected, so the
   `empty-window-database-shape` row is falsely red when the agent picks that form; other forms
   pass.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-2-iii. Proved by unit_tests/evals/tq200d2iii/ (test_tq200d2iii_filtered_count.py, test_tq200d2iii_reach_docs.py).
 - **Occurrences:** 2 (2026-11-02 first live run and re-run 1, Windows 11, main `8248ac7a`).
   Re-run 2 crashed before scoring (see
-  [KI-TQ-20261102-eval-temp-cleanup-error-crashes-the-run](open-low-ki-tq-20261102-eval-temp-cleanup-error-crashes-the-run.md));
+  [KI-TQ-20261102-eval-temp-cleanup-error-crashes-the-run](../open-low-ki-tq-20261102-eval-temp-cleanup-error-crashes-the-run.md));
   re-runs 3 and 4 passed because the agent counted the fetched rows in Python
   (`self.assertEqual(len(non_null_volumes), len(seeded))`,
   `self.assertEqual(sum(1 for v in values if v is not None), 3)`).
@@ -81,5 +81,5 @@ first live run (`../rerun_score/sql-test-writer.json`) failed the same kind with
   `docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md` (:61-79), whose "Passes
   when" lists the three accepted forms, and add the WHERE form as a passing example.
 
-**Related.** [KI-TQ-20261025-sql-test-writer-eval-residual-misreads](open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md)
+**Related.** [KI-TQ-20261025-sql-test-writer-eval-residual-misreads](../open-low-ki-tq-20261025-sql-test-writer-eval-residual-misreads.md)
 records `count(all col)` as another form `non_null_re` misses.
