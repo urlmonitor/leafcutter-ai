@@ -25,7 +25,6 @@ from ._bp1500d2_support import (
     MANIFEST_NAME,
     copy_project,
     load_record,
-    location_keyed,
     new_scratch,
     scrubbed_env,
 )
@@ -169,7 +168,12 @@ def test_bp_1500d_4_three_run_control_remove_substitute_restore_changes_the_verd
     rc3, out3 = run_check(project, name)
     assert rc3 == rc1 and not _could_not_read(out3)
 
-    location_keyed(project)  # (4) substitute record keyed to where it is not read from
+    # (4) substitute record keyed to a location it is not read from: absolute
+    # keys under a folder that does not exist, so none of them resolves here.
+    record = json.loads(good)
+    elsewhere = (project.parent / "written-elsewhere").resolve()
+    record["output_mappings"] = {(elsewhere / k).as_posix(): v for k, v in record["output_mappings"].items()}
+    rec.write_text(json.dumps(record, indent=2), encoding="utf-8")
     assert rec.read_bytes() != good
     rc4, out4 = run_check(project, name)
     assert rc4 != rc1 and _could_not_read(out4), out4[-500:]

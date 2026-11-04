@@ -443,7 +443,7 @@ def _load_readable_record() -> tuple[Path | None, dict | None, int | None]:
     manifest = _load_manifest(manifest_path)
     if not isinstance(manifest, dict):
         reason = "the record file is present but is not valid JSON"
-    elif isinstance(manifest.get("output_mappings"), dict) and _location_keyed_keys(manifest["output_mappings"]):
+    elif isinstance(manifest.get("output_mappings"), dict) and _location_keyed_keys(manifest["output_mappings"], manifest_path.parent):
         reason = "the record file is present but its entries are keyed to the location it was written in"
     else:
         return manifest_path, manifest, None

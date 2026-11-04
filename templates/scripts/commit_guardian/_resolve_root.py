@@ -309,22 +309,35 @@ COULD_NOT_READ_EXIT = 3  # record absent: distinct from 0 (all-clear) and 1 (dri
 UNREADABLE_RECORD_EXIT = 2  # record present but unreadable (INDETERMINATE)
 
 
-def location_keyed_keys(output_mappings: dict) -> list[str]:
+def is_location_keyed(key: str) -> bool:
+    """Return True when a record key is absolute (POSIX or drive-lettered) or
+    steps outside the project with a ``..`` segment (BP-1500d-2, BP-1500d-4).
+
+    Args:
+        key: A record ``output_mappings`` key.
+
+    Returns:
+        True when the key is not project-relative.
+    """
+    norm = str(key).replace("\\", "/")
+    return norm.startswith("/") or norm[1:2] == ":" or ".." in norm.split("/")
+
+
+def location_keyed_keys(output_mappings: dict, project: Path) -> list[str]:
     """Return record keys that only resolve where the record was written.
+
+    A location-keyed key that still resolves from ``project`` (the record is
+    being read where it was written) is not counted, matching BP-1500d-2.
 
     Args:
         output_mappings: The record's ``output_mappings`` section.
+        project: The folder the record is being read in.
 
     Returns:
-        Keys that are absolute (POSIX or drive-lettered) or step outside the
-        project with a ``..`` segment; empty when the record is portable.
+        Location-keyed keys that do not resolve from ``project``; empty when
+        the record can be read here.
     """
-    bad = []
-    for key in output_mappings:
-        norm = str(key).replace("\\", "/")
-        if norm.startswith("/") or norm[1:2] == ":" or ".." in norm.split("/"):
-            bad.append(key)
-    return bad
+    return [k for k in output_mappings if is_location_keyed(k) and not (project / k).exists()]
 
 
 def report_could_not_read(gate: str, project: Path, reason: str, present: bool = False) -> int:
