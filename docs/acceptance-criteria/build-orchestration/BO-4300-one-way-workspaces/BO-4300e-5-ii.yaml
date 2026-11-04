@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -64,7 +64,7 @@ declared_files:
 it_requirements:
 - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py asserts exactly six rows in "Refusals of remove" and a fixed
   tuple of messages, so it is updated in the same change as the pages; its scan of the maker sources also covers
-  templates/scripts/worktree_answer.py and templates/scripts/worktree_clearing.py, so a code or message the pages
+  templates/scripts/worktree_answer.py and templates/scripts/worktree_remove_half.py, so a code or message the pages
   name is proven to be emitted.
 - The reference names each new or changed answer's code, fields and message exactly as the maker emits them after
   BO-4300e-2-ix to BO-4300e-2-xii (among them the half-cleared refusal of ensure and locate, the stopped-part-way
@@ -158,7 +158,7 @@ test_spec:
     framework: pytest
     type: unit
     angle: criterion
-    description: The reference lists HALF_CLEARED (ensure and locate, with remnant_path and no workspace_path), the stopped-part-way wording of the PROCESS_HOLDS_FILES refusal, the unreadable-repository refusal and the record-less half-cleared refusal, each once, by code and fields. Every code, field and message opening it documents must be found in the maker sources (worktree_answer.py, worktree_remove.py, worktree_remove_checks.py and worktree_clearing.py), and the count-of-six-rows assertion of the BO-4300e-5-i test must be updated with it. Both pages carry a last_updated of the date of the change.
+    description: The reference lists HALF_CLEARED (ensure and locate, with remnant_path and no workspace_path), the stopped-part-way wording of the PROCESS_HOLDS_FILES refusal, the unreadable-repository refusal and the record-less half-cleared refusal, each once, by code and fields. Every code, field and message opening it documents must be found in the maker sources (worktree_answer.py, worktree_remove.py, worktree_remove_checks.py and worktree_remove_half.py), and the count-of-six-rows assertion of the BO-4300e-5-i test must be updated with it. Both pages carry a last_updated of the date of the change.
     proves_clause: the reference listing the maker's answer codes and fields describes each new or changed answer by its code and by the fields it carries
     code_file: docs/reference/workspace-maker-answer.md
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
@@ -208,6 +208,9 @@ amended_by:
   - reason: "user decision 2026-11-03 (final gate): the state diagram docs/architecture/diagrams/c3-031-workspace-request-states.md is updated in this record with the half-cleared state and the HALF_CLEARED refusal; no separate diagram record."
     by: user
     at: "2026-11-03"
+  - reason: "the module planned as templates/scripts/worktree_clearing.py shipped as templates/scripts/worktree_remove_half.py (PR #1395); the source scan names the shipped file, and the count of rows in Refusals of remove is eight, not six."
+    by: orchestrator
+    at: "2026-11-04"
 superseded_by: null
 covered_by: []
 implemented_by: []
