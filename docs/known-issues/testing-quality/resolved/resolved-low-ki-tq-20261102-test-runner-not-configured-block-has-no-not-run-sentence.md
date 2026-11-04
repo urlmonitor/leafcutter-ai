@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-11-02'
-last_updated: '2026-11-02'
+last_updated: '2026-11-04'
 components:
   - testing_quality
 related_docs:
@@ -21,7 +21,7 @@ related_docs:
 
 - **Severity:** low. The row's pass depends on wording the agent adds on its own; a report that
   follows the template to the letter is falsely red. The outcome flips between runs.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-4-v. Proved by unit_tests/agents/test_runner_prompt/test_tq_200d_4_v.py and unit_tests/evals/tq200d4v/.
 - **Occurrences:** 1 failure (2026-11-02 first live run, Windows 11, main `8248ac7a`); re-runs 1
   and 2 passed.
 - **First seen:** 2026-11-02 · **Last seen:** 2026-11-02
