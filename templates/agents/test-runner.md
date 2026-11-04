@@ -153,6 +153,7 @@ address:
 
   testing_context.db_connection_test is not configured. Set it in this
   project's skills_config.json before running database tests.
+  The database tests were not run.
   ```
 - `invalid` / `config_error` — stop and emit the checker's `message` verbatim
   (it never contains the raw configured value or a credential).
