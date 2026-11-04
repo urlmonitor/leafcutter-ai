@@ -13,7 +13,7 @@ related_docs:
   - docs/known-issues/README.md
   - docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
   - docs/reference/produced-tests-eval-assertion-kinds-database-setting.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md
 ---
 
 # KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording — report checks the template gives the agent no reason to meet
@@ -81,7 +81,7 @@ first live run results in `../rerun_score/test-writer.json`.
 
 The agent-side weakness seen on these rows (the `empty-window` and `presence-is-not-correctness`
 reports skip the Completion Report format, and no row checks it) is recorded in
-[KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts](open-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md).
+[KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts](resolved/resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md).
 
 ## Fix direction
 

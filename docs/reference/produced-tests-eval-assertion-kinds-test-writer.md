@@ -61,7 +61,7 @@ Lets a reader look up the ten assertion kinds that read the test files and the c
 
 **Reads:** the produced test file named by `file`, parsed and not run.
 
-**Passes when:** the file asserts both an exact processed-row count and a non-NULL count. A count is an `assert` that compares a call of the bare function `len`, `sum` or `count` (a method call such as `values.count(1)` is not one), or a name assigned from such a call, on the left, with an integer on the right. Without a `None` in the expression only `==` is an exact processed-row count. With a `None` in it, `==`, `> n` for `n` of 0 or more, and `>= n` for `n` of 1 or more are a non-NULL count.
+**Passes when:** the file asserts both an exact processed-row count and a non-NULL count. Bare `assert` statements and the unittest calls `assertEqual`/`assertEquals`, `assertTrue(<comparison>)`, `assertGreater` and `assertGreaterEqual` are read; `assertTrue` of a non-comparison and `assertIsNotNone` state no count. A count compares a call of the bare function `len`, `sum` or `count` (a method call such as `values.count(1)` is not one), or a name assigned from such a call, with an integer; for `==` it may stand on either side. An exact count may also compare against a non-literal integer expression such as `len(seed)`, but never against the same expression. Without a `None` in the expression only `==` is an exact processed-row count. With a `None` in it, `==`, `> n` for `n` of 0 or more, and `>= n` for `n` of 1 or more are a non-NULL count (the same bounds as for `assert`, with `n` a literal).
 
 **Fails when:** either count is missing, or the file is absent or does not parse. The detail starts with "the test asserts no".
 
@@ -74,7 +74,19 @@ assert processed == 3
 assert non_null == 3
 ```
 
-**Failing example:** `assert all(value >= 0 for value in values)` alone fails, and so does the example above with `assert non_null >= 0` in place of the last line, because that bound admits an all-NULL window.
+```python
+import unittest
+
+
+class T(unittest.TestCase):
+    def test_x(self):
+        window = [1.0, 0.0, 2.5]
+        volumes = list(window)
+        self.assertEqual(len(volumes), len(window))
+        self.assertEqual(sum(v is not None for v in volumes), len(window))
+```
+
+**Failing example:** `assert all(value >= 0 for value in values)` alone fails, and so does the example above with `assert non_null >= 0` in place of the last line, because that bound admits an all-NULL window. `self.assertGreaterEqual(non_null, 0)` fails the same way, and `self.assertEqual(len(volumes), len(volumes))` is no count because it compares an expression with itself and holds for an empty window.
 
 **Template sentence:**
 
@@ -88,7 +100,7 @@ assert non_null == 3
 
 **Reads:** the produced test file named by `file`, parsed and not run.
 
-**Passes when:** an `assert` holds an `==` comparison with a numeric literal (not a boolean) that an assignment elsewhere in the file also holds. Numbers inside `assert` statements are not seeds.
+**Passes when:** an assertion holds an `==` comparison with a numeric literal (not a boolean) that an assignment elsewhere in the file also holds. A bare `assert` and the unittest calls `assertEqual`/`assertEquals` (the seeded value on either side) and `assertTrue(<comparison>)` are read. Numbers inside assertion calls and `assert` statements are not seeds.
 
 **Fails when:** no `==` assertion compares with an assigned numeric literal, or the file is absent or does not parse.
 
@@ -100,7 +112,18 @@ result = live_values(["AAA", "BBB"], feed)
 assert result["AAA"] == 1.5
 ```
 
-**Failing example:** `assert result["AAA"] is not None` fails (presence, not correctness), and so does `assert result["AAA"] == 9.0` when no assignment holds `9.0`.
+```python
+import unittest
+
+
+class T(unittest.TestCase):
+    def test_x(self):
+        feed = {"AAPL": 190.12, "MSFT": 410.55}
+        result = dict(feed)
+        self.assertEqual(result["AAPL"], 190.12)
+```
+
+**Failing example:** `assert result["AAA"] is not None` fails (presence, not correctness), and so does `assert result["AAA"] == 9.0` when no assignment holds `9.0`. `self.assertIsNotNone(result["AAPL"])` alone fails too.
 
 **Template sentence:**
 
