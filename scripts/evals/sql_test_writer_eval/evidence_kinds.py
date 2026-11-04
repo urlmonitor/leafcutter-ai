@@ -109,9 +109,13 @@ def _is_row_count(query: str) -> bool:
 
 
 def _filtered_count(query: str, column: str) -> bool:
-    """A ``count(*)`` / ``count(1)`` whose own WHERE holds ``[alias.]<column> is not null`` (first predicate or after AND)."""
+    """A ``count(*)`` / ``count(1)`` whose own WHERE holds ``[alias.]<column> is not null`` (first predicate or after AND).
+
+    A ``filter (where ...)`` clause is not the statement's WHERE, so it is ignored here.
+    """
     predicate = rf"(?:where|and)\s+(?:\w+\.)?\"?{re.escape(column)}\"?\s+is\s+not\s+null"
-    return _is_row_count(query) and bool(re.search(rf"\b{predicate}", query))
+    statement = re.sub(r"filter\s*\([^)]*\)", "", query)
+    return _is_row_count(query) and bool(re.search(rf"\b{predicate}", statement))
 
 
 def _asserted_equal(pair: tuple[str, ast.Call, ast.AST | None], later: int) -> bool:
