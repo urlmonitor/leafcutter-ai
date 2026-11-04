@@ -56,7 +56,8 @@ async def _trip(goal: str | None) -> tuple[Any, Any, str]:
     state: Any = {**done, "work_items": {root_id: stuck_root, child.id: reopened},
                   "budgets": Budgets(jev_calls=99), "interaction_queue": [], "outcome": None,
                   "halt_reason": None}
-    update: Any = await schedule(state, types.SimpleNamespace(context=rig.runtime()))
+    runtime: Any = types.SimpleNamespace(context=rig.runtime())
+    update: Any = await schedule(state, runtime)
     merged: Any = {**state, **update,
                    "work_items": {**state["work_items"], **update["work_items"]}}
     return merged, done["requests"][child.request_id], " | ".join(

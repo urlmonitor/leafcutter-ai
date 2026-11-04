@@ -124,20 +124,21 @@ def host_operations_available(budgets: Budgets, limits: LimitsConfig) -> int:
 
 
 def retry_allowed(budgets: Budgets, work_item_id: str, error: ErrorInfo | None,
-                  limits: LimitsConfig, attempt_seconds: float | None = None) -> bool:
+                  limits: LimitsConfig, attempt_seconds: object = None) -> bool:
     """Return True if a failed result may be retried: transient error and retries left.
 
     A `timeout` failure is also retried only while one more full capability timeout still fits
     below `limits.max_active_seconds` (the time already charged plus `attempt_seconds`, the
     time of the attempt being settled, which is not yet charged); other retryable failures keep
-    only the `limits.max_retries` bound. An unknown attempt time (None) counts as one full
-    capability timeout, so a result without its elapsed time never earns an extra retry.
+    only the `limits.max_retries` bound. An unknown attempt time (missing or not a number)
+    counts as one full capability timeout, so such a result never earns an extra retry.
     """
     if error is None or not error.retryable:
         return False
     if error.code == "timeout":
-        attempt = limits.capability_timeout_seconds if attempt_seconds is None else attempt_seconds
-        spent = budgets.active_seconds + float(attempt)
+        known = isinstance(attempt_seconds, (int, float)) and not isinstance(attempt_seconds, bool)
+        attempt = float(attempt_seconds) if known else limits.capability_timeout_seconds  # type: ignore[arg-type]
+        spent = budgets.active_seconds + attempt
         if spent + limits.capability_timeout_seconds >= limits.max_active_seconds:
             return False
     return budgets.retries.get(work_item_id, 0) < limits.max_retries
