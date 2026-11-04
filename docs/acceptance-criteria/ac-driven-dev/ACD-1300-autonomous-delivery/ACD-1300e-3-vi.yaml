@@ -2,8 +2,8 @@ id: ACD-1300e-3-vi
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "A declined clearing of a pause record is stated in the run's result, not only in a log line"
 component: ac-driven-dev
 level: L3
@@ -131,6 +131,100 @@ test_intent:
       the bug symptom (run wf_4a8567df-505, 2026-10-30: the clearing replied "My role is limited to the two workspace actions, create and remove", only a warning line was logged, and the run's pause record was still on disk after the run had moved past its decision point) must not occur
     needs_test: true
     reason: This is the recorded failure, and it returns if the decline goes back to a log line only.
+test_spec:
+  - name: "test_declined_clear_result_states_record_not_cleared"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Starting plan-feature.js through the E2 harness with a resume answer applied and every clear attempt declined: the terminal result states that the record was not cleared, names the clear step and the declining agent, quotes the reason and gives <workspace_path>/.leafcutter/paused_runs/<run_id>.json."
+    proves_clause: "the run's result states that run R's pause record was not cleared, names the declined step and the agent that declined it, quotes the stated reason, and gives the record's location on disk"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_statement_names_passed_gate_and_when_deletion_is_safe"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The statement says the record still names the gate the run has passed and can be deleted once nothing is waiting on the run, with the gate id and run id filled in."
+    proves_clause: "it states that the record still names a decision point the run has already passed, and that the record can be deleted once nothing is waiting on run R"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_nothing_in_the_result_reports_the_record_as_cleared"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The terminal result carries no cleared-true field and no sentence reporting the record cleared when the clear was declined, failed, or its read-back finds the record."
+    proves_clause: "nothing in the result reports the record as cleared"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_record_stays_on_disk_unchanged_and_clear_is_sent_once"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "The record file written by the real pause_store.py is hashed before and after; it is identical, and exactly one clear command was dispatched, to shell-runner only."
+    proves_clause: "the record is left on disk unchanged, and the clearing is not sent to any other agent or done by any other means"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_answer_and_committed_criteria_stay_as_they_were"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The run continues past the gate exactly as after a confirmed clear: the same approval-apply and commit dispatches occur and the applied decision is unchanged."
+    proves_clause: "the person's answer and the criteria committed for that stage stay as they were"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_confirmed_clear_carries_no_not_cleared_statement"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "When the clear runs and clear-pause-record-verify finds no record, the terminal result carries no such statement."
+    proves_clause: "when the clearing runs and its read-back confirms no record remains, the result carries no such statement"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_declined_clear_symptom_run_wf_4a8567df_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The 2026-10-30 reply (My role is limited to the two workspace actions ...) on the clear must reach the terminal result, not only a log line."
+    proves_clause: "the bug symptom (run wf_4a8567df-505, 2026-10-30: the clearing replied \"My role is limited to the two workspace actions, create and remove\", only a warning line was logged, and the run's pause record was still on disk after the run had moved past its decision point) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "keep the declined clear as a log line only"
+      - "report the record cleared before the clear-pause-record-verify read-back confirms it"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "resolveGate holds the clear and its verification, today ending in a log line only, which the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -138,6 +232,9 @@ amended_by:
     date: '2026-11-04'
     by: it-po
     run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

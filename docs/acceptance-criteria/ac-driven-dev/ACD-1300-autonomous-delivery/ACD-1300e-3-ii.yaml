@@ -2,8 +2,8 @@ id: ACD-1300e-3-ii
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "Each pause-record step is one plain command given to the agent whose only job is to run one command"
 component: ac-driven-dev
 level: L3
@@ -211,6 +211,114 @@ test_intent:
       the bug symptom ("on run finalize-gate-child-1, 2026-10-25, the gate-ba pause-store write was sent to the worktree agent as one line chaining a directory change, a fallback and a nested command; it declined both because writing a pause record is neither create nor remove and because the line was a compound command, so no record was written and the run ended pause_persist_failed and could not be resumed") must not occur
     needs_test: true
     reason: This is the recorded failure, and it returns if either the compound line or the old executor comes back.
+test_spec:
+  - name: "test_every_pause_store_command_is_one_plain_absolute_command"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "For every pause-store dispatch of a pause and a resume, the command line has one invocation of pause_store.py, with absolute double-quoted script and store paths, and none of cd, &&, ||, ;, a pipe, $(...), a backtick, a VAR=value prefix or a line break."
+    proves_clause: "each request carries exactly one command line, which names every location it acts on by absolute path and does not change directory, join two commands, branch on the result of an earlier command, or run a nested command"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "keep the compound line (cd, && and a nested git rev-parse) and switch only the agent"
+      - "the script path is relative to the working directory instead of absolute"
+  - name: "test_pause_store_requests_go_to_shell_runner_only"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "Every pause-store dispatch has agentType shell-runner; none goes to worktree-agent, status-checker or command-step-runner, and the prompt holds only the command and the run-unchanged instruction."
+    proves_clause: "each request goes to the agent whose only role is to run one given command unchanged and relay its output word for word, and to no agent whose role is creating and removing workspaces, investigating ticket state, or running the fast lane's own command steps"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "the pause-persist site alone goes back to worktree-agent"
+  - name: "test_step_result_is_read_from_the_relayed_stdout"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The pause-store JSON each step acts on is parsed from the stdout string of a {command, exit_status, stdout, stderr} reply; a reply carrying the JSON anywhere else (a field other than stdout) is not accepted as the record."
+    proves_clause: "the result each step acts on is read from that one command's own outcome and output as relayed in the reply"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_leftover_record_scan_follows_the_same_two_rules"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "A resume whose orphan scan lists a candidate dispatches orphan-scan-pause-record with a single plain command to shell-runner."
+    proves_clause: "any further step of the run that reads the pause store (for example a scan for leftover pause records) follows the same two rules"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_pause_and_resume_use_the_maker_workspace_store"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "The pause-persist command captured from a run with args.workspace at a temporary directory (holding a copy of the installed pause_store.py) is run for real and writes <workspace_path>/.leafcutter/paused_runs/<run_id>.json; the captured read command, run for real, returns that record and a resume started from the same workspace applies the answer."
+    proves_clause: "the pause ends with the run reported as waiting and its record present in that workspace's pause store, and a resume started from that same workspace finds the record and applies the person's answer"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_run_started_from_linked_worktree_uses_the_project_store"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "boundary"
+    description: "Run once with the process in the project root and once in a linked git worktree: both build identical pause-store commands (the store comes from workspace_path), and running them writes to and reads from the project's own store."
+    proves_clause: "a run started from a linked worktree of the project still writes to and reads from the project's own pause store, exactly as ACD-2100a-4 requires"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_finalize_gate_child_1_compound_line_decline_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "With shell-runner scripted to decline any command containing cd, &&, ||, ;, |, $( or a backtick and to run plain ones, the gate-ba pause ends paused_awaiting_input with the record written; no decline reaches pause_persist_failed."
+    proves_clause: "the bug symptom (\"on run finalize-gate-child-1, 2026-10-25, the gate-ba pause-store write was sent to the worktree agent as one line chaining a directory change, a fallback and a nested command; it declined both because writing a pause record is neither create nor remove and because the line was a compound command, so no record was written and the run ended pause_persist_failed and could not be resumed\") must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "keep the compound line and switch only the agent to shell-runner"
+  - name: "test_pause_store_steps_reachable_from_the_workflow_entry"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Starting plan-feature.js through the E2 harness at the business-analyst decision point with no person attached dispatches pause-persist and pause-persist-verify as shell-runner commands and returns paused_awaiting_input."
+    proves_clause: "the pause ends with the run reported as waiting and its record present in that workspace's pause store, and a resume started from that same workspace finds the record and applies the person's answer"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It builds and dispatches every pause-store command through buildPauseStoreCommand, the shape the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -218,6 +326,9 @@ amended_by:
     date: '2026-11-04'
     by: it-po
     run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

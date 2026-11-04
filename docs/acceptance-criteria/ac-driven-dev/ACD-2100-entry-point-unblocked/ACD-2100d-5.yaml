@@ -1,8 +1,8 @@
 id: ACD-2100d-5
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "A run started exactly as the installed command or skill says reaches triage with no step run by hand"
 component: ac-driven-dev
 level: L2
@@ -149,6 +149,88 @@ test_intent:
       the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started with only the maker's answer, as the command and skill say, the run returned status error "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no agent) must not occur
     needs_test: true
     reason: This is the recorded failure, and it returns if the verdict becomes required again.
+test_spec:
+  - name: "test_start_with_only_the_makers_answer_reaches_triage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "plan-feature.js is started through the E2 harness with userInput 'Add a CSV export to the parts list' and workspace (the maker's answer) only; workspace_setup_permission is passed as None so the harness default verdict cannot hide the defect; stage-0-triage is dispatched."
+    proves_clause: "the run passes every check made before triage, and the triage agent is dispatched for that request"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_no_missing_verdict_halt_when_the_makers_answer_is_supplied"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "With workspace supplied and no verdict the result is not an error naming a missing verdict or argument; with only a verdict (no workspace) the run still reaches triage; with neither the run halts before any dispatch."
+    proves_clause: "the run does not end with a report that a startup verdict or any other argument was not supplied"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "drop the args.workspace condition"
+      - "drop the workspace_setup_permission condition"
+      - "the gate always allows"
+  - name: "test_arguments_come_from_the_installed_command_text_only"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The arguments are read from Step 2 of the installed /plan-feature command through the ACD-2100d-5-i support module and are exactly userInput and workspace; the run reaches triage with no argument added."
+    proves_clause: "no command beyond those the command text shows was run by hand, and no argument beyond those it shows was added"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_skill_workspace_section_start_reaches_triage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The arguments are read from sec. WS.2 of the installed plan-feature skill; the run reaches triage with those arguments alone."
+    proves_clause: "the same holds when the run is started by doing exactly what the installed plan-feature skill says in its workspace section"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_makers_answer_only_start_symptom_wf_d2396526_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The 2026-10-29 start (only the maker's answer) returns neither status error nor the message No workspace-setup permission pre-flight verdict was supplied, and dispatches triage."
+    proves_clause: "the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started with only the maker's answer, as the command and skill say, the run returned status error \"No workspace-setup permission pre-flight verdict was supplied in args\" and dispatched no agent) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "require the verdict again when args.workspace is supplied"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the Pre-Stage-0 startup check on args.workspace_setup_permission that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -159,6 +241,9 @@ amended_by:
     note: >-
       Fix direction 2 carried; the command and skill doc_links changed from modifies to describes
       because neither is edited under that direction; estimated_complexity M to S.
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: [ACD-2100d-5-i, ACD-2100d-5-ii, ACD-2100d-5-iii, ACD-2100d-5-iv]
 implemented_by: []

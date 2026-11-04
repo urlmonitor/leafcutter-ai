@@ -1,8 +1,8 @@
 id: ACD-1300e-4-i
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The resume how-to explains a declined pause-record step and a pause that could not be confirmed"
 component: ac-driven-dev
 level: L3
@@ -26,7 +26,7 @@ criteria: |
   And it states that the drafted criteria of a run whose pause could not be confirmed are on
     disk and not committed, and how the operator keeps them,
   And every report text and status value the guide quotes is one the route actually produces.
-depends_on: [ACD-1300e-4, ACD-1300e-3-iv, ACD-1300e-3-v, ACD-1300e-3-vi]
+depends_on: [ACD-1300e-4, ACD-1300e-3-iv, ACD-1300e-3-v, ACD-1300e-3-vi, ACD-2100d-5-iii]
 doc_links:
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
     relationship: modifies
@@ -102,6 +102,56 @@ test_intent:
   - clause: every report text and status value the guide quotes is one the route actually produces
     needs_test: true
     reason: The quoted texts and status values can drift from the workflow's output, which a check against the workflow catches and review does not.
+test_spec:
+  - name: "test_guide_quoted_report_texts_are_what_the_route_produces"
+    target_dir: "unit_tests/docs/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Each report text the guide quotes (the four unconfirmed-pause forms, the declined look-up form, the uncleared-record statement) is compared with the message the workflow returns when driven to that outcome through the E2 harness."
+    proves_clause: "every report text and status value the guide quotes is one the route actually produces"
+    code_file: "docs/how-to/resume-a-paused-plan-feature-run.md"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_guide_status_values_quoted_are_terminal_gate_statuses"
+    target_dir: "unit_tests/docs/"
+    framework: "unittest"
+    type: "unit"
+    angle: "real_artifact"
+    description: "Every status value the guide quotes in the new sections is a member of TERMINAL_GATE_STATUSES in templates/workflows-js/plan-feature.js; the guide invents none for the declined look-up."
+    proves_clause: "every report text and status value the guide quotes is one the route actually produces"
+    code_file: "docs/how-to/resume-a-paused-plan-feature-run.md"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: docs/how-to/resume-a-paused-plan-feature-run.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the resume how-to the criteria extend with the unconfirmed-pause, declined look-up and uncleared-record outcomes."
+    decision: null
+file_findings_opened_files:
+  - docs/how-to/resume-a-paused-plan-feature-run.md
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -110,6 +160,17 @@ amended_by:
     by: it-po
     run_id: pf-entry-pause-20261104
     note: "change_target set to docs: the record edits one how-to and no code."
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
+  - reason: dependency-added
+    date: '2026-11-04'
+    by: user
+    run_id: pf-entry-pause-20261104
+    note: >-
+      depends_on gains ACD-2100d-5-iii: the guide's resume step must show the resume arguments
+      that record settles. Flagged by the IT PO (who cannot edit depends_on), decided by the person
+      at the final gate, applied by the main session.
 superseded_by: null
 covered_by: []
 implemented_by: []

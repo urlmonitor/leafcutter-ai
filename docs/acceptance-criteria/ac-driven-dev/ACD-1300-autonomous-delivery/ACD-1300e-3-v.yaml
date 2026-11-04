@@ -2,8 +2,8 @@ id: ACD-1300e-3-v
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "A declined look-up of a pause record is never reported as nothing to resume"
 component: ac-driven-dev
 level: L3
@@ -136,6 +136,116 @@ test_intent:
       the bug symptom (run wf_4a8567df-505, 2026-10-30: the look-up replied "I did not run this read. Reading the pause record is not one of the two actions this agent handles"; a declined look-up read as no record sends the author back over drafts the person had approved) must not occur
     needs_test: true
     reason: This is the recorded failure, and it returns if a decline is read as no record again.
+test_spec:
+  - name: "test_declined_lookup_is_not_nothing_to_resume_or_not_paused"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "Run R resumed with its answer while every peek-pause-record and read-pause-record attempt is a decline reply: the terminal status is not nothing_to_resume and the run does not continue as though R were not paused."
+    proves_clause: "the run does not end as \"nothing to resume\" and does not continue as though run R were not paused"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_no_authoring_agent_is_dispatched_for_the_stage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The dispatch record of the declined resume holds no authoring-agent dispatch for the stage."
+    proves_clause: "no authoring agent is sent to write or rewrite criteria for that stage"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_answer_is_not_applied_and_nothing_recorded"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "No approval-apply, priority or commit dispatch is made on the declined path."
+    proves_clause: "the person's answer is not applied, and no approval or priority is recorded"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_declined_lookup_ends_pause_record_unreadable_with_declined_message"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Starting plan-feature.js through the E2 harness with args.workspace and resume_answer and all attempts declined returns pause_record_unreadable whose message names the step label and the declining agent, quotes the reason, says the record is still on disk and was not examined, and says the resume can be started again with the same answer."
+    proves_clause: "the run ends as \"pause record unreadable\", and its message says the step was declined, names the step and the agent that declined it, quotes the stated reason, says the record is still on disk and was not examined, and says the resume can be started again with the same answer"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_message_never_says_damaged_malformed_or_absent"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The declined form contains none of the words damaged, malformed or absent, and differs from the form for a reply that ran but could not be read."
+    proves_clause: "the message does not say the record is damaged, malformed or absent"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_declined_step_is_not_sent_to_another_agent"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "Every look-up attempt (three at most, a distinct label each) is the same command sent to shell-runner; no read command is dispatched to any other agent."
+    proves_clause: "the declined step is not sent to any other agent"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_record_and_drafts_are_byte_identical_after_a_declined_resume"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "A record written for real by pause_store.py and eleven drafted AC files in a temporary workspace are hashed before and after the declined resume; the hashes are identical."
+    proves_clause: "the pause record and the eleven drafted criteria are byte-identical afterwards"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_second_resume_with_same_answer_applies_it_once_the_step_runs"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "After the declined resume, starting again with the same answer and a running look-up applies the answer to the decision point as ACD-2100c-3 requires."
+    proves_clause: "when the route is then started again for run R with the same answer and the step runs, the answer is applied to that decision point exactly as ACD-2100c-3 requires"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_declined_lookup_symptom_run_wf_4a8567df_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The 2026-10-30 reply (I did not run this read ...) on the look-up leaves the drafts untouched and the author unsent."
+    proves_clause: "the bug symptom (run wf_4a8567df-505, 2026-10-30: the look-up replied \"I did not run this read. Reading the pause record is not one of the two actions this agent handles\"; a declined look-up read as no record sends the author back over drafts the person had approved) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "treat a declined look-up reply as exists false"
+      - "drop the declined-reply condition from the look-up"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "peekPausedGateId and readPauseRecordWithRetry hold the look-up and resume read that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -143,6 +253,9 @@ amended_by:
     date: '2026-11-04'
     by: it-po
     run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

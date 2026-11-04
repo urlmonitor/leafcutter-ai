@@ -175,66 +175,104 @@ test_intent:
     needs_test: true
     reason: This is the recorded failure, and it returns if any pause-record step goes back to worktree-agent.
 test_spec:
-  - name: test_every_pause_record_op_dispatched_to_chartered_executor
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: discrimination
-    description: "Across a pause and a resume, every dispatch labelled pause-persist, pause-persist-verify, peek-pause-record, read-pause-record, clear-pause-record, clear-pause-record-verify has agentType command-step-runner."
-    proves_clause: "Then each is performed either by a fixed command step that involves no agent or by an agent whose declared role explicitly includes reading and writing pause records,"
+  - name: "test_every_pause_record_op_dispatched_to_shell_runner"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "Across a headless pause and a resume (with a leftover-record scan), every dispatch labelled pause-persist, pause-persist-verify, peek-pause-record, read-pause-record, clear-pause-record, clear-pause-record-verify and orphan-scan-pause-record, retry labels included, has agentType shell-runner, one value for all sites."
+    proves_clause: "each is performed either by a fixed command step that involves no agent or by an agent whose declared role explicitly includes reading and writing pause records"
+    code_file: "templates/workflows-js/plan-feature.js"
     must_catch:
-      - "one site (e.g. the clear in resolveGate) still hard-codes worktree-agent"
-      - "the read-back retry path uses a different executor than the first attempt"
-  - name: test_no_pause_record_op_given_to_worktree_or_status_agent
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: criterion
-    description: "No pause-record dispatch has agentType worktree-agent or status-checker."
-    proves_clause: "And none of them is given to an agent whose declared role is limited to other work (creating and removing worktrees, or investigating ticket state),"
-  - name: test_executor_registry_charter_names_pause_record_work
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: unit
-    angle: real_artifact
-    description: "In config/agent_registry.json and .leafcutter/config/agent_registry.json, command-step-runner has permits_shell true, spawned_by contains plan-feature.js, and its description names pause-record reads and writes."
-  - name: test_headless_pause_ends_waiting_with_record_on_disk
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: real_artifact
-    description: "With a stub command-step-runner that runs the real pause_store.py against a temp store, a headless gate returns paused_awaiting_input and paused_runs/<R>.json exists."
-    proves_clause: "And the pause ends with the run reported as waiting and the record present on disk, never ended as \"pause persist failed\" because the step that should have written the record declined it as outside its role,"
-  - name: test_resume_reads_record_and_applies_answer
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: seam
-    description: "A follow-up invocation with a person answer for the named gate reads the record through the executor's stdout and applies the answer (ACD-2100c-3)."
-    proves_clause: "And the resume reads that record and applies the person's answer as ACD-2100c-3 requires,"
-  - name: test_worktree_agent_refusal_symptom_does_not_recur
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: discrimination
-    description: "With worktree-agent stubbed to decline every pause-store request (the gpt-flow-step-links / fast-lane-test-gates condition), the pause still ends paused_awaiting_input and is resumable."
-    proves_clause: "And the bug symptom (\"on runs gpt-flow-step-links and fast-lane-test-gates, 2026-10-15/16, the pause record write was handed to the worktree agent, whose role is only worktree create/remove; it refused, every pause ended pause_persist_failed and the run could not be resumed at all\") must not occur."
+      - "revert the fix"
+      - "one site (the clear in resolveGate) still hard-codes worktree-agent"
+      - "the retry attempts in readPauseRecordWithRetry use a different agentType than the first attempt"
+  - name: "test_no_pause_record_op_given_to_worktree_status_or_command_step_agent"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "No pause-record dispatch has agentType worktree-agent, status-checker or command-step-runner, and every dispatch the pause-record labels cover is accounted for (no unlabelled pause_store.py command goes to another agent)."
+    proves_clause: "none of them is given to an agent whose declared role is limited to other work (creating and removing worktrees, or investigating ticket state)"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_headless_pause_ends_waiting_with_record_on_disk"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "A headless gate returns paused_awaiting_input with shell-runner result replies scripted for the persist and the read-back; the pause-persist command captured from the dispatch record is then run for real against a temporary workspace holding the installed pause_store.py, and the paused_runs/<run_id>.json it writes is read back."
+    proves_clause: "the pause ends with the run reported as waiting and the record present on disk, never ended as \"pause persist failed\" because the step that should have written the record declined it as outside its role"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_resume_reads_record_from_relayed_stdout_and_applies_answer"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "A follow-up invocation with the person's answer for the named gate gets its record only from the stdout string of a shell-runner result reply (pause_store.py JSON as text), applies the answer as ACD-2100c-3 requires, and dispatches the clear."
+    proves_clause: "the resume reads that record and applies the person's answer as ACD-2100c-3 requires"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_worktree_agent_refusal_symptom_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "With worktree-agent scripted to decline any request (the gpt-flow-step-links / fast-lane-test-gates condition) and shell-runner scripted to run, a headless gate still ends paused_awaiting_input and the resume still finds its record; no pause-record dispatch reaches worktree-agent."
+    proves_clause: "the bug symptom (\"on runs gpt-flow-step-links and fast-lane-test-gates, 2026-10-15/16, the pause record write was handed to the worktree agent, whose role is only worktree create/remove; it refused, every pause ended pause_persist_failed and the run could not be resumed at all\") must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
     must_catch:
+      - "revert the fix"
       - "pause write still dispatched to worktree-agent"
-  - name: test_decline_reply_reported_as_decline_not_success
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: failure
-    description: "A command-step-runner decline (no exit_status key) on the write yields pause_persist_failed whose message names the decline, not a store fault."
-  - name: test_deployed_workflow_pause_uses_command_step_runner
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: reachability
-    description: "The deployed .claude/workflows/plan-feature.js run headless through the E2 harness dispatches its pause write to command-step-runner and returns paused_awaiting_input."
-    surface_invoked: ".claude/workflows/plan-feature.js (deployed build output), driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
-test_rationale: "The real-world failure was an LLM agent refusing by charter, which a stub harness cannot reproduce; the deterministic proof is (a) every pause-record dispatch names one executor whose registry charter covers the work (real_artifact on the registry) and (b) the body reaches a resumable pause through the deployed workflow. The amended BO-2300a-1-ii pin must not stay green on the old executor."
+  - name: "test_bo_2300a_1_ii_pin_asserts_shell_runner_for_pause_store_dispatches"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The existing pin unit_tests/workflows/test_bo_2300a_1_ii.py is amended in the same change: its pause-store labels assert shell-runner instead of worktree-agent and keep the status-checker exclusion."
+    proves_clause: "none of them is given to an agent whose declared role is limited to other work (creating and removing worktrees, or investigating ticket state)"
+    code_file: "templates/workflows-js/plan-feature.js"
+    convention_test_file: "unit_tests/workflows/test_bo_2300a_1_ii.py"
+  - name: "test_pause_is_reachable_through_the_workflow_entry"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Starting plan-feature.js through the E2 harness with args.workspace (no verdict) and no person attached runs the real pause path to its terminal payload paused_awaiting_input, with the pause-persist dispatch on shell-runner."
+    proves_clause: "the pause ends with the run reported as waiting and the record present on disk, never ended as \"pause persist failed\" because the step that should have written the record declined it as outside its role"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_rationale: "A refusing agent cannot be reproduced by a stub, so the deterministic proof is behavioural: the E2 harness records every dispatch of a pause and a resume, and the tests assert each pause-record dispatch (write, read-back, look-up, resume read, clear, clear read-back, leftover-record scan) names shell-runner and nothing else, that a run reaches a resumable pause with the real pause_store.py writing the record, and that the pin unit_tests/workflows/test_bo_2300a_1_ii.py is amended to shell-runner. No registry or charter file is edited (ADR-070 sec. 3), so no registry test is designed."
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the pause-store dispatches, the per-function worktree-agent locals and readPauseRecordWithRetry that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:

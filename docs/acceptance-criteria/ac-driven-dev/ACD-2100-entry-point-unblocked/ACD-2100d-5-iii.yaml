@@ -1,8 +1,8 @@
 id: ACD-2100d-5-iii
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "A resume started the way the skill describes is not stopped by the startup check"
 component: ac-driven-dev
 level: L3
@@ -95,6 +95,75 @@ test_intent:
       the bug symptom (KI-ACD-20261022: a start without a hand-run startup verdict "returned status error" with "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no agent) must not occur on the resume
     needs_test: true
     reason: This is the recorded failure on a fresh start, and the resume path reaches the same check.
+test_spec:
+  - name: "test_resume_arguments_from_the_skill_pass_the_startup_checks_without_a_verdict"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "The arguments of sec. RS.2 of the installed skill (resumeFromRunId, args.resume_answer and args.workspace) are read by the ACD-2100d-5-i support module and passed with workspace_setup_permission None; the resumed run passes every check before triage."
+    proves_clause: "the resumed run passes every check made before triage with no startup verdict or other argument added by hand"
+    code_file: "templates/skills/plan-feature/SKILL.md"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_resume_reaches_the_product_owner_gate_applies_the_answer_and_continues"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "With the pause record at the product-owner gate scripted through a shell-runner result, the answer approve is applied and the run continues past the gate."
+    proves_clause: "it reaches the product-owner decision point, applies the answer, and continues"
+    code_file: "templates/skills/plan-feature/SKILL.md"
+  - name: "test_resume_works_in_the_paused_runs_workspace_and_makes_no_second_one"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "boundary"
+    description: "No workspace-making dispatch occurs on the resume and every pause-store command names the workspace_path of the args.workspace passed."
+    proves_clause: "it works in the same workspace run R was paused in, and no second workspace is made for it"
+    code_file: "templates/skills/plan-feature/SKILL.md"
+  - name: "test_resume_without_a_hand_run_verdict_symptom_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The resume invocation carrying no verdict does not return status error with the missing-verdict message and dispatches an agent."
+    proves_clause: "the bug symptom (KI-ACD-20261022: a start without a hand-run startup verdict \"returned status error\" with \"No workspace-setup permission pre-flight verdict was supplied in args\" and dispatched no agent) must not occur on the resume"
+    code_file: "templates/skills/plan-feature/SKILL.md"
+    must_catch:
+      - "revert the fix"
+      - "require the verdict on a resume that carries args.workspace"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/skills/plan-feature/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds sec. WS and sec. RS.2, the resume invocation text the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/skills/plan-feature/SKILL.md
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -105,6 +174,9 @@ amended_by:
     note: >-
       assigned_agent python-coder to llm-expert: under fix direction 2 the change is the skill's
       sec. RS.2 text only; plan-feature.js's doc_link changed from modifies to describes.
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

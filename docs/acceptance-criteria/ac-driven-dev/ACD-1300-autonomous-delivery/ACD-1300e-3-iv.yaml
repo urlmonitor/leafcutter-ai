@@ -2,8 +2,8 @@ id: ACD-1300e-3-iv
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "When a pause cannot be confirmed, the report shows what the write said next to what the read-back found"
 component: ac-driven-dev
 level: L3
@@ -152,6 +152,120 @@ test_intent:
       the bug symptom (KI-BO-20261022: "the workflow knew what the write returned and threw it away, so the report cannot say which of three causes it was"; on 2026-10-25 the decline reply survived only in the run's journal) must not occur
     needs_test: true
     reason: This is the recorded failure, and it returns if the reply is dropped again.
+test_spec:
+  - name: "test_report_quotes_write_reply_and_read_back_separately"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "A pause_persist_failed message quotes the write's command outcome and output, bounded to 2 KB (a 5 KB stdout is cut to 2 KB), and states the read-back's result in a separate part."
+    proves_clause: "its report quotes the write's own reply -- the command's outcome and its output, up to 2 KB -- and, separately, the read-back's result"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_write_success_but_no_record_names_that_cause_only"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "Write result exit_status 0 and a read-back finding no record: the message says the write reported success but no record was found and does not say the store could not be written or a step was declined."
+    proves_clause: "it says the write reported success but no record was found, and does not say that the store could not be written or that a step was declined"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "name a store write failure whenever the read-back finds no record"
+      - "drop the exit_status zero condition"
+      - "drop the declined-reply condition"
+  - name: "test_message_names_run_gate_and_recovery_facts"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "Every one of the four forms names the run id and the gate id, says the drafted criteria are on disk, not committed and unchanged, and says the run cannot be resumed until a pause is recorded; status is pause_persist_failed."
+    proves_clause: "it names the run id and the decision point, says the drafted criteria are on disk, not committed and unchanged, and says the run cannot be resumed until a pause is recorded"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_write_ran_and_failed_quotes_error_output"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "A write result with a non-zero exit_status and stderr yields a message quoting that stderr and saying the store write failed (not a decline)."
+    proves_clause: "when instead the write ran and failed, the report quotes the write's error output and says the store write failed"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_declined_write_quotes_decline_and_claims_no_unsent_read_back"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "A decline reply (declined true, agent, reason, no exit_status key) yields a message quoting the agent and reason and saying the write was not run; where the read-back reply cannot be read, the message claims no read-back result."
+    proves_clause: "when instead the write step was declined, the report quotes the decline and its stated reason, says the write was not run, and claims no read-back result for a read-back that was not sent"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_unreadable_write_reply_quoted_as_received"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "A reply that is neither a result nor a decline (prose, or a wrapped object) yields a message quoting it as received and saying it could not be read as a result."
+    proves_clause: "when instead the write's reply is neither a result nor a decline, the report quotes that reply as received and says it could not be read as a result"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_write_is_not_sent_again_after_its_reply_is_reported"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "In every case exactly one pause-persist dispatch is made, to shell-runner, and no dispatch of the write command goes to any other agent after the reply."
+    proves_clause: "the write is not sent again to any other agent after its reply is reported"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_dropped_write_reply_symptom_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The 2026-10-25 shape: a decline whose reason appears only in the reply must appear in the returned message, not only in the run's journal."
+    proves_clause: "the bug symptom (KI-BO-20261022: \"the workflow knew what the write returned and threw it away, so the report cannot say which of three causes it was\"; on 2026-10-25 the decline reply survived only in the run's journal) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "discard the write reply before the message is built"
+  - name: "test_unconfirmed_pause_reachable_from_the_workflow_entry"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Starting plan-feature.js through the E2 harness with the write succeeding and the read-back empty returns the pause_persist_failed terminal payload carrying the quoted reply."
+    proves_clause: "its report quotes the write's own reply -- the command's outcome and its output, up to 2 KB -- and, separately, the read-back's result"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "pauseAtGate discards the write's reply and builds the pause_persist_failed message the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -159,6 +273,9 @@ amended_by:
     date: '2026-11-04'
     by: it-po
     run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,8 +1,8 @@
 id: ACD-2100d-5-iv
 components:
   - ac_driven_dev
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "The startup-check reference and the workflow rationale describe the start the route actually accepts"
 component: ac-driven-dev
 level: L3
@@ -102,6 +102,82 @@ test_intent:
       the reference page's row for a run that arrives with no maker's answer and no verdict gives the remedy that ACD-2100d-5-ii's report gives
     needs_test: true
     reason: The row and the halt are written in different files and drift apart unless compared.
+test_spec:
+  - name: "test_pages_list_the_arguments_the_entry_texts_pass_and_which_are_required"
+    target_dir: "unit_tests/reference/"
+    framework: "unittest"
+    type: "unit"
+    angle: "real_artifact"
+    description: "The arguments read from the installed command and skill (through the ACD-2100d-5-i support module) are each listed on the pages, and the page marks workspace as the one a start needs and the verdict as required only without it."
+    proves_clause: "the pages list the arguments the installed /plan-feature command and skill pass, and say which of them the workflow requires"
+    code_file: "docs/reference/plan-feature-layout-and-startup-checks.md"
+  - name: "test_quoted_startup_halt_reports_match_the_workflow_word_for_word"
+    target_dir: "unit_tests/reference/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "plan-feature.js driven through the E2 harness to each startup halt the pages quote (including neither argument) returns a report that appears word for word on the reference page, whitespace-normalised."
+    proves_clause: "each startup-halt report the pages quote is word for word what the workflow produces"
+    code_file: "docs/reference/plan-feature-layout-and-startup-checks.md"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_pages_claim_no_skill_preflight_unless_the_installed_skill_has_it"
+    target_dir: "unit_tests/reference/"
+    framework: "unittest"
+    type: "unit"
+    angle: "discrimination"
+    description: "Neither page says the skill runs a permission pre-flight unless the installed skill contains that step."
+    proves_clause: "the pages do not say that the skill runs a permission pre-flight unless the installed skill contains that step"
+    code_file: "docs/reference/plan-feature-layout-and-startup-checks.md"
+    must_catch:
+      - "revert the fix"
+      - "a page still says the skill runs the permission pre-flight"
+  - name: "test_no_argument_no_verdict_row_gives_the_halt_reports_remedy"
+    target_dir: "unit_tests/reference/"
+    framework: "unittest"
+    type: "unit"
+    angle: "real_artifact"
+    description: "The reference page's row for a run with no maker's answer and no verdict contains the remedy of the halt report ACD-2100d-5-ii produces."
+    proves_clause: "the reference page's row for a run that arrives with no maker's answer and no verdict gives the remedy that ACD-2100d-5-ii's report gives"
+    code_file: "docs/reference/plan-feature-layout-and-startup-checks.md"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: docs/reference/plan-feature-layout-and-startup-checks.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the reference page listing the startup checks and quoted halts that the criteria change."
+    decision: null
+  - file: docs/reference/plan-feature-workflow-rationale.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the Pre-Stage-0 gate rationale comments moved out of plan-feature.js that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -110,6 +186,9 @@ amended_by:
     by: it-po
     run_id: pf-entry-pause-20261104
     note: "change_target set to docs: the record edits two reference pages and no code."
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

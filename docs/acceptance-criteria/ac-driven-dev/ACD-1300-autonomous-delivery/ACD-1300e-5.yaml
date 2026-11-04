@@ -71,30 +71,74 @@ test_intent:
     needs_test: true
     reason: Outcome labels drift from the workflow's statuses, which a check against the workflow source catches.
 test_spec:
-  - name: test_decision_gate_diagram_shows_resume_chain
-    target_dir: unit_tests/docs/
-    framework: unittest
-    type: unit
-    angle: real_artifact
+  - name: "test_decision_gate_diagram_shows_resume_chain"
+    target_dir: "unit_tests/docs/"
+    framework: "unittest"
+    type: "unit"
+    angle: "real_artifact"
     description: "The c3-008 Mermaid block contains, in order, a resume entering with one answer, the duplicate-coverage check excluding own criteria, the answer applied to the named gate, the next gate reached, and a second pause naming the next gate."
-    proves_clause: "Then the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision,"
-  - name: test_decision_gate_diagram_pause_actor_is_not_worktree_agent
-    target_dir: unit_tests/docs/
-    framework: unittest
-    type: unit
-    angle: discrimination
-    description: "The participant on the write/read/clear messages to the pause store is command-step-runner; no worktree-agent participant sends a pause-store message in c3-008 or c3-002."
-    proves_clause: "And it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent,"
+    proves_clause: "the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision"
+    code_file: "docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md"
+  - name: "test_decision_gate_diagram_pause_actor_is_shell_runner"
+    target_dir: "unit_tests/docs/"
+    framework: "unittest"
+    type: "unit"
+    angle: "discrimination"
+    description: "The participant on the write, read and clear messages to the pause store is shell-runner in c3-008 and c3-002; no worktree-agent, command-step-runner or status-checker participant sends a pause-store message in either diagram."
+    proves_clause: "it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent"
+    code_file: "docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md"
     must_catch:
+      - "revert the fix"
       - "c3-002 still names status-checker as the persist/read agent"
-  - name: test_decision_gate_diagram_lists_reported_resume_outcomes
-    target_dir: unit_tests/docs/
-    framework: unittest
-    type: unit
-    angle: real_artifact
+      - "a diagram still names worktree-agent or command-step-runner as the pause-record actor"
+  - name: "test_decision_gate_diagram_lists_reported_resume_outcomes"
+    target_dir: "unit_tests/docs/"
+    framework: "unittest"
+    type: "unit"
+    angle: "real_artifact"
     description: "The diagram shows the five resume outcomes, each status label being one the route returns."
-    proves_clause: "And it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable."
-test_rationale: "Diagram claims are checkable as text in the Mermaid block; the discrimination entry guards the stale participant label in c3-002 that would contradict the new diagram."
+    proves_clause: "it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable"
+    code_file: "docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md"
+test_rationale: "Diagram claims are checkable as text in the Mermaid block; the discrimination entry guards the stale participant labels (status-checker in c3-002 today) and any worktree-agent, command-step-runner or status-checker pause-record actor, so shell-runner (ADR-070) is the one participant that writes, reads and clears the record."
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the pause/resume sequence diagram whose persist/read participant label the criteria change."
+    decision: null
+  - file: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the decision-gate sequence diagram the criteria extend with the resume chain and outcomes."
+    decision: null
+file_findings_opened_files:
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:

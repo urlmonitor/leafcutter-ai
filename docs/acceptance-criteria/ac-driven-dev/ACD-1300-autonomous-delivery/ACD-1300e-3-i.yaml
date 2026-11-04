@@ -76,37 +76,83 @@ test_intent:
     needs_test: true
     reason: A store failure and an executor refusal must be told apart from the reply, and a wrong branch names the wrong cause.
 test_spec:
-  - name: test_five_headless_runs_all_reported_waiting_with_records
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: criterion
-    description: "Five run ids reaching the same gate each return paused_awaiting_input and each has paused_runs/<run_id>.json."
-    proves_clause: "Then all five end reported as waiting with a record present on disk for each run id,"
-  - name: test_none_of_five_runs_ends_pause_persist_failed
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: discrimination
-    description: "No status is pause_persist_failed across the five runs and the executor id is identical for every pause-record dispatch."
-    proves_clause: "And none of the five ends as \"pause persist failed\","
+  - name: "test_five_headless_runs_all_reported_waiting_with_records"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "Five run ids reaching the same gate each return paused_awaiting_input; the pause-persist command captured for each run is run for real and paused_runs/<run_id>.json exists for each of the five."
+    proves_clause: "all five end reported as waiting with a record present on disk for each run id"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_none_of_five_runs_ends_pause_persist_failed"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "No result of the five runs is pause_persist_failed and the agentType is the identical shell-runner for every pause-record dispatch of every run."
+    proves_clause: "none of the five ends as \"pause persist failed\""
+    code_file: "templates/workflows-js/plan-feature.js"
     must_catch:
+      - "revert the fix"
       - "executor chosen from a list or by fallback so that different runs hit different agents"
-  - name: test_five_runs_from_worktree_persist_to_shared_store
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: boundary
-    description: "Started from a linked worktree, the five records land in the main repository's paused_runs store and are readable from the project root."
-    proves_clause: "And the same holds when the five runs are started from a worktree of the project rather than from the project root,"
-  - name: test_unwritable_store_reports_store_write_cause_and_keeps_drafts
-    target_dir: unit_tests/workflows/
-    framework: unittest
-    type: integration
-    angle: failure
-    description: "With a read-only store dir, the result is pause_persist_failed, its message names the store write (not an executor refusal), and drafted AC files are byte-identical."
-    proves_clause: "And when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged."
-test_rationale: "Consistency across runs is guaranteed structurally (one fixed executor) rather than statistically, so the discrimination entry pins the fixed id; the store-unwritable case uses a real pause_store.py against a read-only temp dir."
+  - name: "test_five_runs_from_worktree_persist_to_shared_store"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "boundary"
+    description: "With the process started in a linked git worktree of a temporary project, the five runs' commands name a store derived from args.workspace's workspace_path, not the working directory, and the records land in that store and are readable from the project root."
+    proves_clause: "the same holds when the five runs are started from a worktree of the project rather than from the project root"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_unwritable_store_reports_store_write_cause_and_keeps_drafts"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "failure"
+    description: "With the store location blocked by a regular file, the real pause_store.py exits non-zero and the scripted result carries its exit_status and stderr; the result is pause_persist_failed, its message names the store write (not a refusal by the executor), and the drafted AC files are byte-identical."
+    proves_clause: "when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_five_runs_reachable_from_workflow_entry"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Each of the five runs is started through the E2 harness on plan-feature.js (the real entry) and its terminal payload is asserted."
+    proves_clause: "all five end reported as waiting with a record present on disk for each run id"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_rationale: "Consistency across runs is guaranteed structurally (one fixed executor id) rather than statistically, so the discrimination entry pins the fixed id across five runs; the five-run, worktree and unwritable-store cases run the captured pause-store commands against the real pause_store.py in temporary directories and read the records back."
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds pauseAtGate, the write, the read-back and the store location whose consistency the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by:

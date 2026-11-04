@@ -2,8 +2,8 @@ id: ACD-1300e-3-iii
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: reviewed
-priority: medium
+readiness: approved
+priority: high
 title: "A pause record whose text holds quotes and shell characters is stored and read back unchanged"
 component: ac-driven-dev
 level: L3
@@ -135,6 +135,108 @@ test_intent:
       the bug symptom (KI-BO-20261022 candidate path 3: "the write passes the record as a single-quoted shell argument and a single quote in the record is not escaped; a rule-check summary such as Unexpected token 'X' ends the quoted argument, the write fails, and the read-back finds no record") must not occur
     needs_test: true
     reason: This is the failure the KI infers from the code, and it returns if the record is passed as a quoted argument again.
+test_spec:
+  - name: "test_quote_laden_record_run_ends_waiting_with_record_on_disk"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "A headless gate whose rule-check summary is the Given text (with Unexpected token 'X') and whose request is the two Given lines is run through the E2 harness; the captured pause-persist command is run for real through bash against a temporary store and the record file exists. Files are read and written as UTF-8."
+    proves_clause: "the run is reported as waiting and its pause record is present on disk"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_record_holds_summary_and_both_request_lines_character_for_character"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "The record file written by the real pause_store.py, read back as UTF-8 JSON, holds the summary and both request lines exactly: single and double quotes, backslash, dollar sign, backtick, line breaks, the non-ASCII text Größe: 5 – ok."
+    proves_clause: "the record holds the summary and both request lines character for character, including every single quote, double quote, backslash, dollar sign, backtick, line break and non-ASCII character"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_no_text_is_expanded_as_a_command_on_the_way"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "boundary"
+    description: "The argument that carries the record in the captured command holds only letters, digits, - _ . and %; after the real run the stored record contains the literal text $HOME and the literal backticked pwd, not a path or command output."
+    proves_clause: "no part of either text was run or expanded as a command on the way: the record holds the literal text $HOME and the literal backticked pwd, not a directory path or the output of a command"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_resume_shows_the_same_summary_and_request_lines"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The captured read command, run for real with the console code page forced to a non-UTF-8 value, prints ASCII-safe JSON; fed back as the relayed stdout of the resume read, the resumed run shows the identical summary and request lines."
+    proves_clause: "a resume of that run shows the person the same summary and the same two request lines, character for character"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_single_quote_in_record_does_not_break_the_write"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "With a record containing a single quote (Unexpected token 'X'), the write succeeds and the read-back finds the record; also with a dollar sign and a backtick alone."
+    proves_clause: "the bug symptom (KI-BO-20261022 candidate path 3: \"the write passes the record as a single-quoted shell argument and a single quote in the record is not escaped; a rule-check summary such as Unexpected token 'X' ends the quoted argument, the write fails, and the read-back finds no record\") must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "escape only the single quote and keep a quoted argument"
+      - "pass the record in double quotes so the dollar sign and backtick expand"
+      - "drop the escaping of the characters encodeURIComponent leaves alone"
+  - name: "test_invalid_encoded_record_exits_non_zero_and_stores_nothing"
+    target_dir: "unit_tests/scripts/"
+    framework: "unittest"
+    type: "unit"
+    angle: "failure"
+    description: "pause_store.py write given an encoded record with an invalid escape or invalid UTF-8 exits non-zero with a stderr line naming the decode failure and stores no file; the existing --record raw-JSON input keeps working."
+    proves_clause: "the record holds the summary and both request lines character for character, including every single quote, double quote, backslash, dollar sign, backtick, line break and non-ASCII character"
+    code_file: "scripts/pause_store.py"
+  - name: "test_pause_store_cli_encoded_record_is_reachable_as_a_subprocess"
+    target_dir: "unit_tests/scripts/"
+    framework: "unittest"
+    type: "unit"
+    angle: "reachability"
+    description: "pause_store.py is run as a subprocess (python scripts/pause_store.py --store-dir <tmp> write ... with the encoded record argument) and the file it writes decodes to exactly the encoded JSON object."
+    proves_clause: "no part of either text was run or expanded as a command on the way: the record holds the literal text $HOME and the literal backticked pwd, not a directory path or the output of a command"
+    code_file: "scripts/pause_store.py"
+    surface_invoked: "scripts/pause_store.py run as a subprocess CLI"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: scripts/pause_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It defines the write and read subcommands and the --record input whose carriage of the record the criteria change."
+    decision: null
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It builds the write command in pauseAtGate with a single-quoted JSON record, the carriage the criteria change."
+    decision: null
+file_findings_opened_files:
+  - scripts/pause_store.py
+  - templates/workflows-js/plan-feature.js
 origin_agent: business-analyst
 created: 2026-11-04
 amended_by:
@@ -142,6 +244,9 @@ amended_by:
     date: '2026-11-04'
     by: it-po
     run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
 superseded_by: null
 covered_by: []
 implemented_by: []

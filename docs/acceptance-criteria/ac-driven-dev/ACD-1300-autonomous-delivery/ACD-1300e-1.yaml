@@ -57,7 +57,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 delivers_to:
   agent: python-coder
-  contract: "Run-ownership read for run R, available on every start of R whether or not a pause record exists. Produced by one command step (command-step-runner) over the authoring branch history origin/main..HEAD; stdout is one JSON object {run_id: string (== R), own_ac_ids: string[] (sorted, unique; [] when R committed nothing), evidence: 'commit-trailer'}. Ownership = an AC id listed in the 'AC IDs:' trailer of a plan-feature(<STAGE>) commit whose 'run-id:' trailer equals R exactly. Non-zero exit or unparseable stdout means 'ownership unknown', never 'owns nothing'. Consumed by ACD-1300e-1-i (crash, no pause record) and ACD-1300e-2 (resume reaches the named decision)."
+  contract: "Run-ownership read for run R, available on every start of R whether or not a pause record exists. Produced by one command step (shell-runner, ADR-070) over the authoring branch history origin/main..HEAD; stdout is one JSON object {run_id: string (== R), own_ac_ids: string[] (sorted, unique; [] when R committed nothing), evidence: 'commit-trailer'}. Ownership = an AC id listed in the 'AC IDs:' trailer of a plan-feature(<STAGE>) commit whose 'run-id:' trailer equals R exactly. Non-zero exit or unparseable stdout means 'ownership unknown', never 'owns nothing'. Consumed by ACD-1300e-1-i (crash, no pause record) and ACD-1300e-2 (resume reaches the named decision)."
 expects_from: null
 it_requirements:
   - "Run ownership must be derived from durable evidence the run leaves in git history when it commits (the 'run-id:' and 'AC IDs:' trailers already written on every plan-feature(<STAGE>) commit), never from the pause record, so it survives a crash that wrote no record (ACD-1300e-1-i)."
@@ -67,7 +67,7 @@ it_requirements:
   - "When the ownership read fails (decline, non-zero exit, unparseable stdout), the run must not silently fall back to counting its own criteria as coverage: it logs a [plan-feature][WARNING] naming the run id and returns a distinct, non-success status telling the operator the resume could not establish which criteria are its own, rather than raising the covered-route decision on unverified grounds."
   - "Detection of coverage by OTHER runs (ACD-300a-3) is unchanged: same triage agent, same prompt contract {route, existing_acs, parent_l1_id, rationale}, same covered-route options (cancel/amend/force)."
   - "The ownership read is one command dispatch per run start (reuse the history read scanCommittedStages already performs where possible rather than adding a second git-log dispatch); it adds no dispatch to a first (non-resume) run when the branch has no plan-feature commits."
-  - "The E2 workflow body has no filesystem access (ADR-030, ADR-024): every disk or git read/write it needs is a single command dispatched to command-step-runner (registry: permits_shell true, charter 'run exactly one given command in one named workspace'), never to status-checker or worktree-agent; the caller parses the command's stdout itself from command-step-runner's {command, workspace, exit_status, stdout, stderr} result, and treats a reply with no exit_status key as a decline."
+  - "The E2 workflow body has no filesystem access (ADR-030, ADR-024): every disk or git read/write it needs is a single plain command dispatched to shell-runner (ADR-070; registry: permits_shell true, charter 'run exactly one given command line, once, unchanged'), never to status-checker or worktree-agent; the caller parses the command's stdout itself from shell-runner's {command, exit_status, stdout, stderr} result via the shared shellStepReply(), and treats a reply with no exit_status key as a decline."
   - "File-size ratchet: templates/workflows-js/plan-feature.js measures 2646 lines under scripts/commit_guardian/_file_size_ratchet.count_content_lines against a 1000-line .js limit, so check-file-size requires at least 2 measured lines removed for every measured line added (JSDoc/block comments are not counted, so deleting them earns nothing). The change must land with the measured length of plan-feature.js not increased beyond what the ratchet permits; new logic belongs in a Python script under scripts/ (deployed to .leafcutter/scripts/ by build.py, each new file under the 400-line .py limit) invoked as a command step, or is paid for by consolidating existing duplicated dispatch code."
   - "templates/workflows-js/plan-feature.js is the source; .claude/workflows/plan-feature.js is rebuilt by python scripts/build.py in the same change and the two are byte-identical afterwards (never hand-edit the deployed copy)."
   - "Errors handled per the CLAUDE.md error-handling policy: no silent fallback; every degraded path logs a [plan-feature][WARNING] line naming the run id, the gate id and the failing step."
@@ -166,6 +166,15 @@ amended_by:
     date: '2026-10-16'
     by: it-po
     run_id: plan-feature-resume-and-pause
+  - reason: executor-amendment
+    date: '2026-11-04'
+    by: user
+    run_id: pf-entry-pause-20261104
+    note: >-
+      Executor changed from command-step-runner to shell-runner (ADR-070 sec. 2.2-2.3: every
+      workflow shell step except the fast lane's own command steps goes to shell-runner), as
+      decided by the person at the final gate of run pf-entry-pause-20261104 and applied by the
+      main session. Technical fields only.
 superseded_by: null
 covered_by: [ACD-1300e-1-i]
 implemented_by: []
