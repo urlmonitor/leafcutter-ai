@@ -414,6 +414,34 @@ def _print_blocked_block(violations: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _anchor_package_keys(manifest: dict, package_offset: str) -> dict:
+    """Re-apply the recorded package position to package-relative template keys.
+
+    The build (BP-1500d-2) records template keys relative to the package
+    ("templates/agents/x.md") so the record stays valid when the project
+    moves; the position of the package is the separate ``package_root`` field.
+    This reader resolves keys against the manifest's own directory, so it
+    prefixes the offset here. Keys that already carry the offset (records
+    written before this change) are left untouched.
+
+    Args:
+        manifest: The loaded build manifest.
+        package_offset: The ``package_root`` field ("" when same directory).
+
+    Returns:
+        The manifest with template keys anchored at the manifest directory.
+    """
+    if not package_offset:
+        return manifest
+    prefix = package_offset.replace("\\", "/").rstrip("/")
+    anchored: dict = {}
+    for key, value in manifest.items():
+        if isinstance(value, str) and key.startswith("templates/"):
+            key = f"{prefix}/{key}"
+        anchored[key] = value
+    return anchored
+
+
 def main() -> int:
     """Entry point for the pre-commit hook.
 
@@ -569,6 +597,7 @@ def main() -> int:
         )
         return 2
     package_offset = package_root_raw or ""
+    manifest = _anchor_package_keys(manifest, package_offset)
     templates_base = (repo_root / package_offset) if package_offset else repo_root
     templates_dir = templates_base / "templates" / "agents"
     cg_templates_dir = templates_base / "templates" / "scripts" / "commit_guardian"
