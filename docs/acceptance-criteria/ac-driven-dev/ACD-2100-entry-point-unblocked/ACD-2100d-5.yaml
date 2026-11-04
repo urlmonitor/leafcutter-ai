@@ -1,0 +1,287 @@
+id: ACD-2100d-5
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A run started exactly as the installed command or skill says reaches triage with no step run by hand"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a project with the route installed from the current source, whose agent registry is the
+    one the install delivered,
+  And the feature request "Add a CSV export to the parts list",
+  When a run is started by doing exactly what the installed /plan-feature command says and
+    nothing else -- run the workspace-maker command it shows, then start the workflow with
+    exactly the arguments it shows, filled in from the maker's answer --
+  Then the run passes every check made before triage, and the triage agent is dispatched for
+    that request,
+  And the run does not end with a report that a startup verdict or any other argument was not
+    supplied,
+  And no command beyond those the command text shows was run by hand, and no argument beyond
+    those it shows was added,
+  And the same holds when the run is started by doing exactly what the installed plan-feature
+    skill says in its workspace section,
+  And the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started
+    with only the maker's answer, as the command and skill say, the run returned status error
+    "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no
+    agent) must not occur.
+depends_on: [ACD-2100d, ACD-2100b-5]
+doc_links:
+  - path: templates/commands/plan-feature.md
+    relationship: describes
+    status: exists
+    relevance: "Step 2 builds Workflow('plan-feature', { userInput, workspace }) -- one of the two entry surfaces whose arguments must match what the workflow requires."
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. WS.2 passes only args.workspace; its DECISION HISTORY records the 2026-10-10 replacement of the permission pre-flight (sec. WSP) by sec. WS."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The Pre-Stage-0 read of args.workspace_setup_permission and the fail-closed halt that runs before the maker answer is used."
+  - path: docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+    relationship: describes
+    status: exists
+    relevance: "Mechanism, both occurrences, the hand-run workaround and the two fix directions."
+  - path: scripts/worktree/check_workspace_setup_permission.py
+    relationship: related
+    status: exists
+    relevance: "The pre-flight whose verdict the workflow still requires; restored to the entry surfaces under fix direction 1, no longer required when the maker's answer is supplied under fix direction 2."
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Done record whose it_requirements put the verdict into args and require a direct invocation without one to halt; fix direction 2 amends that requirement."
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: "The answer contract the workflow's acceptance check applies to args.workspace."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 4 (the permits_shell lint) and sec. 5 (a decline ends the run) take over the guard the verdict gave when the maker's answer is supplied."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      For ACD-2100d-5-i and -ii: the start contract in templates/workflows-js/plan-feature.js.
+      Workflow('plan-feature', {userInput: <request>, workspace: <the maker's answer, verbatim>})
+      passes every check before triage with no other argument, and the installed command's Step 2
+      and the installed skill's sec. WS.2 supply exactly those arguments.
+      args.workspace_setup_permission is required only when args.workspace is absent; a start with
+      neither halts before any dispatch with the report ACD-2100d-5-ii specifies.
+  - agent: llm-expert
+    contract: >-
+      For ACD-2100d-5-iii: the same start contract holds for a resume re-invocation, which passes
+      args.workspace (the paused run's own workspace answer) together with resumeFromRunId and
+      args.resume_answer, and no verdict.
+expects_from: null
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    Start contract (the person's decision at gate-ba, fix direction 2): when args.workspace (the
+    maker's answer) is supplied, the workflow neither requires nor consults
+    args.workspace_setup_permission. It applies its existing workspace-answer acceptance check
+    (ADR-070 sec. 6.2), and an answer that is present but not accepted halts as that check already
+    does. A start with neither argument halts as ACD-2100d-5-ii specifies. A start with only a
+    verdict keeps today's verdict check and the run's own workspace step (ACD-2100b-1 to -5).
+  - >-
+    The entry surfaces stay as they are: templates/commands/plan-feature.md Step 2 and the skill's
+    sec. WS.2 already pass exactly userInput and workspace, so they agree with the workflow once
+    the start contract above lands. Neither is edited by this record; an edit found necessary to
+    either is llm-expert work and is flagged, not made here.
+  - >-
+    Consequence carried (decision 1b): a registry that withholds shell permission no longer halts
+    at startup when the maker's answer is supplied. That guard is taken over by the ADR-070
+    permits_shell lint (unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py) and the
+    shell-reply decline rule (ADR-070 sec. 5). ACD-2100b-5's direct-invocation requirement is
+    narrowed to match (amended 2026-11-04 by it-po).
+  - >-
+    Tests amended in the same change, none skipped: ACD-2100b-5's
+    test_direct_workflow_invocation_with_no_preflight_verdict_halts supplies neither a maker answer
+    nor a verdict and still expects the halt. Tests that start the workflow with a hand-built args
+    object carrying a verdict (ACD-2100a-5, ACD-2100b-1 to -5, ACD-2100d-1, the plan-feature
+    harness defaults) keep passing.
+  - >-
+    The startup check stays local to args: it adds no agent dispatch and no file access (ADR-030,
+    and ACD-2100b-5's guarantee that no dispatch is made on the check's behalf).
+  - >-
+    scripts/worktree/check_workspace_setup_permission.py stays, because the verdict-only start
+    still uses it; it is not deleted.
+  - >-
+    The Pre-Stage-0 code comment and docs/reference/plan-feature-workflow-rationale.md (comments
+    moved verbatim out of plan-feature.js) must agree: a changed code comment and its page land in
+    the same commit (the page is ACD-2100d-5-iv's).
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    scripts/commit_guardian/_file_size_ratchet.count_content_lines ('.js') at 927934e33, against a
+    1000-line limit, so every measured line this change puts in (a changed line counts; comments
+    are not measured) must be paid for by about two removed.
+  - >-
+    templates/ is the source: .claude/workflows/plan-feature.js, .claude/commands/plan-feature.md
+    and .claude/skills/plan-feature/SKILL.md are rebuilt by python scripts/build.py and never
+    hand-edited.
+test_intent:
+  - clause: the run passes every check made before triage, and the triage agent is dispatched for that request
+    needs_test: true
+    reason: Every run started as documented halts today, and only a run driven with the documented arguments shows the fix.
+  - clause: the run does not end with a report that a startup verdict or any other argument was not supplied
+    needs_test: true
+    reason: The halt is computed from args, and a wrong condition brings the recorded halt back.
+  - clause: >-
+      no command beyond those the command text shows was run by hand, and no argument beyond those it shows was added
+    needs_test: true
+    reason: A test that adds a verdict to args is exactly the false green the done records gave, so the arguments must come from the command text.
+  - clause: >-
+      the same holds when the run is started by doing exactly what the installed plan-feature skill says in its workspace section
+    needs_test: true
+    reason: The skill is a second entry surface whose arguments can drift from the command's.
+  - clause: >-
+      the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started with only the maker's answer, as the command and skill say, the run returned status error "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no agent) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if the verdict becomes required again.
+test_spec:
+  - name: "test_start_with_only_the_makers_answer_reaches_triage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "plan-feature.js is started through the E2 harness with userInput 'Add a CSV export to the parts list' and workspace (the maker's answer) only; workspace_setup_permission is passed as None so the harness default verdict cannot hide the defect; stage-0-triage is dispatched."
+    proves_clause: "the run passes every check made before triage, and the triage agent is dispatched for that request"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_no_missing_verdict_halt_when_the_makers_answer_is_supplied"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "With workspace supplied and no verdict the result is not an error naming a missing verdict or argument; with only a verdict (no workspace) the run still reaches triage; with neither the run halts before any dispatch."
+    proves_clause: "the run does not end with a report that a startup verdict or any other argument was not supplied"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "drop the args.workspace condition"
+      - "drop the workspace_setup_permission condition"
+      - "the gate always allows"
+  - name: "test_arguments_come_from_the_installed_command_text_only"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The arguments are read from Step 2 of the installed /plan-feature command through the ACD-2100d-5-i support module and are exactly userInput and workspace; the run reaches triage with no argument added."
+    proves_clause: "no command beyond those the command text shows was run by hand, and no argument beyond those it shows was added"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_skill_workspace_section_start_reaches_triage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "seam"
+    description: "The arguments are read from sec. WS.2 of the installed plan-feature skill; the run reaches triage with those arguments alone."
+    proves_clause: "the same holds when the run is started by doing exactly what the installed plan-feature skill says in its workspace section"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_makers_answer_only_start_symptom_wf_d2396526_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The 2026-10-29 start (only the maker's answer) returns neither status error nor the message No workspace-setup permission pre-flight verdict was supplied, and dispatches triage."
+    proves_clause: "the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started with only the maker's answer, as the command and skill say, the run returned status error \"No workspace-setup permission pre-flight verdict was supplied in args\" and dispatched no agent) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "require the verdict again when args.workspace is supplied"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the Pre-Stage-0 startup check on args.workspace_setup_permission that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      Fix direction 2 carried; the command and skill doc_links changed from modifies to describes
+      because neither is edited under that direction; estimated_complexity M to S.
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
+superseded_by: null
+covered_by: [ACD-2100d-5-i, ACD-2100d-5-ii, ACD-2100d-5-iii, ACD-2100d-5-iv]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  PLACEMENT. The run was dispatched with parent_l1_id ACD-1300e. That L1 is full at five L2s
+  (cap 5, no override) and its subject is resuming after an answer, not starting a run. The
+  defect is the ACD-2100 goal word for word ("Starting new work the proper way always
+  succeeds"). Its L1s: ACD-2100a, -b, -c are full at five L2s and every L2 under -b is done
+  (a done parent cannot take a todo child); ACD-2100e is documentation-only. ACD-2100d ("the
+  installed copy behaves like the one that was fixed") had one free slot and is the closest
+  fit: the route a user runs is the INSTALLED command and skill starting the INSTALLED
+  workflow, and the two halves fell out of agreement. ACD-2100d's notes warn against
+  restating a sibling's behaviour "but in the deployed layout"; this record does not -- its
+  subject is agreement between the entry surfaces and the workflow, which no sibling owns.
+  ACD-2100d is now at 5/5. If the PO prefers a dedicated L1 (ACD-2100 has two free L1 slots),
+  this record and its four L3s can be re-homed as one unit.
+
+  WHY DONE RECORDS DID NOT CATCH THIS. ACD-2100d-1 ("neither run stops at a check performed
+  before the first question") and ACD-2100a-5 are done, and their tests start the workflow
+  with a hand-built args object that already carries the verdict. That is the false green:
+  the evidence never used the arguments the entry surfaces build. ACD-2100d-5-i is the record
+  that closes it.
+
+  FIX DIRECTION -- OPEN, FOR THE IT PO AND THE USER AT THE GATE. The criteria hold under both
+  directions the KI lists:
+    1. restore the permission pre-flight to the command and the skill and pass its verdict; or
+    2. stop requiring the verdict when the maker's answer is supplied, since the workspace is
+       already made and the workflow no longer runs a workspace-setup step itself.
+  BA recommendation: direction 2. The skill's 2026-10-10 rewrite (TICKET-20260928-BO-4300-entry-skills)
+  retired the pre-flight on purpose; restoring it re-adds a second argument that can drift
+  and a pre-start step that can fail, to guard a step the run no longer performs. Direction 2
+  has two consequences the IT PO must carry: (a) ACD-2100b-5's it_requirement that a direct
+  invocation with no verdict halts must be narrowed to "with neither the maker's answer nor a
+  verdict" (ACD-2100d-5-ii keeps that case halting), and its test
+  test_direct_workflow_invocation_with_no_preflight_verdict_halts amended to match; (b) a
+  registry that denies shell permission no longer halts at startup when the maker's answer is
+  supplied -- the ADR-070 permits_shell lint and the shell-reply decline rule cover that
+  instead. Under direction 1, the command's and the skill's text both gain the pre-flight
+  step, and ACD-2100d-5-i guards it like any other argument.

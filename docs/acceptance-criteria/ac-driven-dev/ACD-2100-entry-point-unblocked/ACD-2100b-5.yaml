@@ -67,7 +67,7 @@ it_requirements:
   - "All source changes must land under templates/ and scripts/. The deployed workflow and the deployed skill are build output."
   - "The verdict must be a function of the registry contents alone. It must be identical whether dispatch is available or not -- 'skip the check when dispatch is unavailable' is a fail-open regression wearing this record's clothes and is explicitly forbidden. There must be no code path anywhere in the check that branches on dispatch availability."
   - "The startup path must reach this check and pass it with no network available."
-  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them. Moving the check into the skill must additionally not open a bypass -- the workflow must fail closed when no pre-flight verdict reaches it. A caller that invokes the workflow directly, for example Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'}), which is a real and currently-used invocation path, supplies no verdict and must be stopped before any authoring agent is dispatched, with a report that names the missing pre-flight rather than asserting a permission cause the run never established."
+  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them. Moving the check into the skill must additionally not open a bypass -- the workflow must fail closed when neither the maker's answer (args.workspace) nor a pre-flight verdict reaches it. A caller that invokes the workflow directly, for example Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'}), which is a real and currently-used invocation path, and supplies neither must be stopped before any authoring agent is dispatched, with a report that names what is missing rather than asserting a permission cause the run never established. (Narrowed 2026-11-04 by it-po, run pf-entry-pause-20261104: when the maker's answer is supplied the verdict is not required -- ACD-2100d-5, fix direction 2 -- and the test test_direct_workflow_invocation_with_no_preflight_verdict_halts is amended to supply neither and still expect the halt.)"
   - "The verdict must cross from the pre-flight into the workflow through args -- the only injected global that carries caller-supplied data -- and must carry enough structure to keep the outcomes ACD-2100b-1, -2 and -3 own distinguishable from one another. A single boolean collapses them and re-creates the defect those records exist to fix."
   - "The registry-location semantics must not fork. The pre-flight must resolve the registry the same way ACD-2100a-1 and ACD-2100a-3 already established -- repository-anchored, so it reaches the project's real registry when the run starts inside a linked git worktree that holds no .leafcutter/ of its own -- rather than a second, independent, cwd-relative resolution."
   - "If a helper that dispatches for this purpose remains in the source for another caller, this behaviour is not satisfied by its absence from the file -- what must be observable is that no dispatch is made on the check's behalf during a run."
@@ -175,6 +175,22 @@ amended_by:
       relationship: modifies. assigned_agent stays python-coder. Added an explicit
       fail-closed requirement and a covering test for direct workflow invocation, which the
       move would otherwise have left as a bypass."
+  - reason: it-po-start-contract-amendment
+    by: it-po
+    at: 2026-11-04
+    run_id: pf-entry-pause-20261104
+    note: >-
+      Criteria and work_status untouched. Narrowed the direct-invocation it_requirement to a start
+      with neither the maker's answer (args.workspace) nor a pre-flight verdict, carrying the
+      person's choice of fix direction 2 for KI-ACD-20261022 (ACD-2100d-5): the workflow no longer
+      requires the verdict when the maker's answer is supplied. The test
+      test_direct_workflow_invocation_with_no_preflight_verdict_halts is amended in the ACD-2100d-5
+      change to supply neither and still expect the halt; the test_spec entry itself is left to the
+      test-design stage. Consequence: a registry that withholds shell permission no longer halts at
+      startup when the maker's answer is supplied; ADR-070's permits_shell lint and decline rule
+      cover that case. Not re-derived here: the first it_requirement still says the plan-feature
+      skill invokes the pre-flight, which has not held since the skill's sec. WSP was replaced by
+      sec. WS on 2026-10-10.
 superseded_by: null
 covered_by:
 - ACD-2100b-5-i
