@@ -23,7 +23,7 @@ related_docs:
 - **Severity:** medium. The `refresh-gate` row cannot pass unless the agent writes only tests that
   each catch the wrong version, which punishes the criterion and boundary tests that round out a
   test set. The row is falsely red whenever the agent writes more than the one catching test.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-1-v (proving tests: unit_tests/evals/tq200d1v/).
 - **Occurrences:** 3 (first live run, re-run 1 and re-run 2, all 2026-11-02, Windows 11, main
   `8248ac7a`).
 - **First seen:** 2026-11-02 · **Last seen:** 2026-11-02

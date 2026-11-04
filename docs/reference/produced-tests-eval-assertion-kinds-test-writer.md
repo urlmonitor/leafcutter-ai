@@ -243,15 +243,15 @@ class T(unittest.TestCase):
 
 **Used by:** the test-writer set, row `refresh-gate` (the test half of the row).
 
-**Reads:** the produced test files and the verdict of a wrong-version run. The kind finds the test functions tagged `# covers: <AC-ID>`, writes an AC record per id naming the row's `wrong_version` under `must_catch`, installs the `fixed` module, prepares the `altered` copy as the wrong version, and calls the shared runner ([wrong-version runs](wrong-version-runs.md)).
+**Reads:** the produced test files and the verdict of a wrong-version run. The kind finds the test functions tagged `# covers: <AC-ID>`, writes an AC record per id naming the row's `wrong_version` under `must_catch` for every tagged test, installs the `fixed` module, prepares the `altered` copy as the wrong version, and calls the shared runner ([wrong-version runs](wrong-version-runs.md)). Every tagged test runs on the fixed version and under the wrong version.
 
-**Passes when:** the verdict has `gate_passed` true and a `caught` row for the wrong version from one of the tagged tests.
+**Passes when:** at least one tagged test is `caught` for the wrong version, no tagged test fails on the fixed version, and no run is left unfinished. One catching test is enough: tagged tests that pass under the wrong version are not blocking in the eval (they would be in build work, where the shared verdict is unchanged). An untagged catching test never counts.
 
-**Fails when:** no test carries a `# covers:` tag, or the verdict is anything else (survived, not run, invalid).
+**Fails when:** no test carries a `# covers:` tag, every tagged test passes under the wrong version ("not caught by the runner (survivor)"), a tagged test fails on the fixed version, or the run is stopped or unfinished.
 
-**Passing example:** the `refresh-gate` test asserts `should_refresh(True, False) is False` and `should_refresh(True, True) is True`; the altered code drops `retry_due`, so the verdict is "caught 'drop the retry_due condition' by test_gate_needs_both_conditions".
+**Passing example:** four tests tagged `# covers: TQ-9201` (`test_refresh_fires_when_both_due`, `test_refresh_blocked_when_retry_not_due`, `test_refresh_blocked_when_refresh_not_due`, `test_refresh_blocked_when_neither_due`) all pass on the fixed version; the altered code drops `retry_due`, so only `test_refresh_blocked_when_retry_not_due` fails and the verdict is "caught 'drop the retry_due condition' by test_refresh_blocked_when_retry_not_due", with the other three listed as not blocking. Probe fixture: `unit_tests/evals/fixtures/tq200d-rerun/test-writer/refresh-gate/run1`.
 
-**Failing example:** the same test without the `(True, False)` assertion survives ("not caught by the runner (survivor)"); without its `# covers: TQ-9201` line, the detail is "no '# covers: <AC-ID>' tagged test in the output".
+**Failing example:** the same file without `test_refresh_blocked_when_retry_not_due` survives ("not caught by the runner (survivor)"); without its `# covers: TQ-9201` lines, the detail is "no '# covers: <AC-ID>' tagged test in the output".
 
 **Template sentence:**
 
