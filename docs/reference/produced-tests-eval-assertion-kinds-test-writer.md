@@ -207,15 +207,15 @@ class T(unittest.TestCase):
 
 **Used by:** the test-writer set (rows such as `empty-window`, `configured-database`) and the test-runner set (rows `configured-database`, `missing-setting-database-work`).
 
-**Reads:** the completion report (`report.md`). Spec key: `contains`.
+**Reads:** the completion report (`report.md`). Spec keys: `contains`, and an optional `also_accepts` list of equivalent wordings. Only the `empty-window` row (`non-None`, ``non-`None` ``) and the `presence-is-not-correctness` row (`expected value`, `seeded value`) list `also_accepts`; every other row checks its one `contains` term.
 
-**Passes when:** the report holds `contains` as a substring, ignoring case.
+**Passes when:** the report holds `contains`, or any `also_accepts` wording, as a substring, ignoring case. The detail names the term found.
 
-**Fails when:** it does not; the detail reads "report does not name '<contains>'".
+**Fails when:** it holds none of them; the detail reads "report does not name '<contains>'" and, for a row with `also_accepts`, lists every term joined by "or".
 
-**Passing example:** row `empty-window` has `contains` `non-NULL`; a report saying "the non-NULL buy_volume values (3)" passes.
+**Passing example:** row `empty-window` has `contains` `non-NULL` and `also_accepts` `non-None`; a report saying "the exact non-None count" passes, as does "the non-NULL buy_volume values (3)".
 
-**Failing example:** a report saying only "the check counts the values" fails.
+**Failing example:** a report saying only "the check counts the values" fails, and so does "returns None when the feed is empty" (a bare None is not a non-None phrase).
 
 **Template sentence:** none - `contains` is a per-row term of the fixture, and the kind quotes no template sentence.
 

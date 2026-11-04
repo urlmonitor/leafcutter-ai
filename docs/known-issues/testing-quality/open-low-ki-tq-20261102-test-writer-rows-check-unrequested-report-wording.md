@@ -24,7 +24,7 @@ related_docs:
 - **Severity:** medium. Three of the eight test-writer rows hold a report check that a report
   which follows the template fails, so those rows are falsely red independent of test quality, and
   a template that never states the wanted wording cannot be fixed by reading the score.
-- **Status:** open, no AC. Fix direction decided by the user on 2026-11-02: widen the checks
+- **Status:** open; parts 1 and 2 struck, fixed by TQ-200d-1-vi (part 3 pending TQ-200d-4-vi). Fix direction decided by the user on 2026-11-02: widen the checks
   (no template change); see Fix direction.
 - **Occurrences:** 9 failed assertions, each check in each of the three live runs of 2026-11-02
   (first live run, re-run 1, re-run 2; Windows 11, main `8248ac7a`).
@@ -45,13 +45,15 @@ does not name 'known value'" or "the report does not say the database tests were
 
 ## Mechanism
 
-1. **`non-NULL` on `empty-window`.** The row tests Python code over a list, where the missing value
-   is `None`; the agents say "non-`None`". The template uses "non-NULL count" only inside its own
-   Step 4b remedy (`test-writer.md`:1156) and never asks the report to repeat it.
-2. **`known value` on `presence-is-not-correctness`.** The template's remedy says "assert at least
-   one known expected value seeded in the fixture" (:1159); a report that echoes it ("known
-   expected value") still fails the substring `known value`, and nothing asks the report to use the
-   phrase at all.
+1. ~~**`non-NULL` on `empty-window`.** The row tests Python code over a list, where the missing value~~
+   ~~is `None`; the agents say "non-`None`". The template uses "non-NULL count" only inside its own~~
+   ~~Step 4b remedy (`test-writer.md`:1156) and never asks the report to repeat it.~~
+   *Fixed by TQ-200d-1-vi: `also_accepts` on the row's `report_mentions` check; tests in `unit_tests/evals/tq200d1vi/`.*
+2. ~~**`known value` on `presence-is-not-correctness`.** The template's remedy says "assert at least~~
+   ~~one known expected value seeded in the fixture" (:1159); a report that echoes it ("known~~
+   ~~expected value") still fails the substring `known value`, and nothing asks the report to use the~~
+   ~~phrase at all.~~
+   *Fixed by TQ-200d-1-vi: `also_accepts` on the row's `report_mentions` check; tests in `unit_tests/evals/tq200d1vi/`.*
 3. **`report_says_not_run` on `missing-setting-database-work`.** The test-writer must run its new
    tests and see them red (Step 4 "Verify the Tests Are Red", `test-writer.md`:1090-1117), and its
    DB pattern lets the not-configured error propagate from `setUp` (:854-857). So the truthful
