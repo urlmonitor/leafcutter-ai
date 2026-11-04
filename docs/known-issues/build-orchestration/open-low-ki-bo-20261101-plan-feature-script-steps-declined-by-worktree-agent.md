@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-11-01'
-last_updated: '2026-11-01'
+last_updated: '2026-11-04'
 components:
   - build_orchestration
 related_docs:
@@ -30,9 +30,10 @@ related_docs:
 - **Status:** open. No AC. The fix is already ticketed for the stage-script steps:
   `tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md` (status `todo`). That
   ticket does not cover the pause-store reads and clear (`:1579`, `:1654`).
-- **Occurrences:** 1 (`/plan-feature` run `wf_4a8567df-505`, run id `default-run`, workspace
-  `ac/tq-200d-before-score-fixes`, BA stage, 2026-10-29 to 2026-10-30)
-- **First seen:** 2026-10-30 · **Last seen:** 2026-10-30
+- **Occurrences:** 2 (`/plan-feature` run `wf_4a8567df-505`, run id `default-run`, workspace
+  `ac/tq-200d-before-score-fixes`, BA stage, 2026-10-29 to 2026-10-30; run `wf_6207f8a0-8ee`,
+  run id `pf-entry-pause-20261104`, BA stage, 2026-11-04)
+- **First seen:** 2026-10-30 · **Last seen:** 2026-11-04
 - **Where** (`templates/workflows-js/plan-feature.js` at base `d62440669`; the deployed
   `.claude/workflows/plan-feature.js` is the same body with the shared block inlined):
   - `:1579` — `readPauseRecordWithRetry()` dispatches every pause-record read with
@@ -144,3 +145,21 @@ with `AC IDs:` and `run-id:` lines, and start a new run. Delete the stale
 
 **Pattern:** a step sent to an agent whose charter forbids it, with a reply reader that cannot
 tell "refused" from "failed". The refusal is then blamed on the next agent in line.
+
+## Occurrence 2026-11-04 — rule-check-ba declined; the check itself also failed
+
+On run `wf_6207f8a0-8ee` (run id `pf-entry-pause-20261104`), `rule-check-ba` went to
+`worktree-agent`, which replied `{"output": "", "exit_code": null, "stderr": "NOT_RUN:
+requirement_rule_check.py is outside the worktree-agent's two actions (create and remove)."}`.
+The gate summary then read "Rule check failed: the check produced no readable report (JSON Parse
+error: Unexpected EOF)". In the run just before it (`wf_59d7a401-0f3`), `read-covering-ac-titles` and the first
+`pause-persist-verify` were declined the same way.
+
+The main session ran the same command by hand, from the workspace. It ran (`records_checked:
+14`) and returned `verdict: failed`, with 25 findings needing a decision. They were contract
+symmetry (a child's `expects_from` with no `delivers_to` on the producer, an IT-PO field) and
+stale `test_intent` clause texts on the parent records ACD-1300e-3 and ACD-1300e-4, which the BA
+had touched only to add `covered_by` links. So the post-gate re-check at `:2915` would have
+sent the BA back to edit, for findings that belong to the IT-PO stage or to records it only
+linked. The person approved gate-ba, and the stage was committed
+from the main loop (`927934e33`).

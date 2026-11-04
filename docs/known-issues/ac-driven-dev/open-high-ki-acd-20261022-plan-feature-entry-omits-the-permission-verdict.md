@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-25'
-last_updated: '2026-11-01'
+last_updated: '2026-11-04'
 components:
   - ac_driven_dev
 related_docs:
@@ -20,12 +20,15 @@ related_docs:
 - **Severity:** high. Every `/plan-feature` run started the documented way halts before any
   authoring agent runs. The halt is loud and nothing is lost, but the message points at a skill
   step that no longer exists, so the user cannot fix it from the docs.
-- **Status:** open. No AC. Traced to code.
-- **Occurrences:** 2 (driving `/plan-feature` for KM-400d-4-i..iii from a workspace made by
+- **Status:** open. Traced to code. ACs drafted 2026-11-04: ACD-2100d-5 and ACD-2100d-5-i..iv (branch
+  `ac/plan-feature-entry-and-pause-fixes`); the person chose fix direction 2 (do not require the
+  verdict when the maker's answer is supplied).
+- **Occurrences:** 3 (driving `/plan-feature` for KM-400d-4-i..iii from a workspace made by
   `.leafcutter/scripts/worktree.py ensure --kind ac`, 2026-10-22; `/plan-feature` run
   `wf_d2396526-264` for the TQ-200d before-score fixes, workspace `ac/tq-200d-before-score-fixes`,
-  2026-10-29 19:51 UTC, see [the occurrence section](#occurrence-2026-10-29--still-open-at-base-d62440669))
-- **First seen:** 2026-10-22 · **Last seen:** 2026-10-29
+  2026-10-29 19:51 UTC, see [the occurrence section](#occurrence-2026-10-29--still-open-at-base-d62440669);
+  run id `pf-entry-pause-20261104`, 2026-11-04, workaround applied up front)
+- **First seen:** 2026-10-22 · **Last seen:** 2026-11-04
 - **Where:** `templates/workflows-js/plan-feature.js:2203` (reads
   `args.workspace_setup_permission`) and `:2206-2218` (the fail-closed halt). The entry surfaces
   that omit it: `templates/commands/plan-feature.md:34-38` and
@@ -121,3 +124,11 @@ numbers moved slightly since the first filing):
 Graded `high` at the first filing; the brief for this occurrence called it low. The grade is left
 as filed: every run started the documented way still stops, even though the halt is loud and the
 workaround above still works.
+
+## Occurrence 2026-11-04 — workaround applied up front
+
+The run that planned this fix (run id `pf-entry-pause-20261104`, base `c4bcf1c14`) ran
+`check_workspace_setup_permission.py --agent-id shell-runner` by hand before the first start and
+passed its verdict with `args.workspace`. All three starts went past the check. The verdict's
+`location` was the main checkout's `.leafcutter/config/agent_registry.json`, not the workspace's,
+which is worth checking when the fix lands.
