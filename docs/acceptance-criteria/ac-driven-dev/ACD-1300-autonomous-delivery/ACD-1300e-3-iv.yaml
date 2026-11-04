@@ -2,7 +2,7 @@ id: ACD-1300e-3-iv
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "When a pause cannot be confirmed, the report shows what the write said next to what the read-back found"
 component: ac-driven-dev
@@ -55,15 +55,110 @@ doc_links:
   - path: templates/workflows-js/_shared/workspace-answer.js
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Done: the write is reported failed if and only if no record is on disk, established by observing the record after the write."
 assigned_agent: python-coder
 estimated_complexity: S
 delivers_to:
   agent: documentation-expert
-  contract: "The report forms for the four unconfirmed-pause cases (write succeeded but no record found; write failed; write declined; write reply unreadable), quoted in the resume how-to by ACD-1300e-4-i."
-expects_from: null
+  contract: >-
+    The pause_persist_failed message forms pauseAtGate() produces for the four unconfirmed-pause
+    causes, quoted in the resume how-to by ACD-1300e-4-i: (a) the write reported success but no
+    record was found; (b) the store write failed, quoting its error output; (c) the write was
+    declined and not run, quoting the declining agent and its reason; (d) the write's reply could
+    not be read as a result, quoting it as received. Every form has status pause_persist_failed,
+    names the run id and gate id, quotes the write's reply (up to 2 KB) and states the read-back's
+    outcome separately, and says the drafted criteria are on disk, not committed and unchanged, and
+    that the run cannot be resumed until a pause is recorded.
+expects_from:
+  ac_id: ACD-1300e-3
+  contract: >-
+    The one pause-store step path: a fixed shell-runner dispatch per step whose reply
+    shellStepReply() classifies as a result {command, exit_status, stdout, stderr}, a decline
+    {declined: true, agent, reason} with no exit_status key, or a reply that is neither (kept as
+    received).
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    The write's reply is kept: its shellStepReply() classification, and for a result its
+    exit_status, stdout and stderr, for a decline its agent and reason, otherwise the reply as
+    received. It is held until the read-back has decided and is quoted in the pause_persist_failed
+    message, bounded to 2 KB per quoted reply (ADR-070 sec. 5.2).
+  - >-
+    The read-back decides (ACD-2100a-4): the run ends pause_persist_failed if and only if the
+    read-back finds no record, or not the record the run sent (ACD-1300e-3-iii). The read-back is
+    sent after every write reply, a decline or an unreadable reply included, so a write whose reply
+    could not be read but whose record is on disk ends as waiting (IT-PO decision; this refines
+    ADR-070 sec. 5.3 for the pause write and is flagged for the person). The message states the
+    read-back's outcome separately and never claims a read-back result that was not obtained; a
+    read-back that could not itself be read is reported as such.
+  - >-
+    Exactly one of the four causes is named, decided from the write reply's classification alone:
+    a result with exit_status 0 is cause (a), a result with a non-zero exit_status is cause (b), a
+    decline is cause (c), anything else is cause (d). No message names a cause the reply does not
+    show.
+  - >-
+    Every form names the run id and the gate id, says the drafted criteria are on disk, not
+    committed and unchanged, and says the run cannot be resumed until a pause is recorded. The run
+    ends there with no later step, and the write is not sent again to shell-runner or to any other
+    agent (ADR-070 sec. 5.3).
+  - >-
+    The status stays pause_persist_failed, already in TERMINAL_GATE_STATUSES; no new status is
+    added.
+  - >-
+    Errors follow the CLAUDE.md error-handling policy: besides the result, a [plan-feature][WARNING]
+    line names the run id, the gate id and the write's classification.
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    count_content_lines ('.js') at 927934e33, against a 1000-line limit, so every measured line
+    this change puts in (a changed line counts) must be paid for by about two removed. Build the
+    four forms from one message template, not four copies.
+  - >-
+    templates/workflows-js/plan-feature.js is the source. The deployed .claude/workflows/plan-feature.js
+    is rebuilt by python scripts/build.py and never hand-edited.
+test_intent:
+  - clause: >-
+      its report quotes the write's own reply -- the command's outcome and its output, up to 2 KB -- and, separately, the read-back's result
+    needs_test: true
+    reason: The write's reply is discarded today, so keeping and quoting it is new behaviour a regression would silently drop.
+  - clause: >-
+      it says the write reported success but no record was found, and does not say that the store could not be written or that a step was declined
+    needs_test: true
+    reason: The cause is computed from the reply, and a wrong branch names a cause the reply does not show.
+  - clause: >-
+      it names the run id and the decision point, says the drafted criteria are on disk, not committed and unchanged, and says the run cannot be resumed until a pause is recorded
+    needs_test: true
+    reason: These parts are filled in per run, and a missing part leaves the operator unable to recover the drafts.
+  - clause: >-
+      when instead the write ran and failed, the report quotes the write's error output and says the store write failed
+    needs_test: true
+    reason: A non-zero exit is a result and not a decline, and the two are easy to fold together.
+  - clause: >-
+      when instead the write step was declined, the report quotes the decline and its stated reason, says the write was not run, and claims no read-back result for a read-back that was not sent
+    needs_test: true
+    reason: A decline carries no exit status, and a reader that expects one misreports it as a store failure.
+  - clause: >-
+      when instead the write's reply is neither a result nor a decline, the report quotes that reply as received and says it could not be read as a result
+    needs_test: true
+    reason: A wrapped or prose reply has been recorded in practice, and without its own branch it falls into one of the other causes.
+  - clause: the write is not sent again to any other agent after its reply is reported
+    needs_test: true
+    reason: A substitute dispatch after a refusal caused the 2026-09-25 incident, and it is visible only in the run's dispatch record.
+  - clause: >-
+      the bug symptom (KI-BO-20261022: "the workflow knew what the write returned and threw it away, so the report cannot say which of three causes it was"; on 2026-10-25 the decline reply survived only in the run's journal) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if the reply is dropped again.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
 superseded_by: null
 covered_by: []
 implemented_by: []

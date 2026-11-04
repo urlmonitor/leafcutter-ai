@@ -39,25 +39,42 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: ACD-1300e-3
-  contract: "All pause-record operations dispatched to command-step-runner with request {step, command, target: {workspace, branch, ac_id}} and reply {command, workspace, exit_status, stdout, stderr} | decline {declined: true, step, agent, reason}; pause_persist_failed iff the read-back finds no record, with a message naming decline vs store write."
+  contract: >-
+    Every pause-record operation is one plain command (ACD-1300e-3-ii) dispatched to shell-runner
+    (ACD-1300e-3, ADR-070) with only the command and the run-unchanged instruction. The reply is a
+    result {command, exit_status, stdout, stderr} for a command that ran, or a decline
+    {declined: true, agent: 'shell-runner', reason} with no exit_status key for one that did not
+    (templates/agents/shell-runner.md), classified by shellStepReply(). pause_persist_failed is
+    returned if and only if the read-back finds no record, with a message naming the cause
+    (ACD-1300e-3-iv).
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
 it_requirements:
-  - "The executor id is a fixed value, never chosen per call, per run, or by fallback rotation, so the outcome cannot vary between runs reaching the same gate."
-  - "Runs started from a linked worktree and from the project root write to and read from the same repository-anchored store (<repo root via git --git-common-dir>/.leafcutter/paused_runs), unchanged from ACD-2100a-4."
+  - "The executor id is a fixed value (shell-runner), never chosen per call, per run, or by fallback rotation, so the outcome cannot vary between runs reaching the same gate."
+  - >-
+    Runs started from a linked worktree and from the project root write to and read from the same
+    store: its path is computed in the workflow body from the accepted maker answer's
+    workspace_path (<workspace_path>/<output_root>/paused_runs, ACD-1300e-3-ii), never from the
+    session's working directory. This keeps ACD-2100a-4's guarantee without the removed git
+    rev-parse --git-common-dir subshell (amended 2026-11-04 by it-po).
   - "When the store is not writable, pause_store.py's non-zero exit and stderr are carried into the pause_persist_failed message, which names the store write as the cause and not a refusal by the executor."
   - "A pause failure never deletes, rewrites, stages or commits drafted criteria."
 test_intent:
-  - clause: "Then all five end reported as waiting with a record present on disk for each run id,"
+  - clause: all five end reported as waiting with a record present on disk for each run id
     needs_test: true
-    reason: "Observable outcome; proved by test_five_headless_runs_all_reported_waiting_with_records (criterion)."
-  - clause: "And none of the five ends as \"pause persist failed\","
+    reason: The routing was reported as varying between runs, so the outcome must be shown for every one of several runs.
+  - clause: none of the five ends as "pause persist failed"
     needs_test: true
-    reason: "Observable outcome; proved by test_none_of_five_runs_ends_pause_persist_failed (discrimination)."
-  - clause: "And the same holds when the five runs are started from a worktree of the project rather than from the project root,"
+    reason: A fixed executor id is what makes the outcome the same each time, and a fallback or rotation breaks that silently.
+  - clause: >-
+      the same holds when the five runs are started from a worktree of the project rather than from the project root
     needs_test: true
-    reason: "Observable outcome; proved by test_five_runs_from_worktree_persist_to_shared_store (boundary)."
-  - clause: "And when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged."
+    reason: The store path must not depend on where the run was started, which only a run from a second directory shows.
+  - clause: >-
+      when the pause store is not writable, the run reports the pause as failed, the report names the store write as the cause (not a refusal by the step performing it), and the drafted criteria are still present on disk unchanged
     needs_test: true
-    reason: "Observable outcome; proved by test_unwritable_store_reports_store_write_cause_and_keeps_drafts (failure)."
+    reason: A store failure and an executor refusal must be told apart from the reply, and a wrong branch names the wrong cause.
 test_spec:
   - name: test_five_headless_runs_all_reported_waiting_with_records
     target_dir: unit_tests/workflows/
@@ -97,6 +114,16 @@ amended_by:
     date: '2026-10-16'
     by: it-po
     run_id: plan-feature-resume-and-pause
+  - reason: it-po-executor-amendment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      expects_from contract and the reply shapes moved from command-step-runner to shell-runner
+      (ACD-1300e-3 as amended, ADR-070); the store-location requirement no longer names the
+      git --git-common-dir subshell; added declared_files; test_intent clause texts rewritten to
+      the normalised outcome clauses, test names dropped from the reasons. criteria and test_spec
+      untouched.
 superseded_by: null
 covered_by: []
 implemented_by: []

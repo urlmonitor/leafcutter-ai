@@ -1,7 +1,7 @@
 id: ACD-2100d-5-iii
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A resume started the way the skill describes is not stopped by the startup check"
 component: ac-driven-dev
@@ -35,20 +35,76 @@ doc_links:
     status: exists
     relevance: "Step 3: re-run the same workflow with resumeFromRunId and args.resume_answer; the skill constructs the re-invocation."
   - path: templates/workflows-js/plan-feature.js
-    relationship: modifies
+    relationship: describes
     status: exists
+    relevance: "Its startup check, as changed by ACD-2100d-5, is what the resume must pass; this record does not edit it."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
-assigned_agent: python-coder
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+    relevance: "The maker's locate verb, which returns an existing workspace's answer and never makes one."
+assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: ACD-2100d-5
-  contract: "The start arguments the installed entry surfaces build are the ones the workflow requires; this record extends that agreement to the resume re-invocation."
+  contract: >-
+    The start contract: Workflow('plan-feature', {userInput, workspace: <the maker's answer>})
+    passes every check before triage with no verdict. This record extends it to the resume
+    re-invocation, which also carries resumeFromRunId and args.resume_answer.
+declared_files:
+  - path: templates/skills/plan-feature/SKILL.md
+    state: existing
+it_requirements:
+  - >-
+    Sec. RS.2 states that the re-invocation passes, besides resumeFromRunId and args.resume_answer,
+    the paused run's own workspace answer as args.workspace, passed verbatim as sec. WS.2 requires
+    (never re-typed, trimmed or re-shaped). The answer comes from ONE maker command for that
+    workspace's kind and slug using the maker's locate verb (docs/how-to/get-a-workspace.md), which
+    never makes a workspace, or is the maker answer the session already holds for that run.
+  - >-
+    No startup verdict and no other argument is added on a resume (ACD-2100d-5's start contract).
+  - >-
+    When the maker refuses (for example NOT_FOUND), the skill stops and reports the maker's answer
+    verbatim. It never makes a new workspace for the resume, because a fresh workspace holds
+    neither the paused run's record nor its drafts.
+  - >-
+    The resume arguments in sec. RS.2 are shown in a form the support module of ACD-2100d-5-i can
+    read from the installed skill, so the resume can be checked behaviourally with the arguments
+    the skill gives.
+  - >-
+    Sec. RS.3's provenance obligation is unchanged. The command template has no resume step and is
+    not edited.
+  - >-
+    templates/skills/plan-feature/SKILL.md is the source and gains a DECISION HISTORY entry; the
+    deployed .claude/skills/plan-feature/SKILL.md is rebuilt by python scripts/build.py and never
+    hand-edited.
+test_intent:
+  - clause: the resumed run passes every check made before triage with no startup verdict or other argument added by hand
+    needs_test: true
+    reason: A resume is a second start that runs the same startup check, and a fix to the first start alone leaves every resume halting.
+  - clause: it reaches the product-owner decision point, applies the answer, and continues
+    needs_test: true
+    reason: Passing the startup check is not enough if the resume cannot find its record in the workspace it was given.
+  - clause: it works in the same workspace run R was paused in, and no second workspace is made for it
+    needs_test: true
+    reason: Running the maker to make a workspace on resume is the obvious repair, and it silently loses the paused run's record and drafts.
+  - clause: >-
+      the bug symptom (KI-ACD-20261022: a start without a hand-run startup verdict "returned status error" with "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no agent) must not occur on the resume
+    needs_test: true
+    reason: This is the recorded failure on a fresh start, and the resume path reaches the same check.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      assigned_agent python-coder to llm-expert: under fix direction 2 the change is the skill's
+      sec. RS.2 text only; plan-feature.js's doc_link changed from modifies to describes.
 superseded_by: null
 covered_by: []
 implemented_by: []

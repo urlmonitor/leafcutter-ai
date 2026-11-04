@@ -1,7 +1,7 @@
 id: ACD-1300e-4-i
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The resume how-to explains a declined pause-record step and a pause that could not be confirmed"
 component: ac-driven-dev
@@ -50,13 +50,70 @@ expects_from:
     contract: "The pause record unreadable message form for a declined look-up."
   - ac_id: ACD-1300e-3-vi
     contract: "The result statement for an uncleared pause record."
+declared_files:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    state: existing
+it_requirements:
+  - >-
+    Edit the existing guide docs/how-to/resume-a-paused-plan-feature-run.md in place and keep its
+    Diataxis how-to genre; no new how-to file. ACD-1300e-4 owns the multi-decision walkthrough and
+    the unwritable-store case with its retry, so this record adds only the outcomes ACD-1300e-3-iv,
+    -v and -vi introduce and does not restate those.
+  - >-
+    Report texts are quoted word for word from what the route produces, as delivered by
+    ACD-1300e-3-iv, -v and -vi. Status values are only those in TERMINAL_GATE_STATUSES in
+    templates/workflows-js/plan-feature.js; a declined look-up is pause_record_unreadable, and the
+    guide invents no status for it.
+  - >-
+    Wherever the guide says who reads, writes or clears a pause record, it names shell-runner, the
+    one-command executor of ADR-070 (not worktree-agent or command-step-runner).
+  - >-
+    The safe-to-delete instruction for an uncleared record agrees with section 3's rule against
+    editing the record by hand: deleting a stale record once nothing waits on the run is stated as
+    the one sanctioned manual step, and editing a record stays forbidden.
+  - >-
+    How the operator keeps the drafts of an unconfirmed pause is the KI-BO-20261022 workaround:
+    commit the stage from the main loop as plan-feature(<STAGE>): <component> with AC IDs: and
+    run-id: lines, then start a new run, which crash-resumes past the committed stage.
+  - >-
+    Where the guide lists what the resume invocation carries, it lists what the plan-feature
+    skill's sec. RS.2 says when this lands (after ACD-2100d-5-iii, also the paused run's own
+    workspace answer as args.workspace); where the two disagree, flag it rather than diverge.
+  - >-
+    The check-doc-length ratchet applies to docs/**.md: the guide must not cross or grow past its
+    limit; tighten existing prose to make room if needed.
+test_intent:
+  - clause: >-
+      the guide shows a report that quotes what the write said next to what the read-back found, and how to tell its four causes apart: the write reported success but no record was found, the write ran and failed, the write was declined, and the write's reply could not be read as a result
+    needs_test: false
+    reason: This is explanatory prose whose accuracy against the route is covered by the clause on quoted texts, so a presence test would only restate the sentence.
+  - clause: >-
+      it states that a declined look-up of a pause record leaves the record and the drafted criteria unchanged, does not apply the answer, and is retried by starting the resume again with the same answer
+    needs_test: false
+    reason: This is a prose statement reviewed at sign-off; the behaviour it describes is tested on ACD-1300e-3-v.
+  - clause: >-
+      it states what the run's result says when a pause record could not be cleared, where that record is, and when it is safe to delete it
+    needs_test: false
+    reason: This is a prose statement reviewed at sign-off; the result statement itself is tested on ACD-1300e-3-vi.
+  - clause: >-
+      it states that the drafted criteria of a run whose pause could not be confirmed are on disk and not committed, and how the operator keeps them
+    needs_test: false
+    reason: This is a prose statement reviewed at sign-off, with no computed content.
+  - clause: every report text and status value the guide quotes is one the route actually produces
+    needs_test: true
+    reason: The quoted texts and status values can drift from the workflow's output, which a check against the workflow catches and review does not.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: "change_target set to docs: the record edits one how-to and no code."
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: pipeline
+change_target: docs
 risk_surface: contract_boundary
 notes: |
   ACD-1300e's documentation_triggers (how-to, sequence-diagram) are already served by

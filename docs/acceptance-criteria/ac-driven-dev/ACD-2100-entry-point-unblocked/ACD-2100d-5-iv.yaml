@@ -1,7 +1,7 @@
 id: ACD-2100d-5-iv
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The startup-check reference and the workflow rationale describe the start the route actually accepts"
 component: ac-driven-dev
@@ -46,14 +46,74 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: ACD-2100d-5-ii
-  contract: "The startup-halt report text for a run with no maker's answer and no verdict."
+  contract: >-
+    The startup-halt report for a start with neither the maker's answer nor a verdict, word for
+    word as plan-feature.js produces it (status error; names args.workspace as missing; remedy is
+    the maker step of the installed command's Step 1 and the skill's sec. WS.1).
+declared_files:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    state: existing
+  - path: docs/reference/plan-feature-workflow-rationale.md
+    state: existing
+it_requirements:
+  - >-
+    Edit both pages in place and keep their reference genre; no new page. The check-doc-length
+    ratchet applies to docs/**.md; tighten existing prose to make room if needed.
+  - >-
+    State the start contract as the workflow implements it after ACD-2100d-5: the installed
+    command and skill pass userInput and workspace; workspace (the maker's answer) is what a start
+    needs; args.workspace_setup_permission is required only for a start without the maker's
+    answer.
+  - >-
+    Quote startup-halt reports word for word from the workflow, including the neither-argument row
+    and its remedy as delivered by ACD-2100d-5-ii; no paraphrase is presented as a quote.
+  - >-
+    Remove the claim that the skill runs the permission pre-flight (sec. WSP was retired on
+    2026-10-10, TICKET-20260928-BO-4300-entry-skills). Where
+    scripts/worktree/check_workspace_setup_permission.py is still named, say it serves only a start
+    without the maker's answer.
+  - >-
+    docs/reference/plan-feature-workflow-rationale.md holds comments moved verbatim out of
+    plan-feature.js. Its sections "Pre-Stage-0 workspace-setup permission gate" and "No pre-flight
+    verdict at all fails closed" are rewritten to match the code comment as changed by ACD-2100d-5
+    and -ii, and say whether the verdict is required when the maker's answer is supplied, and why
+    (the workspace already exists and the workflow runs no workspace step of its own).
+  - >-
+    Check docs/reference/plan-feature-workflow-rationale-gates.md, section "The pre-flight outcome
+    field", against the new contract. If it contradicts it, flag that at sign-off rather than
+    editing a file this record does not declare.
+test_intent:
+  - clause: >-
+      the pages list the arguments the installed /plan-feature command and skill pass, and say which of them the workflow requires
+    needs_test: true
+    reason: The listed arguments can drift from the entry texts, which reading those texts the way ACD-2100d-5-i does catches.
+  - clause: each startup-halt report the pages quote is word for word what the workflow produces
+    needs_test: true
+    reason: Quoted halts drift from the workflow's output whenever either changes, which a check against the workflow catches.
+  - clause: >-
+      the pages do not say that the skill runs a permission pre-flight unless the installed skill contains that step
+    needs_test: true
+    reason: This stale claim is in the pages today, and a check against the installed skill catches it coming back.
+  - clause: >-
+      the rationale notes say whether the startup verdict is required when the maker's answer is supplied, and why, matching what the workflow does
+    needs_test: false
+    reason: This is an explanation of a design choice, reviewed at sign-off; the behaviour it describes is tested on ACD-2100d-5.
+  - clause: >-
+      the reference page's row for a run that arrives with no maker's answer and no verdict gives the remedy that ACD-2100d-5-ii's report gives
+    needs_test: true
+    reason: The row and the halt are written in different files and drift apart unless compared.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: "change_target set to docs: the record edits two reference pages and no code."
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: pipeline
+change_target: docs
 risk_surface: contract_boundary
 notes: |
   The request asks to "update the halt message and the rationale doc". The halt message is

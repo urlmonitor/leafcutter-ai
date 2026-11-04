@@ -2,7 +2,7 @@ id: ACD-1300e-3-v
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A declined look-up of a pause record is never reported as nothing to resume"
 component: ac-driven-dev
@@ -59,11 +59,90 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to:
   agent: documentation-expert
-  contract: "The 'pause record unreadable' message form for a declined look-up (names step, agent, quoted reason, record still on disk, retry with the same answer), quoted in the resume how-to by ACD-1300e-4-i."
-expects_from: null
+  contract: >-
+    The pause_record_unreadable message form for a declined look-up or resume read, quoted in the
+    resume how-to by ACD-1300e-4-i: it names the step label and the agent that declined it, quotes
+    the stated reason (up to 2 KB), says the record was not examined and has not been changed, and
+    says the resume can be started again with the same answer. It never says the record is
+    damaged, malformed or absent, and it is distinct from the form for a reply that ran but could
+    not be read (ACD-2100c-3-ii).
+expects_from:
+  ac_id: ACD-1300e-3
+  contract: >-
+    The one pause-store step path: a fixed shell-runner dispatch per step whose reply
+    shellStepReply() classifies as a result {command, exit_status, stdout, stderr} or a decline
+    {declined: true, agent, reason} with no exit_status key; reads keep ACD-2100c-3-ii's bounded
+    re-attempt.
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    A decline is not an answer about the record: in the look-up (peek-pause-record, peekPausedGateId)
+    and in the resume read (read-pause-record), a reply shellStepReply() classifies as declined is
+    never read as exists false, as "not paused here", or as nothing_to_resume.
+  - >-
+    The bounded re-attempt of ACD-2100c-3-ii applies: at most three attempts in total, a distinct
+    label each, the same command, each sent to shell-runner. No attempt goes to another agent or
+    runs another command (ADR-070 sec. 5.3).
+  - >-
+    When every attempt is declined, the run ends with the existing status pause_record_unreadable
+    (ACD-2100c-3-ii), not a new one. Its message is the declined form in the delivers_to contract,
+    distinct from the damaged-reply form; when attempts returned different kinds of reply, the
+    message reports what each attempt returned.
+  - >-
+    Nothing moves on a declined look-up: no authoring agent is dispatched for the stage, the answer
+    is not applied, no approval, priority or commit is made, and the record and the drafted
+    criteria stay byte-identical. The run ends at that point with no later step.
+  - >-
+    Errors follow the CLAUDE.md error-handling policy: a [plan-feature][WARNING] line names the run
+    id, the gate id, the step label and the declining agent.
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    count_content_lines ('.js') at 927934e33, against a 1000-line limit, so every measured line
+    this change puts in (a changed line counts) must be paid for by about two removed.
+  - >-
+    templates/workflows-js/plan-feature.js is the source. The deployed .claude/workflows/plan-feature.js
+    is rebuilt by python scripts/build.py and never hand-edited.
+test_intent:
+  - clause: >-
+      the run does not end as "nothing to resume" and does not continue as though run R were not paused
+    needs_test: true
+    reason: Folding a decline into exists false is the named mutation, and it is invisible until a person's approval is lost.
+  - clause: no authoring agent is sent to write or rewrite criteria for that stage
+    needs_test: true
+    reason: A re-dispatched author overwrites drafts the person approved, which only the run's dispatch record shows.
+  - clause: the person's answer is not applied, and no approval or priority is recorded
+    needs_test: true
+    reason: Applying an answer to a record nobody read would act on an unverified state.
+  - clause: >-
+      the run ends as "pause record unreadable", and its message says the step was declined, names the step and the agent that declined it, quotes the stated reason, says the record is still on disk and was not examined, and says the resume can be started again with the same answer
+    needs_test: true
+    reason: The status and message are computed from the decline, and today a decline gets the same message as a damaged record.
+  - clause: the message does not say the record is damaged, malformed or absent
+    needs_test: true
+    reason: The wrong wording sends the operator to repair a record that is fine.
+  - clause: the declined step is not sent to any other agent
+    needs_test: true
+    reason: A substitute dispatch after a refusal is visible only in the dispatch record.
+  - clause: the pause record and the eleven drafted criteria are byte-identical afterwards
+    needs_test: true
+    reason: Any write on this path would destroy the state the retry depends on.
+  - clause: >-
+      when the route is then started again for run R with the same answer and the step runs, the answer is applied to that decision point exactly as ACD-2100c-3 requires
+    needs_test: true
+    reason: The remedy the message promises must actually work, or the message is wrong.
+  - clause: >-
+      the bug symptom (run wf_4a8567df-505, 2026-10-30: the look-up replied "I did not run this read. Reading the pause record is not one of the two actions this agent handles"; a declined look-up read as no record sends the author back over drafts the person had approved) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if a decline is read as no record again.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
 superseded_by: null
 covered_by: []
 implemented_by: []

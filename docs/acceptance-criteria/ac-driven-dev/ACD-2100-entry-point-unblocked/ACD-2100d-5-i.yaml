@@ -1,7 +1,7 @@
 id: ACD-2100d-5-i
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A change to the start arguments on only one side is caught before it ships"
 component: ac-driven-dev
@@ -48,15 +48,85 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Fix direction: 'add a test that runs the workflow with exactly the args the command template builds, so the two cannot drift apart again'."
+  - path: unit_tests/_installed_route_probe.py
+    relationship: related
+    status: exists
+    relevance: "Existing support for exercising the installed route, which ACD-2100d-1's evidence used."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The installed copies the build writes are what runs, so the arguments are read from them."
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: ACD-2100d-5
-  contract: "The installed command, skill and workflow agree on the start arguments; this record makes any one-sided change to them fail the project's checks."
+  contract: >-
+    The start contract: Workflow('plan-feature', {userInput: <request>, workspace: <the maker's
+    answer>}) passes every check before triage with no other argument, and the installed
+    command's Step 2 and the installed skill's sec. WS.2 supply exactly those arguments. This
+    record makes any one-sided change to them fail the project's checks.
+declared_files:
+  - path: unit_tests/workflows/_acd_2100d_5_support.py
+    state: to_be_created
+it_requirements:
+  - >-
+    The arguments are read when the checks run, from the installed copies the build writes: the
+    Workflow("plan-feature", {...}) start in Step 2 of the installed /plan-feature command, and the
+    arguments the installed skill's sec. WS passes (args.<name>). They are never taken from a list
+    kept in the test, in a fixture or in the plan-feature harness defaults (ADR-001: the installed
+    copy is what runs; ACD-2100d's notes).
+  - >-
+    Behavioural, not lexical (CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep"):
+    the arguments read are passed to the installed workflow driven through the E2 harness
+    (unit_tests/_workflow_engine_harness.py), and the run's own outcome decides: it reaches triage,
+    or it halts naming arguments. Comparing argument names as strings is not the check.
+  - >-
+    Each mutation arm runs on temporary copies of the entry texts and the workflow, never on the
+    repository's files, and its failure message names the argument and the side or sides
+    (command, skill) that lack it.
+  - >-
+    No fallback: when the command text shows no workflow start, the check fails saying no start
+    could be read from it. It never falls back to harness defaults or another list of arguments.
+  - >-
+    The reader of the installed entry texts lives in one support module, kept under the 400-line
+    .py limit and not deployed, so the resume (ACD-2100d-5-iii) and reference-page
+    (ACD-2100d-5-iv) checks can read the same texts the same way.
+  - >-
+    The checks run in CI within the workflow-test suite's existing budget, reusing the harness's
+    runner rather than adding a second way to start the workflow.
+test_intent:
+  - clause: >-
+      the checks fail, naming the argument the workflow needs that the command no longer supplies and naming the command as the side that lacks it
+    needs_test: true
+    reason: Dropping an argument on the command side is the recorded defect pattern, and the check must name the side to be actionable.
+  - clause: >-
+      when instead the workflow is changed to require one more argument that neither the command nor the skill supplies, the checks fail naming that argument and naming both the command and the skill
+    needs_test: true
+    reason: A consumer-side change is the other half of a one-sided contract change and must be caught from the same reading.
+  - clause: >-
+      when instead only the skill's workspace section is changed to pass the maker's answer under a different argument name, the checks fail naming the skill
+    needs_test: true
+    reason: The skill is read separately from the command, and a reader that only parses the command misses this arm.
+  - clause: >-
+      when the command, the skill and the workflow are all changed together so that they still agree (the same argument renamed in all three), the checks pass
+    needs_test: true
+    reason: Without this paired acceptable input, a check that fails on any change to the entry text passes every other arm.
+  - clause: >-
+      when the command text is replaced by one that shows no workflow start at all, the checks fail saying no start could be read from it, rather than falling back to a list of arguments kept anywhere else
+    needs_test: true
+    reason: A silent fallback to kept arguments is exactly how the done records stayed green while every documented start failed.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      assigned_agent stays python-coder: the surface map assigns the unit_tests/ support module
+      (the reader of the installed entry texts) to python-coder; the tests that exercise it come
+      from the test-design stage.
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,7 +1,7 @@
 id: ACD-2100d-5
 components:
   - ac_driven_dev
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A run started exactly as the installed command or skill says reaches triage with no step run by hand"
 component: ac-driven-dev
@@ -32,11 +32,11 @@ criteria: |
 depends_on: [ACD-2100d, ACD-2100b-5]
 doc_links:
   - path: templates/commands/plan-feature.md
-    relationship: modifies
+    relationship: describes
     status: exists
     relevance: "Step 2 builds Workflow('plan-feature', { userInput, workspace }) -- one of the two entry surfaces whose arguments must match what the workflow requires."
   - path: templates/skills/plan-feature/SKILL.md
-    relationship: modifies
+    relationship: describes
     status: exists
     relevance: "Sec. WS.2 passes only args.workspace; its DECISION HISTORY records the 2026-10-10 replacement of the permission pre-flight (sec. WSP) by sec. WS."
   - path: templates/workflows-js/plan-feature.js
@@ -58,13 +58,107 @@ doc_links:
     relationship: related
     status: exists
     relevance: "Done record whose it_requirements put the verdict into args and require a direct invocation without one to halt; fix direction 2 amends that requirement."
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: "The answer contract the workflow's acceptance check applies to args.workspace."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 4 (the permits_shell lint) and sec. 5 (a decline ends the run) take over the guard the verdict gave when the maker's answer is supplied."
 assigned_agent: python-coder
-estimated_complexity: M
-delivers_to: null
+estimated_complexity: S
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      For ACD-2100d-5-i and -ii: the start contract in templates/workflows-js/plan-feature.js.
+      Workflow('plan-feature', {userInput: <request>, workspace: <the maker's answer, verbatim>})
+      passes every check before triage with no other argument, and the installed command's Step 2
+      and the installed skill's sec. WS.2 supply exactly those arguments.
+      args.workspace_setup_permission is required only when args.workspace is absent; a start with
+      neither halts before any dispatch with the report ACD-2100d-5-ii specifies.
+  - agent: llm-expert
+    contract: >-
+      For ACD-2100d-5-iii: the same start contract holds for a resume re-invocation, which passes
+      args.workspace (the paused run's own workspace answer) together with resumeFromRunId and
+      args.resume_answer, and no verdict.
 expects_from: null
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    Start contract (the person's decision at gate-ba, fix direction 2): when args.workspace (the
+    maker's answer) is supplied, the workflow neither requires nor consults
+    args.workspace_setup_permission. It applies its existing workspace-answer acceptance check
+    (ADR-070 sec. 6.2), and an answer that is present but not accepted halts as that check already
+    does. A start with neither argument halts as ACD-2100d-5-ii specifies. A start with only a
+    verdict keeps today's verdict check and the run's own workspace step (ACD-2100b-1 to -5).
+  - >-
+    The entry surfaces stay as they are: templates/commands/plan-feature.md Step 2 and the skill's
+    sec. WS.2 already pass exactly userInput and workspace, so they agree with the workflow once
+    the start contract above lands. Neither is edited by this record; an edit found necessary to
+    either is llm-expert work and is flagged, not made here.
+  - >-
+    Consequence carried (decision 1b): a registry that withholds shell permission no longer halts
+    at startup when the maker's answer is supplied. That guard is taken over by the ADR-070
+    permits_shell lint (unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py) and the
+    shell-reply decline rule (ADR-070 sec. 5). ACD-2100b-5's direct-invocation requirement is
+    narrowed to match (amended 2026-11-04 by it-po).
+  - >-
+    Tests amended in the same change, none skipped: ACD-2100b-5's
+    test_direct_workflow_invocation_with_no_preflight_verdict_halts supplies neither a maker answer
+    nor a verdict and still expects the halt. Tests that start the workflow with a hand-built args
+    object carrying a verdict (ACD-2100a-5, ACD-2100b-1 to -5, ACD-2100d-1, the plan-feature
+    harness defaults) keep passing.
+  - >-
+    The startup check stays local to args: it adds no agent dispatch and no file access (ADR-030,
+    and ACD-2100b-5's guarantee that no dispatch is made on the check's behalf).
+  - >-
+    scripts/worktree/check_workspace_setup_permission.py stays, because the verdict-only start
+    still uses it; it is not deleted.
+  - >-
+    The Pre-Stage-0 code comment and docs/reference/plan-feature-workflow-rationale.md (comments
+    moved verbatim out of plan-feature.js) must agree: a changed code comment and its page land in
+    the same commit (the page is ACD-2100d-5-iv's).
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    scripts/commit_guardian/_file_size_ratchet.count_content_lines ('.js') at 927934e33, against a
+    1000-line limit, so every measured line this change puts in (a changed line counts; comments
+    are not measured) must be paid for by about two removed.
+  - >-
+    templates/ is the source: .claude/workflows/plan-feature.js, .claude/commands/plan-feature.md
+    and .claude/skills/plan-feature/SKILL.md are rebuilt by python scripts/build.py and never
+    hand-edited.
+test_intent:
+  - clause: the run passes every check made before triage, and the triage agent is dispatched for that request
+    needs_test: true
+    reason: Every run started as documented halts today, and only a run driven with the documented arguments shows the fix.
+  - clause: the run does not end with a report that a startup verdict or any other argument was not supplied
+    needs_test: true
+    reason: The halt is computed from args, and a wrong condition brings the recorded halt back.
+  - clause: >-
+      no command beyond those the command text shows was run by hand, and no argument beyond those it shows was added
+    needs_test: true
+    reason: A test that adds a verdict to args is exactly the false green the done records gave, so the arguments must come from the command text.
+  - clause: >-
+      the same holds when the run is started by doing exactly what the installed plan-feature skill says in its workspace section
+    needs_test: true
+    reason: The skill is a second entry surface whose arguments can drift from the command's.
+  - clause: >-
+      the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started with only the maker's answer, as the command and skill say, the run returned status error "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no agent) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if the verdict becomes required again.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      Fix direction 2 carried; the command and skill doc_links changed from modifies to describes
+      because neither is edited under that direction; estimated_complexity M to S.
 superseded_by: null
 covered_by: [ACD-2100d-5-i, ACD-2100d-5-ii, ACD-2100d-5-iii, ACD-2100d-5-iv]
 implemented_by: []

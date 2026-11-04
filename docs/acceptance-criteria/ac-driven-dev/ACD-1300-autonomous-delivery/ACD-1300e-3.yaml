@@ -53,47 +53,127 @@ doc_links:
   - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
     relationship: related
     status: exists
-  - path: templates/agents/command-step-runner.md
-    relationship: modifies
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
     status: exists
-  - path: config/agent_registry.json
-    relationship: modifies
+    relevance: "Sec. 2.3 sends every workflow shell step outside the fast lane to shell-runner; sec. 3 changes no existing agent's charter; sec. 5 is the reply rule."
+  - path: templates/agents/shell-runner.md
+    relationship: describes
     status: exists
+    relevance: "The executor's charter and its result and decline reply shapes."
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    relationship: describes
+    status: exists
+    relevance: "shellStepReply(), the shared reply check that tells a decline from a result."
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to:
-  agent: architecture-diagram-author
-  contract: "Executor decision for ACD-1300e-5 and ACD-1300e-4: every pause-record operation (write, persist read-back, peek, resume read, clear, clear read-back, plus the orphan-scan read) is one command dispatched to command-step-runner (agentType 'command-step-runner'), whose registry entry lists plan-feature.js in spawned_by and whose declared role names pause-record reads and writes. worktree-agent and status-checker perform none of them."
+  - agent: architecture-diagram-author
+    contract: >-
+      Executor decision for ACD-1300e-5 (and the guide, ACD-1300e-4): every pause-record operation
+      (the write, its read-back, the look-up, the resume read, the clear, its read-back and the
+      leftover-record scan) is one plain command dispatched to shell-runner (agentType
+      'shell-runner', ADR-070), whose reply is a result {command, exit_status, stdout, stderr} or a
+      decline {declined: true, agent: 'shell-runner', reason} with no exit_status key.
+      worktree-agent, status-checker and command-step-runner perform none of them.
+  - agent: python-coder
+    contract: >-
+      For ACD-1300e-3-i, -iv, -v and -vi: the one pause-store step path in
+      templates/workflows-js/plan-feature.js. Each step is a fixed shell-runner dispatch whose
+      reply shellStepReply() classifies as a result (its exit_status and relayed stdout and stderr,
+      with pause_store.py's JSON parsed from the stdout string), a decline (agent and reason;
+      nothing ran), or a reply that is neither (kept as received, quoted up to 2 KB). The reads
+      keep ACD-2100c-3-ii's bounded re-attempt; the write and the clear are sent once.
 expects_from: null
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
 it_requirements:
-  - "Executor decision: command-step-runner is the executor for all pause-record operations. It fits: permits_shell true, no allow-list of commands, its charter is to run exactly one given command in one named workspace and return exit_status/stdout/stderr verbatim, and it declines only out-of-role requests (no workspace, hand edits, acting as another role). worktree-agent (charter: worktree create/remove only) and status-checker (permits_shell false; ticket-state investigation) must not be used."
-  - "One executor id for every pause-record site: readPauseRecordWithRetry (peek-pause-record, read-pause-record, pause-persist-verify, clear-pause-record-verify, orphan-scan-pause-record), the write (pause-persist) and the clear (clear-pause-record). Declared once in the workflow body; the per-function _shellPermittedAgentId = 'worktree-agent' locals are removed, not duplicated."
-  - "The executor's declared role must name this work explicitly: config/agent_registry.json command-step-runner adds 'plan-feature.js' to spawned_by (registry_validator recognises it because templates/workflows-js/plan-feature.js exists) and its description names plan-feature pause-record reads and writes as an adopted dispatch class; templates/agents/command-step-runner.md description/adopter_notes say the same. config/agent_registry.json and .leafcutter/config/agent_registry.json stay in parity via build.py."
-  - "Requests must satisfy command-step-runner's request shape: {step: <the existing label>, command: <buildPauseStoreCommand(...) output, unchanged>, target: {workspace: <absolute path of the checkout the run is executing in>, branch: <authoring branch>, ac_id: <null or the run id; never an invented AC id>}}. If the template treats ac_id as mandatory, its input description is amended to make it optional for non-fast-lane callers in the same change."
-  - "Replies are parsed caller-side: the pause-store JSON is read from result.stdout; a reply without exit_status is a decline and is reported as a decline (naming the executor and its reason), distinct from a store-write failure (non-zero exit_status, stderr carried). Neither is ever reported as success."
-  - "pause_persist_failed is returned if and only if the read-back finds no record (ACD-2100a-4); its message names which step failed and why (decline vs store write)."
-  - "The existing pin unit_tests/workflows/test_bo_2300a_1_ii.py, which asserts worktree-agent for these dispatches, is amended in the same change to assert the new executor; BO-2300a-1-ii is superseded/amended for this part (status-checker exclusion kept)."
-  - "Out of scope here: the worktree-setup-script lookup and the ~40 other shell dispatches enumerated in KI-BO-20260927; do not migrate them in this change."
-  - "The E2 workflow body has no filesystem access (ADR-030, ADR-024): every disk or git read/write it needs is a single command dispatched to command-step-runner (registry: permits_shell true, charter 'run exactly one given command in one named workspace'), never to status-checker or worktree-agent; the caller parses the command's stdout itself from command-step-runner's {command, workspace, exit_status, stdout, stderr} result, and treats a reply with no exit_status key as a decline."
-  - "File-size ratchet: templates/workflows-js/plan-feature.js measures 2646 lines under scripts/commit_guardian/_file_size_ratchet.count_content_lines against a 1000-line .js limit, so check-file-size requires at least 2 measured lines removed for every measured line added (JSDoc/block comments are not counted, so deleting them earns nothing). The change must land with the measured length of plan-feature.js not increased beyond what the ratchet permits; new logic belongs in a Python script under scripts/ (deployed to .leafcutter/scripts/ by build.py, each new file under the 400-line .py limit) invoked as a command step, or is paid for by consolidating existing duplicated dispatch code."
-  - "templates/workflows-js/plan-feature.js is the source; .claude/workflows/plan-feature.js is rebuilt by python scripts/build.py in the same change and the two are byte-identical afterwards (never hand-edit the deployed copy)."
-  - "Errors handled per the CLAUDE.md error-handling policy: no silent fallback; every degraded path logs a [plan-feature][WARNING] line naming the run id, the gate id and the failing step."
+  - >-
+    Executor (amended 2026-11-04 by it-po, run pf-entry-pause-20261104, following ADR-070 sec. 2.3
+    and the person's decision for that run): shell-runner is the executor for every pause-record
+    operation: the write (pause-persist), its read-back (pause-persist-verify), the look-up
+    (peek-pause-record), the resume read (read-pause-record), the clear (clear-pause-record), its
+    read-back (clear-pause-record-verify) and every other read of the pause store, such as the
+    leftover-record scan (orphan-scan-pause-record). This replaces the 2026-10-16 choice of
+    command-step-runner, which ADR-070 sec. 2.2 keeps for the fast lane's own command steps.
+    worktree-agent (create and remove only), status-checker (permits_shell false) and
+    command-step-runner perform none of them.
+  - >-
+    shell-runner meets the first outcome clause without a charter change: its declared role is to
+    run one given command unchanged and relay its output, and it is the executor ADR-070 names for
+    every workflow shell step outside the fast lane, which covers each pause-record step by class.
+    Its registry entry already has permits_shell true and lists plan-feature.js in spawned_by. No
+    agent template or registry entry is edited (ADR-070 sec. 3): templates/agents/shell-runner.md,
+    templates/agents/command-step-runner.md and config/agent_registry.json stay as they are.
+  - >-
+    One executor id for every pause-record site, named once in the workflow body: the
+    per-function _shellPermittedAgentId = 'worktree-agent' locals and the hard-coded agentType in
+    readPauseRecordWithRetry() are removed, not duplicated.
+  - >-
+    Request shape (ADR-070 sec. 1.2-1.3): one plain command with absolute paths, sent with only the
+    instruction to run it unchanged and relay its output verbatim. The command's form and the
+    store and script locations are specified in ACD-1300e-3-ii, and the record's carriage in
+    ACD-1300e-3-iii.
+  - >-
+    Replies: every reply passes the shared shellStepReply() check
+    (templates/workflows-js/_shared/workspace-answer.js) before any field is used. A result is
+    {command, exit_status, stdout, stderr}, and the pause-store JSON is parsed from its stdout. A
+    decline is {declined: true, agent, reason} with no exit_status key and is reported as a
+    decline naming the agent and its reason, distinct from a store-write failure (non-zero
+    exit_status, stderr carried). Neither is ever reported as success.
+  - >-
+    pause_persist_failed is returned if and only if the read-back finds no record (ACD-2100a-4); its
+    message names the cause (ACD-1300e-3-iv).
+  - >-
+    The E2 workflow body has no filesystem or process access (ADR-030, ADR-024): every disk read or
+    write it needs for a pause record is one command dispatched to shell-runner, and the caller
+    parses the relayed stdout itself.
+  - >-
+    The existing pin unit_tests/workflows/test_bo_2300a_1_ii.py, which asserts worktree-agent for
+    these dispatches, is amended in the same change to assert shell-runner; BO-2300a-1-ii is
+    superseded by this record for that part, and its status-checker exclusion is kept.
+  - >-
+    Out of scope: the stage-end script steps (rule check, test design, approval holds, hand-back
+    findings), which keep scriptStepAgentId
+    (tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md); the pause-store
+    dispatches in finalize-feature.js; the worktree-setup-script lookup and the other shell
+    dispatches listed in KI-BO-20260927; the run-ownership read of ACD-1300e-1.
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    scripts/commit_guardian/_file_size_ratchet.count_content_lines ('.js') at 927934e33, against a
+    1000-line limit. check-file-size accepts the change only if the new measured length is at most
+    2375 minus the measured lines the change puts in; a changed line counts as put in and comments
+    are not measured, so every measured line added must be paid for by about two removed. New
+    logic goes to Python under scripts/ (each file under the 400-line .py limit) or is paid for by
+    consolidating the duplicated pause-store dispatch code (pauseAtGate, readPauseRecordWithRetry,
+    resolveGate's clear, peekPausedGateId).
+  - >-
+    templates/workflows-js/plan-feature.js is the source; .claude/workflows/plan-feature.js is
+    rebuilt by python scripts/build.py in the same change and is never hand-edited.
+  - >-
+    Errors handled per the CLAUDE.md error-handling policy: no silent fallback; every degraded path
+    logs a [plan-feature][WARNING] line naming the run id, the gate id and the failing step.
 test_intent:
-  - clause: "Then each is performed either by a fixed command step that involves no agent or by an agent whose declared role explicitly includes reading and writing pause records,"
+  - clause: >-
+      each is performed either by a fixed command step that involves no agent or by an agent whose declared role explicitly includes reading and writing pause records
     needs_test: true
-    reason: "Observable outcome; proved by test_every_pause_record_op_dispatched_to_chartered_executor (discrimination)."
-  - clause: "And none of them is given to an agent whose declared role is limited to other work (creating and removing worktrees, or investigating ticket state),"
+    reason: The executor is a value in each of six dispatches, and one site left on the old agent changes nothing else a reader would see.
+  - clause: >-
+      none of them is given to an agent whose declared role is limited to other work (creating and removing worktrees, or investigating ticket state)
     needs_test: true
-    reason: "Observable outcome; proved by test_no_pause_record_op_given_to_worktree_or_status_agent (criterion)."
-  - clause: "And the pause ends with the run reported as waiting and the record present on disk, never ended as \"pause persist failed\" because the step that should have written the record declined it as outside its role,"
+    reason: A hard-coded worktree-agent at one site is the recorded defect, and only the run's dispatch record shows it.
+  - clause: >-
+      the pause ends with the run reported as waiting and the record present on disk, never ended as "pause persist failed" because the step that should have written the record declined it as outside its role
     needs_test: true
-    reason: "Observable outcome; proved by test_headless_pause_ends_waiting_with_record_on_disk (real_artifact)."
-  - clause: "And the resume reads that record and applies the person's answer as ACD-2100c-3 requires,"
+    reason: The outcome depends on the executor, the command and the read-back together, so only a run that pauses shows it.
+  - clause: the resume reads that record and applies the person's answer as ACD-2100c-3 requires
     needs_test: true
-    reason: "Observable outcome; proved by test_resume_reads_record_and_applies_answer (seam)."
-  - clause: "And the bug symptom (\"on runs gpt-flow-step-links and fast-lane-test-gates, 2026-10-15/16, the pause record write was handed to the worktree agent, whose role is only worktree create/remove; it refused, every pause ended pause_persist_failed and the run could not be resumed at all\") must not occur."
+    reason: The resume read now parses the record from the relayed stdout, which a wrong parse breaks while the pause still succeeds.
+  - clause: >-
+      the bug symptom ("on runs gpt-flow-step-links and fast-lane-test-gates, 2026-10-15/16, the pause record write was handed to the worktree agent, whose role is only worktree create/remove; it refused, every pause ended pause_persist_failed and the run could not be resumed at all") must not occur
     needs_test: true
-    reason: "Observable outcome; proved by test_worktree_agent_refusal_symptom_does_not_recur (discrimination)."
+    reason: This is the recorded failure, and it returns if any pause-record step goes back to worktree-agent.
 test_spec:
   - name: test_every_pause_record_op_dispatched_to_chartered_executor
     target_dir: unit_tests/workflows/
@@ -162,6 +242,18 @@ amended_by:
     date: '2026-10-16'
     by: it-po
     run_id: plan-feature-resume-and-pause
+  - reason: it-po-executor-amendment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      Executor changed from command-step-runner to shell-runner (ADR-070 sec. 2.2-2.3, the
+      person's decision for run pf-entry-pause-20261104). Re-derived it_requirements and
+      delivers_to; removed the command-step-runner.md and agent_registry.json modifies links
+      because no charter or registry change remains; added declared_files; rewrote the
+      test_intent clause texts to the normalised outcome clauses and dropped test names from the
+      reasons. criteria, test_spec and test_rationale untouched; the test_spec still names
+      command-step-runner and is left to the test-design stage.
 superseded_by: null
 covered_by: [ACD-1300e-3-i, ACD-1300e-3-ii, ACD-1300e-3-iii, ACD-1300e-3-iv, ACD-1300e-3-v, ACD-1300e-3-vi]
 implemented_by: []

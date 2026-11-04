@@ -2,7 +2,7 @@ id: ACD-1300e-3-vi
 components:
   - ac_driven_dev
   - build_orchestration
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A declined clearing of a pause record is stated in the run's result, not only in a log line"
 component: ac-driven-dev
@@ -49,15 +49,95 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Says not to hand-edit records; the result's 'can be deleted once nothing is waiting' statement must agree with it."
+  - path: docs/reference/plan-feature-workflow-rationale.md
+    relationship: describes
+    status: exists
+    relevance: "'Clearing the pause record once the run moves past the gate': the clear runs before the caller's commit, which is why a declined clear must not end the run."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
 delivers_to:
   agent: documentation-expert
-  contract: "The result statement for an uncleared pause record (step, agent, quoted reason, record location, when it is safe to delete), quoted in the resume how-to by ACD-1300e-4-i."
-expects_from: null
+  contract: >-
+    The statement the run's terminal result carries for an uncleared pause record, quoted in the
+    resume how-to by ACD-1300e-4-i: it names the clear step and the agent that declined it (or the
+    clear's error output), quotes the stated reason (up to 2 KB), gives the record's absolute
+    location <workspace_path>/<output_root>/paused_runs/<run_id>.json, says the record still names
+    gate <gate_id>, which the run has passed, and says it can be deleted once nothing is waiting on
+    run <run_id>. The run itself continues past the gate.
+expects_from:
+  ac_id: ACD-1300e-3
+  contract: >-
+    The one pause-store step path: a fixed shell-runner dispatch per step whose reply
+    shellStepReply() classifies as a result {command, exit_status, stdout, stderr} or a decline
+    {declined: true, agent, reason} with no exit_status key; the clear's read-back uses the bounded
+    read of ACD-2100c-3-ii.
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    Run continuation (IT-PO decision): a declined or unconfirmed clear does not end the run. The
+    answer has already been validated and applied, and the clear runs before the caller's commit,
+    so ending the run there would leave the stage the person approved uncommitted
+    (KI-BO-20261101). The run continues past the gate exactly as after a confirmed clear. This
+    refines ADR-070 sec. 5.2-5.3 for this one housekeeping step and is flagged for the person.
+  - >-
+    Cleared if and only if confirmed: the record is reported cleared only when the clear's
+    read-back finds no record. A declined clear, a clear with a non-zero exit, and a read-back that
+    finds the record or cannot be read all leave the record in the not-cleared state. The clear is
+    sent once, to shell-runner only, and nothing else deletes or rewrites the record.
+  - >-
+    The not-cleared state is carried into the run's own terminal result as the statement in the
+    delivers_to contract, not only as a log line; the [plan-feature][WARNING] line stays as well.
+    The statement must agree with the resume how-to's rule against hand-editing records: deleting
+    a stale record once nothing waits on the run is the one manual step it names.
+  - >-
+    A later pause of the same run that replaces the record (ACD-1300e-2) withdraws the statement,
+    because the record then names the gate the run is waiting on.
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    count_content_lines ('.js') at 927934e33, against a 1000-line limit, so every measured line
+    this change puts in (a changed line counts) must be paid for by about two removed.
+  - >-
+    templates/workflows-js/plan-feature.js is the source. The deployed .claude/workflows/plan-feature.js
+    is rebuilt by python scripts/build.py and never hand-edited.
+test_intent:
+  - clause: >-
+      the run's result states that run R's pause record was not cleared, names the declined step and the agent that declined it, quotes the stated reason, and gives the record's location on disk
+    needs_test: true
+    reason: Keeping the warning line only is the named mutation, and only the run's result shows the difference.
+  - clause: >-
+      it states that the record still names a decision point the run has already passed, and that the record can be deleted once nothing is waiting on run R
+    needs_test: true
+    reason: The gate id and run id in the statement are filled in per run and can be wrong or missing.
+  - clause: nothing in the result reports the record as cleared
+    needs_test: true
+    reason: A cleared flag set before the read-back confirms it would contradict the statement.
+  - clause: >-
+      the record is left on disk unchanged, and the clearing is not sent to any other agent or done by any other means
+    needs_test: true
+    reason: A substitute clear is visible only in the dispatch record and the file on disk.
+  - clause: the person's answer and the criteria committed for that stage stay as they were
+    needs_test: true
+    reason: Continuing past a declined clear must not disturb what the answer already did.
+  - clause: >-
+      when the clearing runs and its read-back confirms no record remains, the result carries no such statement
+    needs_test: true
+    reason: Without this arm, a result that always carries the statement passes every other clause.
+  - clause: >-
+      the bug symptom (run wf_4a8567df-505, 2026-10-30: the clearing replied "My role is limited to the two workspace actions, create and remove", only a warning line was logged, and the run's pause record was still on disk after the run had moved past its decision point) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if the decline goes back to a log line only.
 origin_agent: business-analyst
 created: 2026-11-04
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -28,7 +28,7 @@ doc_links:
     relationship: modifies
     status: exists
   - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
-    relationship: describes
+    relationship: modifies
     status: exists
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
@@ -36,28 +36,40 @@ doc_links:
   - path: docs/architecture/components/interactive-pause-resume-substrate.md
     relationship: related
     status: exists
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Names shell-runner as the executor of every workflow shell step outside the fast lane, which is the pause-record participant."
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: ACD-1300e-3
   contract: "The chosen pause-record executor, so the diagram names the right participant."
+declared_files:
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+    state: existing
+  - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+    state: existing
 it_requirements:
   - "Extend docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md in place (write-c4-diagram skill, Mermaid sequenceDiagram); no new diagram file."
-  - "The participant that writes, reads and clears the pause record is command-step-runner (per ACD-1300e-3) and appears as its own participant; worktree-agent does not appear as a pause-record actor."
-  - "docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md currently labels the persist/read agent 'status-checker'; correct that participant to command-step-runner in the same change so the two diagrams agree."
+  - "The participant that writes, reads and clears the pause record is shell-runner (per ACD-1300e-3 as amended 2026-11-04, ADR-070) and appears as its own participant; neither worktree-agent nor command-step-runner appears as a pause-record actor."
+  - "docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md currently labels the persist/read agent 'status-checker'; correct that participant to shell-runner in the same change so the two diagrams agree."
   - "Outcome labels use the route's actual reported values: continued (no terminal status), paused_awaiting_input (waiting again), paused_awaiting_input with a refusal for an answer naming a different decision, nothing_to_resume, pause_record_unreadable."
   - "check-doc-length ratchet applies to both diagram docs."
 test_intent:
-  - clause: "Then the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision,"
+  - clause: >-
+      the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision
     needs_test: true
-    reason: "Observable outcome; proved by test_decision_gate_diagram_shows_resume_chain (real_artifact)."
-  - clause: "And it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent,"
+    reason: The ordered chain in the Mermaid block is checkable text that a later diagram edit can silently break.
+  - clause: >-
+      it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent
     needs_test: true
-    reason: "Observable outcome; proved by test_decision_gate_diagram_pause_actor_is_not_worktree_agent (discrimination)."
-  - clause: "And it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable."
+    reason: A stale participant label (status-checker in c3-002 today) contradicts the route and is caught only by checking both diagrams.
+  - clause: >-
+      it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable
     needs_test: true
-    reason: "Observable outcome; proved by test_decision_gate_diagram_lists_reported_resume_outcomes (real_artifact)."
+    reason: Outcome labels drift from the workflow's statuses, which a check against the workflow source catches.
 test_spec:
   - name: test_decision_gate_diagram_shows_resume_chain
     target_dir: unit_tests/docs/
@@ -90,6 +102,16 @@ amended_by:
     date: '2026-10-16'
     by: it-po
     run_id: plan-feature-resume-and-pause
+  - reason: it-po-executor-amendment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+    note: >-
+      The two it_requirements naming command-step-runner now name shell-runner (ACD-1300e-3 as
+      amended, ADR-070); c3-002's doc_link is now modifies, since this record corrects it; added
+      declared_files; test_intent clause texts rewritten to the normalised outcome clauses, test
+      names dropped from the reasons. criteria and test_spec untouched; the test_spec description
+      still names command-step-runner and is left to the test-design stage.
 superseded_by: null
 covered_by: []
 implemented_by: []
