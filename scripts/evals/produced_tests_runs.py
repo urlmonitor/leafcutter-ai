@@ -27,6 +27,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET  # noqa: S405 - parses the junit file our own pytest run wrote
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -139,6 +140,31 @@ def remove_tree(path: Path) -> None:
         shutil.rmtree(path, onexc=_writable)
     else:
         shutil.rmtree(path, onerror=_writable)
+
+
+CLEANUP_ATTEMPTS = 3
+CLEANUP_PAUSE_SECONDS = 0.3
+LEFT_BEHIND_WARNING = "temp folder left behind (could not be deleted), the run goes on:"
+
+
+def remove_tree_quietly(path: Path) -> None:
+    """Best-effort delete of a row's temp folder (TQ-200d-5-iv): retry a few times, then warn and move on; never raises.
+
+    A Windows file-in-use error must not end a run, replace a row's real error or change its result.
+    """
+    for attempt in range(CLEANUP_ATTEMPTS):
+        if not Path(path).exists():
+            return
+        try:
+            remove_tree(Path(path))
+        except OSError as exc:
+            last = exc
+            if attempt + 1 < CLEANUP_ATTEMPTS:
+                time.sleep(CLEANUP_PAUSE_SECONDS)
+        else:
+            return
+    if Path(path).exists():
+        logger.warning("%s %s (%s)", LEFT_BEHIND_WARNING, path, last)
 
 
 def _register_test(ctx: RowContext, target: Path) -> None:
