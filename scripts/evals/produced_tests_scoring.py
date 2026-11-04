@@ -207,10 +207,13 @@ def files_present(ctx: RowContext, spec: dict) -> dict:
 
 
 def report_mentions(ctx: RowContext, spec: dict) -> dict:
-    """The completion report names the thing the row is about."""
-    needle = spec["contains"]
-    found = needle.lower() in ctx.report.lower()
-    return {"passed": found, "detail": f"report {'names' if found else 'does not name'} '{needle}'"}
+    """The completion report names the thing the row is about (``contains``, or any ``also_accepts`` wording)."""
+    terms = [spec["contains"], *spec.get("also_accepts", [])]
+    report = ctx.report.lower()
+    found = next((term for term in terms if term.lower() in report), None)
+    if found is not None:
+        return {"passed": True, "detail": f"report names '{found}'"}
+    return {"passed": False, "detail": "report does not name " + " or ".join(f"'{term}'" for term in terms)}
 
 
 def _wrong_version_items(report: str) -> list[str]:
