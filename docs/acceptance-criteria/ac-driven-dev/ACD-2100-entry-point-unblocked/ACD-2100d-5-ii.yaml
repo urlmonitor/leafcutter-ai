@@ -1,0 +1,251 @@
+id: ACD-2100d-5-ii
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A run started without what the workflow needs stops before any authoring and names only a remedy that exists"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the installed workflow is started directly with the request text and no other argument
+    -- no maker's answer and no startup verdict --
+  When the run reaches its checks before triage,
+  Then it stops before any authoring agent is dispatched and before any workspace or branch is
+    made,
+  And its report names each argument that was missing,
+  And every step, command or argument the report tells the operator to run or supply is one
+    the installed /plan-feature command or skill contains at that moment, or a script present
+    in the installed copy at the path the report gives,
+  And the report does not name a skill step or section that the installed skill does not
+    contain,
+  And the report does not say that a permission was denied or that the agent registry is
+    misconfigured,
+  And when the operator does what the report says, and only that, and starts the run again, it
+    reaches triage,
+  And the bug symptom (KI-ACD-20261022: the halt says "the plan-feature skill's pre-flight
+    (scripts/worktree/check_workspace_setup_permission.py) must run BEFORE this workflow is
+    invoked", but the skill replaced that pre-flight on 2026-10-10, so the operator cannot fix
+    the run from the docs) must not occur.
+depends_on: [ACD-2100d-5]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The 'No workspace-setup permission pre-flight verdict was supplied' halt text."
+  - path: templates/commands/plan-feature.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100b-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Done: every unresolved startup outcome halts before authoring work begins -- this record keeps that halt and fixes what it tells the operator."
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+    relevance: "The maker step the halt's remedy points to."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: documentation-expert
+  contract: >-
+    The startup-halt report for a start with neither the maker's answer nor a verdict, quoted word
+    for word on the reference page by ACD-2100d-5-iv: status error; it names args.workspace (the
+    workspace maker's answer) as missing and says args.workspace_setup_permission is only needed
+    for a start without the maker's answer; its remedy is the maker step the installed
+    /plan-feature command (Step 1) and skill (sec. WS.1) show, then the start with workspace set to
+    that answer (command Step 2).
+expects_from:
+  ac_id: ACD-2100d-5
+  contract: >-
+    The start contract: args.workspace_setup_permission is required only when args.workspace is
+    absent, so the only start this halt covers is one with neither.
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - >-
+    The halt applies when neither args.workspace nor args.workspace_setup_permission is supplied.
+    It stops the run before triage, before any agent dispatch and before any workspace or branch
+    is made; the fail-closed guarantee is kept (BO-1500f-1, ACD-2100b-4, ACD-2100b-5).
+  - >-
+    The report names only remedies the installed entry surfaces contain: args.workspace (the
+    workspace maker's answer) as the missing argument, the maker step the installed /plan-feature
+    command (Step 1) and skill (sec. WS.1) show, and the start with workspace set to that answer.
+    The maker script path it gives is one the installed copy holds, laid out as the install lays
+    it out (<output_root>/scripts/worktree.py, the build-time output root, .leafcutter here). It names no sec. WSP, no skill pre-flight,
+    no permission denial and no registry fault; it mentions args.workspace_setup_permission only
+    to say that argument is needed only for a start without the maker's answer.
+  - >-
+    Following the remedy, and nothing else, must reach triage, checked against the installed
+    copies rather than against the source text.
+  - >-
+    The status stays error, as the halt returns today. The report is one string, which the
+    reference page (ACD-2100d-5-iv) quotes word for word, so a later edit to it changes that page
+    in the same commit.
+  - >-
+    File-size ratchet: templates/workflows-js/plan-feature.js measures 2375 lines under
+    count_content_lines ('.js') at 927934e33, against a 1000-line limit, so every measured line
+    this change puts in (a changed line counts) must be paid for by about two removed. The halt
+    text replaces the current one; it does not add a second halt.
+  - >-
+    templates/workflows-js/plan-feature.js is the source. The deployed .claude/workflows/plan-feature.js
+    is rebuilt by python scripts/build.py and never hand-edited.
+test_intent:
+  - clause: it stops before any authoring agent is dispatched and before any workspace or branch is made
+    needs_test: true
+    reason: The fail-closed halt must survive the relaxed start contract, and only the run's dispatch record shows nothing ran.
+  - clause: its report names each argument that was missing
+    needs_test: true
+    reason: The report is computed from which arguments are absent, and a wrong condition names the wrong one.
+  - clause: >-
+      every step, command or argument the report tells the operator to run or supply is one the installed /plan-feature command or skill contains at that moment, or a script present in the installed copy at the path the report gives
+    needs_test: true
+    reason: The recorded halt named a skill step that had been removed, which only a check against the installed copies catches.
+  - clause: the report does not name a skill step or section that the installed skill does not contain
+    needs_test: true
+    reason: The stale pointer is the recorded defect, and it returns whenever the skill changes without the halt.
+  - clause: the report does not say that a permission was denied or that the agent registry is misconfigured
+    needs_test: true
+    reason: An absent argument worded as a permission outcome re-commits the collapse KI-ACD-009 records.
+  - clause: >-
+      when the operator does what the report says, and only that, and starts the run again, it reaches triage
+    needs_test: true
+    reason: This is the falsifier for a report that names a real script with the wrong argument.
+  - clause: >-
+      the bug symptom (KI-ACD-20261022: the halt says "the plan-feature skill's pre-flight (scripts/worktree/check_workspace_setup_permission.py) must run BEFORE this workflow is invoked", but the skill replaced that pre-flight on 2026-10-10, so the operator cannot fix the run from the docs) must not occur
+    needs_test: true
+    reason: This is the recorded failure, and it returns if the old halt text comes back.
+test_spec:
+  - name: "test_neither_argument_halts_before_any_dispatch"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "plan-feature.js started with the request text only (workspace_setup_permission passed as None) returns status error with zero agent dispatches, so no authoring agent runs and no workspace or branch is made."
+    proves_clause: "it stops before any authoring agent is dispatched and before any workspace or branch is made"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "drop the args.workspace condition"
+      - "drop the workspace_setup_permission condition"
+      - "the gate always allows"
+  - name: "test_report_names_each_missing_argument"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The report names args.workspace as missing and mentions args.workspace_setup_permission only as needed for a start without the maker's answer."
+    proves_clause: "its report names each argument that was missing"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_every_remedy_in_the_report_exists_in_the_installed_copies"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "Each command, step or argument the report tells the operator to run or supply is found in the installed /plan-feature command or skill, and the maker script path the report gives exists in the installed copy at <output_root>/scripts/worktree.py."
+    proves_clause: "every step, command or argument the report tells the operator to run or supply is one the installed /plan-feature command or skill contains at that moment, or a script present in the installed copy at the path the report gives"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_report_names_no_skill_section_the_skill_lacks"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "Every skill section the report names (for example sec. WS.1) is a heading of the installed skill; sec. WSP and the permission pre-flight are not named."
+    proves_clause: "the report does not name a skill step or section that the installed skill does not contain"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_report_makes_no_permission_or_registry_claim"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "criterion"
+    description: "The report contains no statement that a permission was denied or that the agent registry is misconfigured."
+    proves_clause: "the report does not say that a permission was denied or that the agent registry is misconfigured"
+    code_file: "templates/workflows-js/plan-feature.js"
+  - name: "test_following_the_report_and_only_that_reaches_triage"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "reachability"
+    description: "Doing what the report says (the maker step of the installed command, then the start with workspace set to the answer) and nothing else, driven through the E2 harness, reaches triage."
+    proves_clause: "when the operator does what the report says, and only that, and starts the run again, it reaches triage"
+    code_file: "templates/workflows-js/plan-feature.js"
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+  - name: "test_stale_preflight_halt_text_symptom_does_not_recur"
+    target_dir: "unit_tests/workflows/"
+    framework: "unittest"
+    type: "integration"
+    angle: "discrimination"
+    description: "The report does not contain the text that the plan-feature skill's pre-flight (scripts/worktree/check_workspace_setup_permission.py) must run before the workflow is invoked."
+    proves_clause: "the bug symptom (KI-ACD-20261022: the halt says \"the plan-feature skill's pre-flight (scripts/worktree/check_workspace_setup_permission.py) must run BEFORE this workflow is invoked\", but the skill replaced that pre-flight on 2026-10-10, so the operator cannot fix the run from the docs) must not occur"
+    code_file: "templates/workflows-js/plan-feature.js"
+    must_catch:
+      - "revert the fix"
+      - "the report names the retired skill pre-flight again"
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-04"
+test_design_opened_files:
+  - templates/workflows-js/plan-feature.js
+  - scripts/pause_store.py
+  - docs/how-to/resume-a-paused-plan-feature-run.md
+  - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - templates/skills/plan-feature/SKILL.md
+  - docs/reference/plan-feature-layout-and-startup-checks.md
+  - docs/reference/plan-feature-workflow-rationale.md
+  - templates/commands/plan-feature.md
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/_plan_feature_harness_defaults.py
+  - unit_tests/_installed_route_probe.py
+  - unit_tests/test_pause_store.py
+  - unit_tests/docs/test_finalize_howto.py
+  - unit_tests/workflows/test_bo_2300a_1_ii.py
+  - unit_tests/workflows/test_acd_2100a_4.py
+  - unit_tests/workflows/test_acd_2100b_5.py
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+  - unit_tests/workflows/_acd_2100c_support.py
+file_findings:
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the missing-verdict halt text and condition that the criteria change."
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/plan-feature.js
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-11-04'
+    by: it-po
+    run_id: pf-entry-pause-20261104
+  - action: approved
+    agent: approve_acs
+    date: '2026-11-04'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  FAIL-CLOSED IS KEPT. Whichever fix direction ACD-2100d-5 takes, a run that arrives with
+  neither the maker's answer nor a verdict must still stop before authoring (BO-1500f-1,
+  ACD-2100b-4, ACD-2100b-5's direct-invocation guard). This record is direction-agnostic: under
+  direction 1 the remedy is the restored pre-flight step; under direction 2 it is the maker
+  step the command already shows.
+
+  "Names only a remedy that exists" is checked against the INSTALLED command, skill and copy,
+  because that is what the operator reads. The do-what-it-says-then-restart clause is the
+  falsifier: a report that names a real script but the wrong argument still fails it.
+  Not a permission cause: ACD-2100b-5's notes already say an absent verdict must never be
+  worded as any of ACD-2100b-1/-2/-3's outcomes.

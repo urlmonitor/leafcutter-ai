@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-25'
-last_updated: '2026-10-25'
+last_updated: '2026-11-04'
 components:
   - build_orchestration
 related_docs:
@@ -22,13 +22,15 @@ related_docs:
 
 - **Severity:** high. The run could not be resumed. The user has to commit the stage by hand and
   start a new run, and the drafts are at risk if they do not.
-- **Status:** open. No AC. **Mechanism established on the second occurrence (2026-10-25):
+- **Status:** open. ACs drafted 2026-11-04: ACD-1300e-3-ii..vi under ACD-1300e-3 (branch
+  `ac/plan-feature-entry-and-pause-fixes`). **Mechanism established on the second occurrence (2026-10-25):
   `worktree-agent` declined the write (candidate path 2).** See the section at the end. The first
   occurrence's replies were not kept, so it may or may not have had the same cause.
-- **Occurrences:** 2 (`/plan-feature` for KM-400d-4-i..iii, 2026-10-22; `/plan-feature` run
+- **Occurrences:** 4 (`/plan-feature` for KM-400d-4-i..iii, 2026-10-22; `/plan-feature` run
   `finalize-gate-child-1`, 2026-10-25; both at gate `gate-ba`, both from a workspace made by
-  `.leafcutter/scripts/worktree.py ensure --kind ac`)
-- **First seen:** 2026-10-22 · **Last seen:** 2026-10-25
+  `.leafcutter/scripts/worktree.py ensure --kind ac`; run id `pf-entry-pause-20261104`, twice on
+  2026-11-04, at `covered-route-gate` and at `gate-ba`)
+- **First seen:** 2026-10-22 · **Last seen:** 2026-11-04
 - **Where:** `templates/workflows-js/plan-feature.js:1756-1802` (`pauseAtGate()`): the write prompt
   at `:1778-1782`, the write dispatch at `:1783` (its reply is discarded), the read-back at
   `:1785-1787`, the failure return at `:1788-1801`. The read-back helper is
@@ -116,3 +118,27 @@ is a compound shell line (`cd`, `||`, `&&`, subshells), which the global shell r
 That settles fix direction 3: move the pause-store dispatches to `shell-runner` (ADR-070) and give
 it single commands, not a compound line. Fix direction 1 still stands. The journal was the only
 place this reply survived.
+
+## Occurrences 2026-11-04 — path 2 twice, and a stale record that hid the second
+
+Run id `pf-entry-pause-20261104`, workspace `ac/plan-feature-entry-and-pause-fixes` (base
+`c4bcf1c14`), the run that planned this KI's own fix.
+
+1. **`covered-route-gate`** (workflow run `wf_59d7a401-0f3`). `pause-persist` went to
+   `worktree-agent`, which declined: "Persisting a pending question to `.leafcutter/paused_runs`
+   is not one of this agent's two actions". `pause-persist-verify` was declined too, its retry read
+   `exists: false`, and the run ended `pause_persist_failed`. The main session ran the exact
+   command from the declined prompt by hand. It wrote the record (`{"ok": true}`), and the run
+   was resumed from it.
+2. **`gate-ba`** (workflow run `wf_6207f8a0-8ee`). `pause-persist` was declined again. This time
+   the read-back found the covered-route record still on disk (see
+   `KI-ACD-20261104-covered-route-answer-dropped-when-the-resume-re-triages`). `exists: true`
+   passed the check at `plan-feature.js:1787`, and the run returned `paused_awaiting_input` for
+   `gate-ba` with a record that named `covered-route-gate`. A resume at `gate-ba` would have been
+   refused as naming a different gate. ACD-1300e-2's it_requirement covers the check that was
+   missing here ("the read-back verify confirms the record now names the new gate_id").
+
+The gate-ba record also nearly hit path 3. Its question text is `Interactive gate 'gate-ba'
+requires a human decision`, and the single quotes sit inside the single-quoted `--record`
+argument. The quotes fell out of the stored text, with no error, only because `gate-ba` has no
+space in it. ACD-1300e-3-iii pins this.
