@@ -1,0 +1,16 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from buy_volume_window import buy_volumes
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    def test_every_row_in_the_window_has_non_negative_buy_volume(self):
+        # covers: TQ-9302
+        window = [{"buy_volume": 4.0}, {"buy_volume": 0.0}, {"buy_volume": 2.5}]
+        volumes = buy_volumes(window)
+        self.assertEqual(len(volumes), len(window))
+        self.assertEqual(sum(v is not None for v in volumes), len(window))
+        self.assertTrue(all(v >= 0 for v in volumes))

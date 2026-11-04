@@ -4,7 +4,7 @@ description: "Run an agent eval live on your machine with run_agent_eval.py: che
 type: how-to
 status: active
 created: 2026-11-01
-last_updated: 2026-11-01
+last_updated: 2026-11-04
 components:
   - testing_quality
 related_docs:
@@ -116,6 +116,12 @@ When the agent cannot be started at all, scoring more rows would only repeat the
 - writes the results file with a `harness_failure` object (`cause`, `row`, `detail`) and no score: there is no accuracy, no pass rate and no `rows`, so nothing in it reads as 0%.
 
 The file is never a fresh eval receipt for `eval_selector.py --check`. Read the `detail` as described in "Reading a launch failure", fix the launch, and run the eval again.
+
+### A temp folder left behind
+
+Each row runs in a temp folder. When that folder cannot be deleted (on Windows, a process the agent started still holds a file), the harness retries a few times, then logs a warning that starts with `temp folder left behind (could not be deleted), the run goes on:` and names the folder.
+
+The run does not stop and does not change any row's result: every row is still run and scored, the aggregate is printed and the results file is written. A row that failed for another reason keeps its own error. Delete the folder by hand once the process holding it has ended.
 
 ## See Also
 

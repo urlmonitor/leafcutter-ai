@@ -158,10 +158,15 @@ payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs
   The refresh-gate row's test half is a real run of the shared
   wrong-version runner (`halves.test` carries the runner's verdict, `halves.report` the
   report check). A judge, if a row has a rubric, is secondary and never decides a test half.
+- **One catching test.** The refresh-gate row passes when one tagged test catches the wrong version; tagged tests that pass under it do not block, a tagged test failing on the fixed version does ([`wrong_version_run`](../../docs/reference/produced-tests-eval-assertion-kinds-test-writer.md#wrong_version_run)).
 - **Rules.** A to-run-later entry counts when its test id names the function and its wrong version is non-empty ([`sql_to_run_later_names_wrong_version`](../../docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md#sql_to_run_later_names_wrong_version)).
 - **Counts.** The exact processed-row count and the non-NULL count may be computed in SQL or asserted on the fetched rows; a `>= 0` or "at least one row" assertion is not a count ([`sql_counts_rows_and_non_null`](../../docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md#sql_counts_rows_and_non_null)).
+- **Unittest.** The test-writer count and seeded-value checks read unittest assertion calls as well as bare asserts, and an exact count may compare against `len(seed)` ([count entry](../../docs/reference/produced-tests-eval-assertion-kinds-test-writer.md#counts_rows_and_non_null),
+  [seeded-value entry](../../docs/reference/produced-tests-eval-assertion-kinds-test-writer.md#asserts_known_seeded_value)).
 - **Address.** A report names an address only when a scheme is followed by a host, so relaying the checker's own message passes ([`report_names_no_address`](../../docs/reference/produced-tests-eval-assertion-kinds-database-setting.md#report_names_no_address)).
 - **PASS.** A test-runner report may claim a pass (`PASS` in upper case, or a Status / Result of pass in any case) only when it quotes a passed-test count above zero from the runner's summary ([`report_pass_quotes_a_count`](../../docs/reference/produced-tests-eval-assertion-kinds-database-setting.md#report_pass_quotes_a_count)); the test-runner set has four rows: `configured-database`, `missing-setting-database-work`, `missing-setting-no-database-work` and `no-test-collected`.
+- **Not run.** The test-runner's "Database Not Configured" block ends with the sentence "The database tests were not run.", so a report that relays it says the tests were not run ([`report_says_not_run`](../../docs/reference/produced-tests-eval-assertion-kinds-database-setting.md#report_says_not_run)).
+- **Equivalent wordings.** A `report_mentions` row may list `also_accepts` wordings beside `contains` (only `empty-window` and `presence-is-not-correctness` do), so a report saying "non-None" or "expected value" passes ([`report_mentions`](../../docs/reference/produced-tests-eval-assertion-kinds-test-writer.md#report_mentions)).
 - **Offline.** `python scripts/evals/run_agent_eval.py --agent test-writer --score-gold`
   replays the recorded gold outputs, scores every row and calls no model.
 - **Local only.** `agents["test-writer"].local_only` is true: `eval_selector.py` keeps
@@ -169,6 +174,7 @@ payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs
   fresh result. Every payload carries `run_context: "local"` and the printed report says
   "LOCAL RUN". A live run (`--agent test-writer` without `--score-gold`) needs model
   credentials and is never run in CI.
+- **Temp folders.** A row's temp folder that cannot be deleted (for example a Windows file-in-use error) is retried, then left behind with a warning (`temp folder left behind (could not be deleted), the run goes on:` followed by the folder); it never stops the run or changes a row's result. See [A temp folder left behind](../../docs/how-to/run-a-live-agent-eval.md#a-temp-folder-left-behind).
 - **Keeping a live run's outputs.** A live row's output lives in a temporary folder that
   is deleted after scoring. To check a failed row against what the agent really wrote, set
   `LEAFCUTTER_EVAL_KEEP_OUTPUTS` to a directory before the run. Each live row's output

@@ -5,7 +5,7 @@ type: how_to
 category: how-to
 status: active
 created: 2026-10-13
-last_updated: 2026-11-02
+last_updated: 2026-11-04
 components:
   - worktree_manager
   - build_orchestration
@@ -79,23 +79,53 @@ ask again; the clearing continues where it stopped.
 
 ## If an earlier clearing stopped part-way
 
-A workspace whose clearing stopped is half-cleared: its repository is gone or can no longer be
-read, or the clearing was marked started. Ask again with the same request as in step 2 (or name
-the work with `remove --kind <kind> --slug <slug>`) and the maker finishes it. If the folder
-holds no files, or the clearing had already checked the work, it is finished without a token.
-Asking for such a workspace with `ensure` or `locate` is refused `HALF_CLEARED`: clear it first.
+A clearing that stopped part-way leaves a half-cleared workspace. If the maker had already
+checked the work when it stopped, finish it by making the same request again, with no token:
 
-If it still holds files, the refusal is `UNSENT_WORK` and lists them under `unsent`. They
-cannot be checked against the shared project, so they would be lost. Save any you want to
-keep elsewhere first. To accept the loss, repeat the request with the `discard_token` from
-that refusal, as in step 3. Read the token from that refusal each time and never store it.
+```bash
+python /absolute/path/to/scripts/worktree.py remove --path "<workspace-path>"
+```
+
+You can also name the work with `remove --kind <kind> --slug <slug>`. The maker does not check the
+work again. If the repository is gone or can no longer be read, a token is needed (see below).
+
+Asking for such a workspace with `ensure` or `locate` is refused `HALF_CLEARED`; it is never
+answered as ready. You need to clear it again first, then ask for the workspace anew. The
+[answer reference](../reference/workspace-maker-answer.md) lists what each answer carries.
+
+If the repository is already gone and files remain, the refusal is `UNSENT_WORK` and lists
+them under `unsent`. They cannot be checked against the shared project, so they would be lost.
+Save any you want to keep elsewhere first. To accept the loss, repeat the request with the
+`discard_token` from that refusal, as in step 3. Read the token from that refusal each time and
+never store it.
+
+## If the repository can no longer be read
+
+A leftover whose repository can no longer be read is refused as half-cleared with
+`UNSENT_WORK`, even though its record may still say ready. Its remaining files are listed under
+`unsent`. The maker tells you that its commits cannot be checked: it cannot see whether any
+were never pushed, so the refusal lists none. If you may have unpushed commits there, recover
+them before you go on, because the loss cannot be undone.
+
+To accept the loss, repeat the request with the token and `--discard-token`:
+
+```bash
+python /absolute/path/to/scripts/worktree.py remove --path "<workspace-path>" --discard-token <discard-token>
+```
+
+The `discard_token` comes from that refusal. Read it from the refusal each time and never store
+it. A token that no longer matches gets a refusal with a fresh one.
 
 ## If the folder has no workspace record
 
-A folder that holds files but has no workspace record is refused with `"code": "NOT_FOUND"`
-and the files under `files`. The maker cannot tell it is a workspace of this project, so it
-changed nothing and offers no token. Check that you have the right path: run step 1 again and
-use the `workspace_path` it gives.
+A folder that holds files but has no workspace record is half-cleared only when a leftover
+piece of its repository names this project's shared project. Then the refusal is `UNSENT_WORK`
+with the files under `unsent` and a token, as in the section above.
+
+A folder that fails that test is refused otherwise, as `"code": "NOT_FOUND"` with the files
+under `files`. The maker cannot tell it is a workspace of this project, so nothing changed and
+it offers no token. Check that you have the right path: run step 1 again and use the
+`workspace_path` it gives.
 
 ## If the workspace is off its line of work
 

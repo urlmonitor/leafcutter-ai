@@ -18,13 +18,13 @@ related_docs:
 
 # KI-TQ-20261102-eval-temp-cleanup-error-crashes-the-run — temp cleanup decides whether an eval run produces any result
 
-> Filed 2026-11-02. Index: [testing-quality.md](../testing-quality.md). Filename severity is the
+> Filed 2026-11-02. Index: [testing-quality.md](../../testing-quality.md). Filename severity is the
 > three-level index bucket (`low`); the original grading is the `**Severity:**` line below.
 
 - **Severity:** medium. Not a false score: the run produces no score at all. One locked folder
   discards every row already scored in that run and skips the rest, and on Windows the lock is
   routine after an agent run whose child processes outlive the CLI.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-5-iv (tolerant temp-folder cleanup: retry, warn, never stop the run); proving tests: unit_tests/evals/tq200d5iv/.
 - **Occurrences:** 1 live run (sql-test-writer re-run 2, 2026-11-02, Windows 11, main `8248ac7a`
   plus the keep-outputs change of PR #1386). The same `WinError 32` on the temp folder also makes
   the score-gold unit tests flake on Windows (`unit_tests/evals/test_tq200d1_runner_cli.py`, the
