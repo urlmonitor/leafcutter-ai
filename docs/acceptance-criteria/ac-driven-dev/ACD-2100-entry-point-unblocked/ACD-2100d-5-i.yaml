@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given the project's own checks start the installed workflow with the arguments read, at the
@@ -44,7 +44,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The E2 harness the existing startup tests drive the workflow through; those tests pass a hand-built args object, which is the drift this record closes."
-  - path: docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
     relationship: describes
     status: exists
     relevance: "Fix direction: 'add a test that runs the workflow with exactly the args the command template builds, so the two cannot drift apart again'."

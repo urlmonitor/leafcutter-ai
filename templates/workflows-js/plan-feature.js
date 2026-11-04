@@ -2194,7 +2194,7 @@ const sessionSlug = component
 
 // Why the registry read is out of this body (ACD-2100b-5): docs/reference/plan-feature-workflow-rationale.md
 // The workspace-setup step runs repository-mutating commands and goes only to an agent whose charter permits shell; the verdict
-// arrives as `args.workspace_setup_permission` (the pre-flight check runs outside this body) and a missing verdict fails closed.
+// arrives as `args.workspace_setup_permission` (the pre-flight check runs outside this body) for a start without the maker's answer; with neither, the run fails closed.
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-runner";
 // Stage-end script steps (rule-check, test design, approval holds and apply, hand-back findings) send compound commands the
 // one-command shell-runner declines, so they stay on worktree-agent until the follow-up ticket
@@ -2202,21 +2202,15 @@ const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-run
 const scriptStepAgentId = "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
-// Why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
-if (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object") {
-  const missingPreflightMessage =
-    "No workspace-setup permission pre-flight verdict was supplied in args " +
-    "(args.workspace_setup_permission). This workflow no longer resolves the " +
-    "workspace-setup permission itself: the plan-feature skill's pre-flight " +
-    "(scripts/worktree/check_workspace_setup_permission.py) must run BEFORE " +
-    "this workflow is invoked and pass its verdict through args. This is a " +
-    "MISSING pre-flight, not a permission denial — halting before any " +
-    "authoring agent is dispatched.";
-  log("[plan-feature][WARNING] " + missingPreflightMessage);
-  return { status: "error", message: missingPreflightMessage };
+// Why a start with neither the maker's answer nor a verdict fails closed (ACD-2100d-5): docs/reference/plan-feature-workflow-rationale.md
+// The verdict is consulted only for a start without args.workspace; with the maker's answer the workspace-answer check and the shell-runner decline rule guard the run.
+const makersAnswerSupplied = !!args && args.workspace !== undefined && args.workspace !== null;
+if (!makersAnswerSupplied && (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object")) {
+  const missingWorkspaceMessage = "No workspace was supplied: args.workspace (the workspace maker's answer) is missing. Run the maker step once -- Step 1 of the /plan-feature command, §WS.1 of the plan-feature skill: python {{config.output_root}}/scripts/worktree.py ensure --kind ac ... -- and start the workflow again with args.workspace set to that answer, verbatim (Step 2 of the command). args.workspace_setup_permission is only needed for a start without the maker's answer. Halting before any authoring agent is dispatched.";
+  log("[plan-feature][WARNING] " + missingWorkspaceMessage); return { status: "error", message: missingWorkspaceMessage };
 }
 
-if (workspaceSetupPermission.permits !== true) {
+if (!makersAnswerSupplied && workspaceSetupPermission.permits !== true) {
   // Why how the pre-flight outcome field is read (ACD-2100b): docs/reference/plan-feature-workflow-rationale-gates.md
   const outcome = typeof workspaceSetupPermission.outcome === "string"
     ? workspaceSetupPermission.outcome

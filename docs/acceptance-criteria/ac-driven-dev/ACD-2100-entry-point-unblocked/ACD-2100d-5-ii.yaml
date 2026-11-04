@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given the installed workflow is started directly with the request text and no other argument
@@ -42,7 +42,7 @@ doc_links:
   - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
-  - path: docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
     relationship: describes
     status: exists
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100b-4.yaml
@@ -136,7 +136,6 @@ test_spec:
     code_file: "templates/workflows-js/plan-feature.js"
     must_catch:
       - "drop the args.workspace condition"
-      - "drop the workspace_setup_permission condition"
       - "the gate always allows"
   - name: "test_report_names_each_missing_argument"
     target_dir: "unit_tests/workflows/"
@@ -232,6 +231,15 @@ amended_by:
   - action: approved
     agent: approve_acs
     date: '2026-11-04'
+  - reason: equivalent-wrong-version-dropped
+    date: '2026-11-04'
+    by: orchestrator
+    note: >-
+      must_catch of test_neither_argument_halts_before_any_dispatch loses "drop the
+      workspace_setup_permission condition": a start with neither argument halts with or
+      without that condition, so the wrong version cannot fail this test (equivalent for
+      it). ACD-2100d-5's test_no_missing_verdict_halt_when_the_makers_answer_is_supplied
+      still names it (its verdict-only start reaches triage only with the condition).
 superseded_by: null
 covered_by: []
 implemented_by: []
