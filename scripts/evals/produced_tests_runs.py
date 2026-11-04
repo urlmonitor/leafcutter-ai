@@ -288,14 +288,35 @@ def write_manifest(work_dir: Path, spec: dict, fixture_dir: Path) -> Path:
     return manifest
 
 
+def _short(row: dict) -> str:
+    """The bare test function name of a result row."""
+    return row.get("test", "").rsplit("::", 1)[-1]
+
+
+def _split_rows(rows: list[dict], wrong_version: str, names: set[str]) -> tuple[list[dict], list[dict], list[dict]]:
+    """The tagged catchers of *wrong_version*, every other blocking row, and those of them that are tagged survivors."""
+    def tagged_as(r: dict, result: str) -> bool:
+        return r.get("result") == result and r.get("wrong_version") == wrong_version and _short(r) in names
+
+    caught = [r for r in rows if tagged_as(r, "caught")]
+    other = [r for r in rows if r.get("blocking") and r not in caught]
+    return caught, other, [r for r in other if tagged_as(r, "survived")]
+
+
 def judge_verdict(verdict: dict, wrong_version: str, tagged: list[tuple[str, str]]) -> tuple[bool, str]:
-    """Judge a runner verdict: passed only on gate_passed and a caught row from a produced test."""
-    names = {fn for _, fn in tagged}
+    """Judge a runner verdict: one tagged test catching the wrong version passes the row (TQ-200d-1-v).
+
+    Passes when a tagged test is ``caught`` for *wrong_version*, no stop reason other than ``survivor``
+    applies (a baseline failure fails the row), nothing is unfinished, and every other blocking row is a
+    tagged test that survived under *wrong_version*. Those survivors are not blocking in the eval.
+    """
     rows = verdict.get("results", [])
-    caught = [r for r in rows if r.get("result") == "caught" and r.get("wrong_version") == wrong_version
-              and r.get("test", "").rsplit("::", 1)[-1] in names]
-    if verdict.get("gate_passed") and caught:
-        return True, f"caught '{wrong_version}' by {caught[0]['test'].rsplit('::', 1)[-1]} (runner gate_passed)"
+    caught, other, survivors = _split_rows(rows, wrong_version, {fn for _, fn in tagged})
+    if caught and verdict.get("reason") in (None, "survivor") and not verdict.get("unfinished") and len(survivors) == len(other):
+        detail = f"caught '{wrong_version}' by {_short(caught[0])}"
+        if survivors:
+            detail += "; passed under it, not blocking in the eval: " + ", ".join(_short(r) for r in survivors)
+        return True, detail
     details = [f"{r.get('result')}: {r.get('detail')}" for r in rows if r.get("result") != "caught"]
     reason = verdict.get("reason") or verdict.get("outcome") or "no reason given"
     return False, f"not caught by the runner ({reason}); " + "; ".join(details)

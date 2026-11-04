@@ -158,6 +158,7 @@ payload), `produced_tests_scoring.py` (assertion kinds) and `produced_tests_runs
   The refresh-gate row's test half is a real run of the shared
   wrong-version runner (`halves.test` carries the runner's verdict, `halves.report` the
   report check). A judge, if a row has a rubric, is secondary and never decides a test half.
+- **One catching test.** The refresh-gate row passes when one tagged test catches the wrong version; tagged tests that pass under it do not block, a tagged test failing on the fixed version does ([`wrong_version_run`](../../docs/reference/produced-tests-eval-assertion-kinds-test-writer.md#wrong_version_run)).
 - **Rules.** A to-run-later entry counts when its test id names the function and its wrong version is non-empty ([`sql_to_run_later_names_wrong_version`](../../docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md#sql_to_run_later_names_wrong_version)).
 - **Counts.** The exact processed-row count and the non-NULL count may be computed in SQL or asserted on the fetched rows; a `>= 0` or "at least one row" assertion is not a count ([`sql_counts_rows_and_non_null`](../../docs/reference/produced-tests-eval-assertion-kinds-sql-test-writer.md#sql_counts_rows_and_non_null)).
 - **Address.** A report names an address only when a scheme is followed by a host, so relaying the checker's own message passes ([`report_names_no_address`](../../docs/reference/produced-tests-eval-assertion-kinds-database-setting.md#report_names_no_address)).
