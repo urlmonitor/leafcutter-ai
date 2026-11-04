@@ -228,7 +228,7 @@ def score_row(row: dict[str, Any], output_dir: Path, work_dir: Path, *, repo_roo
         runs.place_outputs(output_dir, ctx)
         outcomes = [(spec["kind"], run_assertion(ctx, spec)) for spec in specs]
     finally:
-        runs.remove_tree(sandbox)
+        runs.remove_tree_quietly(sandbox)
     score: dict[str, Any] = {
         "passed": all(o["passed"] for _, o in outcomes),
         "assertions": [{"kind": k, "passed": o["passed"], "detail": o["detail"]} for k, o in outcomes],

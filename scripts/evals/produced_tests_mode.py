@@ -111,7 +111,7 @@ def live_output(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path,
         if transcript is not None:
             (out_dir / capture.TRANSCRIPT_NAME).write_text(transcript, encoding="utf-8")
     finally:
-        runs.remove_tree(agent_box)
+        runs.remove_tree_quietly(agent_box)
     return out_dir
 
 
@@ -128,25 +128,33 @@ def keep_outputs(out_dir: Path, agent_cfg: dict, row_id: str) -> Path | None:
     return target
 
 
-def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, *, score_gold: bool, timeout: int) -> dict[str, Any]:
-    """Score one row; a harness or sandbox failure is a failed row carrying its error, never a skip."""
+def score_in(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, work_dir: Path, *,
+             score_gold: bool, timeout: int) -> dict[str, Any]:
+    """Score one row inside its temp folder *work_dir*; a harness or sandbox failure is a failed row carrying its error."""
     field_name = agent_cfg.get("expected_field", "expected")
     expected = row.get(field_name, {})
-    with tempfile.TemporaryDirectory(prefix="produced-tests-") as tmp:
-        work_dir = Path(tmp)
-        try:
-            if score_gold:
-                output_dir = repo_root / expected["gold_output"]
-            else:
-                output_dir = live_output(row, agent_cfg, system_prompt, repo_root, work_dir, harness, timeout)
-                keep_outputs(output_dir, agent_cfg, row.get("id", "?"))
-            return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
-                                     support=support_for(agent_cfg, repo_root))
-        except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:
-            launch_failed(exc, row.get("id", "?"))
-            logger.warning("row %s could not be scored: %r", row.get("id"), exc)
-            record = {"passed": False, "assertions": [], "judge": None}
-            return {"id": row.get("id", "?"), "negative": bool(expected.get("negative")), "score": record, "error": repr(exc)}
+    try:
+        if score_gold:
+            output_dir = repo_root / expected["gold_output"]
+        else:
+            output_dir = live_output(row, agent_cfg, system_prompt, repo_root, work_dir, harness, timeout)
+            keep_outputs(output_dir, agent_cfg, row.get("id", "?"))
+        return scoring.score_row(row, output_dir, work_dir / "score", repo_root=repo_root, expected_field=field_name,
+                                 support=support_for(agent_cfg, repo_root))
+    except (runs.SandboxError, harness.EvalHarnessError, OSError, KeyError) as exc:
+        launch_failed(exc, row.get("id", "?"))
+        logger.warning("row %s could not be scored: %r", row.get("id"), exc)
+        record = {"passed": False, "assertions": [], "judge": None}
+        return {"id": row.get("id", "?"), "negative": bool(expected.get("negative")), "score": record, "error": repr(exc)}
+
+
+def score_one(row: dict, agent_cfg: dict, system_prompt: str, repo_root: Path, harness: ModuleType, *, score_gold: bool, timeout: int) -> dict[str, Any]:
+    """Score one row in an explicit temp folder removed tolerantly (TQ-200d-5-iv); a failure is a failed row, never a skip."""
+    tmp = tempfile.mkdtemp(prefix="produced-tests-")
+    try:
+        return score_in(row, agent_cfg, system_prompt, repo_root, harness, Path(tmp), score_gold=score_gold, timeout=timeout)
+    finally:
+        runs.remove_tree_quietly(Path(tmp))
 
 
 def aggregate(rows: list[dict]) -> dict[str, Any]:
