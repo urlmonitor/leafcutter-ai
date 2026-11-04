@@ -37,7 +37,7 @@ from kernel.contracts import (
 from kernel.contracts import WorkItemStatus as WS
 from kernel.contracts.evidence import EvidenceBundlePayload, stronger_category
 from kernel.contracts.work import ChildOutcome
-from kernel.scheduler import guards
+from kernel.scheduler import guards, nodes_execute
 from kernel.scheduler.state import Budgets, KernelState, new_event, result_artifact_name
 
 _AS_RESULT = {WS.COMPLETED: ResultStatus.COMPLETED, WS.PARTIAL: ResultStatus.PARTIAL,
@@ -305,7 +305,8 @@ def _block(draft: Draft, item: WorkItem, invocation: CapabilityInvocation, text:
 def _settle_failed(draft: Draft, item: WorkItem, invocation: CapabilityInvocation,
                    result: CapabilityResult, limits: LimitsConfig) -> None:
     """Retry a transient failure with the same binding; otherwise fail the item."""
-    if guards.retry_allowed(draft.budgets, item.id, result.error, limits):
+    if guards.retry_allowed(draft.budgets, item.id, result.error, limits,
+                            result.diagnostics.get(nodes_execute.ELAPSED_KEY)):
         retries = {**draft.budgets.retries, item.id: draft.budgets.retries.get(item.id, 0) + 1}
         draft.budgets = draft.budgets.model_copy(update={"retries": retries})
         draft.neutral += 1

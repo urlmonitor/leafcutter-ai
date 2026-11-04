@@ -252,7 +252,7 @@ class TestRunLimits(unittest.IsolatedAsyncioTestCase):
     """Scheduler iterations, active time and cancellation stop the run with diagnostics."""
 
     async def test_scheduler_iteration_limit_stops_the_run(self) -> None:
-        rig = _rig(lambda inv: failed(inv, "timeout", retryable=True), max_retries=50,
+        rig = _rig(lambda inv: failed(inv, "provider_unavailable", retryable=True), max_retries=50,
                    no_progress_limit=50)
         rig.max_iterations = 3
         _, _, state = await rig.start()
@@ -261,7 +261,8 @@ class TestRunLimits(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(len(rig.executors["decide.root"].invocations), 3)
 
     async def test_active_time_limit_stops_the_run(self) -> None:
-        rig = _rig(lambda inv: failed(inv, "timeout", retryable=True), max_retries=50,
+        # A non-timeout code: timeout retries are capped by the active-time budget (ticket AC-4).
+        rig = _rig(lambda inv: failed(inv, "provider_unavailable", retryable=True), max_retries=50,
                    no_progress_limit=50, max_active_seconds=1000)
         ticks = itertools.count(step=400)
         rig.monotonic = lambda: float(next(ticks))
