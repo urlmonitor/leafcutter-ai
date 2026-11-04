@@ -12,7 +12,7 @@ related_docs:
   - docs/known-issues/testing-quality.md
   - docs/known-issues/README.md
   - docs/reference/produced-tests-eval-assertion-kinds-test-writer.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md
 ---
 
 # KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts — unittest assertions are invisible to two test-writer scorer kinds
@@ -89,7 +89,7 @@ Run, the Three Questions table, "Wrong versions the tests now catch"); they are 
 summaries. These two row inputs, unlike `refresh-gate` and `missing-setting-database-work`, do not
 say "End with your completion report", and no assertion on any row checks for the format, so the
 omission is invisible to the score. See also
-[KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording](open-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md).
+[KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording](resolved-low-ki-tq-20261102-test-writer-rows-check-unrequested-report-wording.md).
 
 ## Fix direction
 
