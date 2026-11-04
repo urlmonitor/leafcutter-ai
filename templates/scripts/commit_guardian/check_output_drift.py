@@ -166,6 +166,8 @@ from pathlib import Path
 import logging
 
 from _resolve_root import resolve_manifest_path as _resolve_manifest_path
+from _resolve_root import location_keyed_keys as _location_keyed_keys
+from _resolve_root import report_could_not_read as _report_could_not_read
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
@@ -227,20 +229,6 @@ def _err(message: str = "") -> None:
         message: Text to print; an empty string emits a bare blank line.
     """
     print(message, file=sys.stderr)
-
-
-def _warn_manifest_not_found(tried: list[Path]) -> None:
-    """Print a visible, path-naming warning when no manifest was found.
-
-    Args:
-        tried: Every absolute candidate path that was checked.
-    """
-    tried_str = "\n  ".join(str(p) for p in tried)
-    _err(
-        "check-output-drift: WARNING — .build_manifest.json not found. "
-        f"Tried:\n  {tried_str}\n"
-        "Run build.py to generate it. Skipping output drift check."
-    )
 
 
 def _sha256_of_file(path: Path) -> str:
@@ -920,6 +908,24 @@ def _default_floor_dirs(repo_root: Path) -> list[Path]:
     return [repo_root / ".claude" / name for name in names]
 
 
+def _record_unreadable_reason(record: object) -> str | None:
+    """Explain why a loaded record cannot be read here, or None when it can.
+
+    Args:
+        record: The parsed record, or None when it is not valid JSON.
+
+    Returns:
+        A short reason (malformed, no output_mappings, non-portable keys) or
+        None when the record is readable where the project now sits.
+    """
+    if not isinstance(record, dict):
+        return "the record file is present but is not valid JSON"
+    mappings = record.get("output_mappings")
+    if isinstance(mappings, dict) and _location_keyed_keys(mappings):
+        return "the record file is present but its entries are keyed to the location it was written in"
+    return None
+
+
 def main() -> int:
     """Entry point for the pre-commit hook.
 
@@ -969,10 +975,13 @@ def main() -> int:
     """
     manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
     if manifest_path is None:
-        _warn_manifest_not_found(tried)
-        return 0
+        return _report_could_not_read(_GATE_NAME, tried[0].parent, "the record file is absent")
+    record = _load_manifest(manifest_path)
+    unreadable = _record_unreadable_reason(record)
+    if unreadable:
+        return _report_could_not_read(_GATE_NAME, manifest_path.parent, unreadable, present=True)
 
-    blocker = _manifest_blocker(_load_manifest(manifest_path) or {})
+    blocker = _manifest_blocker(record or {})
     if blocker:
         _err(blocker)
         return 2

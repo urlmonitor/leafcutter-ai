@@ -88,6 +88,8 @@ from pathlib import Path
 import logging
 
 from _resolve_root import resolve_manifest_path as _resolve_manifest_path
+from _resolve_root import location_keyed_keys as _location_keyed_keys
+from _resolve_root import report_could_not_read as _report_could_not_read
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
@@ -141,21 +143,6 @@ _GATE_NAME = "check-build-drift"
 # ---------------------------------------------------------------------------
 # Manifest resolution (GE-118b)
 # ---------------------------------------------------------------------------
-
-
-def _warn_manifest_not_found(tried: list[Path]) -> None:
-    """Print a visible, path-naming warning when no manifest was found.
-
-    Args:
-        tried: Every absolute candidate path that was checked.
-    """
-    tried_str = "\n  ".join(str(p) for p in tried)
-    print(
-        "check-build-drift: WARNING — .build_manifest.json not found. "
-        f"Tried:\n  {tried_str}\n"
-        "Run build.py to generate it. Skipping drift check.",
-        file=sys.stderr,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -442,6 +429,27 @@ def _anchor_package_keys(manifest: dict, package_offset: str) -> dict:
     return anchored
 
 
+def _load_readable_record() -> tuple[Path | None, dict | None, int | None]:
+    """Find and read the build record, or report why it cannot be read (BP-1500d-4).
+
+    Returns:
+        ``(manifest_path, manifest, None)`` when the record was read, else
+        ``(None, None, code)`` with the could-not-read verdict already printed;
+        ``code`` is never the all-clear 0.
+    """
+    manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
+    if manifest_path is None:
+        return None, None, _report_could_not_read(_GATE_NAME, tried[0].parent, "the record file is absent")
+    manifest = _load_manifest(manifest_path)
+    if not isinstance(manifest, dict):
+        reason = "the record file is present but is not valid JSON"
+    elif isinstance(manifest.get("output_mappings"), dict) and _location_keyed_keys(manifest["output_mappings"]):
+        reason = "the record file is present but its entries are keyed to the location it was written in"
+    else:
+        return manifest_path, manifest, None
+    return None, None, _report_could_not_read(_GATE_NAME, manifest_path.parent, reason, present=True)
+
+
 def main() -> int:
     """Entry point for the pre-commit hook.
 
@@ -480,27 +488,9 @@ def main() -> int:
         reports exempt + gap transparently; it does not by itself drive the
         verdict.
     """
-    manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
-    if manifest_path is None:
-        _warn_manifest_not_found(tried)
-        return 0
-
-    manifest = _load_manifest(manifest_path)
-    if manifest is None:
-        # H-1: manifest_path.exists() was already confirmed True by
-        # _resolve_manifest_path() (it only returns a path that passed
-        # .exists()), so reaching here means the file could not be parsed —
-        # a broken build artifact, never the fresh-clone absence case, which
-        # is handled entirely by the branch above. _load_manifest() already
-        # printed the "cannot read manifest" WARNING with the parse error.
-        print(
-            f"{_GATE_NAME}: INDETERMINATE - manifest at {manifest_path} "
-            "exists but could not be parsed as JSON. This gate cannot "
-            "verify anything against a build artifact it cannot read, so "
-            "this run is not clean.",
-            file=sys.stderr,
-        )
-        return 2
+    manifest_path, manifest, refusal = _load_readable_record()
+    if refusal is not None:
+        return refusal
 
     # build.py records a whole-computation output_mappings failure
     # (output_mappings_error) OR a PARTIAL, per-section enumeration failure

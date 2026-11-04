@@ -303,6 +303,59 @@ def resolve_manifest_path(hook_file: Path) -> tuple[Path | None, list[Path]]:
             return candidate, tried
     return None, tried
 
+# BP-1500d-4: the could-not-read verdict shared by both drift readers.
+RECORD_NAME = ".build_manifest.json"
+COULD_NOT_READ_EXIT = 3  # record absent: distinct from 0 (all-clear) and 1 (drift)
+UNREADABLE_RECORD_EXIT = 2  # record present but unreadable (INDETERMINATE)
+
+
+def location_keyed_keys(output_mappings: dict) -> list[str]:
+    """Return record keys that only resolve where the record was written.
+
+    Args:
+        output_mappings: The record's ``output_mappings`` section.
+
+    Returns:
+        Keys that are absolute (POSIX or drive-lettered) or step outside the
+        project with a ``..`` segment; empty when the record is portable.
+    """
+    bad = []
+    for key in output_mappings:
+        norm = str(key).replace("\\", "/")
+        if norm.startswith("/") or norm[1:2] == ":" or ".." in norm.split("/"):
+            bad.append(key)
+    return bad
+
+
+def report_could_not_read(gate: str, project: Path, reason: str, present: bool = False) -> int:
+    """Report that the build record could not be read; return the verdict code.
+
+    Names the project and the record file, and says whether the record is
+    absent or present-but-unreadable (``reason``). It deliberately makes no
+    claim about the install's freshness; the exit code is distinct from the
+    all-clear so an automated caller can tell the two apart.
+
+    Args:
+        gate: The reporting check's name.
+        project: The project whose record was looked for.
+        reason: Why it could not be read (absent / malformed / non-portable).
+        present: True when the record file exists but is unreadable.
+
+    Returns:
+        ``UNREADABLE_RECORD_EXIT`` when ``present``, else ``COULD_NOT_READ_EXIT``;
+        neither equals the all-clear status 0.
+    """
+    import sys
+
+    label = "INDETERMINATE - " if present else ""
+    print(
+        f"{gate}: {label}COULD NOT READ the build record {RECORD_NAME} for the project "
+        f"at {project} ({reason}). This check is not protecting this project; "
+        "re-run build.py in it to write the record.",
+        file=sys.stderr,
+    )
+    return UNREADABLE_RECORD_EXIT if present else COULD_NOT_READ_EXIT
+
 
 def resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
     """Locate the package root via the shared manifest convention.
