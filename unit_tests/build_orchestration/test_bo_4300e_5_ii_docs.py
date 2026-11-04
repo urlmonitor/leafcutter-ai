@@ -143,7 +143,7 @@ class TestClearHowToStoppedAndDamaged(unittest.TestCase):
             for block in re.findall(r"```[^\n]*\n(.*?)```", text, re.S):
                 self.assertIsNone(DELETE_COMMANDS.search(block), msg=f"deletion step in {path.name}:\n{block}")
             for span in re.findall(r"`([^`\n]+)`", text):
-                if re.match(r"\s*(rm|rmdir|Remove-Item|del)\s", span) or "rmtree" in span or "worktree remove" in span:
+                if re.match(r"\s*(rm|rmdir|Remove-Item|del)\s", span) or "rmtree" in span or re.search(r"worktree\s+remove", span):
                     self.fail(f"deletion command {span!r} in {path.name}")
         body = _section(self.text, STOPPED_HEADING)
         blocks = re.findall(r"```[^\n]*\n(.*?)```", body, re.S)
