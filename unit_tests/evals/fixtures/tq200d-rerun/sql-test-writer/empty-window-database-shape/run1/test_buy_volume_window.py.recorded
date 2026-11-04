@@ -1,0 +1,116 @@
+"""
+MODULE: test_buy_volume_window
+GOAL: Verify every row the buy_volume_window view returns has a non-negative,
+    non-NULL buy_volume value, and that the view neither masks nor drops rows.
+BUSINESS CONTEXT: Downstream volume aggregations assume buy_volume can never
+    be negative; a silent sign-flip, NULL-swallow, or row-drop in this view
+    would corrupt those aggregations without raising an error.
+ARCHITECTURE: Tests the view buy_volume_window using transaction-rollback
+    isolation.
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "<local sandbox>/scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+_SYMBOL_ZERO = "TQ9502_TEST_ZERO"
+_SYMBOL_POS = "TQ9502_TEST_POS"
+_SYMBOL_LARGE = "TQ9502_TEST_LARGE"
+_SYMBOL_ABSENT = "TQ9502_TEST_ABSENT"
+
+# Distinct, known buy_volume values (plain ints, to avoid Decimal/float
+# comparison pitfalls) keyed by their uniquely-tagged symbol.
+_SEEDED_ROWS = {
+    _SYMBOL_ZERO: 0,
+    _SYMBOL_POS: 12,
+    _SYMBOL_LARGE: 1000000,
+}
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    """Tests for the buy_volume_window view."""
+
+    def setUp(self):
+        """Open a transaction that will be rolled back after the test."""
+        # resolve_test_db_address() takes the PROJECT ROOT; suites run with cwd
+        # at the project root, so Path.cwd() is that root. It raises
+        # DbConnectionTestNotConfiguredError, naming
+        # testing_context.db_connection_test, when the setting is unset -- let it
+        # propagate. Never catch it to skip the test, never use a fallback address.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
+        self.cur = self.conn.cursor()
+        for symbol, buy_volume in _SEEDED_ROWS.items():
+            self.cur.execute(
+                "INSERT INTO trades (symbol, buy_volume) VALUES (%s, %s)",
+                (symbol, buy_volume),
+            )
+
+    def tearDown(self):
+        """Always roll back -- never commit."""
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_all_rows_have_non_negative_buy_volume(self):
+        # covers: TQ-9502
+        """Every seeded row surfaces through the view with its exact,
+        non-NULL, non-negative buy_volume -- not dropped, nulled, or
+        transformed (e.g. abs()'d or sign-flipped)."""
+        symbols = list(_SEEDED_ROWS)
+
+        # Exact row count: a view that drops a boundary (zero-volume) row,
+        # or that silently duplicates rows, is caught here -- not just ">= 1".
+        self.cur.execute(
+            "SELECT COUNT(*) FROM buy_volume_window WHERE symbol = ANY(%s)",
+            (symbols,),
+        )
+        self.assertEqual(self.cur.fetchone()[0], len(_SEEDED_ROWS))
+
+        # Exact non-NULL count: a view that returned NULL for buy_volume
+        # would otherwise vacuously satisfy a "no negative values" check.
+        self.cur.execute(
+            "SELECT COUNT(*) FROM buy_volume_window "
+            "WHERE symbol = ANY(%s) AND buy_volume IS NOT NULL",
+            (symbols,),
+        )
+        self.assertEqual(self.cur.fetchone()[0], len(_SEEDED_ROWS))
+
+        # The actual invariant, as an exact zero count rather than a
+        # one-sided bound.
+        self.cur.execute(
+            "SELECT COUNT(*) FROM buy_volume_window "
+            "WHERE symbol = ANY(%s) AND buy_volume < 0",
+            (symbols,),
+        )
+        self.assertEqual(self.cur.fetchone()[0], 0)
+
+        # Exact value match per symbol: defeats a view that would hide a
+        # sign-flip or abs() by only ever reporting non-negative numbers.
+        self.cur.execute(
+            "SELECT symbol, buy_volume FROM buy_volume_window WHERE symbol = ANY(%s)",
+            (symbols,),
+        )
+        actual = {symbol: int(buy_volume) for symbol, buy_volume in self.cur.fetchall()}
+        self.assertEqual(actual, _SEEDED_ROWS)
+
+    def test_absent_symbol_window_returns_no_rows(self):
+        # covers: TQ-9502
+        """A window containing no matching trades returns exactly zero
+        rows -- not a NULL-swallowed phantom row that would pass a
+        one-sided check vacuously."""
+        self.cur.execute(
+            "SELECT COUNT(*) FROM buy_volume_window WHERE symbol = %s",
+            (_SYMBOL_ABSENT,),
+        )
+        self.assertEqual(self.cur.fetchone()[0], 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

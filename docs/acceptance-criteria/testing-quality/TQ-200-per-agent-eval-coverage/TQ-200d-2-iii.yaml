@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -296,7 +296,9 @@ amended_by:
     at: '2026-11-02'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/evals/sql_test_writer_eval/evidence_kinds.py
+  - scripts/evals/sql_test_writer_eval/sql_resolve.py
 change_target:
   - code
   - docs
