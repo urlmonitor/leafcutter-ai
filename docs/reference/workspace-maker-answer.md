@@ -4,7 +4,7 @@ description: "Every field, status, exit code and outcome code of the answer the 
 type: reference
 status: active
 created: 2026-10-13
-last_updated: 2026-11-02
+last_updated: 2026-11-04
 components:
   - worktree_manager
   - build_orchestration
@@ -70,7 +70,7 @@ These are all the codes. No answer carries a generic `REFUSED` code.
 | Code | Status | Meaning |
 |---|---|---|
 | `OK` | ok | The request was done. |
-| `NOT_FOUND` | refused | No workspace with a marker at that place. On `remove`, a folder with no record that holds files also gets this code, with `files` listing them; see [Refusals of remove](#refusals-of-remove). |
+| `NOT_FOUND` | refused | No workspace with a marker at that place. On `remove`, a folder with no record that holds files, and is not shown to be this project's, also gets this code, with `files` listing them; see [Refusals of remove](#refusals-of-remove). |
 | `INCOMPLETE` | refused | The workspace is half-made and could not be finished safely; see `remnant_path`. |
 | `OCCUPIED` | refused | The place already holds other work; left as it is. See `occupant`. |
 | `OCCUPIED_LEGACY_WORKTREE` | refused | An old-style worktree occupies the work's place. See `occupant`. |
@@ -188,7 +188,7 @@ post-merge checks are `n/a` only when the project does not declare that stage.
 | `candidates` | `AMBIGUOUS_REPO`; `AMBIGUOUS_LINE` from `locate --branch` | the matching project paths; or the workspaces the branch matched by alias |
 | `searched_from` | `NO_REPO` | where the search started |
 | `occupant` | `OCCUPIED`, `OCCUPIED_LEGACY_WORKTREE` | `{path, kind, branch}`; `kind` is `other-line`, `other-project`, `plain-folder` or `legacy-worktree`; `branch` may be null |
-| `remnant_path` | `INCOMPLETE` | the half-made workspace |
+| `remnant_path` | `INCOMPLETE`, `HALF_CLEARED` | the half-made workspace, or the leftover of a clearing that stopped part-way |
 | `unsent` | `UNSENT_WORK`, `WORK_AT_RISK` | `{commits, files}`; for a half-cleared workspace `commits` is always empty |
 | `files` | `NOT_FOUND` from `remove` of a record-less folder holding files | the files in the folder: paths relative to the folder, forward slashes, sorted |
 | `discard_token` | `UNSENT_WORK` on `remove` only | see [Discard token](#discard-token) |
@@ -208,8 +208,10 @@ stops them.
 | A program is working inside the workspace | `PROCESS_HOLDS_FILES` | `holders`: `[{pid, name}]` | `Programs are working inside <workspace>: <pid> (<name>), .... Stop them and ask again; nothing was removed.` |
 | The program check is unavailable | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `The program check is unavailable (<reason>), so it cannot be told whether programs are working inside <workspace>; nothing was removed.` |
 | Some items could not be deleted | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `Could not remove all of <workspace> (a program may hold files): could not delete a, b, c and N more The clearing stopped part-way and is not finished: make the same request again and it finishes ...` |
-| A half-cleared workspace still holds files | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | says the workspace was half-cleared and its remaining files cannot be checked against the shared project; when the repository can no longer be read it also says so, and that its commits cannot be checked |
-| A folder with no record holds files | `NOT_FOUND` | `files`; no `discard_token` | says the folder cannot be told to be a workspace of this project |
+| Half-cleared, the repository is gone, files remain | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | `<workspace> is a half-cleared workspace (a clearing stopped part-way and its repository is gone: its N remaining file(s) cannot be checked against the shared project, so they count as unsent). ... Repeat the request with --discard-token to discard them.` |
+| Half-cleared, the repository can no longer be read | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | `<workspace> is a half-cleared workspace (its repository can no longer be read, so its commits cannot be checked, and its N remaining file(s) cannot be checked against the shared project, so they count as unsent). ...` The record says ready, yet the repository cannot be read. |
+| A leftover with no record whose repository names this project's shared project | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | the half-cleared wording of the gone-repository row. The folder has no workspace record, but a leftover piece of its repository names only this project's shared project |
+| A folder with no record, not shown to be ours | `NOT_FOUND` | `files`; no `discard_token` | `<workspace> holds files but is not shown to be a workspace of this project (no workspace record naming it); nothing was changed.` |
 | A workspace off its line of work (detached) has commits that are on neither `origin/<branch>` nor `origin/main` | `UNSENT_WORK` | `unsent` (`commits` as full 40-character ids, `files`), `discard_token` | adds that the workspace is not on its line of work (detached), so the commit it sits on was checked too |
 
 Details:
@@ -224,13 +226,14 @@ Details:
   ends `The branch on the shared project was already deleted.` and the answer adds
   `hub_branch_deleted: true`. Asking again continues the clearing, which is then a
   half-cleared workspace.
-- **Half-cleared workspace.** The repository is gone and an earlier clearing stopped part-way.
-  `unsent.files` lists the remaining files (relative paths, forward slashes, sorted, the
-  workspace record left out). They count as unsent because they cannot be checked against the
-  shared project. Repeating the request with the matching `--discard-token` finishes the
-  clearing; the ok answer's `discarded` is then `{commits: [], files: [...]}`. A token that does
-  not match repeats the refusal with a fresh token. A half-cleared folder with no files left is
-  simply finished with an ok answer. The shared project is never touched.
+- **Half-cleared workspace.** An earlier clearing stopped part-way and its repository is gone, or
+  it can no longer be read. `unsent.files` lists the remaining files (relative paths, forward
+  slashes, sorted, the workspace record left out). They count as unsent because they cannot be
+  checked against the shared project. Repeating the request with the matching `--discard-token`
+  finishes the clearing; the ok answer's `discarded` is then `{commits: [], files: [...]}`. A token
+  that does not match repeats the refusal with a fresh token. A half-cleared folder with no files
+  left is simply finished with an ok answer, except that an unreadable repository whose record says
+  ready still asks for a token. The shared project is never touched.
 - **Clearing that stopped part-way.** The clearing marks the workspace record `clearing` once its
   checks passed, then deletes the content, then the repository, the record last. A request that
   asks again, by `--path` or by `--kind`/`--slug`, finishes it: no token, no fetch, no second check
@@ -238,14 +241,13 @@ Details:
   line of work moved on, the normal check applies. `ensure`, `locate` and `list` report such a
   leftover as `HALF_CLEARED` (`half-cleared` in `list`) and never as ready.
 - **Record-less leftover of this project.** A folder in this project's landing place with no
-  record, a repository folder that has lost its history, and a leftover `FETCH_HEAD` or `config`
-  that names only this project's shared project is treated as half-cleared (refused `UNSENT_WORK`
+  record, whose repository can no longer be read, and whose leftover `FETCH_HEAD` or `config`
+  name only this project's shared project, is treated as half-cleared (refused `UNSENT_WORK`
   with a token for exactly its files). One that names another shared project, mixed evidence, or
-  none stays `NOT_FOUND`.
-- **Folder with no record holding files.** Nothing was changed and no token is offered, because
-  the folder cannot be told to belong to this project. A record-less folder with no files in this
-  project's landing place is finished with an ok answer. A plain `NOT_FOUND` without `files`
-  means the place is not a workspace of this project.
+  none is the next case.
+- **Folder with no record, not shown to be ours.** Nothing was changed and no token is offered.
+  A record-less folder with no files in this project's landing place is finished with an ok
+  answer. A plain `NOT_FOUND` without `files` means the place is not a workspace of this project.
 - **Workspace off its line of work.** Being detached is not a refusal by itself; `remove` treats
   such a workspace like any other. There is no separate field for it; the only sign is the extra
   sentence in the message.

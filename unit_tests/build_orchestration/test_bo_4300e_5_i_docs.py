@@ -14,6 +14,9 @@ ARCHITECTURE: unittest; reads the two docs and the remove sources as text. No ma
 DECISION HISTORY
 ====================================================================
 - 2026-11-02 [claude/BO-4300e-5-i]: Created with the how-to and reference update.
+- 2026-11-04 [test-writer/fast-lane bo-4300e-5-ii, BO-4300e-5-ii]: Refusals table is now eight rows
+  (the unreadable repository and the record-less leftover get their own); more message phrases;
+  the source scan also covers worktree_answer.py and worktree_remove_half.py.
 ====================================================================
 """
 from __future__ import annotations
@@ -28,6 +31,8 @@ REF_DOC = REPO / "docs/reference/workspace-maker-answer.md"
 REMOVE_SOURCES = (
     REPO / "templates/scripts/worktree_remove.py",
     REPO / "templates/scripts/worktree_remove_checks.py",
+    REPO / "templates/scripts/worktree_answer.py",
+    REPO / "templates/scripts/worktree_remove_half.py",
 )
 DELETE_COMMANDS = re.compile(r"\b(rm|rmdir|Remove-Item|rmtree|del)\b|git\s+worktree\s+remove")
 # The fixed opening words of each refusal message, as the reference quotes them.
@@ -35,6 +40,11 @@ MESSAGE_OPENINGS = (
     "Programs are working inside",
     "The program check is unavailable",
     "Could not remove all of",
+    "The clearing stopped part-way and is not finished",
+    "is a half-cleared workspace",
+    "commits cannot be checked",
+    "cannot be checked against the",
+    "is not shown to be a workspace of this project",
 )
 REFUSAL_FIELDS = ("holders", "files", "unsent", "discard_token")
 
@@ -85,7 +95,7 @@ class TestAnswerReference(unittest.TestCase):
         """AC-1: the program, check-unavailable, partial-deletion, half-cleared, record-less and
         detached refusals are each listed with their code."""
         rows = [line for line in self.refusals.splitlines() if line.startswith("| ") and "---" not in line][1:]
-        self.assertEqual(len(rows), 6, msg="\n".join(rows))
+        self.assertEqual(len(rows), 8, msg="\n".join(rows))
         for code in ("PROCESS_HOLDS_FILES", "UNSENT_WORK", "NOT_FOUND"):
             self.assertIn(f"`{code}`", self.refusals)
             self.assertIn(f'"{code}"', self.code, msg=f"{code} is not emitted by remove")
