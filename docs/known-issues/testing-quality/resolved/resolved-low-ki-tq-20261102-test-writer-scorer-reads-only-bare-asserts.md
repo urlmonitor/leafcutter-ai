@@ -17,13 +17,13 @@ related_docs:
 
 # KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts — unittest assertions are invisible to two test-writer scorer kinds
 
-> Filed 2026-11-02. Index: [testing-quality.md](../testing-quality.md). Filename severity is the
+> Filed 2026-11-02. Index: [testing-quality.md](../../testing-quality.md). Filename severity is the
 > three-level index bucket (`low`); the original grading is the `**Severity:**` line below.
 
 - **Severity:** medium. The scorer marks a correct test as wrong (falsely red) on two of the eight
   test-writer rows, so the live test-writer score understates the agent and a fix to the agent
   cannot be measured on these rows.
-- **Status:** open, no AC.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-1-iv. Proved by unit_tests/evals/tq200d1iv/.
 - **Occurrences:** 5 failed assertions in three live runs on 2026-11-02 (Windows 11, main
   `8248ac7a`): `counts_rows_and_non_null` on `empty-window` in the first live run and re-run 1
   (re-run 2 passed because the agent happened to write bare `assert` statements);

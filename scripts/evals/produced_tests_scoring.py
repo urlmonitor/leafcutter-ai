@@ -84,28 +84,85 @@ def fixture_seeds_moved_input(ctx: RowContext, spec: dict) -> dict:
     return {"passed": True, "detail": f"{len(seeded)} seeded record(s) hold '{new}' with values distinct from '{old}'"}
 
 
-def _count_side(test: ast.Compare, assigned: Mapping[str, ast.AST]) -> ast.AST | None:
-    """The counted expression of ``<count> <op> <int>`` (a name resolved to its assignment), else None."""
-    bound = test.comparators[0]
-    if len(test.ops) != 1 or not isinstance(bound, ast.Constant) or not isinstance(bound.value, int) or isinstance(bound.value, bool):
-        return None
-    side = assigned.get(test.left.id, test.left) if isinstance(test.left, ast.Name) else test.left
-    calls = {n.func.id for n in ast.walk(side) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
-    return side if calls & {"len", "sum", "count"} else None
+_COUNT_CALLS = {"len", "sum", "count"}
+_CALL_OPS = {"assertEqual": ast.Eq, "assertEquals": ast.Eq, "assertGreater": ast.Gt, "assertGreaterEqual": ast.GtE}
 
 
-def _count_kind(assertion: ast.Assert, assigned: Mapping[str, ast.AST]) -> str | None:
-    """Classify an assert as an exact 'processed' count, a 'non_null' count, or neither."""
-    test = assertion.test
-    side = _count_side(test, assigned) if isinstance(test, ast.Compare) else None
-    limit = test.comparators[0] if isinstance(test, ast.Compare) else None
-    if side is None or not isinstance(test, ast.Compare) or not isinstance(limit, ast.Constant) or not isinstance(limit.value, int):
+def _assertion_tests(tree: ast.AST) -> list[ast.expr]:
+    """Every assertion of the file as the expression it states: a bare assert's test, or the call's comparison.
+
+    ``self.assertEqual(a, b)`` is ``a == b``, ``assertGreater(a, b)`` is ``a > b``, ``assertGreaterEqual`` is
+    ``a >= b`` and ``assertTrue(x)`` is ``x``. ``assertIsNotNone`` and any other call state no comparison.
+    """
+    tests: list[ast.expr] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assert):
+            tests.append(node.test)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            name = node.func.attr
+            if name in _CALL_OPS and len(node.args) == 2:
+                tests.append(ast.Compare(left=node.args[0], ops=[_CALL_OPS[name]()], comparators=[node.args[1]]))
+            elif name == "assertTrue" and node.args:
+                tests.append(node.args[0])
+    return tests
+
+
+def _resolve(node: ast.AST, assigned: Mapping[str, ast.AST]) -> ast.AST:
+    """A name resolved to the expression it was assigned from."""
+    return assigned.get(node.id, node) if isinstance(node, ast.Name) else node
+
+
+def _is_count(node: ast.AST) -> bool:
+    """The expression calls the bare function len, sum or count."""
+    return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in _COUNT_CALLS for n in ast.walk(node))
+
+
+def _int_literal(node: ast.AST) -> int | None:
+    """The int a node holds as a literal (a bool is not one), else None."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
+        return node.value
+    return None
+
+
+def _count_side(counted: ast.AST, other: ast.AST, assigned: Mapping[str, ast.AST]) -> ast.AST | None:
+    """The counted expression of ``<count> == <int or count expression>`` (names resolved), else None.
+
+    The other side must be an int literal or a count expression such as ``len(seed)``, and never the same
+    expression as the counted side, which holds for an empty window too.
+    """
+    side, limit = _resolve(counted, assigned), _resolve(other, assigned)
+    if not _is_count(side) or (_int_literal(limit) is None and not _is_count(limit)):
         return None
-    bound, op = limit.value, test.ops[0]
+    return None if ast.dump(side) == ast.dump(limit) else side
+
+
+def _kind_of_side(side: ast.AST, op: ast.cmpop, bound: int | None) -> str | None:
+    """'processed' or 'non_null' for a counted expression compared by *op* with *bound* (None: non-literal)."""
     if not any(isinstance(n, ast.Constant) and n.value is None for n in ast.walk(side)):
         return "processed" if isinstance(op, ast.Eq) else None
-    exact = isinstance(op, ast.Eq) or (isinstance(op, ast.Gt) and bound >= 0) or (isinstance(op, ast.GtE) and bound >= 1)
+    exact = isinstance(op, ast.Eq) or (bound is not None and ((isinstance(op, ast.Gt) and bound >= 0) or (isinstance(op, ast.GtE) and bound >= 1)))
     return "non_null" if exact else None
+
+
+def _has_none(node: ast.AST, assigned: Mapping[str, ast.AST]) -> bool:
+    """The (name-resolved) expression holds a ``None`` constant."""
+    return any(isinstance(n, ast.Constant) and n.value is None for n in ast.walk(_resolve(node, assigned)))
+
+
+def _count_kinds(test: ast.expr, assigned: Mapping[str, ast.AST]) -> set[str | None]:
+    """Classify an assertion's comparison as a 'processed' or a 'non_null' count (an == may hold the count on either side).
+
+    When both sides of an == are counts, the side holding a ``None`` is the counted one (a non-NULL count).
+    """
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1:
+        return set()
+    op, left, right = test.ops[0], test.left, test.comparators[0]
+    pairs = [(left, right), (right, left)] if isinstance(op, ast.Eq) else [(left, right)]
+    for counted, other in sorted(pairs, key=lambda p: not _has_none(p[0], assigned)):
+        side = _count_side(counted, other, assigned)
+        if side is not None and (isinstance(op, ast.Eq) or _int_literal(other) is not None):
+            return {_kind_of_side(side, op, _int_literal(other))}
+    return set()
 
 
 def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
@@ -114,7 +171,7 @@ def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
     if tree is None:
         return {"passed": False, "detail": why}
     assigned = {t.id: n.value for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
-    kinds = {_count_kind(a, assigned) for a in ast.walk(tree) if isinstance(a, ast.Assert)}
+    kinds = set().union(*(_count_kinds(t, assigned) for t in _assertion_tests(tree)))
     missing = [label for label, key in (("an exact processed-row count", "processed"), ("a non-NULL count", "non_null")) if key not in kinds]
     if missing:
         return {"passed": False, "detail": "the test asserts no " + " and no ".join(missing) + ", so an empty or all-NULL window passes it"}
@@ -122,7 +179,7 @@ def counts_rows_and_non_null(ctx: RowContext, spec: dict) -> dict:
 
 
 def _numbers(tree: ast.AST) -> set[float]:
-    """Numeric literals the test seeds: constants in assignments (assert statements are not seeds)."""
+    """Numeric literals the test seeds: constants in assignments (assertions are not seeds)."""
     return {n.value for a in ast.walk(tree) if isinstance(a, ast.Assign) for n in ast.walk(a.value)
             if isinstance(n, ast.Constant) and isinstance(n.value, (int, float)) and not isinstance(n.value, bool)}
 
@@ -133,8 +190,8 @@ def asserts_known_seeded_value(ctx: RowContext, spec: dict) -> dict:
     if tree is None:
         return {"passed": False, "detail": why}
     seeded = _numbers(tree)
-    for assertion in (n for n in ast.walk(tree) if isinstance(n, ast.Assert)):
-        for cmp_ in (n for n in ast.walk(assertion.test) if isinstance(n, ast.Compare) and all(isinstance(o, ast.Eq) for o in n.ops)):
+    for test in _assertion_tests(tree):
+        for cmp_ in (n for n in ast.walk(test) if isinstance(n, ast.Compare) and all(isinstance(o, ast.Eq) for o in n.ops)):
             hit = [n.value for n in ast.walk(cmp_) if isinstance(n, ast.Constant) and n.value in seeded and not isinstance(n.value, bool)]
             if hit:
                 return {"passed": True, "detail": f"asserts the seeded known value {hit[0]!r}"}
