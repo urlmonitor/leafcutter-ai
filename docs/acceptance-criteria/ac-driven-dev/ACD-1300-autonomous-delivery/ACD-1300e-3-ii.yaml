@@ -1,0 +1,111 @@
+id: ACD-1300e-3-ii
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "Each pause-record step is one plain command given to the agent whose only job is to run one command"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run with no person attached reaches its business-analyst decision point
+    while working in a workspace made by the workspace maker, with drafted criteria on disk,
+  And the run must write its pause record and read it back, and a later resume must look the
+    record up, read it, clear it and read back the clearing,
+  When each of those six steps is sent out,
+  Then each request carries exactly one command line, which names every location it acts on
+    by absolute path and does not change directory, join two commands, branch on the result
+    of an earlier command, or run a nested command,
+  And each request goes to the agent whose only role is to run one given command unchanged
+    and relay its output word for word, and to no agent whose role is creating and removing
+    workspaces, investigating ticket state, or running the fast lane's own command steps,
+  And the result each step acts on is read from that one command's own outcome and output as
+    relayed in the reply,
+  And any further step of the run that reads the pause store (for example a scan for leftover
+    pause records) follows the same two rules,
+  And the pause ends with the run reported as waiting and its record present in that
+    workspace's pause store, and a resume started from that same workspace finds the record
+    and applies the person's answer,
+  And a run started from a linked worktree of the project still writes to and reads from the
+    project's own pause store, exactly as ACD-2100a-4 requires,
+  And the bug symptom ("on run finalize-gate-child-1, 2026-10-25, the gate-ba pause-store write
+    was sent to the worktree agent as one line chaining a directory change, a fallback and a
+    nested command; it declined both because writing a pause record is neither create nor
+    remove and because the line was a compound command, so no record was written and the run
+    ended pause_persist_failed and could not be resumed") must not occur.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "pauseAtGate(), resolveGate(), readPauseRecordWithRetry() and buildPauseStoreCommand() -- the six pause-store dispatches and the compound command line they send today."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 1.2-1.5 (one command, absolute paths, no chaining; result vs decline reply shapes) and sec. 2.2/2.3 (command-step-runner is for fast-lane steps only; every other workflow shell step goes to shell-runner)."
+  - path: templates/agents/shell-runner.md
+    relationship: describes
+    status: exists
+    relevance: "The charter of the one-command executor: it declines a chained command line, so the command must be split before the executor is switched."
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    relationship: describes
+    status: exists
+    relevance: "The shared reply check (shellStepReply) that already tells a decline from a result for shell-runner replies."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
+    relationship: related
+    status: exists
+    relevance: "Occurrence 2026-10-25 -- the decline reply quoted in the bug symptom, and fix direction 3."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
+    relationship: related
+    status: exists
+    relevance: "The read and clear declines on run wf_4a8567df-505 and the hard-coded worktree-agent sites."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT ALREADY ACD-1300e-3. The parent says WHO may perform the six record
+  operations. It is silent on the SHAPE of the request. That gap is load-bearing: the
+  one-command executor ADR-070 names (shell-runner) declines any command line that chains
+  commands with &&, ||, ;, a pipe or command substitution (ADR-070 sec. 1.3). The pause-store
+  command today is built as `cd <workspace> && REPO_ROOT=$(git rev-parse ...) ... || ...`.
+  Switching the executor while keeping that line turns an intermittent decline into a
+  certain one: every pause would be declined by charter. The 2026-10-25 decline gave the
+  compound line as its second reason. Named mutation for the test designer: keep the
+  compound line and switch only the agent -- this record must go red, the parent need not.
+
+  EXECUTOR NAME -- FLAG FOR THE IT PO (not authored here; executor choice is the IT PO's).
+  ACD-1300e-3's it_requirements (2026-10-16) choose command-step-runner, and its
+  delivers_to contract to ACD-1300e-4/-5 names it too. ADR-070 sec. 2.2/2.3 reserves
+  command-step-runner for the fast lane's command steps and sends every other workflow shell
+  step to shell-runner, and this run's request names shell-runner. The criteria here are
+  written so that both the parent and this record are satisfied only by the non-fast-lane
+  executor. ACD-1300e-3's it_requirements and delivers_to need amending by the IT PO.
+
+  STORE LOCATION. Removing the `cd` and the `$(git rev-parse --git-common-dir)` subshell
+  removes the thing that anchors the store today. The location must still resolve to the
+  repository-anchored store (ACD-2100a-4, ACD-1300e-3-i): a maker workspace is a clone, so its
+  store is the workspace's own; a linked worktree's store is the main repository's.
+
+  BO-2300a-1-ii is already status superseded_by, superseded_by ACD-1300e-3 (2026-10-16); its
+  pinned test unit_tests/workflows/test_bo_2300a_1_ii.py still asserts worktree-agent and is
+  amended when ACD-1300e-3 is built (parent it_requirements). No edit to BO-2300a-1-ii is needed.
+
+  OUT OF SCOPE (from the request): the stage-end script steps (rule check, test design,
+  approval holds, hand-back findings) -- tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md;
+  and the pause-store dispatches in finalize-feature.js.

@@ -1,0 +1,76 @@
+id: ACD-1300e-3-vi
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A declined clearing of a pause record is stated in the run's result, not only in a log line"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R was resumed with the person's answer for its business-analyst decision point, the
+    answer was applied, and the run has moved past that decision point,
+  When the step that clears run R's pause record declines to run on every attempt (it replies
+    that it did not run the command, and gives a reason),
+  Then the run's result states that run R's pause record was not cleared, names the declined
+    step and the agent that declined it, quotes the stated reason, and gives the record's
+    location on disk,
+  And it states that the record still names a decision point the run has already passed, and
+    that the record can be deleted once nothing is waiting on run R,
+  And nothing in the result reports the record as cleared,
+  And the record is left on disk unchanged, and the clearing is not sent to any other agent or
+    done by any other means,
+  And the person's answer and the criteria committed for that stage stay as they were,
+  And when the clearing runs and its read-back confirms no record remains, the result carries
+    no such statement,
+  And the bug symptom (run wf_4a8567df-505, 2026-10-30: the clearing replied "My role is limited
+    to the two workspace actions, create and remove", only a warning line was logged, and the
+    run's pause record was still on disk after the run had moved past its decision point) must
+    not occur.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "resolveGate(): the clear-pause-record dispatch and the _clearVerifyFailed path that today only logs a warning."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
+    relationship: related
+    status: exists
+    relevance: "Mechanism item 5 (the clear's decline is only a log line) and journal row 31."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1300-autonomous-delivery/ACD-1300e-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling that requires no waiting record to remain after the run moves past its last decision point; a silent declined clear violates it unseen."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+    relevance: "Says not to hand-edit records; the result's 'can be deleted once nothing is waiting' statement must agree with it."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: documentation-expert
+  contract: "The result statement for an uncleared pause record (step, agent, quoted reason, record location, when it is safe to delete), quoted in the resume how-to by ACD-1300e-4-i."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Whether the run continues past a declined clearing or ends there is left to the IT PO:
+  ADR-070 sec. 5.2 ends the run on any decline; the KI's recovery (commit the stage, start a
+  new run) works either way because the answer was already applied and the stage committed.
+  What is fixed here is that the operator is TOLD, in the result, and is told what to do with
+  the leftover record. A stale record that names a passed decision point otherwise makes the
+  next resume of the same run id refuse a correct answer as naming a different decision
+  (ACD-2100c-3-i), which would be read as a new defect.
+
+  Named mutation: keep the warning line only -- the "result states" clause goes red; the parent
+  ACD-1300e-3 stays green, which is why this is its own record.

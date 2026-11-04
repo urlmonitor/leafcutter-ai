@@ -111,7 +111,7 @@ amended_by:
     by: it-po
     run_id: plan-feature-resume-and-pause
 superseded_by: null
-covered_by: []
+covered_by: [ACD-1300e-4-i]
 implemented_by: []
 change_target: docs
 risk_surface: internal

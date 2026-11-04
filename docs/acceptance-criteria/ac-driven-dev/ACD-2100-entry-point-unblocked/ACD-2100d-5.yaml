@@ -1,0 +1,108 @@
+id: ACD-2100d-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A run started exactly as the installed command or skill says reaches triage with no step run by hand"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a project with the route installed from the current source, whose agent registry is the
+    one the install delivered,
+  And the feature request "Add a CSV export to the parts list",
+  When a run is started by doing exactly what the installed /plan-feature command says and
+    nothing else -- run the workspace-maker command it shows, then start the workflow with
+    exactly the arguments it shows, filled in from the maker's answer --
+  Then the run passes every check made before triage, and the triage agent is dispatched for
+    that request,
+  And the run does not end with a report that a startup verdict or any other argument was not
+    supplied,
+  And no command beyond those the command text shows was run by hand, and no argument beyond
+    those it shows was added,
+  And the same holds when the run is started by doing exactly what the installed plan-feature
+    skill says in its workspace section,
+  And the bug symptom (KI-ACD-20261022, 2026-10-22 and run wf_d2396526-264 on 2026-10-29: started
+    with only the maker's answer, as the command and skill say, the run returned status error
+    "No workspace-setup permission pre-flight verdict was supplied in args" and dispatched no
+    agent) must not occur.
+depends_on: [ACD-2100d, ACD-2100b-5]
+doc_links:
+  - path: templates/commands/plan-feature.md
+    relationship: modifies
+    status: exists
+    relevance: "Step 2 builds Workflow('plan-feature', { userInput, workspace }) -- one of the two entry surfaces whose arguments must match what the workflow requires."
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Sec. WS.2 passes only args.workspace; its DECISION HISTORY records the 2026-10-10 replacement of the permission pre-flight (sec. WSP) by sec. WS."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The Pre-Stage-0 read of args.workspace_setup_permission and the fail-closed halt that runs before the maker answer is used."
+  - path: docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+    relationship: describes
+    status: exists
+    relevance: "Mechanism, both occurrences, the hand-run workaround and the two fix directions."
+  - path: scripts/worktree/check_workspace_setup_permission.py
+    relationship: related
+    status: exists
+    relevance: "The pre-flight whose verdict the workflow still requires; restored to the entry surfaces under fix direction 1, no longer required when the maker's answer is supplied under fix direction 2."
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100b-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Done record whose it_requirements put the verdict into args and require a direct invocation without one to halt; fix direction 2 amends that requirement."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: [ACD-2100d-5-i, ACD-2100d-5-ii, ACD-2100d-5-iii, ACD-2100d-5-iv]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  PLACEMENT. The run was dispatched with parent_l1_id ACD-1300e. That L1 is full at five L2s
+  (cap 5, no override) and its subject is resuming after an answer, not starting a run. The
+  defect is the ACD-2100 goal word for word ("Starting new work the proper way always
+  succeeds"). Its L1s: ACD-2100a, -b, -c are full at five L2s and every L2 under -b is done
+  (a done parent cannot take a todo child); ACD-2100e is documentation-only. ACD-2100d ("the
+  installed copy behaves like the one that was fixed") had one free slot and is the closest
+  fit: the route a user runs is the INSTALLED command and skill starting the INSTALLED
+  workflow, and the two halves fell out of agreement. ACD-2100d's notes warn against
+  restating a sibling's behaviour "but in the deployed layout"; this record does not -- its
+  subject is agreement between the entry surfaces and the workflow, which no sibling owns.
+  ACD-2100d is now at 5/5. If the PO prefers a dedicated L1 (ACD-2100 has two free L1 slots),
+  this record and its four L3s can be re-homed as one unit.
+
+  WHY DONE RECORDS DID NOT CATCH THIS. ACD-2100d-1 ("neither run stops at a check performed
+  before the first question") and ACD-2100a-5 are done, and their tests start the workflow
+  with a hand-built args object that already carries the verdict. That is the false green:
+  the evidence never used the arguments the entry surfaces build. ACD-2100d-5-i is the record
+  that closes it.
+
+  FIX DIRECTION -- OPEN, FOR THE IT PO AND THE USER AT THE GATE. The criteria hold under both
+  directions the KI lists:
+    1. restore the permission pre-flight to the command and the skill and pass its verdict; or
+    2. stop requiring the verdict when the maker's answer is supplied, since the workspace is
+       already made and the workflow no longer runs a workspace-setup step itself.
+  BA recommendation: direction 2. The skill's 2026-10-10 rewrite (TICKET-20260928-BO-4300-entry-skills)
+  retired the pre-flight on purpose; restoring it re-adds a second argument that can drift
+  and a pre-start step that can fail, to guard a step the run no longer performs. Direction 2
+  has two consequences the IT PO must carry: (a) ACD-2100b-5's it_requirement that a direct
+  invocation with no verdict halts must be narrowed to "with neither the maker's answer nor a
+  verdict" (ACD-2100d-5-ii keeps that case halting), and its test
+  test_direct_workflow_invocation_with_no_preflight_verdict_halts amended to match; (b) a
+  registry that denies shell permission no longer halts at startup when the maker's answer is
+  supplied -- the ADR-070 permits_shell lint and the shell-reply decline rule cover that
+  instead. Under direction 1, the command's and the skill's text both gain the pre-flight
+  step, and ACD-2100d-5-i guards it like any other argument.

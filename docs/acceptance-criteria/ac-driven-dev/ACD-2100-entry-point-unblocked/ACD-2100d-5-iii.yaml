@@ -1,0 +1,66 @@
+id: ACD-2100d-5-iii
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "A resume started the way the skill describes is not stopped by the startup check"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R was started exactly as the installed /plan-feature command says and paused at its
+    product-owner decision point, with its pause record on disk in the workspace the maker gave
+    it,
+  When the person's answer "approve" for that decision point is supplied by doing exactly what
+    the installed skill's resume section and the resume how-to say, and nothing else,
+  Then the resumed run passes every check made before triage with no startup verdict or other
+    argument added by hand,
+  And it reaches the product-owner decision point, applies the answer, and continues,
+  And it works in the same workspace run R was paused in, and no second workspace is made for
+    it,
+  And the bug symptom (KI-ACD-20261022: a start without a hand-run startup verdict "returned
+    status error" with "No workspace-setup permission pre-flight verdict was supplied in args"
+    and dispatched no agent) must not occur on the resume.
+depends_on: [ACD-2100d-5, ACD-2100c-3]
+doc_links:
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Sec. RS.2 describes the re-invocation with args.resume_answer and does not mention the workspace answer or a verdict."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3: re-run the same workflow with resumeFromRunId and args.resume_answer; the skill constructs the re-invocation."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-2100d-5
+  contract: "The start arguments the installed entry surfaces build are the ones the workflow requires; this record extends that agreement to the resume re-invocation."
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  UNASKED-FOR, KEPT ON PURPOSE. The request names the fresh start only. A resume is a second
+  start of the same workflow, and the startup check runs before any gate logic, so a fix that
+  only patches the command's Step 2 leaves every documented resume halting the same way -- and
+  the person's answer is then never applied, which is ACD-1300e's whole promise. The skill's
+  sec. RS.2 shows only args.resume_answer.
+
+  The same-workspace clause stops the obvious repair (have the resume run the maker again)
+  from silently making a fresh workspace without the paused run's drafts and record
+  (ACD-1300e: "resumes in the same workspace, with the same state").

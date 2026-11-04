@@ -1,0 +1,63 @@
+id: ACD-2100d-5-iv
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The startup-check reference and the workflow rationale describe the start the route actually accepts"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the reference page on the route's layout and startup checks and the workflow's
+    rationale notes,
+  When a reader looks up what the route needs in order to start and what each startup halt
+    means,
+  Then the pages list the arguments the installed /plan-feature command and skill pass, and say
+    which of them the workflow requires,
+  And each startup-halt report the pages quote is word for word what the workflow produces,
+  And the pages do not say that the skill runs a permission pre-flight unless the installed
+    skill contains that step,
+  And the rationale notes say whether the startup verdict is required when the maker's answer is
+    supplied, and why, matching what the workflow does,
+  And the reference page's row for a run that arrives with no maker's answer and no verdict
+    gives the remedy that ACD-2100d-5-ii's report gives.
+depends_on: [ACD-2100d-5, ACD-2100d-5-ii]
+doc_links:
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: modifies
+    status: exists
+    relevance: "Sec. 3 table: the 'No verdict supplied at all' row quotes the halt that names the retired skill pre-flight, and the section intro says the skill runs the pre-flight."
+  - path: docs/reference/plan-feature-workflow-rationale.md
+    relationship: modifies
+    status: exists
+    relevance: "Sections 'Pre-Stage-0 workspace-setup permission gate' and 'No pre-flight verdict at all fails closed' -- rationale moved out of plan-feature.js that still describes the skill pre-flight."
+  - path: docs/reference/plan-feature-workflow-rationale-gates.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 'The pre-flight outcome field' -- check it still matches once the start contract is settled."
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-2100d-5-ii
+  contract: "The startup-halt report text for a run with no maker's answer and no verdict."
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  The request asks to "update the halt message and the rationale doc". The halt message is
+  ACD-2100d-5-ii; this record is the two pages. ACD-2100d's reference-doc trigger was served by
+  ACD-2100d-4 (done, a different page: which copy runs where). This record does not reopen it.
+  The rationale page holds comments moved verbatim out of plan-feature.js; if the coder changes
+  the matching code comment, the page must change in the same commit.

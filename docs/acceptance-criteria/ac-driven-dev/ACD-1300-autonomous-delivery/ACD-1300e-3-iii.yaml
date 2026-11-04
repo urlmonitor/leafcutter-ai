@@ -1,0 +1,81 @@
+id: ACD-1300e-3-iii
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A pause record whose text holds quotes and shell characters is stored and read back unchanged"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run with no person attached reaches a decision point whose decision context
+    includes the rule-check summary
+      the check produced no readable report (JSON Parse error: Unexpected token 'X')
+  And the request the run was started with is these two lines:
+      Don't drop the user's "approved" drafts; keep $HOME and `pwd` literal \ done
+      Größe: 5 – ok
+  When the run records that it is waiting,
+  Then the run is reported as waiting and its pause record is present on disk,
+  And the record holds the summary and both request lines character for character, including
+    every single quote, double quote, backslash, dollar sign, backtick, line break and
+    non-ASCII character,
+  And no part of either text was run or expanded as a command on the way: the record holds the
+    literal text $HOME and the literal backticked pwd, not a directory path or the output of a
+    command,
+  And a resume of that run shows the person the same summary and the same two request lines,
+    character for character,
+  And the bug symptom (KI-BO-20261022 candidate path 3: "the write passes the record as a
+    single-quoted shell argument and a single quote in the record is not escaped; a rule-check
+    summary such as Unexpected token 'X' ends the quoted argument, the write fails, and the
+    read-back finds no record") must not occur.
+depends_on: [ACD-1300e-3, ACD-1300e-3-ii]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The pause-persist write that passes --record as a single-quoted JSON.stringify() argument, and the mid-gate context that carries the rule-check summary."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
+    relationship: related
+    status: exists
+    relevance: "Candidate path 3 and fix direction 2 (pass the record through a file or stdin, not a single-quoted argument)."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 1.2-1.3: the executor runs the command line unchanged, so whatever reaches it is exactly what the shell sees."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1300e-3-ii
+  contract: "The pause-store write is one plain command with no chaining; this record constrains how the record text is carried inside that one command."
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  INFERRED, NOT REPRODUCED. KI-BO-20261022 lists the quote break as candidate path 3 and says
+  it did not fire on the 2026-10-25 occurrence. It is still a live defect in the code as
+  described there, and it is the one candidate the executor move (ACD-1300e-3-ii) does NOT
+  close: the one-command executor runs the line unchanged, so a quote that breaks the line
+  breaks it there too.
+
+  WHY THE GIVEN CARRIES MORE THAN A SINGLE QUOTE. "Escape ' as '\''" (the KI's minimum fix)
+  turns the single-quote case green and leaves $ and backtick expansion open the moment the
+  quoting style changes to double quotes, and leaves a CRLF/encoding round-trip unpinned on
+  Windows. Each character in the Given is there to turn one specific weaker fix red. The
+  non-ASCII line pins the Windows code-page hazard (the recorded runs are on win32).
+
+  The rule-check summary is the realistic source: KI-BO-20261101 records a declined rule check
+  producing exactly "the check produced no readable report (JSON Parse error: ...)", and V8's
+  parse errors quote the offending token in single quotes.

@@ -1,0 +1,90 @@
+id: ACD-1300e-3-v
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A declined look-up of a pause record is never reported as nothing to resume"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given run R paused at its business-analyst decision point, with its pause record on disk and
+    eleven drafted criteria on disk that are not committed,
+  When the route is started again for run R with the person's answer for that decision point,
+    and the step that looks up or reads the pause record declines to run on every attempt (it
+    replies that it did not run the command, and gives a reason),
+  Then the run does not end as "nothing to resume" and does not continue as though run R were
+    not paused,
+  And no authoring agent is sent to write or rewrite criteria for that stage,
+  And the person's answer is not applied, and no approval or priority is recorded,
+  And the run ends as "pause record unreadable", and its message says the step was declined,
+    names the step and the agent that declined it, quotes the stated reason, says the record is
+    still on disk and was not examined, and says the resume can be started again with the same
+    answer,
+  And the message does not say the record is damaged, malformed or absent,
+  And the declined step is not sent to any other agent,
+  And the pause record and the eleven drafted criteria are byte-identical afterwards,
+  And when the route is then started again for run R with the same answer and the step runs,
+    the answer is applied to that decision point exactly as ACD-2100c-3 requires,
+  And the bug symptom (run wf_4a8567df-505, 2026-10-30: the look-up replied "I did not run this
+    read. Reading the pause record is not one of the two actions this agent handles"; a declined
+    look-up read as no record sends the author back over drafts the person had approved) must
+    not occur.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "readPauseRecordWithRetry() and peekPausedGateId(): where a decline is today folded into 'not the record' and, on the peek, can become 'not paused here'."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
+    relationship: related
+    status: exists
+    relevance: "Journal rows 25-27: the declined peek and the retry that ran; fix direction 2 (treat a decline as a routing failure, keep the drafts)."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2100-entry-point-unblocked/ACD-2100c-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Done sibling contract this record refines: bounded re-attempts, status pause_record_unreadable, never nothing_to_resume for a reply that is not the record."
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    relationship: describes
+    status: exists
+    relevance: "shellStepReply() already classifies a reply as kind 'declined'; the look-up must use that classification instead of reading a decline as an unreadable record."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: documentation-expert
+  contract: "The 'pause record unreadable' message form for a declined look-up (names step, agent, quoted reason, record still on disk, retry with the same answer), quoted in the resume how-to by ACD-1300e-4-i."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THE STATUS IS "pause record unreadable" AND NOT A NEW ONE. ACD-2100c-3-ii (approved,
+  done) already says that when no attempt returns a readable record the run ends
+  pause_record_unreadable and its message says the record could not be read (not that it is
+  absent). A decline on every attempt is a case of "no attempt returned a readable record", so
+  a new status would contradict a done record. What that record does not do is tell a decline
+  apart from a damaged or retyped record -- its message is the same for both, and the remedy
+  differs (a decline is a routing fault and a retry may run; a damaged record will not improve
+  on retry). This record keeps the status and pins the message. If the IT PO prefers a
+  distinct status, ACD-2100c-3-ii must be amended in the same change and every caller status
+  list updated; flag, do not do it silently.
+
+  "ON EVERY ATTEMPT" is deliberate: it holds whether the look-up is re-attempted (ACD-2100c-3-ii's
+  bounded retry) or not (ADR-070 sec. 5.3: no re-send after a decline). The executor-choice
+  conflict between those two is for the IT PO.
+
+  Eleven drafts mirrors the recorded run (TQ-200d, 2026-10-30). Named mutation: map a
+  decline to exists=false -- this record goes red on the nothing-to-resume clause and on the
+  no-authoring-agent clause.

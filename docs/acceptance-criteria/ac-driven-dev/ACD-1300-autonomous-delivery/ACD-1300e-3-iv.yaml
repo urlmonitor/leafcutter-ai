@@ -1,0 +1,88 @@
+id: ACD-1300e-3-iv
+components:
+  - ac_driven_dev
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "When a pause cannot be confirmed, the report shows what the write said next to what the read-back found"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a planning run with no person attached reaches its business-analyst decision point and
+    sends its pause-record write,
+  And the write's reply says the write succeeded, but the read-back that follows finds no record
+    for the run (for example because the record was written to a different pause store),
+  When the run ends because the pause could not be confirmed,
+  Then its report quotes the write's own reply -- the command's outcome and its output, up to
+    2 KB -- and, separately, the read-back's result,
+  And it says the write reported success but no record was found, and does not say that the
+    store could not be written or that a step was declined,
+  And it names the run id and the decision point, says the drafted criteria are on disk, not
+    committed and unchanged, and says the run cannot be resumed until a pause is recorded,
+  And when instead the write ran and failed, the report quotes the write's error output and says
+    the store write failed,
+  And when instead the write step was declined, the report quotes the decline and its stated
+    reason, says the write was not run, and claims no read-back result for a read-back that was
+    not sent,
+  And when instead the write's reply is neither a result nor a decline, the report quotes that
+    reply as received and says it could not be read as a result,
+  And the write is not sent again to any other agent after its reply is reported,
+  And the bug symptom (KI-BO-20261022: "the workflow knew what the write returned and threw it
+    away, so the report cannot say which of three causes it was"; on 2026-10-25 the decline
+    reply survived only in the run's journal) must not occur.
+depends_on: [ACD-1300e-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "pauseAtGate(): the write dispatch whose reply is discarded today, and the pause_persist_failed return."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
+    relationship: related
+    status: exists
+    relevance: "Fix direction 1 (keep the write's reply and report it) and the pattern 'a failure that discards its own evidence'."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261101-shell-reply-schema-admits-a-wrapped-reply.md
+    relationship: related
+    status: exists
+    relevance: "A shell-runner reply that wrapped its whole result inside stdout -- the 'neither a result nor a decline' case in the criteria."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Sec. 5.2 (quote the reply received, up to 2 KB) and sec. 5.3 (no substitute agent after a decline)."
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: documentation-expert
+  contract: "The report forms for the four unconfirmed-pause cases (write succeeded but no record found; write failed; write declined; write reply unreadable), quoted in the resume how-to by ACD-1300e-4-i."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BOUNDARY WITH ACD-1300e-3-i. That sibling pins that an UNWRITABLE store is reported as a
+  store write, not as a refusal. This record's headline case is the one nobody owns: the write
+  REPORTED SUCCESS and the read-back still found nothing. Without the write's reply in the
+  report, that case is indistinguishable from the other three, which is exactly why the
+  2026-10-22 occurrence could not be diagnosed. The store-write-failed arm is kept only to pin
+  that the write's own error output is QUOTED (the sibling requires only that the cause is
+  named).
+
+  CONSISTENCY WITH ACD-2100a-4 ("the write is reported as failed if and only if no record is on
+  disk"): every arm here is a no-record-on-disk case, so all of them are failures; none
+  reports a pause as failed while a record exists.
+
+  The "claims no read-back result for a read-back that was not sent" clause is there so the
+  report is correct whether or not the IT PO keeps the read-back after a declined write
+  (ADR-070 sec. 5.3 says no later step is dispatched after a decline; ACD-1300e-3 says the
+  read-back decides). Either is acceptable; a report that invents a read-back result is not.

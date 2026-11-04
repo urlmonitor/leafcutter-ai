@@ -1,0 +1,70 @@
+id: ACD-1300e-4-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "The resume how-to explains a declined pause-record step and a pause that could not be confirmed"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the how-to for resuming a paused planning run,
+  When an operator looks up a run that ended because a pause could not be confirmed, or because
+    a step that reads or clears a pause record was declined,
+  Then the guide shows a report that quotes what the write said next to what the read-back
+    found, and how to tell its four causes apart: the write reported success but no record was
+    found, the write ran and failed, the write was declined, and the write's reply could not be
+    read as a result,
+  And it states that a declined look-up of a pause record leaves the record and the drafted
+    criteria unchanged, does not apply the answer, and is retried by starting the resume again
+    with the same answer,
+  And it states what the run's result says when a pause record could not be cleared, where that
+    record is, and when it is safe to delete it,
+  And it states that the drafted criteria of a run whose pause could not be confirmed are on
+    disk and not committed, and how the operator keeps them,
+  And every report text and status value the guide quotes is one the route actually produces.
+depends_on: [ACD-1300e-4, ACD-1300e-3-iv, ACD-1300e-3-v, ACD-1300e-3-vi]
+doc_links:
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: modifies
+    status: exists
+    relevance: "The guide this record extends; ACD-1300e-4 owns its multi-decision walkthrough."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
+    relationship: describes
+    status: exists
+    relevance: "Detection and workaround sections: what an operator does today with a pause_persist_failed run."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
+    relationship: describes
+    status: exists
+    relevance: "Detection and workaround for a declined look-up or clear, including deleting a stale record."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: ACD-1300e-3-iv
+    contract: "Report forms for the four unconfirmed-pause causes."
+  - ac_id: ACD-1300e-3-v
+    contract: "The pause record unreadable message form for a declined look-up."
+  - ac_id: ACD-1300e-3-vi
+    contract: "The result statement for an uncleared pause record."
+origin_agent: business-analyst
+created: 2026-11-04
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ACD-1300e's documentation_triggers (how-to, sequence-diagram) are already served by
+  ACD-1300e-4 and ACD-1300e-5. This record is an L3 under ACD-1300e-4 because the L1 is full at
+  five L2s; it adds only the outcomes ACD-1300e-3-iv/-v/-vi introduce. ACD-1300e-4 already
+  covers the unwritable-store case and its retry; do not restate it.
+
+  FLAG, NOT AUTHORED: ACD-1300e-5 (sequence diagram) lists the resume outcomes to show and
+  does not list a declined look-up. Under ACD-1300e-3-v that outcome reports as "pause record
+  unreadable", which ACD-1300e-5 does list, so no diagram record is added here; the diagram
+  author may annotate the decline wording.
