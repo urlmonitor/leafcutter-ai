@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -134,9 +134,6 @@ test_spec:
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_v.py
     must_catch:
       - revert the fix
-      - drop the hub URL comparison condition
-      - drop the repository folder is a folder condition
-      - drop the workspace position inside this project's landing place condition
       - list the files inside the repository folder
   - name: test_remove_cli_reaches_the_record_less_identification
     target_dir: unit_tests/build_orchestration/
@@ -168,9 +165,9 @@ test_spec:
     must_catch:
       - drop the every URL found equals the hub condition
       - drop the at least one URL found condition
-      - drop the repository folder is a folder condition
+      - drop the hub URL comparison condition
       - identify a folder outside this project's landing place
-      - the gate always allows
+      - the not-found refusal never refuses
   - name: test_token_from_the_first_run_is_never_honoured_on_the_not_found_path
     target_dir: unit_tests/build_orchestration/
     framework: pytest

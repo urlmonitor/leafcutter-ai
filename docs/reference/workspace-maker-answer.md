@@ -92,6 +92,7 @@ These are all the codes. No answer carries a generic `REFUSED` code.
 | `TICKET_NOT_ON_BASE` | refused | The named ticket file is not on the shared project's base; see `ticket_path` and `reason`. |
 | `AMBIGUOUS_LINE` | refused | More than one line of work exists on the shared project for this work; the answer lists the `lines`. Name one. |
 | `BUILT_FOR_OTHER_TICKET` | refused | `ensure --kind ticket` for a line already recorded as built for a different ticket; the answer names `branch`, `recorded_ticket` and `ticket_path`. Nothing was written; ask with a different slug. |
+| `HALF_CLEARED` | refused | `ensure` or `locate` met the leftover of a clearing that stopped part-way (its record says it was being cleared, or says ready while its repository can no longer be read); see `remnant_path`. It is never answered ready; asking to clear it again finishes it. Nothing is fetched, pushed or changed. |
 | `USAGE` | error | The arguments were unusable (exit 64). This includes a `--slug` that is empty after normalising, is a Windows reserved device name (`con`, `nul`, `com1`, ...), or is longer than 64 characters (never truncated). |
 | `INTERNAL_ERROR` | error | The maker failed unexpectedly; never an ok answer. |
 
@@ -206,8 +207,8 @@ stops them.
 |---|---|---|---|
 | A program is working inside the workspace | `PROCESS_HOLDS_FILES` | `holders`: `[{pid, name}]` | `Programs are working inside <workspace>: <pid> (<name>), .... Stop them and ask again; nothing was removed.` |
 | The program check is unavailable | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `The program check is unavailable (<reason>), so it cannot be told whether programs are working inside <workspace>; nothing was removed.` |
-| Some items could not be deleted | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `Could not remove all of <workspace> (a program may hold files): could not delete a, b, c and N more` |
-| A half-cleared workspace still holds files | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | says the workspace was half-cleared and its remaining files cannot be checked against the shared project |
+| Some items could not be deleted | `PROCESS_HOLDS_FILES` | none of its own; no `holders` | `Could not remove all of <workspace> (a program may hold files): could not delete a, b, c and N more The clearing stopped part-way and is not finished: make the same request again and it finishes ...` |
+| A half-cleared workspace still holds files | `UNSENT_WORK` | `unsent` (`commits` always `[]`), `discard_token` | says the workspace was half-cleared and its remaining files cannot be checked against the shared project; when the repository can no longer be read it also says so, and that its commits cannot be checked |
 | A folder with no record holds files | `NOT_FOUND` | `files`; no `discard_token` | says the folder cannot be told to be a workspace of this project |
 | A workspace off its line of work (detached) has commits that are on neither `origin/<branch>` nor `origin/main` | `UNSENT_WORK` | `unsent` (`commits` as full 40-character ids, `files`), `discard_token` | adds that the workspace is not on its line of work (detached), so the commit it sits on was checked too |
 
@@ -230,6 +231,17 @@ Details:
   clearing; the ok answer's `discarded` is then `{commits: [], files: [...]}`. A token that does
   not match repeats the refusal with a fresh token. A half-cleared folder with no files left is
   simply finished with an ok answer. The shared project is never touched.
+- **Clearing that stopped part-way.** The clearing marks the workspace record `clearing` once its
+  checks passed, then deletes the content, then the repository, the record last. A request that
+  asks again, by `--path` or by `--kind`/`--slug`, finishes it: no token, no fetch, no second check
+  of unsent work, as long as the repository is readable and still at the checked commit; if the
+  line of work moved on, the normal check applies. `ensure`, `locate` and `list` report such a
+  leftover as `HALF_CLEARED` (`half-cleared` in `list`) and never as ready.
+- **Record-less leftover of this project.** A folder in this project's landing place with no
+  record, a repository folder that has lost its history, and a leftover `FETCH_HEAD` or `config`
+  that names only this project's shared project is treated as half-cleared (refused `UNSENT_WORK`
+  with a token for exactly its files). One that names another shared project, mixed evidence, or
+  none stays `NOT_FOUND`.
 - **Folder with no record holding files.** Nothing was changed and no token is offered, because
   the folder cannot be told to belong to this project. A record-less folder with no files in this
   project's landing place is finished with an ok answer. A plain `NOT_FOUND` without `files`

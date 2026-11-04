@@ -40,14 +40,14 @@ ALL_CODES: frozenset[str] = frozenset({
     "GIT_FAILED", "NO_CONFIG", "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED",
     "WORK_AT_RISK", "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK",
     "PROCESS_HOLDS_FILES", "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE",
-    "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "USAGE", "INTERNAL_ERROR",
+    "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "HALF_CLEARED", "USAGE", "INTERNAL_ERROR",
 })
 REFUSED_CODES: frozenset[str] = frozenset({
     "NOT_FOUND", "INCOMPLETE", "OCCUPIED", "OCCUPIED_LEGACY_WORKTREE",
     "IN_PROGRESS", "AMBIGUOUS_REPO", "NO_HUB", "FETCH_FAILED", "NO_CONFIG",
     "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED", "WORK_AT_RISK",
     "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK", "PROCESS_HOLDS_FILES",
-    "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE", "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET",
+    "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE", "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "HALF_CLEARED",
 })
 EXIT_USAGE = 64
 
@@ -144,4 +144,6 @@ def forward_git_output(args: list[str], proc: subprocess.CompletedProcess) -> No
 # - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/05]:
 #   Removed REFUSED from ALL_CODES and REFUSED_CODES: it is not a BO-4300c-2
 #   contract code and nothing emits it (M9d). (ADR-018)
+# - 2026-11-03 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-x/-xi]: Declared the refused code HALF_CLEARED (ensure/locate over a stopped clearing).
+#   (#fast-lane/BO-4300e-2) (ADR-018)
 # ===========================================================================

@@ -34,6 +34,7 @@ import worktree_identity as wi
 import worktree_layout as wl
 import worktree_paths as wp
 import worktree_readiness as wr
+import worktree_remove_half as wrh
 
 _log = logging.getLogger(__name__)
 
@@ -82,6 +83,8 @@ def _located_fields(workspace: Path, marker: dict[str, Any], checks: dict[str, A
 def _located_answer(workspace: Path, marker: dict[str, Any]) -> dict[str, Any]:
     """The ok answer for one found workspace: path fields, marker, and (when ready) checks and located fields."""
     base = {"status": "ok", **wp.path_fields(workspace), "marker": marker}
+    if wrh.is_half_cleared(workspace, marker):
+        return {**base, "marker": {**marker, "state": wrh.HALF_CLEARED_STATE}}  # a stopped clearing is never ready
     if marker.get("state", "ready") != "ready":
         return base  # the caller turns a half-made workspace into INCOMPLETE; nothing to check
     checks, _hub = _checks_for(workspace, marker)
@@ -202,8 +205,10 @@ def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _list_entry(path: Path, marker: dict[str, Any]) -> dict[str, Any]:
-    """One list entry: exactly kind, slug, branch, both path spellings and ready|incomplete."""
+    """One list entry: exactly kind, slug, branch, both path spellings and ready|incomplete|half-cleared."""
     state = "ready" if marker.get("state", "ready") == "ready" else "incomplete"
+    if wrh.is_half_cleared(path, marker):
+        state = wrh.HALF_CLEARED_STATE
     paths = wp.path_fields(path)
     return {"kind": marker.get("kind"), "slug": marker.get("slug"), "branch": marker.get("branch"),
             "workspace_path": paths["workspace_path"], "workspace_path_posix": paths["workspace_path_posix"],
@@ -260,4 +265,6 @@ def cmd_list(args: argparse.Namespace) -> dict[str, Any]:
 #   locate/list/remove compute the location through worktree_layout (one
 #   function for all verbs), accept and validate --landing-root, and filter
 #   markers by project_root; a refused resolution is returned as-is. (ADR-018)
+# - 2026-11-03 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-x/-xi]: locate and list report a stopped clearing as half-cleared (never ready) via worktree_remove_half.
+#   (#fast-lane/BO-4300e-2) (ADR-018)
 # ===========================================================================

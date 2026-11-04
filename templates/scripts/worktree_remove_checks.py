@@ -2,8 +2,9 @@
 MODULE: worktree_remove_checks
 GOAL: The safety checks the workspace maker's ``remove`` runs around a deletion:
     the check for programs working inside a workspace (failing closed when the
-    check itself cannot run), and the recognition, listing and token binding of
-    a half-cleared folder (AC BO-4300e-2-iv, e-2-v, e-2-vi).
+    check itself cannot run), the listing and token binding of a half-cleared
+    folder, and the deletion order that keeps a stopped clearing finishable
+    (AC BO-4300e-2-iv, e-2-v, e-2-vi, e-2-ix).
 BUSINESS CONTEXT: A clearing that stopped part-way leaves a folder whose
     repository is gone; it must still be finishable, but never by silently
     deleting files nobody could verify reached the shared project. A program
@@ -20,6 +21,9 @@ ARCHITECTURE: Stdlib-only. Imports ``worktree_answer`` and ``worktree_git``
     lists a half-cleared folder's files (workspace-relative, forward slashes,
     sorted, the workspace record excluded) and ``half_token`` is the same kind
     of stateless sha256 binding as ``worktree_remove.discard_token``.
+    ``delete_children_first`` deletes a folder's content, then its repository
+    folder, then its record, and stops before the repository when anything
+    outside it stayed, so asking again finds the checked commit still readable.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ import importlib.util
 import json
 import logging
 import os
+import stat
 import sys
 from pathlib import Path
 from typing import Any
@@ -126,24 +131,71 @@ def program_check(workspace: Path) -> tuple[list[dict[str, Any]], str | None]:
     return [holder_entry(h) for h in found], None
 
 
-def is_half_slot(resolved: Path, root: Path) -> bool:
-    """True when *resolved* is a folder at ``<root>/<kind>/<slug>`` (depth 2, known kind) with no repository of its own."""
+def rmtree_onerror(func: Any, target: str, exc: Any) -> None:
+    """Tolerate an item that vanished; clear the read-only bit (git objects on Windows) and retry once otherwise."""
+    error = exc[1] if isinstance(exc, tuple) else exc
+    if isinstance(error, FileNotFoundError):
+        return  # something else removed it first: the folder is that much emptier, not a failure
+    try:  # add the owner-write bit only: a bare S_IWRITE would strip a POSIX folder's read and search bits
+        os.chmod(target, stat.S_IMODE(os.lstat(target).st_mode) | stat.S_IWRITE)
+        func(target)
+    except FileNotFoundError:
+        return  # vanished while retrying
+
+
+def named_failures(root: str, failed: list[str], shown: int = 5) -> str:
+    """The items that could not be deleted, workspace-relative; files first (their folders fail only as non-empty)."""
+    rel = [os.path.relpath(item, root).replace("\\", "/") for item in failed]
+    files = [r for r, item in zip(rel, failed, strict=True) if not os.path.isdir(item)] or rel
+    more = f" and {len(files) - shown} more" if len(files) > shown else ""
+    return f"could not delete {', '.join(files[:shown])}{more}"
+
+
+def delete_children_first(target: str, rmtree: Any, collect: Any, failed: list[str]) -> None:
+    """Delete the items of the folder *target* so a stop leaves it finishable: content, then ``.git``, then the record.
+
+    Stops before the repository folder when anything outside it could not be
+    deleted, so the repository (and with it the checked commit) stays readable.
+    A folder link is removed as a link. Failures are reported through *collect*.
+    """
+    names = os.listdir(target)
+    for group in ([n for n in names if n not in (".git", ".leafcutter")], [n for n in names if n == ".git"],
+                  [n for n in names if n == ".leafcutter"]):
+        for name in group:
+            item = os.path.join(target, name)
+            if os.path.isdir(item) and not os.path.islink(item):
+                rmtree(item)
+                continue
+            func = os.rmdir if os.path.isdir(item) else os.unlink
+            try:
+                func(item)
+            except OSError as exc:
+                collect(func, item, exc)
+        if failed:
+            return
+
+
+def is_leftover_slot(resolved: Path, root: Path) -> bool:
+    """True when *resolved* is a folder at ``<root>/<kind>/<slug>`` (depth 2, known kind)."""
     try:
         parts = resolved.relative_to(root).parts
     except ValueError:
         return False
-    return len(parts) == 2 and parts[0] in wg.VALID_KINDS and resolved.is_dir() and not (resolved / ".git").exists()
+    return len(parts) == 2 and parts[0] in wg.VALID_KINDS and resolved.is_dir()
 
 
 def remaining_files(folder: Path) -> list[str]:
     """Files left in a half-cleared *folder*, workspace-relative with forward slashes, sorted.
 
-    The workspace record is not counted, and empty sub-folders hold nothing.
-    A symlinked folder counts as one entry (it is deleted as a link).
+    The workspace record and the repository folder's own contents are not
+    counted, and empty sub-folders hold nothing. A symlinked folder counts as
+    one entry (it is deleted as a link).
     """
     record = wg.marker_path(folder)
     found: list[str] = []
     for dirpath, dirs, names in os.walk(folder):
+        if Path(dirpath) == folder:
+            dirs[:] = [d for d in dirs if d != ".git"]
         linked = [d for d in dirs if os.path.islink(os.path.join(dirpath, d))]
         for name in [*names, *linked]:
             path = Path(dirpath) / name
@@ -163,14 +215,16 @@ def half_token(folder: Path, marker: dict[str, Any] | None, files: list[str]) ->
     return hashlib.sha256(json.dumps(binding, sort_keys=True).encode("utf-8")).hexdigest()[:32]
 
 
-def half_refusal(folder: Path, files: list[str], token: str, presented: str | None) -> dict[str, Any]:
+def half_refusal(folder: Path, files: list[str], token: str, presented: str | None,
+                 unreadable: bool = False) -> dict[str, Any]:
     """UNSENT_WORK refusal for a half-cleared folder that still holds files, carrying the fresh token."""
     why = " The discard token presented does not match what the folder holds now." if presented else ""
+    cause = ("its repository can no longer be read, so its commits cannot be checked, and its "
+             if unreadable else "a clearing stopped part-way and its repository is gone: its ")
     return wa.error_answer(
         "UNSENT_WORK",
-        f"{folder} is a half-cleared workspace (a clearing stopped part-way and its repository is gone): its "
-        f"{len(files)} remaining file(s) cannot be checked against the shared project, so they count as unsent."
-        f"{why} Repeat the request with --discard-token to discard them.",
+        f"{folder} is a half-cleared workspace ({cause}{len(files)} remaining file(s) cannot be checked against the "
+        f"shared project, so they count as unsent).{why} Repeat the request with --discard-token to discard them.",
         unsent={"commits": [], "files": files}, discard_token=token,
     )
 
@@ -178,6 +232,11 @@ def half_refusal(folder: Path, files: list[str], token: str, presented: str | No
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-11-03 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-ix]:
+#   Hosts the deletion helpers (rmtree_onerror, named_failures,
+#   delete_children_first) so a stopped clearing leaves the repository in place
+#   until everything else is gone; remaining_files no longer lists the
+#   repository folder's own files. (#fast-lane/BO-4300e-2) (ADR-018)
 # - 2026-10-26 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-iv/-v/-vi]:
 #   Created. The program check moved here from worktree_remove and now fails
 #   closed (a missing, broken or raising check refuses instead of reading as

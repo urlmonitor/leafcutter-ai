@@ -3,7 +3,7 @@ MODULE: worktree_remove
 GOAL: The workspace maker's ``remove`` verb and the definite ``locate`` answer:
     clear a workspace completely or not at all, never wait for input, and lose
     unsent work only when the request itself carries the one-time discard token
-    its refusal returned (AC BO-4300e-1-i, e-2, e-2-i, e-2-ii, e-3, e-3-i).
+    its refusal returned (AC BO-4300e-1-i, e-2, e-2-i, e-2-ii, e-3, e-3-i, e-2-ix..xii).
 BUSINESS CONTEXT: Finalize and clean-up run unattended, so a remove that
     prompts deadlocks them, and one that deletes unsent work silently destroys
     it. The unsent verdict (BO-4100c-1) is: commits on the workspace's line that
@@ -26,7 +26,12 @@ ARCHITECTURE: Stdlib-only. ``unsent_work`` is the exported verdict (ticket 12's
     without pasting git's text (that goes to stderr). This module is the one home
     of ``delete_whole_folder`` (the only rmtree) and of the ``status -z`` parser
     ``parse_status_z`` / ``status_entries``; it imports ``worktree_admin`` and
-    ``worktree_ensure_state``, and neither imports it back.
+    ``worktree_ensure_state``, and neither imports it back. Once the checks
+    passed the record is rewritten ``clearing`` and the content goes before the
+    repository and the record (``delete_whole_folder(in_order=True)``); a stop is
+    answered PROCESS_HOLDS_FILES saying asking again finishes it, and
+    ``worktree_remove_half`` recognises what a stop left (finished without a
+    second check, or with the one-time token for exactly the unchecked files).
 """
 
 from __future__ import annotations
@@ -37,7 +42,6 @@ import json
 import logging
 import os
 import shutil
-import stat
 import sys
 from pathlib import Path
 from typing import Any
@@ -48,6 +52,7 @@ import worktree_git as wg
 import worktree_layout as wl
 import worktree_paths as wp
 import worktree_remove_checks as wrc
+import worktree_remove_half as wrh
 
 _log = logging.getLogger(__name__)
 
@@ -66,6 +71,8 @@ def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:
     if answer.get("status") != "ok" or not isinstance(marker, dict) or marker.get("state", "ready") == "ready":
         return answer
     carried = {k: v for k, v in answer.items() if k in ("repo_root", "repo_root_posix", "layout")}
+    if marker.get("state") == wrh.HALF_CLEARED_STATE:
+        return {**wrh.half_cleared_answer(Path(answer.get("workspace_path", ""))), **carried}
     return {**incomplete_answer(Path(answer.get("workspace_path", "")), marker), **carried}
 
 
@@ -204,25 +211,15 @@ def _unsent_refusal(workspace: Path, unsent: dict[str, Any], token: str, present
     )
 
 
-def _rmtree_onerror(func: Any, target: str, exc: Any) -> None:
-    """Tolerate an item that vanished; clear the read-only bit (git objects on Windows) and retry once otherwise."""
-    error = exc[1] if isinstance(exc, tuple) else exc
-    if isinstance(error, FileNotFoundError):
-        return  # something else removed it first: the folder is that much emptier, not a failure
-    try:  # add the owner-write bit only: a bare S_IWRITE would strip a POSIX folder's read and search bits
-        os.chmod(target, stat.S_IMODE(os.lstat(target).st_mode) | stat.S_IWRITE)
-        func(target)
-    except FileNotFoundError:
-        return  # vanished while retrying
-
-
-def delete_whole_folder(path: Path) -> str | None:
+def delete_whole_folder(path: Path, in_order: bool = False) -> str | None:
     """Delete the whole folder at *path* (the one rmtree of the workspace maker).
 
     Uses the Windows extended-length prefix, clears read-only files and checks
-    afterwards that nothing remains. Returns ``None`` when nothing remains,
-    else a short reason text (no refusal is built here, so every caller words
-    its own answer).
+    afterwards that nothing remains. With *in_order* the content goes first, then
+    the repository folder, then the record, and a stop leaves the repository
+    folder in place when anything else could not go (so a later ask finishes
+    it). Returns ``None`` when nothing remains, else a short reason text (no
+    refusal is built here, so every caller words its own answer).
     """
     target = _long_path(path)
     failed: list[str] = []
@@ -231,38 +228,39 @@ def delete_whole_folder(path: Path) -> str | None:
         # An item that still cannot go is noted and rmtree carries on with the rest; raising here would
         # abort the whole delete (on POSIX) and leave rmtree's last error, the non-empty folder, as the reason.
         try:
-            _rmtree_onerror(func, item, exc)
+            wrc.rmtree_onerror(func, item, exc)
         except OSError as err:
             _log.warning("delete_whole_folder: could not delete %s: %s", item, err)
             failed.append(item)
 
-    try:
+    def _rmtree(item: str) -> None:
         if sys.version_info >= (3, 12):
-            shutil.rmtree(target, onexc=_collect)
+            shutil.rmtree(item, onexc=_collect)
         else:
-            shutil.rmtree(target, onerror=_collect)
+            shutil.rmtree(item, onerror=_collect)
+
+    try:
+        if in_order:
+            wrc.delete_children_first(target, _rmtree, _collect, failed)
+        if not failed:
+            _rmtree(target)
     except OSError as exc:
         _log.warning("delete_whole_folder: rmtree failed for %s: %s", path, exc)
         return f"Could not remove all of {path} (a program may hold files): {exc}"
     if failed:
-        return f"Could not remove all of {path} (a program may hold files): {_named(target, failed)}"
+        return f"Could not remove all of {path} (a program may hold files): {wrc.named_failures(target, failed)}"
     if os.path.lexists(target):
         return f"Part of {path} remains after removal; it is not cleared."
     return None
 
 
-def _named(root: str, failed: list[str], shown: int = 5) -> str:
-    """The items that could not be deleted, workspace-relative; files first (their folders fail only as non-empty)."""
-    rel = [os.path.relpath(item, root).replace("\\", "/") for item in failed]
-    files = [r for r, item in zip(rel, failed, strict=True) if not os.path.isdir(item)] or rel
-    more = f" and {len(files) - shown} more" if len(files) > shown else ""
-    return f"could not delete {', '.join(files[:shown])}{more}"
-
-
 def _delete_tree(workspace: Path) -> dict[str, Any] | None:
-    """Delete the whole folder; ``None`` when nothing remains, else a PROCESS_HOLDS_FILES refusal."""
-    reason = delete_whole_folder(workspace)
-    return None if reason is None else _err("PROCESS_HOLDS_FILES", reason)
+    """Delete the whole folder; ``None`` when nothing remains, else a PROCESS_HOLDS_FILES refusal saying to ask again."""
+    reason = delete_whole_folder(workspace, in_order=True)
+    if reason is None:
+        return None
+    return _err("PROCESS_HOLDS_FILES", f"{reason} The clearing stopped part-way and is not finished: make the same "
+                "request again and it finishes (no token, fetch or second check of unsent work is needed).")
 
 
 def _authorise(workspace: Path, marker: dict[str, Any], presented: str | None,
@@ -280,21 +278,6 @@ def _authorise(workspace: Path, marker: dict[str, Any], presented: str | None,
     return _unsent_refusal(workspace, unsent, token, presented), discarded
 
 
-def _project_and_root(args: argparse.Namespace, workspace: Path,
-                      marker: dict[str, Any] | None) -> tuple[Path | None, Path | None]:
-    """The project (``--repo-root``, else the one *marker* records) and its resolved landing place, or ``(None, None)``."""
-    project = None
-    if args.repo_root:
-        project, refusal = wl.resolve_repo_root(args.repo_root)
-        project = None if refusal is not None else project
-    elif marker is not None:
-        project = wl.project_of(workspace, marker)
-    if project is None:
-        return None, None
-    place, usage = wl.landing_for(getattr(args, "landing_root", None), project)
-    return (None, None) if usage is not None or place is None else (project, place.resolve())
-
-
 def _own_workspace(args: argparse.Namespace, workspace: Path) -> dict[str, Any] | None:
     """Return the marker when *workspace* is one of this project's own workspaces, else ``None``.
 
@@ -304,7 +287,7 @@ def _own_workspace(args: argparse.Namespace, workspace: Path) -> dict[str, Any] 
     workspace switched onto a bare commit (detached) is still its own.
     """
     marker = wg.read_marker(workspace)
-    project, root = _project_and_root(args, workspace, marker)
+    project, root = wrh.project_and_root(args, workspace, marker)
     if marker is None or project is None or root is None:
         return None
     resolved = workspace.resolve()
@@ -319,19 +302,6 @@ def _on_own_line(resolved: Path, marker: dict[str, Any]) -> bool:
     if current is not None:
         return current == marker.get("branch")
     return wg.run_git(["symbolic-ref", "--quiet", "HEAD"], resolved).returncode == 1
-
-
-def _own_half_cleared(args: argparse.Namespace, workspace: Path) -> dict[str, Any] | None:
-    """The record (``{}`` when none) of a half-cleared folder in this project's own landing place, else ``None``."""
-    marker = wg.read_marker(workspace)
-    project, root = _project_and_root(args, workspace, marker)
-    if project is None or root is None or not wrc.is_half_slot(workspace.resolve(), root):
-        return None
-    if marker is None:
-        return {}
-    kind, slug = workspace.resolve().parts[-2:]  # a record that names another slot is a copy, not a leftover
-    same_slot = (marker.get("kind"), marker.get("slug")) == (kind, slug)
-    return None if wl.other_project_occupant(workspace, marker, project) or not same_slot else marker
 
 
 def _is_workspace_slot(resolved: Path, root: Path) -> bool:
@@ -387,64 +357,81 @@ def _blocked_by_programs(workspace: Path) -> dict[str, Any] | None:
                 "Stop them and ask again; nothing was removed.", holders=holders)
 
 
-def _remove_half_cleared(args: argparse.Namespace, workspace: Path) -> dict[str, Any]:
-    """Finish a folder a clearing left part-way (repository gone), or NOT_FOUND when it is not this project's.
+def _finish_half(args: argparse.Namespace, workspace: Path, marker: dict[str, Any], kind: str) -> dict[str, Any]:
+    """Finish a clearing left part-way, or refuse: files in it cannot be checked, so they go only with their token.
 
-    Files in it cannot be checked against the shared project, so they count as
-    unsent: they go only with the one-time token bound to exactly them. The
-    shared project is never touched (there is no repository to ask).
+    The shared project is never touched. A record-less folder not shown to be this project's is NOT_FOUND,
+    listing its files and returning no token. A clearing that checked its work first (``resume``) needs none.
     """
-    marker = _own_half_cleared(args, workspace)
-    if marker is None:
-        return _err("NOT_FOUND", f"This project has no workspace at {workspace}; nothing was changed.")
+    files = wrc.remaining_files(workspace)
+    if kind == "foreign" or (kind == "gone" and not marker and files):
+        return _err("NOT_FOUND", f"{workspace} holds files but is not shown to be a workspace of this project "
+                    "(no workspace record naming it); nothing was changed.", files=files)
     blocked = _blocked_by_programs(workspace)
     if blocked is not None:
         return blocked
-    files = wrc.remaining_files(workspace)
-    if files and not marker:  # no record: only an empty folder is a leftover; one holding files may not be ours
-        return _err("NOT_FOUND", f"{workspace} holds files but no workspace record, so it cannot be told to be a "
-                    "workspace of this project; nothing was changed.", files=files)
+    needs_token = kind != "resume" and (bool(files) or (kind == "unreadable" and marker.get("state") == "ready"))
     presented = getattr(args, "discard_token", None)
-    token = wrc.half_token(workspace, marker or None, files) if files else ""
-    if files and presented != token:
-        return wrc.half_refusal(workspace, files, token, presented)
+    token = wrc.half_token(workspace, marker or None, files) if needs_token else ""
+    if needs_token and presented != token:
+        return wrc.half_refusal(workspace, files, token, presented, unreadable=kind == "unreadable")
     failure = _delete_tree(workspace.resolve())
     if failure is not None:
         return failure
     return {"status": "ok", **wp.path_fields(workspace), "removed_path": str(workspace),
-            "discarded": {"commits": [], "files": files}}
+            "discarded": {"commits": [], "files": files if needs_token else []}}
+
+
+def _mark_clearing(args: argparse.Namespace, workspace: Path, marker: dict[str, Any]) -> dict[str, Any] | None:
+    """Record, atomically and before anything is deleted, that the checks passed (``None``, or a refusal when it cannot)."""
+    project, _root = wrh.project_and_root(args, workspace, marker)
+    _state, sha = wrh.head_state(workspace.resolve())
+    try:
+        wg.write_marker(workspace, wrh.clearing_marker(marker, workspace, project or workspace.parent, sha))
+    except OSError as exc:
+        return _err("PROCESS_HOLDS_FILES", f"The record of {workspace} could not be rewritten ({exc}); nothing was removed.")
+    return None
 
 
 def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
-    """Clear the workspace at ``--path``; never reads stdin or prompts.
+    """Clear the workspace at ``--path`` (or named by ``--kind``/``--slug``); never reads stdin or prompts.
 
     Programs working inside it are checked first (nothing is fetched, pushed or
     deleted while one runs). The hub branch (when asked for) is deleted before
     the local folder; if the local delete then fails the answer says the hub
-    branch is already gone (``hub_branch_deleted``).
+    branch is already gone (``hub_branch_deleted``). Once the checks passed the
+    record says ``clearing``, so a clearing that stops part-way is finished by
+    asking again; a clearing already started whose checked commit is unchanged
+    is finished without a second check.
     """
-    bad_override = wl.override_refusal(args)
-    if bad_override is not None:
+    if (bad_override := wl.override_refusal(args)) is not None:
         return bad_override
-    workspace = wp.resolve_arg(args.path)
+    workspace, refusal = wrh.target_path(args)
+    if workspace is None:
+        return refusal or _err("USAGE", "remove requires --path.")
+    half = wrh.half_state(args, workspace)
+    if half is not None and half[1] != "resume":
+        return _finish_half(args, workspace, *half)
     marker = _own_workspace(args, workspace)
     if marker is None:
-        return _remove_half_cleared(args, workspace)
-    if args.delete_remote_branch:
-        unsafe = _unsafe_hub_branch(workspace, str(marker.get("branch") or ""))
-        if unsafe is not None:
-            return unsafe
-    blocked = _blocked_by_programs(workspace)
-    if blocked is not None:
+        return _err("NOT_FOUND", f"This project has no workspace at {workspace}; nothing was changed.")
+    if args.delete_remote_branch and (unsafe := _unsafe_hub_branch(workspace, str(marker.get("branch") or ""))):
+        return unsafe
+    if half is not None:
+        return _finish_half(args, workspace, *half)
+    if (blocked := _blocked_by_programs(workspace)) is not None:
         return blocked
     refusal, discarded = _authorise(workspace, marker, getattr(args, "discard_token", None))
     if refusal is not None:
         return refusal
-    if args.delete_remote_branch:
-        failure = _delete_hub_branch(workspace, marker["branch"])
-        if failure is not None:
-            return failure
-    failure = _delete_tree(workspace.resolve())
+    return _clear_checked(args, workspace, marker, discarded)
+
+
+def _clear_checked(args: argparse.Namespace, workspace: Path, marker: dict, discarded: dict) -> dict[str, Any]:
+    """Delete the hub branch (when asked for), mark the clearing, then delete the folder."""
+    if args.delete_remote_branch and (failure := _delete_hub_branch(workspace, marker["branch"])) is not None:
+        return failure
+    failure = _mark_clearing(args, workspace, marker) or _delete_tree(workspace.resolve())
     if failure is not None:
         if args.delete_remote_branch:
             failure["message"] += " The branch on the shared project was already deleted."
@@ -456,6 +443,14 @@ def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-11-03 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-ix..xii]:
+#   remove can name the work (--kind/--slug); the record is rewritten
+#   ``clearing`` once the checks passed and before any deletion; deletion goes
+#   content, repository, record; a stopped clearing is finished by asking
+#   again (no token, fetch or second check when the checked commit is
+#   unchanged); an unreadable repository and an identified record-less leftover
+#   are half-cleared (token for the remaining files). Recognition moved to
+#   worktree_remove_half. (#fast-lane/BO-4300e-2) (ADR-018)
 # - 2026-10-26 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-iv..viii]:
 #   Program check moved to worktree_remove_checks and runs FIRST, failing
 #   closed; half-cleared folders (no .git) are finished or token-refused;
