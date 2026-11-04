@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-11-02'
-last_updated: '2026-11-02'
+last_updated: '2026-11-04'
 components:
   - testing_quality
 related_docs:
@@ -18,14 +18,15 @@ related_docs:
 
 # KI-TQ-20261102-test-writer-rows-check-unrequested-report-wording — report checks the template gives the agent no reason to meet
 
-> Filed 2026-11-02. Index: [testing-quality.md](../testing-quality.md). Filename severity is the
+> Filed 2026-11-02. Index: [testing-quality.md](../../testing-quality.md). Filename severity is the
 > three-level index bucket (`low`); the original grading is the `**Severity:**` line below.
 
 - **Severity:** medium. Three of the eight test-writer rows hold a report check that a report
   which follows the template fails, so those rows are falsely red independent of test quality, and
   a template that never states the wanted wording cannot be fixed by reading the score.
-- **Status:** open; parts 1 and 2 struck, fixed by TQ-200d-1-vi (part 3 pending TQ-200d-4-vi). Fix direction decided by the user on 2026-11-02: widen the checks
-  (no template change); see Fix direction.
+- **Status:** RESOLVED 2026-11-04 by TQ-200d-1-vi and TQ-200d-4-vi; proving tests in
+  `unit_tests/evals/tq200d1vi/` and `unit_tests/evals/tq200d4vi/`. Fix direction decided by the user on
+  2026-11-02: widen the checks (no template change); see Fix direction.
 - **Occurrences:** 9 failed assertions, each check in each of the three live runs of 2026-11-02
   (first live run, re-run 1, re-run 2; Windows 11, main `8248ac7a`).
 - **First seen:** 2026-11-02 · **Last seen:** 2026-11-02
@@ -54,13 +55,14 @@ does not name 'known value'" or "the report does not say the database tests were
    ~~expected value") still fails the substring `known value`, and nothing asks the report to use the~~
    ~~phrase at all.~~
    *Fixed by TQ-200d-1-vi: `also_accepts` on the row's `report_mentions` check; tests in `unit_tests/evals/tq200d1vi/`.*
-3. **`report_says_not_run` on `missing-setting-database-work`.** The test-writer must run its new
-   tests and see them red (Step 4 "Verify the Tests Are Red", `test-writer.md`:1090-1117), and its
-   DB pattern lets the not-configured error propagate from `setUp` (:854-857). So the truthful
-   report is "ran, red in `setUp` before any connection", not "not run". The rule's documented
-   template sentence, "Do NOT attempt to run the SQL suite unless the checker reports `reachable`."
-   (`docs/reference/produced-tests-eval-assertion-kinds-database-setting.md`:162-181), comes from
-   `templates/agents/test-runner.md`:172; `test-writer.md` holds no such sentence.
+3. ~~**`report_says_not_run` on `missing-setting-database-work`.** The test-writer must run its new~~
+   ~~tests and see them red (Step 4 "Verify the Tests Are Red", `test-writer.md`:1090-1117), and its~~
+   ~~DB pattern lets the not-configured error propagate from `setUp` (:854-857). So the truthful~~
+   ~~report is "ran, red in `setUp` before any connection", not "not run". The rule's documented~~
+   ~~template sentence, "Do NOT attempt to run the SQL suite unless the checker reports `reachable`."~~
+   ~~(`docs/reference/produced-tests-eval-assertion-kinds-database-setting.md`:162-181), comes from~~
+   ~~`templates/agents/test-runner.md`:172; `test-writer.md` holds no such sentence.~~
+   *Fixed by TQ-200d-4-vi (`report_says_stopped_before_database`); proving tests in `unit_tests/evals/tq200d4vi/`.*
 
 ## Evidence
 
@@ -83,7 +85,7 @@ first live run results in `../rerun_score/test-writer.json`.
 
 The agent-side weakness seen on these rows (the `empty-window` and `presence-is-not-correctness`
 reports skip the Completion Report format, and no row checks it) is recorded in
-[KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts](resolved/resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md).
+[KI-TQ-20261102-test-writer-scorer-reads-only-bare-asserts](resolved-low-ki-tq-20261102-test-writer-scorer-reads-only-bare-asserts.md).
 
 ## Fix direction
 

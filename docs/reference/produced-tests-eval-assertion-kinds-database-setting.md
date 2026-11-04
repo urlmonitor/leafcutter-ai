@@ -1,6 +1,6 @@
 ---
 title: "Reference: Produced-Tests Assertion Kinds, Database-Setting Family"
-description: "Lookup for the ten database-setting assertion kinds of the produced-tests eval, which judge a test's address, the commands a runner ran and the hand-off report against the testing_context.db_connection_test setting."
+description: "Lookup for the eleven database-setting assertion kinds of the produced-tests eval, which judge a test's address, the commands a runner ran and the hand-off report against the testing_context.db_connection_test setting."
 type: reference
 status: active
 created: 2026-11-01
@@ -16,7 +16,7 @@ related_docs:
 
 # Produced-Tests Assertion Kinds, Database-Setting Family
 
-Lets a reader look up the ten assertion kinds registered through `produced_tests_db.py`, `produced_tests_commands.py` and `produced_tests_reports.py`. They check that a produced database test, a runner's commands and a hand-off report use the project's `testing_context.db_connection_test` setting and no address of their own. What a kind is and how the family pages fit together is on the [hub](produced-tests-eval-assertion-kinds.md).
+Lets a reader look up the eleven assertion kinds registered through `produced_tests_db.py`, `produced_tests_commands.py` and `produced_tests_reports.py`. They check that a produced database test, a runner's commands and a hand-off report use the project's `testing_context.db_connection_test` setting and no address of their own. What a kind is and how the family pages fit together is on the [hub](produced-tests-eval-assertion-kinds.md).
 
 ## Kinds
 
@@ -28,7 +28,8 @@ Lets a reader look up the ten assertion kinds registered through `produced_tests
 | `commands_ran_pytest` | recorded commands | test-runner set |
 | `report_names_no_address` | hand-off report | test-writer and test-runner sets |
 | `report_says_unconfigured` | hand-off report | test-writer and test-runner sets |
-| `report_says_not_run` | hand-off report | test-writer and test-runner sets |
+| `report_says_not_run` | hand-off report | test-runner set |
+| `report_says_stopped_before_database` | hand-off report | test-writer set |
 | `report_silent_on_setting` | hand-off report | test-writer and test-runner sets |
 | `report_states_outcome` | hand-off report | test-writer and test-runner sets |
 | `report_pass_quotes_a_count` | hand-off report | test-runner set |
@@ -161,7 +162,7 @@ conn = psycopg2.connect(address)
 
 ### `report_says_not_run`
 
-**Used by:** the test-writer set (row `missing-setting-database-work`) and the test-runner set (same row).
+**Used by:** the test-runner set (row `missing-setting-database-work`).
 
 **Reads:** the hand-off report, read clause by clause with contractions spelled out.
 
@@ -186,6 +187,26 @@ The database tests were not run.
 > The database tests were not run.
 
 - templates/agents/test-runner.md
+
+### `report_says_stopped_before_database`
+
+**Used by:** the test-writer set (row `missing-setting-database-work`).
+
+**Reads:** the hand-off report, read clause by clause with contractions spelled out.
+
+**Passes when:** no clause claims the database tests ran or connected to a database (`ran`, `run`, `executed`, `passed`, `passing`, "tests pass", `connected`, not negated), and the report holds either a not-run phrase (the ones `report_says_not_run` accepts) or a stopped-before-the-database phrase: "before any connection", "before ever reaching" the database code, "did not run against a database", "never reached the database", or no connection was made or attempted. Lines that quote the required red verification run (`Ran 2 tests in 0.004s`, `FAILED (errors=2)`, `1 failed`, "red, exit code 1") are not read as a claim that the database tests ran, and on their own they are not a stopped-before-the-database phrase.
+
+**Fails when:** a clause claims the tests ran, passed or connected to a database, or the report holds neither a not-run phrase nor a stopped-before-the-database phrase (a red run alone fails); the detail names the clause.
+
+**Passing example:** the run 1 probe report `unit_tests/evals/fixtures/tq200d-rerun/test-writer/missing-setting-database-work/run1/report.md` (its red run, raised in `setUp()` "before any connection is attempted") passes.
+
+**Failing example:** the same report without its "before any connection" sentence fails, and so does "The database tests ran and passed."
+
+**Template sentence:**
+
+> Required outcome: non-zero exit code (tests MUST be red).
+
+- templates/agents/test-writer.md
 
 ### `report_silent_on_setting`
 
