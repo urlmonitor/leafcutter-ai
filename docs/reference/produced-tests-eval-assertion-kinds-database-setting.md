@@ -169,13 +169,21 @@ conn = psycopg2.connect(address)
 
 **Fails when:** a clause claims a run, or no not-run phrase is present.
 
-**Passing example:** "The database tests for the stored procedure refresh_totals() were not run." passes.
+**Passing example:**
+
+```
+## Database Not Configured
+
+testing_context.db_connection_test is not configured. Set it in this
+project's skills_config.json before running database tests.
+The database tests were not run.
+```
 
 **Failing example:** "The database tests ran and passed." fails ("reports the database tests as run"), and so does "Results are pending."
 
 **Template sentence:**
 
-> Do NOT attempt to run the SQL suite unless the checker reports `reachable`.
+> The database tests were not run.
 
 - templates/agents/test-runner.md
 
