@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-21'
-last_updated: '2026-10-21'
+last_updated: '2026-11-04'
 components:
   - build_orchestration
 related_docs:
@@ -27,9 +27,9 @@ related_docs:
   lines is pasted into a shell command, so a value with shell metacharacters runs a command the
   workflow never wrote. That is an injection surface in the package's own build path.
 - **Status:** open, no AC. Not fixed here, by instruction.
-- **Occurrences:** 1. Found by reading the code on 2026-10-21, during the review of PR #1299. That
-  PR fixed this pattern in its own new code. This entry was not reproduced by a live drive.
-- **First seen:** 2026-10-21 · **Last seen:** 2026-10-21
+- **Occurrences:** 2. Found by reading the code on 2026-10-21, during the review of PR #1299. That
+  PR fixed this pattern in its own new code. First live occurrence 2026-11-04 (see below).
+- **First seen:** 2026-10-21 · **Last seen:** 2026-11-04
 - **Where** (line numbers at `origin/main` `fd93f92c6`):
   - `templates/workflows-js/fast-lane-ship.js`, the wrong-version block from TQ-500g-1-v (#1280,
     `1c312fd90`). All three commands go to `command-step-runner` through `wvStep` (:1951-1958).
@@ -54,6 +54,16 @@ related_docs:
     in place of `${worktreeTicketPath}`.
   - `targetAc` is the caller's `ac` argument after only `.trim()`
     (`fast-lane-ship.js`:794). The slug on :796 is sanitised. The id is not.
+
+**Live occurrence, 2026-11-04 (backslashes, not spaces).** Run `wf_39ec449a-05e`
+(`TQ-200d-2-iii`): the wrong-version `finish` command reached the shell with the worktree path
+in Windows form with backslashes. Unquoted, the shell read each `\` as an escape and dropped it,
+so a path of the form `C:\<a>\<b>\...` came out as `C:<a><b>...`. Python said `can't open file`,
+exit 2, and the lane halted after the code was done. Quoting the path fixes this case too. The
+same step failed two other ways that day, which quoting does not fix; those are in
+`KI-BO-20261104-wrong-version-finish-fails-in-the-command-runner`. At `origin/main` `72ddec43f`
+the wrong-version lines cited below have moved to `:1728-1730` (shared pieces), `:1735-1743`
+(`wvStep`), `:1751` (recover), `:1756` (list) and `:1769-1771` (finish).
 
 ## Symptom
 
