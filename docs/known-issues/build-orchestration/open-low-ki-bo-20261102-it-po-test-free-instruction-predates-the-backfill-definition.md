@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-11-02'
-last_updated: '2026-11-02'
+last_updated: '2026-11-03'
 components:
   - build_orchestration
 related_docs:
@@ -75,8 +75,10 @@ Baseline, measured 2026-11-02 by loading every record (active records, `change_t
 prompt, `test_required` false): 37 records. 20 are done (19 with a reason, 1 without). 17
 are unfinished and already carry a reason (15 todo, 2 in_progress). The 17 were outside
 the backfill's population, which took only records with no reason, so the prompt-class
-decision did not reach them. Whether it should is a question for the user. A new record
-on top of these 37 is an occurrence of this issue.
+decision did not reach them. On 2026-11-03 the user decided it should: the 17 were set
+to `test_required: true`, to be proved by eval cases, and their old reasons were removed.
+That leaves 20 done prompt records with `test_required: false`, which stay as they are. A
+new unfinished prompt record with `test_required: false` is an occurrence of this issue.
 
 ## Workaround
 

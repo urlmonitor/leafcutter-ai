@@ -97,17 +97,7 @@ delivers_to:
       the answer-taken state, never in the answer-owed state, and must place a bare
       no in neither — a bare no is malformed and reported as such.
 expects_from: null
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
-  deliverable is template prose defining a permitted answer shape in
-  templates/skills/signoff/SKILL.md and templates/agents/test-writer.md. A test
-  asserting the shape is described in a template is source-presence evidence and
-  passes on an implementation that records nothing. The reader-side obligations
-  this AC's contract states — a reasoned negative lands in answer-taken, a bare
-  no lands in neither and is reported as malformed — are asserted over emitted
-  records by TQ-500b-1-i (piece F) and by TQ-500b-1's reading, which carry the
-  test contract for them.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
@@ -121,6 +111,10 @@ amended_by:
       physically writable so TQ-500b-1's reader has something to detect.
       test_required false; the falsifiable half is TQ-500b-1-i piece F.
       criteria untouched.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -143,3 +137,8 @@ notes: |
   makes it distinguishable from silence at read time. Neither absorbs the other: an
   expressible negative that reads the same as an absent answer would leave the
   collapse TQ-500b exists to remove.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

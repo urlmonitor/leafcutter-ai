@@ -93,16 +93,7 @@ expects_from:
   contract: >-
     The named alterations these outcomes are recorded against. This AC specifies the
     granularity of the outcomes, not the choice of alteration.
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. The
-  deliverable is the record shape defined in templates/agents/test-writer.md and
-  templates/skills/signoff/SKILL.md; a test asserting the shape is described in a
-  template is source-presence evidence and passes on an implementation that
-  records nothing. The three-valued cell and the absence of a group verdict are
-  asserted over emitted records by TQ-500c-2, TQ-500c-3 and TQ-500c-2-i, which
-  carry the test contract — TQ-500c-3's fourth descriptor in particular fails
-  outright if the record collapses not_exposed into did_not_object.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
@@ -117,6 +108,10 @@ amended_by:
       a prohibition on the record rather than a preference. test_required false;
       the falsifiable halves are TQ-500c-2, TQ-500c-3 and TQ-500c-2-i. criteria
       untouched.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -141,3 +136,8 @@ notes: |
   alteration. Recording "not exposed" as "did not object" would have marked three
   sound tests inert and produced exactly the flood of false findings whose only
   natural remedy is to switch the check off.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

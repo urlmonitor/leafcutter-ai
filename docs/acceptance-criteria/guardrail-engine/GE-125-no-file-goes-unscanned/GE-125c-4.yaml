@@ -65,18 +65,7 @@ it_requirements:
   - "NO EXAMPLE MAY BE WRITTEN AS A LONG LINE WHOSE INTERESTING PART SITS PAST THE 120TH CHARACTER. That would be a live instance of the defect being documented. Keep every line of the new passage well under 120 characters, and verify it rather than assuming it."
   - "DO NOT DESCRIBE A PLANNED NARROWING AS THOUGH IT HAD LANDED. GE-125d-5 asserts this rule for the whole goal; it binds this passage too. Any part of the reduction that is still only proposed — including anything from the sibling L1s not yet built — is either omitted or marked as not yet in effect, never written in the present tense."
   - "NO SECOND HOME FOR ANY PART OF THE STATEMENT. Do not restate the reduction in `docs/how-to/managing-pre-commit-hooks.md`, in a component architecture document, or in a new file. If another surface already says something about the reduction that now contradicts the consolidated passage, correct it by pointing at the consolidated passage rather than by re-explaining — two homes for one statement drift, and the drifted copy is the one someone reads."
-test_required: false
-test_rationale: |
-  This criterion changes prose only, so it carries no executable behaviour and
-  test_required is false rather than test_spec being left empty. What stands in
-  place of a test is a review against the shipped check, in both directions:
-  nothing claimed that the check does not do, nothing omitted that it does. The
-  claim most at risk is the second one — a reader cannot verify from the document
-  alone that the judgement uses the whole value, and it is the statement a future
-  maintainer is most likely to invalidate without noticing. Mechanising the parity
-  review would mean reading the check's own description of its reductions and
-  comparing it against the document, which is a code criterion of its own and is
-  out of scope here.
+test_required: true
 doc_links:
   - path: templates/skills/security-scanner/SKILL.md
     relationship: describes
@@ -126,6 +115,10 @@ amended_by:
       forbid credential-shaped literals and any example line whose interesting part sits
       past the 120th character; and forbid a second home for any part of the statement.
       criteria, title, level, work_status, test_required and test_rationale unchanged.'
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -166,3 +159,8 @@ notes: |
   documentation criteria in the GE-123 tree do. Nor may an example be written as a
   long line whose interesting part sits past the 120th character: it would be a
   live instance of the defect being documented.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
