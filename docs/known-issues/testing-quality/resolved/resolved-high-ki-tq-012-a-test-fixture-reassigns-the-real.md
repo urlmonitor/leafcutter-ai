@@ -84,9 +84,10 @@ Setting an identity is legitimate — the fixture creates commits and CI has no 
 family**, not to the worktree. `tearDownClass` calls `git worktree remove --force` and never
 unsets the keys, so the identity outlives the fixture that set it.
 
-This repository already has `extensions.worktreeConfig = true`, which means the correctly-scoped
-form — `git config --worktree user.email …` — is available today. The fixture just does not use
-it. Four sites, all identical.
+This repository's own clone has `extensions.worktreeConfig = true`, so `git config --worktree
+user.email …` appears to work locally. It is not an option: the switch lives in untracked
+`.git/config` and is absent from every fresh checkout, where the form aborts (see the
+Remediation below). Four sites, all identical.
 
 **Why this is high and not cosmetic.** The leak is silent, persistent, and repository-wide:
 
@@ -107,11 +108,15 @@ fixture identity, since the lane's worktree inherits the same shared config.
 
 **Remediation.**
 
-1. Change all four sites to `git config --worktree …`, which this repo's
-   `extensions.worktreeConfig` already supports. One word per site.
-2. Better still, stop mutating repository state at all: pass the identity per invocation with
-   `git -c user.name=… -c user.email=… commit`, which cannot outlive the process, or set
-   `GIT_AUTHOR_*` / `GIT_COMMITTER_*` in the subprocess environment.
+1. Stop mutating repository state: set all four of `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`,
+   `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in the subprocess environment the fixture
+   already centralises. Do not use `git config --worktree …`: it is not available on a fresh
+   checkout, where it aborts with `fatal: --worktree cannot be used with multiple working trees
+   unless the config extension worktreeConfig is enabled` (exit 128). It only appears to work
+   here because this clone has the extension on, so the failure would first show in the required
+   CI job (TQ-100a-2-ii).
+2. Passing the identity per invocation with `-c user.name=… -c user.email=…` also cannot outlive
+   the process, but an omitted site silently falls back to the ambient identity, so prefer item 1.
 3. Give `tearDownClass` an `unset` for anything it did set, so a mid-run failure cannot strand
    the value.
 4. Add a guard: a test that asserts `user.email` in the repository config is unchanged across

@@ -6,7 +6,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -58,7 +58,8 @@ covered_by:
   - TQ-100a-1-i
   - TQ-100a-1-ii
   - TQ-100a-1-iii
-implemented_by: []
+implemented_by:
+  - pytest.ini
 notes: |
   Mechanism (settled design): pytest --continue-on-collection-errors. The
   load-bearing behavior is "one un-collectable file does not abort the others";

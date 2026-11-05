@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,7 +44,8 @@ amended_by:
     note: "Added it_requirements (non-passing exit status when a collectable test fails despite an uncollectable file; hold under both `-x` and full-run since CI uses `-x`; determinism). Confirmed python-coder / S."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - pytest.ini
 notes: |
   Guards the trust property: tolerance for an uncollectable file must NOT degrade
   into tolerance for real regressions. The exit status must still be non-passing
