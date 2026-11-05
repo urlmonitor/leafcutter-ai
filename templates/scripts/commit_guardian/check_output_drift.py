@@ -167,7 +167,6 @@ import logging
 
 from _resolve_root import resolve_manifest_path as _resolve_manifest_path
 from _resolve_root import is_location_keyed as _is_location_keyed
-from _resolve_root import location_keyed_keys as _location_keyed_keys
 from _resolve_root import report_could_not_read as _report_could_not_read
 
 logger = logging.getLogger(__name__)
@@ -473,7 +472,7 @@ def _reconcile_recorded(
             violations.append((out_key, fields.get("template", "<unknown>")))
     if location_keyed:
         _err(
-            f"{_GATE_NAME}: UNREADABLE - the record {repo_root / '.build_manifest.json'} "
+            f"{_GATE_NAME}: UNREADABLE - COULD NOT READ the record {repo_root / '.build_manifest.json'} "
             f"for the project at {repo_root} has {location_keyed} entr(ies) keyed to "
             "the location it was written in (absolute or outside the project), "
             "which do not resolve here. The record did not travel with the "
@@ -890,22 +889,18 @@ def _default_floor_dirs(repo_root: Path) -> list[Path]:
     return [repo_root / ".claude" / name for name in names]
 
 
-def _record_unreadable_reason(record: object, project: Path) -> str | None:
+def _record_unreadable_reason(record: object) -> str | None:
     """Explain why a loaded record cannot be read here, or None when it can.
 
     Args:
         record: The parsed record, or None when it is not valid JSON.
-        project: The folder the record is being read in.
 
     Returns:
-        A short reason (malformed, no output_mappings, non-portable keys) or
-        None when the record is readable where the project now sits.
+        A short reason when the record is not valid JSON, else None. Entries
+        keyed to another location are counted by the scan (BP-1500d-2).
     """
     if not isinstance(record, dict):
         return "the record file is present but is not valid JSON"
-    mappings = record.get("output_mappings")
-    if isinstance(mappings, dict) and _location_keyed_keys(mappings, project):
-        return "the record file is present but its entries are keyed to the location it was written in"
     return None
 
 
@@ -960,7 +955,7 @@ def main() -> int:
     if manifest_path is None:
         return _report_could_not_read(_GATE_NAME, tried[0].parent, "the record file is absent")
     record = _load_manifest(manifest_path)
-    unreadable = _record_unreadable_reason(record, manifest_path.parent)
+    unreadable = _record_unreadable_reason(record)
     if unreadable:
         return _report_could_not_read(_GATE_NAME, manifest_path.parent, unreadable, present=True)
 
