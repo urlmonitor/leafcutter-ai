@@ -35,6 +35,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
+from _plan_feature_harness_defaults import approval_step_replies  # noqa: E402
 from _workflow_engine_harness import HarnessResult, finalize_baseline_responses, run_workflow_under_e2, workspace_ensure_reply  # noqa: E402
 from workflows._bo2300_step35_replies import STEP35_RESPONSES  # noqa: E402
 
@@ -111,9 +112,10 @@ def _with_workspace_permission(label_responses: dict) -> dict:
     The permission gate runs before Stage 0 on every plan-feature.js
     invocation regardless of args, so every call in this file that drives
     _PLAN_FEATURE_JS must include this mock or the run halts immediately
-    (the BO-1500f-1 regression this helper fixes).
+    (the BO-1500f-1 regression this helper fixes). It also answers the final-gate
+    approval step (ACD-300c-4: dry run, then `approval-apply`, this file's advance marker).
     """
-    return {**_WORKSPACE_PERMISSION_MOCK, **label_responses}
+    return {**_WORKSPACE_PERMISSION_MOCK, **approval_step_replies(), **label_responses}
 
 
 # ---------------------------------------------------------------------------
@@ -573,8 +575,8 @@ def test_enum_invalid_action_rejected_before_record_check():
     )
 
     # Answer must NOT be applied.
-    assert not any(c.label == "apply-approval" for c in result2.agent_calls), (
-        "Enum-invalid answer must not be applied (no apply-approval)."
+    assert not any(c.label == "approval-apply" for c in result2.agent_calls), (
+        "Enum-invalid answer must not be applied (no approval-apply)."
     )
 
 
@@ -622,7 +624,7 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     # covers: BO-2300d-1
     """
     A valid single_choice approve answer resolves the gate without re-pausing.
-    The workflow advances past the gate: apply-approval is dispatched.
+    The workflow advances past the gate: approval-apply is dispatched.
 
     New fail-closed contract: read-pause-record must return {exists:true,stale:false}
     for the answer to be applied.  The read-pause-record prompt must contain the
@@ -688,10 +690,10 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
         f"Got: {str(read_prompt)[:200]}"
     )
 
-    # Workflow must have advanced past the gate: apply-approval appears.
-    apply_labels = [c.label for c in result2.agent_calls if c.label == "apply-approval"]
+    # Workflow must have advanced past the gate: approval-apply appears.
+    apply_labels = [c.label for c in result2.agent_calls if c.label == "approval-apply"]
     assert len(apply_labels) > 0, (
-        f"Valid approve must advance workflow past the gate — apply-approval dispatch expected. "
+        f"Valid approve must advance workflow past the gate — approval-apply dispatch expected. "
         f"Run 2 labels: {[c.label for c in result2.agent_calls]}"
     )
 
@@ -759,9 +761,9 @@ def test_resume_preserves_committed_earlier_stages():
         f"Got {len(pauses2)} pause-persist dispatch(es)."
     )
 
-    # Workflow advanced past gate: apply-approval dispatched.
-    assert any(c.label == "apply-approval" for c in result2.agent_calls), (
-        f"Run 2 must advance past the gate to apply-approval. "
+    # Workflow advanced past gate: approval-apply dispatched.
+    assert any(c.label == "approval-apply" for c in result2.agent_calls), (
+        f"Run 2 must advance past the gate to approval-apply. "
         f"Run 2 labels: {[c.label for c in result2.agent_calls]}"
     )
 
@@ -905,9 +907,9 @@ def test_paused_state_durable_across_process_exit():
         f"Got {len(pauses2)} pause-persist dispatch(es)."
     )
 
-    # Workflow advanced past gate: apply-approval dispatched.
-    assert any(c.label == "apply-approval" for c in result2.agent_calls), (
-        f"Run 2 must advance past the gate to apply-approval. "
+    # Workflow advanced past gate: approval-apply dispatched.
+    assert any(c.label == "approval-apply" for c in result2.agent_calls), (
+        f"Run 2 must advance past the gate to approval-apply. "
         f"Run 2 labels: {[c.label for c in result2.agent_calls]}"
     )
 
@@ -981,7 +983,7 @@ def test_resume_with_no_pending_pause_is_noop():
     """
     When args.resume_answer is set but read-pause-record returns {exists: false},
     the workflow reports 'nothing to resume': no crash, no pause-persist re-dispatch,
-    and the answer is NOT applied (no apply-approval).
+    and the answer is NOT applied (no approval-apply).
 
     Agent-mediated read contract (ADR-024): no real file is created or accessed.
     The gate wrapper dispatches read-pause-record; exists:false → nothing_to_resume.
@@ -1002,8 +1004,8 @@ def test_resume_with_no_pending_pause_is_noop():
     # No crash.
     assert result.error == "", f"Resume with no pending pause must not crash: {result.error}"
 
-    # 'Nothing to resume': answer must NOT be applied (no apply-approval).
-    assert not any(c.label == "apply-approval" for c in result.agent_calls), (
+    # 'Nothing to resume': answer must NOT be applied (no approval-apply).
+    assert not any(c.label == "approval-apply" for c in result.agent_calls), (
         f"read-pause-record → exists:false must block answer application. "
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )
@@ -1047,8 +1049,8 @@ def test_stale_pause_fails_gracefully():
     # No crash.
     assert result.error == "", f"Stale-pause detection must not crash: {result.error}"
 
-    # Stale record must NOT silently apply: no apply-approval.
-    assert not any(c.label == "apply-approval" for c in result.agent_calls), (
+    # Stale record must NOT silently apply: no approval-apply.
+    assert not any(c.label == "approval-apply" for c in result.agent_calls), (
         f"read-pause-record → stale:true must block answer application. "
         f"Got labels: {[c.label for c in result.agent_calls]}"
     )

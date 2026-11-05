@@ -77,7 +77,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required exact attribute-name matching (not prefix or substring) and attribute-wise tag parsing, because real pinned elements carry class values with framework interpolation that defeats a whole-tag regex. Extended the constraint past the reader to every downstream surface. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/11_TICKET-20261022-GE-124b-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -91,3 +92,4 @@ notes: |
   The second scenario is the one that matters in practice: real pinned elements
   carry both attributes, and the reader must take the criteria from exactly one
   of them. The mock-data record `decl-stock-badge` is this element.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

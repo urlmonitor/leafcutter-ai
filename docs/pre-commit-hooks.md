@@ -4,7 +4,7 @@ description: "Reference for all pre-commit hooks enforced by the leafcutter comm
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-10-14
+last_updated: 2026-10-22
 components:
   - commit_guardian
 ---
@@ -71,6 +71,14 @@ flowchart LR
     D -->|output matches| PASS[hook passes\ncommit proceeds]
     D -->|output differs| FAIL[hook fails\nrun build.py to regenerate\nthen re-stage]
 ```
+
+## Agent Registry and Skill-Reference Check (check-agent-registry)
+
+Scope: the hook runs when the agent registry, its schema, or any staged
+`templates/**/*.md` file (agents, skills, commands, rules) is staged. It runs the
+same validator as the build, so a template that tells an agent to load a skill the
+package does not ship is refused at commit time, naming the template file and the
+skill. A commit that stages none of those paths passes without running the validator.
 
 ## Hook Configuration
 

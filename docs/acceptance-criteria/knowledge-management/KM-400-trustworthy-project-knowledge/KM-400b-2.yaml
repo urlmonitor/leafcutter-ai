@@ -47,6 +47,7 @@ superseded_by: null
 covered_by:
 - KM-400b-2-i
 - KM-400b-2-ii
+- KM-400b-2-iii
 - tests/knowledge/test_projection.py::test_duplicate_canonical_id_rejects_snapshot
 - tests/knowledge/test_projection.py::test_required_missing_reference_rejects_before_loader_drops_edge
 - tests/knowledge/test_source_boundaries.py::test_valid_yaml_missing_criteria_is_rejected

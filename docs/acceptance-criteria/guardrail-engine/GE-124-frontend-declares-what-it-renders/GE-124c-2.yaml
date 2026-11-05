@@ -103,7 +103,8 @@ superseded_by: null
 covered_by:
   - GE-124c-2-i
   - GE-124c-2-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/19_TICKET-20261022-GE-124c-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -130,3 +131,4 @@ notes: |
   therefore: add a public entry point to ac_coverage_resolver.py over
   _ac_store_index, then migrate GE-111 and GE-117 onto it. That is real work
   and it is larger than "call the existing resolver".
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

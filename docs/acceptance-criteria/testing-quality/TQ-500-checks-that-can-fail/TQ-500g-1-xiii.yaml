@@ -1,0 +1,365 @@
+id: TQ-500g-1-xiii
+components:
+  - testing_quality
+  - build_orchestration
+title: "Every run re-checks each pinned replacement against the current code before any wrong version is run, and a pin that fails a check is neither used nor dropped but prepared again"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the work 07_TICKET-refresh-gate holds pinned replacements for six
+    names of test T1's entry, and the code as written has changed since they
+    were pinned —
+      P1: its old text still occurs exactly once in refresh_config.py, the
+          altered file loads, it changes bytes, and T1 runs the changed line
+          on the run on the code as written,
+      P2: its old text "if refresh_due and retry_due" now occurs twice in
+          refresh_config.py,
+      P3: applied now, refresh_config.py no longer loads, because the coder
+          renamed a function the new text calls,
+      P4: its new text now equals the current text at that place, so applying
+          it changes no byte,
+      P5: it applies, loads and changes bytes, but the changed line is in a
+          function that no test naming P5 runs on the run on the code as
+          written any more,
+      P6: its file, settings.py, is no longer in scope for that name in the
+          owed list,
+  When the gate runs for that work,
+  Then every pinned replacement is checked before any wrong version is run,
+    And P1 is applied from the pin and run,
+    And P2 to P6 are not applied from the pin; each is sent to the preparer,
+      and each row says "re-prepared" and names the check that failed:
+      "old text found 2 times", "did not load", "changes nothing",
+      "changes no line the tests naming it run", "not in scope",
+    And "still loads" is decided by executing the altered file as a module in
+      a separate interpreter, not by checking only that it parses, so a P3
+      whose new text calls the renamed function at module level reads "did
+      not load"; the altered file is applied and put back through the same
+      recorded apply-and-put-back the wrong-version runs use, and after the
+      check refresh_config.py is byte for byte as written, whatever the
+      outcome,
+    And a re-prepared replacement is held to the same checks before it is
+      run; when it passes, it is run and becomes that name's pin in place of
+      the earlier one,
+    And when the preparer cannot prepare a name again, or its new replacement
+      also fails a check, the name is reported unfinished with the failed
+      check named, the work does not pass, the name is never reported as
+      caught or as survived, and the earlier pin is left as it was,
+    And a replacement prepared for a name with no pin is held to the same
+      checks before it is run, and becomes that name's pin only when it
+      passes all of them,
+    And no name owed by T1's entry is missing from the report: each one is
+      run, or reported unfinished with its reason.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-xi
+  - TQ-500g-1-ii
+  - TQ-500g-1-xiv
+doc_links:
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Invariants 2 and 3 for a pin (re-validate against the current code every run; re-check effect, not only form), and the round-III naive-chain survivor a pinned no-op would reproduce."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: describes
+    status: exists
+    relevance: "The no-op family: an alteration that loads and changes bytes but not behaviour. Check P5 is the KI's proposed not_executed check applied to a pin."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Today's did_not_load and not_applied results, judged on a fresh alteration; this AC applies the same judgements to a pin before it is used."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The writer's replacement rules (old text exactly once; path refusals; per-name scope), which a pinned replacement must still pass on the current code."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Writer, runner and gate CLIs; the checks live in the writer's plan, the run-time judgement in the runner."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; the five checks and their row wording are documented there."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: scripts/build_orchestration/_wvp_checks.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvp_plan.py
+    state: to_be_created
+  - path: scripts/build_orchestration/_wvp_store.py
+    state: to_be_created
+it_requirements:
+  - >-
+    The five checks live in one new private module, scripts/build_orchestration/_wvp_checks.py, called
+    from _wvp_plan (TQ-500g-1-xi) for every pinned and every declared candidate before the list step
+    prints to_prepare, so every pinned replacement is checked before the preparer is dispatched and
+    before any wrong version is run. The same module's functions are the only implementation of the
+    checks; the write step, the runner and the declared path (TQ-500g-1-xvii) never carry a copy.
+  - >-
+    Order and wording, first failure wins, each reason exactly: (e) paths, before any file is read,
+    through _wvw_prepare's path rule and the name's CURRENT in-scope files from the owed list:
+    "not in scope", or the writer's own refusal wording for a test file, a path outside the repository
+    or inside the version-control folder; (a) old text exactly once, each replacement against the result
+    of the one before, with _wvw_prepare's counting and CRLF rule: "old text found N times" (N >= 2), or
+    "target changed" when it is not found (TQ-500g-1-xii); (c) the applied result differs from the file as
+    now written: "changes nothing"; (b) loads: "did not load"; (d) reaches a line: "changes no line the
+    tests naming it run". A pinned candidate that fails gets decision source "re-prepared: <reason>" and
+    goes into to_prepare.
+  - >-
+    Check (b), decided before the run (IT-PO decision on the BA's open point; confirmed by the user,
+    BrainCandy, 2026-10-24: EXECUTE, not compile-only, under the runner's journalled apply/put-back). For a .py file: the altered
+    text compiles, and the altered module executes in a child interpreter: the alteration is applied in
+    the worktree through the runner's journalled RunGate (_wvr_gate, under
+    <git-dir>/leafcutter/wrong-version-runs/<run-id>/), the file is executed as a module
+    (importlib.util.spec_from_file_location, its own directory and the repository root on sys.path, within
+    done_proof's _resolve_pytest_timeout_seconds budget), and the file is ALWAYS put back byte for byte
+    before the check returns; a cut-short check is put back by the existing recover step. An
+    ImportError, NameError, AttributeError or SyntaxError at that point is "did not load". A file of any
+    other language has no pre-run load check; its load is judged by the run as today (TQ-500g-1-ii), and a
+    run that reads did_not_load still never counts as caught or survived. After the list step returns,
+    git status --porcelain is as before.
+  - >-
+    Check (d) uses the traced run of TQ-500g-1-xiv (_wvr_trace, _wvr_effect): one pytest run on the code
+    as written of only the tests whose own entry names a candidate that passed (e), (a), (c) and (b),
+    traced only for the files those candidates alter. The candidate passes when at least one test whose
+    own entry names it ran at least one changed line of a traceable file. A candidate whose altered files
+    are all untraceable (for example SQL) passes (d), with the decision's reason saying the check could
+    not be made, never failing for that reason alone (TQ-500g-1-xiv). The pre-run is made only when at
+    least one candidate reaches (d); with no pin and no declaration no pytest run happens in the list
+    step. The runner keeps its own baseline run as the gate's control; this pre-run never replaces it.
+  - >-
+    A failure found only by the run. When a manifest entry with source "pinned" reads did_not_load,
+    not_applied or not_executed in the runner's verdict, the pin step (_wvp_store) leaves the pin's
+    replacements untouched and records failed_check {check, files_sha256} over the bytes of the pin's
+    files as written in that run. The next plan treats a pin whose failed_check matches the files' current
+    hash as failing that check (decision "re-prepared: <check>"); once the files change, the pin is
+    checked afresh. This is how a pin that only fails at run time is never silently used again and never
+    dropped.
+  - >-
+    Re-preparation outcome. A re-prepared or newly prepared replacement is held to the same checks: (e),
+    (a) and (c) by the write step through _wvw_prepare and _wvp_checks, (b) and (d) by the runner's run
+    (did_not_load from the kind rule, not_executed from TQ-500g-1-xiv). It becomes the name's pin only
+    through the pin step's promotion rule (TQ-500g-1-xi). When the preparer cannot prepare the name again,
+    or the fresh replacement fails a check, the manifest entry is could_not_prepare (or the runner's
+    unfinished result) with a reason that starts "re-prepared: <failed pin check>" and then gives the
+    second failure; the verdict reason is unfinished, the name is never caught or survived, and the
+    earlier pin is left byte for byte as it was.
+  - >-
+    Completeness: every owed name of the entry appears in the manifest exactly once and has at least one
+    verdict row: run, or unfinished with its reason. No check failure removes a name from owed.
+  - >-
+    Cost: checks (e), (a) and (c) for 50 candidates finish within 1 s; (b) costs one child interpreter per
+    Python candidate; (d) at most one traced pytest run of the holder tests per gate run. Logging to stderr
+    only. Every new or changed Python file stays at or under 400 counted lines. _wvp_checks.py is in
+    scripts/build_orchestration/ and is deployed by that directory's glob (no deploy-list edit).
+test_spec:
+  - name: test_six_pins_checked_before_any_run_and_failures_re_prepared
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py list
+    description: >-
+      Temp repo where P1 to P6 are set up as in the criteria (P2's old text twice, P3's new text calling a
+      renamed module-level function, P4's new text already in the file, P5's line in a function no test
+      naming it calls, P6's settings.py removed from in_scope_files). list --work-key prints to_prepare with
+      exactly P2 to P6 and decisions "re-prepared: old text found 2 times", "re-prepared: did not load",
+      "re-prepared: changes nothing", "re-prepared: changes no line the tests naming it run",
+      "re-prepared: not in scope"; P1 is "pinned". The pre-run happened before any finish call.
+    must_catch:
+      - a pin applied without re-checking its old text against the current file
+      - a pinned no-op (changes nothing) applied as a wrong version
+      - a pin whose file left the name's scope applied anyway
+      - a pin on a line its tests no longer run applied anyway
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_checks.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_load_check_puts_the_file_back_and_leaves_git_status_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: >-
+      After list --work-key ran check (b) on P3, refresh_config.py is byte-identical to before, git status
+      --porcelain and git stash list are unchanged, and the run's journal under
+      wrong-version-runs/ is closed.
+    must_catch:
+      - the load check leaving the altered file in the working tree
+      - git stash used for the load check
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_checks.py
+  - name: test_passing_re_preparation_replaces_the_pin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: python scripts/build_orchestration/wrong_version_gate.py finish
+    description: >-
+      The reply re-prepares P2 with a replacement whose old text occurs once and whose changed line T1
+      runs. finish runs it (row source "re-prepared: old text found 2 times") and afterwards the pin file
+      holds the new replacement and its alteration_id for P2.
+    must_catch:
+      - a passing re-preparation not written back as the new pin
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_failed_re_preparation_is_unfinished_and_keeps_the_earlier_pin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      For P3 the reply says could_not_prepare; for P4 the fresh replacement again changes nothing. Both are
+      unfinished in the verdict with reasons starting "re-prepared: did not load" and "re-prepared: changes
+      nothing", reason is unfinished, neither name is in survivors or reported caught, and the pin file's
+      entries for P3 and P4 are byte-identical to before the run.
+    must_catch:
+      - the earlier pin deleted when re-preparation fails
+      - a failed re-preparation reported as survived
+      - the earlier pin silently applied as a fallback
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_fresh_preparation_pinned_only_after_every_check
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      A name with no pin is prepared twice in two works: once as a replacement whose new text equals its old
+      (not_applied), once as one on a line no holder runs (not_executed). Neither becomes a pin. A third,
+      faithful preparation that survives becomes a pin.
+    must_catch:
+      - a first-guess no-op locked in as the pin
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_run_time_load_failure_marks_the_pin_for_re_preparation
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      A pin whose new text calls a renamed function inside a function body passes check (b) but reads
+      did_not_load in the run. The pin file keeps its replacements and gains failed_check "did not load";
+      the next list with the same code puts the name in to_prepare with "re-prepared: did not load"; after
+      the file changes, the pin is checked afresh.
+    must_catch:
+      - a pin that failed at run time used again unchanged on the next run
+      - a pin that failed at run time deleted
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/_wvp_plan.py
+  - name: test_every_owed_name_appears_in_the_report
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Across the P1 to P6 run with a reply that answers only P2, the verdict holds at least one row for every
+      owed name of T1's entry, each either run or unfinished with its reason; none is missing.
+    must_catch:
+      - a name whose pin failed a check omitted from the manifest
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_plan.py
+test_required: true
+test_rationale: >-
+  The checks are deterministic on a fixture repo, so every entry runs the real list and finish CLIs against a
+  temp git repo with real pytest tests, a hand-written pin file and reply fixtures, and asserts on to_prepare,
+  the decisions, the verdict rows and the pin file bytes. Check (b) is proven on a real child interpreter and
+  check (d) on a real traced pytest run, never mocked. The failure entries carry the "never used, never
+  dropped" rule, including the run-time-only failure the pre-run cannot see.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-xvii
+    contract: >-
+      _wvp_checks: check(candidate replacements, owed files, holder tests, traced lines) returning the first
+      failing check's reason ("not in scope" / writer refusal wording, "target changed", "old text found N
+      times", "changes nothing", "did not load", "changes no line the tests naming it run") or none; applied
+      unchanged to a declared replacement.
+expects_from:
+  - ac_id: TQ-500g-1-xi
+    contract: >-
+      The per-work-key pin store (_wvp_store, with failed_check on each pin), the plan module (_wvp_plan)
+      that calls the checks, and the pin step's promotion rule.
+  - ac_id: TQ-500g-1-xiv
+    contract: >-
+      _wvr_trace: one traced pytest run returning, per test identity, {repo-relative path: set of executed
+      line numbers} for the requested files, plus the list of files that are not traceable; _wvr_effect:
+      changed_lines(as-written bytes, altered bytes) giving the as-written line numbers a replacement
+      changes.
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+  - reason: "User decision (BrainCandy, 2026-10-24, approved) recorded as a new criteria clause: the 'still loads' check executes the altered module in a separate (child) interpreter, not compile-only, under the runner's journalled apply and put-back, and the file is byte for byte as written after the check. it_requirements (check b) and notes state the decision. All other clauses unchanged."
+    date: '2026-10-24'
+    by: business-analyst
+    directed_by: user
+  - action: approved
+    agent: approve_acs
+    date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/05_TICKET-20261024-TQ-500g-1-xiii.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CHECKS (user brief item 2, plus one the BA added).
+    a. old text occurs exactly once in its file as it now stands  (P2)
+    b. the altered file still loads                              (P3)
+    c. it still changes bytes                                    (P4)
+    d. it changes at least one line a test naming it runs on the
+       run on the code as written                                (P5)
+    e. ADDED BY THE BA: its file is still in scope for the name in the owed
+       list, and still passes the writer's other path refusals (test file,
+       outside the repository, inside the version-control folder)  (P6).
+       Reason: scope is declared on the entry (in_scope_files) and can change
+       after the pin was made; a pin must not widen it.
+
+  NEVER SILENTLY USED, NEVER SILENTLY DROPPED. A failed pin is never applied
+  and never falls back to a stored copy (analysis invariant 2), and it is
+  never omitted from the report: either a re-preparation runs, or the name is
+  unfinished naming the check. The last And clause is the guard against a
+  name quietly vanishing.
+
+  "BEFORE ANY WRONG VERSION IS RUN", NOT "BEFORE ANYTHING". Check (d) needs
+  the run on the code as written, which TQ-500g-1-i already makes first. Check
+  (b) may be decided without running the tests (IT-PO's choice); if it can
+  only be decided from the run, the row still reads "did not load", never
+  caught or survived (TQ-500g-1-ii).
+
+  NOTHING IS PINNED UNTIL IT PASSES. A fresh preparation becomes a pin only
+  after all checks pass, so a first guess that is a no-op is not locked in.
+  When re-preparation fails, the earlier pin is kept rather than deleted: the
+  next run checks it again (it may pass after a further code change), and the
+  reset (TQ-500g-1-xvi) stays the only way to remove a pin.
+
+  IMPLEMENTATION LEFT TO IT-PO: how "loads" is decided before the run, and how
+  the executed lines are measured (TQ-500g-1-xiv).
+
+  IT-PO ENRICHMENT (2026-10-23)
+  LOADS: decided before the run for Python files (compile, then execute the
+  altered module in a child interpreter under the runner's journalled apply and
+  put-back). Other languages: decided by the run, as TQ-500g-1-ii does today.
+  A load failure that only the run can see (a bad name inside a function body)
+  marks the pin with failed_check, so the next run re-prepares it while the
+  code is unchanged; the pin is still never dropped.
+  EXECUTED LINES: the traced pre-run of TQ-500g-1-xiv, limited to the holder
+  tests and the candidate files, made only when a pin or declaration reaches
+  check (d). This is one extra pytest run per gate run in that case; the
+  runner's own baseline stays the control.
+  WHERE: the checks in _wvp_checks.py, called by the plan (_wvp_plan) that the
+  list and write steps share.
+
+  USER DECISION (BrainCandy, 2026-10-24, "approved")
+  c. "STILL LOADS" EXECUTES. The check runs the altered module in a child
+     interpreter; compiling it is not enough. It runs under the runner's
+     journalled apply and put-back, so the file is always restored. Now a
+     criteria clause. A load failure only a test run can see (a bad name inside
+     a function body) is still handled by failed_check, as above.

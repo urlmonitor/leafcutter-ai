@@ -73,3 +73,15 @@ risk_surface: contract_boundary
 notes: |
   The paired acceptable input exists so this rule cannot be satisfied by a check that
   fails everything (memory: guard-liveness, "refuses everything is the off switch").
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

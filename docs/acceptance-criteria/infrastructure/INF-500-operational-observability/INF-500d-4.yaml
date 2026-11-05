@@ -185,6 +185,7 @@ covered_by:
   - INF-500d-4-vii
   - INF-500d-4-viii
   - INF-500d-4-ix
+  - INF-500d-4-x
   - unit_tests/portability/test_inf_500d_4_e2e.py
   - unit_tests/portability/_inf_500d_4_e2e_helpers.py
 implemented_by:

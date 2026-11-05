@@ -1,0 +1,215 @@
+id: TQ-200d-5-i
+components:
+  - testing_quality
+title: "A row whose agent could not be launched records the operating-system reason in the results file"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three live rows whose agent launch is refused by the operating system:
+      R1 with Windows error 206, "the file name or extension is too long",
+      R2 with Windows error 2, "the system cannot find the file specified",
+      R3 with a permission error on Linux,
+  When each row is written to the results file,
+  Then each row's error says the agent CLI could not be launched and carries
+      the operating-system error number and message exactly as raised,
+    And R1 and R2 can be told apart from the results file alone, without the
+      run's log,
+    And the error text has the same form whichever of the three ways the
+      harness starts an agent was used (label, artifact or produced-tests,
+      produced-tests with recorded commands),
+    And a row that launched and then failed (a timeout, a non-zero exit, a
+      reply that cannot be read) keeps its current error text unchanged.
+depends_on:
+  - TQ-200d-5
+doc_links:
+  - path: docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261025-eval-harness-system-prompt-exceeds-windows-command-line.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Suggested fix 'Keep the cause in the record'. On main, run_agent_eval._run_cli raises the constant
+      '<label> could not be launched' (label 'claude CLI' for label runs, 'agent CLI' for artifact runs),
+      and produced_tests_transcript.invoke_with_transcript writes 'agent CLI could not be launched: {exc!r}'.
+      The cause survives only in the log for two of three invokers.
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The results-file paragraph states what a launch-failure row records, with the WinError 206 and WinError
+      2 examples.
+  - path: docs/how-to/run-a-live-agent-eval.md
+    relationship: modifies
+    status: planned
+    relevance: >-
+      Created by TQ-200d-5. Gains 'Reading a launch failure': what 206 and 2 mean on Windows and what
+      to do.
+  - path: scripts/changelog/README.md
+    relationship: relates-to
+    status: exists
+  - path: docs/glossary.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A launch failure raised by the shared builder as an error that the row loops can tell apart from every
+    post-start failure by its class (not by parsing text), whose message is 'agent CLI could not be launched:
+    <ExceptionType>: <str(exc)>' (for example 'agent CLI could not be launched: FileNotFoundError: [WinError
+    206] ...'), with the original OSError kept as its cause. TQ-200d-5-iii's stop message repeats this
+    text.
+expects_from:
+  ac_id: TQ-200d-5
+  contract: >-
+    The shared launch builder in scripts/evals/agent_launch/command.py used by all three invokers, so
+    the launch-failure text is set in one place.
+test_required: true
+package_surface: false
+declared_files:
+  - path: scripts/evals/agent_launch/command.py
+    state: to_be_created
+  - path: scripts/evals/run_agent_eval.py
+    state: existing
+  - path: scripts/evals/produced_tests_transcript.py
+    state: existing
+  - path: scripts/evals/README.md
+    state: existing
+  - path: docs/how-to/run-a-live-agent-eval.md
+    state: to_be_created
+it_requirements:
+  - >-
+    Form decision (IT PO, 2026-10-30): the row error is 'agent CLI could not be launched: <ExceptionType>:
+    <str(exc)>' for all three invokers, so the operating-system number and message appear exactly as raised
+    ('[WinError 206] ...', '[WinError 2] ...', '[Errno 13] Permission denied: ...'). Label runs change
+    from the 'claude CLI' prefix to 'agent CLI'; the transcript invoker changes from repr to this form.
+    The localized Windows message is kept as raised, never translated.
+  - >-
+    A launch failure is distinguishable from a timeout, a non-zero exit after start and an unreadable
+    reply by its error class; those post-start errors keep their current text unchanged.
+  - >-
+    Existing tests that assert the old 'claude CLI could not be launched' text or the repr form (unit_tests/evals/test_cli_failure_detail.py
+    and the transcript tests are candidates) are updated in the same change and listed in the consumer-test
+    sweep with the reason.
+  - >-
+    Unit tests never call a live model; they use a fake claude program on PATH (or a patched process start)
+    that records its argv, its stdin and any prompt file it is given. Tests raise each error from the
+    patched process start and read the written results file, never the log.
+  - >-
+    DOCUMENTATION (part of done) - scripts/evals/README.md must state that a row whose agent could not
+    be started records 'agent CLI could not be launched: <ExceptionType>: <message>' in its error, with
+    the two Windows examples (WinError 206: a command line over the limit; WinError 2: no program found),
+    and that the results file alone tells them apart.
+  - >-
+    DOCUMENTATION (part of done) - docs/how-to/run-a-live-agent-eval.md gains 'Reading a launch failure',
+    which must state what 206 and 2 mean on Windows and the action for each (206: report it, the harness
+    should never build such a command line; 2: see 'Finding claude on Windows').
+  - >-
+    DOC-DRIFT TEST: a unit test produces a launch-failure row and asserts the prefix the README quotes
+    is the prefix written to the results file.
+  - >-
+    KNOWN ISSUE: no file moves here (TQ-200d-5 moves the 206 entry). If TQ-200d-5 has already moved it,
+    append 'launch-failure cause now kept in the results file by TQ-200d-5-i' to the resolved entry's
+    Status line.
+  - >-
+    CHANGELOG: one entry for TQ-200d-5-i written with scripts/changelog/emit_entry.py (type manual, components
+    [testing_quality]) into changelogs/, naming the launch-failure error text and the README/how-to sections.
+    The entry is written in the same change as the code.
+  - >-
+    GLOSSARY: new terms used in the docs this AC writes ('launch failure') reach docs/glossary.md only
+    through the check-glossary-coverage hook and the glossary-triage flow. No entry is added by hand (CLAUDE.md).
+  - >-
+    Files stay at or under 400 counted lines; run_agent_eval.py must not grow; tests go in unit_tests/evals/tq200d5/.
+test_spec:
+  - name: test_launch_failure_row_carries_the_operating_system_reason
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      R1 (WinError 206), R2 (WinError 2) and R3 (PermissionError errno 13) raised from the patched process
+      start: each row's error in the written results file starts with 'agent CLI could not be launched'
+      and carries the number and message exactly as raised; R1 and R2 differ in the results file.
+    must_catch:
+      - launch error replaced by a constant with no operating-system reason
+      - only the exception class kept, without its number and message
+    in_scope_files:
+      - scripts/evals/agent_launch/command.py
+      - scripts/evals/run_agent_eval.py
+  - name: test_launch_failure_text_has_one_form_for_all_three_invokers
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The same OSError raised under label, artifact/produced-tests and recorded-commands runs produces
+      the identical error text.
+    must_catch:
+      - label runs keep the 'claude CLI could not be launched' prefix
+      - transcript invoker keeps the repr form
+    in_scope_files:
+      - scripts/evals/agent_launch/command.py
+      - scripts/evals/run_agent_eval.py
+      - scripts/evals/produced_tests_transcript.py
+  - name: test_post_start_failures_keep_their_error_text
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: >-
+      A timeout, a non-zero exit after start and an unreadable reply keep the error text they had before
+      this change and are not marked as launch failures.
+    must_catch:
+      - timeout reported as a launch failure
+      - non-zero exit after start rewritten with the launch-failure prefix
+    in_scope_files:
+      - scripts/evals/agent_launch/command.py
+      - scripts/evals/cli_envelope.py
+  - name: test_readme_quotes_the_written_launch_failure_prefix
+    target_dir: unit_tests/evals/tq200d5/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The prefix quoted in scripts/evals/README.md equals the prefix of the error a launch failure writes;
+      the how-to has a 'Reading a launch failure' section naming WinError 206 and WinError 2.
+test_rationale: >-
+  The criteria are about what the results file holds, so every behavioural test reads the written results
+  file, never the log. The wrong versions are the two ways the cause was lost on main (a constant, or
+  a class name only) and the two prefixes that differ today between invokers. The boundary test keeps
+  the post-start errors out of the launch-failure class, which TQ-200d-5-iii relies on.
+origin_agent: business-analyst
+created: 2026-10-29
+amended_by:
+  - reason: >-
+      IT-PO technical enrichment after the user approved the business-analyst stage of the TQ-200d before-score
+      fixes. Set assigned_agent, estimated_complexity, declared_files, it_requirements (each doc update
+      named with what it must state), delivers_to/expects_from, doc_links with checked status, test_required,
+      test_spec (each must_catch with in_scope_files, doc-drift entries as real_artifact), test_rationale,
+      change_target, risk_surface and package_surface, and readiness reviewed. Criteria, title and depends_on
+      untouched.
+    by: it-po
+    at: '2026-10-30'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  IT-PO (2026-10-30). Decided the error form 'agent CLI could not be launched:
+  <ExceptionType>: <str(exc)>' and that a launch failure is told apart by its error
+  class, which TQ-200d-5-iii uses to stop the run.
+
+  USER DECISIONS (2026-10-30, final gate).
+    - OQ-6 accepted: the docs stay with this AC's implementing agent (each AC carries
+      its own docs). A 'specialist versus surface' finding on a declared .md path is
+      settled as 'assignment stands'.
+    - OQ-7 accepted: this record keeps the legacy test_spec (must_catch with
+      in_scope_files) and carries no test_intent, like its TQ-200d siblings.

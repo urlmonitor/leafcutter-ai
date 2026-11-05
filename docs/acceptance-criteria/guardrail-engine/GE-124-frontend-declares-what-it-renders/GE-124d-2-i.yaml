@@ -79,7 +79,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the placeholder list an explicit case-insensitive named constant, required the refusal message to differ from a plain missing declaration (different next action), and added the over-correction guard — a short but genuine reason must be accepted, since a minimum-length rule is the natural and forbidden response to placeholder rejection. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/29_TICKET-20261023-GE-124d-2-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -100,3 +101,4 @@ notes: |
   required date. A quality bar the check cannot judge would be theatre; the
   visibility of the reason in the diff is what makes it accountable, and a
   reviewer is the judge of whether it is a good reason.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

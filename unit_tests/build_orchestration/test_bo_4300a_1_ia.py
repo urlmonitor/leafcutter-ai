@@ -27,13 +27,23 @@ import unittest
 from pathlib import Path
 
 from unit_tests.build_orchestration._bo_4300a_1_ia_fixtures import (
+    FIXTURE_COMMON_DIR_STDOUT,
+    MARKER_LABEL,
+    RELATIVE_MAKER_SPELLING,
+    RESOLVE_LABEL,
     TEMPLATE_WORKFLOWS_DIR,
+    UNANCHORED_BRANCH_COMMAND,
     all_shell_dispatch_violations,
     free_form_workspace_phrase,
     list_deployed_workflow_files,
     load_agent_registry,
+    maker_command_defects,
+    maker_command_line,
+    marker_reply,
     shell_permitted_agent_ids,
+    workspace_branch_results,
 )
+from unit_tests._workflow_engine_harness import run_workflow_under_e2
 from unit_tests.build_orchestration._bo_4300c_3_fixtures import (
     REQUIRED_CONSUMERS,
     WORKSPACE_LABEL,
@@ -44,6 +54,8 @@ from unit_tests.build_orchestration._bo_4300c_3_fixtures import (
     hostile_reply,
     ok_maker_answer,
     run_scenario,
+    scenario_inputs,
+    shell_result,
     terminal,
     terminal_text,
     workspace_calls,
@@ -177,7 +189,8 @@ class TestBO4300a1iaWorkspaceDispatch(unittest.TestCase):
         failures = []
         for name, step in (("fast-lane-ship.js", "resolve-connected"), ("plan-feature.js", "detect-current-branch")):
             for case, reply in replies.items():
-                result = run_scenario(name, args_extra={"workspace": ok_maker_answer()}, extra_labels={step: reply})
+                result = run_scenario(name, args_extra={"workspace": ok_maker_answer()},
+                                      extra_labels={step: reply, MARKER_LABEL: marker_reply()})
                 labels = [c.label for c in result.agent_calls]
                 if step not in labels:
                     failures.append(f"{name}/{case}: step {step!r} never dispatched: {labels}")
@@ -230,6 +243,106 @@ class TestBO4300a1iaWorkspaceDispatch(unittest.TestCase):
                 if recorded != helper_opts.get(key):
                     failures.append(f"{name}: {key} differs from the helper's ({recorded!r} vs {helper_opts.get(key)!r})")
         self.assertEqual(failures, [], msg="\n".join(failures))
+
+    def test_every_workflow_dispatches_the_maker_by_an_absolute_quoted_path(self):
+        # covers: BO-4300a-1-ia
+        # angle: deployed
+        """M13: each consumer, run from a fixture project (the maker-path probe is scripted to answer that
+        project's git common dir), sends every maker command (ensure, and verify of a handed-in location) as
+        `python "<abs>/scripts/worktree.py" <verb> ...` with every --slug/--path/--ticket value quoted. At
+        least one maker command is seen per consumer, and none is cwd-relative."""
+        # consumer_drift: a handed-in location's project comes from its marker (one more probe step), not the cwd.
+        probe = {RESOLVE_LABEL: shell_result(FIXTURE_COMMON_DIR_STDOUT), MARKER_LABEL: marker_reply()}
+        given = ok_maker_answer()
+        failures = []
+        for name in _consumers():
+            runs = {
+                "ensure": run_scenario(name, hostile_reply("ok"), extra_labels=probe),
+                "verify": run_scenario(
+                    name, args_extra={"workspace_path": given["workspace_path"]},
+                    extra_labels={**probe, "workspace-verify": shell_result(json.dumps(given))}),
+            }
+            for kind, result in runs.items():
+                commands = [c for c in (maker_command_line(call.prompt) for call in result.agent_calls) if c]
+                if not commands:
+                    failures.append(f"{name}/{kind}: no maker command was dispatched: {[c.label for c in result.agent_calls]}")
+                for command in commands:
+                    failures += [f"{name}/{kind}: {why}: {command!r}" for why in maker_command_defects(command)]
+        self.assertEqual(failures, [], msg="\n".join(failures))
+
+    def test_no_deployed_workflow_spells_the_maker_relative_or_unanchored(self):
+        # covers: BO-4300a-1-ia
+        # angle: deployed
+        """M13/M16 over every deployed workflow source (the sites a single run does not reach: finalize's
+        remove, plan-feature's two fallback branch checks, the verify fallback): no relative maker spelling
+        (`python3 {{config.output_root}}/scripts/worktree.py` etc.), and no dispatched `git branch
+        --show-current` that names no location."""
+        hits = []
+        for path in list_deployed_workflow_files(deployed_workflows_dir()):
+            for no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if RELATIVE_MAKER_SPELLING.search(line):
+                    hits.append(f"{path.name}:{no}: relative maker spelling: {line.strip()[:110]}")
+                if UNANCHORED_BRANCH_COMMAND.search(line):
+                    hits.append(f"{path.name}:{no}: branch check names no location: {line.strip()[:110]}")
+        self.assertEqual(hits, [], msg="\n".join(hits))
+
+    def test_branch_check_transport_failure_ends_the_run(self):
+        # covers: BO-4300a-1-ia
+        # angle: deployed
+        """M16 / ADR-070 5.2: the deployed plan-feature.js, with the detect-current-branch dispatch REJECTING
+        (no reply at all), ends status error with nothing dispatched after it. The command it sent is
+        `git -C "<absolute project>" branch --show-current`. The rejection is injected by a prefix shim on a
+        copy of the deployed script (the harness's agent() mock cannot throw); the shim records the call first."""
+        shim = (
+            "{ const __orig = agent; agent = async function (p, o) { const r = await __orig(p, o);"
+            " if (o && o.label === 'detect-current-branch') throw new Error('TOKEN-transport'); return r; }; }\n"
+        )
+        source = (deployed_workflows_dir() / "plan-feature.js").read_text(encoding="utf-8")
+        labels, wf_args = scenario_inputs("plan-feature.js")
+        labels[RESOLVE_LABEL] = shell_result(FIXTURE_COMMON_DIR_STDOUT)
+        labels["detect-current-branch"] = shell_result("feature-x\n")
+        with tempfile.TemporaryDirectory(prefix="bo4300a1ia-throw-") as tmp:
+            copy = Path(tmp, "plan-feature.js")
+            copy.write_text(shim + source, encoding="utf-8")
+            result = run_workflow_under_e2(copy, timeout=90, label_responses=labels, args=wf_args)
+        labels_seen = [c.label for c in result.agent_calls]
+        self.assertIn("detect-current-branch", labels_seen, msg=f"step never dispatched: {labels_seen}")
+        self.assertEqual(labels_seen[-1], "detect-current-branch", msg=f"dispatches after the failed step: {labels_seen}")
+        self.assertEqual(terminal(result).get("status"), "error", msg=f"terminal: {result.result!r}")
+        sent = next(c.prompt for c in result.agent_calls if c.label == "detect-current-branch")
+        self.assertRegex(str(sent), r'git -C "(?:/|[A-Za-z]:)[^"]+" branch --show-current')
+
+    def test_refused_verify_of_handed_in_location_stops_the_run(self):
+        # covers: BO-4300a-1-ia
+        # angle: failure
+        """M5 caller re-check: build-feature.js handed a location, with the verify dispatch answering
+        refused/VERIFY_FAILED: status error quoting the answer, and no dispatch after the verify."""
+        refusal = shell_result(json.dumps({"status": "refused", "code": "VERIFY_FAILED", "message": "TOKEN-vf"}), 2)
+        result = run_scenario(
+            "build-feature.js", args_extra={"workspace_path": ok_maker_answer()["workspace_path"]},
+            extra_labels={RESOLVE_LABEL: shell_result(FIXTURE_COMMON_DIR_STDOUT), MARKER_LABEL: marker_reply(),
+                          "workspace-verify": refusal})
+        labels = [c.label for c in result.agent_calls]
+        self.assertIn("workspace-verify", labels)
+        self.assertEqual(labels[-1], "workspace-verify", msg=f"dispatches after the refused verify: {labels}")
+        self.assertEqual(terminal(result).get("status"), "error")
+        self.assertIn("TOKEN-vf", terminal_text(result))
+
+    def test_workspace_branch_reads_top_level_branch_then_marker_branch(self):
+        # covers: BO-4300a-1-ia
+        # angle: boundary
+        """M5: the deployed block's workspaceBranch returns the top-level `branch` when present (also when a
+        marker disagrees), the marker's branch otherwise, and "" when neither names one."""
+        name = _consumers()[0]
+        block = extract_between_markers((deployed_workflows_dir() / name).read_text(encoding="utf-8"))
+        self.assertIsNotNone(block, msg=f"{name}: no WORKSPACE-ANSWER block")
+        got = workspace_branch_results(block, [
+            {"branch": "top-level", "marker": {"branch": "from-marker"}},
+            {"marker": {"branch": "from-marker"}},
+            {"branch": "only-top"},
+            {"marker": {}},
+        ])
+        self.assertEqual(got, ["top-level", "from-marker", "only-top", ""])
 
 
 if __name__ == "__main__":

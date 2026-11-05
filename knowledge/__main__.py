@@ -149,7 +149,14 @@ def main(*, observer: object | None = None) -> int:
             return 2
     except KnowledgeError as exc:
         print(
-            json.dumps({"status": exc.code, "retryable": exc.retryable, "message": str(exc)}),
+            json.dumps(
+                {
+                    **getattr(exc, "details", {}),  # discrete failure fields, when the command has them
+                    "status": exc.code,
+                    "retryable": exc.retryable,
+                    "message": str(exc),
+                }
+            ),
             file=sys.stderr,
         )
         return 2

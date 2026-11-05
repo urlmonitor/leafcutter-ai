@@ -402,8 +402,11 @@ amended_by:
     alone as statements uncounted (BrainCandy 2026-10-20: docstrings AND bare strings
     such as a trailing DECISION HISTORY block; a string that is assigned, passed,
     returned or part of a larger expression counts — this supersedes the 2026-10-16
-    "docstring position only" confirmation), blank lines counted, per-language
-    tokenizer. The test
+    "docstring position only" confirmation), blank lines NOT counted anywhere
+    (BrainCandy 2026-10-21, superseding "blank lines counted": a line counts only if
+    it holds a code token), per-language tokenizer. The asymmetry descriptor's
+    rewrite in GE-127d-3 now also treats deleting blank lines as leaving the quoted
+    length unchanged. The test
     descriptor test_ge_127d_2_the_asymmetry_between_removable_and_non_removable_content_is_legible_from_the_outcome
     asserts that deleting hash comments moves the quoted length; it will go red when
     GE-127d-3 lands and must be rewritten to the new rule in that change, not

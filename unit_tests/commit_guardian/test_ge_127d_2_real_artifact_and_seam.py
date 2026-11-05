@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _ge_127d_2_fixture as fx  # noqa: E402
+import _ge_127d_3_content as independent  # noqa: E402 -- ast/tokenize oracle for the rule now in force
 
 
 class _FixtureTestCase(unittest.TestCase):
@@ -73,15 +74,14 @@ class TestApplyingPublishedRuleIndependentlyArrivesAtQuotedLength(_FixtureTestCa
                 quoted_length, _permitted = parsed
                 quoted_lengths.append(quoted_length)
 
-                categories = fx.parse_discard_categories(fx.extract_measures_line(combined))
-                rederived = fx.independent_count_content_lines(content, categories)
+                rederived = fx.independent_python_measure(content)
                 self.assertEqual(
                     quoted_length,
                     rederived,
                     msg=(
                         f"variant {index}: independent re-derivation from the published rule must "
-                        f"equal the quoted length. quoted={quoted_length} rederived={rederived} "
-                        f"categories={categories!r}. Got: {combined!r}"
+                        f"equal the quoted length. quoted={quoted_length} rederived={rederived}. "
+                        f"Got: {combined!r}"
                     ),
                 )
 
@@ -118,9 +118,15 @@ class TestChangingRuleInForceChangesBothPublishedAndQuoted(_FixtureTestCase):
         RED TODAY, for the same underlying reason as the sibling
         reproducibility descriptor: nothing is published at all yet.
         """
+        # REWRITTEN IN PLACE (GE-127d-3 test_spec, superseded rule): the old
+        # mutation (also discard '#' comments) is a no-op under the rule now in
+        # force, so it would pass vacuously. This one stops counting blank
+        # lines COUNT again (BrainCandy 2026-10-21: they never do in the rule in
+        # force), which changes one file's length under the new rule.
+        blank_lines = 4
         dest = fx.build_fixture_tree(self.root, line_limit=5)
         content = fx.python_lines_with_all_categories(
-            counted_code_lines=6, docstring_body_lines=3, hash_comment_lines=4, blank_lines=0
+            counted_code_lines=6, docstring_body_lines=3, hash_comment_lines=4, blank_lines=blank_lines
         )
         fx.write_and_stage(self.root, "oversized.py", content)
 
@@ -130,8 +136,9 @@ class TestChangingRuleInForceChangesBothPublishedAndQuoted(_FixtureTestCase):
         before_parsed = fx.parse_lines_and_limit(before_combined)
         self.assertIsNotNone(before_parsed, msg=f"baseline must quote Lines/Limit. Got: {before_combined!r}")
         quoted_before, _limit_before = before_parsed
+        measures_before = fx.extract_measures_line(before_combined)
 
-        fx.mutate_rule_to_also_discard_hash_comments(dest)
+        fx.mutate_rule_to_count_blank_lines_again(dest)
 
         after = fx.run_check_file_size(self.root)
         after_combined = fx.combined_output(after)
@@ -140,27 +147,15 @@ class TestChangingRuleInForceChangesBothPublishedAndQuoted(_FixtureTestCase):
         self.assertIsNotNone(after_parsed, msg=f"post-mutation run must quote Lines/Limit. Got: {after_combined!r}")
         quoted_after, _limit_after = after_parsed
 
-        self.assertLess(
-            quoted_after,
-            quoted_before,
-            msg=(
-                "fixture sanity: the mutated rule (also discarding '#' comments) must quote a "
-                f"SMALLER length for the same file. before={quoted_before} after={quoted_after}"
-            ),
-        )
-
-        categories_after = fx.parse_discard_categories(fx.extract_measures_line(after_combined))
-        rederived_after = fx.independent_count_content_lines(content, categories_after)
-        self.assertEqual(
-            quoted_after,
-            rederived_after,
-            msg=(
-                "what is published after the rule change must be taken FROM the rule now in "
-                "force, not maintained separately -- independent re-derivation from the "
-                f"post-change Measures line must equal the post-change quoted length. "
-                f"quoted_after={quoted_after} rederived_after={rederived_after} "
-                f"categories_after={categories_after!r}. Got: {after_combined!r}"
-            ),
+        self.assertEqual(independent.independent_python_length(content), quoted_before,
+                         msg=f"the quoted length must be the independently re-derived one. Got: {before_combined!r}")
+        self.assertEqual(quoted_before + blank_lines, quoted_after,
+                         msg=f"the mutated rule must move the quoted length by the blanks. Got: {after_combined!r}")
+        self.assertEqual(independent.independent_python_length(content) + blank_lines, quoted_after,
+                         msg="the post-change quoted length must re-derive independently under the changed rule")
+        self.assertNotEqual(
+            measures_before, fx.extract_measures_line(after_combined),
+            msg="what is published must be taken FROM the rule now in force: it must move with the mutation",
         )
 
 
@@ -180,77 +175,58 @@ class TestAsymmetryBetweenRemovableAndNonRemovableContentIsLegible(_FixtureTestC
         distinguishing them, and neither HELPS_MARKER nor NO_HELP_MARKER is
         present.
         """
-        fx.build_fixture_tree(self.root, line_limit=5)
-        base_content = fx.python_lines_with_all_categories(
+        # REWRITTEN IN PLACE (GE-127d-3 test_spec, superseded rule): the old
+        # assertion (deleting '#' comments moves the number) is DELETED, not kept
+        # alongside. Three variants of one refused file -- blank lines outside
+        # comments removed, every '#' comment removed, every docstring removed.
+        base = fx.python_lines_with_all_categories(
             counted_code_lines=6, docstring_body_lines=3, hash_comment_lines=3, blank_lines=2
         )
-        fx.write_and_stage(self.root, "oversized.py", base_content)
-        base_result = fx.run_check_file_size(self.root)
-        base_combined = fx.combined_output(base_result)
-        self.assertNotEqual(0, base_result.returncode, msg=f"baseline must refuse. Got: {base_combined!r}")
-        base_parsed = fx.parse_lines_and_limit(base_combined)
-        self.assertIsNotNone(base_parsed, msg=f"baseline must quote Lines/Limit. Got: {base_combined!r}")
-        quoted_base, _limit_base = base_parsed
-
-        self.assertNotIn(
-            fx.FORBIDDEN_OLD_SENTENCE,
-            base_combined,
-            msg=(
-                "the undifferentiated forbid-everything sentence must be gone -- it names a "
-                f"helpful and a useless action in one breath. Got: {base_combined!r}"
-            ),
-        )
-        self.assertIn(
-            fx.HELPS_MARKER, base_combined,
-            msg=f"the outcome must state that blank lines/'#' comments DO reduce the length. Got: {base_combined!r}",
-        )
-        self.assertIn(
-            fx.NO_HELP_MARKER, base_combined,
-            msg=f"the outcome must state that triple-quoted/block-comment content does NOT. Got: {base_combined!r}",
-        )
-
-        with tempfile.TemporaryDirectory() as helps_root_name:
-            helps_root = Path(helps_root_name)
-            fx.build_fixture_tree(helps_root, line_limit=5)
-            helps_content = fx.python_lines_with_docstring(counted_code_lines=6, docstring_body_lines=3)
-            fx.write_and_stage(helps_root, "oversized.py", helps_content)
-            helps_result = fx.run_check_file_size(helps_root)
-            helps_combined = fx.combined_output(helps_result)
-            helps_parsed = fx.parse_lines_and_limit(helps_combined)
-            self.assertIsNotNone(helps_parsed, msg=f"helps-variant must quote Lines/Limit. Got: {helps_combined!r}")
-            quoted_helps, _ = helps_parsed
-
-        self.assertLess(
-            quoted_helps,
-            quoted_base,
-            msg=(
-                "removing blank lines and '#' comments (kept the docstring) must REDUCE the "
-                f"quoted length. base={quoted_base} helps_variant={quoted_helps}"
-            ),
-        )
-
-        with tempfile.TemporaryDirectory() as no_help_root_name:
-            no_help_root = Path(no_help_root_name)
-            fx.build_fixture_tree(no_help_root, line_limit=5)
-            no_help_content = fx.python_lines_hash_and_blank_only(
+        variants = {
+            "base": base,
+            "blanks_removed": "".join(ln + "\n" for ln in base.splitlines() if ln.strip()),
+            "hash_removed": "".join(ln + "\n" for ln in base.splitlines() if not ln.lstrip().startswith("#")),
+            "docstring_removed": fx.python_lines_hash_and_blank_only(
                 counted_code_lines=6, hash_comment_lines=3, blank_lines=2
-            )
-            fx.write_and_stage(no_help_root, "oversized.py", no_help_content)
-            no_help_result = fx.run_check_file_size(no_help_root)
-            no_help_combined = fx.combined_output(no_help_result)
-            no_help_parsed = fx.parse_lines_and_limit(no_help_combined)
-            self.assertIsNotNone(
-                no_help_parsed, msg=f"no-help-variant must quote Lines/Limit. Got: {no_help_combined!r}"
-            )
-            quoted_no_help, _ = no_help_parsed
-
-        self.assertEqual(
-            quoted_base,
-            quoted_no_help,
-            msg=(
-                "removing ONLY the docstring (kept blanks/'#' comments) must NOT change the "
-                f"quoted length. base={quoted_base} no_help_variant={quoted_no_help}"
             ),
+        }
+        quoted: dict[str, int] = {}
+        outputs: dict[str, str] = {}
+        for name, text in variants.items():
+            with tempfile.TemporaryDirectory() as run_root_name:
+                run_root = Path(run_root_name)
+                fx.build_fixture_tree(run_root, line_limit=3)
+                fx.write_and_stage(run_root, "oversized.py", text)
+                result = fx.run_check_file_size(run_root)
+            outputs[name] = fx.combined_output(result)
+            self.assertNotEqual(0, result.returncode, msg=f"{name} must refuse. Got: {outputs[name]!r}")
+            parsed = fx.parse_lines_and_limit(outputs[name])
+            self.assertIsNotNone(parsed, msg=f"{name} must quote Lines/Limit. Got: {outputs[name]!r}")
+            quoted[name] = parsed[0]
+
+        # BrainCandy 2026-10-21: blank lines never count, so deleting them moves nothing either.
+        self.assertEqual(quoted["base"], quoted["blanks_removed"], msg=f"removing blanks must not. {quoted!r}")
+        self.assertEqual(quoted["base"], quoted["hash_removed"], msg=f"removing '#' comments must not. {quoted!r}")
+        self.assertEqual(quoted["base"], quoted["docstring_removed"], msg=f"removing docstrings must not. {quoted!r}")
+        for removed_code in (1, 3):
+            kept = [ln for ln in base.splitlines() if not ln.startswith("value_")] + [
+                f"value_{i} = {i}" for i in range(6 - removed_code)
+            ]
+            with tempfile.TemporaryDirectory() as run_root_name:
+                run_root = Path(run_root_name)
+                fx.build_fixture_tree(run_root, line_limit=1)
+                fx.write_and_stage(run_root, "oversized.py", "".join(ln + "\n" for ln in kept))
+                parsed = fx.parse_lines_and_limit(fx.combined_output(fx.run_check_file_size(run_root)))
+            self.assertIsNotNone(parsed, msg=f"K={removed_code}: must quote Lines/Limit")
+            self.assertEqual(quoted["base"] - removed_code, parsed[0], msg=f"removing {removed_code} code lines moves it by K")
+        measures = (fx.extract_measures_line(outputs["base"]) or "").lower()
+        self.assertTrue(
+            "blank" in measures and "comment" in measures and "standalone" in measures,
+            msg=f"the Measures line must let an author predict exactly that. Got: {outputs['base']!r}",
+        )
+        self.assertRegex(
+            measures, r"not count[^;.]*blank lines|blank lines[^;.]*(?:not counted|uncounted)",
+            msg=f"the Measures line must say blank lines are not counted. Got: {measures!r}",
         )
 
 

@@ -1,0 +1,241 @@
+id: ACD-2500a-2-ix-a
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A resumed /plan-feature run treats the committed hand-back design as done and does not design or commit it again"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a /plan-feature run "pf-demo-1" on its authoring branch for the batch ACD-9990a-1,
+    ACD-9990a-2 and ACD-9990a-3, where ACD-9990a-2 carries one undecided file finding,
+    and the run has committed the test-design output as its hand-back design commit
+    (labelled test-design-handback, naming those 3 AC ids and run id pf-demo-1),
+    and the run then paused or its process ended before the planner's hand-back round
+    finished, so the branch has no final test-design commit,
+  When the run is started again on the same authoring branch,
+  Then the test-designer is not dispatched again for the batch,
+  And no second hand-back design commit is made: the branch carries exactly one
+    hand-back design commit for pf-demo-1,
+  And the run continues with the planner's hand-back round for ACD-9990a-2's undecided
+    finding and then runs the requirement rule check for the hand-back stage
+    (itpo-handback), with the hand-back design commit as its before-state,
+  And when that check passes, the run reaches the final gate offering the 3 AC ids,
+  And given instead the branch carries a final test-design commit for pf-demo-1 and no
+    hand-back design commit,
+  When the run is started again,
+  Then that commit is read as the completed test-design stage and not as the hand-back
+    design, so no hand-back round is started on resume because of it,
+  And given instead the branch carries only the hand-back design commit,
+  When the run is started again,
+  Then that commit is not read as the completed test-design stage, so the final gate and
+    the final test-design commit are still ahead of the run.
+depends_on:
+  - ACD-2500a-2-ix
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500a-2-ix.yaml
+    relationship: related
+    status: exists
+    relevance: The parent record whose it_requirement adds the hand-back design commit this record makes resumable.
+  - path: docs/reference/plan-feature-workflow-rationale-gates.md
+    relationship: describes
+    status: exists
+    relevance: "Approval step and hand-back check: why the hand-back commit carries its own label and must not be read as the finished test-design stage."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1500-safe-ac-authoring-delivery/BO-1500b-2.yaml
+    relationship: related
+    status: exists
+    relevance: The general rule that a resumed run starts from the first stage that had not committed.
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+    relevance: Canonical source of the resume scan of committed stages and of the hand-back round.
+  - path: docs/reference/plan-feature-workflow-rationale-helpers.md
+    relationship: describes
+    status: exists
+    relevance: "Crash-resume stage skip and stage output recovery: the rationale the new resume case extends."
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+it_requirements:
+  - 'The resume scan maps the plan-feature(TEST-DESIGN-HANDBACK) subject to its own stage key, distinct from
+    test-design, by exact label match: neither label is ever read as the other, in the scan of committed
+    stages or in the recovery of AC ids from commit bodies.'
+  - 'Recognising the key is not enough on its own: the hand-back round is not a pipeline step but runs inside
+    the test-design step before the final gate, so the test-design step must act on the key. With the hand-back
+    key committed and no test-design key, the resumed run does not dispatch the test-designer, takes the
+    batch ids from the hand-back commit body (AC IDs line, same run-id), makes no new hand-back design commit,
+    continues with the hand-back round and its itpo-handback check, and then reaches the final gate and
+    the final TEST-DESIGN commit.'
+  - 'On that resume the test-design stage check is not re-run against HEAD (the batch is unchanged since the
+    hand-back commit, so the check would see no changed record and fail closed); the hand-back commit stands
+    as evidence that the test-design check passed, because that commit is only made after it passes.'
+  - 'The itpo-handback check on resume uses --before-ref HEAD with HEAD being the existing hand-back design
+    commit; nothing is committed between resume and that check.'
+  - 'Fail-closed: a resumed run never reaches the final gate with record edits made after the hand-back commit
+    that the itpo-handback check has not passed, including the case where the planner had already decided
+    every finding before the process ended and no finding is left undecided.'
+  - 'Resume is idempotent: resuming the same run on the same branch any number of times leaves exactly one
+    hand-back design commit per run id and keeps the two-round cap of the hand-back per run.'
+  - 'A run paused at the final gate and resumed with its answer keeps its current behaviour: no test-design
+    dispatch and no hand-back round are started again.'
+  - 'The resumed run logs that it resumed from the hand-back design commit and which stage it continues with,
+    using the workflow''s existing log channel.'
+  - 'templates/workflows-js/plan-feature.js is over its size limit and its measured length must not grow
+    (GE-127b-1 growth ratchet): lines added are paid for by lines removed or by rationale comments moved
+    to docs/reference/plan-feature-workflow-rationale*.md.'
+  - Canonical sources only; deployed and installed copies are regenerated by the build and never hand-edited
+    (ADR-001).
+test_intent:
+  - clause: the test-designer is not dispatched again for the batch
+    needs_test: true
+    reason: Re-dispatching the designer on resume is the defect this record fixes, and only a resumed run shows it.
+  - clause: 'no second hand-back design commit is made: the branch carries exactly one hand-back design commit
+      for pf-demo-1'
+    needs_test: true
+    reason: The round-1 commit runs inside the hand-back loop, so a resume that re-enters the loop would commit
+      the design a second time.
+  - clause: the run continues with the planner's hand-back round for ACD-9990a-2's undecided finding and then
+      runs the requirement rule check for the hand-back stage (itpo-handback), with the hand-back design commit
+      as its before-state
+    needs_test: true
+    reason: The hand-back round lives inside the test-design step, so skipping or wholly re-running that step
+      on resume would drop the round or check it against the wrong before-state.
+  - clause: when that check passes, the run reaches the final gate offering the 3 AC ids
+    needs_test: true
+    reason: The batch ids must be recovered from the hand-back commit body, and a missed recovery would offer
+      an empty or partial batch at the gate.
+  - clause: given instead the branch carries a final test-design commit for pf-demo-1 and no hand-back design
+      commit
+    needs_test: false
+    reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+  - clause: that commit is read as the completed test-design stage and not as the hand-back design, so no hand-back
+      round is started on resume because of it
+    needs_test: true
+    reason: A label match that also accepted the longer or shorter label would start a hand-back round after
+      the stage already finished.
+  - clause: given instead the branch carries only the hand-back design commit
+    needs_test: false
+    reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+  - clause: that commit is not read as the completed test-design stage, so the final gate and the final test-design
+      commit are still ahead of the run
+    needs_test: true
+    reason: Mapping the hand-back label to the finished stage would skip the final gate and the final commit,
+      so the batch would never be approved.
+test_spec:
+  - name: test_resume_after_handback_commit_does_not_redispatch_test_designer
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py, mirroring test_handback_commit_subject_is_not_read_as_the_final_test_design_stage with labels(...) and run(table) from _handback_support.py: the real plan-feature.js run under run_workflow_under_e2 on the technical route, scan-committed-stages listing plan-feature(TEST-DESIGN-HANDBACK) and plan-feature(IT-PO) commits and no TEST-DESIGN commit; resume-log carries both bodies with AC IDs ACD-9990a-1, ACD-9990a-2, ACD-9990a-3 and run-id pf-demo-1; approval-holds served by_round (before round 1: ACD-9990a-2 file finding undecided; after: nothing held). No stage-test-design-author dispatch happens.'
+    proves_clause: the test-designer is not dispatched again for the batch
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - the resume scan ignores the hand-back subject and the whole test-design step runs again, as today
+  - name: test_resume_makes_no_second_handback_commit
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: the same resume, run twice with the same table (resume repeated); in each run no commit-stage-output dispatch carries the subject plan-feature(TEST-DESIGN-HANDBACK), so the branch keeps the one hand-back design commit for pf-demo-1.'
+    proves_clause: 'no second hand-back design commit is made: the branch carries exactly one hand-back design commit for pf-demo-1'
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - the round-1 hand-back commit is made again on resume, as today
+  - name: test_resume_runs_handback_round_then_itpo_handback_check_on_head
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: the same resume; it-po-findings-round-1 is dispatched and its instructions name ACD-9990a-2, then rule-check-itpo-handback is dispatched with --stage itpo-handback and --before-ref HEAD in its command; no rule-check-test-design and no commit-stage-output dispatch happens between scan-committed-stages and that check.'
+    proves_clause: "the run continues with the planner's hand-back round for ACD-9990a-2's undecided finding and then runs the requirement rule check for the hand-back stage (itpo-handback), with the hand-back design commit as its before-state"
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_resume_with_no_undecided_finding_still_runs_itpo_handback_check
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: the same resume, but approval-holds reports nothing undecided (the planner had decided every finding before the process ended); rule-check-itpo-handback is still dispatched before any final-gate pause, and when it replies verdict failed the run does not pause at final-gate.'
+    proves_clause: "the run continues with the planner's hand-back round for ACD-9990a-2's undecided finding and then runs the requirement rule check for the hand-back stage (itpo-handback), with the hand-back design commit as its before-state"
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - the hand-back check is skipped when no finding is left undecided, so edits made after the hand-back commit reach the final gate unchecked
+  - name: test_resume_after_handback_commit_reaches_final_gate_with_batch
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: the same resume with rule-check-itpo-handback passing; the run pauses at final-gate and the persisted gate context (gate_context from _handback_support.py) has all_acs and approvable equal to ACD-9990a-1, ACD-9990a-2 and ACD-9990a-3.'
+    proves_clause: when that check passes, the run reaches the final gate offering the 3 AC ids
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_final_test_design_commit_alone_starts_no_handback_round
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: scan-committed-stages lists plan-feature(TEST-DESIGN, final) and plan-feature(IT-PO) for pf-demo-1 and no hand-back commit; no it-po-findings-round-* dispatch, no rule-check-itpo-handback and no stage-test-design-author dispatch happens, and the ids recovered for the run are the final commit ids.'
+    proves_clause: that commit is read as the completed test-design stage and not as the hand-back design, so no hand-back round is started on resume because of it
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - a prefix label match reads the final TEST-DESIGN commit as the hand-back design and starts a hand-back round
+  - name: test_handback_commit_alone_leaves_final_gate_and_final_commit_ahead
+    target_dir: unit_tests/ac_driven_dev/file_findings/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: 'In unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix_a.py: scan-committed-stages lists only plan-feature(IT-PO) and plan-feature(TEST-DESIGN-HANDBACK); the run returns paused_awaiting_input at final-gate (never the Pipeline complete fall-through), and no commit-stage-output dispatch carries plan-feature(TEST-DESIGN, final) before that pause.'
+    proves_clause: that commit is not read as the completed test-design stage, so the final gate and the final test-design commit are still ahead of the run
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - the hand-back subject is mapped to the test-design stage key, so the step is skipped and the run ends without a final gate or final commit
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/agents/test-designer.md
+- templates/agents/ac-triage.md
+- templates/workflows-js/plan-feature.js
+- unit_tests/_workflow_engine_harness.py
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/workflows/test_acd_2100c_3_iv.py
+- unit_tests/ac_driven_dev/file_findings/_handback_support.py
+- unit_tests/ac_driven_dev/file_findings/test_acd_2500a_2_ix.py
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-2-ix
+  contract: "A mid-pipeline commit on the run's authoring branch (git log origin/main..HEAD) whose subject is
+    exactly 'plan-feature(TEST-DESIGN-HANDBACK): <component>' (no ', final' suffix) and whose body carries
+    the lines 'AC IDs: <comma-separated AC ids>' and 'run-id: <run id>'; it holds the test-design output
+    (test_spec, test-design authorship, file_findings and their opened-files lists) and is made once, before
+    hand-back round 1, only after the test-design stage check passed."
+origin_agent: business-analyst
+created: 2026-10-23
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-23'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-23'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+notes: |
+  Gap found 2026-10-23: /plan-feature commits the test design as
+  plan-feature(TEST-DESIGN-HANDBACK) before the hand-back round (ACD-2500a-2-ix), but the
+  resume scan of committed stages has no entry for that label, so a resumed run does not
+  see the stage as committed and designs and commits the batch again. The label is
+  deliberately not TEST-DESIGN, so the fix must not simply map it to the finished stage:
+  the final gate and the final commit still lie ahead.

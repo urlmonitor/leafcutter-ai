@@ -106,7 +106,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124c-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/17_TICKET-20261022-GE-124c-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -128,3 +129,4 @@ notes: |
   obligations for the whole tier: the hook file in both locations, the
   commit_guardian.json config section and manifest entry, and the deploy_map
   entry for the shared reader every sibling AC also imports.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

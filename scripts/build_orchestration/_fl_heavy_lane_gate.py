@@ -50,7 +50,7 @@ import yaml
 
 import gate_verdict_records as gvr
 from _fl_common import _LOG, _scan_test_root_for_covers_tags
-from project_python import resolve_project_python  # TQ-500f-3-v
+from project_python import resolve_project_python  # TQ-500f-3-vi
 from _fl_red_baseline_support import (
     _partition_newly_added,
     _resolve_git_baseline_context,
@@ -414,6 +414,6 @@ def heavy_lane_gate(
 # - 2026-10-22 [python-coder/TQ-500g-1-viii]: heavy_lane_gate gained the optional ``record`` key: the
 #   verdict of every outcome is written as red_baseline.json by gate_verdict_records (fail closed).
 #   The pass-record logic moved, unchanged, into _heavy_lane_gate_core.
-# - 2026-10-22 [python-coder/TQ-500f-3-v]: The not-applicable and reused
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: The not-applicable and reused
 #   verdicts name the PROJECT interpreter (project_python), the same one the
 #   reader now judges with, instead of the interpreter that launched the gate.# ====================================================================

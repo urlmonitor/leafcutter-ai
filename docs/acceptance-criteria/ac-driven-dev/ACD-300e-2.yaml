@@ -3,14 +3,14 @@ components:
   - ac_driven_dev
 readiness: approved
 priority: medium
-title: "PO v3 queries the knowledge graph during S1 to discover related L0/L1 nodes before framing"
+title: "The product owner queries the knowledge graph during S1 to discover related L0/L1 nodes before framing"
 component: ac-driven-dev
 level: L2
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the product-owner-v3 agent has reached S1 (Knowledge Acquisition)
+  Given the product-owner agent has reached S1 (Knowledge Acquisition)
     and has identified the target component for the user's request,
   When the agent executes its knowledge-acquisition steps,
   Then it invokes knowledge-query with a keyword derived from the user's request
@@ -46,13 +46,21 @@ it_requirements:
   - "Must not introduce dependencies on tools not already in the agent's allowed-tools list"
 delivers_to:
   agent: llm-expert
-  contract: "product-owner-v3.md template body contains a knowledge-query invocation block in S1 with instructions for keyword and component queries"
+  contract: "product-owner.md template body contains a knowledge-query invocation block in S1 with instructions for keyword and component queries"
 expects_from:
   ac_id: ACD-300e-1
-  contract: "knowledge-query is listed in skills_used frontmatter of product-owner-v3.md so the skill is available at runtime"
+  contract: "knowledge-query is listed in skills frontmatter of product-owner.md so the skill is available at runtime"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'names only after #1245/#1246: the -v3 agent names are now product-owner, business-analyst and it-po (templates product-owner.md, business-analyst.md, it-po.md). Behaviour unchanged; the delivers_to/expects_from contract texts still say -v3 and are left for the planner.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: rename stale workflow/agent/template names in contracts
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300e-2-i, ACD-300e-2-ii]
 implemented_by: []

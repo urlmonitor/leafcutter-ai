@@ -195,6 +195,7 @@ marked below.
 | `testing_context.max_test_duration_seconds` | integer | yes | `5` | Maximum allowed wall-clock duration for any auto-running test. Tests that exceed this limit must use `manual_test_suffix`. |
 | `testing_context.manual_test_suffix` | string | no | `_MANUAL` | Suffix appended to test function names excluded from the standard pre-commit suite (slow or DB-requiring tests). |
 | `testing_context.db_connection_test` | string | no | — | Connection string for the test database environment, e.g. `postgresql://<user>:<password>@<host>:<port>/<database>`. Used in `setUp` for DB-requiring tests. Ships with no default; each project must set its own address. |
+| `testing_context.test_command` | string | no | — | The command that runs the project's tests; the test runner runs a named file as `<test_command> <file>`, and falls back to `python -m pytest <file>` when it is unset. |
 | `testing_context.naming_pattern` | string | no | `test_*.py` | Glob pattern that test files must match. Enforced by the pre-commit hook and `test-runner`. |
 | `testing_context.test_output_rules` | string | no | `"Never write to project dirs; use tmp_path or %TEMP%"` | Human-readable constraint injected into `test-writer` prompts to prevent tests from writing to project directories. |
 

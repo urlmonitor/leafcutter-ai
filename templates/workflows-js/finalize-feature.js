@@ -444,8 +444,7 @@ const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '')
 // WORKSPACE-ANSWER-END
 
 const finalizeSlug = (epicArg || "finalize-feature").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "finalize-feature";
-const finalizeWorkspace = await workspaceObtain(
-  "python3 {{config.output_root}}/scripts/worktree.py ensure --kind feature --slug " + finalizeSlug, "Pre-flight");
+const finalizeWorkspace = await workspaceEnsure("Pre-flight", { kind: "feature", slug: finalizeSlug, outputRoot: "{{config.output_root}}" });
 if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace);
 
 const BRANCH = workspaceBranch(finalizeWorkspace.answer);
@@ -499,9 +498,7 @@ async function cleanupBaselineWorktree() {
   const path = baselineWorktreePath;
   baselineWorktreePath = null;
   try {
-    const removal = shellStepReply(await shellStepDispatch(
-      "python3 {{config.output_root}}/scripts/worktree.py remove --path \"" + path + "\" --force",
-      "cleanup-baseline-worktree", "Cleanup"), "cleanup-baseline-worktree");
+    const removal = shellStepReply(await shellStepDispatch(await workspaceRemoveCommand(path), "cleanup-baseline-worktree", "Cleanup"), "cleanup-baseline-worktree");
     if (!removal.ok) log("[finalize-feature][WARNING] baseline workspace " + path + " was not removed: " + removal.reason + " -- " + removal.received);
     scratchClearing = workspaceRemovalRecord(path, removal);
   } catch (err) {
@@ -515,8 +512,7 @@ async function cleanupBaselineWorktree() {
  * step is a shell-runner dispatch. status "declined" = an answer that was no usable result -- never "the step ran".
  */
 async function mainTestRun(slug, testIds, phaseName, stepLabel) {
-  const made = workspaceAcceptAnswer(await workspaceDispatch(
-    "python3 {{config.output_root}}/scripts/worktree.py ensure --kind scratch --slug " + slug, phaseName, stepLabel + "-workspace"));
+  const made = await workspaceMade(phaseName, { kind: "scratch", slug: slug, outputRoot: "{{config.output_root}}" }, stepLabel + "-workspace");
   if (!made.accepted) {
     const makerSaidNo = made.kind === "refused" || made.kind === "error";
     return { status: makerSaidNo ? "worktree_failed" : "declined", failures: null, sha: null, detail: made.reason + ": " + made.received };
@@ -1000,8 +996,6 @@ if (testPassed) {
   //   Tests in the recovered baseline → pre_existing; absent → regression.
   // Failure path: logs "targeted rerun unavailable" and falls back to the
   //   conservative null-baseline path (all failures = regressions, FIN-100c-9).
-  let recoveredBaselineFailures = null;
-
   if (baselineFailures === null && postMergeFailures.length > 0) {
     log(
       `[finalize-feature] step 3: baseline unavailable — attempting targeted rerun of ` +
@@ -1023,7 +1017,7 @@ if (testPassed) {
       // Success: forward recovered baseline to triage (FIN-100c-6).
       // recoveredBaselineFailures = intersection of post-merge failures and those
       // that ALSO fail on origin/main HEAD. Tests absent from it → regression.
-      recoveredBaselineFailures = recoveryInfo.recovered_failures;
+      const recoveredBaselineFailures = recoveryInfo.recovered_failures; // FIN-100c-15: scoped to its only use
       baselineFailures = recoveredBaselineFailures; // [] means clean baseline, never null
       log(
         `[finalize-feature] step 3 targeted rerun complete: ` +

@@ -62,6 +62,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _file_size_measure.rule_statement import MARKER as MEASUREMENT_RULE_MARKER
+from _file_size_ratchet import describe_measurement_rule
 from check_file_size import _classify_file
 from config import (
     CHECKED_EXTENSIONS,
@@ -125,6 +127,11 @@ _ADJACENT_EXT_LIMIT_PATTERN = re.compile(r'\.([a-zA-Z]{1,4})(?![a-zA-Z])"?\s*:?\
 # no-exemption claim it is, never as the opposite.
 _NO_EXEMPTION_PATTERN = re.compile(r"every changed file", re.IGNORECASE)
 _EXEMPTION_PATTERN = re.compile(r"only\s+(?:to\s+)?newly[\s-]?added|new[\s-]?files?[\s-]?only", re.IGNORECASE)
+
+# GE-127d-5: a published surface's measurement-rule passage starts at the fixed
+# marker and runs to the end of its table cell (" | ") or line, or to the end of
+# the text (a JSON comment string carries it last).
+_PASSAGE_END = re.compile(r" \| |\n")
 
 DISAGREEMENT_TOKEN = "DISAGREEMENT"
 INDETERMINATE_PREFIX = "INDETERMINATE: reason="
@@ -286,7 +293,26 @@ def _read_surface_claim_text(surface: str) -> str:
     return comment if isinstance(comment, str) else ""
 
 
-_SurfaceClaim = tuple[set[str], "bool | None", dict[str, int]]
+_SurfaceClaim = tuple[set[str], "bool | None", dict[str, int], "str | None"]
+
+
+def _extract_measurement_passage(text: str) -> str | None:
+    """Return *text*'s measurement-rule passage, marker included, or None when absent.
+
+    Args:
+        text: A surface's claim-relevant text.
+
+    Returns:
+        The passage from the ``MEASUREMENT RULE`` marker to the end of its
+        table cell, line or text -- compared WHOLE against the generated
+        statement, so a new sentence standing beside an old one still
+        disagrees. None when the surface carries no such passage at all.
+    """
+    start = text.find(MEASUREMENT_RULE_MARKER)
+    if start < 0:
+        return None
+    end = _PASSAGE_END.search(text, start)
+    return text[start : end.start() if end else len(text)].strip()
 
 
 def _gather_surface_claims(surfaces: list[str]) -> tuple[list[str], dict[str, _SurfaceClaim]]:
@@ -318,6 +344,7 @@ def _gather_surface_claims(surfaces: list[str]) -> tuple[list[str], dict[str, _S
             _extract_kinds(_in_scope_portion(text)),
             _extract_when_applies_claim(text),
             _extract_limit_claims(text),
+            _extract_measurement_passage(text),
         )
 
     return indeterminate, claims
@@ -364,25 +391,37 @@ def _disagreements_for_surface(
     enforced_kinds: set[str],
     enforced_exemption: bool,
     enforced_limits: dict[str, int],
+    enforced_rule: str,
 ) -> list[str]:
-    """Build every disagreement line for one surface, across all three facts.
+    """Build every disagreement line for one surface, across all four facts.
 
     Args:
         surface: The configured surface path, for the reported message.
-        claim: This surface's ``(kinds, when_applies, limits)`` claim, as
-            returned by ``_gather_surface_claims``.
+        claim: This surface's ``(kinds, when_applies, limits, passage)``
+            claim, as returned by ``_gather_surface_claims``.
         enforced_kinds: The real, enforced ``CHECKED_EXTENSIONS``.
         enforced_exemption: Whether the enforced rule exempts a modified
             file from its limit (always ``False`` since GE-127b-1).
         enforced_limits: The real, enforced ``FILE_LINE_LIMITS``.
+        enforced_rule: The full ``MEASUREMENT RULE: ...`` passage the
+            enforced measure generates.
 
     Returns:
         One line per fact this surface makes a claim about that disagrees
-        with the enforced side. Empty when every claim this surface makes
-        agrees.
+        with the enforced side -- and, for the measurement rule alone
+        (GE-127d-5), one line for a surface that makes NO claim, since every
+        published place must state it. Empty when everything agrees.
     """
-    kinds_claim, when_claim, limit_claims = claim
+    kinds_claim, when_claim, limit_claims, passage = claim
     lines: list[str] = []
+
+    if passage is None:
+        lines.append(f"{DISAGREEMENT_TOKEN}: {surface} carries no {MEASUREMENT_RULE_MARKER} passage")
+    elif passage != enforced_rule:
+        lines.append(
+            f"{DISAGREEMENT_TOKEN}: {surface} states a measurement rule ({passage!r}) "
+            f"that is not the rule in force ({enforced_rule!r})"
+        )
 
     if kinds_claim != enforced_kinds:
         lines.append(
@@ -426,11 +465,14 @@ def main() -> int:
         return 2
 
     enforced_exemption = not _enforced_applies_to_modified_files()
+    enforced_rule = f"{MEASUREMENT_RULE_MARKER}: {describe_measurement_rule()}"
 
     disagreements: list[str] = []
     for surface in surfaces:
         disagreements.extend(
-            _disagreements_for_surface(surface, claims[surface], enforced_kinds, enforced_exemption, FILE_LINE_LIMITS)
+            _disagreements_for_surface(
+                surface, claims[surface], enforced_kinds, enforced_exemption, FILE_LINE_LIMITS, enforced_rule
+            )
         )
 
     print(f"Compared {len(surfaces)} surface(s) against the enforced file-size rule.")
@@ -484,5 +526,14 @@ DECISION HISTORY
   commit_guardian.json's file_size._comment) is to correct the DOCUMENTATION
   to match the already-deliberately-widened enforced behaviour, never to
   restore the old exemption.
+- 2026-10-20 15:19 [python-coder]: GE-127d-5. Added the FOURTH fact, the measurement rule. The
+  enforced side is the statement the measure generates from probe behaviour
+  (describe_measurement_rule); the published side is each surface's passage from the fixed
+  MEASUREMENT RULE marker to the end of its table cell, line or text, compared WHOLE, so a new
+  sentence beside an old one still disagrees. For this fact alone silence is a disagreement: a
+  configured surface with no passage is named, because every published place must state the rule.
+  Unreadable surfaces stay INDETERMINATE. The _enforced_applies_to_modified_files probe writes
+  tokenizable content ("probe line N") for every checked extension.
+  (#EPIC-FilesStayWorkable/GE-127d-5)
 ====================================================================
 """

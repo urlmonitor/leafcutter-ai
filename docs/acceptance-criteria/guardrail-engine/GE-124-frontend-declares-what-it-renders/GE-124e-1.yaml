@@ -100,7 +100,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Named the new CI gate script and its ci.yml job modelled on the existing done-proof job (--mode ci-changed --base origin/<base_ref>, with install_shims), required the store to be read through the shared AC index rather than a second walker, and flagged that change_target may be a scalar OR a list so a naive membership test silently shrinks the selected set. Charged the CI tier's reachability floor here. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/32_TICKET-20261023-GE-124e-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -125,3 +126,4 @@ notes: |
   (GE-124e-3-i). Second, change_target is `anyOf string|array` in
   config/ac_store_schema.json — the scalar assumption is a real and silent
   selected-set bug, not a hypothetical.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

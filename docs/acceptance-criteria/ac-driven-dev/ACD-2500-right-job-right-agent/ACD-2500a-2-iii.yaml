@@ -99,3 +99,15 @@ notes: |
   Last clause is the line between this check and the planner: whether two descriptions
   mean the same thing is judgment (TKT-300a-3 keeps it with the planner). Named
   alteration: make the check compare description text -> the last clause goes red.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

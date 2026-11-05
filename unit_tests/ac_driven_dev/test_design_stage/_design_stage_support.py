@@ -31,6 +31,7 @@ for _extra in ("unit_tests", "unit_tests/ac_store", "scripts/ac_store"):
 import _workflow_engine_harness as harness  # noqa: E402
 from _acd_2500d_5_i_fixtures import run_prepass  # noqa: E402
 from _approval_holds import build_report  # noqa: E402
+from _plan_feature_harness_defaults import approval_apply_reply  # noqa: E402
 from _rule_check_fixtures import make_store, valid_record  # noqa: E402
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
@@ -98,7 +99,7 @@ def check_reply(passed: bool = True) -> dict:
 
 def labels(prepass: dict, holds: dict, designer=None, check=None, **overrides) -> dict:
     """Every label the technical route dispatches, with the new stage's replies supplied."""
-    table = {
+    table: dict[str, dict] = {
         "stage-0-triage": {"route": "technical", "existing_acs": [], "parent_l1_id": None, "rationale": "forced"},
         "stage-itpo-author": {"status": "ok", "acs_written": IDS, "message": "done"},
         "branch-check": {"output": "ac-authoring/test-design", "exit_code": 0},
@@ -108,7 +109,8 @@ def labels(prepass: dict, holds: dict, designer=None, check=None, **overrides) -
         "design-prepass": prepass,
         "stage-test-design-author": designer if designer is not None else designer_reply(),
         "rule-check-test-design": check if check is not None else check_reply(),
-        "approval-holds": holds,
+        "approval-holds": holds,  # the pre-gate report AND the approval step's dry run (ACD-300c-4)
+        "approval-apply": approval_apply_reply(holds),  # applies what the dry run released
     }
     table.update(overrides)
     return table

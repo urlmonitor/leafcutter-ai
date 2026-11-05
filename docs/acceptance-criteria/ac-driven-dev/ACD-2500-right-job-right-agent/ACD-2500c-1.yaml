@@ -137,3 +137,15 @@ notes: |
   IT-PO (2026-09-25): the code-aware agent is created and registered by ACD-2500d-5 (placed under
   ACD-2500d because ACD-2500c is at the 5-L2 cap). This AC writes the test-design procedure into
   that agent's template.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

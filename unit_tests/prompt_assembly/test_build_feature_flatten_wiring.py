@@ -325,7 +325,7 @@ class TestBuildFeatureFlattenWiring(unittest.TestCase):
         # The workspace guard must survive the rewire (BO-4300c-3: the old worktreeResult claim is replaced by
         # the accepted-answer guard, which stops the run on anything but a ready workspace).
         self.assertIn(
-            "workspaceObtain",
+            "workspaceEnsure",  # consumer_drift: the shared helper is now workspaceEnsure
             self.source,
             "build-feature.js no longer obtains its workspace through the shared helper. The workspace "
             "guard must be preserved after the rewire (BO-2000f-5, BO-4300c-3).",

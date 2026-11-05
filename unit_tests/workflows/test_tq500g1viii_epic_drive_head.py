@@ -32,8 +32,8 @@ def test_build_epic_recovers_once_at_drive_head_and_fails_closed():
     labels = fx.labels_of(result)
     recovers = fx.calls(result, fx.RECOVER)
     assert len(recovers) == 1, f"recover must run once per drive, however many batches and tickets: {labels}"
-    # The workspace guard (workspace-*) runs first by design; recover is the first step after it.
-    after_guard = [x for x in labels if not x.startswith("workspace-")]
+    # The workspace guard (read-workspace-marker, then workspace-verify) runs first by design; recover is the first step after it.
+    after_guard = [x for x in labels if not x.startswith("workspace-") and x != "read-workspace-marker"]
     assert after_guard[0] == fx.RECOVER, f"recover must be the first dispatch after the workspace guard: {labels}"
     assert labels.index(fx.RECOVER) < labels.index(fx.PLANNER), f"recover must run before the epic planner: {labels}"
     assert recovers[0].agent_type == fx.EXECUTOR, f"recover goes to command-step-runner, not status-checker: {recovers[0].agent_type}"

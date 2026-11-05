@@ -96,7 +96,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Forbade extending check_done_proof.py to also check declarations (the shortest path to one-failure-per-criterion and the exact substitution GE-124g forbids), allowed shared read-only infrastructure but no shared verdict, required both jobs to run on the same commit rather than one gating the other, and added the force-each-input-independently test that actually detects a short-circuit. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/35_TICKET-20261023-GE-124e-3-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -120,3 +121,4 @@ notes: |
   check_done_proof.py already walks every done AC and already has a --mode
   ci-changed surface. Adding a declaration check to it would be a small diff and
   would produce one tidy failure per criterion. That is the defect. Two gates.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

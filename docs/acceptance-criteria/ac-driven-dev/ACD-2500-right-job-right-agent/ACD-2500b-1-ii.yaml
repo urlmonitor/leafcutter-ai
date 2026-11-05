@@ -1,0 +1,134 @@
+id: ACD-2500b-1-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "The test-intent reader passes the type checker with no union-attribute finding"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the project's type checker, run with the project's own settings over
+    scripts/ac_store/_test_intent.py, reports a union-attr finding at lines 64-65 (an
+    attribute read on a value that can be None when a pattern does not match),
+  When the reader is changed so that the no-match case is handled before the attribute is read,
+  Then the type checker reports no finding for scripts/ac_store/_test_intent.py,
+  And for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change,
+  And a criteria text with no outcome clause gives the same result as before the change,
+    and raises no error.
+depends_on:
+  - ACD-2500b-1
+  - ACD-2500b-1-i
+doc_links:
+  - path: docs/reference/test-intent.md
+    relationship: describes
+    status: exists
+    relevance: The clause-matching rule the reader implements; behaviour must not change.
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+- The clause reader and the normalisation rule behave as before; the existing test-intent tests pass unmodified.
+- 'The finding is fixed in the code: no inline ignore comment and no change to the type checker''s settings.'
+declared_files:
+- path: scripts/ac_store/_test_intent.py
+  state: existing
+delivers_to: null
+expects_from: null
+test_intent:
+- clause: the type checker reports no finding for scripts/ac_store/_test_intent.py
+  needs_test: false
+  reason: The type checker run is the proof; a unit test cannot observe a static typing finding.
+- clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the count is
+    1", the reader returns the same clauses, in the same order, as before the change
+  needs_test: true
+  reason: The reader feeds every test-intent check, and a changed clause list would break them all silently.
+- clause: a criteria text with no outcome clause gives the same result as before the change, and raises
+    no error
+  needs_test: true
+  reason: The no-match case is exactly the code being changed, so its result must be pinned.
+test_spec:
+- name: test_outcome_clauses_unchanged_for_then_and
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'outcome_clauses(''Given a table,\nWhen the job runs,\nThen one row is written,\nAnd the
+    count is 1.\n'') returns exactly [''one row is written,'', ''the count is 1.''] (pinned literally:
+    today''s output), in that order.'
+  proves_clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change
+  code_file: scripts/ac_store/_test_intent.py
+- name: test_no_outcome_clause_returns_empty_without_error
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Criteria with Given/When only, plain prose lines that match no step keyword, and a non-string
+    value each return [] and raise nothing.
+  proves_clause: a criteria text with no outcome clause gives the same result as before the change, and
+    raises no error
+  code_file: scripts/ac_store/_test_intent.py
+- name: test_no_match_guard_keeps_other_lines
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'Bug-fix discrimination: criteria mixing non-matching lines with a Then header, ''-'' bullets
+    and a wrapped continuation line return today''s clauses unchanged.'
+  proves_clause: a criteria text with no outcome clause gives the same result as before the change, and
+    raises no error
+  code_file: scripts/ac_store/_test_intent.py
+  must_catch:
+  - a guard that returns [] at the first line the step pattern does not match
+  - a guard that skips non-matching lines and so drops bullet and continuation lines
+  - reading match.group(2) without a guard, which raises on a non-matching line
+- name: test_test_intent_reader_reachable_from_rule_check_cli
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: requirement_rule_check.py as a subprocess on a tmp store whose record has
+    the Then/And criteria above and one test_intent entry per clause: no ''test intent coverage'' finding;
+    control record with one entry missing gets exactly one ''missing'' finding.'
+  proves_clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change
+  code_file: scripts/ac_store/_test_intent.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-16'
+test_design_opened_files:
+- scripts/ac_store/_test_intent.py
+- unit_tests/ac_store/test_acd_2500b_1_i.py
+- unit_tests/ac_store/_rule_check_fixtures.py
+- scripts/ac_store/requirement_rule_check.py
+file_findings:
+- file: scripts/ac_store/_test_intent.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds outcome_clauses, whose step-line match at lines 64-65 is read without a None check.
+  decision: null
+file_findings_opened_files:
+- scripts/ac_store/_test_intent.py
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/08_TICKET-20261021-ACD-2500b-1-ii.md
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Item 8(c), first finding; introduced by EPIC-RightJobRightAgent (tickets 20/21,
+  ACD-2500b-1 and ACD-2500b-1-i). Placed here as the nearest honest parent. The example
+  clause texts are illustrative; the existing test-intent tests are the regression proof.

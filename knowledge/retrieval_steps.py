@@ -215,38 +215,74 @@ async def disclose_candidates(
         if item.limitations:
             out.status = "partial"
             out.truncated = True
-        if _include_context(request, candidate_work, remaining_candidates):
-            neighbors, edges = await service.backend.neighbors(
-                request.repository_id,
-                snapshot.generation_id,
-                [node.canonical_id],
-                HYBRID_EDGES,
-                min(request.budget.max_neighbors_per_seed, remaining_candidates - candidate_work),
-            )
-            validate_edges(edges, request.repository_id, snapshot.source_sha)
-            candidate_work += max(len(neighbors), len(edges))
-            for neighbor in neighbors[: request.budget.max_neighbors_per_seed]:
-                if (
-                    neighbor.source.repository_id != request.repository_id
-                    or neighbor.source.source_sha != snapshot.source_sha
-                ):
-                    invalid("foreign structural neighbor rejected")
-                item.related.append(
-                    {
-                        "canonical_id": neighbor.canonical_id,
-                        "title": neighbor.title,
-                        "kind": neighbor.kind,
-                    }
-                )
-            ids = {r["canonical_id"] for r in item.related} | {node.canonical_id}
-            item.relationships = [e for e in edges if e.source_id in ids and e.target_id in ids][
-                : request.budget.max_neighbors_per_seed
-            ]
-            if node.properties.get("status") in {"corrected", "superseded"} and not any(
-                e.edge_type in {"CORRECTED_BY", "SUPERSEDED_BY"} for e in item.relationships
-            ):
-                item.limitations.append("correction reference unresolved in retrieved scope")
+        # Appended before the optional context lookups so a deadline miss there keeps the
+        # evidence already gathered (the item is enriched in place below).
         out.evidence.append(item)
+        if _include_context(request, candidate_work, remaining_candidates):
+            try:
+                candidate_work = await _add_context(
+                    service, request, snapshot, node, item, remaining_candidates, candidate_work
+                )
+            except (KnowledgeError, ValueError):
+                # A rejected context lookup invalidates the item; only a deadline keeps it.
+                out.evidence.pop()
+                raise
+    return candidate_work
+
+
+async def _add_context(
+    service: KnowledgeService,
+    request: KnowledgeRetrievalRequest,
+    snapshot: ProjectionSnapshot,
+    node: Entity,
+    item,
+    remaining_candidates: int,
+    candidate_work: int,
+) -> int:
+    """Enrich one evidence item with structural neighbors and relationships in place.
+
+    Args:
+        service: Owner of the backend.
+        request: Disclosure level and resource limits.
+        snapshot: Immutable generation used to verify provenance.
+        node: Entity the item describes.
+        item: Evidence item enriched in place.
+        remaining_candidates: Candidate budget available for this page.
+        candidate_work: Work consumed so far.
+
+    Returns:
+        int: Candidate work including this item's neighbors and edges.
+    """
+    neighbors, edges = await service.backend.neighbors(
+        request.repository_id,
+        snapshot.generation_id,
+        [node.canonical_id],
+        HYBRID_EDGES,
+        min(request.budget.max_neighbors_per_seed, remaining_candidates - candidate_work),
+    )
+    validate_edges(edges, request.repository_id, snapshot.source_sha)
+    candidate_work += max(len(neighbors), len(edges))
+    for neighbor in neighbors[: request.budget.max_neighbors_per_seed]:
+        if (
+            neighbor.source.repository_id != request.repository_id
+            or neighbor.source.source_sha != snapshot.source_sha
+        ):
+            invalid("foreign structural neighbor rejected")
+        item.related.append(
+            {
+                "canonical_id": neighbor.canonical_id,
+                "title": neighbor.title,
+                "kind": neighbor.kind,
+            }
+        )
+    ids = {r["canonical_id"] for r in item.related} | {node.canonical_id}
+    item.relationships = [e for e in edges if e.source_id in ids and e.target_id in ids][
+        : request.budget.max_neighbors_per_seed
+    ]
+    if node.properties.get("status") in {"corrected", "superseded"} and not any(
+        e.edge_type in {"CORRECTED_BY", "SUPERSEDED_BY"} for e in item.relationships
+    ):
+        item.limitations.append("correction reference unresolved in retrieved scope")
     return candidate_work
 
 

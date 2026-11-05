@@ -4,7 +4,7 @@ description: "Lookup reference for the single hold-reason list, the hold_reason 
 type: reference
 status: active
 created: 2026-10-12
-last_updated: 2026-10-15
+last_updated: 2026-10-21
 components:
   - ac_store
   - ac_driven_dev
@@ -15,6 +15,7 @@ related_docs:
   - config/surface_craft_map.yaml
   - scripts/ac_store/_impl_readiness_gate.py
   - scripts/ac_store/assignment_quality.py
+  - scripts/ac_store/approve_acs.py
 ---
 
 # AC Readiness and Assignment Gates
@@ -141,6 +142,47 @@ python scripts/ac_store/assignment_quality.py --ac-id ACD-2 --surface a.py --sur
 Prints one JSON object and always exits 0 (advisory rollout, ADR-026). An unreadable map is
 logged to stderr and raises. The script deploys to `<root>/scripts/ac_store/` and the map to
 `<root>/config/` (`AC_STORE_DEPLOY_MAP`, `scripts/build_phases_ac_store.py`).
+
+---
+
+## `approve_acs.py` CLI
+
+`scripts/ac_store/approve_acs.py` is the store's one approval step: a person runs it by hand,
+and the `/plan-feature` final gate runs its deployed copy (`.leafcutter/scripts/ac_store/`,
+`RULE_CHECK_DEPLOY_MAP`, `scripts/build_phases_ac_store_rc.py`). It promotes records from
+`readiness: reviewed` to `approved` and never writes a record that `approval_hold_reason` holds.
+
+```bash
+python scripts/ac_store/approve_acs.py --goal ACD-1200 --json
+python scripts/ac_store/approve_acs.py --ac ACD-1200a-1
+python scripts/ac_store/approve_acs.py --ids ACD-1-1,ACD-1-2 --dry-run --json
+python scripts/ac_store/approve_acs.py --ids ACD-1-1,ACD-1-2 --priority high --json
+```
+
+| Argument | Description |
+|---|---|
+| `--goal GOAL_AC_ID` | Promote every reviewed leaf in the goal's `covered_by`. |
+| `--ac AC_ID` | Promote one record. |
+| `--ids ID,ID` | Approve exactly these records, each under its own id at any level; an id is never expanded to its children. Every id must be a plain id (no glob characters) and exist, its file's `id:` equal to it, before anything is written. A record that is not held is approved whatever its readiness (`draft`, or no `readiness` line, which is inserted); holds are checked first. |
+| `--priority P` | `critical`, `high`, `medium` or `low`, written with the approval (the `priority` line is inserted when the record has none). Required with `--ids` unless `--dry-run`; refused with `--goal`. |
+| `--ac-root DIR` | Store root to search; default `docs/acceptance-criteria/`. |
+| `--dry-run` | Write nothing. With `--json`, `approved` lists the ids that would be approved. |
+| `--json` | Print the report on stdout. |
+
+The report is `{"approved": [id], "held": [{id, file, reason}]}`; with `--ids` it also carries
+`already_approved: [id]` and `failed: [id]` (records whose write failed read-back). A record already at `approved` is listed there and not written, so
+running the same approval twice changes nothing and exits 0.
+
+In one write per record the step changes the `readiness` line, the `priority` line (when
+`--priority` is given) and appends exactly one `amended_by` entry (`action: approved`,
+`agent: approve_acs`, the date) after the entries already there. Every earlier byte of the
+record, including folded multi-line `amended_by` notes, is preserved, and the file keeps its own
+line endings. The file is then read back; if it does not parse, or does not read back approved
+with the earlier entries intact and the new entry last, the record is restored byte for byte, stderr
+names the file and the reason, and the id is listed in `failed`. The run goes on through the other
+ids, then exits 1 (records approved in the run stay approved).
+Exit codes: 0 success, hold or no-op; 1 not found, unreadable or failed read-back; 2 unexpected
+readiness.
 
 ---
 

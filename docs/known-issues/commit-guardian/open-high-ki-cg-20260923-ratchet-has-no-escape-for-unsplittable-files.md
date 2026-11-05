@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-09-23
-last_updated: '2026-10-14'
+last_updated: '2026-10-21'
 components:
   - commit_guardian
 related_docs:
@@ -24,7 +24,7 @@ related_docs:
   source file permanently unmaintainable through the sanctioned path, and the only way
   past it is `SKIP=check-file-size`, which trains people to skip the guard generally.
 - **Status:** open — no AC
-- **Occurrences:** 1
+- **Occurrences:** 2
 - **First seen:** 2026-09-23 · **Last seen:** 2026-09-23
 - **Where:** `templates/scripts/commit_guardian/check_file_size.py` and
   `_file_size_ratchet.py`; observed on `templates/workflows-js/plan-feature.js`
@@ -95,3 +95,12 @@ the line count". `//` and `#` comments are measured today (verified with
 `describe_measurement_rule`), so this section's earlier claim that the ratchet strips comments is
 wrong for those forms. Excluding all comment forms from the measure would also remove the
 restyling incentive. The user noted separate work is already shrinking the large workflow bodies.
+
+## Second occurrence (2026-10-21, user-approved skip)
+
+EPIC-RightJobRightAgentFollowUps' approval and plan-feature.js lane (ACD-300c-3/-4/-5, ACD-300c-5-i, ACD-2500a-2-ix)
+edits `templates/workflows-js/plan-feature.js`, which was already at 2,646 measured lines against a 400 limit. With 53
+lines edited or added (15 of them the required "Why why" word fixes), the ratchet demanded 2,593. A coder found
+only about 20-25 payable lines under the user's rules: no `//` comment run of 3+ lines was left to move, block
+comments are already unmeasured, and the E2 sandbox (ADR-030) lets no JS move to another file. The user chose a
+one-off `SKIP=check-file-size` for that commit (2026-10-21). A last savings pass found 2 more lines; with the review fixes the file grows from 2,646 to 2,664 measured lines.

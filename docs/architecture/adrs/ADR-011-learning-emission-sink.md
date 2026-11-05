@@ -47,7 +47,7 @@ emit a `knowledge_captured` event when it discovers something worth persisting:
 }
 ```
 
-This event is described in `agent_knowledge_system.md` §4 as going to
+This event was described in the original `agent_knowledge_system.md` §4 (before its 2026-10-25 rewrite) as going to
 `agent_telemetry.jsonl`. However, `agent_telemetry.jsonl` is also the sink for
 **all other agent operational events** — `agent_start`, `agent_signoff`,
 `agent_retry`, `agent_failure`, `supervisor_dispatch`, `epic_complete`, etc.

@@ -1,5 +1,5 @@
 id: GE-117c
-readiness: draft
+readiness: approved
 priority: medium
 title: "Each new decision-history note records the requirement behind the change"
 component: guardrail-engine

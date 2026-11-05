@@ -276,3 +276,25 @@ blind drop of this block would silently lose them (turning a
 visible double-count into an invisible under-count, which is worse).
 Union with de-duplication is therefore the only correct merge.
 ```
+
+## Approval step and hand-back check
+
+Explains: Why the final gate approves through approve_acs.py, why a failed step stops before the commit, and why the hand-back commit is labelled test-design-handback (ACD-300c-4, -4-ii, ACD-2500a-2-ix).
+
+```text
+Approval: the final gate's "approve" runs the deployed approve_acs.py as two
+deterministic dispatches, no agent edit: `--ids <batch> --dry-run --json` reports
+each id as releasable, held (with the reason) or already approved; `--ids <released>
+--priority <p> --json` is given only the released ids and re-checks every hold.
+The summary counts the apply run's approved and already-approved ids and names each
+held id with its reason.
+Failure: a non-zero exit of either run ends the run as status error, with the
+step's stderr, before the final commit and the delivery step. The step restores a
+record it could not read back; the run never claims it approved.
+Hand-back: the check (`--stage itpo-handback --before-ref HEAD`) judges the
+planner's edits against the batch as committed before the hand-back, so the
+test-design output is committed first, as plan-feature(TEST-DESIGN-HANDBACK). The
+label must not be TEST-DESIGN: scanCommittedStages() would read it as the finished
+stage and a resumed run would skip the stage that owns the final gate. A failed
+check (exit 1, a failed verdict, no readable report) stops the run before the gate.
+```

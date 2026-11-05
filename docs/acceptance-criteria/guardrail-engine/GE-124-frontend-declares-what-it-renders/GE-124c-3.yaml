@@ -112,7 +112,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-124c-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/22_TICKET-20261022-GE-124c-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -149,3 +150,4 @@ notes: |
   The pass record in scenario 2 is deliberately a RECORD, not a success banner.
   GE-124g-3 constrains how it may be counted, and GE-124e-5 constrains the
   language a pass may use.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

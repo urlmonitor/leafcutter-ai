@@ -98,7 +98,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Made the section set contractually equal to the check's emitted-code enum (and required that enum to be importable so the assertion is possible), required the block report to route to this page and asserted that routing from the check's real output, and added the second half of the untouched-file rule so the backfill does not read as a regression. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/24_TICKET-20261022-GE-124c-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -119,3 +120,4 @@ notes: |
   GE-124c has not yet named. Deriving the section set from the check's enum
   rather than from the two codes named here means the page stays correct
   whichever way that is settled.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

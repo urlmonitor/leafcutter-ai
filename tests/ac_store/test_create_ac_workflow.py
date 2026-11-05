@@ -12,7 +12,6 @@ Source ACs: ACD-300, ACD-300a, ACD-300a-1..3, ACD-300b..d and sub-ACs, TKT-100g
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -232,7 +231,7 @@ class TestStrategicRouteDispatch:
         if not WORKFLOW_IMPORT_OK:
             pytest.skip("create_ac_workflow module not yet implemented")
 
-        mock_triage_result = {
+        mock_triage_result: dict[str, object] = {
             "route": "strategic",
             "existing_acs": [],
             "parent_l1_id": None,
@@ -276,7 +275,7 @@ class TestBehavioralRouteSkipsPO:
         if not WORKFLOW_IMPORT_OK:
             pytest.skip("create_ac_workflow module not yet implemented")
 
-        mock_triage_result = {
+        mock_triage_result: dict[str, object] = {
             "route": "behavioral",
             "existing_acs": ["ACD-100a"],
             "parent_l1_id": "ACD-100a",
@@ -316,7 +315,7 @@ class TestTechnicalRouteSkipsPOAndBA:
         if not WORKFLOW_IMPORT_OK:
             pytest.skip("create_ac_workflow module not yet implemented")
 
-        mock_triage_result = {
+        mock_triage_result: dict[str, object] = {
             "route": "technical",
             "existing_acs": ["ACD-200a"],
             "parent_l1_id": None,
@@ -356,7 +355,7 @@ class TestCancelAtGatePreservesDrafts:
         if not WORKFLOW_IMPORT_OK:
             pytest.skip("create_ac_workflow module not yet implemented")
 
-        mock_triage_result = {
+        mock_triage_result: dict[str, object] = {
             "route": "strategic",
             "existing_acs": [],
             "parent_l1_id": None,
@@ -393,58 +392,7 @@ class TestCancelAtGatePreservesDrafts:
         assert result.get("status") in ("cancelled", "ok")
 
 
-# ---------------------------------------------------------------------------
-# AC-7: Final gate sets readiness: approved and priority
-# ---------------------------------------------------------------------------
-
-class TestFinalGateSetsApprovedAndPriority:
-    """AC-7: final gate user selects priority, all ACs get readiness: approved"""
-
-    def test_final_gate_sets_approved_and_priority(self) -> None:
-        # covers: UNKNOWN
-        """After final gate approval with priority=high, all ACs get readiness: approved + priority: high."""
-        if not WORKFLOW_IMPORT_OK:
-            pytest.skip("create_ac_workflow module not yet implemented")
-
-        mock_triage_result = {
-            "route": "technical",
-            "existing_acs": [],
-            "parent_l1_id": None,
-            "rationale": "Technical constraint.",
-        }
-
-        def mock_dispatch(agent_name: str, **kwargs: object) -> dict:
-            if agent_name == "it-po":
-                return {
-                    "status": "ok",
-                    "acs_written": [
-                        {"id": "ACD-300c", "readiness": "reviewed"},
-                        {"id": "ACD-300c-1", "readiness": "reviewed"},
-                    ],
-                }
-            return {"status": "ok", "acs_written": []}
-
-        def mock_gate(stage: str, acs: list | None = None, **kwargs: object) -> dict | str:
-            if stage == "final":
-                return {"action": "approve", "priority": "high"}
-            return "approve"
-
-        mock_write_fn = MagicMock()
-
-        create_ac_workflow.run_authoring_pipeline(
-            triage_result=mock_triage_result,
-            user_request="Add rate limiting",
-            component="inventory",
-            dispatch_fn=mock_dispatch,
-            gate_fn=mock_gate,
-            write_ac_fields_fn=mock_write_fn,
-        )
-        # All ACs should be updated with readiness: approved + priority: high
-        # write_ac_fields_fn should have been called for each AC
-        assert mock_write_fn.called
-        for call_args in mock_write_fn.call_args_list:
-            fields = call_args.kwargs.get("fields") or call_args.args[1] if len(call_args.args) > 1 else {}
-            assert fields.get("readiness") == "approved" or mock_write_fn.called
+# AC-7 (final gate sets readiness: approved and priority) lives in test_create_ac_workflow_final_gate.py.
 
 
 # ---------------------------------------------------------------------------
@@ -465,7 +413,7 @@ class TestNoFilesWrittenToTickets:
         ac_dir = tmp_path / "docs" / "acceptance-criteria"
         ac_dir.mkdir(parents=True)
 
-        mock_triage_result = {
+        mock_triage_result: dict[str, object] = {
             "route": "technical",
             "existing_acs": [],
             "parent_l1_id": None,

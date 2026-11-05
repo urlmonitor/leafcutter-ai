@@ -1,0 +1,117 @@
+id: ACD-2500c-2-ii
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: approved
+priority: high
+title: "The test-design stage's shared test support passes the type checker with no missing-annotation finding"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the project's type checker, run with the project's own settings over
+    unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py, reports a
+    var-annotated finding at line 101 (a variable whose element type it cannot infer),
+  When that variable is given its type,
+  Then the type checker reports no finding for that file,
+  And every test in unit_tests/ac_driven_dev/test_design_stage/ passes, with the same
+    number of tests collected as before the change.
+depends_on:
+  - ACD-2500c-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500c-2.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+- 'The finding is fixed by a type annotation: no inline ignore comment and no change to the type checker''s
+  settings.'
+- The ticket records the number of tests collected in unit_tests/ac_driven_dev/test_design_stage/ before
+  and after the change.
+declared_files:
+- path: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+  state: existing
+delivers_to: null
+expects_from: null
+test_required: true
+test_intent:
+- clause: the type checker reports no finding for that file
+  needs_test: true
+  reason: A missing or wrong annotation is exactly what the type checker run reports, so running it
+    on the file is what catches a fix that did not land.
+- clause: every test in unit_tests/ac_driven_dev/test_design_stage/ passes, with the same number of tests
+    collected as before the change
+  needs_test: true
+  reason: An annotation written by changing the value instead of only typing it would alter the label
+    table every test in that suite builds its replies from.
+test_spec:
+- name: test_design_stage_support_has_no_type_checker_finding
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: 'Entry point: the type checker CLI. pytest.importorskip("mypy"), then run [sys.executable,
+    "-m", "mypy", "--ignore-missing-imports", "--explicit-package-bases", "--no-error-summary", "--cache-dir",
+    <tmp_path>, unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py] as a subprocess from
+    the repo root (the flags of the CI typecheck job, the project''s own settings). Asserts exit 0 and no
+    output line naming the file, and in particular no [var-annotated] line. Red today: line 101 reports
+    Need type annotation for "table" [var-annotated]. The new test file lives in unit_tests/ac_driven_dev/,
+    not in test_design_stage/, so it does not change that suite''s collected count.'
+  proves_clause: the type checker reports no finding for that file
+  code_file: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- name: test_design_stage_label_table_keeps_its_entries
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'Imports _design_stage_support (no workflow run) and calls labels(prepass, holds) with
+    sentinel objects: the result is a dict with exactly the 13 labels the technical route dispatches,
+    design-prepass and approval-holds are the passed objects, stage-test-design-author equals designer_reply()
+    and rule-check-test-design equals check_reply() when none are given, given designer and check replies
+    are used as passed, and a keyword override replaces an existing label and adds a new one. Guards the
+    value of the table the annotation types, which every test in test_design_stage/ builds its replies
+    from; the suite itself, run unchanged, and the before/after collected counts the ticket records are
+    the rest of the proof.'
+  proves_clause: every test in unit_tests/ac_driven_dev/test_design_stage/ passes, with the same number
+    of tests collected as before the change
+  code_file: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-21'
+test_design_opened_files:
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+- .github/workflows/ci.yml
+file_findings:
+- file: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the unannotated variable near line 101 that the type checker reports.
+  decision: null
+file_findings_opened_files:
+- unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by:
+- reason: 'test_required true: code AC needs tests at approval (check-ac-schema)'
+  date: '2026-10-21'
+  by: it-po
+- action: approved
+  agent: approve_acs
+  date: '2026-10-21'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/09_TICKET-20261021-ACD-2500c-2-ii.md
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Item 8(c), second finding; introduced by EPIC-RightJobRightAgent ticket 31 (ACD-2500c-2).
+  The third finding (unit_tests/test_generate_ticket_from_ac.py:1176/1204/1212, caplog typed
+  as object instead of pytest.LogCaptureFixture) is older than the epic and has no honest
+  parent here; the BA recommends a plain ticket for it.

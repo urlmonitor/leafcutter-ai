@@ -1,0 +1,89 @@
+id: GE-111f-1
+title: "A replaced skip or a skip in a brand-new test file is not reported as an added skip"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given check_contract_shrinking.py blocks a commit that both changes production code and
+    weakens tests, and it detects an added skip or expected-failure by matching each added
+    diff line against the skip/xfail weakening patterns
+  When a commit modifies an existing test file by replacing one skip with another of the
+    same kind — for example removing
+    `pytest.skip(f"live Neo4j not reachable: {exc}")` and adding
+    `pytest.skip(unreachable_reason(exc))` in the same file, so the file's skip count is
+    unchanged
+  Then the guard does not report "pytest.skip added" for that file, because per file and
+    per kind an added skip/xfail is a weakening only when the added count exceeds the
+    removed count
+  And when a commit adds a brand-new test file (diff status A) that contains a skip or an
+    expected-failure mark, the guard does not report it, because a new file cannot weaken
+    a test that existed before
+  And the guard still blocks a commit that adds a skip to an existing test file that had
+    none of that kind removed in the same diff
+  And the bug symptom ("check-contract-shrinking blocks a commit with 'pytest.skip added'
+    for (a) a one-for-one REPLACEMENT of an existing skip in a modified test file (8
+    violations on PR #1322: pytest.skip(f"live Neo4j not reachable: {exc}") replaced by
+    pytest.skip(unreachable_reason(exc)), skip count unchanged) and (b) a skip inside a
+    brand-new test file (three live-test builds on 2026-10-14). Every such commit needed
+    SKIP=check-contract-shrinking.") must not occur
+depends_on:
+  - GE-111f
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-111-traceability-stays-honest/GE-111f.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_contract_shrinking.py
+    relationship: related
+    status: exists
+    relevance: "The template source of the guard; scripts/commit_guardian/check_contract_shrinking.py is its build output and must stay in sync."
+  - path: docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-20261023-contract-shrinking-counts-moved-skips-as-added.md
+    relationship: related
+    status: exists
+    relevance: "The known-issue record for this defect, resolved by this AC."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Net skip/xfail weakenings per file and per kind: count added and removed matches of each skip/xfail pattern within one file's diff, and report a violation only for the excess of added over removed. Do not change how test deletions (GE-111f) are detected."
+  - "Ignore files whose diff status is A (newly added) for the skip/xfail weakening patterns. A new file cannot weaken an existing test."
+  - "Keep blocking a skip added to an existing test file where no skip of that kind was removed in the same file."
+  - "Edit templates/scripts/commit_guardian/check_contract_shrinking.py and keep scripts/commit_guardian/check_contract_shrinking.py (build output) byte-identical in the same change."
+test_spec:
+  - name: test_ge111f1_replaced_skip_in_modified_file_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A staged diff that removes pytest.skip(f\"live Neo4j not reachable: {exc}\") and adds pytest.skip(unreachable_reason(exc)) in the same existing test file, alongside a production-code change, yields no 'pytest.skip added' violation from check_contract_shrinking run against a real git repository."
+  - name: test_ge111f1_skip_in_new_test_file_is_not_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A newly added test file (status A) containing pytest.skip and an xfail mark, staged with a production-code change, yields no skip/xfail violation."
+  - name: test_ge111f1_net_new_skip_in_existing_file_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A skip added to an existing test file with no skip removed (or two added for one removed) is still reported and the hook exits non-zero — catches a wrong version that ignores all skips in modified files."
+test_rationale: "The defect is in how the guard nets diff lines per file, so only a test that stages a real diff in a git repository and runs the check can see it; a direct regex test proves the pattern matches, not that matches are netted or that status-A files are skipped. The discrimination case is load-bearing: an implementation that simply stops looking at skips would pass the first two tests, so the third must prove a genuine net-new skip still blocks."
+origin_agent: BrainCandy
+created: 2026-10-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_111f_1_contract_shrinking_net_skips.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_contract_shrinking.py
+change_target: code
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: The skip/xfail weakening patterns are matched against each added diff line in isolation: added skip lines are never netted against removed skip lines of the same kind in the same file, and files whose diff status is A (newly added) are judged even though a new file cannot weaken an existing test. Fix: per file, report a skip/xfail weakening only when the added count of that kind exceeds the removed count, and ignore files added in this diff; keep blocking a skip added to an existing test that had none. Recorded as KI-CG-20261023-contract-shrinking-counts-moved-skips-as-added (docs/known-issues/commit-guardian/open-low-ki-cg-20261023-contract-shrinking-counts-moved-skips-as-added.md); move it to resolved/ and update the register index when fixed. Note scripts/commit_guardian/check_contract_shrinking.py is the build output of the template and must stay in sync..
+  components uses commit_guardian (registered in docs/components.json), matching the parent GE-111f and its siblings; there is no guardrail_engine entry in components.json.

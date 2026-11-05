@@ -74,10 +74,22 @@ delivers_to:
   contract: 'Shared runner CLI (inputs: --ac-ids, --test-root, --ac-root, --base-ref, --alterations <manifest
     path>). It prints one JSON object: {gate_passed: bool, applicable: bool, verified: bool, outcome:
     str, reason: ''survivor''|''unfinished''|''failing on the code as written''|str|null, results: [{test:
-    str (pytest nodeid), wrong_version: str, result: ''caught''|''survived''|''did_not_load''|''not_applied''|''invalid''|''not_run''|''not_in_scope''|''not_applicable'',
-    blocking: bool, detail: str}], survivors: [{test: str, wrong_version: str}], unfinished: [{wrong_version:
-    str, result: str, detail: str}]}. It exits 0 when gate_passed is true, else 1. An empty --ac-ids gives
-    gate_passed true, applicable false, outcome ''wrong-version runs not applicable: no source requirement''.'
+    str (pytest nodeid), wrong_version: str, result: ''caught''|''survived''|''did_not_load''|''not_applied''|''not_executed''|''invalid''|''not_run''|''not_in_scope''|''not_applicable'',
+    blocking: bool, detail: str, alteration_id: str|null, source: str|null, replacements: [{path, old,
+    new}]|null, declared_by: [{ac_id, entry}] (declared names only)}], survivors: [{test: str, wrong_version:
+    str}], unfinished: [{wrong_version: str, result: str, detail: str}]}. It exits 0 when gate_passed is
+    true, else 1. An empty --ac-ids gives gate_passed true, applicable false, outcome ''wrong-version runs
+    not applicable: no source requirement''. Amended 2026-10-23: not_executed (TQ-500g-1-xiv) is an
+    unfinished, blocking result, never a survivor; alteration_id, source, replacements and declared_by are
+    additive row keys (TQ-500g-1-xv, -xvii), null on baseline rows.'
+- agent: python-coder
+  ac_id: TQ-500g-1-xi
+  contract: 'The same run JSON, read by the writer''s pin step to decide promotion: a prepared name is pinned
+    only when every row for it has result caught or survived.'
+- agent: python-coder
+  ac_id: TQ-500g-1-xiv
+  contract: 'The baseline run on the code as written (one pytest run over the in-scope tests, before any wrong
+    version) and the result rows and unfinished set of _wvr_verdict, which gain not_executed.'
 - agent: python-coder
   ac_id: TQ-500g-1-vi
   contract: Same CLI and JSON as for TQ-500g-1-v.
@@ -121,12 +133,16 @@ it_requirements:
   there catches nothing: the verdict is stop, with the reason ''failing on the code as written''.'
 - Only the in-scope tests run, selected by node id. Never the full suite. One pytest run per wrong version.
 - The verdict comes from the runs alone. Any claim field in the manifest (for example 'caught') is ignored.
-- Unfinished results (did_not_load, not_applied, could_not_prepare, invalid, not_run) set gate_passed
-  false, with reason 'unfinished'. That is distinct from reason 'survivor'.
+- Unfinished results (did_not_load, not_applied, not_executed, could_not_prepare, invalid, not_run) set
+  gate_passed false, with reason 'unfinished'. That is distinct from reason 'survivor'. not_executed
+  (amended 2026-10-23, TQ-500g-1-xiv) is a test whose own entry names the wrong version but which ran none
+  of its changed lines on the code as written; it is never counted caught or survived.
 - After each run the altered files are byte-identical to the code as written, and git status --porcelain
   is unchanged. The copies are kept as described in TQ-500g-1-iii. Per-work gate files (copies, journals,
-  manifests, lists, records) live under the worktree's own git directory (git rev-parse --git-dir, subfolder
-  leafcutter/). That keeps them outside the working tree, so git status is unchanged. It also keeps them
+  manifests, lists, records, and since 2026-10-23 the plan, the manifest history and the pins of
+  TQ-500g-1-xi/-xv) live under the worktree's own git directory (git rev-parse --git-dir, subfolder
+  leafcutter/). Whether pins should instead outlive the workspace is an open user decision recorded on
+  TQ-500g-1-xi. That keeps them outside the working tree, so git status is unchanged. It also keeps them
   private to the worktree, unlike the shared stash, lets them survive a crash, and lets a resumed drive
   find them. They are never committed.
 test_spec:
@@ -189,7 +205,11 @@ test_rationale: The rule is only real when it is proven on real runs. So every t
   The reachability test goes through the CLI every route calls.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+- reason: "Technical reconciliation with TQ-500g-1-xi, -xiv, -xv and -xvii (IT-PO pass 2026-10-23): the result vocabulary gains the unfinished value not_executed; result rows gain the additive keys alteration_id, source, replacements and declared_by; delivers_to gains TQ-500g-1-xi (pin promotion reads the verdict) and TQ-500g-1-xiv (the traced baseline); the per-work gate files list gains the plan, history and pins. Criteria unchanged."
+  date: '2026-10-23'
+  by: it-po
+  directed_by: orchestrator (wrong-version pinning IT-PO brief); not yet user-approved
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -235,3 +255,13 @@ notes: |
   (for example on a None result) reads as did-not-load. That errs safe: the
   work stays unfinished, and nothing is counted as caught.
   Fast lane, python-coder, after TQ-500g-4 is done.
+
+  IT-PO RECONCILIATION (2026-10-23)
+  RESULT VOCABULARY gains not_executed (TQ-500g-1-xiv): unfinished, blocking,
+  never caught or survived. Rows gain alteration_id, source, replacements and
+  declared_by (TQ-500g-1-xv, -xvii). The documented vocabulary lives on the
+  TQ-500g-5 reference page, docs/reference/wrong-version-runs.md, which is
+  planned and not yet written; TQ-500g-5's it_requirements now name the new
+  words. templates/agents/sql-test-writer.md quotes the result words and needs
+  not_executed added (documentation follow-up). The build of these changes is
+  TQ-500g-1-xiv's and -xv's; this record only states the contract.

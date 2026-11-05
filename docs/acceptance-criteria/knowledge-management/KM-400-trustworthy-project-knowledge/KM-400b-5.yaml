@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 parent: KM-400b
 criteria: |
   Given a source revision, mapping version and graph evidence baseline

@@ -523,7 +523,10 @@ def compute_intra_package_closure(script: Path, root: Path, data_root: Path | No
 
 
 def compute_intra_package_closure_with_deploy_root_relative(
-    script: Path, root: Path, data_root: Path | None = None
+    script: Path,
+    root: Path,
+    data_root: Path | None = None,
+    closure_cache: dict | None = None,
 ) -> tuple[set[str], set[str]]:
     """Compute the closure like ``compute_intra_package_closure``, tagging deploy-root-only entries.
 
@@ -554,6 +557,10 @@ def compute_intra_package_closure_with_deploy_root_relative(
             not resolve under *root*. Defaults to *root* (no split -- every
             entry is reported as family-relative, matching every caller's
             behaviour before this AC).
+        closure_cache: BP-900g-8 perf. One plain dict a caller creates per
+            guard pass and passes for every root of that pass; each file's
+            analysis is memoised in it. ``None`` (default) keeps the uncached
+            behaviour. Never module-level: nothing may outlive the pass.
 
     Returns:
         A ``(closure, deploy_root_relative)`` pair. ``closure`` is the same
@@ -568,7 +575,13 @@ def compute_intra_package_closure_with_deploy_root_relative(
     deploy_root_relative: set[str] = set()
     resolved_data_root = (data_root or root).resolve()
     _closure_walk(
-        script.resolve(), root.resolve(), set(), closure, deploy_root_relative, resolved_data_root
+        script.resolve(),
+        root.resolve(),
+        set(),
+        closure,
+        deploy_root_relative,
+        resolved_data_root,
+        closure_cache,
     )
     return closure, deploy_root_relative
 

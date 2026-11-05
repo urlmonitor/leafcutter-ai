@@ -514,13 +514,21 @@ Rules:
 **A record that already carries a `test_spec`** was written by an earlier planner
 and is protected: leave it untouched and add no `test_intent` to it.
 
-**`test_required: false`** — set this, with no `test_intent`, when the AC
+**`test_required: false`** — write this together with a `test_rationale`, as one
+declaration and never the first alone, and with no `test_intent`, when the AC
 genuinely produces no executable behaviour (for example `change_target: prompt`
 or `docs`, a prompt- or docs-only change). It records the decision explicitly so
-test-writer skips with an accurate reason.
+test-writer skips with an accurate reason. The `test_rationale` is written for
+this record: it names what the deliverable is and why no executable test can
+observe it. One sentence reused across records, or text filled in from the
+record's `change_target`, is not a reason, and `check-ac-schema` refuses
+identical reasons (BO-2500a-8-v). The commit-time record check refuses the
+declaration without a reason (BO-2500a-8-i) and the done gate refuses it at mark
+time (BO-2500a-1-ii). Which records may be declared test-free is set by TQ-400e-6
+and `docs/reference/test-free-declarations.md`; follow those, do not restate them.
 
 The `check-ac-schema` commit check rejects an approved leaf code AC that has no
-`test_spec` and no `test_required: false`. It also rejects `test_intent` alone,
+`test_spec` and no `test_required: false` with its `test_rationale`. It also rejects `test_intent` alone,
 with no `test_spec`, as "test design pending". It accepts a legacy `test_spec`
 that has no intent.
 
@@ -783,7 +791,7 @@ the new child AC files and update the original's status.
 - Add `assigned_agent`, `estimated_complexity`, `declared_files` (before
   `it_requirements`, see 2.2b), `it_requirements`,
   `delivers_to`, `expects_from` and `doc_links` fields. Add `test_intent` (or
-  `test_required: false`, see 2.7). On a package-surface record also add
+  `test_required: false` with its record-specific `test_rationale`, see 2.7). On a package-surface record also add
   `hold_reason: reference file pending` (see 2.3).
 - For splits: write new files, then update original with `superseded_by`
 - Validate that every enriched file has a non-null `assigned_agent`
@@ -822,7 +830,7 @@ Before presenting the confirmation gate, verify:
        referenced pattern (only instance-specific implementation constraints
        are added).
 [ ] 12. Every leaf code AC has one `test_intent` entry per Then/And outcome clause
-       (or `test_required: false` for prompt- or docs-only work), with no test name,
+       (or `test_required: false` with its own `test_rationale` for prompt- or docs-only work), with no test name,
        directory, framework, type, angle, strategy, isolation level or `must_catch`.
 [ ] 13. Every package-surface record carries the four planner-owned it_requirements
        fields and hold_reason: reference file pending, and no reference_file_path.

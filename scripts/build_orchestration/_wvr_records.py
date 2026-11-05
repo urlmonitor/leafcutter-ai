@@ -137,6 +137,12 @@ def declared_names(records: dict[str, dict | None]) -> tuple[set[str], list[str]
     return declared, unavailable
 
 
+def requires_db_names(records: dict[str, dict | None]) -> set[str]:
+    """Return the ``test_spec`` entry names that declare ``requires_db: true`` (never inferred from code)."""
+    return {entry["name"] for record in records.values() for entry in (record or {}).get("test_spec") or []
+            if isinstance(entry, dict) and entry.get("name") and entry.get("requires_db") is True}
+
+
 def covers_tags(test_root: Path, ac_ids: list[str]) -> list[dict]:
     """Return the ``# covers:`` tags of *ac_ids* under *test_root* (same dicts and order as the full scan).
 

@@ -95,7 +95,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Named the four stores by their real on-disk locations, recorded which hops verifiably exist today (mockup.screen -> step.screen -> step.implements) and which does not (built page -> design), required covering tests to be drawn OFF the chain so the picture cannot teach GE-124g's substitution, and pointed at c3-005-artifact-knowledge-graph.md to extend rather than compete with. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/43_TICKET-20261023-GE-124f-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -114,3 +115,4 @@ notes: |
   GE-124g-2), and a picture that joins them would undo four ACs at a glance.
   Required in it_requirements that tests, if drawn at all, are visibly off the
   chain.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

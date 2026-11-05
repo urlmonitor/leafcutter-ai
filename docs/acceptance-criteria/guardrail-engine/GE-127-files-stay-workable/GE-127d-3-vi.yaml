@@ -1,0 +1,175 @@
+id: GE-127d-3-vi
+title: "One-line blocks, SQL and shell statements are counted as their expanded forms, and a joined statement is keyed as it would stand on its own line"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a covered JavaScript or TypeScript file holding a block written on one
+    line (`if (x) { a(); b(); }`, `function f() { return 1; }`,
+    `xs.forEach((x) => { a(x); b(x); })`, a type literal `{ a: string; b: number }`),
+  When it is measured,
+  Then it measures what the same block measures with its opening brace, each
+    statement and its closing brace on lines of their own,
+  And an object literal or destructuring pattern on one line (`{ a: 1, b: 2 }`,
+    `const { a, b } = o`), an empty block, and braces inside a string are not
+    split,
+  And given a covered SQL file holding several statements on one line, inside or
+    outside a dollar-quoted function body,
+  When it is measured,
+  Then each statement counts as a line, and a `;` inside a string, identifier or
+    comment does not split a line,
+  And given a covered shell script holding several commands on one line
+    (`a; b`, `if x; then y; fi`, `for i in 1 2; do echo $i; done`),
+  When it is measured,
+  Then it measures what the same script measures with one command per line,
+    while a `&&` or `||` list, a `;` inside a quote or substitution, and the words
+    `then`, `do` or `else` used as arguments (`echo do it`) do not split a line,
+  And given a tracked file already over its limit and a staged change whose only
+    effect is joining a Python compound body onto its header (`if x: y`), writing
+    a JavaScript block on one line, or joining SQL or shell statements, or the
+    reverse of any of these, with the file indented in its language's usual unit
+    (four spaces in Python, two elsewhere),
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome states that the change added 0 lines,
+    and the quoted length is the same before and after,
+  And the published measurement rule names SQL and shell among the languages that
+    count a line once per statement.
+depends_on:
+  - GE-127d-3
+  - GE-127d-3-v
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3-v.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Recorded the three residues this record closes: compound-body keys, one-line JS blocks
+      counting once per statement, and SQL/shell not being split.
+  - path: docs/reference/source-file-length-measurement.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+declared_files:
+  - path: templates/scripts/commit_guardian/_file_size_measure/spans.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/python_lines.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/c_family_lines.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/sql_lines.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/shell_lines.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/__init__.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_file_size_measure/rule_statement.py
+    state: existing
+it_requirements:
+  - >-
+    A BREAK CARRIES AN INDENT STEP. Each lexer returns (offset, step) pairs: step 1 after a
+    Python compound header's `:`, after a block's `{` and after shell `then`/`do`/`else`; step -1
+    before a block's `}` and before shell `fi`/`done`/`esac`/`else`/`elif` after a `;`; step 0
+    otherwise. spans.counted_keys moves the piece's indentation by one language unit per step
+    (registry: four spaces for Python, two for every other language), so a joined form and its
+    expanded form give identical keys when the file uses that unit.
+  - >-
+    A BLOCK IS A BRACE PAIR DIRECTLY HOLDING A `;` STATEMENT SEPARATOR (outside any parenthesis
+    opened since that brace). Object literals and destructuring patterns hold commas, not `;`,
+    so they never split; type literals and interface bodies whose members end in `;` split like
+    their one-member-per-line form. JSX expression containers and template `${}` are scanned in
+    their own context and are not blocks.
+  - >-
+    SQL breaks come from the same lexer pass that finds comments, after a `;` outside strings,
+    quoted identifiers and comments; breaks inside a dollar-quoted body are kept only when the
+    body lexes, exactly like its comments. Shell breaks come from the shell scanner, after `;`
+    or `;;` (a `;` before `then`/`do` keeps the header on its line) and after `then`/`do`/`else`
+    in command position only; a lone `;` that splits is uncounted punctuation in the key.
+  - >-
+    The independent TypeScript-compiler oracle applies the same block rule to the compiler's
+    own tokens and must agree with the measure on every tracked JS/TS file.
+test_spec:
+  - name: test_ge_127d_3_vi_one_line_blocks_measure_and_key_like_their_expanded_forms
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      One-line JS/TS blocks, Python compound bodies, joined SQL statements and joined shell
+      commands each measure, and key, exactly like their expanded forms.
+    must_catch:
+      - "brace lines of a one-line block not counted"
+      - "a joined compound body keyed with the header's indentation"
+  - name: test_ge_127d_3_vi_object_literals_strings_and_argument_keywords_do_not_split
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Object literals, destructuring, empty blocks, braces or `;` inside strings, SQL comments,
+      shell `&&`/`||` lists, substitutions and `echo do it` each measure their code lines.
+    must_catch:
+      - "every brace pair treated as a block"
+      - "shell keywords split outside command position"
+  - name: test_ge_127d_3_vi_joining_or_splitting_blocks_on_an_over_limit_file_adds_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Through the gate in a temporary repository, on over-limit .py, .js, .sql and .sh files,
+      a join-only change and its reverse each complete, state 0 added and quote equal lengths.
+  - name: test_ge_127d_3_vi_the_published_rule_names_sql_and_shell
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The generated rule's per-statement clause names Python, JavaScript, TypeScript, SQL and
+      shell under the real measure.
+test_rationale: |
+  The discrimination descriptor fails on the GE-127d-3-v measure (blocks counted once per
+  statement, compound bodies keyed at the header's indentation, SQL and shell unsplit). The
+  boundary descriptor guards the false splits a brace or keyword rule invites. The gate
+  descriptor proves the repayment diff, not only the length, is unmoved by joining in both
+  directions, which is what the indent-aware keys exist for.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-3-v
+  contract: >-
+    Statement breaks from every lexer, split in spans.counted_keys.
+origin_agent: BrainCandy
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  REQUESTED BY BRAINCANDY, 2026-10-25 ("quick-fix each of the still open items"), closing the
+  three residues GE-127d-3-v accepted.
+
+  MEASURED IMPACT, 2026-10-25, over every tracked covered file against main's measure: 50 of
+  3558 files measure higher, all JS/TS from one-line blocks (largest +120
+  templates/workflows-js/plan-feature.js, already over its limit; most others +2), none crosses
+  its limit. No tracked SQL or shell file holds joined statements. Both independent oracles
+  (ast for Python, the TypeScript compiler's tokens for JS/TS) agree with the measure on every
+  tracked file: 3347 .py, 205 JS/TS, 0 disagreements.
+
+  KNOWN RESIDUE, ACCEPTED. Keys match the expanded form only when the file indents in the
+  language's usual unit; a file indented otherwise still measures the same, and only the
+  repayment diff can differ. A JavaScript statement without a `;` (relying on ASI) inside a
+  one-line block does not make the braces a block.
+

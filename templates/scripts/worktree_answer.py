@@ -30,17 +30,17 @@ from typing import Any, NoReturn
 # field is compatible; renaming or removing one bumps it).
 ANSWER_SCHEMA_VERSION = 1
 
-# The COMPLETE BO-4300c-2 code enum (plus the legacy REFUSED code
-# worktree_admin still emits for a dirty/unpushed remove). REFUSED_CODES are
-# well-understood preconditions (status "refused", exit 2); every other code
-# is an "error" (exit 1; USAGE exits 64).
+# The COMPLETE BO-4300c-2 code enum (nothing else: REFUSED is not a contract
+# code and no answer carries it). REFUSED_CODES are well-understood
+# preconditions (status "refused", exit 2); every other code is an "error"
+# (exit 1; USAGE exits 64).
 ALL_CODES: frozenset[str] = frozenset({
     "OK", "NOT_FOUND", "INCOMPLETE", "OCCUPIED", "OCCUPIED_LEGACY_WORKTREE",
     "IN_PROGRESS", "NO_REPO", "AMBIGUOUS_REPO", "NO_HUB", "FETCH_FAILED",
     "GIT_FAILED", "NO_CONFIG", "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED",
     "WORK_AT_RISK", "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK",
     "PROCESS_HOLDS_FILES", "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE",
-    "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "USAGE", "INTERNAL_ERROR", "REFUSED",
+    "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET", "USAGE", "INTERNAL_ERROR",
 })
 REFUSED_CODES: frozenset[str] = frozenset({
     "NOT_FOUND", "INCOMPLETE", "OCCUPIED", "OCCUPIED_LEGACY_WORKTREE",
@@ -48,7 +48,6 @@ REFUSED_CODES: frozenset[str] = frozenset({
     "BOOTSTRAP_FAILED", "BOOTSTRAP_DIRTIED_TRACKED", "WORK_AT_RISK",
     "HOOKS_INACTIVE", "VERIFY_FAILED", "UNSENT_WORK", "PROCESS_HOLDS_FILES",
     "ON_PROTECTED_BRANCH", "TICKET_NOT_ON_BASE", "AMBIGUOUS_LINE", "BUILT_FOR_OTHER_TICKET",
-    "REFUSED",
 })
 EXIT_USAGE = 64
 
@@ -142,4 +141,7 @@ def forward_git_output(args: list[str], proc: subprocess.CompletedProcess) -> No
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/20)
 #   Added BUILT_FOR_OTHER_TICKET (refused): a ticket workspace already
 #   recorded for a different ticket (BO-400e-3-ix). (ADR-018)
+# - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/05]:
+#   Removed REFUSED from ALL_CODES and REFUSED_CODES: it is not a BO-4300c-2
+#   contract code and nothing emits it (M9d). (ADR-018)
 # ===========================================================================

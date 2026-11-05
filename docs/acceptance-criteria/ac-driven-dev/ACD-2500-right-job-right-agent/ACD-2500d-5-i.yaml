@@ -148,3 +148,15 @@ notes: |
   cap is not exceeded. BA to review the criteria at the final gate.
   BLOCKER FOR BUILD (caveat): the AC schema has no 'declared files' field and no to-be-created marker;
   today's declared surface is the doc_links -> files_touched derivation (ADR-010, KI-ACS-002).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

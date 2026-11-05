@@ -100,7 +100,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the opt-out examples to be executable in BOTH directions (accepted forms accepted, refused forms refused) against the real check, named the warn list by its real config key with a staleness test, made the in-file-versus-config asymmetry explicit, and carried GE-124g's no-escape-from-worth boundary onto the page most likely to be read by someone hunting for one. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/31_TICKET-20261023-GE-124d-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -118,3 +119,4 @@ notes: |
   loophole. GE-124g's boundary — escapes govern whether a file must declare,
   never what a declaration is worth — is therefore required content here, not
   only in GE-124g-5's reference.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

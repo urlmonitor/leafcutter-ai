@@ -1,0 +1,5 @@
+# Recorded BAD output: a one-sided, NULL-skipping check; an empty window passes it.
+def test_buy_volume_is_never_negative():
+    # covers: TQ-9302
+    window = [{"buy_volume": 4.0}, {"buy_volume": None}, {"buy_volume": 2.5}]
+    assert all(r["buy_volume"] >= 0 for r in window if r["buy_volume"] is not None)

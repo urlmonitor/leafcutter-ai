@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -64,7 +64,9 @@ estimated_complexity: M
 package_surface: false
 declared_files:
   - path: scripts/shared_block_identity.py
-    state: to_be_created
+    state: existing
+  - path: unit_tests/build_orchestration/test_bo_4300c_3.py
+    state: existing
 it_requirements:
   - >-
     The check reads INSTALLED routes under a location it is given (the deployed layout root),

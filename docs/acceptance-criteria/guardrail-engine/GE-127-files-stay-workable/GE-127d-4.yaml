@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -57,7 +57,7 @@ doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
     relationship: parent
     status: exists
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
     relationship: context
     status: exists
     relevance: >-

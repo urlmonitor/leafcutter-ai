@@ -1,5 +1,5 @@
 id: GE-117d-3
-readiness: draft
+readiness: approved
 priority: medium
 title: "A deliberately configured warn tier reports violations without blocking, and block is the default"
 component: guardrail-engine
@@ -29,22 +29,70 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117d.yaml"
     relationship: parent
     status: exists
-  - path: "scripts/commit_guardian/commit_guardian.json"
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
     relationship: configures
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    state: existing
 it_requirements:
-  - "The enforcement mode is read from this hook's config section in commit_guardian.json; the UNCONFIGURED default is block (first scenario) — a missing/empty mode key must resolve to block, never warn. Mirror the GE-100 warn-vs-block config precedent for the key shape."
+  - "The enforcement mode is read from this hook's config section in templates/scripts/commit_guardian/commit_guardian.json; the UNCONFIGURED default is block (first scenario) — a missing, empty or unrecognised mode value must resolve to block, never warn. Mirror the GE-100 warn-vs-block config precedent for the key shape, and ship the packaged config with the mode absent or set to block."
   - "In warn mode the guardrail exits 0 (commit proceeds) but emits the SAME per-item detail it would have blocked on, labeled as a warning; do not degrade the detail in warn mode."
-  - "Warn mode is the only non-block behavior permitted and is reachable only by deliberate configuration; do not add any other bypass. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Warn mode is the only non-block behavior permitted and is reachable only by deliberate configuration; do not add any other bypass. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117d-1
   contract: "The block/proceed decision and the violation report whose warn-tier variant this AC specifies"
+test_spec:
+  - name: test_ge_117d_3_absent_mode_key_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "With the hook's config section present but carrying no mode key, stage a missing declaration and run the hook: non-zero exit."
+    must_catch:
+      - "defaults to warn when the mode key is absent"
+  - name: test_ge_117d_3_warn_mode_proceeds_with_identical_item_detail
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the hook twice on the same staged index, once unconfigured and once with mode set to warn: the warn run exits 0, is labelled as a warning, and its per-item lines (file, surface, missing/invalid, declared value) equal the block run's."
+    must_catch:
+      - "emits a degraded or summary-only message in warn mode"
+  - name: test_ge_117d_3_empty_or_unrecognised_mode_value_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Set mode to '' and then to 'advisory': both runs exit non-zero on a missing declaration."
+    must_catch:
+      - "treats any value other than 'block' as warn"
+  - name: test_ge_117d_3_packaged_config_does_not_ship_warn
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Load the real templates/scripts/commit_guardian/commit_guardian.json and resolve this hook's effective mode through the hook's own config reader: it is block."
+test_rationale: |
+  The criteria lock a default and an opt-in, and a default is easiest to break by
+  configuration rather than by code. So the contract tests the default three ways: key absent,
+  value empty, and value unrecognised. It also reads the real packaged config, because the
+  cheapest way to ship warn-as-default is a one-line change to commit_guardian.json that no
+  code test sees. The warn test compares the per-item detail of a block run and a warn run on
+  the same index. Only that comparison catches a warn path that prints a vaguer summary.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Extended the default-to-block rule to empty and unrecognised mode values and to the packaged config; pointed configuration at the real templates/scripts/commit_guardian/commit_guardian.json; added change_target, declared_files, test_spec and test_rationale. criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

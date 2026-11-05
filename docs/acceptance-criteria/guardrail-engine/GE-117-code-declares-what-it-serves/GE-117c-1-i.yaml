@@ -1,5 +1,5 @@
 id: GE-117c-1-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "A new decision-history entry may inherit its enclosing symbol's AC unless it serves a different one"
 component: guardrail-engine
@@ -38,20 +38,72 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117c-1.yaml"
     relationship: parent
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "Determine the enclosing symbol of a new decision-history entry from the same ast parse used for GE-117b (map the entry's source line into the enclosing FunctionDef/ClassDef span); inheritance applies only when that enclosing symbol has a RESOLVED AC reference."
-  - "Precedence: an entry's OWN resolvable AC reference always wins over the enclosing symbol's (scenario 2); inheritance is a fallback only when the entry carries no own reference."
-  - "A module-level entry (no enclosing symbol) with no own reference has nothing to inherit and yields a missing verdict (scenario 3); do not silently pass it."
-  - "Reuse the shared _load_ac_by_id resolver for both the entry's own ref and the inherited ref; no separate resolution path. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "Determine the enclosing symbol of a new decision-history entry from the same ast parse used for GE-117b (map the entry's source line into the enclosing function/class span); inheritance applies only when that enclosing symbol has a RESOLVED AC reference."
+  - "Precedence: an entry's OWN AC reference always wins over the enclosing symbol's (scenario 2); inheritance is a fallback only when the entry carries no own reference. An own reference that fails to resolve yields 'invalid' and is never rescued by inheritance."
+  - "A module-level entry (no enclosing symbol) with no own reference has nothing to inherit and yields a missing verdict (scenario 3); the module docstring and neighbouring symbols are not inheritance sources."
+  - "Reuse the shared GE-124c-2-i resolver for both the entry's own ref and the inherited ref; no separate resolution path. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117c-1
   contract: "The per-entry decision-history verdict whose inheritance branch this edge case defines"
+test_spec:
+  - name: test_ge_117c_1_i_entry_inside_a_declared_symbol_inherits_its_ac
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new AC-less decision-history entry inside a public function whose docstring cites GE-900a-1 (present in the temp store): the entry's verdict is 'satisfied' and its declared_ref is GE-900a-1."
+  - name: test_ge_117c_1_i_entrys_own_reference_wins_over_the_symbols
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Inside a function citing GE-900a-1, stage a new entry citing GE-900a-2 (both present): verdict 'satisfied' with declared_ref GE-900a-2, not GE-900a-1."
+    must_catch:
+      - "lets the inherited enclosing-symbol reference override the entry's own reference"
+  - name: test_ge_117c_1_i_own_dangling_reference_is_not_rescued_by_inheritance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Inside a function citing GE-900a-1, stage a new entry citing GE-900z-9 (absent): verdict 'invalid', not 'satisfied'."
+    must_catch:
+      - "falls back to the enclosing symbol's AC when the entry's own reference fails to resolve"
+  - name: test_ge_117c_1_i_module_level_entry_has_nothing_to_inherit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new AC-less module-level entry in a module whose public functions all cite resolvable ACs: verdict 'missing'."
+    must_catch:
+      - "inherits from the module docstring or the nearest symbol for a module-level entry"
+  - name: test_ge_117c_1_i_unresolved_symbol_reference_is_not_inheritable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Stage a new AC-less entry inside a function whose own docstring cites a dangling id: the entry is not 'satisfied'."
+test_rationale: |
+  Inheritance has a precedence rule and two limits, so each gets a test. The criteria scenarios
+  are covered directly. Two boundary tests cover the wrong versions most likely to slip through.
+  One lets inheritance rescue an entry whose own ref is a typo, which hides the typo. The other
+  inherits from a symbol whose own ref does not resolve, which chains a dangling id into a
+  pass. Without these, an implementation can satisfy all three criteria scenarios and still
+  rubber-stamp entries the PO required to resolve to a real AC.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Pinned that an own dangling ref is never rescued by inheritance; re-pointed resolution to the shared GE-124c-2-i resolver; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

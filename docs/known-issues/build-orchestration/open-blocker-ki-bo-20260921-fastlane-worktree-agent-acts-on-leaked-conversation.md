@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-21'
-last_updated: '2026-09-25'
+last_updated: '2026-10-23'
 components:
   - build_orchestration
   - supervisor_system
@@ -17,10 +17,10 @@ related_docs:
 # KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards
 
 - **Severity:** blocker — the tool is designed for unattended single-argument use (`/fast-lane-build <AC-id>`), and in this run it destroyed a remote ref nobody asked it to touch. Unattended plus destructive plus acting on inferred intent is not a combination that can be left live.
-- **Status:** open. Observed 2026-09-21 (run `wf_e48f8d02-599`) and 2026-09-25 (run `wf_8ee46b70-c46`, see "Second occurrence" below).
+- **Status:** open, narrowed. Observed 2026-09-21 (run `wf_e48f8d02-599`) and 2026-09-25 (run `wf_8ee46b70-c46`, see "Second occurrence" below). Re-verified 2026-10-23: the fast lane no longer dispatches `worktree-agent` at all, and its claim step no longer runs on `status-checker` (defects 2 and 4 closed for the fast lane). Defect 3 (the removal gate) and defect 1 (the context leak) remain, and `worktree-agent` is still dispatched by `finalize-feature.js` and `plan-feature.js`; see "Re-verified 2026-10-23" at the end.
 - **Occurrences:** 2
 - **First seen:** 2026-09-21 · **Last seen:** 2026-09-25
-- **Where:** `templates/workflows-js/fast-lane-ship.js:674-700` (the `Worktree` phase `agent()` call) · `templates/agents/worktree-agent.md` (the agent type it dispatches)
+- **Where (as observed):** `templates/workflows-js/fast-lane-ship.js:674-700` (the `Worktree` phase `agent()` call, since replaced) · `templates/agents/worktree-agent.md` (the agent type it dispatched). **Where now (2026-10-23):** `templates/agents/worktree-agent.md:133-136` (the removal gate) · `templates/workflows-js/finalize-feature.js:1777` · `templates/workflows-js/plan-feature.js:1570, 1645, 1749, 2198`
 
 **What happened.** `Workflow({scriptPath: ".../fast-lane-ship.js", args: {ac: "TKT-500f-6"}})` was invoked to build one acceptance criterion. It performed **zero** work on `TKT-500f-6`. Instead the Worktree-phase agent returned:
 
@@ -124,3 +124,34 @@ mechanism is present in current code exactly as described.
 - Kept open per the decision rule: the mechanism is present and demonstrable in current code,
   regardless of how inconvenient it is to reproduce live (the entry's own reproduction note
   already explains why a deliberate repro is inadvisable).
+
+**Re-verified 2026-10-23 (origin/main `54efbdd31`):** the fast lane's own path to the damage
+is closed, and the defect has moved to the workflows that still dispatch `worktree-agent`.
+
+- **Defect 2 is closed for the fast lane.** `fast-lane-ship.js` no longer dispatches
+  `worktree-agent` anywhere. Its workspace step is the shared WORKSPACE-ANSWER block
+  (BO-4300c-3): one verbatim `worktree.py ensure` command sent to `shell-runner`, which runs
+  that one command and has no lifecycle actions of its own. A caller can also hand the maker's
+  answer in as `args.workspace`, and then no workspace agent is dispatched at all.
+- **Defect 4 is closed.** The resolve and claim steps run on `command-step-runner`
+  (`CLAIM_EXECUTOR_AGENT_TYPE`, `fast-lane-ship.js:1057`), whose role is to run one given command
+  in one named workspace. `status-checker` is still dispatched for two read-only steps: the
+  producibility guard (`fast-lane-ship.js:949`) and the scratch-item step (`:1318`).
+- **Defect 3 is still live.** `worktree-agent.md:133-136` still deletes on the user typing "yes",
+  with nothing requiring that "yes" to come from the run that dispatched it.
+- **Other dispatches of `worktree-agent` still give work to an agent that can delete:**
+  - `finalize-feature.js:1777` (`step-7-remove-worktree`): a removal by design, so the
+    caller-attribution fix in defect 3 is what protects it.
+  - `plan-feature.js:1570` (the pause-store read): a read-only job.
+  - `plan-feature.js:1645` and `:1749` (gate answer and pause persist): shell steps.
+  - `plan-feature.js:2198` (`scriptStepAgentId`, the stage-end script steps): kept on
+    `worktree-agent` because `shell-runner` declines their compound commands. The move is
+    tracked by `tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md`.
+
+  None of the `plan-feature.js` dispatches needs the removal action. They are the same
+  "capability the phase never needed" shape as defect 2.
+- **Defect 1 is unchanged.** Workflow agents can still read the parent conversation.
+- **Still no AC or test.** The next step is to author ACs through `/plan-feature`. One AC
+  requires a removal to proceed only on an authorization passed in by the dispatching
+  workflow, never on text the agent can read. Another moves the `plan-feature.js` read and
+  shell steps to an agent without removal.

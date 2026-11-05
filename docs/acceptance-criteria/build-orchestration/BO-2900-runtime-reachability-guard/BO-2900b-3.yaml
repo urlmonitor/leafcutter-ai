@@ -60,8 +60,16 @@ it_requirements:
     - "The invocation crosses a language boundary (JavaScript automation invoking a Python surface as a program), so the connection is the ARGUMENT the automation passes, not any language-level reference. Do not attempt to resolve it via imports or symbols."
     - "Surface identity must be resolved to a repo-relative path even when the command is built from a variable (e.g. `${gateScript}` bound to `${worktreePath}/scripts/build_orchestration/fast_lane.py`), so an invocation is attributed to the surface it actually runs. An unresolvable surface reference must be reported as such, never silently dropped — a silently dropped invocation makes a called capability look uncalled."
 delivers_to:
-  agent: python-coder
-  contract: "collected_invocations(script_paths) -> list[{ script: str, line: int, surface: str, capability: str }] from scripts/commit_guardian/_reachability_inventory.py. Consumed by BO-2900b-1 (which registered capabilities have a caller), BO-2900c-1 and BO-2900c-2 (which invocations name a capability that exists), and BO-2900a-3 condition (3) (is the unit run as a program by any automation)."
+  - agent: python-coder
+    contract: 'collected_invocations(script_paths) -> list[{ script: str, line: int, surface:
+      str, capability: str }] from scripts/commit_guardian/_reachability_inventory.py. Consumed
+      by BO-2900b-1 (which registered capabilities have a caller), BO-2900c-1 and BO-2900c-2
+      (which invocations name a capability that exists), and BO-2900a-3 condition (3) (is
+      the unit run as a program by any automation).'
+  - agent: python-coder
+    ac_id: BO-2500f-2-i
+    contract: collected_invocations(script_paths) -> list[{script, line, surface, capability}];
+      an invocation, never a name in text, is what makes a check wired.
 expects_from:
   ac_id: BO-2900c-4
   contract: "The derived set of automation-script paths to collect from — the automation scripts that exist at the time of the check, never a hardcoded list."

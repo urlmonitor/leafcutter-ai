@@ -18,6 +18,10 @@ ARCHITECTURE: `load_folder` returns (records, findings, files_seen); `records_ch
     <root>/scripts/ac_store/ (AC_STORE_DEPLOY_MAP).
 
 DECISION HISTORY:
+  - 2026-10-21 [python-coder/ACD-2500a-2-vi]: BeforeState keeps each committed record from the
+    one cat-file batch (`committed_record`, `has_fields`); Context gains `applied_repairs`.
+  - 2026-10-21 [python-coder/ACD-2500a-2-viii]: Context.has_before_state is the one test for
+    "a before-state exists": an unresolvable ref or unreadable snapshot counts as none.
   - 2026-10-14 [python-coder/ACD-2500a-1]: Created per the architect-review note
     (sections 1 and 7, D5-D8, D10).
 """
@@ -193,6 +197,7 @@ class BeforeState:
         self.snapshot = snapshot
         self.ref = ref
         self._by_file: dict[str, tuple[bool, Any]] = {}
+        self._committed: dict[str, dict[str, Any]] = {}
         self.error: str | None = None
 
     @classmethod
@@ -242,7 +247,9 @@ class BeforeState:
             pos = end + 1
             if len(header) == 3 and header[1] == b"blob":
                 size = int(header[2])
-                self._by_file[rel] = (True, _readiness_of(out[pos:pos + size]))
+                data = _committed_of(out[pos:pos + size])
+                self._committed[rel] = data
+                self._by_file[rel] = (True, data.get("readiness"))
                 pos += size + 1
             else:
                 self._by_file[rel] = (False, None)
@@ -255,14 +262,27 @@ class BeforeState:
         rid = str(record["id"])
         return (rid in snapshot, snapshot.get(rid))
 
+    def committed_record(self, record: Record) -> dict[str, Any] | None:
+        """The record as committed at the ref (ACD-2500a-2-vi); None when it did not exist there.
 
-def _readiness_of(blob: bytes) -> Any:
-    """The `readiness` of a committed record blob; None when it does not parse."""
+        {} means the committed file exists but does not parse. A snapshot holds readiness only,
+        so with no ref this is None as well; `has_fields` tells the two cases apart.
+        """
+        return self._committed.get(record.file)
+
+    @property
+    def has_fields(self) -> bool:
+        """True when the before-state holds full committed records (a git ref), not readiness only."""
+        return self.ref is not None and not self.error
+
+
+def _committed_of(blob: bytes) -> dict[str, Any]:
+    """The parsed committed record of a blob; {} when it does not parse (readiness then reads None)."""
     try:
         data = yaml.load(blob.decode("utf-8"), Loader=yaml.SafeLoader)  # noqa: S506
     except (yaml.YAMLError, UnicodeDecodeError):
-        return None
-    return data.get("readiness") if isinstance(data, dict) else None
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 @dataclass(eq=False)
@@ -275,7 +295,8 @@ class Context:
     check. surface_map_path: the --surface-map override or None. migration_map: the
     namespace-to-graph-ids map (--migration-map or the shipped one). before: BeforeState
     or None. changed_since: the --changed-since REV (checked set = changed files only) or None. families: the FAMILIES in force (the record-schema adapter reads their
-    CLAIMS_SUBJECTS).
+    CLAIMS_SUBJECTS). applied_repairs: {record file: [(field, how)]} the run's own repairs wrote,
+    so a family can tell the run's change from the stage's (ACD-2500a-2-vi).
     """
 
     repo_root: Path
@@ -295,6 +316,7 @@ class Context:
     _peer_cache: dict[Path, list[Record]] = field(default_factory=dict)
     _index: dict[str, Path] | None = None
     _store_cache: dict[str, Record | None] = field(default_factory=dict)
+    applied_repairs: dict[str, list[tuple[str, Any]]] = field(default_factory=dict)
 
     @property
     def wide(self) -> bool:
@@ -336,6 +358,11 @@ class Context:
             loaded = load_one(path, self.repo_root) if path else None
             self._store_cache[record_id] = loaded if isinstance(loaded, Record) else None
         return self._store_cache[record_id]
+
+    @property
+    def has_before_state(self) -> bool:
+        """True when a before-state was given AND could be read; an errored one counts as none."""
+        return self.before is not None and not self.before.error
 
     def before_state(self, record: Record) -> tuple[bool, Any]:
         """(existed at stage start, readiness then); (False, None) when no before-state is loaded."""

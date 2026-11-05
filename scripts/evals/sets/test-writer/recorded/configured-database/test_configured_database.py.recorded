@@ -1,0 +1,25 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestRefreshTotals(unittest.TestCase):
+    def setUp(self):
+        # The address comes from the project's setting; a missing setting raises and fails the test.
+        self.conn = psycopg2.connect(resolve_test_db_address(Path.cwd()))
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_refresh_totals_returns_the_totals_rows(self):
+        # covers: TQ-9401
+        with self.conn.cursor() as cur:
+            cur.execute("select count(*) from refresh_totals()")
+            self.assertGreaterEqual(cur.fetchone()[0], 0)

@@ -105,7 +105,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Pinned the membership-form selector `[data-ac~=]` and tied it back to GE-124b-1's whitespace-only value grammar (a comma would make every derived selector match nothing), required reuse of the repo's existing covers-tag parser (COVERS_TAG_RE, shared by done_proof.py and test_enforcement.py) rather than a second convention, kept the agreement check static, and added the back-door guard that a test using a non-derived selector is not a finding. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/42_TICKET-20261023-GE-124f-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -130,3 +131,4 @@ notes: |
   via a common regex. Front-end tests must use that same convention — inventing
   a second one would put this tree in the position GE-124c-2-i is written to
   fix, one namespace along.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

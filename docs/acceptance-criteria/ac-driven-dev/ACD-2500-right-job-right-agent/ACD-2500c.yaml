@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Test designs come from a step that can see the code under test.
 
@@ -60,3 +60,15 @@ notes: |
   (test-planner with source access) fills the test design. The test writer at build
   time consumes it; it does not author it. See ACD-2500 notes for the ACD-1600c /
   check-ac-schema readiness conflict this must resolve.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

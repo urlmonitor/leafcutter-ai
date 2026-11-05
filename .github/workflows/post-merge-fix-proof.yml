@@ -48,6 +48,10 @@ jobs:
       whole_lane: ${{ steps.verify.outputs.whole_lane }}
       failing_ids: ${{ steps.verify.outputs.failing_ids }}
       collected_ids: ${{ steps.verify.outputs.collected_ids }}
+      run_correctness: ${{ steps.verify.outputs.run_correctness }}
+      live_proof: ${{ steps.verify.outputs.live_proof }}
+      live_whole: ${{ steps.verify.outputs.live_whole }}
+      live_ids: ${{ steps.verify.outputs.live_ids }}
     steps:
       # The DEFAULT branch's scripts/ci only.
       - uses: actions/checkout@v4
@@ -93,6 +97,9 @@ jobs:
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       AC_ENFORCE_STRICT: "1"
+      # The live lane's database address and start-up limit (TQ-600a-13-xxv); read only by the live steps below.
+      LIVE_DB_ADDRESS: "127.0.0.1:17687"
+      LIVE_DB_STARTUP_LIMIT: "300"
     steps:
       # The default branch's harness at the workspace root (no ref) ...
       - uses: actions/checkout@v4
@@ -129,4 +136,22 @@ jobs:
           WHOLE_LANE: ${{ needs.prepare.outputs.whole_lane }}
           FAILING_IDS: ${{ needs.prepare.outputs.failing_ids }}
           COLLECTED_IDS: ${{ needs.prepare.outputs.collected_ids }}
+          RUN_CORRECTNESS: ${{ needs.prepare.outputs.run_correctness }}
         run: python scripts/ci/post_merge_fix_proof.py prove --head head --ini pytest.ini
+
+      # The live-database part (TQ-600a-13-xxv), only when the red run's live lane was red or did not complete. GitHub
+      # service containers are declared per job and cannot be conditional, so main's script starts the SAME three
+      # instances the live lane's services declare (scripts/ci/_live_lane.py INSTANCES) with `docker run`, and only here:
+      # a correctness-only proof starts no database. A failure of either step fails this job, so the job named
+      # `Post-merge fix proof` (the one conclusion the hold reads) is success only when every required part proved.
+      - name: Start the live databases
+        if: needs.prepare.outputs.live_proof == 'true'
+        run: python scripts/ci/post_merge_fix_proof.py start-live
+
+      - name: Prove the live-database tests against the head
+        if: needs.prepare.outputs.live_proof == 'true'
+        env:
+          RED_RUN_ID: ${{ needs.prepare.outputs.red_run_id }}
+          LIVE_WHOLE: ${{ needs.prepare.outputs.live_whole }}
+          LIVE_IDS: ${{ needs.prepare.outputs.live_ids }}
+        run: python scripts/ci/post_merge_fix_proof.py prove-live --head head --ini pytest.ini

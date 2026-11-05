@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -43,6 +43,8 @@ estimated_complexity: S
 package_surface: false
 declared_files:
   - path: scripts/build_phases_workflows.py
+    state: existing
+  - path: templates/workflows-js/_shared/hand-kept.json
     state: existing
 it_requirements:
   - >-

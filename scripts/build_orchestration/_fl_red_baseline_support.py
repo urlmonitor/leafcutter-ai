@@ -84,7 +84,7 @@ from _fl_common import (
     _load_ac_by_id,
     _nodeid_function_name,
 )
-from project_python import ProjectPython, pytest_unusable  # TQ-500f-3-v
+from project_python import ProjectPython, pytest_unusable  # TQ-500f-3-vi
 
 
 class _RedBaselineGitError(Exception):
@@ -402,7 +402,7 @@ def _red_baseline_verdict(
             each ``{"nodeid", "ac_id", "kind": "absence", "message"}``.
             Additive key; always present (``[]`` when unused or when no
             caller-supplied ``ac_root`` is given). Defaults to ``[]``.
-        refusal: TQ-500f-3-v — the operator-facing text of a
+        refusal: TQ-500f-3-vi — the operator-facing text of a
             ``project_package_not_importable`` refusal. The ``refusal`` key is
             present only when this is given.
 
@@ -431,7 +431,7 @@ def _red_baseline_verdict(
 def _interpreter_unusable_verdict(judge: ProjectPython) -> dict | None:
     """Return a refusal verdict when *judge* cannot import pytest.
 
-    Tests run as ``<judge> -m pytest`` (TQ-500f-3-v: the project's interpreter,
+    Tests run as ``<judge> -m pytest`` (TQ-500f-3-vi: the project's interpreter,
     see ``project_python``); if that interpreter lacks pytest every test would
     ERROR and surface as a misleading ``no_red_outcome_among_new_tests``
     (TQ-500f-3-ii).
@@ -718,7 +718,7 @@ def _classify_declared_reds(
 #   from fast_lane.py (NO behaviour change) as part of the file-size split —
 #   see fast_lane.py's own DECISION HISTORY for the full record.
 #   (#TICKETLESS reason=fast-lane-file-size-split)
-# - 2026-10-22 [python-coder/TQ-500f-3-v]: _interpreter_unusable_verdict now
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: _interpreter_unusable_verdict now
 #   probes the interpreter the tests will actually run under (the project's,
 #   via project_python) instead of this process; _red_baseline_verdict gains
 #   the optional ``refusal`` key for project_package_not_importable.

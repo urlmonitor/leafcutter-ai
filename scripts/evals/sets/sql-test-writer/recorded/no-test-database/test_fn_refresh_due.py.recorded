@@ -1,0 +1,26 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestFnRefreshDue(unittest.TestCase):
+    def setUp(self):
+        self.conn = psycopg2.connect(resolve_test_db_address(Path.cwd()))
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_retry_due_gate(self):
+        # covers: TQ-9503
+        with self.conn.cursor() as cur:
+            cur.execute("select fn_refresh_due(true, false)")
+            self.assertIs(cur.fetchone()[0], False)
+            cur.execute("select fn_refresh_due(true, true)")
+            self.assertIs(cur.fetchone()[0], True)

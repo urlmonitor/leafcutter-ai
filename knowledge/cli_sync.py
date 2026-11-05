@@ -214,6 +214,7 @@ async def sync(
         "counts": counts,
         "reclamation": getattr(backend, "publication_reclamation", None),
         "capacity": getattr(backend, "publication_capacity", None),
+        "writes": getattr(backend, "publication_writes", None),
         **_plan(snapshot),
     }
 
@@ -313,9 +314,39 @@ async def run(args: argparse.Namespace) -> dict:
     except BackendUnavailable as exc:
         name, source = database_source(args.root)
         detail = f"{exc} [database requested: {name}; read from {source}]"
-        raise BackendUnavailable(detail) from exc
+        failure = BackendUnavailable(detail)
+        failure.details = failure_details(backend, exc)
+        raise failure from exc
     finally:
         await backend.close()
+
+
+def failure_details(backend: Neo4jBackend, error: BackendUnavailable) -> dict:
+    """Collect the discrete failure fields a failed publication carries (KM-400b-5-vi).
+
+    Args:
+        backend: Writer adapter holding the last publication's reports.
+        error: The failure being re-raised; its cause class and time limit are kept.
+
+    Returns:
+        ``cause_class``, ``time_limit_seconds`` (time limit only), and from the write report
+        ``phase``, ``batch``, ``attempts``, ``attempt_causes``, ``progress`` and ``writes``;
+        a field the failure does not have is left out rather than reported as 0.
+    """
+    details: dict = {}
+    cause = getattr(error, "cause_class", None)
+    if cause is not None:
+        details["cause_class"] = cause
+    if getattr(error, "time_limit_seconds", None) is not None:
+        details["time_limit_seconds"] = error.time_limit_seconds
+    report = getattr(backend, "publication_failure", None) or {}
+    for field in ("time_limit_seconds", "phase", "batch", "attempts", "attempt_causes", "progress"):
+        if field in report and field not in details:
+            details[field] = report[field]
+    writes = getattr(backend, "publication_writes", None)
+    if writes is not None:
+        details["writes"] = writes
+    return details
 
 
 async def _dispatch(

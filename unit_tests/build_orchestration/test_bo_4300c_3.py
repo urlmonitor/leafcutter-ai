@@ -32,7 +32,6 @@ from unit_tests.build_orchestration._bo_4300c_3_fixtures import (
     START_MARKER,
     WORKSPACE_LABEL,
     consuming_workflows,
-    deployed_workflow_names,
     deployed_workflows_dir,
     extract_between_markers,
     hostile_reply,
@@ -141,16 +140,15 @@ class TestBO4300c3EveryCallerStops(unittest.TestCase):
         """The text between the markers in every DEPLOYED workflow equals the
         single source block; a difference names the workflow."""
         self.assertTrue(SHARED_SOURCE.is_file(), msg=f"missing single source {SHARED_SOURCE}")
-        source = shared_source_block()
-        self.assertTrue(source.strip(), "the single source block is empty")
-        carriers, diffs = [], []
-        for name in deployed_workflow_names():
-            block = extract_between_markers((deployed_workflows_dir() / name).read_text(encoding="utf-8"))
-            if block is None:
-                continue
-            carriers.append(name)
-            if block != source:
-                diffs.append(name)
+        self.assertTrue(shared_source_block().strip(), "the single source block is empty")
+        # One implementation of "installed copy equals source": the BO-4500b-2 identity check.
+        from shared_block_identity import check_identity
+        config = {"workflows": {"enabled": True}, "output_root": ".leafcutter"}
+        result = check_identity(deployed_workflows_dir().parent, SHARED_SOURCE.parents[3], config)
+        mine = "WORKSPACE-ANSWER"
+        diffs = sorted(Path(d["route"]).name for d in result["differences"] if d["block"] == mine)
+        carriers = sorted(
+            {Path(r).name for m in result["matched"] if m["block"] == mine for r in m["routes"]} | set(diffs))
         self.assertEqual(diffs, [], msg=f"block differs from the source in: {diffs}")
         self.assertTrue(set(REQUIRED_CONSUMERS) <= set(carriers), msg=f"carriers: {carriers}")
 

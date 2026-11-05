@@ -5,9 +5,9 @@ type: architecture
 diagram_type: sequence
 status: active
 created: 2026-06-08
-last_updated: 2026-06-08
+last_updated: 2026-10-21
 flight_level: L1-Context
-parent: agent_delivery_workflows.md
+root: true
 children:
   - docs/architecture/diagrams/finalize-progress-narration-sequence.md
   - docs/architecture/diagrams/finalize-progress-relay-sequence.md

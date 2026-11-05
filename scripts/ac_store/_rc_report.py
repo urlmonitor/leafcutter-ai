@@ -17,6 +17,11 @@ ARCHITECTURE: Pure data and functions, no I/O, no imports from sibling _rc_ modu
     Deployed flat into <root>/scripts/ac_store/ (AC_STORE_DEPLOY_MAP).
 
 DECISION HISTORY:
+  - 2026-10-22 [python-coder/EPIC-RightJobRightAgentFollowUps mypy]: `unrepaired` moved here verbatim from
+    requirement_rule_check.py (was `_unrepaired`) to pay for a type-annotation edit under the size ratchet.
+  - 2026-10-21 [python-coder/ACD-2500a-2-vi, ACD-2500a-2-viii]: Added FAMILY_PROTECTED, `no_write`
+    (a repair becomes `needs a decision` when the run has no before-state) and the additive
+    top-level `before_state` {given, repairs_applied}, which sorts before family_counts and findings.
   - 2026-10-14 [python-coder/ACD-2500a-1]: Created. Dispositions rank failed >
     needs a decision > fixed > not evaluated when two findings share a key, so dedupe
     never hides a blocker behind a repair note.
@@ -25,7 +30,7 @@ DECISION HISTORY:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 FAMILY_BACKLINKS = "parent-to-child back-links"
@@ -38,6 +43,7 @@ FAMILY_MODIFIES = "declared files versus modifies links"
 FAMILY_TEST_INTENT = "test intent coverage"
 FAMILY_TEST_DESIGN_GROUNDING = "test design grounding"
 FAMILY_FILE_FINDINGS = "file findings consistency"
+FAMILY_PROTECTED = "protected fields"
 FAMILY_RECORD_SCHEMA = "record schema"
 FAMILY_RECORD_READABLE = "record readable"
 
@@ -97,6 +103,29 @@ class Finding:
         }
 
 
+def no_write(finding: Finding) -> Finding:
+    """A repair finding of a run with no before-state: `needs a decision`, naming what would be written.
+
+    Other findings pass through. The detail carries the field and the (verb, value) the
+    repair would have applied, so a person can make the change by hand (ACD-2500a-2-viii).
+    """
+    if finding.repair is None:
+        return finding
+    field, how = finding.repair
+    verb, value = how
+    message = f"no before-state was given, so nothing was repaired; would {verb} {value!r} on {field}: {finding.message}"
+    return replace(finding, disposition=DISPOSITION_DECISION, repair=None, message=message,
+                   detail={"field": field, verb: value})
+
+
+def unrepaired(finding: Finding) -> Finding:
+    """A pass-2 finding still carrying a repair means the repair did not stick."""
+    if finding.repair is None:
+        return finding
+    return replace(finding, disposition=DISPOSITION_FAILED, repair=None,
+                   message=f"still violated after the repair pass: {finding.message}")
+
+
 def dedupe(findings: list[Finding]) -> list[Finding]:
     """Keep one finding per key: the highest-ranked disposition, the first on a tie."""
     best: dict[tuple, Finding] = {}
@@ -147,6 +176,7 @@ def build_report(
     findings: list[Finding],
     counts: dict[str, dict[str, int]],
     records_to_commit: list[str] | None = None,
+    before_state: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
     """Assemble the report dict (findings already deduped and sorted by the caller)."""
     report: dict[str, Any] = {
@@ -158,6 +188,8 @@ def build_report(
     }
     if records_to_commit is not None:
         report["records_to_commit"] = records_to_commit
+    if before_state is not None:
+        report["before_state"] = before_state
     return report
 
 

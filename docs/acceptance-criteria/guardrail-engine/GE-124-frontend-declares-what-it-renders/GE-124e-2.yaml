@@ -99,7 +99,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Pinned the evidence source: the gate must invert a FRESH scan of front-end source with the shared reader, never read the store's declared_by/pinned_by, which are a projection of that scan and would make the gate check the store against itself. Required one inverted index per run, the four declaration_status values rather than a boolean, and named evidence per surface. Added the desynchronised-store test as the centre of the contract. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/33_TICKET-20261023-GE-124e-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -123,3 +124,4 @@ notes: |
   this gate performs, so reading them would make the gate a consistency check on
   its own output. The gate scans front-end source; the fields are the recorded
   result. GE-124g-1 owns writing them.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

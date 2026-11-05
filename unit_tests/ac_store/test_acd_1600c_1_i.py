@@ -1,11 +1,15 @@
 """
 MODULE: test_acd_1600c_1_i
 GOAL: Red-first real-AC edge case for the implementation-readiness gate
-    (ACD-1600c-1-i): the two real records ACD-300c-3 and TQ-200a-1, which have no
-    file targets, are flagged 'missing file targets' and held back from dispatch.
-BUSINESS CONTEXT: These are the empirically observed ACs where the coder had no file
-    targets and had to guess. The verdict must be data-driven on the declared-files
-    seam, never keyed on these ids or on what their it_requirements/doc_links say.
+    (ACD-1600c-1-i): two real records with no file targets, ACD-300c-1 and TQ-200a-1,
+    are flagged 'missing file targets' and held back from dispatch.
+BUSINESS CONTEXT: ACD-300c-3 and TQ-200a-1 are the empirically observed ACs where the
+    coder had no file targets and had to guess. The verdict must be data-driven on the
+    declared-files seam, never keyed on these ids or on what their it_requirements/doc_links
+    say. ACD-300c-3 gained declared_files in EPIC-RightJobRightAgentFollowUps, so the
+    fixture's precondition failed loudly as the AC intends, and the fixture was re-pointed
+    to its sibling ACD-300c-1 (same /plan-feature gate family, still no declared_files).
+    The criterion test's name follows the AC's test_spec, which now pins acd300c1.
 ARCHITECTURE: The two real YAMLs are loaded, normalised (only readiness -> approved
     and depends_on -> [] so the scan's own filters admit them), re-serialised with
     yaml.safe_dump into a temp store, and the REAL scripts/ac_store/scan_ac_store.py
@@ -28,7 +32,7 @@ import yaml
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCAN = _REPO_ROOT / "scripts" / "ac_store" / "scan_ac_store.py"
 _STORE = _REPO_ROOT / "docs" / "acceptance-criteria"
-_IDS = ("ACD-300c-3", "TQ-200a-1")
+_IDS = ("ACD-300c-1", "TQ-200a-1")  # ACD-300c-3 now declares files (see module docstring)
 
 
 def _real_record(ac_id: str) -> dict:
@@ -61,7 +65,7 @@ def _scan_copy(*flags: str) -> dict:
 
 
 class TestRealAcsMissingFileTargets(unittest.TestCase):
-    def test_acd300c3_and_tq200a1_flagged_missing_file_targets(self):
+    def test_acd300c1_and_tq200a1_flagged_missing_file_targets(self):
         """Each real AC is flagged with the reason 'missing file targets'."""
         # covers: ACD-1600c-1-i
         # angle: criterion

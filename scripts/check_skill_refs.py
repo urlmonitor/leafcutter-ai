@@ -34,8 +34,10 @@ names an agent, not an ability), and treats zero examined as an error. The grant
 is the specialist's OWN ``skills:`` frontmatter, never the derived registry copy; a grant it
 marks ``provided_by: project`` satisfies both the existence and the grant check for that
 definition (AR-400d-3: the project, not the package, supplies it). The CLI
-``main`` below checks existence only (the grant comparison needs a registry) and keeps
-its original report format and exit codes.
+``main`` below runs that SAME verdict (INF-700b-2), reading the registry from
+``<repo-root>/config/agent_registry.json`` when present, so the standalone CLI and the build
+agree on every tree (``provided_by: project`` skills are accepted). Each finding line names
+the template file and the skill; exit codes are unchanged.
 
 Usage:
     python3 scripts/check_skill_refs.py [--repo-root <path>] [--verbose]
@@ -49,8 +51,8 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
-from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -66,7 +68,14 @@ _REPO_ROOT = _SCRIPT_DIR.parent
 
 
 def load_skill_names(templates_dir: Path) -> set[str] | None:
-    """Return the set of real skill directory names, or None if unreadable."""
+    """Return the set of real skill directory names, or None if unreadable.
+
+    Args:
+        templates_dir: The ``templates/`` directory holding ``skills/``.
+
+    Returns:
+        The skill directory names, or ``None`` when ``skills/`` cannot be read.
+    """
     skills_dir = templates_dir / "skills"
     try:
         return {d.name for d in skills_dir.iterdir() if d.is_dir()}
@@ -96,6 +105,14 @@ def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
 
     Descriptive mentions are no longer collected: a sentence that is not an instruction
     is not recognised at all, so the second list is always empty (kept for callers).
+
+    Args:
+        templates_dir: The ``templates/`` directory to scan recursively.
+        known: Names of the skill directories that really exist.
+
+    Returns:
+        ``(dangling references, [])``; each reference is a dict with path, line, skill,
+        reason and text.
     """
     skills_dir = templates_dir / "skills"
     bad: list[dict] = []
@@ -116,7 +133,15 @@ def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
 
 def _definition_paths(agents: list[dict], package_root: Path) -> dict[Path, str]:
     """Map resolved template path -> agent id for registry agents whose template is a
-    file directly inside ``templates/agents/`` (a specialist *definition*)."""
+    file directly inside ``templates/agents/`` (a specialist *definition*).
+
+    Args:
+        agents: Registry agent records.
+        package_root: The package root the records' ``template_path`` values are relative to.
+
+    Returns:
+        Mapping of resolved template path to agent id.
+    """
     agents_dir = (package_root / "templates" / "agents").resolve()
     found: dict[Path, str] = {}
     for rec in agents:
@@ -128,7 +153,16 @@ def _definition_paths(agents: list[dict], package_root: Path) -> dict[Path, str]
 
 
 def _population_errors(defs: int, guides: int, templates_dir: Path) -> list[str]:
-    """Zero examined in either population is an error, never a pass."""
+    """Zero examined in either population is an error, never a pass.
+
+    Args:
+        defs: Number of specialist definitions examined.
+        guides: Number of shared guides examined.
+        templates_dir: The ``templates/`` directory, named in the messages.
+
+    Returns:
+        One error string per empty population.
+    """
     errors: list[str] = []
     if defs == 0:
         errors.append(f"zero specialist definitions examined: no registry agent "
@@ -147,6 +181,15 @@ def _own_declarations(
     and that is stated in ``errors``, never computed against an empty set).
     ``project_supplied`` holds the grants marked ``provided_by: project`` (AR-400d-3).
     ``errors`` also carries the hand-off redundancy/repeat findings read from the RAW list (AR-400f-1).
+
+    Args:
+        text: The definition's full text.
+        phase_ids: Ids of the ticket-phase agents.
+        rel: Repo-relative path, used in messages.
+        subject: The agent id.
+
+    Returns:
+        The 4-tuple described above.
     """
     try:
         # Lazy: template_compiler hard-imports yaml, and registry_validator must stay importable without it.
@@ -180,6 +223,15 @@ def _document_findings(text: str, rel: Path, subject: str | None, ctx: dict[str,
 
     A grant the definition marks ``provided_by: project`` satisfies both the existence check and
     the grant check for that definition (AR-400d-3): the project, not the package, supplies it.
+
+    Args:
+        text: The document's full text.
+        rel: Repo-relative path of the document.
+        subject: The agent id for a definition, else ``None`` for a guide.
+        ctx: Shared lookups (known skills, agent ids, bundle probe, phase ids).
+
+    Returns:
+        One finding string per faulty reference.
     """
     if subject is None:
         refs = recognise(text, ctx["known"], ctx["agents"], None)
@@ -206,6 +258,13 @@ def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[i
     (agent id, or the guide's repo-relative path), the ability, the file and the 1-based
     line. HTML comments (DECISION HISTORY) are excluded by position. An unreadable file
     is an error, not a skipped warning.
+
+    Args:
+        package_root: Root of the package (the directory holding ``templates/``).
+        agents: Registry agent records.
+
+    Returns:
+        ``(definitions_examined, guides_examined, errors)``.
     """
     templates_dir = package_root / "templates"
     skills_dir = templates_dir / "skills"
@@ -232,28 +291,46 @@ def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[i
     return counts["definitions"], counts["guides"], errors
 
 
-def _report(bad: list[dict], repo_root: Path) -> None:
-    """Print dangling references grouped by skill name."""
-    by_skill: dict[str, list[dict]] = defaultdict(list)
-    for rec in bad:
-        by_skill[rec["skill"]].append(rec)
+def _load_registry_agents(repo_root: Path) -> tuple[list[dict], str | None]:
+    """Return ``(agents, problem)`` for the registry under ``repo_root``.
 
-    print(
-        f"FAIL: {len(bad)} reference(s) to {len(by_skill)} skill target(s) "
-        f"that do not exist under templates/skills/.",
-        file=sys.stderr,
-    )
-    for name in sorted(by_skill):
-        recs = by_skill[name]
-        reasons = sorted({rec["reason"] for rec in recs})
-        print(f"\n  '{name}'  ({len(recs)} reference(s)) — {'; '.join(reasons)}:",
-              file=sys.stderr)
-        for rec in recs[:10]:
-            rel = rec["path"].relative_to(repo_root)
-            print(f"    - {rel}:{rec['line']}", file=sys.stderr)
-            print(f"        {rec['text'][:120]}", file=sys.stderr)
-        if len(recs) > 10:
-            print(f"    ... and {len(recs) - 10} more", file=sys.stderr)
+    The registry supplies the specialist definitions the verdict compares grants against.
+    A repo with NO registry file (a bare templates/ tree) has no definitions to grade:
+    that is the only state returning ``([], None)``. A registry that exists but is
+    unreadable, invalid JSON, lacks an ``agents`` list, or lists none is a ``problem``.
+
+    Args:
+        repo_root: The package root holding ``config/``.
+
+    Returns:
+        ``(agent dicts, None)`` when usable or absent; ``([], message naming the registry)``
+        when present but unusable.
+    """
+    registry = repo_root / "config" / "agent_registry.json"
+    try:
+        data = json.loads(registry.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [], None
+    except (OSError, ValueError) as exc:
+        return [], f"cannot read agent registry {registry}: {exc}"
+    agents = data.get("agents") if isinstance(data, dict) else None
+    if not isinstance(agents, list):
+        return [], f"agent registry {registry} has no 'agents' list"
+    records = [a for a in agents if isinstance(a, dict)]
+    if not records:
+        return [], f"agent registry {registry} lists no agents"
+    return records, None
+
+
+def _report(errors: list[str]) -> None:
+    """Print one line per faulty reference (each names the template file and the skill).
+
+    Args:
+        errors: The finding strings from ``ability_reference_verdict``.
+    """
+    print(f"FAIL: {len(errors)} ability reference finding(s):", file=sys.stderr)
+    for err in errors:
+        print(f"  - {err}", file=sys.stderr)
     print(
         "\nFix: author the skill under templates/skills/<name>/, repoint the "
         "reference at a skill that exists, or delete it. Do NOT leave the caller "
@@ -264,7 +341,14 @@ def _report(bad: list[dict], repo_root: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point. 0 = clean, 1 = dangling refs, 2 = unreadable skills dir."""
+    """Entry point. 0 = clean, 1 = dangling refs, 2 = unreadable skills dir.
+
+    Args:
+        argv: Command-line arguments; ``None`` reads ``sys.argv``.
+
+    Returns:
+        The process exit code.
+    """
     parser = argparse.ArgumentParser(description="Validate skill references in template prose.")
     parser.add_argument("--repo-root", default=str(_REPO_ROOT),
                         help=f"Repo root. Default: {_REPO_ROOT}")
@@ -279,13 +363,21 @@ def main(argv: list[str] | None = None) -> int:
     if known is None:
         return 2
 
-    bad, _mentions = scan(templates_dir, known)
+    agents, problem = _load_registry_agents(repo_root)
+    if problem is not None:
+        # A registry that exists but is unusable must never read as an empty population.
+        _report([problem])
+        return 1
+    _defs, _guides, errors = ability_reference_verdict(repo_root, agents)
+    if not (repo_root / "config" / "agent_registry.json").exists():
+        # No registry means no specialist definitions to grade; that is not a failure here.
+        errors = [e for e in errors if not e.startswith("zero specialist definitions")]
 
-    if not bad:
+    if not errors:
         print(f"OK: every recognised skill reference resolves ({len(known)} skills known).")
         return 0
 
-    _report(bad, repo_root)
+    _report(errors)
     return 1
 
 

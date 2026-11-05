@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`documentation-system/resolved/`](documentation-system/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 5** (0 blocker, 3 high, 2 low) · **Resolved: 0**
+**Open: 8** (0 blocker, 3 high, 5 low) · **Resolved: 0**
 
 ## Open
 
@@ -66,6 +66,9 @@ Fixed issues move to [`documentation-system/resolved/`](documentation-system/res
 | `high` | KI-DS-003 — Nothing resolves the paths in `pre_flight_reads`, so an agent can require a file that has never existed | [open-high-ki-ds-003.md](documentation-system/open-high-ki-ds-003.md) |
 | `low` | KI-DS-20260908-1535 — the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit | [open-low-ki-ds-20260908-1535.md](documentation-system/open-low-ki-ds-20260908-1535.md) |
 | `low` | KI-DS-20261014-token-scan-flags-f-string-fields-in-source-targets — documentation-verifier runs its unfilled-token check (6c) on every required path, so a `.py` target's f-string fields block the phase as placeholders | [open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md](documentation-system/open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md) |
+| `low` | KI-DS-20261016-c3-030-number-claimed-on-two-branches — diagram number c3-030 is on main (requirement rule check) and on the BO-4300 workspace epic branch (workspace request halt sequence); that branch renumbers at its next main merge | [open-low-ki-ds-20261016-c3-030-number-claimed-on-two-branches.md](documentation-system/open-low-ki-ds-20261016-c3-030-number-claimed-on-two-branches.md) |
+| `low` | KI-DS-20261021-architecture-docs-with-broken-parent-links — 19 architecture docs and 6 Python files (one real, five likely false positives) fail check-mermaid-parent-link now that it reads the real project root; a commit staging one is refused until fixed | [open-low-ki-ds-20261021-architecture-docs-with-broken-parent-links.md](documentation-system/open-low-ki-ds-20261021-architecture-docs-with-broken-parent-links.md) |
+| `low` | KI-DS-20261021-adr-cross-reference-findings — 155 findings from the repaired check-adr-cross-reference (43 ADR components without a detail_ref, 56 detail_ref docs that do not mention their ADR); pre-commit runs it without --strict, so they surface as warnings | [open-low-ki-ds-20261021-adr-cross-reference-findings.md](documentation-system/open-low-ki-ds-20261021-adr-cross-reference-findings.md) |
 
 ## Resolved
 

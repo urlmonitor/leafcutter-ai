@@ -152,6 +152,9 @@
 #                add it to any required-status-checks list until that ticket
 #                lands.
 #
+#   deployed-maker-family — BO-4300f-4 (A11): the deployed-maker tests, `_MANUAL` ones
+#                included, on pull requests that change the maker. INFORMATIONAL.
+#
 #   workspace-maker-windows — BO-4300b-4 arm 1: the workspace maker's readiness and
 #                no-link proofs on a real Windows runner. INFORMATIONAL.
 #
@@ -439,6 +442,88 @@ jobs:
         run: |
           echo "aggregate shard result: ${{ needs.test-shard.result }}"
           test "${{ needs.test-shard.result }}" = "success"
+
+  deployed-maker-family:
+    name: Deployed workspace maker family, manual tests included (BO-4300f-4)
+    # BO-4300f-4 (amended 2026-10-22, A11): the deployed-maker tests are `_MANUAL`, so pytest.ini
+    # deselects them in every `test-shard` leg. This job runs them, manual tests included
+    # (`-m "manual or not manual"`), on every pull request that touches the maker. It is
+    # INFORMATIONAL: do not add it to the required checks. A job-level path filter is not
+    # available for a single job of a workflow that must stay on for the other jobs, so the
+    # filter is the `Detect` step's pathspec list; the heavy steps run only when it matches.
+    # `-ra` lists every skipped test in the output, so a test that does not run is reported as
+    # not run, never as passed.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes to the maker, its deploy manifest or this family's tests
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- \
+            'templates/scripts/worktree*.py' \
+            'templates/scripts/workspace_root.py' \
+            'scripts/build.py' \
+            'scripts/build_phases_script_deploy*.py' \
+            'scripts/build_phases_script_deploy_standalone.py' \
+            'scripts/build_deploy_manifest_helpers.py' \
+            'scripts/build_deploy_manifest*.py' \
+            'scripts/suite_performance/_shared_layout_producer.py' \
+            'scripts/suite_performance/_shared_layout_seed.py' \
+            'scripts/suite_performance/pytest_manual_deselect.py' \
+            'scripts/suite_performance/pytest_shared_reference_layout.py' \
+            'unit_tests/build_orchestration/' \
+            'pytest.ini' \
+            '.github/workflows/ci.yml')
+          if [ -n "$CHANGED" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "$CHANGED"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No maker file, deploy-manifest entry or family test changed: the family is not run."
+          fi
+
+      - name: Set up Python
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        if: steps.changed.outputs.run == 'true'
+        run: pip install -r requirements-dev.txt
+
+      - name: Set up Node
+        if: steps.changed.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: leafcutter-web/package-lock.json
+
+      - name: Install leafcutter-web dependencies (provides vitest)
+        if: steps.changed.outputs.run == 'true'
+        run: npm ci --prefix leafcutter-web
+
+      - name: Build - run install_shims to create scripts/ symlinks
+        if: steps.changed.outputs.run == 'true'
+        run: python scripts/build.py --target-dir .
+
+      - name: Run the deployed-maker family, manual tests included
+        if: steps.changed.outputs.run == 'true'
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: >
+          pytest
+          unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+          unit_tests/build_orchestration/test_bo_4300f_4.py
+          unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
+          unit_tests/build_orchestration/test_bo_4300a_1_marker_survival.py
+          unit_tests/build_orchestration/test_bo_4300a_1_route_shape.py
+          -m "manual or not manual" -ra -s
 
   workspace-maker-windows:
     name: Workspace maker on Windows (BO-4300b-4, arm 1)

@@ -42,9 +42,10 @@ from pathlib import Path
 
 from build_referential_integrity_closure_eval import (
     _annotate_parents,
-    _build_local_assignments,
     _enclosing_scope,
     _eval_static_path,
+    _scope_assignments,
+    _tree_nodes,
 )
 
 # Pinned to the ORIGINAL module's name, not __name__ (which would resolve to
@@ -83,7 +84,7 @@ def _extract_dynamic_loader_paths(tree: ast.AST, script: Path) -> list[Path]:
     """
     _annotate_parents(tree)
     candidates: list[Path] = []
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if not isinstance(node, ast.Call) or not _is_spec_from_file_location_call(node):
             continue
         location_node: ast.AST | None = None
@@ -101,7 +102,7 @@ def _extract_dynamic_loader_paths(tree: ast.AST, script: Path) -> list[Path]:
         # _build_local_assignments) -- a same-named local variable in an
         # unrelated function must never be substituted in.
         scope = _enclosing_scope(node, tree)
-        assignments = _build_local_assignments(scope, tree)
+        assignments = _scope_assignments(scope, tree)
         resolved = _eval_static_path(location_node, script, assignments)
         if resolved is None:
             _log.warning(
@@ -256,7 +257,7 @@ def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
     """
     _annotate_parents(tree)
     directories: list[Path] = []
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if isinstance(node, ast.Call) and _is_syspath_mutation_call(node):
             path_nodes = _syspath_pushed_path_nodes(node)
         elif isinstance(node, ast.Assign):
@@ -265,7 +266,7 @@ def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
             continue
         for path_node in path_nodes:
             scope = _enclosing_scope(node, tree)
-            assignments = _build_local_assignments(scope, tree)
+            assignments = _scope_assignments(scope, tree)
             resolved = _eval_static_path(path_node, script, assignments)
             if resolved is None:
                 _log.warning(
@@ -344,7 +345,7 @@ def _extract_static_import_candidates(
     module and wrong for a subpackage shipping in this very tree.
     """
     candidates: list[Path] = []
-    for node in ast.walk(tree):
+    for node in _tree_nodes(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 candidates.extend(

@@ -1,5 +1,5 @@
 id: GE-117d-4
-readiness: draft
+readiness: approved
 priority: medium
 title: "How-to guide: understanding and clearing a declaration-guardrail block"
 component: guardrail-engine
@@ -32,6 +32,8 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "State the block DEFAULT and the deliberate warn opt-in exactly as GE-117d-3 implements (unconfigured = block); show how to read the block report fields (file, surface, missing|invalid, declared value)."

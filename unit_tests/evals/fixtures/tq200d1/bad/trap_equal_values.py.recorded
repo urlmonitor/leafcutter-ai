@@ -1,0 +1,10 @@
+# Recorded BAD output: cvd_delta_30 is seeded, but with the very values cvd holds.
+ROWS = [
+    {"symbol": "AAA", "cvd": 12.0, "cvd_delta_30": 12.0},
+    {"symbol": "BBB", "cvd": -3.0, "cvd_delta_30": -3.0},
+]
+
+
+def test_gate_reads_the_moved_input():
+    # covers: TQ-9301
+    assert len(ROWS) == 2

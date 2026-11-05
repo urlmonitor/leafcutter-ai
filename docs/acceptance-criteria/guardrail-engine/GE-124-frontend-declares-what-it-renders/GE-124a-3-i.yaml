@@ -63,7 +63,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Pinned the rule to re-export-only rather than the filename `index` (a route index that renders markup must stay in scope), required the distinct reason code, and named the uppercase-identifier false positive. Added the positive index.tsx counter-case to the test contract. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/07_TICKET-20261022-GE-124a-3-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -78,3 +79,4 @@ notes: |
   filename `index` rather than on re-export-only content — is not visible from
   the criteria as written, because the worked example happens to be called
   index.tsx. It is pinned in it_requirements and given its own test case.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

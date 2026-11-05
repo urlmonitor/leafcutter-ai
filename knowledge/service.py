@@ -10,7 +10,7 @@ from __future__ import annotations
 from .retrieval_steps import load_generation, fetch_candidates, disclose_candidates
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from .ports import SourceResolver, EmbeddingProvider, KnowledgeBackend, RetrievalTelemetry
 
@@ -23,6 +23,12 @@ import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
+# Retrieval status for a KnowledgeError code that left no evidence; any other code is "error".
+_FAILURE_STATUS: dict[str, Literal["unavailable", "unsupported", "stale"]] = {
+    "unavailable": "unavailable",
+    "unsupported": "unsupported",
+    "stale": "stale",
+}
 import secrets
 import time
 from .disclosure import finalize
@@ -32,6 +38,7 @@ from .errors import KnowledgeError
 from . import cursors
 from .deadlines import deadline
 from .semantic import QueryEmbeddings
+from .step_timing import StepRecorder, recorder_var
 
 
 class KnowledgeService:
@@ -108,47 +115,58 @@ class KnowledgeService:
             out.stats["operation_digest"] = request.operation_digest
         start = time.monotonic()
         page: dict = {}
+        missed = False
+        recorder = StepRecorder()
+        recorder_token = recorder_var.set(recorder)
+        backend_warnings = getattr(self.backend, "config_warnings", None)
+        if isinstance(backend_warnings, list):
+            out.warnings.extend(backend_warnings)
         try:
-            state = (
-                cursors.decode(request.continuation, self.cursor_secret, request)
-                if request.continuation
-                else None
-            )
-            page = {"state": state, "used": state.get("used_bytes", 0) if state else 0}
-            remaining = request.budget.deadline_ms - (state.get("spent_ms", 0) if state else 0)
-            if remaining <= 0:
-                invalid("cumulative retrieval deadline exhausted")
-            token = deadline.set(time.monotonic() + remaining / 1000)
             try:
-                retrieved_page = await asyncio.wait_for(
-                    self._retrieve(request, out, state), remaining / 1000
+                state = (
+                    cursors.decode(request.continuation, self.cursor_secret, request)
+                    if request.continuation
+                    else None
                 )
-                if retrieved_page is not None:
-                    page = retrieved_page
-            finally:
-                deadline.reset(token)
-        except TimeoutError:
-            logger.warning("Knowledge retrieval timed out")
-            out.status = "partial" if out.evidence else "unavailable"
-            out.warnings.append("retrieval deadline reached")
-        except KnowledgeError as exc:
-            logger.warning("Knowledge retrieval unavailable: %s", exc.code)
-            if out.evidence:
-                out.status = "partial"
-            elif exc.code == "unavailable":
-                out.status = "unavailable"
-            elif exc.code == "unsupported":
-                out.status = "unsupported"
-            elif exc.code == "stale":
-                out.status = "stale"
-            else:
+                page = {"state": state, "used": state.get("used_bytes", 0) if state else 0}
+                remaining = request.budget.deadline_ms - (state.get("spent_ms", 0) if state else 0)
+                if remaining <= 0:
+                    invalid("cumulative retrieval deadline exhausted")
+                token = deadline.set(time.monotonic() + remaining / 1000)
+                try:
+                    retrieved_page = await asyncio.wait_for(
+                        self._retrieve(request, out, state), remaining / 1000
+                    )
+                    if retrieved_page is not None:
+                        page = retrieved_page
+                finally:
+                    deadline.reset(token)
+            except TimeoutError:
+                logger.warning("Knowledge retrieval timed out")
+                missed = True
+                out.status = "partial" if out.evidence else "unavailable"
+                out.warnings.append("retrieval deadline reached")
+            except KnowledgeError as exc:
+                logger.warning("Knowledge retrieval unavailable: %s", exc.code)
+                if out.evidence:
+                    out.status = "partial"
+                else:
+                    out.status = _FAILURE_STATUS.get(exc.code, "error")
+                out.errors.append(
+                    {"code": exc.code, "message": str(exc), "retryable": exc.retryable}
+                )
+            except (ValueError, OSError) as exc:
+                logger.warning("Knowledge retrieval rejected: %s", type(exc).__name__)
                 out.status = "error"
-            out.errors.append({"code": exc.code, "message": str(exc), "retryable": exc.retryable})
-        except (ValueError, OSError) as exc:
-            logger.warning("Knowledge retrieval rejected: %s", type(exc).__name__)
-            out.status = "error"
-            out.errors.append({"code": "retrieval_failed", "message": str(exc), "retryable": False})
+                out.errors.append(
+                    {"code": "retrieval_failed", "message": str(exc), "retryable": False}
+                )
+        finally:
+            recorder_var.reset(recorder_token)
         out.stats["duration_ms"] = round((time.monotonic() - start) * 1000, 3)
+        step_stats = recorder.snapshot(missed)
+        if step_stats is not None:
+            out.stats.update(step_stats)
         finalize(request, out, page, self.cursor_secret, 128 if self.observer else 0)
         if self.telemetry:
             try:

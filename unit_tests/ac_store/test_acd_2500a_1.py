@@ -27,7 +27,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _rule_check_fixtures import (  # noqa: E402
     FAMILY_CONTRACTS,
-    check_store,
+    # The protected-fields family's 'not evaluated' entries (ACD-2500a-2-vi / -vii)
+    # are not this file's subject; every other finding is kept.
+    check_store_other_families as check_store,
     findings_for,
     hierarchy,
     make_store,

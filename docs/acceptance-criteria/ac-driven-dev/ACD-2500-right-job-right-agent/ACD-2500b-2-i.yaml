@@ -103,3 +103,26 @@ notes: |
   row). For a record with test intent that fallback is exactly the silent path, so clause
   3 forbids it. Named alteration: remove the intent exclusion from the fallback -> clause
   3 goes red while b-2 stays green.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: generate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Ticket
+    source: real
+    asof: '2026-10-23'
+  - flow: leafcutter/ac-lifecycle
+    node: scan
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

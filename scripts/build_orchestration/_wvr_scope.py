@@ -31,8 +31,9 @@ from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 
 from _fl_common import _nodeid_function_name
+from _wvr_extras import ExtrasRead, attach_extras
 from _wvr_pytest import NodeSpec
-from _wvr_records import covers_tags, declared_names, load_records
+from _wvr_records import covers_tags, declared_names, load_records, requires_db_names
 
 _LOG = logging.getLogger("wrong_version_runner")
 UNDONE_NAME = "the fix undone"
@@ -61,6 +62,7 @@ class ScopedTest:
     names: list[str] = field(default_factory=list)
     issue: str = ""
     files: list[str] = field(default_factory=list)
+    extras: dict[str, str] = field(default_factory=dict)  # {key: name} the test writer left "to run later" (non-blocking)
 
     @property
     def versions(self) -> dict[str, str]:
@@ -78,6 +80,8 @@ class Scope:
     out_of_scope: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
     problem: str = ""
+    db_names: set[str] = field(default_factory=set)  # test_spec names declaring requires_db: true
+    extras_read: ExtrasRead = field(default_factory=ExtrasRead)  # the to-run-later extras read, with notes on unusable ones
 
 
 def _chains(file: Path, function: str) -> list[tuple[str, ...]]:
@@ -169,6 +173,8 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
         else:
             scope.out_of_scope.append(f"{Path(tag['file']).as_posix()}::{tag['function']}")
     scope.missing = sorted(declared - found)
+    scope.db_names = requires_db_names(records)
+    scope.extras_read = attach_extras(scope.tests, test_root, ac_ids, wrong_version_key, wrong_version_key(UNDONE_NAME))
     return scope
 
 
@@ -248,6 +254,7 @@ class OwedName:
     name: str
     files: list[str] = field(default_factory=list)
     scope: str = "declared"
+    extra: bool = False  # a to-run-later extra: owed, never blocking
 
 
 def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
@@ -272,6 +279,9 @@ def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
             if test.files:
                 declared.add(key)
             item.files += [f for f in dict.fromkeys(test.files) if f not in item.files and not is_test_path(f, test_root_rel)]
+    for test in tests:
+        for key, name in test.extras.items():
+            owed.setdefault(key, OwedName(name, extra=True))
     shared: list[str] | None = None
     for key, item in owed.items():
         if key in declared:

@@ -27,12 +27,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _rule_check_fixtures import (  # noqa: E402
     SCRIPTS_DIR,
-    check_store,
+    # The protected-fields family's 'not evaluated' entries (ACD-2500a-2-vi / -vii)
+    # are not this file's subject; every other finding is kept.
+    check_store_other_families as check_store,
     cli_argv,
     findings_for,
     make_store,
     roots,
-    run_cli_subprocess,
+    run_cli_subprocess_other_families as run_cli_subprocess,
     unreadable_record_text,
 )
 

@@ -35,12 +35,14 @@ from _rule_check_fixtures import (  # noqa: E402
     DISPOSITION_DECISION,
     DISPOSITION_NOT_EVALUATED,
     REPO_ROOT,
-    check_store,
+    # The protected-fields family's 'not evaluated' entries (ACD-2500a-2-vi / -vii)
+    # are not this file's subject; every other finding is kept.
+    check_store_other_families as check_store,
     cli_argv,
     finding_text,
     findings_for,
     make_store,
-    run_cli_subprocess,
+    run_cli_subprocess_other_families as run_cli_subprocess,
     valid_record,
 )
 

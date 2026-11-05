@@ -520,6 +520,13 @@ function. List every consumer in `## Comments`. If any consumer reads a field
 the proposed fix would remove, the change is **blocked** — emit
 `(status: handoff)` and stop. Do not proceed without human review.
 
+**The same query serves the existing-test sweep (TQ-500g-3), and the sweep is
+not limited to contract-shrinking repairs.** Whenever the work changes an
+existing function, check, helper or fixture in any way (new input, new branch,
+new return value, a moved gate input), run the same `research-agent` query on
+it and read the existing tests among the consumers. Use no other lookup path:
+you have no `Grep` or `Glob`. Then follow "Existing-Test Sweep" below.
+
 ### Rule 3 — Cross-layer seam test required (ALL work — new and repair alike).
 
 **This rule is not repair-only.** It applies to every function you write tests
@@ -614,6 +621,134 @@ that the test assertions cover what the *consumer* reads from the producer's
 output — not just internal fields the producer happens to emit. If the
 `## Test Requirements` section was authored without consumer context, propose
 an expansion before writing the test.
+
+## Existing-Test Sweep (TQ-500g-3)
+
+An existing test is changed only after you have swept its consumers and said so.
+The sweep replaces the old blanket ban on touching existing tests. It is safe
+only because the checks below make a weakening visible and blocking, so none of
+it is optional.
+
+### What you do
+
+1. **Find the consumers.** Per Rule 2, spawn `research-agent` with a blast-radius
+   or find-references query on every existing check, function, helper or fixture
+   the requirement changes. Collect the existing tests that call or rely on it.
+2. **Decide for each consumer test**, with a one-line reason:
+   - `strengthened` — you edited it so it still proves something under the new
+     behaviour (for example, a fixture that sets `refresh_due` but never the new
+     `retry_due` now sets both, with values distinct from each other, so the test
+     cannot pass for the wrong reason). Say what was added.
+   - `unaffected` — you read it and it needs no change. Say why.
+   - `removed` — the work deleted it together with the code it tested. A one-line
+     reason is required. Anything else you want to delete is a weakening (below).
+3. **Strengthen, never weaken.** A strengthening adds an assertion, a distinct
+   fixture value or a control row. These edits are forbidden, whatever the reason:
+   removing an assertion; widening an expected value or a tolerance (a looser
+   comparison, a wider `pytest.approx`); adding `skip`, `skipif`, `xfail` or
+   `expectedFailure`, or a `pytest.skip` call; moving an assertion under a
+   condition or behind an early return; deleting a test; dropping or renaming a
+   `parametrize` case.
+4. **A test that can pass only by weakening it is handed back.** Do not edit it.
+   Name it in the report with the reason and stop. On ticket routes end with
+   `(status: handoff)` naming the receiving agent (and `handoff_target` in a
+   machine-parsed reply, per the `signoff` skill); on the fast lane use
+   `(status: blocker)`. It is never
+   quietly adjusted to go green.
+5. **List fixtures, helpers and constants too.** An edit to a fixture, helper,
+   constant, import, top-level call, block or `pytestmark` in an existing test
+   file or in `conftest.py` is listed exactly like a test, with `test` set to the
+   symbol name (the fixture that seeds `refresh_due` is such an edit). Edits to
+   tests outside the consumers you found are listed too. Every edited symbol
+   (test, fixture, helper, constant, import, call, block, mark) is listed as
+   `strengthened` — or `removed` when you deleted it. `unaffected` is only for
+   consumers you left unedited and excuses no edit. New tests in a file you
+   create need no entry.
+6. **You may run the files of the existing tests you listed** to confirm they
+   still pass (never the full suite — that ban stands).
+
+### Recording the list — once, after your last edit
+
+Make every edit to every existing test file and `conftest.py` first. Then, as
+the very last step of editing, you may preview what the check will report. The
+preview is optional when every edit is to a named test function; it is required
+when you edited a fixture, helper, constant, import, top-level call or block.
+Run it once, with a Bash timeout of 600000 ms; exit 1 is expected. If it times
+out or reports `inconclusive`, do not retry in a loop — derive the names from
+your own edit list (the symbol-name forms below) and record.
+
+```
+python "<absolute worktree path>/{{config.output_root}}/scripts/build_orchestration/consumer_sweep.py" check --test-root <absolute worktree path> --base-ref HEAD
+```
+
+Its JSON object lists `unlisted` edits as `{file, test}` pairs (and, if any,
+`weakened`, `loosened`, `removed` and `inconclusive`). The names are the ones
+you must record: a test function name; `Class::method`; a fixture, helper or
+constant name; `import:<name>`; `call:<func>`; or a block name such as
+`if:<header>`. Add a `[param-id]` suffix only to name one parametrized case.
+Record every `unlisted` pair you edited on purpose. If `weakened` or `loosened`
+names a test you changed, that edit is a weakening: undo it, or hand the test
+back per step 4. `sweep list missing` appears only when no list exists in the
+worktree yet; otherwise unlisted edits are reported as `unlisted`. The preview
+is advisory; the check that finish runs before commit is authoritative.
+`<absolute worktree path>` is the
+`worktree_path` (ticket routes) or `Worktree:` (fast lane) your dispatch gave you.
+
+Then record the list, once, with one Bash call (a quoted here-document; no
+`cd`, no pipe). Pick a delimiter that does not occur anywhere in the list:
+
+```
+python "<absolute worktree path>/{{config.output_root}}/scripts/build_orchestration/consumer_sweep.py" record --work-key <key> --test-root <absolute worktree path> --base-ref HEAD <<'SWEEP_LIST_END'
+{"entries": [
+  {"file": "unit_tests/x/test_refresh.py", "test": "test_refresh_runs_when_due", "status": "strengthened", "note": "fixture now sets retry_due, distinct from refresh_due"},
+  {"file": "unit_tests/x/test_refresh.py", "test": "test_status_page_shows_next_refresh", "status": "unaffected", "note": "reads only the rendered label, which is unchanged"}
+]}
+SWEEP_LIST_END
+```
+
+- `file` — repo-relative POSIX path of the test file or `conftest.py`.
+- `status` — exactly `strengthened`, `unaffected` or `removed`. Every edited
+  symbol is `strengthened` (or `removed` when you deleted it); `unaffected` is
+  only for consumers you left unedited and excuses no edit. `note` — a
+  non-empty single line (what was added, why it is unaffected, why it was removed).
+- `<key>` — one plain path segment: the ticket file's name without `.md` on a
+  ticket route; the first AC id of the build set on the fast lane. It is
+  informational only; the check reads every list in the worktree.
+- The result is `{recorded, path, error, entries}`. Exit 0 only when
+  `recorded` is true. On exit 1 report `(status: blocker)` with the `error`
+  text; never skip the record and never write the file yourself. You never
+  supply a fingerprint — the record step computes it from the working tree.
+- **Record once, after your last edit.** Do not list an edit you have not made.
+  An existing test edited after your record (by the coder or a remedy agent) is
+  not covered by it and stops the work at the before-commit check; the ticket is
+  then re-driven. So do not hand off with an edit still to come.
+
+### What is checked mechanically, and what is not
+
+The before-commit check (`wrong_version_gate.py finish` runs `consumer_sweep.py
+check` first, on every route) stops the work when:
+
+- an edit to an existing test, or to a fixture, helper, constant or `pytestmark`
+  in an existing test file or `conftest.py`, is missing from your list
+  (reported as `<file>::<symbol>`);
+- a test that passed before the work is now skipped, expected to fail or gone
+  (only a `removed` entry with a reason excuses a deleted test);
+- a changed existing test has fewer assertions, a loosened comparison or a wider
+  `pytest.approx` tolerance than at the base — **even if you listed it as
+  strengthened**.
+
+You do not run the check as a gate; it runs on its own at finish. Expect it.
+A widened expected literal (`== 200` becoming `== 2000`) is **not** seen by any
+check and is left to `pr-reviewer`, so never do it.
+
+### Rendering the list in your hand-off
+
+Render the same entries (file, test, status, note) in your hand-off: the
+`consumer_sweep` key of the `completion_manifest:` block on ticket routes, and
+a `consumer_sweep` field of the JSON reply on the fast lane (extra properties are
+accepted). When you edited no existing test there is nothing to record: skip the
+check and record steps, and render only the consumer tests you reviewed and left
+alone as `unaffected` entries, or `[]` when you found none.
 
 ## Step 1 — Pre-flight Reads
 
@@ -1112,7 +1247,10 @@ red_baseline:
 
 - Do NOT run the full test suite. Write tests and run only the newly written
   files for verification.
-- Do NOT modify existing test files unless the ticket explicitly requires it.
+- Existing test files and `conftest.py` may be edited only through "Existing-Test
+  Sweep (TQ-500g-3)": strengthen, never weaken; list every edit (tests, fixtures,
+  helpers, constants, module-level marks) and record the list once after your last
+  edit; hand back a test that could pass only by weakening it.
 - Do NOT use `Grep`, `Glob`, or MCP search tools — delegate to `research-agent`.
 - The `## Test Requirements` section you read must conform to `leafcutter/config/test_requirements.schema.json` (`$id`: `https://leafcutter/config/test_requirements.schema.json`, version `1.0.0`).
 - Spawn sub-agents only for the agents in your spawn allowlist (the generated
@@ -1177,6 +1315,12 @@ Your sign-off comment MUST include a `completion_manifest:` block immediately af
   case — because a bare string cannot be distinguished from a bare-`true`
   item, and the `not_found` case must never be written as the bare literal
   `false`.
+
+- `consumer_sweep` — the Existing-Test Sweep list (see "Existing-Test Sweep
+  (TQ-500g-3)" above): a list of `{file, test, status, note}` entries, the same
+  ones you recorded with `consumer_sweep.py record`; when you edited no existing
+  test, only the `unaffected` consumers you reviewed, or `[]` when there are none.
+  This is informational — the gate reads the recorded file, not this field.
 
 Example completion manifest for a test-writer sign-off that covered two ACs,
 found a real cross-layer seam, and resolved a reachability entry point that

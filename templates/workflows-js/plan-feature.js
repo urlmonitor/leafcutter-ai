@@ -3,21 +3,30 @@
  *
  * Implements the /plan-feature command: triages the user's request via the
  * ac-triage agent (Haiku-tier, fast), routes to the correct AC authoring
- * agents (product-owner, business-analyst, it-po) in sequence with
- * user confirmation gates between stages, and writes all output exclusively
+ * agents (product-owner, business-analyst, it-po, test-designer) in sequence
+ * with user confirmation gates after the PO and BA stages (the IT PO stage is
+ * auto-gated by a rule check), and writes all output exclusively
  * to the AC store (docs/acceptance-criteria/). No ticket files are produced.
  *
- * Routing table (matches ac-triage classification):
- *   strategic  → PO v3 → gate → BA v3 → gate → IT PO v3 → final gate
- *   behavioral → BA v3 → gate → IT PO v3 → final gate
- *   technical  → IT PO v3 → final gate
+ * Routing table (matches ac-triage classification; every route ends with the
+ * IT PO stage, then test design, then the final gate):
+ *   strategic  → PO → gate → BA → gate → IT PO (auto) → test design → final gate
+ *   behavioral → BA → gate → IT PO (auto) → test design → final gate
+ *   technical  → IT PO (auto) → test design → final gate
+ *   (a product-truth flow produced for a technical request adds the BA stage)
  *   covered    → show matching ACs → prompt cancel / amend / force
  *
  * Architecture:
  *   Stage 0: ac-triage agent (Haiku-pinned, reads AC store, classifies route)
  *   Stage 1–N: authoring agents dispatched in sequence per route
- *   Gates: user confirm/edit/cancel between each stage
- *   Final gate: user sets priority; workflow writes readiness: approved
+ *   Gates: user confirm/edit/cancel after PO and BA; IT PO passes on its rule check
+ *   Test design: design pre-pass (design_prepass.py), then the test-designer
+ *     agent; its output is committed as plan-feature(TEST-DESIGN-HANDBACK)
+ *   Hand-back: up to 2 rounds returning undecided file findings to it-po; each
+ *     round runs runRuleCheck("itpo-handback") and fails closed
+ *   Final gate: user sets priority; approveBatch runs approve_acs.py --ids
+ *     (approval-holds, then approval-apply): it approves the records that
+ *     pass and reports the held ones and the failed ones
  *
  * E2 canonical form: top-level body, agent(prompt, opts), args global.
  * No export async function run() — E2 executes the top-level body directly.
@@ -277,7 +286,7 @@ function stageDisplayName(stageKey) {
 async function commitStageOutput(written, stageName, component, isFinal, runId, acStorePath, authoringWorktreePath, extraPaths) {
   acStorePath = acStorePath || "docs/acceptance-criteria";
   // Build the git -C anchor for all git operations in this function. (AC BO-1500a-2)
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the no-main-commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
@@ -285,12 +294,10 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
     let branchConfirmed = false;
     let branchCheckError = "unknown error during branch check";
 
-    // Build git command: with -C if worktree path is known; bare otherwise.
-    const branchCheckCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" branch --show-current`
-      : `git branch --show-current`;
+    const branchCheckCmd = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)} branch --show-current` : null;
 
     try {
+      if (!branchCheckCmd) throw new Error("no authoring workspace path to anchor the branch check");
       const branchCheckResult = await agent(
         `Run the following command and return its raw stdout output:\n` +
         `${branchCheckCmd}\n` +
@@ -399,6 +406,12 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  For example, ACD-300g.yaml must NOT match ACD-300 (stems must be\n" +
       "  identical, not merely prefix-equal; ACD-300g !== ACD-300).\n" +
       "  These are the stage-specific files to stage.\n" +
+      "  PARENT RULE: in addition, if a parent AC's YAML file (an ancestor of a written\n" +
+      "  AC, e.g. BO-2600a for BO-2600a-6) was modified on disk by this stage -- typically its\n" +
+      "  covered_by list gained the written child -- include that parent file too. A parent\n" +
+      "  that is clean (unmodified) must never be staged, and neither must an unmodified sibling AC or an AC file committed by an earlier stage.\n" +
+      `  Only paths under the AC store (${acStorePath}/) are ever eligible; any path\n` +
+      "  outside the AC store is excluded, whatever its status.\n" +
       "\n" +
       "Step 2 — If no matching files are found:\n" +
       "  Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
@@ -414,7 +427,14 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  If the output is empty (nothing staged despite Step 3 succeeding):\n" +
       "    Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
       "\n" +
+      "  Compare the output with the expected set (the files staged in Step 3). Files the user had\n" +
+      "  already staged (pre-staged) outside the AC store, or AC files from an earlier stage, may be\n" +
+      "  in the index. If the index holds any unexpected extra path (not in the expected set):\n" +
+      `    unstage it with 'git ${gitC} reset -q -- <extra path>'; if that fails, return an error\n` +
+      "    { \"status\": \"error\", \"message\": \"unexpected staged path <path> - aborted\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false } and do not commit.\n" +
+      "\n" +
       "Step 5 — Commit the staged files using the commit agent's standard flow.\n" +
+      "  Limit the commit to the expected set via pathspec (-- <expected paths>) so that unrelated already staged changes are never swept in.\n" +
       "  The commit message has already been provided above. Use it exactly.\n" +
       "  After committing, capture the exit code and output.\n" +
       "  If exit code is 0:\n" +
@@ -520,6 +540,7 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
   return (
     `Commit of ${agentLabel} AC output failed. ` +
     `${hookLabel} rejected the staged files.` +
+    (commitOutcome.message && !/rejected (the )?staged files/i.test(commitOutcome.message) ? "\n  " + commitOutcome.message : "") + // the hook's own error; a message that only repeats the rejection adds nothing
     fileList + "\n" +
     "Fix the validation errors listed above, then re-run /plan-feature. " +
     "All AC files from this stage remain on disk as uncommitted changes so you can inspect and correct them."
@@ -535,15 +556,16 @@ function formatCommitError(agentLabel, stageName, commitOutcome, allAcsWritten) 
  * @param {string}   cancelledAt          - Human label for where the cancel occurred.
  * @param {string}   acStorePath          - Absolute path to the AC store directory.
  * @param {string|null} authoringWorktreePath - Absolute path to the dedicated authoring worktree.
+ * @param {string[]} [recordPaths]        - Repo-relative record paths (the rule check's records_to_commit); a draft id is matched to the path whose filename stem equals it exactly. Without any path the flat <store>/<id>.yaml is shown (legacy).
  * @returns {string} Formatted exit message for the user.
  */
-function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, authoringWorktreePath) {
+function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, authoringWorktreePath, recordPaths) {
   const store = acStorePath || "docs/acceptance-criteria";
   // Use the -C anchor in user-facing git instructions so cleanup targets the authoring worktree. (AC BO-1500a-2)
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const gitCheckoutCmd = `git ${gitC} checkout -- ${store}/`.trim();
   const draftFilePaths = draftAcs.map(
-    (id) => `  ${store}/${id}.yaml`
+    (id) => !Array.isArray(recordPaths) || recordPaths.length === 0 ? `  ${store}/${id}.yaml` : "  " + (recordPaths.find((p) => p.split(/[\/]/).pop().replace(/\.yaml$/, "") === id) || id + " (no record path known)")
   );
 
   const parts = [`Pipeline cancelled at ${cancelledAt}.`];
@@ -586,7 +608,7 @@ function buildCancelMessage(committedAcs, draftAcs, cancelledAt, acStorePath, au
 async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
   // Build the git status command, conditionally inserting -C.
   const gitStatusCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" status --porcelain --untracked-files=all -- ${acStoreDir}`
+    ? `git -C ${makerQuote(authoringWorktreePath)} status --porcelain --untracked-files=all -- ${acStoreDir}`
     : `git status --porcelain --untracked-files=all -- ${acStoreDir}`;
   // Run git status to discover modified/untracked YAML files in the AC store.
   let statusOutput;
@@ -669,7 +691,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
     const readiness = readinessMatch ? readinessMatch[1].trim().replace(/^['"]|['"]$/g, "") : null;
     // Qualify as orphan: origin_agent must be an AC authoring agent AND readiness must be "draft".
     const AUTHORING_AGENTS = new Set(["product-owner", "business-analyst", "it-po"]);
-    if (!AUTHORING_AGENTS.has(originAgent)) { continue; }
+    if (!AUTHORING_AGENTS.has((originAgent || "").replace(/-v\d+$/, ""))) { continue; } // stored v3 authors map to canonical names
     if (readiness !== "draft") { continue; }
     // Extract AC ID: prefer the id field, fall back to filename stem.
     let acId;
@@ -699,7 +721,7 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
  * @returns {Promise<{ status: "ok"|"error", message: string, pr_url?: string }>}
  */
 async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, allAcsApproved, component, priority) {
-  const gitC = authoringWorktreePath ? `git -C "${authoringWorktreePath}"` : "git";
+  const gitC = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)}` : "git";
   const acList = allAcsApproved.length > 0 ? allAcsApproved.join(", ") : "(none)";
   const componentLabel = component || "ac-store";
   const prTitle = `chore(ac): ${componentLabel} — AC authoring session approved (${allAcsApproved.length} AC${allAcsApproved.length !== 1 ? "s" : ""})`;
@@ -794,7 +816,7 @@ async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, al
  */
 async function scanCommittedStages(authoringWorktreePath) {
   const gitLogCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" log --oneline origin/main..HEAD`
+    ? `git -C ${makerQuote(authoringWorktreePath)} log --oneline origin/main..HEAD`
     : "git log --oneline origin/main..HEAD";
 
   let logOutput;
@@ -827,6 +849,7 @@ async function scanCommittedStages(authoringWorktreePath) {
     "ba": "ba",
     "it-po": "itpo",
     "test-design": "test-design",
+    "test-design-handback": "test-design-handback",
     "mock-data": "mockdata",
     "mockup": "mockup",
     "flow": "flow",
@@ -871,7 +894,7 @@ async function scanCommittedStages(authoringWorktreePath) {
 async function resolveOrphanedDrafts(orphans, acStoreDir, runId, authoringWorktreePath, userChoice) {
   // Build a git command prefix helper.
   const gitCmd = authoringWorktreePath
-    ? (sub) => `git -C "${authoringWorktreePath}" ${sub}`
+    ? (sub) => `git -C ${makerQuote(authoringWorktreePath)} ${sub}`
     : (sub) => `git ${sub}`;
 
   userChoice = (typeof userChoice === "string") ? userChoice.toLowerCase().trim() : "no";
@@ -1191,18 +1214,17 @@ async function emitPtTelemetry(event, detail, authoringWorktreePath) {
  */
 async function commitStageOutputProductTruth(reportedPaths, stageName, component, runId, ptStorePath, authoringWorktreePath) {
   ptStorePath = ptStorePath || "docs/product-truth";
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const stageLabel = stageDisplayName(stageName);
 
   // Why the PT commit guard: docs/reference/plan-feature-workflow-rationale-helpers.md
   {
     let branchConfirmed = false;
     let branchCheckError = "unknown error during branch check";
-    const branchCheckCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" branch --show-current`
-      : `git branch --show-current`;
+    const branchCheckCmd = authoringWorktreePath ? `git -C ${makerQuote(authoringWorktreePath)} branch --show-current` : null;
 
     try {
+      if (!branchCheckCmd) throw new Error("no authoring workspace path to anchor the branch check");
       const branchCheckResult = await agent(
         `Run the following command and return its raw stdout output:\n` +
         `${branchCheckCmd}\n` +
@@ -1339,7 +1361,7 @@ async function commitStageOutputProductTruth(reportedPaths, stageName, component
  */
 async function recoverFlowRefFromCommit(authoringWorktreePath) {
   const gitLogCmd = authoringWorktreePath
-    ? `git -C "${authoringWorktreePath}" log --name-only --format=%H%x00%s origin/main..HEAD`
+    ? `git -C ${makerQuote(authoringWorktreePath)} log --name-only --format=%H%x00%s origin/main..HEAD`
     : "git log --name-only --format=%H%x00%s origin/main..HEAD";
 
   try {
@@ -1440,7 +1462,7 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   }
 
   // Step 2 — commit the reconciliation as its own commit (flow + index + affected ACs).
-  const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
+  const gitC = authoringWorktreePath ? `-C ${makerQuote(authoringWorktreePath)}` : "";
   const commitMessage =
     `plan-feature(RECONCILE): ${component || "unknown-component"}\n\nrun-id: ${runId}\nflow step.implements back-links + regenerated derived data`;
   const indexPath = ptStorePath + "/index.json";
@@ -1639,7 +1661,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       // Wrong/malformed shape or action not in valid options: stay paused.
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
-    // Why why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md
+    // Why shape-valid is not person-authored (ACD-2100c-4): docs/reference/plan-feature-workflow-rationale.md
     if (args.resume_answer.channel !== "person") {
       return {
         status: "paused_awaiting_input",
@@ -1671,7 +1693,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     if (_pausedRecord && _pausedRecord.context && typeof _pausedRecord.context === "object") {
       decision._resumedContext = _pausedRecord.context;
     }
-    // Why why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md
+    // Why the pause record is cleared once the run moves past the gate (ACD-2100c-3 AC-4): docs/reference/plan-feature-workflow-rationale.md
     if (decision.action !== "edit") {
       const _clearPrompt =
         "This paused run has been resumed and is moving past the decision point " +
@@ -1696,7 +1718,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       }
 
       if (!_clearVerified) {
-        // Why why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md
+        // Why a failed pause-record clear is reported: docs/reference/plan-feature-workflow-rationale.md
         log(
           "[plan-feature][WARNING] Could not verify the durable pause record for run '" +
           runId + "' (gate '" + gateId + "') was cleared after resume. A stale record " +
@@ -1707,7 +1729,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     }
     return decision;
   }
-  // Why why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md
+  // Why an unanswered gate pauses (ACD-2100c-1 / KI-ACD-005): docs/reference/plan-feature-workflow-rationale.md
   void liveGateFn;
   return pauseAtGate(gateId, runId, context, descriptor);
 }
@@ -1777,7 +1799,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
         "Re-run /plan-feature interactively, or drive the remaining authoring agents directly.",
     };
   }
-  // Why why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md
+  // Why the pause payload carries the question (ACD-2100c-1): docs/reference/plan-feature-workflow-rationale.md
   return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId, question: question };
 }
 
@@ -1914,20 +1936,7 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
     "done | sort -u | head -n1); " +
     "fi; " +
     "if [ -z \"$REPO_ROOT\" ]; then " +
-    // Structured, fixed-vocabulary marker (mirrors buildRepoAnchoredReadCommand()'s
-    // own REGISTRYREADFAIL tags below), using an errno-style CODE rather than
-    // an English phrase. This command's own literal source text is dispatched
-    // as part of the agent() prompt on EVERY run regardless of which branch
-    // actually executes, so an English reason word here (e.g. "found",
-    // "missing", "denied") would leak into the observable report of every
-    // OTHER branch's run too. A code with zero lexical overlap with either
-    // the "not found" or "permission refused" vocabulary (ACD-2100b-1), NOR
-    // with the word "unreadable" itself, is what keeps those two reports —
-    // and this run's own report, whatever outcome it turns out to be —
-    // genuinely distinguishable (ACD-2100b-2: this same static command text
-    // is also dispatched, unconditionally, on the uninterpretable-registry
-    // outcome, so a tag containing "unreadable" would leak that word into
-    // every uninterpretable-registry report too).
+    // Why the structured ENOREPO marker is an errno-style code (ACD-2100b-1, ACD-2100b-2): docs/reference/plan-feature-workflow-rationale-helpers.md
     "echo \"REGISTRYREADFAIL reason=ENOREPO location=" + targetDescription + "\" >&2; " +
     "exit 1; " +
     "fi; "
@@ -2013,12 +2022,12 @@ async function runRuleCheck(stage, acStoreDir, worktreePath, agentType) {
 }
 
 // ACD-2500c-2: one deterministic ac_store CLI via the shell agent; ok only on exit 0 with JSON stdout (fail closed, like runRuleCheck).
-async function runStageScript(label, script, ids, acStoreDir, worktreePath, agentType) {
+async function runStageScript(label, script, ids, acStoreDir, worktreePath, agentType, tail) {
   const target = ".leafcutter/scripts/ac_store/" + script;
   const bad = ids.filter((id) => !/^[A-Za-z0-9._-]+$/.test(id));
   if (bad.length > 0) { return { ok: false, why: label + " refused unsafe ids " + bad.join(",") }; }
   const cmd = _buildRepoRootResolutionSnippet(target) + "python \"$REPO_ROOT/" + target + "\" --ids " + ids.join(",") +
-    " --store-root \"" + acStoreDir + "\" --repo-root \"" + worktreePath + "\"";
+    (tail || " --store-root \"" + acStoreDir + "\" --repo-root \"" + worktreePath + "\"");
   try {
     const raw = await agent(
       "Run the following command and return ONLY the raw stdout output:\n" + cmd + "\n" +
@@ -2026,7 +2035,7 @@ async function runStageScript(label, script, ids, acStoreDir, worktreePath, agen
       { agentType: agentType, label: label }
     );
     const reply = parseAgentJson(raw, { stage: label, agent: agentType });
-    if (reply.exit_code !== 0) { return { ok: false, why: label + " exited " + reply.exit_code + " " + (reply.stderr || "") }; }
+    if (reply.exit_code !== 0) { let partial = null; try { partial = JSON.parse(reply.output); } catch (_) { partial = null; } return { ok: false, report: partial, why: label + " exited " + reply.exit_code + " " + (reply.stderr || "") }; }
     return { ok: true, report: JSON.parse(reply.output) };
   } catch (err) {
     return { ok: false, why: label + " produced no readable report (" + (err && err.message ? err.message : String(err)) + ")" };
@@ -2034,8 +2043,9 @@ async function runStageScript(label, script, ids, acStoreDir, worktreePath, agen
 }
 
 // ACD-2500c-2: the test-design step. No pre-pass report, no designer dispatch. Returns {ruleCheck} to stand in for the stage check, or {ruleCheck: null} to run it.
-async function dispatchTestDesign(agentType, ids, feedback, acStoreDir, worktreePath, shellAgent) {
+async function dispatchTestDesign(agentType, ids, feedback, acStoreDir, worktreePath, shellAgent, fromHandback) {
   const stop = (passed, why) => ({ ruleCheck: { passed: passed, toCommit: [], report: { verdict: passed ? "passed" : "failed", reason: why }, summary: "Test-design step: " + why } });
+  if (fromHandback) { log("[plan-feature] resumed from the hand-back design commit (TEST-DESIGN-HANDBACK); continuing with the hand-back round and the final gate."); return stop(true, "resumed from the hand-back design commit (its test-design check passed before it was made)."); }
   const pre = await runStageScript("design-prepass", "design_prepass.py", ids, acStoreDir, worktreePath, shellAgent);
   if (!pre.ok) { return stop(false, "the pre-pass produced no report: " + pre.why); }
   if (!Array.isArray(pre.report.records) || pre.report.records.length === 0) { return stop(true, "nothing to design (no record needs a design)."); }
@@ -2063,10 +2073,41 @@ async function approvalHolds(ids, acStoreDir, worktreePath, shellAgent) {
   return out.ok && Array.isArray(out.report.held) && Array.isArray(out.report.approved) ? [...out.report.held, ...ids.filter((id) => !out.report.approved.includes(id) && !out.report.held.some((h) => h.id === id)).map((id) => ({ id: id, reason: "not in the hold report" }))] : ids.map((id) => ({ id: id, reason: "unreadable" }));
 }
 
-// ACD-2500d-3-i: hand undecided file findings back to it-po (max 2 rounds, docs/reference/code-aware-step.md); what stays undecided is shown held.
-async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent) {
+// ACD-300c-4: approve through the store's one approval step (approve_acs.py, deployed copy; why: docs/reference/plan-feature-workflow-rationale-gates.md): its --dry-run reports the holds, the apply gets only the released ids; ok:false on any failure (fail closed).
+async function approveBatch(ids, priority, acStoreDir, worktreePath, shellAgent) {
+  const json = " --json --ac-root \"" + acStoreDir + "\"";
+  const dry = await runStageScript("approval-holds", "approve_acs.py", ids, acStoreDir, worktreePath, shellAgent, " --dry-run" + json);
+  if (!dry.ok) { return dry; }
+  const released = [...(dry.report.approved || []), ...(dry.report.already_approved || [])];
+  const done = released.length === 0 ? { ok: true, report: {} } : await runStageScript("approval-apply", "approve_acs.py", released, acStoreDir, worktreePath, shellAgent, " --priority " + priority + json);
+  const part = done.report || {}, got = [...(part.approved || []), ...(part.already_approved || [])], failed = part.failed || [];
+  const held = [...(dry.report.held || []), ...(part.held || []).filter((h) => !(dry.report.held || []).some((d) => d.id === h.id))];
+  return done.ok ? { ok: true, held: held, approved: got, already: part.already_approved || [] } : { ...done, held: held, approved: got, failed: failed, untouched: released.filter((id) => !got.includes(id) && !failed.includes(id)) };
+}
+
+/** ACD-2500a-2-ix-a: add the AC ids of the hand-back design commit (exact subject label TEST-DESIGN-HANDBACK, never TEST-DESIGN) to `acs`, read from its `AC IDs:` body line. Returns true only when ids were recovered; otherwise logs why and returns false so the caller runs the stage normally (fail closed). */
+async function recoverHandbackIds(acs, worktreePath) {
+  const cmd = worktreePath ? `git -C "${worktreePath}" log --format=%B origin/main..HEAD` : "git log --format=%B origin/main..HEAD";
+  try {
+    const reply = parseAgentJson(await agent("Run the following command and return ONLY the raw stdout:\n" + cmd + "\nReturn JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }", { agentType: "status-checker", label: "resume-log" }), { stage: "resume-log", agent: "status-checker" });
+    const commit = String(reply && reply.exit_code === 0 ? reply.output : "").split(/\n(?=plan-feature\()/).find((c) => /^plan-feature\(TEST-DESIGN-HANDBACK\):/i.test(c));
+    const found = commit && commit.match(/^AC IDs:\s*(.+)$/m);
+    const ids = (found ? found[1].split(",").map((x) => x.trim()) : []).filter((id) => id && id !== "(none)");
+    for (const id of ids) { if (!acs.includes(id)) { acs.push(id); } }
+    if (ids.length === 0) { log("[plan-feature] no AC ids recovered from the hand-back commit (git log exit " + (reply && reply.exit_code) + "); running the test-design stage normally."); }
+    return ids.length > 0;
+  } catch (err) {
+    log("[plan-feature] could not read the hand-back commit's AC ids: " + (err && err.message ? err.message : String(err)));
+    return false;
+  }
+}
+
+// ACD-2500d-3-i / ACD-2500a-2-ix: hand undecided file findings back to it-po (max 2 rounds, docs/reference/code-aware-step.md); what stays undecided is shown held. Round 1 first commits the test-design output as test-design-handback (the check's before-state; why that label: docs/reference/plan-feature-workflow-rationale-gates.md); each round is checked as itpo-handback and a failure is `stopped`.
+async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePath, shellAgent, commitDesign, resumed) {
   const undecided = (list) => list.filter((h) => h.reason === "file finding undecided").map((h) => h.id);
+  let stopped = null, checked = false;
   for (let round = 1; round <= 2 && ruleCheck.passed && undecided(held).length > 0; round++) {
+    if (round === 1 && !resumed) { const done = await commitDesign(ruleCheck); if (done.status === "error") { stopped = formatCommitError("test-design", "test-design", done, allAcs); break; } }
     try {
       const raw = await agent(
         "You are the technical planner (it-po). These requirements carry file findings with no recorded decision: " + undecided(held).join(", ") + ".\n" +
@@ -2079,31 +2120,28 @@ async function handBackFindings(held, ruleCheck, allAcs, acStoreDir, worktreePat
       log("[plan-feature] findings hand-back round " + round + " failed: " + (err && err.message ? err.message : String(err)));
       break;
     }
-    ruleCheck = await runRuleCheck("test-design", acStoreDir, worktreePath, shellAgent);
+    ruleCheck = await runRuleCheck("itpo-handback", acStoreDir, worktreePath, shellAgent);
+    checked = true;
+    if (!ruleCheck.passed) { stopped = "The hand-back stage (itpo-handback) is not complete, so the run stops before the final gate.\n" + ruleCheck.summary; }
     held = await approvalHolds(allAcs, acStoreDir, worktreePath, shellAgent);
   }
-  return { held: held, ruleCheck: ruleCheck };
+  if (resumed && !checked && ruleCheck.passed) { ruleCheck = await runRuleCheck("itpo-handback", acStoreDir, worktreePath, shellAgent); if (!ruleCheck.passed) { stopped = "The hand-back stage (itpo-handback) is not complete, so the run stops before the final gate.\n" + ruleCheck.summary; } }
+  return { held: held, ruleCheck: ruleCheck, stopped: stopped };
 }
 
-/**
- * ACD-2100a-1: the workspace maker's ABSOLUTE in-repository path. The repository is found the repo-anchored way
- * (the parent of git-common-dir run here, else a child folder holding .git), one single plain shell-runner
- * command per probe. Sibling folders are not probed: that glob would also match a working folder holding an
- * empty .git (the dev layout's untracked parent), i.e. the very copy this must never run. A decline or prose
- * reply, no repository found, or several child repositories (the maker's AMBIGUOUS_REPO; never a pick) is
- * returned for the caller to halt on, quoting what was received or the candidates.
- */
-const MAKER_PROBES = ["git rev-parse --path-format=absolute --git-common-dir", "realpath -- */.git"];
-async function resolveRepoAnchoredMakerPath(phaseName) {
-  const replies = [];
-  for (const probe of MAKER_PROBES) {
-    const reply = shellStepReply(await shellStepDispatch(probe, "resolve-maker-path", phaseName), "resolve-maker-path");
-    if (!reply.ok) return reply;
-    const gitDirs = [...new Set(reply.stdout.split(/\r?\n/).map((s) => s.trim()).filter((s) => /^(\/|[A-Za-z]:).*[\\/]\.git$/.test(s)))];
-    if (gitDirs.length) return gitDirs.length > 1 ? { ok: false, reason: "more than one child repository was found, so which one the workspace maker belongs to is ambiguous (AMBIGUOUS_REPO)", received: workspaceQuote(gitDirs) } : { ok: true, path: gitDirs[0].replace(/[\\/]\.git$/, "/.leafcutter/scripts/worktree.py") };
-    replies.push(reply.reply);
+/** ACD-300a-3: read the title of each covering AC through ONE shell dispatch (label read-covering-ac-titles; the body has no file access). Returns {id: title}; a failed read returns {} so the ids are still listed. */
+async function readCoveringTitles(ids, acStoreDir) {
+  if (ids.length === 0 || ids.some((id) => !/^[A-Za-z0-9._-]+$/.test(id))) { log("[plan-feature] covering AC titles not read (an id is unsafe or none given); listing ids only."); return {}; }
+  const py = "import sys,json,glob,yaml; d={}; [d.__setitem__(i,yaml.safe_load(open(p,encoding=\"utf-8\")).get(\"title\")) for i in sys.argv[2:] for p in glob.glob(sys.argv[1]+\"/**/\"+i+\".yaml\",recursive=True)]; print(json.dumps(d))";
+  try {
+    const reply = parseAgentJson(await agent("Run the following command and return ONLY the raw stdout:\npython -c '" + py + "' \"" + acStoreDir + "\" " + ids.join(" ") + "\nReturn JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number> }", { agentType: scriptStepAgentId, label: "read-covering-ac-titles" }), { stage: "read-covering-ac-titles", agent: scriptStepAgentId });
+    if (reply.exit_code !== 0) { log("[plan-feature] covering AC titles not read (command exit " + reply.exit_code + "); listing ids only."); }
+    const titles = reply.exit_code === 0 ? JSON.parse(reply.output) : {};
+    return titles && typeof titles === "object" && !Array.isArray(titles) ? titles : {};
+  } catch (err) {
+    log("[plan-feature] could not read the covering AC titles: " + (err && err.message ? err.message : String(err)));
+    return {};
   }
-  return { ok: false, reason: "the workspace maker's in-repository location could not be resolved (no repository here or in a child folder)", received: workspaceQuote(replies) };
 }
 
 // E2 top-level body — executed directly by the E2 engine
@@ -2139,34 +2177,15 @@ if (!request) {
 // Detect whether the user's current checkout is on main. One shell-runner dispatch of one exact command; a
 // reply that is not a result (a decline, prose, no exit status) ends the run quoting it -- it is never taken
 // as the step having run.
-let userIsOnMain = false;
-let currentBranchRaw = null;
-let currentBranchDispatchFailed = false;
-try {
-  currentBranchRaw = await shellStepDispatch("git branch --show-current", "detect-current-branch", "Stage 0");
-} catch (branchDispatchErr) {
-  // A transport failure (no reply at all) is not a reply to quote; detection is best-effort then.
-  currentBranchDispatchFailed = true;
-  log("[plan-feature][WARNING] Could not dispatch the current-branch check: " + branchDispatchErr.message);
-}
-const currentBranchReply = currentBranchDispatchFailed
-  ? { ok: false, transport: true }
-  : shellStepReply(currentBranchRaw, "detect-current-branch");
-if (!currentBranchReply.ok && !currentBranchReply.transport) {
-  return {
-    status: "error",
-    message:
-      "Could not detect the current branch: " + currentBranchReply.reason + ". Received: " +
-      currentBranchReply.received + ". Nothing was dispatched after it.",
-  };
-}
-if (currentBranchReply.ok && currentBranchReply.exit_status === 0 && currentBranchReply.stdout.trim().toLowerCase() === "main") {
-  userIsOnMain = true;
-  log(
-    "[plan-feature] Detected: current checkout is on protected main branch.\n" +
-    "[plan-feature] The AC-authoring workspace is made by the workspace maker from origin/main " +
-    "on its own branch -- your main branch will not be modified."
-  );
+// Runs once the permission gate below has passed, in the project the maker was resolved in (ACD-2100a-1); null = go on.
+async function detectCurrentBranch(projectRoot) {
+  let r;
+  try { r = shellStepReply(await shellStepDispatch(`git -C ${makerQuote(projectRoot)} branch --show-current`, "detect-current-branch", "Stage 0"), "detect-current-branch"); }
+  catch (e) { r = { ok: false, reason: "no reply was received (" + e.message + ")", received: "(no answer)" }; }
+  if (!r.ok) return { status: "error", message: "Could not detect the current branch: " + r.reason + ". Received: " + r.received + ". Nothing was dispatched after it." };
+  if (r.exit_status !== 0 || r.stdout.trim().toLowerCase() !== "main") return null;
+  log("[plan-feature] Detected: current checkout is on protected main branch.\n[plan-feature] The AC-authoring workspace is made by the workspace maker from origin/main on its own branch -- your main branch will not be modified.");
+  return null;
 }
 
 const sessionSlug = component
@@ -2177,13 +2196,13 @@ const sessionSlug = component
 // The workspace-setup step runs repository-mutating commands and goes only to an agent whose charter permits shell; the verdict
 // arrives as `args.workspace_setup_permission` (the pre-flight check runs outside this body) and a missing verdict fails closed.
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-runner";
-// Stage-end script steps (rule-check, test design, approval holds, hand-back findings) send compound commands the
+// Stage-end script steps (rule-check, test design, approval holds and apply, hand-back findings) send compound commands the
 // one-command shell-runner declines, so they stay on worktree-agent until the follow-up ticket
 // tickets/00_inbox/TICKET-20261021-PlanFeatureScriptStepsToShellRunner.md rewrites them for shell-runner (ADR-070).
 const scriptStepAgentId = "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
-// Why why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
+// Why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
 if (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object") {
   const missingPreflightMessage =
     "No workspace-setup permission pre-flight verdict was supplied in args " +
@@ -2228,7 +2247,7 @@ if (workspaceSetupPermission.permits !== true) {
       "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is " +
       "not a list of agent entries. Halting before any authoring agent is dispatched. Fix " +
       "config/agent_registry.json so that 'agents' is a list of agent entries.",
-    // Why why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why the denied report names permits_shell (ACD-2100b-3): docs/reference/plan-feature-workflow-rationale-gates.md
     permission_denied:
       "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent '" +
       workspaceSetupAgentId + "', which is listed in the agent registry (config/agent_registry.json) " +
@@ -2246,13 +2265,16 @@ if (workspaceSetupPermission.permits !== true) {
   return { status: "error", message: deniedMessage };
 }
 
+const makerPath = await resolveRepoAnchoredMakerPath("Stage 0", "{{config.output_root}}");
+if (!makerPath.ok) return workspaceFailure(makerPath);
+const branchFailure = await detectCurrentBranch(makerPath.root);
+if (branchFailure) return branchFailure;
+
 // The authoring workspace: the maker's answer (args.workspace) or exactly one verbatim dispatch of the maker
 // command. Anything but an accepted answer ends the run here, quoting what was received (BO-4300c-3).
 // ACD-2100a-1: that dispatch names the maker copy inside the repository by its absolute path, never a cwd-relative one.
-const makerPath = args && args.workspace != null ? { ok: true, path: "" } : await resolveRepoAnchoredMakerPath("Stage 0");
-if (!makerPath.ok) return workspaceFailure(makerPath);
 const authoringWorkspace = await workspaceObtain(
-  "python3 \"" + makerPath.path + "\" ensure --kind ac --slug " + (sessionSlug || "ac-authoring"), "Stage 0");
+  makerCommand(makerPath.path, "ensure", { kind: "ac", slug: sessionSlug || "ac-authoring" }), "Stage 0");
 if (!authoringWorkspace.accepted) return workspaceFailure(authoringWorkspace);
 
 const authoringWorktreePath = authoringWorkspace.workspace_path;
@@ -2358,14 +2380,16 @@ try {
 const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage;
 
 // Handle "covered" route: show existing ACs + prompt user
+let _amendIds = []; // ACD-300a-3: the covering ids an "amend" answer hands to the it-po stage
 if (route === "covered" && !force && !_resumedCtx) {
+  const _covTitles = args.resume_answer ? {} : await readCoveringTitles(existing_acs, acStoreDir);
+  const _covQuestion = "These existing ACs already cover your request. Would you like to proceed anyway (force new), amend an existing AC, or cancel?" + existing_acs.map((id) => "\n  " + id + (typeof _covTitles[id] === "string" && _covTitles[id] ? ": " + _covTitles[id] : "")).join("");
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
   const _covGateResult = await resolveGate(
     "covered-route-gate",
     async () => {
       const raw = await agent(
-        "Present the following to the user and ask them to choose one option:\n\n" +
-        `The request appears to already be covered by these existing ACs:\n${existing_acs.join(", ")}\n\n` +
+        "Present the following to the user and ask them to choose one option:\n\n" + _covQuestion + "\n\n" +
         "Options:\n" +
         "  1. cancel  — the existing ACs are sufficient; exit without creating new ACs.\n" +
         "  2. amend   — add constraints/details to the existing ACs (routes as 'technical').\n" +
@@ -2383,13 +2407,13 @@ if (route === "covered" && !force && !_resumedCtx) {
     },
     args,
     { route: "covered", existing_acs },
-    { type: "single_choice", options: ["cancel", "amend", "force"] },
+    { type: "single_choice", options: ["cancel", "amend", "force"], prompt: _covQuestion },
     args.run_id || "default-run"
   );
   if (_covGateResult && TERMINAL_GATE_STATUSES.includes(_covGateResult.status)) {
     return _covGateResult;
   }
-  // Why why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md
+  // Why a missing covered-gate answer fails closed (KI-ACD-005): docs/reference/plan-feature-workflow-rationale-gates.md
   if (!_covGateResult) {
     return {
       status: "undetermined",
@@ -2413,13 +2437,14 @@ if (route === "covered" && !force && !_resumedCtx) {
   }
 
   if (choice === "amend") {
-    triage.route = "technical";
+    triage.route = "technical"; _amendIds = existing_acs;
   } else {
     // force → strategic
     triage.route = "strategic";
   }
 }
 
+if (route === "covered" && force) { triage.route = "strategic"; } // ACD-300a-3: --force on a covered request is the force answer
 _runRouteCtx = { route: triage.route, existing_acs, parent_l1_id };
 // Why the always-on Product-Truth phase: docs/reference/plan-feature-workflow-rationale-gates.md
 phase('Product-Truth Phase')
@@ -2670,7 +2695,7 @@ for (const step of pipeline) {
     // Why the crash-resume id recovery: docs/reference/plan-feature-workflow-rationale-helpers.md
     const stageDisplayLabel = stageDisplayName(step.stage);
     const resumeLogCmd = authoringWorktreePath
-      ? `git -C "${authoringWorktreePath}" log --format=%B origin/main..HEAD`
+      ? `git -C ${makerQuote(authoringWorktreePath)} log --format=%B origin/main..HEAD`
       : "git log --format=%B origin/main..HEAD";
 
     let resumedAcIds = [];
@@ -2691,7 +2716,7 @@ for (const step of pipeline) {
         const logBody = resumeLogParsed.output || "";
         // Why how AC ids are recovered from commit bodies: docs/reference/plan-feature-workflow-rationale-gates.md
         const stageSubjectRe = new RegExp(
-          `^plan-feature\\(${stageDisplayLabel}(?:[^)]*)?\\):`,
+          `^plan-feature\\(${stageDisplayLabel}(?:,[^)]*)?\\):`,
           "i"
         );
         const anyStageSubjectRe = /^plan-feature\([^)]*\):/i;
@@ -2723,7 +2748,7 @@ for (const step of pipeline) {
     // Also add to committedAcs so cancel messages distinguish prior commits.
     committedAcs.push(...resumedAcIds);
 
-    // Why why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why a skipped reconciliation is signalled (m6): docs/reference/plan-feature-workflow-rationale-gates.md
     if (step.stage === "ba" && ptFlowProduced) {
       await emitPtTelemetry(
         "pt_reconciliation_skipped_on_resume",
@@ -2765,16 +2790,19 @@ for (const step of pipeline) {
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
   let skipAuthorOnResume = isPausedAtThisStep; // BO-2300d-1-iii: an edit resume also skips the pre-gate author run; the edit re-authors once
+  let resumedHandback = false; // ACD-2500a-2-ix-a: the test-design step resumes from the hand-back design commit
   let reapprove = false; // approval was consumed, then the check forced a re-author: a rewrite that passes needs a NEW pause (never the old answer); one that still fails skips the gate and retries
 
   while (!approved) {
-    // Why why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
+    // Why the author is not re-dispatched on resume (ACD-2100c-3): docs/reference/plan-feature-workflow-rationale-gates.md
     let written;
     if (skipAuthorOnResume) {
       written = [];
     } else if (step.stage === "test-design") {
+      resumedHandback = committedStageKeys.has("test-design-handback") && editRetries === 0;
+      if (resumedHandback) { resumedHandback = await recoverHandbackIds(allAcsWritten, authoringWorktreePath); }
       written = [...allAcsWritten];
-      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, scriptStepAgentId);
+      designOutcome = await dispatchTestDesign(step.agent, allAcsWritten, acFeedback, acStoreDir, authoringWorktreePath, scriptStepAgentId, resumedHandback);
     } else {
       // Dispatch the authoring agent, directing AC writes to the dedicated
       // authoring worktree's AC store path (AC BO-1500a-1).
@@ -2810,6 +2838,7 @@ for (const step of pipeline) {
         `component: ${JSON.stringify(component)}\n` +
         `parent_l1_id: ${JSON.stringify(parent_l1_id)}\n` +
         `route: ${JSON.stringify(effectiveRoute)}\n` +
+        (step.stage === "itpo" && _amendIds.length > 0 ? `amend_acs: ${JSON.stringify(_amendIds)}\nThese existing records already cover the request: amend them (edit those records) rather than authoring new ones.\n` : "") +
         `ac_store_path: ${JSON.stringify(acStoreDir)}`,
         { agentType: step.agent, label: `stage-${step.stage}-author` }
       );
@@ -2890,12 +2919,12 @@ for (const step of pipeline) {
       if (action === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel).
         const cancelLabel = `gate after ${step.agent}`;
-        // Why why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md
+        // Why a cancel is distinct from success (BO-2300a-2, ACD-2100c-5): docs/reference/plan-feature-workflow-rationale-gates.md
         return {
           status: "cancelled",
           cancelled_at: `gate-${step.stage}`,
           cancelled_by: "person",
-          message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath),
+          message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath, ruleCheck && ruleCheck.report && ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -2910,7 +2939,7 @@ for (const step of pipeline) {
           status: "error",
           message:
             `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-            buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir, authoringWorktreePath),
+            buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -2947,7 +2976,7 @@ for (const step of pipeline) {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
       // ADR-024: resolveGate checks args.resume_answer before the live agent call.
       let heldPre = skipAuthorOnResume ? [] : await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId);
-      if (!skipAuthorOnResume) { ({ held: heldPre, ruleCheck } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId)); written = [...new Set(allAcsWritten)]; }
+      if (!skipAuthorOnResume) { let stopped; ({ held: heldPre, ruleCheck, stopped } = await handBackFindings(heldPre, ruleCheck, allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId, (rc) => commitStageOutput(allAcsWritten, "test-design-handback", component, false, runId, acStoreDir, authoringWorktreePath, rc.toCommit), resumedHandback)); written = [...new Set(allAcsWritten)]; if (stopped) { return { status: "error", message: stopped, stage: "itpo-handback", committed_acs: committedAcs, acs_as_drafts: written }; } }
       const approvablePre = allAcsWritten.filter((id) => !heldPre.some((h) => h.id === id));
       const _finalGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         "final-gate",
@@ -2972,7 +3001,7 @@ for (const step of pipeline) {
         },
         reapprove ? { ...args, resume_answer: null } : args,
         { stage: "final", acs: written, all_acs: allAcsWritten, rule_check: ruleCheck && ruleCheck.summary, held: heldPre, approvable: approvablePre },
-        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Show each approvable requirement criteria next to its test_spec; list held requirements separately with no approve option." },
+        { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"], prompt: "Final gate (test design). Show each approvable requirement: its criteria next to its test_spec, with its assigned_agent, estimated_complexity, delivers_to and expects_from; list held requirements separately with no approve option. Ask for one batch priority (critical / high / medium / low), then approve | edit | defer | cancel.\nApprovable: " + (approvablePre.join(", ") || "(none)") + heldPre.map((h) => "\nHeld, no approve option: " + h.id + " (" + h.reason + ")").join("") },
         args.run_id || "default-run"
       );
       // Non-proceed outcomes: exit immediately.
@@ -2984,7 +3013,7 @@ for (const step of pipeline) {
         return {
           status: "undetermined",
           message:
-            "The final gate (IT PO v3 review) returned no usable answer, so " +
+            "The final gate (test-design stage) returned no usable answer, so " +
             "no decision was recorded. This is a gate failure, NOT a user " +
             "cancellation. Committed ACs are preserved and drafted ACs are " +
             "left on disk -- re-run /plan-feature and answer the gate.",
@@ -2999,7 +3028,7 @@ for (const step of pipeline) {
         if (Array.isArray(finalDecision._resumedContext.acs)) {
           written = finalDecision._resumedContext.acs;
         }
-        // Why why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md
+        // Why all_acs is merged with de-duplication (H-2): docs/reference/plan-feature-workflow-rationale-gates.md
         if (Array.isArray(finalDecision._resumedContext.all_acs)) {
           for (const _resumedAcId of finalDecision._resumedContext.all_acs) {
             if (!allAcsWritten.includes(_resumedAcId)) {
@@ -3022,7 +3051,7 @@ for (const step of pipeline) {
           status: "cancelled",
           cancelled_at: "final-gate",
           cancelled_by: "person",
-          message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)", acStoreDir, authoringWorktreePath),
+          message: buildCancelMessage(committedAcs, written, "final gate (test design)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -3034,8 +3063,8 @@ for (const step of pipeline) {
         return {
           status: "error",
           message:
-            `it-po failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
-            buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)", acStoreDir, authoringWorktreePath),
+            `test-design failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
+            buildCancelMessage(committedAcs, written, "max-retries abort for test-design (final gate)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -3047,22 +3076,24 @@ for (const step of pipeline) {
           acs_as_reviewed: allAcsWritten,
         };
       } else if (finalAction === "approve") {
-        // Write readiness: approved + priority to all ACs in batch.
-        const heldNow = await approvalHolds(allAcsWritten, acStoreDir, authoringWorktreePath, scriptStepAgentId);
-        const approvable = allAcsWritten.filter((id) => !heldNow.some((h) => h.id === id));
-        const approvalResult = (approvable.length === 0 && heldNow.length > 0) ? null : await agent(
-          `For each of the following ACs: ${approvable.join(", ")}, ` +
-          `update their YAML files to set readiness: approved and priority: ${priority}. ` +
-          "Use Edit tool on each file. Confirm by returning { \"status\": \"ok\", \"updated\": [<ac_ids>] }.",
-          { agentType: "status-checker", label: "apply-approval" }
-        );
+        // Why a failed step stops before the commit (ACD-300c-4-ii): docs/reference/plan-feature-workflow-rationale-gates.md
+        const approval = await approveBatch(allAcsWritten, priority, acStoreDir, authoringWorktreePath, scriptStepAgentId);
+        if (!approval.ok) {
+          const gotIds = approval.approved || [], failedIds = approval.failed || [], untouchedIds = approval.untouched || allAcsWritten;
+          return {
+            status: "error", route: effectiveRoute, acs_approved: gotIds, acs_failed: failedIds, acs_untouched: untouchedIds,
+            acs_as_reviewed: allAcsWritten.filter((id) => !gotIds.includes(id)),
+            message: "Approval failed and nothing was committed.\nApproved before the failure (still approved on disk): " + (gotIds.join(", ") || "none") +
+              "\nFailed: " + (failedIds.join(", ") || "none") + "\nUntouched: " + (untouchedIds.join(", ") || "none") + "\n" + approval.why,
+          };
+        }
 
         // Commit the final IT PO enriched AC output before reporting success.
         const finalCommitOutcome = await commitStageOutput(written, step.stage, component, true, runId, acStoreDir, authoringWorktreePath, ruleCheck.toCommit);
         if (finalCommitOutcome.status === "error") {
           return {
             status: "error",
-            message: formatCommitError("it-po", step.stage, finalCommitOutcome, allAcsWritten),
+            message: formatCommitError("test-design", step.stage, finalCommitOutcome, allAcsWritten),
             acs_updated: allAcsWritten,
             priority,
             route: effectiveRoute,
@@ -3100,9 +3131,9 @@ for (const step of pipeline) {
         return {
           status: "ok",
           message:
-            `/plan-feature complete. ${approvable.length} AC(s) approved with priority: ${priority}; ${heldNow.length} held.\n` +
-            prSummary,
-          acs_approved: approvable,
+            `/plan-feature complete. ${approval.approved.length} approved, ${approval.held.length} held (priority: ${priority})` +
+            (approval.already.length ? `; ${approval.already.length} already approved` : "") + approval.held.map((h) => `\nHeld ${h.id}: ${h.reason}`).join("") + "\n" + prSummary,
+          acs_approved: approval.approved, held: approval.held,
           priority,
           route: effectiveRoute,
           authoring_branch: authoringBranch,
@@ -3116,7 +3147,7 @@ for (const step of pipeline) {
           status: "error",
           message:
             `Final gate returned unrecognized action: ${JSON.stringify(finalAction)}. Pipeline aborted without committing.\n` +
-            buildCancelMessage(committedAcs, written, "final gate (unrecognized action)", acStoreDir, authoringWorktreePath),
+            buildCancelMessage(committedAcs, written, "final gate (unrecognized action)", acStoreDir, authoringWorktreePath, ruleCheck.report.records_to_commit),
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };

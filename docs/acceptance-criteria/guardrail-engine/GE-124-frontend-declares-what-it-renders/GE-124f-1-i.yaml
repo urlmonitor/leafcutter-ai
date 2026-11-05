@@ -77,7 +77,8 @@ amended_by:
   - "2026-08-25 [it-po]: technical enrichment. Required the mock-data iff to be enforced on the record rather than at each consumer, gave the misplacement its own finding code (the name may be valid, it is in the wrong place), and added the cardinality cases — two attributes on a root, or root plus leaf — which the criteria do not reach and which are where a chain consumer actually breaks. Flagged the dependency on GE-124f-1's page-root rule being explicit, or this AC produces false findings on nested route layouts. criteria untouched."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/39_TICKET-20261023-GE-124f-1-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -95,3 +96,4 @@ notes: |
   question about whether a layout file is a page root; if that is left fuzzy,
   this check will report legitimate files. Settle the rule in GE-124f-1 before
   implementing this one.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

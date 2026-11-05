@@ -229,6 +229,24 @@ class TestMakerRecordsTheTicket(unittest.TestCase):
         self.assertEqual(reply.get("reason_code"), "built_for_unknown", reply)
         self.assertEqual(reply["records"], [])
 
+    def test_legacy_feature_line_with_record_derives_its_ticket(self):
+        # covers: BO-400e-3-ix
+        # angle: seam
+        """A legacy feature/my-fix linked checkout carrying branch.feature/my-fix.leafcutterTicket (a line
+        made before feature/<slug> was its own kind) derives built_for_ticket == the recorded path in the
+        REAL finalize_closable_set.py derive, although the slug could not be reversed into that ticket.
+        CONTROL: the same branch without the record stays undeterminable (test_branch_without_record_...)."""
+        p = _Project(self)
+        wt = p.tmp / "legacy" / "my-fix"
+        wt.parent.mkdir(parents=True)
+        git(["fetch", "-q", "origin"], p.project)
+        link_checkout(p.project, ["-q", "-b", "feature/my-fix", str(wt), "origin/main"], env=_isolated_git_env())
+        git(["config", "branch.feature/my-fix.leafcutterTicket", T_NEW], wt)
+        p.sign_off_and_commit(wt, T_NEW, "BO-9100a-2")
+        reply = p.derive(wt, "feature/my-fix")
+        self.assertEqual(reply.get("built_for_ticket"), T_NEW, reply)
+        self.assertEqual([r["path"] for r in reply["records"]], [T_NEW, ac_rel("BO-9100a-2")], reply)
+
 
 if __name__ == "__main__":
     unittest.main()

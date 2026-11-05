@@ -300,8 +300,7 @@ if (!epicPath) {
 
 const epicSlug = (epicPath.split(/[\\/]/).filter(Boolean).pop() || "epic")
   .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "epic";
-const epicWorkspace = await workspaceObtain(
-  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind epic --slug ${epicSlug}`, "Worktree Guard");
+const epicWorkspace = await workspaceEnsure("Worktree Guard", { kind: "epic", slug: epicSlug, outputRoot: "{{config.output_root}}" });
 if (!epicWorkspace.accepted) return workspaceFailure(epicWorkspace);
 
 const worktreePath = epicWorkspace.workspace_path;
@@ -315,7 +314,7 @@ async function gvStep(label, command, runId) {
   try {
     const reply = await agent(JSON.stringify({ step: label, command, target: { workspace: worktreePath, run_id: runId } }),
       { agentType: "command-step-runner", schema: GV_RUNNER_SCHEMA, label, phase: "Worktree Guard" });
-    const out = JSON.parse(reply.stdout);
+    const out = parseStepJson(reply.stdout);
     return out && typeof out === "object" ? out : null;
   } catch { return null; }
 }

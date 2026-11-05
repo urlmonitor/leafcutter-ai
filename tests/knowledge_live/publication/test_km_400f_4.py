@@ -78,7 +78,9 @@ def test_live_status_matches_a_real_backends_own_counts(tmp_path, monkeypatch):
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         try:
             sha, last = parent, None
             for n in range(PUBLISHED):  # real generations, each a descendant of the last

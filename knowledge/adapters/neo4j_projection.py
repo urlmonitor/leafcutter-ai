@@ -43,7 +43,7 @@ from knowledge.adapters.neo4j_retention import (  # re-exported: retention lives
     evaluate_retention as evaluate_retention,
     retention_facts as retention_facts,
 )
-from knowledge.projection.validation import collapse_identical_edges, validate_snapshot
+from knowledge.projection.validation import collapse_identical_edges, collapsed_content_digest, validate_snapshot
 from knowledge.errors import BackendUnavailable
 
 logger = logging.getLogger(__name__)
@@ -83,14 +83,19 @@ async def publish(
     # A failed or stale publication reclaims nothing, and says so with an explicit zero.
     db.publication_reclamation = nothing_reclaimed()
     db.publication_capacity = None  # no headroom is reported until usage has been measured
-    # The digest names the loaded source content, so it is taken before the collapse: a
-    # generation record left by an earlier attempt on the same revision keeps its identity.
-    digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
+    # Records written before KM-400b-2-iii carry this raw pre-collapse digest; it is still accepted.
+    legacy_digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     # Counts belong to this publication only; an already-ready generation reports none.
     db.publication_counts = None
+    db.publication_writes = None  # set when the build starts: row cap, payload budget, oversized, retried
+    db.publication_failure = None  # set by a failed write: cause, phase, batch, attempts, progress
+    db.publication_progress = None  # set when the build starts; an activation-only run reports none
     # Nothing is stored until the build starts; a failure before then removes nothing.
     db.publication_removal = {"outcome": "nothing_stored"}
     collapse_identical_edges(snapshot)  # in place, before any node or relationship is written
+    # Taken after the collapse and without its diagnostics, so publishing the same snapshot object
+    # again (already collapsed in place) names the same content (KM-400b-2-iii).
+    digest = collapsed_content_digest(snapshot)
     validate_snapshot(snapshot)
     unsupported = await db._run(_CONTROL_SCHEMA_QUERY, {"repo": snapshot.repository_id})
     if unsupported[0]["count"]:
@@ -121,7 +126,7 @@ async def publish(
         'MERGE (g:Snapshot {key:$key}) ON CREATE SET g += $meta, g.status="building", g.semantic_ready=false RETURN g.digest AS digest, g.status AS status',
         {"key": key, "meta": metadata},
     )
-    if rows[0]["digest"] != digest:
+    if rows[0]["digest"] not in (digest, legacy_digest):
         raise ValueError("generation identity already belongs to different content")
     if rows[0]["status"] != "ready":
         try:
@@ -421,7 +426,9 @@ async def switch_active(
         set_current(db, tx, key, True)
         return True
 
-    return await db._transaction(transaction, True)
+    from knowledge.adapters.neo4j_writes import with_retry
+
+    return await with_retry(db, "activation", None, lambda: db._transaction(transaction, True))
 
 
 _NO_RETENTION = (

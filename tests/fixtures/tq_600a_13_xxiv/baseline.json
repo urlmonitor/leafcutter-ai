@@ -1,0 +1,124 @@
+{
+  "cli": {
+    "pr-fail": {
+      "exit": 1,
+      "lines": [
+        "[check-done-proof] SYN-400: linked test failed: tests/knowledge_live/test_syn_400.py::test_400_live_proof",
+        "[check-done-proof] exemptions in force: 0"
+      ]
+    },
+    "pr-live": {
+      "exit": 0,
+      "lines": [
+        "[check-done-proof] exemptions in force: 0"
+      ]
+    },
+    "pr-none": {
+      "exit": 0,
+      "lines": [
+        "[check-done-proof] exemptions in force: 0"
+      ]
+    }
+  },
+  "done_proof_job": {
+    "job": {
+      "name": "Proof-of-done coverage check (BO-2500b)",
+      "runs-on": "ubuntu-latest",
+      "services": {
+        "knowledge-domain": {
+          "env": {
+            "NEO4J_AUTH": "neo4j/leafcutter-domain-tests",
+            "NEO4J_server_memory_heap_initial__size": "256m",
+            "NEO4J_server_memory_heap_max__size": "512m",
+            "NEO4J_server_memory_pagecache_size": "128m"
+          },
+          "image": "neo4j:5.26-community",
+          "options": "--health-cmd \"cypher-shell -u neo4j -p leafcutter-domain-tests 'RETURN 1'\" --health-interval 10s --health-timeout 10s --health-retries 12",
+          "ports": [
+            "18087:7687"
+          ]
+        },
+        "knowledge-native": {
+          "env": {
+            "NEO4J_AUTH": "neo4j/leafcutter-native-tests",
+            "NEO4J_server_memory_heap_initial__size": "256m",
+            "NEO4J_server_memory_heap_max__size": "512m",
+            "NEO4J_server_memory_pagecache_size": "128m"
+          },
+          "image": "neo4j:5.26-community",
+          "options": "--health-cmd \"cypher-shell -u neo4j -p leafcutter-native-tests 'RETURN 1'\" --health-interval 10s --health-timeout 10s --health-retries 12",
+          "ports": [
+            "18088:7687"
+          ]
+        },
+        "knowledge-retrieval": {
+          "env": {
+            "NEO4J_AUTH": "neo4j/leafcutter-local-tests",
+            "NEO4J_server_memory_heap_initial__size": "256m",
+            "NEO4J_server_memory_heap_max__size": "512m",
+            "NEO4J_server_memory_pagecache_size": "128m"
+          },
+          "image": "neo4j:5.26-community",
+          "options": "--health-cmd \"cypher-shell -u neo4j -p leafcutter-local-tests 'RETURN 1'\" --health-interval 10s --health-timeout 10s --health-retries 12",
+          "ports": [
+            "17687:7687"
+          ]
+        }
+      }
+    },
+    "proof_step_argv": [
+      "--mode",
+      "ci-changed",
+      "--base",
+      "origin/${{",
+      "github.base_ref",
+      "}}",
+      "--test-root",
+      "."
+    ],
+    "proof_steps": 1
+  },
+  "in_process": {
+    "pr-fail": {
+      "changed": [
+        "SYN-400.yaml"
+      ],
+      "evaluated": [
+        {
+          "ac_id": "SYN-400",
+          "tests": [
+            "tests/knowledge_live/test_syn_400.py::test_400_live_proof"
+          ]
+        }
+      ],
+      "violations": [
+        {
+          "ac_id": "SYN-400",
+          "reason": "linked test failed: tests/knowledge_live/test_syn_400.py::test_400_live_proof"
+        }
+      ]
+    },
+    "pr-live": {
+      "changed": [
+        "SYN-100.yaml"
+      ],
+      "evaluated": [
+        {
+          "ac_id": "SYN-100",
+          "tests": [
+            "tests/knowledge_live/test_syn_100.py::test_100_live_proof"
+          ]
+        }
+      ],
+      "violations": []
+    },
+    "pr-none": {
+      "changed": [
+        "SYN-300.yaml"
+      ],
+      "evaluated": [],
+      "violations": []
+    }
+  },
+  "recorded_from": "origin/main 54efbdd31937004d5e70ff568da24da317203895, before the post-merge live lane (TQ-600a-13-xxi)"
+}

@@ -98,6 +98,7 @@ def test_ac2_removed_procedures_leave_no_distinctive_token():
 
 def test_ac2_no_trigger_to_specialist_table_or_mapping_of_its_own():
     # covers: ACD-2500e-2
+    # covers: ACD-200b
     # covers: ACD-200b-1
     # angle: discrimination
     """ACD-200b-1 clause 1 and the architect note (conflict table): no table row pairs `sequence-diagram`
@@ -223,6 +224,7 @@ def test_ac3_s5b_names_the_script_the_stage_and_the_reference_doc():
 
 def test_ac3_documentation_sentence_is_verbatim_inside_s5b():
     # covers: ACD-2500e-2
+    # covers: ACD-200b
     # covers: ACD-200b-1
     # angle: criterion
     """ACD-200b-1 clause 5: the template states, verbatim, 'Batches without documentation coverage for

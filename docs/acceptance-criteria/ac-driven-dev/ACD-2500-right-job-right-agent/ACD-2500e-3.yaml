@@ -60,3 +60,26 @@ risk_surface: internal
 notes: |
   Output-level proof for ACD-2500e-2, which alone is a prose-presence claim. Keeps
   TKT-300a-1, TKT-300a-4 and ACS-500c-2 visibly true after the shrink.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'
+  - flow: leafcutter/how-acs-are-built
+    node: itpo
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Ticket
+    source: real
+    asof: '2026-10-23'

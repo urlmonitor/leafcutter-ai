@@ -61,7 +61,7 @@ def test_batch_skip_or_failure_offers_none(kind, tmp_path, monkeypatch):
 
     first = run(labels(prepass, all_held, designer=designer))
     position(first, "design-prepass")  # control: the step was attempted
-    assert calls(first, "apply-approval") == [] and "acs_approved" not in (first.result or {}), names(first)
+    assert calls(first, "approval-apply") == [] and "acs_approved" not in (first.result or {}), names(first)
     if gate_record(first) is not None:
         context = gate_context(first)
         assert context.get("approvable") == [], f"a failed batch was offered for approval: {context}"
@@ -77,7 +77,7 @@ def test_batch_skip_or_failure_offers_none(kind, tmp_path, monkeypatch):
         resume_args(),
     )
     position(resumed, "design-prepass")  # the re-dispatch reached the step
-    assert calls(resumed, "apply-approval") == [], f"a failed batch was approved: {names(resumed)}"
+    assert calls(resumed, "approval-apply") == [], f"a failed batch was approved: {names(resumed)}"
     assert (resumed.result or {}).get("status") == "error", resumed.result
     assert not (resumed.result or {}).get("acs_approved"), resumed.result
 
@@ -102,7 +102,7 @@ def test_no_report_blocks_agent_dispatch(report, tmp_path):
 
     assert len(calls(result, "design-prepass")) == 1, names(result)
     assert calls(result, "stage-test-design-author") == [], f"the agent ran without a report: {names(result)}"
-    assert calls(result, "apply-approval") == [], names(result)
+    assert calls(result, "approval-apply") == [], names(result)
 
 
 def test_empty_prepass_batch_skips_the_designer_and_still_reaches_the_gate():
@@ -130,16 +130,16 @@ def test_empty_prepass_batch_skips_the_designer_and_still_reaches_the_gate():
 def test_unreadable_hold_report_approves_nothing(reply, tmp_path):
     # covers: ACD-2500c-2
     # angle: failure
-    """Fail-closed hold oracle: the workflow runs `approval_hold_report.py --ids <all four> --store-root ...`
-    right before the approval write, and when that report is missing or unreadable it treats every record as
-    held. No approval write is dispatched and nothing is reported approved. Wrong version caught: an
+    """Fail-closed hold oracle: the workflow runs the approval step's dry run (`approve_acs.py --ids <all four>
+    --dry-run --json --ac-root ...`, ACD-300c-4) right before the approval write, and when that report is
+    missing or unreadable it treats every record as held. No approval write is dispatched and nothing is reported approved. Wrong version caught: an
     unreadable report read as "nothing is held" (approve all)."""
     result = run(labels(prepass_reply(tmp_path), reply), resume_args())
 
     holds = calls(result, "approval-holds")
     assert holds, f"the approval-hold report was never run: {names(result)}"
     cmd = holds[0].prompt
-    assert "approval_hold_report.py" in cmd and "--store-root" in cmd, cmd[:700]
+    assert "approve_acs.py" in cmd and "--dry-run" in cmd and "--ac-root" in cmd, cmd[:700]
     assert f"--ids {','.join(IDS)}" in cmd, cmd[:700]
-    assert calls(result, "apply-approval") == [], f"records were approved without a hold report: {names(result)}"
+    assert calls(result, "approval-apply") == [], f"records were approved without a hold report: {names(result)}"
     assert not (result.result or {}).get("acs_approved"), result.result

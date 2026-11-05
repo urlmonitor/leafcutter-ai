@@ -149,15 +149,14 @@ class TestDiscardedContentFileLetsAuthorReconcileTheTwoQuantities(_FixtureTestCa
             msg="fixture sanity: the docstring must make the two quantities genuinely differ.",
         )
 
-        categories = fx.parse_discard_categories(fx.extract_measures_line(combined))
-        rederived = fx.independent_count_content_lines(content, categories)
+        rederived = fx.independent_python_measure(content)
         self.assertEqual(
             quoted_length,
             rederived,
             msg=(
                 "an author applying the published Measures statement independently must "
-                f"arrive at exactly the quoted length. quoted={quoted_length} rederived={rederived} "
-                f"categories={categories!r}. Got: {combined!r}"
+                f"arrive at exactly the quoted length. quoted={quoted_length} rederived={rederived}. "
+                f"Got: {combined!r}"
             ),
         )
 
@@ -322,15 +321,14 @@ class TestGrownFileRefusalStatesPermittedLengthAndWhatIsMeasured(_FixtureTestCas
             ),
         )
 
-        categories = fx.parse_discard_categories(measures)
-        rederived = fx.independent_count_content_lines(grown_content, categories)
+        rederived = fx.independent_python_measure(grown_content)
         self.assertEqual(
             new_length,
             rederived,
             msg=(
                 "an author applying the published Measures statement independently must arrive "
-                f"at exactly the new (arrived-at) length. new={new_length} rederived={rederived} "
-                f"categories={categories!r}. Got: {combined!r}"
+                f"at exactly the new (arrived-at) length. new={new_length} rederived={rederived}. "
+                f"Got: {combined!r}"
             ),
         )
 

@@ -34,6 +34,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - unit_tests/feedback/test_submit_feedback.py::TestAllPhaseAgentsInAllowedWriters
+  - INF-100c-3-i
 implemented_by:
   - templates/config/feedback_categories.yaml
 change_target: config

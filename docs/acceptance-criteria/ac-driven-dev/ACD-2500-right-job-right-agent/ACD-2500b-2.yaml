@@ -127,3 +127,14 @@ notes: |
   cycle. The delivers_to contract string was deliberately left as it is, because ACD-2500b-2-i,
   ACD-2500b-4, ACD-2500c-2, ACD-2500d-2-i and ACD-2500d-3-i carry it byte-for-byte in their
   expects_from.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

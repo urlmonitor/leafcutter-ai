@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -50,7 +50,7 @@ declared_files:
   - path: scripts/build_phases_workflows.py
     state: existing
   - path: templates/workflows-js/_shared/awaiting-adoption.json
-    state: to_be_created
+    state: existing
 it_requirements:
   - >-
     The awaiting-adoption declaration is tracked DATA inside the package, kept with the block

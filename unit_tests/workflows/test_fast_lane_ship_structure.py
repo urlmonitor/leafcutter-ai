@@ -495,7 +495,7 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
 
     def test_workflow_asks_git_where_the_worktree_is(self) -> None:
         self.assertIn(
-            "workspaceObtain(",
+            "workspaceEnsure(",  # consumer_drift: the shared helper is now workspaceEnsure
             self.content,
             "The workflow must obtain its workspace from the workspace maker's accepted answer rather than "
             "trusting a phase agent's reported path.",

@@ -101,7 +101,8 @@ superseded_by: null
 covered_by:
   - GE-124f-1-i
   - GE-124f-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-EveryScreenSaysWhichRequirementItIs/38_TICKET-20261023-GE-124f-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -123,3 +124,4 @@ notes: |
   design names are a different namespace living in the product-truth store, and
   folding them in would give that resolver two questions to answer — the exact
   ambiguity GE-124c-2-i removes. Two resolvers, two codes, two remedies.
+target_epic: EPIC-EveryScreenSaysWhichRequirementItIs

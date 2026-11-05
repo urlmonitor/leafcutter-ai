@@ -263,3 +263,94 @@ def extract_workspace_answer_block(source: str) -> str | None:
     if start == -1 or end == -1 or end < start:
         return None
     return source[start : end + len(_WORKSPACE_ANSWER_END)]
+
+
+# ---------------------------------------------------------------------------
+# Ticket 02 (EPIC-WorkspaceMakerHardening, M13/M16/M5): maker-command shape.
+# ---------------------------------------------------------------------------
+
+FIXTURE_PROJECT = "/fixture/proj"
+# The scripted reply of the maker-path probe (git common dir of the fixture project).
+FIXTURE_COMMON_DIR_STDOUT = FIXTURE_PROJECT + "/.git\n"
+RESOLVE_LABEL = "resolve-maker-path"
+# A handed-in workspace names its project in its marker; one probe step reads it (the reply: the file's text).
+MARKER_LABEL = "read-workspace-marker"
+
+
+def marker_reply(project_root: str = FIXTURE_PROJECT) -> dict[str, Any]:
+    """The shell-runner reply of the marker read: the marker's JSON text (built by json.dumps), exit 0."""
+    return {"command": "cat workspace.json", "exit_status": 0,
+            "stdout": json.dumps({"project_root": project_root}), "stderr": ""}
+
+# `python(3) "<absolute>/scripts/worktree.py" <verb>`: the one exact absolute, quoted form.
+ABSOLUTE_QUOTED_MAKER = re.compile(
+    r"^python3?\s+\"(?:/|[A-Za-z]:[\/])[^\"]*scripts[\/]worktree\.py\"\s+(?:ensure|verify|remove|locate)\b"
+)
+# A value flag whose value is not opened by a double quote.
+UNQUOTED_VALUE_FLAG = re.compile(r"--(?:slug|path|ticket)\s+(?!\")\S")
+# A maker command spelled with a relative or bare script path.
+RELATIVE_MAKER_SPELLING = re.compile(
+    r"python3?\s+(?!\?[\"'$]|\$\{)(?:\./)?(?:\{\{config\.output_root\}\}/|\.leafcutter/)?(?:scripts/)?worktree\.py"
+)
+# A maker command spelled with the rendered (relative) output root.
+OUTPUT_ROOT_MAKER = re.compile(r"\{\{config\.output_root\}\}/scripts/worktree\.py")
+# A maker command whose script path is not one double-quoted word: relative, bare, or an absolute / placeholder
+# path (`<absolute-install-root>/scripts/worktree.py`, `/abs/...`) left unquoted. The AC requires the quoting.
+UNQUOTED_MAKER_PATH = re.compile(r"""python3?\s+(?!["'])(?:<[^>]*>|[^\s"'`<])*worktree\.py""")
+def cwd_relative_maker_hits(rel_path: str, text: str) -> list[str]:
+    """Lines of `text` (a template file at `rel_path`, relative to templates/) that run the maker by a cwd-relative path.
+
+    Nothing is exempt: no file, line or constant is allowed to spell the maker relative to the cwd.
+    """
+    return [
+        f"{rel_path}:{no}: {line.strip()[:100]}"
+        for no, line in enumerate(text.splitlines(), 1)
+        if RELATIVE_MAKER_SPELLING.search(line) or OUTPUT_ROOT_MAKER.search(line) or UNQUOTED_MAKER_PATH.search(line)
+    ]
+
+
+# A dispatched current-branch command that names no location (the exact command string only).
+UNANCHORED_BRANCH_COMMAND = re.compile(r"[`\"']git branch --show-current[`\"']")
+
+
+def maker_command_line(prompt: Any) -> str | None:
+    """The command line of a shell-step prompt that runs the maker, or None."""
+    for line in str(prompt).splitlines():
+        if "worktree.py" in line and re.match(r"\s*python3?\s", line):
+            return line.strip()
+    return None
+
+
+def maker_command_defects(command: str) -> list[str]:
+    """Why `command` is not the one exact absolute, quoted maker command ([] when it is)."""
+    defects = []
+    if not ABSOLUTE_QUOTED_MAKER.match(command):
+        defects.append("does not start with an absolute, quoted path to scripts/worktree.py")
+    if UNQUOTED_VALUE_FLAG.search(command):
+        defects.append("an interpolated --slug/--path/--ticket value is not double-quoted")
+    return defects
+
+
+_BRANCH_NODE_RUNNER = """
+const fs = require('fs'), vm = require('vm');
+const [src, answers] = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const ctx = { agent: async () => null, args: {}, log() {}, console };
+vm.createContext(ctx);
+vm.runInContext(src + '\\n;globalThis.__f = workspaceBranch;', ctx);
+process.stdout.write(JSON.stringify(answers.map(a => ctx.__f(a))));
+"""
+
+
+def workspace_branch_results(block: str, answers: list[dict[str, Any]]) -> list[str]:
+    """Run the deployed block's own `workspaceBranch` over each answer in Node."""
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="bo4300a1ia-branch-") as tmp:
+        Path(tmp, "in.json").write_text(json.dumps([block, answers]), encoding="utf-8")
+        Path(tmp, "run.js").write_text(_BRANCH_NODE_RUNNER, encoding="utf-8")
+        proc = subprocess.run(
+            ["node", str(Path(tmp, "run.js")), str(Path(tmp, "in.json"))],
+            capture_output=True, text=True, timeout=30,
+        )
+    return json.loads(proc.stdout)

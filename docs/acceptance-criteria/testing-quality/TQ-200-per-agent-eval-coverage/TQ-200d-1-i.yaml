@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -36,66 +36,180 @@ doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
     relationship: relates-to
     status: exists
-    relevance: "The shared wrong-version runner reused to score the test half."
-  - path: scripts/evals/run_agent_eval.py
+    relevance: "The shared wrong-version runner reused to score the test half: declared scope, per-entry wrong versions, the verdict shape."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Caught only on an assertion-kind failure; did_not_load, not_applied and invalid leave the verdict unfinished, never caught."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The alterations manifest shape the runner reads ({entries: [{name, status: prepared, files: [{path, altered_copy}]}]})."
+  - path: scripts/evals/README.md
     relationship: describes
     status: exists
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 1: the third test reset only the old variable and the branch ran 0 times. That is O2."
 assigned_agent: python-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-500g-1-i
-    contract: "The shared runner, callable on a produced test and a named wrong version, returning caught or survived."
+    contract: >-
+      wrong_version_runner.run_runner(ac_ids: list[str], test_root: Path, ac_root: Path,
+      base_ref: str = "HEAD", alterations: str | None = None) -> dict, in
+      scripts/build_orchestration/wrong_version_runner.py (public module, imported by path; CLI
+      equivalent: wrong_version_runner.py run --ac-ids --test-root --ac-root --base-ref
+      --alterations, one JSON object on stdout, exit 0 iff gate_passed). Never raises for a run
+      failure. Verdict: {gate_passed: bool, applicable: bool, verified: bool, outcome: str, reason:
+      str|null, results: [{test: str, wrong_version: str, result: caught|survived|did_not_load|
+      not_applied|invalid|not_run|not_in_scope|not_applicable, blocking: bool, detail: str}],
+      survivors: list, unfinished: list, non_blocking_survivors: list}. Scope is declared: a test
+      is in scope only when a "# covers: <AC-ID>" tagged function's name matches a test_spec entry
+      of that AC in ac_root carrying must_catch. Needs a git repository at test_root and a
+      resolvable base_ref. The manifest is {"entries": [{"name": str, "status": "prepared",
+      "files": [{"path": repo-relative str, "altered_copy": path str}]}]}.
+  - ac_id: TQ-200d-1
+    contract: >-
+      The produced-tests scoring mode and its assertion-kind registry (OQ-1 decided: scripts/evals/produced_tests_scoring.py), the row's
+      expected object ({negative, fixture, gold_output, assertions}), the git-initialised sandbox,
+      and the scored-row record {id, negative, score: {passed, assertions: [{kind, passed,
+      detail}], judge}}.
+test_required: true
+package_surface: false
 it_requirements:
-- The test half runs the produced test through TQ-500g-1-i's public runner (module or CLI) inside the
-  row sandbox. The sandbox holds the gate as written, and the wrong version is supplied as a prepared
-  alteration in the manifest shape. No second mutation mechanism.
-- The test half and the report half are scored and reported separately. The row passes only when both
-  pass. The test half never reads the judge or the report.
-- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
-  path, using recorded good and bad agent outputs as fixtures.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
+- 'The test half calls TQ-500g-1-i''s runner: wrong_version_runner.run_runner in scripts/build_orchestration/wrong_version_runner.py,
+  in process or through its run CLI. It runs inside the row sandbox, never against the repository. There
+  is no second mutation mechanism, and the eval does not re-classify pytest output itself.'
+- 'The runner reads its scope from an AC store and # covers: tags, not from a test path, and needs a git
+  base ref. So the row sandbox must carry three things. (1) A git repository whose base commit holds the
+  gate before the fix (if refresh_due). (2) The fix (if refresh_due and retry_due) in the working tree
+  when the runner is called, so "the gate as written" is the fixed gate. (3) A minimal AC store with one
+  record whose test_spec names the produced covers-tagged guarding test with must_catch ["drop the retry_due
+  condition"] and in_scope_files naming the fixture gate module. OQ-4 decided: the scorer writes that record
+  after the agent has run, from the agent''s # covers: tagged tests, with the must_catch taken from the row,
+  so the wrong version is never shown to the agent. The agent works on the pre-fix code; the scorer then
+  installs the fix and calls the runner with base_ref set to the pre-fix commit.'
+- 'The named wrong version is a prepared alteration in the manifest shape (status prepared, files [{path,
+  altered_copy}]) taken from the fixture project, never written by the agent. "The fix undone" comes from
+  the runner itself, against the base commit.'
+- 'The test half passes only when the verdict has gate_passed true and a caught row for "drop the retry_due
+  condition" from the produced test. survived fails the half. Any unfinished result (did_not_load, not_applied,
+  invalid, not_run), or a baseline failing on the code as written, also fails it, with the runner''s detail
+  quoted in the row result.'
+- 'The test half and the report half are scored and recorded separately in the row result (for example
+  score.halves.test and score.halves.report, each {passed, detail}). The row passes only when both pass.
+  The test half never reads the judge or the report. The report half is a deterministic check that the
+  completion report''s "Wrong versions the tests now catch" list names the dropped retry_due condition;
+  any judge is secondary (OQ-5 decided).'
+- 'The runner launches pytest with sys.executable from the sandbox root, and its recovery journal lives
+  under the sandbox''s own <git-dir>/leafcutter/wrong-version-runs/. Nothing may be left in the repository''s
+  git dir. The sandbox is removed only after the runner has put the code back.'
+- Unit tests never call a live model. O1, O2 and O3 are recorded outputs run through the real runner on
+  a real temporary git sandbox. A stubbed judge is used only to prove it is never read for the test half.
+- Every new or changed .py file stays at or under 400 counted lines. run_agent_eval.py (1087) must not
+  grow, and the runner modules (wrong_version_runner.py 309, _wvr_scope.py 275) are reused, not edited.
 test_spec:
 - name: test_o1_passes_both_halves
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: criterion
-  description: 'O1: the produced test passes on the gate as written and fails with the retry_due condition
-    dropped (a real pytest run through the runner), and its report names the wrong version. Both halves
-    pass.'
+  description: 'O1: the produced test passes on the fixed gate and is caught (assertion failure) under
+    "drop the retry_due condition" in a real run_runner call on a git sandbox. Its report names the wrong
+    version. Both halves pass, and the row passes.'
 - name: test_o2_fails_test_half_whatever_the_report_says
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: discrimination
-  description: 'O2: the fixture sets only refresh_due, so the test survives the wrong version. The test
-    half fails even though the report and a stubbed judge say it catches it.'
+  description: 'O2: the fixture sets refresh_due but never retry_due, so the runner reports the wrong
+    version survived. The test half fails, even though the report claims the catch and a stubbed judge
+    returns pass.'
   must_catch:
   - test half taken from the judge verdict
   - test half taken from the report's claim
+  - survived result counted as caught
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+  - scripts/evals/produced_tests_scoring.py
 - name: test_o3_halves_scored_apart
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: boundary
-  description: 'O3: test half passes, report half fails, and the result shows both separately.'
+  description: 'O3: the test half passes and the report half fails. The row fails, and the row result
+    shows both halves separately.'
   must_catch:
   - halves merged into one score
+  - row passes when only the test half passes
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+  - scripts/evals/produced_tests_scoring.py
+- name: test_unfinished_runner_verdict_fails_test_half
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A produced test that cannot be imported in the sandbox (the runner reports did_not_load
+    or a failing baseline), and a run where the manifest entry is missing (invalid), each fail the test
+    half and quote the runner's detail.
+  must_catch:
+  - missing manifest entry ignored
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+- name: test_unfinished_verdict_with_a_caught_row_still_fails_test_half
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A real run_runner verdict on the O1 output, rewritten to gate_passed false (unfinished)
+    while its "drop the retry_due condition" result stays caught, fails the test half and the row. The
+    unaltered verdict passes the test half (control).
+  must_catch:
+  - unfinished runner verdict counted as a test-half pass
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
+- name: test_runner_called_with_declared_scope_and_base_commit
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: The sandbox the scorer hands to run_runner holds an AC record whose test_spec names the
+    produced covers-tagged test with must_catch ["drop the retry_due condition"]. It also holds a manifest
+    entry for that name, and base_ref is the sandbox's pre-fix commit. The verdict's results name the produced
+    test.
+  must_catch:
+  - base_ref left at HEAD after the fix is committed
+  - runner called with no ac_ids
+  in_scope_files:
+  - scripts/evals/produced_tests_runs.py
 - name: test_refresh_row_scored_through_eval_runner_cli
   target_dir: unit_tests/evals/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
-  description: run_agent_eval.py in gold-scoring mode scores the refresh-gate row with O1 to O3, and the
-    runner is invoked in the sandbox.
-test_rationale: O2 is incident 1 itself. Only a real wrong-version run can fail it, so the test uses the
-  shared runner on a real sandbox repo rather than a judge double.
+  surface_invoked: python scripts/evals/run_agent_eval.py --agent test-writer --score-gold --row refresh-gate
+    --results-file <tmp>
+  description: run_agent_eval.py with --score-gold scores the refresh-gate row with its recorded gold
+    output (O1). The row result carries the runner's verdict for the test half and a separate report
+    half, and no file under the repository's git dir changes.
+test_rationale: O2 is incident 1 itself, and only a real wrong-version run can fail it. So the tests use
+  the shared runner on a real temporary git sandbox, not a judge double, and each bad output carries a
+  must_catch on the scoring code that would let it through. The seam test pins the one place this AC
+  can silently go wrong, the scope and base ref handed to the runner. A wrong scope there makes every
+  verdict invalid, and that must fail the row, never pass it.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+  - reason: "IT-PO technical alignment against origin/main after TQ-500g-1, TQ-500g-2 and TQ-500g-4 landed (TQ-500g-3 read from PR #1324). Rewrote it_requirements, delivers_to/expects_from, doc_links, test_spec (each must_catch with in_scope_files), test_required, test_rationale and package_surface to name the real modules, CLIs, config keys and row formats. Criteria, title, depends_on and readiness untouched. The user decided the open questions on 2026-10-23 (all recommendations accepted, the live before-score deferred); the decisions are written into the fields and recorded in notes."
+    by: it-po
+    at: 2026-10-23
+  - reason: "must_catch moved to the catching test after wrong-version runs. 'unfinished runner verdict counted as a test-half pass' moved from test_unfinished_runner_verdict_fails_test_half (which keeps 'missing manifest entry ignored') to a new entry test_unfinished_verdict_with_a_caught_row_still_fails_test_half. String unchanged. Criteria, title, depends_on and readiness untouched."
+    by: it-po
+    at: 2026-10-24
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -118,3 +232,54 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   Lane: fast lane, after TQ-500g-1-i is done.
+  IT-PO TECHNICAL ALIGNMENT (2026-10-23, against origin/main with TQ-500g-1
+  done)
+  Criteria, title, depends_on and readiness untouched. TQ-500g-1-i is done,
+  so this L3 no longer waits. Build it in the same fast-lane run as TQ-200d-1
+  (OQ-10), so the refresh-gate row is never judge-scored.
+  Mismatches with the earlier enrichment:
+    - The runner is not "callable on a produced test and a named wrong
+      version". Its public entry is run_runner(ac_ids, test_root, ac_root,
+      base_ref, alterations). Scope comes from an AC record's test_spec
+      (must_catch) plus # covers: tags, and the fix undone needs a git base
+      ref. The sandbox therefore needs git, a mini AC store and a manifest
+      (OQ-4 decided, see below).
+    - "Caught" means an assertion-kind failure (TQ-500g-1-ii). An absence
+      failure is did_not_load, which leaves the verdict unfinished. The row
+      treats every unfinished result as a test-half failure.
+    - The gold-scoring path never calls the judge, so the report half needs
+      a deterministic check (OQ-5).
+  The module name produced_tests_runs.py is settled by OQ-1 below.
+
+  USER DECISIONS (2026-10-23, answered in the main session; all IT-PO
+  recommendations accepted)
+    OQ-1  A: one new produced-tests scoring_mode in sibling modules
+          scripts/evals/produced_tests_mode.py, produced_tests_scoring.py and
+          (TQ-200d-1-i) produced_tests_runs.py; run_agent_eval.py dispatches
+          it and offsets the lines by moving out the unused text-assertion
+          scaffold. No test_ prefix on these modules.
+    OQ-2  Sets at scripts/evals/sets/<agent>.jsonl, fixture projects and
+          recorded outputs under scripts/evals/sets/<agent>/{projects,recorded}/,
+          recorded test files with the suffix .py.recorded; bad outputs for
+          unit tests under unit_tests/evals/fixtures/ with the same suffix.
+    OQ-3  A: render {{config.output_root}} to the sandbox and copy the scripts
+          the template names (scripts/db_check; for runner callers also
+          scripts/build_orchestration and scripts/ac_store) into it.
+    OQ-4  The scorer writes the sandbox AC record after the agent runs, from
+          its # covers: tagged tests, with the must_catch from the row. The
+          agent works on the pre-fix code; the scorer installs the fix and
+          calls the runner with base_ref at the pre-fix commit.
+    OQ-5  Deterministic report and fixture checks everywhere, the judge
+          optional and secondary; the runner-backed check for the refresh
+          gate, offered for test B.
+    OQ-6  A: config key local_only: true; eval_selector.py keeps such agents
+          out of affected and out of --check; payload run_context "local".
+    OQ-7  A: the mode's own invoker captures a stream-json transcript and
+          scores Bash tool-call inputs structurally.
+    OQ-8  Accepted: the placeholder makes the checker report invalid; no row
+          reaches a database.
+    OQ-9  Structural check of produced SQL; a live run is optional later work.
+    OQ-10 TQ-200d-1 and TQ-200d-1-i are built in one fast-lane run.
+    OQ-11 The live before-score is DEFERRED: recorded later as a separate
+          step the user triggers, after PR #1324 merges, stamped with
+          trigger_shas. No build step calls a model.

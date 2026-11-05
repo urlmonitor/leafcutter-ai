@@ -80,6 +80,14 @@ PUBLIC API (what the other rule-check test writers build on):
 
     findings_for(report, record_id=None, rule_family=None) -> list[dict]
     snapshot_tree(folder) -> dict[str, bytes]      (byte-identity assertions)
+
+    other_families(report) -> dict
+    check_store_other_families(...) / run_cli_subprocess_other_families(...)
+        The report without the "protected fields" family's `not evaluated` entries
+        (ACD-2500a-2-vi / -vii list every record so under a readiness-only snapshot
+        and at stages the owner map does not list). For tests written before that
+        family that assert ANOTHER family's exact findings; every other finding,
+        including any protected-fields blocker, is kept.
     BLOCKERS: the dispositions that fail a verdict.
 
 FAMILY NAMES (canonical strings from the architect note, section 3): constants
@@ -451,6 +459,33 @@ def findings_for(
         if (record_id is None or finding.get("record_id") == record_id)
         and (rule_family is None or finding.get("rule_family") == rule_family)
     ]
+
+
+FAMILY_PROTECTED = "protected fields"
+
+
+def other_families(report: dict) -> dict:
+    """A copy of `report` without the protected-fields family's `not evaluated` entries."""
+    kept = [
+        finding for finding in report.get("findings", [])
+        if not (finding.get("rule_family") == FAMILY_PROTECTED
+                and finding.get("disposition") == DISPOSITION_NOT_EVALUATED)
+    ]
+    return {**report, "findings": kept}
+
+
+def check_store_other_families(
+    store: Store, *extra: str, stage: str = "ba", location: str | None = None
+) -> tuple[int, dict]:
+    """check_store, its report passed through other_families."""
+    exit_code, report = check_store(store, *extra, stage=stage, location=location)
+    return exit_code, other_families(report)
+
+
+def run_cli_subprocess_other_families(argv: list[str], cwd: Path | None = None) -> CliRun:
+    """run_cli_subprocess, its parsed report passed through other_families (stdout untouched)."""
+    run = run_cli_subprocess(argv, cwd=cwd)
+    return run._replace(report=other_families(run.report))
 
 
 def finding_text(finding: dict) -> str:

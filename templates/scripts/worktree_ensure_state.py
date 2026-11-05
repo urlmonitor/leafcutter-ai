@@ -39,7 +39,6 @@ import time
 from pathlib import Path
 from typing import Any, Iterator
 
-import worktree_admin
 import worktree_answer as wa
 import worktree_git as wg
 import worktree_readiness as wr
@@ -384,16 +383,6 @@ def incomplete_refusal(workspace: Path, marker: dict[str, Any]) -> dict[str, Any
     return wa.error_answer(
         "INCOMPLETE", f"The workspace at {workspace} is only partly made (state {marker.get('state')!r}); "
         "ask for it again with ensure to finish it.", marker_state=marker.get("state"))
-
-
-def locate_ready_only(args: Any) -> dict[str, Any]:
-    """``locate`` that answers a half-made workspace as INCOMPLETE rather than as a found one."""
-    answer = worktree_admin.cmd_locate(args)
-    marker = answer.get("marker")
-    if answer.get("status") != "ok" or not isinstance(marker, dict) or marker.get("state", "ready") == "ready":
-        return answer
-    carried = {k: v for k, v in answer.items() if k in ("repo_root", "repo_root_posix", "layout")}
-    return {**incomplete_refusal(Path(answer.get("workspace_path", "")), marker), **carried}
 
 
 # ===========================================================================

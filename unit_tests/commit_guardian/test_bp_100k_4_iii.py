@@ -14,10 +14,17 @@ ROOT = Path(__file__).resolve().parents[2]
 HOOK = ROOT / "templates/scripts/commit_guardian/check_hook_trigger_reachability.py"
 
 
-def _run(*args: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+# A full build.py needs far longer than a git or hook call: about 21 s on a quiet
+# host, and over 30 s on a loaded CI shard (PR #1328, 2026-10-23, timed out twice).
+_BUILD_TIMEOUT = 300
+
+
+def _run(
+    *args: str, cwd: Path, env: dict[str, str] | None = None, timeout: int = 30,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(args), cwd=cwd, env=env, capture_output=True, text=True,
-        check=False, timeout=30,
+        check=False, timeout=timeout,
     )
 
 
@@ -81,7 +88,7 @@ def test_built_consumer_with_real_registry_has_no_unreachable_hooks(tmp_path: Pa
     repo = _fixture_repo(tmp_path)
     build = _run(
         sys.executable, str(ROOT / "scripts/build.py"), "--target-dir", str(repo),
-        cwd=repo,
+        cwd=repo, timeout=_BUILD_TIMEOUT,
     )
     assert build.returncode == 0, build.stdout[-2000:] + build.stderr[-2000:]
     deployed_hook = repo / ".leafcutter/scripts/commit_guardian/check_hook_trigger_reachability.py"

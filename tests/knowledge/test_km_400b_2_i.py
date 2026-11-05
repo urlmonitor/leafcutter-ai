@@ -6,6 +6,7 @@ a database double that records every statement it is handed.
 """
 
 import asyncio
+import hashlib
 import importlib
 import json
 import os
@@ -15,6 +16,7 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -229,6 +231,76 @@ def test_zero_collapsed_relationships_is_reported_explicitly(tmp_path, monkeypat
     # control: a snapshot that did collapse something does not state the zero figure
     assert not any(_ZERO.search(d) for d in _diagnostics(dirty_db, dirty_result))
     assert clean_lines != _diagnostics(dirty_db, dirty_result)
+
+
+class StoringDb(RecordingDb):
+    """RecordingDb that keeps each generation record, so a second publication meets the first's digest."""
+
+    def __init__(self):
+        super().__init__()
+        self.generations = {}
+
+    async def _run(self, statement, params=None, write=False, **ignored):
+        if "MERGE (g:Snapshot" in statement:
+            self.calls.append((statement, params or {}, write))
+            key = params["meta"]["key"]
+            stored = self.generations.setdefault(key, {"digest": params["meta"]["digest"], "status": "building"})
+            answer = dict(stored)
+            stored["status"] = "ready"  # the first publication completed
+            return [answer]
+        return await super()._run(statement, params, write, **ignored)
+
+
+@pytest.mark.parametrize("repeats", [1, 2])
+def test_publishing_the_same_snapshot_object_again_is_idempotent(tmp_path, monkeypatch, repeats):
+    # covers: KM-400b-2-iii
+    # angle: criterion
+    # The collapse updates the snapshot in place (its diagnostics gain the collapse total and,
+    # with ``repeats=2``, its edges lose the duplicate). A second publication of that same object
+    # must still be recognised as the same content, never "already belongs to different content".
+    sha = _repository(tmp_path, [TARGET] * repeats)
+    snapshot = _load(tmp_path, sha)
+    projection = importlib.import_module("knowledge.adapters.neo4j_projection")
+
+    async def no_counts(*args, **kwargs):
+        return None
+
+    async def activated(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(projection, "_validate_counts", no_counts)
+    monkeypatch.setattr(projection, "switch_active", activated)
+    db = StoringDb()
+    assert asyncio.run(projection.publish(db, snapshot, None)) is True
+    built = len(db.writes())
+    assert asyncio.run(projection.publish(db, snapshot, None)) is True
+    # the second publication found the ready generation and wrote no node or relationship
+    assert not [c for c in db.writes()[built:] if "UNWIND $rows" in c[0]]
+    # control: a snapshot whose content really differs is still refused under the same identity
+    changed = snapshot.model_copy(update={"mapper_version": "changed"})
+    with pytest.raises(ValueError, match="different content"):
+        asyncio.run(projection.publish(db, changed, None))
+
+
+def test_a_generation_recorded_with_the_earlier_raw_digest_is_still_the_same_content(tmp_path, monkeypatch):
+    # covers: KM-400b-2-iii
+    # angle: boundary
+    # Records written before KM-400b-2-iii hold the digest of the loaded, uncollapsed snapshot.
+    sha = _repository(tmp_path, [TARGET, TARGET])
+    snapshot = _load(tmp_path, sha)
+    raw = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
+    projection = importlib.import_module("knowledge.adapters.neo4j_projection")
+    backend = importlib.import_module("knowledge.adapters.neo4j_backend")
+
+    async def activated(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(projection, "switch_active", activated)
+    db = StoringDb()
+    key = backend.scope_key(snapshot.repository_id, snapshot.generation_id)
+    db.generations[key] = {"digest": raw, "status": "ready"}
+    assert asyncio.run(projection.publish(db, snapshot, None)) is True
+    assert not [c for c in db.writes() if "UNWIND $rows" in c[0]]
 
 
 def _clean_repo(root):

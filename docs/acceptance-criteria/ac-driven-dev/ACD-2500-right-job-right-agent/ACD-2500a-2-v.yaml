@@ -113,3 +113,15 @@ notes: |
   rule; it is not relocated here (this check never creates records).
   ACD-200b-1's table lists 4 triggers and omits reference-doc; the it-po S7b table and
   this AC list 5. The 5-entry table is the one to keep.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

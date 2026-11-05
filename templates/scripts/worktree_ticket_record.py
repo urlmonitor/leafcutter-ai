@@ -40,17 +40,18 @@ RECORDING_KIND = "ticket"
 _RECORD_PATTERN = r"^branch\..*\.leafcutterticket$"  # git lower-cases the variable name
 
 
-def _records(workspace: Path) -> tuple[list[tuple[str, str]] | None, str]:
-    """Every ``(key, ticket)`` record in *workspace*'s config; ``(None, why)`` when git could not say.
+def _records(workspace: Path) -> list[tuple[str, str]] | None:
+    """Every ``(key, ticket)`` record in *workspace*'s config; ``None`` when git could not say.
 
     ``git config --get-regexp`` exits 1 when nothing matches -- that is "no
     record", not a failure.
     """
     proc = wg.run_git(["config", "--get-regexp", _RECORD_PATTERN], workspace)
     if proc.returncode not in (0, 1):
-        return None, proc.stderr.strip()
+        _log.warning("_records: git config --get-regexp failed in %s: %s", workspace, proc.stderr.strip())
+        return None
     pairs = [line.partition(" ") for line in proc.stdout.splitlines() if line.strip()]
-    return [(key, value.strip()) for key, _sep, value in pairs], ""
+    return [(key, value.strip()) for key, _sep, value in pairs]
 
 
 def conflict_refusal(workspace: Path, kind: str, ticket: wi.TicketRequest | None) -> dict[str, Any] | None:
@@ -62,9 +63,10 @@ def conflict_refusal(workspace: Path, kind: str, ticket: wi.TicketRequest | None
     """
     if kind != RECORDING_KIND or ticket is None or not (workspace / ".git").is_dir():
         return None  # no clone yet: nothing recorded, and git must not read a parent repository
-    records, why = _records(workspace)
+    records = _records(workspace)
     if records is None:
-        return wa.error_answer("GIT_FAILED", f"Could not read the ticket record in {workspace}: {why}")
+        return wa.error_answer("GIT_FAILED", f"Could not read the ticket record in {workspace}.",
+                               step="read-ticket-record")
     for key, recorded in records:
         if Path(recorded).name != ticket.rel.name:
             branch = key[len("branch."):-len(RECORD_KEY) - 1]
@@ -85,8 +87,8 @@ def _record(workspace: Path, branch: str, rel: str) -> dict[str, Any] | None:
     proc = wg.run_git(["config", "--replace-all", key, rel], workspace)
     if proc.returncode != 0:
         _log.warning("_record: git config %s failed in %s: %s", key, workspace, proc.stderr.strip())
-        return wa.error_answer("GIT_FAILED", f"Could not record the built-for ticket on {branch}: "
-                                             f"{proc.stderr.strip()}")
+        return wa.error_answer("GIT_FAILED", f"Could not record the built-for ticket on {branch}.",
+                               step="record-ticket")
     return None
 
 
@@ -118,4 +120,7 @@ def finish(answer: dict[str, Any], kind: str, ticket: wi.TicketRequest | None, w
 #   record now lives in the workspace clone's config (where finalize runs),
 #   not the main checkout's; a conflicting record is refused as the new
 #   BUILT_FOR_OTHER_TICKET code before any write. (ADR-018)
+# - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/05]:
+#   A failed git step answers with a ``step`` and a message holding no git
+#   text (git's own text stays on stderr, via run_git) (BO-4300c-2, M4). (ADR-018)
 # ===========================================================================

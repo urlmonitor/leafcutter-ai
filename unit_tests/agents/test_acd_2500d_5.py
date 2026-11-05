@@ -114,7 +114,7 @@ def test_test_designer_registered_on_sonnet():
     assert entry["spawned_by"] == ["plan-feature.js"]
     assert entry["spawn_allowlist"] == []
     assert (entry["tier"], entry["role"], entry["category"], entry["produces"]) == (
-        "utility", "analysis", "planning", "analysis",
+        "utility", "analysis", "planning", "requirement_records",  # produces: ACD-2500f-1
     )
     assert entry["portable"] is True and entry["domain"] is None
     assert registry_validator.validate_agent_registry(REPO) == []
@@ -195,7 +195,7 @@ def test_test_designer_profile_declares_two_outputs():
     assert mutates[0]["name"] == "requirement_records"
     assert "AC YAML store" in str(mutates[0]["surface"])
     assert [item["name"] for item in outputs] == ["test_design", "file_findings"], outputs
-    assert front["produces"] == "analysis"
+    assert front["produces"] == "requirement_records"  # changed on purpose by ACD-2500f-1
 
 
 def test_ac3_description_names_both_outputs_and_a_use_when_line():

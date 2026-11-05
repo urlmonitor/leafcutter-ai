@@ -1,29 +1,29 @@
 ---
-title: "AC-Driven Pipeline — Component Diagram"
+title: AC-Driven Pipeline — Component Diagram
 type: architecture
 diagram_type: component
 status: active
 created: 2026-06-05
-last_updated: 2026-06-05
-flight_level: L2
-parent: agent_delivery_workflows.md
+last_updated: 2026-10-21
+flight_level: L2-Container
+parent: docs/architecture/diagrams/c1-001-command-map.md
 components:
-  - ac_store
-  - ticket_creation_pipeline
-  - build_orchestration
+- ac_store
+- ticket_creation_pipeline
+- build_orchestration
 related_docs:
-  - docs/architecture/diagrams/ac-authoring-pipeline.md
-  - docs/architecture/diagrams/build-ac-flow.md
-  - docs/architecture/diagrams/ac-readiness-states.md
-  - docs/how-to/ac-driven-development.md
+- docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+- docs/architecture/diagrams/c2-004-build-ac-flow.md
+- docs/architecture/diagrams/c2-003-ac-readiness-states.md
+- docs/how-to/ac-driven-development.md
 tags:
-  - ac-store
-  - ticket-creation
-  - pipeline
-  - scanner
-  - generator
+- ac-store
+- ticket-creation
+- pipeline
+- scanner
+- generator
+description: Overview of AC-Driven Pipeline — Component Diagram.
 ---
-
 # AC-Driven Pipeline — Component Diagram
 
 This diagram shows all seven components of the AC-driven pipeline, the AC
@@ -100,6 +100,8 @@ flowchart TD
     BF -->|"commits + PR"| GIT
     TICK -->|"read by"| BF
 ```
+
+Parent: [Leafcutter Command Map — User-Facing Slash Commands](c1-001-command-map.md)
 
 ---
 

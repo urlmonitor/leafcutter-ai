@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400d-4
 criteria: |
   Scenario: per-step timings on a successful retrieval
@@ -295,8 +295,12 @@ origin_agent: business-analyst
 created: '2026-10-22'
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/knowledge/test_km_400d_4_iii.py
+implemented_by:
+  - knowledge/step_timing.py
+  - knowledge/adapters/neo4j_backend.py
+  - knowledge/service.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

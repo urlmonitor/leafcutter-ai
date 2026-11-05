@@ -64,7 +64,8 @@ async function mockAgent(call) {
     if (label === 'read-pause-record') { return { exists: true, stale: false }; }
     if (label === 'clear-pause-record') { return { ok: true }; }
     if (label === 'clear-pause-record-verify') { return { exists: false }; }
-    if (label === 'approval-holds') { return { output: JSON.stringify({ approved: /--ids (\S+)/.exec(instructions)[1].split(','), held: [] }), exit_code: 0 }; }
+    // approval-holds (pre-gate report and the approval step's --dry-run) and approval-apply (ACD-300c-4) release every id they get.
+    if (label === 'approval-holds' || label === 'approval-apply') { return { output: JSON.stringify({ approved: /--ids (\S*)/.exec(instructions)[1].split(',').filter(Boolean), held: [], already_approved: [] }), exit_code: 0 }; }
   }
 
   if (agentType === 'status-checker') {
@@ -108,7 +109,6 @@ async function mockAgent(call) {
     // (pause-persist, read-pause-record, etc.) ADR-024's substrate itself
     // dispatches now arrive under agentType 'worktree-agent' (BO-2300a-1-ii)
     // -- handled in the block above, not here.
-    if (label === 'apply-approval') { return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] }; }
     return { status: 'ok' };
   }
 

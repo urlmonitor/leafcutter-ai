@@ -143,8 +143,189 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # ---- the live-database lane (TQ-600a-13-xxi): the whole tests/knowledge_live/ folder against disposable databases.
+  # Its own jobs, so a database that never starts cannot take the correctness lane's report down (TQ-600a-13-xxii),
+  # and the verdict job can attribute the ending from the job result plus the absent report. The three service
+  # instances are the Proof-of-done job's (ci.yml `done-proof`) verbatim -- same image, host ports, credentials and
+  # memory -- and the fix proof starts the same ones from scripts/ci/_live_lane.py INSTANCES (a change to one is a
+  # change to all). The credentials are the disposable test literals ci.yml already carries; no secret is referenced. All
+  # decision logic, including the marker override that selects the whole folder, lives in post_merge_suite.py.
+  live_run:
+    runs-on: ubuntu-latest
+    # Not yet measured on a real run (TQ-600a-13-xxi asks for it): set to the correctness lane's bound until then.
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    outputs:
+      failures: ${{ steps.lane.outputs.failure_count }}
+    services:
+      knowledge-retrieval:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-local-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 17687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-local-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-domain:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-domain-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18087:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-domain-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-native:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-native-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18088:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-native-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build
+        run: python scripts/build.py --target-dir .
+
+      # The lane checks the address is reachable (a probe, then a held first connection) before any test.
+      - name: Run the live-database lane
+        id: lane
+        env:
+          AC_ENFORCE_STRICT: "1"
+          LIVE_DB_ADDRESS: "127.0.0.1:17687"
+          LIVE_DB_STARTUP_LIMIT: "120"
+        run: python scripts/ci/post_merge_suite.py run --lane live --report live-first-run-report.json --failures live-first-run-failures.txt -- python -m pytest tests/knowledge_live/ -p no:cacheprovider --durations=20
+
+      - name: Upload the live first-run report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-first-run-report
+          path: live-first-run-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload the live first-run failure list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-first-run-failures
+          path: live-first-run-failures.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
+  live_retry:
+    needs: live_run
+    if: needs.live_run.outputs.failures != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    services:
+      knowledge-retrieval:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-local-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 17687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-local-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-domain:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-domain-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18087:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-domain-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+      knowledge-native:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/leafcutter-native-tests
+          NEO4J_server_memory_heap_initial__size: 256m
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 18088:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p leafcutter-native-tests 'RETURN 1'"
+          --health-interval 10s --health-timeout 10s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build
+        run: python scripts/build.py --target-dir .
+
+      # The ONLY thing received from the first execution is the failure list.
+      - name: Download the live failure list
+        uses: actions/download-artifact@v4
+        with:
+          name: live-first-run-failures
+          path: live-first-run-failures
+
+      # No folder in the command: the retry runs exactly the listed ids, under the lane's own marker override.
+      - name: Re-execute the live first-run failures once
+        env:
+          AC_ENFORCE_STRICT: "1"
+          LIVE_DB_ADDRESS: "127.0.0.1:17687"
+          LIVE_DB_STARTUP_LIMIT: "120"
+        run: python scripts/ci/post_merge_suite.py retry --lane live --failures live-first-run-failures/live-first-run-failures.txt --report live-retry-report.json -- python -m pytest -p no:cacheprovider
+
+      - name: Upload the live retry report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-retry-report
+          path: live-retry-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
   verdict:
-    needs: [run, retry]
+    needs: [run, retry, live_run, live_retry]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -183,6 +364,8 @@ jobs:
         env:
           RUN_RESULT: ${{ needs.run.result }}
           RETRY_RESULT: ${{ needs.retry.result }}
+          LIVE_RUN_RESULT: ${{ needs.live_run.result }}
+          LIVE_RETRY_RESULT: ${{ needs.live_retry.result }}
           GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/ci/post_merge_suite.py verdict --artifacts artifacts --output post-merge-verdict.json --api-url "$GITHUB_API_URL" --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID"
 

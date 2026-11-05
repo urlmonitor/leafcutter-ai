@@ -141,7 +141,7 @@ from _fl_red_baseline_support import (
     _resolve_git_baseline_context,
 )
 from _fl_heavy_lane_gate import heavy_lane_gate  # noqa: F401 — re-exported, used by main()
-from project_python import project_import_refusal, resolve_project_python  # TQ-500f-3-v
+from project_python import project_import_refusal, resolve_project_python  # TQ-500f-3-vi
 from _fl_selection import _is_structural_parent, _topo_order_build_set, select_batch
 
 # ---------------------------------------------------------------------------
@@ -340,7 +340,7 @@ def verify_red_baseline(
             "message"}``. Always ``[]`` when *ac_root* is omitted.
 
         ``interpreter`` (str)
-            TQ-500f-3-v — the PROJECT interpreter that judged the tests
+            TQ-500f-3-vi — the PROJECT interpreter that judged the tests
             (``project_python.resolve_project_python``: configured command,
             else the worktree ``.venv``, else ``uv run``, else
             ``sys.executable``). When it cannot import the project's own
@@ -641,7 +641,7 @@ if __name__ == "__main__":
 #   the test suite (_load_ac, traverse_ac_tree, _run_pytest_and_parse)
 #   still resolves through this module's own namespace exactly as before.
 #   (#TICKETLESS reason=fast-lane-file-size-split)
-# - 2026-10-22 [python-coder/TQ-500f-3-v]: verify_red_baseline judges with the
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: verify_red_baseline judges with the
 #   project interpreter (project_python) and refuses an un-importable project
 #   package as project_package_not_importable; body moved to _judge_red_baseline.
 # ====================================================================

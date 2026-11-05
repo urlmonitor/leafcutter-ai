@@ -320,7 +320,7 @@ class TestFin100hCapabilityStepsNotRoutedToStatusChecker:
         assert 'mainTestRun(baselineSlug, null, "Step 0", "step-0-baseline")' in js, (
             "Could not locate the Step 0 baseline run (label 'step-0-baseline') in finalize-feature.js."
         )
-        assert "workspaceDispatch(" in helper and "shellStepDispatch(" in helper, (
+        assert "workspaceMade(" in helper and "shellStepDispatch(" in helper, (
             "The step-0-baseline run must dispatch through the shared shell-step helpers."
         )
         assert 'agentType: "status-checker"' not in helper, (

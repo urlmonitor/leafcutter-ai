@@ -1,0 +1,173 @@
+id: TQ-500f-2-iii
+components:
+  - testing_quality
+  - ac_store
+title: "A wrong-version name that describes a defect in a test, not a wrong version of the code, is kept out of must_catch, and the code-side wrong version is named instead"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the code-aware test designer is naming the wrong versions for
+    test_report_only_branch_announces_finding, which guards requirement R4, a
+    rule that announces a finding when a proof enters its entry point, and its
+    candidate names are —
+      C1 "a fixture on which no entry point resolves, so the report-only
+         branch is never reached and the test passes vacuously",
+      C2 "an assertion that reads the source file rather than the emitted
+         line",
+      C3 "a rule that is never reached on any fixture",
+      C4 "a rule that passes the verdict through but announces nothing",
+    and for requirement R5, whose code under test itself inspects test files,
+    the candidate C5 "assertions matched by position, so an inserted assertion
+    shifts the strict one",
+  When it produces the test design for R4 and R5,
+  Then C1 and C2 are left out of must_catch, because no change to the code
+      under test is a wrong fixture or a wrong assertion,
+    And for each of them the design names instead the wrong version of the
+      code that the defective test would let through, C3 for C1 and C4 for
+      C2, and a name already in the list is not added a second time,
+    And the concern behind C1 and C2 stays on record in the description of
+      that test entry, where review sees it, without becoming a wrong version
+      a drive must prepare,
+    And C3, C4 and C5 are kept as must_catch names: a name that mentions a
+      fixture, an assertion or a test is a test defect only when no change to
+      the code under test can be that name,
+    And a name of the C1 kind that reaches a drive anyway is reported by the
+      preparer as could not be prepared, with the reason that it names a
+      defect in a test rather than in the code, so a reader sees that the
+      requirement must be corrected rather than the code or the tests.
+depends_on:
+  - TQ-500f-2
+  - TQ-500f-2-ii
+  - TQ-500g-1-iv
+doc_links:
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Section 4: names that describe a defect in a test (BO-2900a-1-ii's vacuous fixture and source-reading assertion), why they can only come back could_not_prepare, and their code-side counterparts; recommendation item 8 (authoring refusal)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The code-aware test designer that fills must_catch; this AC adds a rule to that duty."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-iv.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The preparer (test-breaker) whose could_not_prepare reason gains the test-defect wording as a backstop."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-3-iii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Real store evidence for C5: legitimate must_catch names about assertions and fixtures where the code under test analyses tests, which rule out a keyword-based refusal."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: relates-to
+    status: exists
+    relevance: "Sibling failure of the same gate: a name that cannot become a faithful code change; here because it names a test defect, there because the preparer picked a dead path."
+  - path: templates/agents/test-designer.md
+    relationship: describes
+    status: exists
+    relevance: "Where the rule is written (template created by ACD-2500d-5; present on this branch)."
+  - path: templates/agents/test-breaker.md
+    relationship: describes
+    status: exists
+    relevance: "The preparer whose could_not_prepare reason gains the test-defect backstop wording."
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: describes
+    status: exists
+    relevance: "Why the judgement 'can a change to the code under test be this name?' belongs to the code-aware test designer."
+assigned_agent: llm-expert
+estimated_complexity: S
+declared_files:
+  - path: templates/agents/test-designer.md
+    state: existing
+  - path: templates/agents/test-breaker.md
+    state: existing
+it_requirements:
+  - >-
+    Edit the source templates only (templates/agents/test-designer.md and templates/agents/test-breaker.md),
+    never the deployed copies (ADR-001). Builds that edit test-designer.md (ACD-2500c-1, ACD-2500d-1/-2/-3,
+    TQ-500f-2-ii, this AC) must be serialised, as TQ-500f-2-ii requires.
+  - >-
+    The rule is stated as the one test "can a change to the code under test be this name?", never as a word
+    or leading-phrase list: names that mention a fixture, an assertion or a test stay must_catch names when
+    the code under test reasons about tests (the C5 control, TQ-500g-3-iii). The prompt must not introduce
+    a keyword filter in any form.
+  - >-
+    A left-out test-defect name is replaced by the code-side wrong version it would let through, without
+    adding a name already in the list (exact string after the alias rule's trim and case-fold), and the
+    concern stays in that test_spec entry's description; the test designer never writes it to must_catch,
+    in_scope_files or declared_replacements.
+  - >-
+    Backstop in test-breaker.md: a name that describes a defect in a test is answered could_not_prepare
+    with a one-line reason that says it names a defect in a test rather than in the code (wording fixed in
+    the template, so a reader can tell it from "the code has no such behaviour"). The template's tools stay
+    read-only and its reply shape (TQ-500g-1-iv) is unchanged.
+  - >-
+    The edit passes prompt-audit, keeps each agent's frontmatter valid for registry_validator, and adds no
+    new section headings to test-breaker.md's reply contract.
+test_required: false
+test_rationale: >-
+  Prompt-only (change_target: prompt): whether an agent follows a judgement rule cannot be unit-tested without a
+  template text search, which CLAUDE.md forbids. The proof is an agent eval in the TQ-200d family over the C1 to
+  C5 candidate set, scored on which names end in must_catch, which code-side names replace C1 and C2, and that
+  C3, C4 and C5 are kept; the eval set (scripts/evals/sets/, run by scripts/evals/run_agent_eval.py) is a
+  recommended follow-up requirement, not part of this record's declared files. Substitutes until then:
+  pr-reviewer against the Then clauses, and a dry design run on BO-2900a-1-ii.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/01_TICKET-20261024-TQ-500f-2-iii.md
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  DECISION ON USER BRIEF ITEM 7: PLACED UNDER TQ-500f-2, NOT TQ-500g-1. TQ-500f-2
+  owns how a requirement names its wrong versions (schema, validation,
+  TQ-500f-2-i's refusals, and who fills the list, TQ-500f-2-ii). A test-defect
+  name is an authoring defect in that list, so the guard belongs where the list
+  is written, before any drive. TQ-500g-1 runs the names; it can only discover
+  the defect as a blocking could_not_prepare, which is what the user wants to
+  avoid. The preparer backstop (last And) is the one TQ-500g-1-side piece and
+  is kept here so the rule lives in one AC.
+
+  WHY NOT A MECHANICAL REFUSAL IN THE VALIDATOR. A store sweep on 2026-10-23
+  found many legitimate must_catch names that start with "assertion",
+  "fixture" or "a test", for code that itself reasons about tests:
+  TQ-500g-3-iii ("assertions matched by position, so an inserted assertion
+  shifts the strict one"), TQ-600a-13-xii ("a test falls in no collection"),
+  TQ-200d-1 ("fixture check accepts cvd-only seeding"). A word or
+  leading-phrase rule would refuse those, so the line between a test defect and
+  a code wrong version is a judgement: "can a change to the code under test be
+  this name?". That judgement belongs to the agent that reads the code (the
+  test designer), proven by an eval, not by a commit-time regex. C5 is the
+  control that rules out a keyword implementation. Commit hooks cannot dispatch
+  agents, so an LLM check at commit time is not available either.
+
+  SINGLE AGENT. Both prompt surfaces (test-designer.md and test-breaker.md) are
+  llm-expert's; split if IT-PO wants the backstop shipped separately.
+
+  EXISTING STORE. The two names in BO-2900a-1-ii named in the analysis should be
+  corrected by hand now (analysis section 6); this AC does not rewrite existing
+  records.
+
+  TESTABILITY. Prompt-only: an eval (TQ-200d family) over the C1-C5 candidate
+  set, scored on which names end up in must_catch and which code-side
+  counterparts replace C1 and C2. IT-PO to set test_required and the eval home.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  llm-expert, one change over both templates (no split: both are prompt
+  surfaces of the same specialist). test_required false; the eval over C1-C5
+  is a recommended follow-up record (eval home scripts/evals/sets/). expects_from
+  set to null: the dependency on TQ-500f-2-ii is an ordering on the same
+  template (kept in depends_on), not a data contract, and TQ-500f-2-ii
+  (approved) declares no delivers_to.

@@ -23,6 +23,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import worktree_git as wg
+
 _NO_ROOT = "--no-log-root"
 
 
@@ -55,7 +57,10 @@ def inherited_log_root_args(install_root: Path) -> tuple[list[str], str | None]:
 def _run_build(argv: list[str], **run_kwargs: Any) -> subprocess.CompletedProcess:
     """Run one build invocation; a launch failure or timeout surfaces as ``subprocess.SubprocessError``."""
     try:
-        return subprocess.run(argv, **run_kwargs)  # noqa: PLW1510
+        kwargs = {k: v for k, v in run_kwargs.items() if k not in ("stdin", "env")}
+        caller_env = run_kwargs.get("env")
+        env = wg.git_env() if caller_env is None else wg.no_prompt_env(caller_env)
+        return subprocess.run(argv, stdin=subprocess.DEVNULL, env=env, **kwargs)  # noqa: PLW1510
     except (OSError, subprocess.SubprocessError) as exc:
         raise subprocess.SubprocessError(f"workspace build {argv[0]!r} did not complete: {exc}") from exc
 

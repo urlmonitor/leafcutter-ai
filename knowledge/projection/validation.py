@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from knowledge.contracts import Relation
 
 from pathlib import Path
+import hashlib
 import importlib
 import sys
 
@@ -213,6 +214,23 @@ def collapse_identical_edges(snapshot: ProjectionSnapshot) -> list[str]:
         d for d in snapshot.diagnostics if not (isinstance(d, str) and d.startswith(prior))
     ] + found
     return found
+
+
+def collapsed_content_digest(snapshot: ProjectionSnapshot) -> str:
+    """Return the content digest of a snapshot already passed through ``collapse_identical_edges``.
+
+    The collapse's own diagnostic lines are left out, so the digest is the same for a freshly
+    loaded snapshot and for one an earlier publication already collapsed in place (KM-400b-2-iii).
+
+    Args:
+        snapshot: A collapsed generation.
+
+    Returns:
+        The SHA-256 hex digest of its serialization without collapse diagnostics.
+    """
+    prior = (COLLAPSE_SUMMARY, COLLAPSE_GROUP)
+    kept = [d for d in snapshot.diagnostics if not (isinstance(d, str) and d.startswith(prior))]
+    return hashlib.sha256(snapshot.model_copy(update={"diagnostics": kept}).model_dump_json().encode()).hexdigest()
 
 
 def _collapse_line(edge: Relation, count: int) -> str:

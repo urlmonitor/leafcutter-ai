@@ -234,7 +234,9 @@ class TestReReady(MakerTestCase):
         self.assertGreater(len(canary_log(fx["ws"])), canaries, "no fresh canary rejection during the request")
         for key in CHECK_KEYS:
             with self.subTest(check=key):
-                self.assertIs(ans["checks"].get(key), True, ans["checks"])
+                # tree_clean is tracked-only and computed after the restore (BO-4300c-1-iii): the work's
+                # README edit is tracked, so it is reported False (test_drift fix).
+                self.assertIs(ans["checks"].get(key), key != "tree_clean", ans["checks"])
 
     def test_commits_uncommitted_change_and_untracked_file_survive(self):
         # covers: BO-4300d-1

@@ -53,12 +53,16 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _file_size_measure_copy import copy_measure_package  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_GUARDIAN_SRC = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
@@ -130,13 +134,42 @@ def copy_production_modules(root: Path) -> Path:
     dest.mkdir(parents=True, exist_ok=True)
     for name in PRODUCTION_MODULES:
         shutil.copy2(_COMMIT_GUARDIAN_SRC / name, dest / name)
+    copy_measure_package(dest)
     return dest
 
 
+_MEASURE_PROBE = (
+    "import sys\n"
+    "sys.path.insert(0, sys.argv[1])\n"
+    "import _file_size_ratchet as r\n"
+    "print(r.describe_measurement_rule(), end='')\n"
+)
+
+
+@functools.lru_cache(maxsize=1)
+def enforced_measurement_rule() -> str:
+    """The measurement-rule statement the REAL measure generates (GE-127d-5), read cold.
+
+    A published surface must carry this passage verbatim after the ``MEASUREMENT RULE``
+    marker, so a fixture surface meant to AGREE with the enforced rule is built from the
+    producer's own output, never from a hand-typed copy of it.
+    """
+    result = run([PYTHON, "-c", _MEASURE_PROBE, str(_COMMIT_GUARDIAN_SRC)], _REPO_ROOT)
+    assert result.returncode == 0, f"could not read the enforced measurement rule: {result.stderr!r}"
+    return result.stdout
+
+
 def surface_text(extensions: list[str]) -> str:
-    """Deterministic prose stating which kinds a published surface covers."""
+    """Deterministic prose stating which kinds a published surface covers.
+
+    Also carries the measurement-rule passage in force (GE-127d-5), so a surface
+    built here agrees on every fact the reconciliation gate compares.
+    """
     kinds = ", ".join(extensions) if extensions else "(none)"
-    return f"Enforces line limits on {kinds} files. Limits apply to every changed file, not only newly added ones.\n"
+    return (
+        f"Enforces line limits on {kinds} files. Limits apply to every changed file, not only newly added ones.\n"
+        f"MEASUREMENT RULE: {enforced_measurement_rule()}\n"
+    )
 
 
 def build_fixture_tree(

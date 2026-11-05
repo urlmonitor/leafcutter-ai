@@ -23,7 +23,7 @@ requires_verification: true
 signoff: false
 visibility: internal
 domain: null
-produces: analysis
+produces: requirement_records
 config_keys: {}
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline when a user request
@@ -41,9 +41,12 @@ outputs:
   name: completion_report
   type: structured_response
 mutates:
-- description: Read-only agent — no filesystem mutations
-  name: none
-  surface: none
+- description: Authors L0/L1 requirement records, one AC YAML file each, with all their fields (id, title, component, components, level, status fields, criteria, depends_on, readiness, priority, documentation_triggers, doc_links, origin_agent, created)
+  name: requirement_records
+  surface: AC YAML store (docs/acceptance-criteria/)
+- description: Strategic-shift edits to the vision statement and roadmap, applied only after explicit user confirmation
+  name: vision_and_roadmap
+  surface: docs/vision.md and docs/roadmap.json
 behavioral_patterns:
 - behavior: reprioritization,
   name: Conditional Behavior

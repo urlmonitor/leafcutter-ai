@@ -138,7 +138,10 @@ except ImportError:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_selector import resolve_trigger_shas  # noqa: E402
 from artifact_dependencies import checked_path, copy_sandbox_inputs  # noqa: E402
+from artifact_validation import _ASSERTIONS  # noqa: E402
 from artifact_validation import store_errors, target_errors  # noqa: E402
+from agent_launch import command as agent_command  # noqa: E402
+from agent_launch.harness_failure import launch_failed, stop_run  # noqa: E402
 from cli_envelope import envelope_result  # noqa: E402
 from label_scoring import OUTCOME_BY_COMBO as OUTCOME_BY_COMBO  # noqa: E402
 from label_scoring import aggregate_label, derive_outcome, print_report, score_label_row  # noqa: E402
@@ -256,6 +259,18 @@ def _strip_frontmatter(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Model invocation
 # ---------------------------------------------------------------------------
+def _run_cli(label: str, flags: list[str], system_prompt: str, user_input: str, replace: bool, timeout: int, **run_kwargs: Any) -> str:
+    """Start the agent through the shared launch builder (prompt file + stdin) and return its reply."""
+    try:
+        completed = agent_command.launch(flags, instructions=system_prompt, user_input=user_input, replace=replace,
+                                         timeout=timeout, error=ModelInvocationError, **run_kwargs)
+    except subprocess.TimeoutExpired as exc:
+        logger.exception("%s timed out after %ss", label, timeout)
+        msg = f"{label} timed out after {timeout}s"
+        raise ModelInvocationError(msg) from exc
+    return envelope_result(completed, label, ModelInvocationError)
+
+
 def invoke_via_cli(
     system_prompt: str,
     user_input: str,
@@ -268,37 +283,8 @@ def invoke_via_cli(
     and dynamic system-prompt sections are excluded for determinism. Raises
     ModelInvocationError on any subprocess or output-parse failure.
     """
-    cmd = [
-        "claude",
-        "-p",
-        user_input,
-        "--model",
-        model,
-        "--system-prompt",
-        system_prompt,
-        "--tools",
-        "",
-        "--exclude-dynamic-system-prompt-sections",
-        "--output-format",
-        "json",
-    ]
-    try:
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        logger.exception("claude CLI timed out after %ss", timeout)
-        msg = f"claude CLI timed out after {timeout}s"
-        raise ModelInvocationError(msg) from exc
-    except OSError as exc:
-        logger.exception("claude CLI could not be launched")
-        msg = "claude CLI could not be launched"
-        raise ModelInvocationError(msg) from exc
-    return envelope_result(completed, "claude CLI", ModelInvocationError)
+    flags = ["--model", model, "--tools", "", "--exclude-dynamic-system-prompt-sections", "--output-format", "json"]
+    return _run_cli("claude CLI", flags, system_prompt, user_input, True, timeout)
 
 
 def invoke_via_api(
@@ -402,39 +388,6 @@ def _first_balanced_object(text: str) -> str | None:
 
 
 
-# ---------------------------------------------------------------------------
-# Scoring — artifact mode (scaffold; no active consumer yet)
-# ---------------------------------------------------------------------------
-def run_deterministic_assertions(artifact: str, assertions: list[dict[str, Any]]) -> list[dict]:
-    """Run substring/regex/json-key assertions against a produced artifact.
-
-    Pure function. Each assertion: {"kind": "contains|not_contains|regex|json_has_key",
-    "value"|"pattern"|"key": ...}. Returns a per-assertion result list.
-    """
-    results: list[dict[str, Any]] = []
-    for spec in assertions:
-        results.append({"spec": spec, "passed": _check_assertion(artifact, spec)})
-    return results
-
-
-def _check_assertion(artifact: str, spec: dict[str, Any]) -> bool:
-    """Evaluate a single deterministic assertion. Pure function."""
-    kind = spec.get("kind")
-    if kind == "contains":
-        return str(spec.get("value", "")) in artifact
-    if kind == "not_contains":
-        return str(spec.get("value", "")) not in artifact
-    if kind == "regex":
-        return re.search(str(spec.get("pattern", "")), artifact) is not None
-    if kind == "json_has_key":
-        try:
-            obj = json.loads(artifact)
-        except json.JSONDecodeError:
-            return False
-        return isinstance(obj, dict) and spec.get("key") in obj
-    return False
-
-
 def run_llm_judge(
     artifact: str,
     rubric: str,
@@ -464,25 +417,6 @@ def run_llm_judge(
         "score": float(parsed.get("score", 0.0)),
         "reasoning": str(parsed.get("reasoning", "")),
     }
-
-
-def score_artifact_row(
-    artifact: str,
-    expected: dict[str, Any],
-    model: str,
-    timeout: int,
-    backend: str,
-) -> dict[str, Any]:
-    """Score one artifact row: deterministic assertions AND optional LLM-judge."""
-    assertions = expected.get("assertions", [])
-    det = run_deterministic_assertions(artifact, assertions)
-    det_ok = all(a["passed"] for a in det)
-    judge: dict[str, Any] | None = None
-    rubric = expected.get("rubric")
-    if rubric:
-        judge = run_llm_judge(artifact, str(rubric), model, timeout, backend)
-    judge_ok = judge is None or judge["verdict"] == "pass"
-    return {"passed": det_ok and judge_ok, "assertions": det, "judge": judge}
 
 
 # ---------------------------------------------------------------------------
@@ -749,41 +683,9 @@ def invoke_agent_writer(
     the sandbox and LEAFCUTTER_REPO_ROOT points at it, so writes stay contained.
     Permissions are bypassed because the sandbox is a throwaway /tmp copy.
     """
-    cmd = [
-        "claude",
-        "-p",
-        user_input,
-        "--model",
-        model,
-        "--append-system-prompt",
-        system_prompt,
-        "--tools",
-        tools,
-        "--permission-mode",
-        "bypassPermissions",
-        "--output-format",
-        "json",
-    ]
+    flags = ["--model", model, "--tools", tools, "--permission-mode", "bypassPermissions", "--output-format", "json"]
     env = dict(os.environ, LEAFCUTTER_REPO_ROOT=str(sandbox))
-    try:
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(sandbox),
-            env=env,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        logger.exception("agent CLI timed out after %ss", timeout)
-        msg = f"agent CLI timed out after {timeout}s"
-        raise ModelInvocationError(msg) from exc
-    except OSError as exc:
-        logger.exception("agent CLI could not be launched")
-        msg = "agent CLI could not be launched"
-        raise ModelInvocationError(msg) from exc
-    return envelope_result(completed, "agent CLI", ModelInvocationError)
+    return _run_cli("agent CLI", flags, system_prompt, user_input, False, timeout, cwd=str(sandbox), env=env)
 
 
 def _parse_report(reply: str) -> dict[str, Any]:
@@ -825,197 +727,6 @@ def determine_target(
         "matching_added": matching_added,
         "matching_modified": matching_modified,
     }
-
-
-def _id_from_path(target_rel: str, ext: str) -> str:
-    """Derive the path-stable id '<product>/<name>' from a store-relative file path."""
-    parts = Path(target_rel).parts
-    product = parts[-2] if len(parts) >= 2 else ""
-    name = Path(target_rel).name[: -len(ext)]
-    return f"{product}/{name}"
-
-
-# ---- deterministic assertion checks (pure over the built context) ----------
-def _a_schema_valid(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    schema = ctx.get("schema")
-    if obj is None:
-        return False, "no artifact produced"
-    if schema is None:
-        return False, "no schema configured"
-    try:
-        jsonschema.validate(obj, schema)
-    except jsonschema.ValidationError as exc:
-        return False, f"schema: {exc.message}"
-    return True, "schema-valid"
-
-
-def _a_entities_in_registry(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj, registry = ctx.get("target_obj"), ctx["registry"]
-    if obj is None:
-        return False, "no artifact produced"
-    if ctx["artifact_type"] == "mock":
-        names = list(obj.get("entities", {}).keys())
-    else:
-        names = list(obj.get("entities", []))
-        for node in _iter_flow_nodes(obj):
-            names.extend(node.get("reads", []) + node.get("writes", []))
-    missing = sorted({n for n in names if n not in registry})
-    return (not missing), ("all entities in registry" if not missing else f"not in registry: {missing}")
-
-
-def _a_single_canonical_dataset(ctx: dict, spec: dict) -> tuple[bool, str]:
-    entity, component = spec["entity"], spec["component"]
-    owners = [
-        mid
-        for mid, mock in ctx["mocks"].items()
-        if mock.get("component") == component and entity in mock.get("entities", {})
-    ]
-    ok = len(owners) == 1
-    return ok, f"canonical {entity}@{component} datasets = {sorted(owners)}"
-
-
-def _a_no_new_file(ctx: dict, spec: dict) -> tuple[bool, str]:
-    added = ctx["matching_added"]
-    return (not added), (f"no new {ctx['ext']} created" if not added else f"NEW file(s): {added}")
-
-
-def _a_new_file_created(ctx: dict, spec: dict) -> tuple[bool, str]:
-    added = ctx["matching_added"]
-    return bool(added), (f"created {added}" if added else f"no new {ctx['ext']} was created")
-
-
-def _a_id_equals(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    actual = obj.get("id")
-    return (actual == spec["id"]), f"id={actual!r} expected {spec['id']!r}"
-
-
-def _a_id_path_stable(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj, target_rel = ctx.get("target_obj"), ctx.get("target_rel")
-    if obj is None or target_rel is None:
-        return False, "no artifact produced"
-    expected = _id_from_path(target_rel, ctx["ext"])
-    actual = obj.get("id")
-    return (actual == expected), f"id={actual!r} vs path-derived {expected!r}"
-
-
-def _a_referenced_records_exist(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    entities = obj.get("entities", {})
-    plant_ids = {r.get("id") for r in entities.get("Plant", {}).get("records", [])}
-    customer_ids = {r.get("id") for r in entities.get("Customer", {}).get("records", [])}
-    order_ids = {r.get("id") for r in entities.get("Order", {}).get("records", [])}
-    problems: list[str] = []
-    for order in entities.get("Order", {}).get("records", []):
-        if plant_ids and order.get("item") not in plant_ids:
-            problems.append(f"Order {order.get('id')} item {order.get('item')!r} unresolved")
-        if customer_ids and order.get("customer") not in customer_ids:
-            problems.append(f"Order {order.get('id')} customer {order.get('customer')!r} unresolved")
-    for pay in entities.get("Payment", {}).get("records", []):
-        if order_ids and pay.get("order") not in order_ids:
-            problems.append(f"Payment {pay.get('id')} order {pay.get('order')!r} unresolved")
-    return (not problems), ("all FKs resolve" if not problems else "; ".join(problems))
-
-
-def _iter_flow_nodes(flow: dict):
-    """Yield every step and branch dict of a flow. Pure."""
-    yield from flow.get("steps", [])
-    yield from flow.get("branches", [])
-
-
-def _a_scenario_per_node(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    node_ids = {node["id"] for node in _iter_flow_nodes(obj)}
-    scenario_fors = [s.get("for") for s in obj.get("acceptance_scenarios", [])]
-    covered = set(scenario_fors)
-    missing = sorted(node_ids - covered)
-    dangling = sorted(f for f in scenario_fors if f not in node_ids)
-    if missing or dangling:
-        return False, f"missing scenarios for {missing}; dangling scenario fors {dangling}"
-    return True, f"one scenario per node ({len(node_ids)} nodes)"
-
-
-def _a_steps_ordered(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    orders = [s.get("order") for s in obj.get("steps", [])]
-    if any(not isinstance(o, int) for o in orders):
-        return False, f"non-integer order values: {orders}"
-    if len(set(orders)) != len(orders):
-        return False, f"duplicate order values: {orders}"
-    return True, f"steps uniquely ordered {sorted(orders)}"
-
-
-def _a_screens_resolve(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    screens = ctx["screens"]
-    unresolved = sorted(
-        node["screen"]
-        for node in _iter_flow_nodes(obj)
-        if node.get("screen") and node["screen"] not in screens
-    )
-    return (not unresolved), ("all screens resolve" if not unresolved else f"unresolved screens: {unresolved}")
-
-
-def _a_has_branch(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    count = len(obj.get("branches", []))
-    minimum = int(spec.get("min", 1))
-    return (count >= minimum), f"branches={count} (need >= {minimum})"
-
-
-def _a_mock_data_ref_resolves(ctx: dict, spec: dict) -> tuple[bool, str]:
-    obj = ctx.get("target_obj")
-    if obj is None:
-        return False, "no artifact produced"
-    ref = obj.get("mock_data_ref")
-    if not ref:
-        return False, "no mock_data_ref set"
-    return (ref in ctx["mocks"]), f"mock_data_ref {ref!r} {'resolves' if ref in ctx['mocks'] else 'MISSING'}"
-
-
-def _a_validator_clean(ctx: dict, spec: dict) -> tuple[bool, str]:
-    """Require a valid flow target as well as no newly introduced store errors."""
-    if ctx.get("artifact_type") == "flow":
-        target_errors = ctx.get("target_contract_errors")
-        if target_errors is None:
-            return False, "target contract validation is unavailable"
-        if target_errors:
-            return False, f"target contract error(s): {target_errors[:3]}"
-    new_errors = ctx["validator_new_errors"]
-    return (not new_errors), (
-        "no new validator errors" if not new_errors else f"{len(new_errors)} NEW error(s): {sorted(new_errors)[:3]}"
-    )
-
-
-_ASSERTIONS = {
-    "schema_valid": _a_schema_valid,
-    "entities_in_registry": _a_entities_in_registry,
-    "single_canonical_dataset": _a_single_canonical_dataset,
-    "no_new_file": _a_no_new_file,
-    "new_file_created": _a_new_file_created,
-    "id_equals": _a_id_equals,
-    "id_path_stable": _a_id_path_stable,
-    "referenced_records_exist": _a_referenced_records_exist,
-    "scenario_per_node": _a_scenario_per_node,
-    "steps_ordered": _a_steps_ordered,
-    "screens_resolve": _a_screens_resolve,
-    "has_branch": _a_has_branch,
-    "mock_data_ref_resolves": _a_mock_data_ref_resolves,
-    "validator_clean": _a_validator_clean,
-}
 
 
 def evaluate_artifact_assertions(ctx: dict, assertions: list[dict]) -> list[dict]:
@@ -1123,6 +834,7 @@ def run_artifact_row(
             score_gold=score_gold,
         )
     except ModelInvocationError as exc:
+        launch_failed(exc, row_id)
         logger.warning("Row %s: %s", row_id, exc)
         record["score"] = {"passed": False, "assertions": [], "judge": None}
         record["error"] = str(exc)
@@ -1332,6 +1044,7 @@ def run_label_eval(
                 if any(not isinstance(predicted.get(axis), bool) for axis in axes):
                     raise ModelInvocationError("Model response must supply an explicit boolean for every label axis")
             except ModelInvocationError as exc:
+                launch_failed(exc, row_id)
                 logger.warning("Row %s: model invocation/parse failed: %s", row_id, exc)
                 predicted = {}
                 parse_error = str(exc) or "Model invocation or response validation failed"
@@ -1403,7 +1116,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--score-gold",
         action="store_true",
-        help="ARTIFACT mode: skip the agent run and score each row's gold_target artifact "
+        help="ARTIFACT / PRODUCED_TESTS mode: skip the agent run and score each row's recorded gold output "
         "as if the agent produced it (proves the scorer; expects ~100%%).",
     )
     parser.add_argument("--results-file", default=None, help="Where to write the JSON results file.")
@@ -1459,6 +1172,8 @@ def _run_label_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dict],
         row_results = run_label_eval(
             rows, system_prompt, agent_cfg, self_test=args.self_test, timeout=timeout, backend=backend
         )
+    except agent_command.AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, write_results)
     except EvalHarnessError:
         logger.exception("Eval run failed")
         return 2
@@ -1507,6 +1222,8 @@ def _run_artifact_mode(args: argparse.Namespace, agent_cfg: dict, rows: list[dic
         row_results = run_artifact_eval(
             rows, system_prompt, agent_cfg, repo_root, timeout=timeout, score_gold=args.score_gold
         )
+    except agent_command.AgentLaunchError as exc:
+        return stop_run(args, repo_root, exc, write_results)
     except EvalHarnessError:
         logger.exception("Eval run failed")
         return 2
@@ -1549,6 +1266,10 @@ def main(argv: list[str] | None = None) -> int:
         return _run_artifact_mode(args, agent_cfg, rows, system_prompt, repo_root)
     if mode == "label":
         return _run_label_mode(args, agent_cfg, rows, system_prompt, repo_root)
+    if mode == "produced_tests":
+        from produced_tests_mode import run_produced_tests_mode  # noqa: PLC0415 - handed this module, so no import cycle
+
+        return run_produced_tests_mode(args, agent_cfg, rows, system_prompt, repo_root, sys.modules[__name__])
     logger.error("Unknown scoring_mode %r for agent %s", mode, args.agent)
     return 2
 

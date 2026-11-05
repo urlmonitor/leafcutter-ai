@@ -118,6 +118,7 @@ def _assert_stage_blocked(result) -> None:
 
 def test_stage_not_reported_complete_while_check_failed():
     # covers: ACD-2500a-1
+    # covers: ACD-2500a
     # angle: reachability
     """plan-feature workflow harness: a failed check at stage end keeps the stage from
     being reported complete -- no stage commit, no next-stage author, status not ok --

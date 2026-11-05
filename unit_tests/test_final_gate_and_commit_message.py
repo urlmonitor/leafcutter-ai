@@ -250,6 +250,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         condition and add an explicit exhausted-retries abort branch.
 
         AC: ACD-300g-4 — workflow aborts without approval when retries exhausted.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
         """
         self.assertEqual(
             self.run_result.get("status"),
@@ -274,6 +276,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         RED until fix is applied.
 
         AC: ACD-300g-4 — draft ACs remain on disk uncommitted.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
 
         The technical pipeline has only one stage (it-po -> final gate). With
         edit exhaustion, NO commit call should be made at all -- the defect
@@ -304,6 +308,8 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         RED until fix is applied.
 
         AC: ACD-300g-4 — readiness is NOT set to approved without user consent.
+        # covers: ACD-300c-3
+        # covers: ACD-300g-4
         """
         self.assertNotIn(
             "acs_approved",

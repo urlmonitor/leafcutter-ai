@@ -1,5 +1,5 @@
 id: GE-117a-1-ii
-readiness: draft
+readiness: approved
 priority: medium
 title: "A changed file with no module docstring is not double-reported by the component-declaration check"
 component: guardrail-engine
@@ -34,19 +34,58 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-100-code-quality-hooks/GE-100.yaml"
     relationship: related
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
-  - "When ast.get_docstring returns None for the module (no docstring at all), the declaration check must NOT emit its own missing-docstring finding — docstring PRESENCE is GE-100's floor; this check only asserts that an existing docstring names a resolvable component. Layer on top; do not double-report the same defect."
-  - "Once a docstring exists and names a registered component, apply the normal satisfied path (second scenario) — the no-docstring branch is a suppression of THIS check's finding, not a permanent exemption for the file."
-  - "Same in-process ast parse over the staged blob; no MCP. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "When the module has no docstring at all, the declaration check must NOT emit its own missing-docstring or missing-declaration finding for the module-component surface — docstring PRESENCE is GE-100's floor; this check only asserts that an existing docstring names a resolvable component. Layer on top; do not double-report the same defect."
+  - "Once a docstring exists and names a registered component, apply the normal satisfied path (second scenario) — the no-docstring branch is a suppression of THIS check's module-component finding, not a permanent exemption for the file, and it does not suppress the file's symbol-ac or decision-history-ac surfaces."
+  - "Same in-process ast parse over the staged blob; no MCP. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117a-1
   contract: "The per-file module-component verdict whose no-docstring boundary vs GE-100 this edge case defines"
+test_spec:
+  - name: test_ge_117a_1_ii_file_without_module_docstring_gets_no_module_component_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a new .py that has no module docstring at all (first statement is code): the check emits no module-component verdict for that file and its output contains no missing-docstring message."
+    must_catch:
+      - "emits its own missing-docstring finding when the module has no docstring"
+      - "emits a module-component 'missing' verdict for a file that has no docstring at all"
+  - name: test_ge_117a_1_ii_adding_a_docstring_naming_a_registered_component_then_satisfies
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In the same temp repo, stage a follow-up change that adds a module docstring naming a registered components.json id: the check now yields a 'satisfied' module-component verdict for the file."
+  - name: test_ge_117a_1_ii_no_docstring_does_not_exempt_the_files_public_symbols
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Stage a docstring-less module that also adds a public function whose docstring cites no AC: the module-component finding is suppressed but the symbol-ac 'missing' verdict for the function is still produced."
+    must_catch:
+      - "skips the whole file once the module docstring is found to be absent"
+test_rationale: |
+  The criteria define a boundary with GE-100, and a boundary has two sides. The first test
+  pins the suppression: no second complaint about a missing docstring. The second pins that
+  the suppression is not a permanent pass. The third test covers the cheapest wrong
+  implementation, an early return on 'no module docstring'. That return satisfies both
+  criteria tests and silently exempts every public symbol in the file from GE-117b. That would
+  turn deleting a module docstring into a way round the whole guardrail.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Added change_target, declared_files, test_spec and test_rationale; scoped the suppression to the module-component surface only; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

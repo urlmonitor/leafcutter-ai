@@ -1,0 +1,17 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from window_total import window_total
+
+
+class TestWindowTotal(unittest.TestCase):
+    def test_window_total_adds_the_values(self):
+        # covers: TQ-9403
+        window = [{"value": 2}, {"value": 3}, {"value": 7}]
+        self.assertEqual(window_total(window), 12)
+
+    def test_window_total_of_an_empty_window_is_zero(self):
+        # covers: TQ-9403
+        self.assertEqual(window_total([]), 0)

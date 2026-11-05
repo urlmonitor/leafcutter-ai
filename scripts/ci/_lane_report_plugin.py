@@ -3,7 +3,8 @@ MODULE: _lane_report_plugin
 GOAL: A tiny pytest plugin that writes the machine-readable per-test report of
     one execution: ``{"runner": <name>, "exitstatus": <int>, "expected": <int>,
     "collection_errors": [<node id>], "results":{<full node id>: <status>}}`` with status ``passed`` | ``failed``
-    | ``skipped``. ``exitstatus`` and ``expected`` (tests selected for the
+    | ``skipped``, plus ``"skip_reasons": {<node id>: <reason text>}`` for every test that ended skipped
+    (TQ-600a-13-xxiii: the live lane tells a no-database skip from any other). ``exitstatus`` and ``expected`` (tests selected for the
     session) let the verdict tell a lane that finished from one that was cut short.
 BUSINESS CONTEXT: TQ-600a-13-ii. The post-merge verdict must come from per-test
     results, never from pytest's exit status alone: pytest.ini's addopts carries
@@ -53,6 +54,13 @@ def _status(report) -> str:
     return "skipped" if report.skipped else "passed"
 
 
+def _skip_reason(report) -> str:
+    """The text a skipped test gave for skipping (``pytest.skip(msg)``, ``skip``/``skipif`` reason), without pytest's prefix."""
+    longrepr = getattr(report, "longrepr", None)
+    text = str(longrepr[2]) if isinstance(longrepr, tuple) and len(longrepr) == 3 else str(longrepr or "")
+    return text.removeprefix("Skipped: ")
+
+
 class _Recorder:
     """Collects the worst status seen for each node id and writes the report at session end."""
 
@@ -61,6 +69,7 @@ class _Recorder:
         self.results: dict[str, str] = {}
         self.ran: set[str] = set()
         self.collection_errors: set[str] = set()
+        self.skip_reasons: dict[str, str] = {}
 
     def _record(self, node_id: str, status: str) -> None:
         current = self.results.get(node_id)
@@ -68,9 +77,12 @@ class _Recorder:
             self.results[node_id] = status
 
     def pytest_runtest_logreport(self, report) -> None:
-        """Fold the setup, call and teardown reports of one test into one status."""
+        """Fold the setup, call and teardown reports of one test into one status; keep a skip's reason text."""
         self.ran.add(report.nodeid)
-        self._record(report.nodeid, _status(report))
+        status = _status(report)
+        self._record(report.nodeid, status)
+        if status == "skipped":
+            self.skip_reasons[report.nodeid] = _skip_reason(report)
 
     def pytest_collectreport(self, report) -> None:
         """Record a collection error separately from the results; a clean collection records nothing.
@@ -93,6 +105,7 @@ class _Recorder:
             "ran": len(self.ran),
             "collection_errors": sorted(self.collection_errors),
             "results": dict(sorted(self.results.items())),
+            "skip_reasons": {i: r for i, r in sorted(self.skip_reasons.items()) if self.results.get(i) == "skipped"},
         }
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)

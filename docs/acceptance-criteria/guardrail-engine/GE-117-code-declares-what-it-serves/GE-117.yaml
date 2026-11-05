@@ -1,5 +1,5 @@
 id: GE-117
-readiness: draft
+readiness: approved
 priority: medium
 title: "Every piece of code declares which requirement and which component it serves"
 component: guardrail-engine

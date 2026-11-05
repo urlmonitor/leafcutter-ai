@@ -4,7 +4,7 @@ GOAL: Self-healing pre-commit hook that re-materializes .pre-commit-config.yaml 
 BUSINESS CONTEXT: Worktrees do not inherit .pre-commit-config.yaml from the main working
     tree. When a worktree is created from origin/main, the .leafcutter symlink and
     populated .leafcutter/ directory are absent, causing all pre-commit hooks to be
-    silently skipped. This hook runs at index 0 (before all other hooks) and re-
+    silently skipped. This hook runs first after the stage canaries (before all other hooks) and re-
     materializes the config on every commit, ensuring quality gates fire even in
     fresh worktrees. Atomic (write-temp-then-rename) and idempotent (no-op when config
     already present). Fail-closed: exits 1 when config cannot be established.
@@ -13,24 +13,30 @@ ARCHITECTURE: Standalone script — no imports from sibling modules — so it ca
     materialization: (1) create .leafcutter symlink to main tree .leafcutter (preferred,
     POSIX), or (2) copy .pre-commit-config.yaml directly (NTFS/Windows fallback). Main
     tree root resolved via git commondir, with a script-location fallback for test
-    environments and edge cases. Registered at hooks_manifest.hooks[0] in
-    commit_guardian.json. See ADR-031.
+    environments and edge cases. Registered first after the stage canaries
+    (precommit-canary-*) in commit_guardian.json; main() fails closed when any other
+    hook is registered before it. See ADR-031.
 
 ====================================================================
 DECISION HISTORY
 ====================================================================
 - 2026-07-06 [EPIC-WorktreeQualityGateGuard/05]: Initial implementation.
   Self-healing hook that re-materializes .pre-commit-config.yaml via .leafcutter
-  symlink or direct file copy. Registered at manifest index 0. Uses two-phase
+  symlink or direct file copy. Registered at manifest index 0 (since amended, see below). Uses two-phase
   main-tree resolution: git commondir first, script-location fallback. Atomic
   copy uses write-temp-then-rename (os.replace). Idempotent: exits 0 immediately
   when config already present. Fail-closed: exits 1 when config cannot be
   established. See ADR-031.
+- 2026-10-22 [EPIC-WorkspaceMakerHardening/09]: BO-1700c-1-iii (A14). Added
+  ordering_violation() and a fail-closed manifest check in main(): only stage
+  canaries (precommit-canary-*) may precede this hook; any other hook, a missing
+  entry, or an unreadable manifest exits 1. The heal still runs first.
 ====================================================================
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -42,6 +48,9 @@ _log = logging.getLogger(__name__)
 # Two levels up from scripts/commit_guardian/ → output root (deployed repo root)
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PACKAGE_ROOT = _SCRIPT_DIR.parents[1]
+_HEAL_ID = "ensure-precommit-config"
+_CANARY_PREFIX = "precommit-canary-"
+_MANIFEST_NAME = "commit_guardian.json"
 
 
 def _resolve_git_commondir(cwd: Path) -> Path:
@@ -266,15 +275,52 @@ def ensure_config(worktree_root: Path) -> bool:
     return True
 
 
-def main() -> None:
-    """CLI entry point: re-materialize .pre-commit-config.yaml in the current directory.
+def ordering_violation(hook_ids: list[str]) -> str | None:
+    """Check that only stage canaries precede the self-healing hook.
 
-    Reads Path.cwd() as the worktree root, calls ensure_config(), and exits 0 on
-    success or 1 on failure (fail-closed). Called by the pre-commit framework at
-    every commit (registered at hooks_manifest.hooks[0] in commit_guardian.json).
+    Args:
+        hook_ids: Hook ids in manifest order.
+
+    Returns:
+        None when every entry before ensure-precommit-config starts with
+        ``precommit-canary-``. Otherwise a message naming the first offending
+        hook, or stating that ensure-precommit-config is not registered.
     """
-    worktree_root = Path.cwd()
-    success = ensure_config(worktree_root)
+    for hook_id in hook_ids:
+        if hook_id == _HEAL_ID:
+            return None
+        if not hook_id.startswith(_CANARY_PREFIX):
+            return (
+                f"hook {hook_id!r} is registered before {_HEAL_ID}; only "
+                f"{_CANARY_PREFIX}* stage canaries may precede it"
+            )
+    return f"{_HEAL_ID} is not registered in the manifest"
+
+
+def _check_manifest_order() -> str | None:
+    """Read the manifest beside this script and return an ordering failure, if any."""
+    path = _SCRIPT_DIR / _MANIFEST_NAME
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ids = [str(h["id"]) for h in data["hooks_manifest"]["hooks"]]
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return f"cannot read hook manifest {path}: {exc}"
+    return ordering_violation(ids)
+
+
+def main() -> None:
+    """CLI entry point: re-materialize the config, then verify manifest ordering.
+
+    Reads Path.cwd() as the worktree root, calls ensure_config(), then checks the
+    manifest beside this script with ordering_violation(). Exits 0 on success or 1
+    on failure (fail-closed): config not established, hook ordering violated, or
+    manifest unreadable. The heal runs first so a repaired config is not lost.
+    """
+    success = ensure_config(Path.cwd())
+    violation = _check_manifest_order()
+    if violation is not None:
+        print(f"[ensure-precommit-config] ordering guard failed: {violation}", file=sys.stderr)
+        sys.exit(1)
     sys.exit(0 if success else 1)
 
 

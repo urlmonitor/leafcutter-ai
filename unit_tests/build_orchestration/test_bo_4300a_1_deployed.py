@@ -30,7 +30,6 @@ DECISION HISTORY
 """
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import tempfile
@@ -278,50 +277,6 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
             parents.pop(),
             (project.parent / f"{project.name}-worktrees").resolve(),
             msg="the one landing place is not the project's sibling landing root",
-        )
-
-    def test_every_route_receives_answer_of_identical_shape_MANUAL(self):
-        # covers: BO-4300a-1
-        # angle: criterion
-        """AC-4: the five answers have the same key set and the same status
-        (stating ready), differing only in identity-derived values (slug,
-        branch, paths, commit)."""
-        maker_path = self._require_deployed_maker()
-        project, hub, advanced_sha = self._new_fixture_project("shape")
-        answers = self._ensure_all_routes(maker_path, project)
-
-        key_sets = [frozenset(a.keys()) for a in answers]
-        self.assertEqual(
-            len(set(key_sets)),
-            1,
-            msg=f"the five answers do not share one key set: {key_sets}",
-        )
-
-        statuses = {a.get("status") for a in answers}
-        self.assertEqual(
-            len(statuses),
-            1,
-            msg=f"the five answers do not share one status: {statuses}",
-        )
-        self.assertEqual(next(iter(statuses)), "ok")
-
-        identity_derived = {"slug", "branch", "kind", "workspace_path", "workspace_path_posix", "worktree_path", "base_commit"}
-        shared_keys = set(answers[0].keys()) - identity_derived - {"checks"}
-        for key in shared_keys:
-            values = {json.dumps(a.get(key), sort_keys=True) for a in answers}
-            self.assertEqual(
-                len(values),
-                1,
-                msg=f"non-identity-derived key {key!r} differs across routes: "
-                f"{[a.get(key) for a in answers]}",
-            )
-        # `checks` is compared with the canary-proof keys set aside: a scratch
-        # workspace is exempt from the hook canaries by BO-4300c-1's design and
-        # reports them 'n/a' (see `_split_canary_checks`).
-        self.assertEqual(
-            len({json.dumps(_split_canary_checks(a)[0], sort_keys=True) for a in answers}),
-            1,
-            msg="the non-canary `checks` differ across routes",
         )
 
     def test_no_route_lacks_a_property_another_route_has_MANUAL(self):

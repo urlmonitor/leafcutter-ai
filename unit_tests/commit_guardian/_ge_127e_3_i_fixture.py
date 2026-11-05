@@ -124,8 +124,13 @@ def extract_indeterminate_reason(output: str) -> str | None:
 def _garbled_python(n_lines: int) -> str:
     """Text guaranteed to raise SyntaxError under ast.parse, of exactly
     *n_lines* physical lines (no docstring/comment for count_content_lines
-    to strip, so the file's measured length is exactly *n_lines*)."""
-    return "\n".join(f"???garbled_syntax_line_{i:05d}(((" for i in range(n_lines)) + "\n"
+    to strip, so the file's measured length is exactly *n_lines*).
+
+    Every line tokenizes (GE-127d-3's measure reads a file by its tokens and
+    reports a file it cannot tokenize as INDETERMINATE, a different outcome from
+    the could-not-be-described state this fixture exists to reach) but is a
+    SyntaxError for the parser, so only the part extractor fails."""
+    return "\n".join(f"garbled_syntax_line_{i:05d} = = 1" for i in range(n_lines)) + "\n"
 
 
 def stage_unparseable_over_limit_py_file(root: Path, name: str = "unparseable_over.py") -> Path:

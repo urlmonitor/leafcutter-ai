@@ -60,6 +60,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _file_size_measure_copy import copy_measure_package  # noqa: E402
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_GUARDIAN_SRC = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
 _BUILD_PY = _REPO_ROOT / "scripts" / "build.py"
@@ -147,6 +150,7 @@ def copy_production_modules(root: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for name in PRODUCTION_MODULES:
         shutil.copy2(_COMMIT_GUARDIAN_SRC / name, dest / name)
+    copy_measure_package(dest)
 
 
 def write_config_json(root: Path, line_limit: int) -> None:
@@ -209,7 +213,7 @@ def build_deployed_fixture_repo(root: Path) -> None:
     what lets an ordinary commit reach ONLY the deployed `check-file-size`
     copy without that collateral failure.
     """
-    result = run([PYTHON, str(_BUILD_PY), "--target-dir", str(root)], _REPO_ROOT)
+    result = run([PYTHON, str(_BUILD_PY), "--target-dir", str(root)], _REPO_ROOT, timeout=_BUILD_TIMEOUT_SECONDS)
     assert result.returncode == 0, (
         f"build.py itself failed: stdout={result.stdout!r} stderr={result.stderr!r}"
     )

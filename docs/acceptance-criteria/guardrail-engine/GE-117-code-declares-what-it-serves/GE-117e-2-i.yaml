@@ -1,5 +1,5 @@
 id: GE-117e-2-i
-readiness: draft
+readiness: approved
 priority: medium
 title: "An opt-out with no reason, or a global silent disable, does not clear the block"
 component: guardrail-engine
@@ -31,19 +31,63 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117e-2.yaml"
     relationship: parent
     status: exists
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: configures
+    status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
 it_requirements:
   - "An `AC-EXEMPT:` marker with an empty/whitespace-only reason is NOT honored: the item still blocks and the guardrail reports that the opt-out was rejected for lacking a required reason. The reason must be non-empty text."
-  - "A global disable (e.g. attempting to turn the declaration guardrail off wholesale, or a repo/file-level suppression) is NOT accepted as a substitute for the per-item AC-EXEMPT marker; the specific in-scope item is still evaluated and still blocks. Do not add a global bypass path."
-  - "These two abuse modes must be fail-closed so the escape hatch cannot become an escape from GE-117d's guarantee. Edit templates/commit-guardian/ source AND scripts/commit_guardian/ deployed copy together; verify via build.py round-trip (ADR-001)."
+  - "A global disable (turning the declaration guardrail off wholesale through its config section, or a repo/file-level suppression marker) is NOT accepted as a substitute for the per-item AC-EXEMPT marker; the specific in-scope item is still evaluated and still blocks. The hook's config section offers no enable/disable or 'off' switch; the deliberate warn tier of GE-117d-3 is the only sanctioned config-level behaviour change and it still reports every item."
+  - "These two abuse modes must be fail-closed so the escape hatch cannot become an escape from GE-117d's guarantee. Edit only templates/scripts/commit_guardian/ (ADR-001); verify via the deployed hook after a build.py round-trip."
 delivers_to: null
 expects_from:
   ac_id: GE-117e-2
   contract: "The per-item reason-bearing opt-out whose abuse boundaries this edge case defines"
+test_spec:
+  - name: test_ge_117e_2_i_reasonless_marker_is_rejected_and_says_why
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage an AC-less public function whose docstring carries 'AC-EXEMPT:' with nothing after it, and in a second run 'AC-EXEMPT:    ': both runs exit non-zero and report that the opt-out was not honoured because it lacks a reason."
+    must_catch:
+      - "honours a marker whose reason is empty or whitespace-only"
+      - "rejects the item but reports it as an ordinary missing declaration without saying the opt-out was refused"
+  - name: test_ge_117e_2_i_config_level_disable_does_not_clear_the_item
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Add 'enabled': false and, in a second run, 'mode': 'off' to the hook's config section in the temp repo's commit_guardian.json, then stage an AC-less public function: both runs exit non-zero and report the item as missing."
+    must_catch:
+      - "honours a config-level enabled: false or mode: off switch for the declaration guardrail"
+  - name: test_ge_117e_2_i_file_level_suppression_does_not_clear_items
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Put a file-level suppression comment (an AC-EXEMPT marker as a top-of-file comment outside any docstring) in a staged file holding an AC-less public function: the function still blocks."
+    must_catch:
+      - "honours a file-level comment marker as a blanket exemption"
+test_rationale: |
+  Both scenarios describe abuse, so each test makes a real attempt to escape and asserts that
+  the commit is still refused. The reason-less test runs both the empty and the whitespace-only
+  form, because a strip-less length check accepts the second. It also requires the refusal to
+  say why, as the criteria demand. The global-disable tests use the two config switches a
+  developer would actually reach for in commit_guardian.json, plus a file-level comment. Those
+  three are the real ways the per-item rule gets bypassed.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Named the concrete global-disable forms (config enabled/off switch, file-level marker) and stated that the config section offers no off switch; added change_target, declared_files, test_spec and test_rationale; corrected the source path to templates/scripts/commit_guardian/ (ADR-001). criteria untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []

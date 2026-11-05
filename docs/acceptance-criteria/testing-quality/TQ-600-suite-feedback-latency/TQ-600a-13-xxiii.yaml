@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -80,7 +80,7 @@ declared_files:
     state: existing
   - path: scripts/ci/_notice_render.py
     state: existing
-  - path: tests/knowledge_live/_live_skip.py
+  - path: tests/knowledge_live/lane/_live_skip.py
     state: to_be_created
   - path: tests/knowledge_live/test_km_400f_1.py
     state: existing
@@ -299,8 +299,12 @@ origin_agent: BrainCandy
 created: 2026-10-21
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_13_xxiii.py
+implemented_by:
+  - scripts/ci/_live_lane.py
+  - scripts/ci/_lane_report_plugin.py
+  - tests/knowledge_live/lane/_live_skip.py
 change_target: pipeline
 risk_surface: internal
 notes: |

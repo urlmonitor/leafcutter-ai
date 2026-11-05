@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400b-5
 criteria: |
   Given the writer declares a per-batch row cap of 250 and a per-batch payload budget of 2,000,000 bytes
@@ -66,8 +66,12 @@ origin_agent: BrainCandy
 created: '2026-10-21'
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - tests/knowledge/test_km_400b_5_iii.py
+  - tests/knowledge_live/publication/test_km_400b_5_iii.py
+implemented_by:
+  - knowledge/adapters/neo4j_writes.py
+  - knowledge/adapters/neo4j_domain_build.py
 change_target: code
 risk_surface: contract_boundary
 test_required: true

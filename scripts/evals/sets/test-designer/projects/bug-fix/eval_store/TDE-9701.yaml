@@ -1,0 +1,27 @@
+id: TDE-9701
+title: A database outage no longer causes a retry storm
+component: testing-quality
+components:
+- testing_quality
+level: L3
+status: active
+readiness: approved
+priority: high
+criteria: 'Given the report job runs,
+
+  When the requirement applies,
+
+  Then a database outage no longer causes a retry storm: the refresh runs only when
+  a refresh is due and a retry is due.
+
+  '
+assigned_agent: python-coder
+declared_files:
+- path: scripts/refresh_gate.py
+  state: existing
+test_required: true
+test_intent:
+- clause: 'a database outage no longer causes a retry storm: the refresh runs only
+    when a refresh is due and a retry is due'
+  needs_test: true
+  reason: The behaviour is observable only by running the code.

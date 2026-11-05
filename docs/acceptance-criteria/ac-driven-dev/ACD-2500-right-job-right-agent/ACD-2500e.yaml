@@ -48,3 +48,15 @@ notes: |
   analysis) is tactical on its own and can ship first. The remainder is the closing
   step of this goal: once duties have moved, the planner's instructions shrink to
   what stays. The brief does not relocate the knowledge loop; assumed to stay here.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

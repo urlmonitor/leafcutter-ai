@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L0
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Each part of a requirement comes from the one able to get it right.
 
@@ -63,6 +63,7 @@ covered_by:
   - ACD-2500c
   - ACD-2500d
   - ACD-2500e
+  - ACD-2500f
 implemented_by: []
 change_target:
   - prompt

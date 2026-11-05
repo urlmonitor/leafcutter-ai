@@ -1,0 +1,13 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+import pytest
+
+from refresh_config import refresh_config  # noqa: F401
+
+
+def test_refresh_config_keeps_a_zero_override():
+    # covers: TQ-9304
+    pytest.fail("x")

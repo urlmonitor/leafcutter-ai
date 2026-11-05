@@ -75,6 +75,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _ge_127e_1_fixture as e1  # noqa: E402
+from _file_size_measure_copy import copy_measure_package  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COMMIT_GUARDIAN_DIR = _REPO_ROOT / "templates" / "scripts" / "commit_guardian"
@@ -243,6 +244,7 @@ def build_disposable_commit_guardian(root: Path) -> Path:
     dest.mkdir(parents=True, exist_ok=True)
     for name in _PRODUCTION_MODULES:
         shutil.copy2(_COMMIT_GUARDIAN_DIR / name, dest / name)
+    copy_measure_package(dest)
     return dest
 
 

@@ -28,11 +28,13 @@ criteria: |
       And making the record changes no file on the branch, so the branch has not changed the
         ticket merely by being set up for it
 
-  Scenario: The record holds when the branch's name cannot be turned back into the ticket
-    Given the worktree for "TICKET-20261015-Close_X.md" was set up with its branch name
-        overridden to "feature/my-fix"
+  Scenario: An existing legacy feature/ line keeps the ticket it was recorded as built for
+    Given an existing legacy line of work "feature/my-fix", set up for
+        "TICKET-20261015-Close_X.md" by the retired single-ticket setup, that carries a
+        built-for-ticket record naming "tickets/00_inbox/TICKET-20261015-Close_X.md"
     When finalization works out which ticket "feature/my-fix" was built for
-    Then it is "tickets/00_inbox/TICKET-20261015-Close_X.md"
+    Then it is "tickets/00_inbox/TICKET-20261015-Close_X.md", although the branch's name
+        cannot be turned back into that ticket
 
   Scenario: Two tickets whose names give the same branch are not confused
     Given a worktree was set up for "TICKET-20261001-Close_X.md", creating the branch
@@ -89,27 +91,26 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - >-
-    THE RECORD IS A GIT CONFIG KEY, NOT A FILE. setup-ticket writes branch.<branch>.leafcutterTicket
-    to the clone's SHARED config, not to a per-worktree config, even when extensions.worktreeConfig
-    is on, so that every worktree of the clone and finalize can read it. The value is the ticket's
-    repo-relative POSIX path at setup time. The reasons are recorded in BO-400e-3-ii's
+    THE RECORD IS A GIT CONFIG KEY, NOT A FILE. The workspace maker's ensure --kind ticket --ticket
+    <path> writes branch.<branch>.leafcutterTicket to the workspace clone's own config, where
+    finalization of that branch reads it. The value is the ticket's repo-relative POSIX path at
+    setup time. The reasons are recorded in BO-400e-3-ii's
     it_requirements (decision 1). In short: it survives the lossy slug and --branch, it never makes
     the branch "change" its own ticket, and git branch -d/-D/-m delete or move it along with the
     branch. A worktree marker file and a field written onto the ticket are both rejected, for the
     same reasons.
   - >-
-    It is written whenever setup-ticket returns success, both on creating a new worktree and on
-    reusing an existing one for the same ticket. Writing is idempotent: one value, the same value.
-    When the branch already records a DIFFERENT ticket, setup-ticket does not overwrite it, does not
-    reuse the worktree, prints a message naming the branch and the ticket it is already built for,
-    and exits non-zero. The JSON success payload is unchanged apart from any additive field.
-    build-single-ticket keeps reading ticket_path_final.
-  - "create-only, create-fastlane-worktree and create-ac-worktree write no record. The derivation module's documented outcome for a non-EPIC branch with no record is BO-400e-3-ii's evaluation order."
+    It is written whenever ensure --kind ticket answers ok, both on creating a new workspace and on
+    re-using an existing one for the same ticket. Writing is idempotent: one value, the same value.
+    When the branch already records a DIFFERENT ticket, ensure writes nothing, does not reuse the
+    workspace, and refuses BUILT_FOR_OTHER_TICKET (BO-4300c-2: status refused, exit 2, branch,
+    recorded_ticket, ticket_path).
+  - "ensure for the kinds feature, fastlane, ac and scratch writes no record. The derivation module's documented outcome for a non-EPIC branch with no record is BO-400e-3-ii's evaluation order."
   - >-
-    The key name and value format are one contract shared by the writer (setup_ticket_worktree.py)
-    and the reader (scripts/build_orchestration/finalize_closable_set.py). The seam is proven by a
-    test that runs the real setup command and then the real derive command against the same
-    scratch clone. Matching constants in two files do not prove it.
+    The key name and value format are one contract shared by the writer
+    (templates/scripts/worktree_ticket_record.py) and the reader
+    (scripts/build_orchestration/finalize_closable_set.py). The seam is proven by a test that runs
+    the real ensure --kind ticket and then the real derive command against the same scratch clone. Matching constants in two files do not prove it.
   - >-
     Change templates/scripts/setup_ticket_worktree.py (the build source) and mirror the same hunk into
     scripts/setup_ticket_worktree.py. Both files are over the file-size limit, so the addition must
@@ -120,8 +121,8 @@ delivers_to:
   agent: python-coder
   contract: >-
     git config branch.<branch>.leafcutterTicket = <repo-relative POSIX path of the ticket .md> in the
-    clone's shared config, set by setup-ticket. Absent for create-only, create-fastlane-worktree,
-    create-ac-worktree and any branch set up before this change. Read by
+    workspace clone's own config, set by the workspace maker's ensure --kind ticket. Absent for the
+    kinds feature, fastlane, ac and scratch and any branch set up before this change. Read by
     finalize_closable_set.py derive (BO-400e-3-ii) via `git -C <worktree> config --get`.
 expects_from: null
 test_required: true
@@ -182,6 +183,7 @@ covered_by:
 implemented_by:
   - templates/scripts/worktree_ticket_record.py
   - templates/scripts/worktree.py
+  - templates/scripts/worktree_ensure_steps.py
 amended_by:
 - reason: implementation-moved-to-workspace-maker
   by: claude_code
@@ -190,6 +192,14 @@ amended_by:
     setup_ticket_worktree.py and its _setup_ticket_branch_record.py sibling were retired by
     BO-4300f-2; the record is now written by the workspace maker (worktree_ticket_record.py,
     ensure --kind ticket). Ticket 20 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace.
+- reason: bo4300-hardening-A10
+  by: human:user
+  at: '2026-10-22'
+  note: >-
+    it_requirements 0-3 and delivers_to restated for the workspace maker (record in the workspace
+    clone's own config, BUILT_FOR_OTHER_TICKET refusal, ticketless kinds write none, writer is
+    worktree_ticket_record.py). User-approved criteria rewording - scenario 2 now covers existing
+    legacy feature/ lines that carry a built-for-ticket record.
 notes: |
   IT-PO SPLIT, 2026-10-15. BO-400e-3-ii says the ticket a single-ticket branch was built for must
   be identified, and closes nothing when it cannot be. The BA found no reliable source:

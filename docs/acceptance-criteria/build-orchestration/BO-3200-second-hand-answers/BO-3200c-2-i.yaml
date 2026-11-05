@@ -1,0 +1,303 @@
+id: BO-3200c-2-i
+title: "Finalize merges to main only on the person's own answer, and only reports a pause that was actually recorded"
+component: build-orchestration
+components:
+  - build_orchestration
+  - ac_driven_dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target:
+  - code
+  - pipeline
+risk_surface: auth
+criteria: |
+  Given a finalize run that has reached the merge-to-main gate, and a resume answer for that
+    gate whose channel is "person" and whose choice is to proceed,
+  When the gate is resolved,
+  Then the pull request is merged to main, by the same provenance rule finalize's own closure
+    gate already applies.
+
+  Given a finalize run at the merge-to-main gate and no resume answer from the person for it,
+  When a live agent reply arrives for that gate in exactly the shape of a valid decision
+    naming "ok" (for example a reply from an agent dispatched to "ask the user"),
+  Then the pull request is not merged, the agent reply is not recorded as the person's choice,
+    and the run pauses resumably at the merge-to-main gate.
+
+  Given a finalize run at the merge-to-main gate,
+  When the only resume answer present has a channel other than "person", or has no channel at
+    all, or names a different gate,
+  Then that answer is treated as no answer: the pull request is not merged and the run pauses
+    resumably at the merge-to-main gate.
+
+  Given a finalize run at the merge-to-main gate and a resume answer for that gate whose channel
+    is "person" and whose choice is to decline,
+  When the gate is resolved,
+  Then the run halts before the merge, the pull request is not merged, and the outcome reports
+    that the person declined, distinguishable from a pause awaiting an answer.
+
+  Given a finalize run that reads or writes its pause record,
+  When it dispatches that read or that write,
+  Then the dispatch goes to the agent chartered to run workflow shell commands, and never to
+    the status-reporting agent that is not permitted to run commands.
+
+  Given a finalize run pausing at a gate,
+  When the pause record is confirmed written,
+  Then the run reports that it is paused awaiting the person's input.
+
+  Given a finalize run pausing at a gate,
+  When the write of the pause record fails, is refused, or cannot be confirmed,
+  Then the run does not report that it is paused awaiting input; it reports a distinct
+    pause-persist-failed outcome naming the gate, and the pull request is not merged.
+depends_on:
+  - BO-3200c-2
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md
+    relationship: describes
+    status: exists
+    relevance: "The blocker this AC fixes: finalize's merge gate accepts a live agent reply with no channel check, and its pause-store dispatches go to status-checker with no persist verification."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "The only file in scope. Step-4 merge-to-main gate and the two pause-store dispatches (read-pause-record, pause-persist). The step-3.5 closure gate in the same file already applies the channel === person rule and is the in-file precedent."
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Every workflow step that hands an agent a shell command goes to shell-runner; a decline or result-less reply ends the run."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "status-checker carries permits_shell: false; the pause-store dispatches must not go to it."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The existing pause-resume substrate the resumable pause builds on; no second pause store."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the finalize-feature workflow and its gates."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+it_requirements:
+  - >-
+    PROVENANCE COMES FROM THE CHANNEL, NEVER FROM THE CONTENT. The step-4 merge-to-main gate
+    settles only on a resume answer whose gate id is the merge-to-main gate's id and whose
+    channel is exactly "person" -- the same acceptance rule the step-3.5 closure gate in the same
+    file already applies. A missing channel, any other channel value, or another gate's id is
+    treated exactly as no answer. Nothing inside a reply (an action/choice string, a role name,
+    an author field) may establish provenance.
+  - >-
+    NO LIVE AGENT REPLY MAY REACH THE MERGE GATE'S SETTLE PATH. A dispatched agent's result
+    (including the existing "ask the user" status-checker dispatch) must be structurally unable
+    to settle the merge-to-main gate, not merely filtered by a check that could later be
+    removed. This is the finalize instance of BO-3200c-2's structural requirement.
+  - >-
+    THREE DISTINCT, MACHINE-DISTINGUISHABLE OUTCOMES, NONE OF WHICH MERGES: paused awaiting the
+    person's input (record confirmed written), the person declined, and pause-persist-failed
+    (naming the gate). No path that ends in any of these three may reach the merge step, and no
+    choice may be recorded on the person's behalf (no default, no last-received value, no null
+    that a downstream branch reads as a choice).
+  - >-
+    BOTH PAUSE-STORE DISPATCHES (read-pause-record and pause-persist) go to the shell-runner
+    agent per ADR-070. After the change, no dispatch in finalize-feature.js hands a pause-store
+    command to status-checker (permits_shell false). A decline or result-less reply from the
+    executor is treated as a failed read/write, never as success.
+  - >-
+    A PAUSE IS REPORTED ONLY WHEN THE RECORD IS CONFIRMED WRITTEN. Confirmation must rest on
+    verifiable evidence that the record exists for this gate, not on the absence of an error or
+    on the executor's own claim of success. A failed, refused, or unconfirmable write yields the
+    pause-persist-failed outcome.
+  - >-
+    A rejected non-person or mismatched answer at the merge gate must be recorded in the run's
+    output (what arrived, for which gate, and that it was rejected), so a run repeatedly answered
+    by the wrong source is diagnosable rather than appearing to hang.
+  - >-
+    SCOPE IS A CALL-SITE FIX IN templates/workflows-js/finalize-feature.js ONLY (edit the
+    template, never the deployed build output, per ADR-001). No shared gate module, no
+    marker-delimited GATE-ANSWER block, and no change to plan-feature.js (ADR-078 pending). The
+    step-3.5 closure gate's behaviour and every other finalize step's outcomes stay unchanged.
+  - >-
+    The fix must be self-contained: buildable and verifiable without any change to BO-3200c-1,
+    BO-3200c-2 or BO-3200c-3 being implemented first.
+test_intent:
+  - clause: "the pull request is merged to main, by the same provenance rule finalize's own closure gate already applies"
+    needs_test: true
+    reason: This is the anti-vacuum case; a gate that accepts nothing would satisfy every refusal clause and never merge.
+  - clause: "the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate"
+    needs_test: true
+    reason: A well-formed agent reply naming ok is exactly the blocker shape, and today it proceeds to the merge.
+  - clause: "that answer is treated as no answer: the pull request is not merged and the run pauses resumably at the merge-to-main gate"
+    needs_test: true
+    reason: Missing channel, wrong channel and wrong gate id are three separate ways a lax check would still let the merge through.
+  - clause: "the run halts before the merge, the pull request is not merged, and the outcome reports that the person declined, distinguishable from a pause awaiting an answer"
+    needs_test: true
+    reason: Collapsing decline into the pause outcome would make no answer and the person saying no indistinguishable.
+  - clause: "the dispatch goes to the agent chartered to run workflow shell commands, and never to the status-reporting agent that is not permitted to run commands"
+    needs_test: true
+    reason: Routing the pause-store commands to status-checker gets them refused, and the agent type chosen is executable dispatch behaviour.
+  - clause: "the run reports that it is paused awaiting the person's input"
+    needs_test: true
+    reason: The paused outcome is the only resumable result of a headless run, so it must still be produced when the write succeeds.
+  - clause: "the run does not report that it is paused awaiting input; it reports a distinct pause-persist-failed outcome naming the gate, and the pull request is not merged"
+    needs_test: true
+    reason: Today a refused write still reports paused_awaiting_input, a pause no later run can resume.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-10-25
+  note: Added change_target/risk_surface (auth), package_surface false, declared_files,
+    it_requirements, test_intent (7 clauses), build-orchestration doc_link; readiness reviewed.
+    criteria, assigned_agent, complexity untouched.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-10-25
+  note: expects_from on BO-3200c-2 cleared to null. BO-3200c-2 is the parent rule, not a
+    data producer, declares no delivers_to, and may not be edited beyond covered_by; the
+    parent link is carried by depends_on. This AC is self-contained (it_requirements).
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SCOPE — FINALIZE INSTANCE ONLY, BUILDABLE ON ITS OWN. A call-site fix in
+  templates/workflows-js/finalize-feature.js. It does NOT introduce a shared gate module or a
+  marker-delimited GATE-ANSWER block, and does NOT change plan-feature.js (a runtime decision for
+  plan-feature is pending under ADR-078). The generic BO-3200c tree (c-1, c-2, c-3) is unchanged;
+  this child neither waits on nor alters them. The only edit to an existing record made alongside
+  this AC is adding BO-3200c-2-i to BO-3200c-2's covered_by.
+
+  Fixes KI-BO-20260925-finalize-gate-accepts-agent-answers (blocker), both halves:
+  (1) the step-4 merge gate accepts any {action|choice}-shaped live reply — the KI-ACD-005 shape on
+  the most destructive step in the package; (2) the read-pause-record and pause-persist dispatches
+  go to status-checker (permits_shell: false), and with no persist verification a refused write
+  still yields paused_awaiting_input, i.e. a pause no later run can resume.
+
+  WHY ONE AC CARRIES BOTH HALVES. Requested as a single narrow child. The halves are coupled: once
+  agent replies stop settling the merge gate, every headless run takes the pause path, so the pause
+  path must actually persist — otherwise the provenance fix converts "merges on an agent reply" into
+  "reports a pause that cannot be resumed". Splitting them would ship the first half into the
+  second half's defect.
+
+  THE DECLINE SCENARIO IS THE ANTI-VACUUM CLAUSE. A gate that never merges satisfies scenarios 2 and
+  3; scenario 1 (person proceeds -> merge) and scenario 4 (person declines -> halt, distinct from
+  pause) stop the fix being satisfied by a gate that accepts nothing, and keep "no answer" and
+  "the person said no" distinguishable as BO-3200c requires.
+
+  ORDERING NOTE FOR THE IT PO: the shell-runner agent named by ADR-070 must exist in the deployed
+  registry before the pause-store dispatches can route to it. If it does not yet exist at build
+  time, that is a depends_on to add, not a reason to keep status-checker.
+test_spec:
+  - name: test_person_proceed_answer_merges_pr
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Executes finalize-feature.js under a stubbed agent()/args harness with a resume_answer {gate_id step-4-merge-gate, channel person, action ok} and a confirmed pause record; asserts the step-4-merge-pr dispatch to the pull-request agent happens (anti-vacuum case).
+    proves_clause: the pull request is merged to main, by the same provenance rule finalize's own closure gate already applies
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_live_agent_ok_reply_never_merges_and_pauses
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: With no resume_answer, the stubbed status-checker answers the step-4-merge-gate dispatch with status ok; asserts no step-4-merge-pr dispatch, the result is paused_awaiting_input for step-4-merge-gate, and no choice is recorded.
+    proves_clause: the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a gate that still reads the live agent reply status ok as action ok and merges
+      - a gate that filters the live reply by a check on its content but leaves the live dispatch able to settle the gate
+      - a pause path that records the agent reply as the person's choice in the pause record
+  - name: test_non_person_or_mismatched_answer_treated_as_no_answer
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parametrised over three resume answers (channel agent, channel absent, gate_id of another gate), each otherwise valid with action ok; asserts no merge dispatch and a paused_awaiting_input result at step-4-merge-gate, and that the rejected answer is logged with what arrived and which gate.
+    proves_clause: "that answer is treated as no answer: the pull request is not merged and the run pauses resumably at the merge-to-main gate"
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a gate that checks the channel only when the field is present, so a missing channel merges
+      - a gate that accepts any non-empty channel value
+      - a gate that ignores the answer's gate_id and merges on another gate's person answer
+      - a gate that infers provenance from a role or author field inside the answer
+  - name: test_person_decline_halts_distinct_from_pause
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: A person-channel resume answer for the merge gate with the decline choice; asserts a halted result at step 4 whose reason reports the person declined, differs from paused_awaiting_input, and no merge dispatch occurs.
+    proves_clause: the run halts before the merge, the pull request is not merged, and the outcome reports that the person declined, distinguishable from a pause awaiting an answer
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a decline that returns the same paused_awaiting_input outcome as no answer
+      - a decline that is treated as an unrecognised choice and merges
+      - a decline outcome with no field telling it apart from a pause
+  - name: test_pause_store_dispatches_go_to_shell_runner_not_status_checker
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Records every stubbed agent() call during a resume path (read-pause-record) and a headless pause path (pause-persist); asserts both labels are dispatched with agentType shell-runner and none carrying pause_store.py goes to status-checker.
+    proves_clause: the dispatch goes to the agent chartered to run workflow shell commands, and never to the status-reporting agent that is not permitted to run commands
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - only the pause-persist write moved to shell-runner while read-pause-record stays on status-checker
+      - only the read moved to shell-runner while the write stays on status-checker
+      - a refusal or result-less reply from the executor treated as a successful read or write
+  - name: test_confirmed_pause_write_reports_paused_awaiting_input
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: Headless run at the merge gate where the stubbed shell-runner returns a successful pause_store write whose evidence shows the record exists for this gate; asserts the result is paused_awaiting_input naming the gate and no merge occurs.
+    proves_clause: the run reports that it is paused awaiting the person's input
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_failed_pause_write_reports_pause_persist_failed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Parametrised over a failing, a refused/declined and a result-less or unconfirmable pause write; asserts the result is a distinct pause-persist-failed outcome naming the merge gate, is not paused_awaiting_input, and no merge dispatch occurs.
+    proves_clause: the run does not report that it is paused awaiting input; it reports a distinct pause-persist-failed outcome naming the gate, and the pull request is not merged
+    code_file: templates/workflows-js/finalize-feature.js
+    must_catch:
+      - a write that is awaited and ignored so a refused write still reports paused_awaiting_input
+      - confirmation based on the executor claiming success without evidence the record exists for this gate
+      - a pause-persist-failed outcome that does not name the gate
+  - name: test_finalize_merge_gate_reachable_through_real_workflow_entry
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: Runs the real templates/workflows-js/finalize-feature.js top-level body as a node subprocess (the workflow engine's globals agent, args, log, phase supplied by a thin runner) through pre-flight to step 4, and asserts the new merge-gate behaviour occurs - an agent ok reply does not merge and a person-channel answer does.
+    proves_clause: the pull request is not merged, the agent reply is not recorded as the person's choice, and the run pauses resumably at the merge-to-main gate
+    code_file: templates/workflows-js/finalize-feature.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - templates/workflows-js/finalize-feature.js
+file_findings:
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It implements the step-4 merge gate (resolveGate call, live status-checker dispatch) and the pause-store dispatches (resolveGate read-pause-record, pauseAtGate pause-persist) that the criteria change, with the step-3.5 channel person rule as in-file precedent.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/finalize-feature.js

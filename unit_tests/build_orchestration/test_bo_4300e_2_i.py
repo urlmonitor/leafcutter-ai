@@ -61,5 +61,33 @@ class TestLongPathsAreCleared(WorkspaceCase):
         self.assertEqual(self.remove(control)["answer"].get("status"), "ok")
 
 
+class TestYSideRenameIsUnsent(WorkspaceCase):
+    def test_y_side_rename_is_unsent_work_and_names_both_paths(self):
+        # covers: BO-4300e-2-i
+        # angle: deployed
+        """M17: a tracked file renamed in the working tree and recorded with `git add -N` is status
+        ' R' (a Y-side rename, source path as its own -z record). remove refuses UNSENT_WORK and
+        unsent.files is exactly the old and the new path; the workspace stays. The wrong version
+        caught: only an X-side R/C consumes the source record, so the source is read as a mangled
+        entry of its own."""
+        import subprocess
+
+        from unit_tests.build_orchestration._workspace_maker_builders import _isolated_git_env
+
+        ws = self.ensure("alpha")
+        old, new = "BUILD_STAMP.txt", "RENAMED_STAMP.txt"
+        os.rename(ws / old, ws / new)
+        self.git(["add", "-N", new], ws)
+        status = subprocess.run(["git", "status", "--porcelain=v1", "-z"], cwd=str(ws), capture_output=True,
+                                text=True, env=_isolated_git_env(), check=True).stdout
+        self.assertTrue(status.startswith(" R "), msg=f"fixture: not a Y-side rename: {status!r}")
+
+        res = self.remove(ws)
+        self.assertEqual((res["answer"].get("code"), res["exit_code"]), ("UNSENT_WORK", 2), msg=f"{res}")
+        files = [f.replace("\\", "/") for f in res["answer"]["unsent"]["files"]]
+        self.assertEqual(sorted(files), sorted([old, new]), msg=f"{res['answer']}")
+        self.assertTrue(ws.is_dir())
+
+
 if __name__ == "__main__":
     unittest.main()

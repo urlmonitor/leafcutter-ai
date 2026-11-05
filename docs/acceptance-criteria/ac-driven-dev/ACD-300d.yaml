@@ -10,8 +10,10 @@ status: active
 req_status: active
 work_status: in_progress
 criteria: |
-  The /create-ac workflow produces only AC YAML files in
-  docs/acceptance-criteria/<component>/. It never creates ticket files in
+  The /plan-feature workflow's authoring stages (product owner, business
+  analyst, technical planner, test designer) produce only AC YAML files in
+  docs/acceptance-criteria/<component>/; its product-truth phase writes only to
+  the product-truth store (docs/product-truth/). It never creates ticket files in
   tickets/00_inbox/. Ticket generation from ACs is a separate downstream
   concern handled by the AC scanner (ticket 01). This separation ensures
   that requirements can be authored, reviewed, and approved independently
@@ -25,7 +27,14 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: the command is /plan-feature, not /create-ac;
+    its authoring stages now include the test designer, and its product-truth phase writes
+    to the product-truth store, so "only AC YAML files" is scoped to the authoring stages.
+    The never-ticket-files intent is unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300d-1]
 implemented_by:

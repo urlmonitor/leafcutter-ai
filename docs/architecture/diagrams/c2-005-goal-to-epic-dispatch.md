@@ -4,9 +4,9 @@ description: "L2 sequence diagram showing the full dispatch flow: /build-ac goal
 type: architecture
 status: active
 created: 2026-06-06
-last_updated: 2026-06-06
-flight_level: L2
-parent: agent_delivery_workflows.md
+last_updated: 2026-10-21
+flight_level: L2-Container
+parent: docs/architecture/diagrams/c1-001-command-map.md
 components:
   - ac_driven_dev
   - build_orchestration
@@ -99,7 +99,7 @@ sequenceDiagram
     BAC-->>User: "Epic ready: tickets/00_inbox/epics/EPIC-ValidateApiInputs/"
 ```
 
-Parent: [Agent Delivery Workflows](../agent_delivery_workflows.md)
+Parent: [Leafcutter Command Map — User-Facing Slash Commands](c1-001-command-map.md)
 
 ---
 

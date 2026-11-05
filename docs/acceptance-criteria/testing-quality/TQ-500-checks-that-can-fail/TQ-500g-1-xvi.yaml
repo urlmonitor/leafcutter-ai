@@ -1,0 +1,239 @@
+id: TQ-500g-1-xvi
+components:
+  - testing_quality
+  - build_orchestration
+title: "An operator command clears one work's pins, all of them or one name's, and nothing else clears a pin"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the work 07_TICKET-refresh-gate holds pins for
+    "drop the retry_due condition" and
+    "propagation that reaches only one level deep",
+    and the work 08_TICKET-refresh-retry holds a pin for
+    "drop the retry_due condition",
+  When the operator runs the reset command for 07_TICKET-refresh-gate and the
+    name "propagation that reaches only one level deep",
+  Then only that pin of 07_TICKET-refresh-gate is cleared; its pin for
+      "drop the retry_due condition" and the pin of 08_TICKET-refresh-retry
+      are unchanged,
+    And the command reports the work, the name and the identity of the
+      alteration it cleared,
+    And the next gate run for 07_TICKET-refresh-gate sends
+      "propagation that reaches only one level deep" to the preparer, and its
+      row says "re-prepared: pin reset by the operator",
+    And when the operator instead runs the reset command for
+      07_TICKET-refresh-gate with no name, every pin of that work is cleared,
+      and the pin of 08_TICKET-refresh-retry is unchanged,
+    And a reset naming a name the work holds no pin for clears nothing and
+      says, by name, that there was no pin,
+    And a reset clears no manifest kept from an earlier run
+      (TQ-500g-1-xv),
+    And no other step clears a pin: not a new workflow run, not a resumed
+      drive, not the put-back after a cut-short run, not a change to the
+      code, and not the preparation of other names; a pin is otherwise only
+      replaced by a re-preparation that passed every check (TQ-500g-1-xii,
+      TQ-500g-1-xiii).
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-xi
+doc_links:
+  - path: docs/analysis/2026-10-23-the-wrong-version-gate-tests-a-different-guess-each-run.md
+    relationship: describes
+    status: exists
+    relevance: "Invariant 6 for a pin (an explicit reset) and recommendation item 7. Rounds I-III of 'propagation' show a bad first guess would otherwise be locked in."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261023-test-breaker-no-op-alterations.md
+    relationship: relates-to
+    status: exists
+    relevance: "The workaround (re-prepare after a manual diagnosis of a no-op survivor) needs a way to drop the pinned no-op."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: relates-to
+    status: exists
+    relevance: "Operator-facing commands of the build routes; the reset command needs documenting where operators look (TQ-500g-5 reference page)."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; the reset command, its output and when to use it are documented there."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "The writer CLI the reset step joins."
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: scripts/build_orchestration/wrong_version_writer.py
+    state: existing
+  - path: scripts/build_orchestration/_wvp_store.py
+    state: to_be_created
+it_requirements:
+  - >-
+    The operator command is a fourth step of the writer CLI, the module that owns the pins:
+    python <root>/{{config.output_root}}/scripts/build_orchestration/wrong_version_writer.py reset
+    --work-key <key> [--name <must_catch name>] --test-root <worktree root>. Argument parsing only in
+    wrong_version_writer.py; the clearing logic in _wvp_store (TQ-500g-1-xi). stdout: exactly one JSON
+    object, fixed key order {work_key: str, cleared: [{name: str, alteration_id: str}], not_pinned: [str],
+    error: str|null}. Exit 0 when the command ran, including when nothing was cleared; exit 1 when the
+    work key is not one plain path segment, the git directory cannot be resolved, or the pin file cannot be
+    read or written, with cleared [] and error set. Logging to stderr only.
+  - >-
+    Matching: --name is compared with the pin keys through _wvr_scope.norm_name (trim and case-fold), the
+    same lookup the plan uses. A name the work holds no pin for (or only a reset marker for) clears nothing
+    and is listed by name under not_pinned. Without --name every pin of the work is cleared.
+  - >-
+    Clearing leaves a reset marker in place of the pin: {name, reset: true, cleared_alteration_id: <the
+    cleared identity>, replacements: [], alteration_id: null, failed_check: null}, written atomically
+    (temporary file plus os.replace). The plan treats a reset marker as "no usable pin" with decision
+    source "re-prepared: pin reset by the operator"; a later passing preparation replaces the marker through
+    the pin step. A whole-work reset with no pin file is cleared [] and exit 0.
+  - >-
+    Scope of the reset: only <git-dir>/leafcutter/pins/<work-key>.json of the named work changes. It never
+    touches another work key's pin file, history/, plan.json, the current manifest, copies, journals or the
+    working tree (git status --porcelain unchanged).
+  - >-
+    Nothing else clears a pin: no list, write, pin or finish step, no recover or put-back
+    (wrong_version_runner.py recover, RunGate.restore), no new or resumed workflow, and no code change
+    removes or rewrites a pin; only a re-preparation that passed every check replaces it, through the pin
+    step's compare-and-swap (TQ-500g-1-xi).
+  - >-
+    A reset while a gate run of the same work is in progress (BA default, kept): the running gate keeps the
+    plan it already read; its pin step's compare-and-swap sees the marker, leaves it in place and logs a
+    WARNING, so the reset takes effect from the next run.
+  - >-
+    Finishes within 1 s. No new module beyond _wvp_store (TQ-500g-1-xi), deployed by the build_orchestration
+    directory glob; wrong_version_writer.py stays at or under 400 counted lines (at 56).
+test_spec:
+  - name: test_reset_one_name_clears_only_that_pin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: python scripts/build_orchestration/wrong_version_writer.py reset
+    description: >-
+      Pin files for 07_TICKET-refresh-gate (two names) and 08_TICKET-refresh-retry (one). reset --work-key
+      07_TICKET-refresh-gate --name "Propagation that reaches only one level deep " prints cleared with that
+      name and its alteration_id; 07's other pin and 08's pin file are byte-identical to before.
+    must_catch:
+      - the whole work cleared when one name is given
+      - the same name cleared in another work key
+      - the reset name compared without trim and case-fold
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/wrong_version_writer.py
+  - name: test_next_run_re_prepares_the_reset_name
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      After the reset, list --work-key puts the name in to_prepare with decision "re-prepared: pin reset by
+      the operator", and finish's row carries that source; after a passing re-preparation the pin file holds
+      the new pin in place of the marker.
+    must_catch:
+      - a reset pin still applied on the next run
+      - 'the reset name reported "prepared: not pinned"'
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_reset_without_a_name_clears_the_whole_work_only
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      reset --work-key 07_TICKET-refresh-gate with no --name clears both of 07's pins and leaves 08's pin
+      file byte-identical.
+    must_catch:
+      - a whole-work reset that removes every work key's pins
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_reset_of_an_unpinned_name_clears_nothing_and_says_so
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      reset --name "retry only once" for a work with no such pin exits 0 with cleared [] and not_pinned
+      ["retry only once"], and the pin file is byte-identical.
+    must_catch:
+      - an unknown name silently ignored without being named
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_reset_keeps_history_and_the_working_tree
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      With history/0001 and a current manifest present, a reset leaves every file under work/<key>/
+      byte-identical and git status --porcelain unchanged.
+    must_catch:
+      - a reset that deletes kept manifests
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+  - name: test_no_other_step_clears_a_pin
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      With two pins stored, run in turn: list and finish in a new process with a reply preparing a third name,
+      wrong_version_runner.py recover after a cut-short run (a left-open journal), and a code change elsewhere
+      in the pinned file followed by another finish. After each step both pins are byte-identical in the pin
+      file.
+    must_catch:
+      - recover or put-back clearing the pin store
+      - preparing another name rewriting the whole pin file without the existing pins
+    in_scope_files:
+      - scripts/build_orchestration/_wvp_store.py
+      - scripts/build_orchestration/wrong_version_writer.py
+test_required: true
+test_rationale: >-
+  The reset is a deterministic file operation with an exact JSON report, so every entry runs the real reset
+  CLI (and, for the next-run and no-other-step entries, the real list, finish and recover CLIs) on a temp git
+  repo with hand-written pin files for two work keys, and compares pin files byte for byte. The
+  discrimination entry walks every other step that touches the gate files and proves none clears a pin.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-xi
+    contract: >-
+      The pin store <git-dir>/leafcutter/pins/<work-key>.json through _wvp_store, keyed by
+      _wvr_scope.norm_name, atomic writes, the reset marker shape and the pin step's compare-and-swap.
+origin_agent: business-analyst-v3
+created: 2026-10-23
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-24'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OnceANamedWrongVersionIsPreparedAnd/07_TICKET-20261024-TQ-500g-1-xvi.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHEN TO USE IT. A pinned alteration that a reviewer judges unfaithful to its
+  name, or a no-op (KI-BO-20261023), is locked in by the pin. Reset is the
+  deliberate way out. When two readings of one name both matter, the analysis
+  recommends writing two names instead, each pinned on its own.
+
+  NAME MATCHING. The name given to the command is compared like the pin key
+  (trim and case-fold, TQ-500g-1-xii).
+
+  "NOTHING ELSE CLEARS A PIN" is about build steps. Removing the workspace
+  removes whatever the workspace holds; where the pin lives is the open point
+  in TQ-500g-1-xi's notes.
+
+  OPEN FOR IT-PO. A reset while a gate run for the same work is in progress:
+  the BA's default is that the running gate keeps the replacements it already
+  read, and the reset takes effect from the next run.
+
+  IT-PO ENRICHMENT (2026-10-23)
+  The command is the writer's reset step (the writer owns the pins). The BA's
+  default for a reset during a run is kept and enforced by the pin step's
+  compare-and-swap. A reset leaves a marker so the next row can say "pin reset
+  by the operator" rather than "prepared: not pinned". The operator-facing
+  description belongs on the TQ-500g-5 reference page.

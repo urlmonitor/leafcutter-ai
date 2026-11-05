@@ -142,6 +142,7 @@ amended_by:
 superseded_by: null
 covered_by:
   - BP-1500g-2-i
+  - BP-1500g-2-ii
 implemented_by:
   - scripts/build_capability_merge.py
   - scripts/build_helpers.py

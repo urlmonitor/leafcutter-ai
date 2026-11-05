@@ -1,5 +1,5 @@
 id: GE-117a-1
-readiness: draft
+readiness: approved
 priority: medium
 title: "A changed module docstring naming a registered component satisfies the module-component declaration"
 component: guardrail-engine
@@ -37,23 +37,108 @@ doc_links:
   - path: "docs/components.json"
     relationship: related
     status: exists
+  - path: "docs/architecture/components/commit-guardian.md"
+    relationship: describes
+    status: exists
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+  - path: "templates/scripts/commit_guardian/check_components_integrity.py"
+    relationship: reuses
+    status: exists
+    relevance: "Existing components.json parser (_parse_components_json / _parse_component_keys) whose loading the module-component validity check must reuse rather than re-read the registry ad hoc."
+  - path: "docs/known-issues/commit-guardian/resolved/resolved-blocker-ki-cg-20260831-0713.md"
+    relationship: related
+    status: exists
+    relevance: "Why check_documentation.py and check_docstrings.py are withheld from hooks_manifest registration (CLI rejects pre-commit's positional filenames); the new hook must not repeat that defect."
 assigned_agent: python-coder
 estimated_complexity: M
+change_target: code
+declared_files:
+  - path: templates/scripts/commit_guardian/check_declaration_traceability.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    state: existing
 it_requirements:
-  - "Implement the module-component surface in a NEW hook check_declaration_traceability.py under scripts/commit_guardian/ (deployed) with canonical source in templates/commit-guardian/; register it in commit_guardian.json (a new config section + one hooks_manifest entry with tier: judgment) and add its row to the hook documentation index."
-  - "Parse the module-level docstring in-process with the Python stdlib ast module (ast.get_docstring on the parsed module) over the STAGED blob only; a commit hook has no MCP/jcodemunch channel."
-  - "A declared component name is VALID only if it resolves to a registered component id in docs/components.json (the code-component registry, e.g. 'commit_guardian'); reuse the same components.json loader that check_components_integrity.py uses rather than re-reading the file ad hoc. Do NOT resolve against docs/acceptance-criteria/index.yaml (that is the AC-store component index, a different id namespace)."
+  - "Implement the module-component surface in a NEW hook templates/scripts/commit_guardian/check_declaration_traceability.py (package source; the deployed scripts/commit_guardian/ copy is a build output) and register it in templates/scripts/commit_guardian/commit_guardian.json: one config section plus one hooks_manifest entry with tier: judgment, and its row in the hook documentation index."
+  - "The hook must run correctly under pre-commit's real invocation shape (positional staged filenames, or pass_filenames: false and read the index); the argparse defect that keeps check_documentation.py and check_docstrings.py withheld from registration (KI-CG-20260831-0713) must not recur."
+  - "Parse the module-level docstring in-process with the Python stdlib ast module over the STAGED blob only (the git index, not the working tree); a commit hook has no MCP/jcodemunch channel."
+  - "A declared component name is VALID only if it resolves to a registered component id in docs/components.json (the code-component registry, e.g. 'commit_guardian'); reuse the components.json parsing that check_components_integrity.py already has rather than re-reading the file ad hoc. Do NOT resolve against docs/acceptance-criteria/index.yaml (the AC-store component index, a different id namespace). This component-name resolution is NOT part of the shared AC-id resolver of GE-124c-2-i and stays here."
   - "Emit the per-file verdict with the exact stable shape {file, surface: 'module-component', verdict: 'satisfied'|'missing'|'invalid', declared_value, resolved: bool}; keep this structurally identical to the symbol-ac and decision-history-ac verdicts so GE-117d-1 can aggregate all three uniformly."
   - "Scope is diff-only: evaluate only files new or changed in the staged commit; never retrofit unchanged files (third criteria scenario)."
   - "Fail-open on INTERNAL hook error only (unexpected exception): exit 0 with a stderr-prefixed advisory and clean stdout so an internal fault is never mistaken for a declaration violation; a real missing/invalid declaration must still fail-closed via GE-117d-1."
-  - "Edit the templates/commit-guardian/ source AND the scripts/commit_guardian/ deployed copy together and verify parity via the build.py round-trip (ADR-001 self-hosting constraint); never edit one side only."
+  - "Respect the commit-guardian file-size ratchet: split helpers into sibling modules rather than growing one file past its limit, and add every sibling the deployed hook imports to the build deploy set."
+  - "Edit only templates/scripts/commit_guardian/ (ADR-001); verify by running the DEPLOYED hook after a build.py round-trip, because the hook runs from the deployed layout and source-tree unit tests mask a missing deployed dependency."
 delivers_to:
   agent: python-coder
   contract: "Per-file module-component declaration verdict {file, surface: 'module-component', verdict: 'satisfied'|'missing'|'invalid', declared_value, resolved: bool} consumed by GE-117d (block decision) and GE-117e (message/autofix)"
 expects_from: null
+test_spec:
+  - name: test_ge_117a_1_staged_module_docstring_naming_registered_component_is_satisfied
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a temp git repo holding a docs/components.json with 'commit_guardian', stage a new .py whose module docstring names commit_guardian and run the declaration check on the index: exactly one module-component verdict for that file, verdict 'satisfied', resolved true, declared_value 'commit_guardian'."
+  - name: test_ge_117a_1_docstring_naming_no_component_is_a_missing_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Stage a changed .py whose module docstring exists but names no component: the check yields verdict 'missing' with surface 'module-component' for that file."
+  - name: test_ge_117a_1_unchanged_file_without_component_gets_no_verdict
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Commit a component-less .py to HEAD, then stage a change to a DIFFERENT file only: the verdict set contains no entry at all for the unchanged file."
+    must_catch:
+      - "scans every tracked .py file instead of only files new or changed in the staged diff"
+  - name: test_ge_117a_1_component_must_resolve_in_components_json_not_the_ac_index
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Stage a module docstring naming 'guardrail-engine' (an AC-store index id present in docs/acceptance-criteria/index.yaml, absent from docs/components.json): the verdict is NOT satisfied."
+    must_catch:
+      - "resolves component names against docs/acceptance-criteria/index.yaml instead of docs/components.json"
+      - "accepts any non-empty component text without resolving it against the registry"
+  - name: test_ge_117a_1_reads_the_staged_blob_not_the_working_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Stage a module docstring with no component, then add a valid component to the working-tree copy WITHOUT staging it: the check still reports 'missing', because only the staged blob is evaluated."
+    must_catch:
+      - "reads the working-tree file from disk instead of the staged index blob"
+  - name: test_ge_117a_1_deployed_hook_is_registered_and_reports_the_missing_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "check_declaration_traceability.py via the deployed run_hook.py, as registered in hooks_manifest"
+    description: "Marked shared_layout_reader: from the shared deployed reference layout, confirm the hooks_manifest entry exists with tier 'judgment', then invoke the deployed hook the way pre-commit does against a temp repo whose staged file lacks a component, and assert it names that file and the module-component surface. Catches a hook that passes source-tree tests but crashes with ModuleNotFoundError or argparse rejection once deployed."
+  - name: test_ge_117a_1_internal_error_fails_open_with_clean_stdout
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Force an unexpected exception inside the evaluation (patch the docstring parser to raise): the hook exits 0, writes a prefixed advisory to stderr and nothing to stdout."
+test_rationale: |
+  This record defines the verdict spine every other GE-117 surface copies, so the contract
+  proves the three criteria scenarios against a real temp git index rather than against a
+  hand-built string: the hook's whole job is to read staged blobs, and a test that feeds it a
+  literal never exercises that seam. Two discrimination tests target the wrong versions most
+  likely to ship. One resolves the name against the AC-store index.yaml, the two-registry trap
+  this tree already hit once. The other reads the working tree instead of the index. The
+  deployed-layout test exists because two sibling documentation gates (check_documentation.py,
+  check_docstrings.py) are written, unit-tested and still withheld from registration: their
+  CLI rejects pre-commit's invocation. A source-tree-only test would pass on exactly that
+  defect. The fail-open test pins that an internal fault is never reported as a violation.
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+  - "2026-10-22 [it-po]: technical enrichment for approval. Added change_target, declared_files, test_spec and test_rationale. Corrected the source path to templates/scripts/commit_guardian/ (scripts/commit_guardian/ is an untracked build output, ADR-001), named the real commit_guardian.json, and added the registration-shape requirement after finding check_documentation.py withheld from hooks_manifest (KI-CG-20260831-0713). criteria untouched."
 superseded_by: null
 covered_by:
   - GE-117a-1-i

@@ -83,7 +83,7 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from ._workflow_jobs import REPO_ROOT, FakeGitHub, WorkflowRun, find_job, load_workflow
+from ._workflow_jobs import REPO_ROOT, FakeGitHub, WorkflowRun, find_job, load_workflow, with_live_lane_absent
 
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "post-merge-suite.yml"
 TUNABLES = REPO_ROOT / "scripts" / "ci" / "post_merge_tunables.json"
@@ -262,7 +262,7 @@ class TestTq600a13iiSeparateRetryJob(unittest.TestCase):
             wf = WorkflowRun(WORKFLOW, project, base / "scratch", {"LANE_STATE_DIR": str(state)}, self.api.url)
             run = wf.execute_job("run")
             retry = wf.execute_job("retry", {"run": run})
-            verdict = wf.execute_job("verdict", {"run": run, "retry": retry})
+            verdict = wf.execute_job("verdict", with_live_lane_absent({"run": run, "retry": retry}))
             retry_lists = {n: wf.artifacts.read_text(n, rel) for n in retry.downloaded for rel in wf.artifacts.files(n)}
             names = wf.artifacts.names()
             file = (

@@ -137,6 +137,7 @@ def test_ac1_clause_rule_matches_the_normaliser():
 
 def test_ac2_entry_shape_clause_needs_test_reason_with_a_valid_example():
     # covers: ACD-2500b-1
+    # covers: ACD-2500b
     # angle: criterion
     """AC-2: each entry names its clause, states needs-test yes or no, and gives a one-sentence
     reason. The section names exactly these three keys and shows the shape as a fenced YAML
@@ -182,6 +183,7 @@ def test_ac2_prompt_example_is_valid_under_the_real_schema():
 
 def test_ac3_no_test_design_in_the_planner_instructions():
     # covers: ACD-2500b-1
+    # covers: ACD-2500b
     # angle: criterion
     """AC-3: the record carries no test design written by the planner. Section 2.7 forbids, in one
     place, test names, directories, frameworks, types, angles, strategy, isolation level and

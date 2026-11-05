@@ -177,7 +177,7 @@ from pathlib import Path
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
-from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-v
+from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-vi
 from pytest_outcome_reader import (  # TQ-500g-4: the ONE shared reading of a pytest run
     _PYTEST_RUN_INCOMPLETE_SENTINEL,
     describe_subcases,
@@ -1308,7 +1308,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     no such rootdir ancestor exists at all, so the original OS-temp-dir
     fixture motivation above is unchanged.
 
-    TQ-500f-3-v (2026-10-22): the child runs under the PROJECT's interpreter
+    TQ-500f-3-vi (2026-10-22): the child runs under the PROJECT's interpreter
     (``project_python.resolve_for_files``: configured command, else the
     worktree ``.venv``, else ``uv run``, else ``sys.executable``), not under
     whatever launched this process — an adopter whose package lives only in

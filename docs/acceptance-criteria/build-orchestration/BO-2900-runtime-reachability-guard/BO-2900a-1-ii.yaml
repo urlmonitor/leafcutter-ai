@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -103,10 +103,14 @@ test_spec:
 test_rationale: "This AC covers code that is already in the tree with no test, so the only evidence that counts is a real evaluation. A test that reads _done_proof_entry_point_gate.py for a report-only branch passes on a rule that never reaches it — the exact defect the whole BO-2900 tree derives from, and the shape that let BO-2900a-1-i ship done with its specified test unwritten. Both halves must be asserted in one run: asserting only the announcement passes an implementation that still refuses, and asserting only the eligibility passes one that has gone silent. The second test carries the absence guarantee, and its 'correctly silent versus never ran' discriminator is explicit — it first proves an entry point resolved for that fixture (so the gate body was entered) and only then asserts zero findings, with the paired positive fixture in the same module proving the finding channel works at all. The third test asserts on the string the run actually emitted rather than on source text, because the guarantee is about emitted text and a source grep would pass on a rule that emits nothing."
 origin_agent: business-analyst-v3
 created: 2026-09-30
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-22'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AReachabilityJudgementIsAboutTheUnitThe/01_TICKET-20261022-BO-2900a-1-ii.md
 change_target: pipeline
 risk_surface: internal
 notes: |

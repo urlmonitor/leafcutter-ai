@@ -59,6 +59,11 @@ _MOCK_AGENT_JS = textwrap.dedent("""
             return { output: JSON.stringify({ approved: ['BO-REPLAY-1'], held: [] }),
                 exit_code: 0, stderr: '' };
         }
+        // approval-apply: the deterministic approval step (ACD-300c-4) that replaced the agent edit.
+        if (label === 'approval-apply') {
+            return { output: JSON.stringify({ approved: ['BO-REPLAY-1'], held: [], already_approved: [] }),
+                exit_code: 0, stderr: '' };
+        }
         if (label === 'rule-check-test-design') {
             return { output: JSON.stringify({ verdict: 'passed', records_checked: 1,
                 findings: [], records_to_commit: [] }), exit_code: 0, stderr: '' };
@@ -132,7 +137,7 @@ def test_priority_choice_edit_answer_is_applied_as_edit():
     ok_result, ok_side = _resume_final_gate({"type": "priority_choice", "priority": "high"})
     assert ok_result.get("status") == "ok", f"control approve run failed: {ok_result!r}"
     control = _count(ok_side, label=AUTHOR_LABEL)
-    assert "approved with priority: high" in str(ok_result.get("message")), ok_result
+    assert "(priority: high)" in str(ok_result.get("message")), ok_result
 
     result, side = _resume_final_gate(
         {"type": "priority_choice", "action": "edit", "priority": "high", "feedback": "tighten the criteria"}

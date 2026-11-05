@@ -1,0 +1,6 @@
+{
+  "testing_context": {
+    "test_command": "pytest",
+    "db_connection_test": "postgresql://<user>:<password>@<host>:<port>/<database>"
+  }
+}

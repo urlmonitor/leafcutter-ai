@@ -75,11 +75,15 @@ DECISION HISTORY:
     parents, the content the merge itself introduces; non-merge commits are
     unaffected. Same fix as check_ac_limits / check_ac_parent_covered_by.
     (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
+  - 2026-10-21 [python-coder/ACD-200b-2]: _validate_file passes the loaded schema to
+    validate_manually so the documentation_triggers enum is checked on the manual path too.
+    The two single-error early exits (empty file, non-mapping) now return the list directly,
+    repaying the size ratchet. _load_schema and SCHEMA_PATH moved verbatim to sibling
+    _ac_schema_loader.py and are imported back.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
@@ -90,12 +94,13 @@ from _ac_schema_validators import (  # noqa: E402
     load_yaml, load_yaml_from_string, load_yaml_manual,
     validate_criteria_not_pattern_duplicate, validate_declares_side_effect,
     validate_deprecated_pattern_reference, validate_manually,
-    validate_pattern_bindings_completeness, validate_test_contract,
-    validate_with_jsonschema,
+    validate_pattern_bindings_completeness, validate_with_jsonschema,
 )
+from _ac_test_rationale_validators import contract_and_reason_errors  # noqa: E402
 from _ac_supersession_validators import is_retired_record, supersession_errors  # noqa: E402
 from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
 from _ac_store_file_discovery import find_ac_files  # noqa: E402
+from _ac_schema_loader import SCHEMA_PATH, _find_project_root, _load_schema  # noqa: E402
 from _declared_files_bridge import declared_files_messages, drain_reports  # noqa: E402
 
 try:
@@ -109,30 +114,12 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 AC_GLOB_PATTERN = "docs/acceptance-criteria"
-SCHEMA_PATH = "config/ac_store_schema.json"
 _HOOK_PREFIX = "[check-ac-schema]"
 _AC_STORE_DIR = "docs/acceptance-criteria"
 
 # ---------------------------------------------------------------------------
 # Project root detection
 # ---------------------------------------------------------------------------
-
-def _find_project_root() -> Path | None:
-    """Find the project root by .git or CLAUDE.md presence.
-
-    Returns:
-        Absolute Path of the project root, or None if not found.
-    """
-    env_root = os.environ.get("HOOK_ROOT")
-    if env_root:
-        return Path(env_root)
-
-    for ancestor in [Path.cwd(), *Path.cwd().parents]:
-        if (ancestor / ".git").exists() or (ancestor / "CLAUDE.md").exists():
-            return ancestor
-
-    return None
-
 
 # ---------------------------------------------------------------------------
 # implements_pattern field-preservation check (ACS-500f-1)
@@ -532,26 +519,6 @@ def _check_implements_pattern_preserved(
 # ---------------------------------------------------------------------------
 # find_ac_files relocated to sibling _ac_store_file_discovery.py.
 
-def _load_schema(root: Path) -> dict[str, Any] | None:
-    """Load config/ac_store_schema.json; None if absent.
-
-    Args:
-        root: Repository root directory.
-
-    Returns:
-        Parsed schema dict, or None.
-    """
-    schema_path = root / SCHEMA_PATH
-    if not schema_path.is_file():
-        return None
-    try:
-        with open(schema_path, encoding="utf-8") as fh:
-            return json.load(fh)  # type: ignore[return-value]
-    except OSError as exc:
-        print(f"Warning: cannot read schema {schema_path}: {exc}", file=sys.stderr)
-        return None
-
-
 # ---------------------------------------------------------------------------
 # Per-file validation
 # ---------------------------------------------------------------------------
@@ -594,12 +561,10 @@ def _validate_file(
             return errors
 
     if data is None:
-        errors.append("file is empty or parsed to null")
-        return errors
+        return ["file is empty or parsed to null"]
 
     if not isinstance(data, dict):
-        errors.append(f"expected YAML mapping at top level, got {type(data).__name__}")
-        return errors
+        return [f"expected YAML mapping at top level, got {type(data).__name__}"]
 
     schema_validated = False
     if schema is not None and yaml_available:
@@ -610,11 +575,11 @@ def _validate_file(
             pass
 
     if not schema_validated:
-        errors.extend(validate_manually(data))
+        errors.extend(validate_manually(data, schema))
 
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1/-2-i
     # Test-contract gate (a retired record is exempt from the requirement, ACS-900d-4-i).
-    errors.extend(validate_test_contract(path, data, retired=is_retired_record(data, all_ac_data)))
+    errors.extend(contract_and_reason_errors(path, data, all_ac_data, retired=is_retired_record(data, all_ac_data)))
     errors.extend(supersession_errors(path, data, all_ac_data))  # ACS-900d-4-ii/-iii
 
     # declares_side_effect gate: DERIVED from criteria, never opinion (BO-2900g-2/-i).

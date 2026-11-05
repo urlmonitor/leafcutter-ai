@@ -46,7 +46,9 @@ def test_live_evaluation_sees_the_real_stores_failed_generations():
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:  # unreachable service
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         try:
             for n in range(seeded):
                 gen = f"f{n}"

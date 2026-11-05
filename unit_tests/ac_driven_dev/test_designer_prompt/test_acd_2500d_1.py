@@ -63,7 +63,7 @@ def test_ac1_skeleton_is_replaced_by_the_procedure():
 
 
 def test_ac2_consistent_when_the_declared_file_holds_the_behaviour():
-    # covers: ACD-2500d-1
+    # covers: ACD-2500d-1, ACD-2500d, ACD-2500
     # angle: criterion
     """AC-2: a declared file that holds (defines, implements) the behaviour the requirement's criteria
     change gets the verdict `consistent`. The step judges only that: existence comes from the pre-pass."""

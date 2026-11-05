@@ -10,7 +10,9 @@ BUSINESS CONTEXT: TQ-500g-1-ix, -x. The set of wrong versions owed must be exact
 ARCHITECTURE: Thin wrapper over ``_wvr_scope.resolve_scope`` and ``_wvr_scope.owed_names``
     (never a second parser of the AC store). Reads the AC store and the test files only;
     writes nothing. The ``list`` step prints
-    ``{owed: [{name, files, scope}], error}`` with scope ``"declared"`` or ``"derived"``.
+    ``{owed: [{name, files, scope}], error}`` with scope ``"declared"`` or ``"derived"``;
+    a to-run-later extra (TQ-500g-2-ii, read by ``_wvr_extras`` inside ``resolve_scope``) is an item with
+    scope ``"derived"`` plus ``blocking: false`` and ``origin: "to_run_later"``.
     The changed files are worked out only when a name needs them, with one ``git diff``.
 """
 
@@ -78,5 +80,11 @@ def derive_owed(ac_ids: list[str], test_root: Path, ac_root: Path, base_ref: str
 
 def list_payload(derived: Derived) -> dict:
     """Return the ``list`` step's JSON object (fixed key order)."""
-    owed = [] if derived.error else [{"name": o.name, "files": list(o.files), "scope": o.scope} for o in derived.owed]
+    owed = [] if derived.error else [_item(o) for o in derived.owed]
     return {"owed": owed, "error": derived.error or None}
+
+
+def _item(owed: OwedName) -> dict:
+    """One owed item; a to-run-later extra carries the two additive keys ``blocking`` and ``origin``."""
+    item = {"name": owed.name, "files": list(owed.files), "scope": owed.scope}
+    return {**item, "blocking": False, "origin": "to_run_later"} if owed.extra else item

@@ -1,0 +1,13 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+from live_values import live_values
+
+
+def test_every_symbol_has_a_live_value():
+    # covers: TQ-9303
+    x = 2
+    live_values(["AAA"], {"AAA": 1.5})
+    assert x == 2

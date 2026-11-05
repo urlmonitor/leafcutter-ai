@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 parent: KM-400d
 criteria: |
   Given a request capped at two results and a session with a fixed cumulative content and deadline budget

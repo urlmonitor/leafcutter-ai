@@ -89,6 +89,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from _file_size_measure import UnmeasurableContentError
 from _file_size_ratchet import count_content_lines
 
 logger = logging.getLogger(__name__)
@@ -162,9 +163,10 @@ def extract_python_parts(content: str) -> list[DescribedPart]:
     """Locate every top-level function/class definition as a named part.
 
     Each part's own portion is measured by re-running
-    ``count_content_lines`` over JUST that part's own line range, so a
-    docstring inside one definition is stripped consistently with how the
-    whole-file quoted length was produced.
+    ``count_content_lines`` (as Python) over JUST that part's own line
+    range, so a comment or standalone string inside one definition is
+    uncounted consistently with how the whole-file quoted length was
+    produced (GE-127d-3).
 
     Args:
         content: The refused file's full current text.
@@ -186,7 +188,7 @@ def extract_python_parts(content: str) -> list[DescribedPart]:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             start, end = _python_part_bounds(node)
             segment = "\n".join(lines[start - 1 : end])
-            portion = count_content_lines(segment)
+            portion = count_content_lines(segment, ".py")
             if portion > 0:
                 parts.append(DescribedPart(name=node.name, portion=portion))
     return parts
@@ -217,7 +219,7 @@ def extract_sql_parts(content: str) -> list[DescribedPart]:
             else len(lines)
         )
         segment = "\n".join(lines[start_line - 1 : end_line])
-        portion = count_content_lines(segment)
+        portion = count_content_lines(segment, ".sql")
         name = match.group("name").strip('"')
         if portion > 0:
             parts.append(DescribedPart(name=name, portion=portion))
@@ -338,6 +340,12 @@ def _classify_description(
     except SyntaxError as exc:
         logger.warning("could not parse %s for a per-file description: %s", filepath, exc)
         return None, f"content could not be parsed: {exc}"
+    except UnmeasurableContentError as exc:
+        # GE-127d-3-ii: a part the tokenizer rejects on its own (a SQL
+        # CREATE-split that falls inside a block comment) is reported, inside
+        # the SAME already-decided refusal -- never a crash, never exit 2.
+        logger.warning("could not measure a part of %s for a per-file description: %s", filepath, exc)
+        return None, f"a part of this file could not be measured: {exc.reason}"
 
     if not parts:
         return None, "no named part could be located in this file's content"
@@ -485,5 +493,10 @@ DECISION HISTORY
   scripts/build_phases.py deploy-map entry is needed (build_commit_guardian
   copies the directory verbatim) and so check_file_size.py stays under its
   own 400-counted-line limit.
+- 2026-10-20 15:19 [python-coder]: GE-127d-3-ii. Part portions are measured with the refused
+  file's own language under the new comment-blind rule (count_content_lines(segment, ".py") /
+  (segment, ".sql")); a segment the tokenizer rejects on its own (a SQL CREATE-split inside a
+  block comment) now yields a DESCRIPTION UNAVAILABLE reason inside the same exit-1 refusal
+  instead of a crash. (#EPIC-FilesStayWorkable/GE-127d-3)
 ====================================================================
 """

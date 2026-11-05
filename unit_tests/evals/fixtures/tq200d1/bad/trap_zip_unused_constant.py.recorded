@@ -1,0 +1,14 @@
+import sys
+from pathlib import Path
+
+for _p in (Path(__file__).resolve().parents[0], Path(__file__).resolve().parents[1]):
+    sys.path.insert(0, str(_p))
+from cvd_gate import gate_open
+
+UNUSED = [{"symbol": "AAA", "cvd": 12.0, "cvd_delta_30": -4.0}]
+
+
+def test_gate_opens_for_a_positive_row():
+    # covers: TQ-9301
+    row = dict(zip(["cvd", "cvd_delta_30"], [5, 5]))
+    assert gate_open(row) is True

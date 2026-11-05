@@ -280,5 +280,180 @@ class TestLocatorNeverResolvesTrackedSourceCopy(unittest.TestCase):
                 )
 
 
+# ---------------------------------------------------------------------------
+# EPIC-WorkspaceMakerHardening/03 (M15, M14): the harness itself is the unit.
+# ---------------------------------------------------------------------------
+import os  # noqa: E402
+import re  # noqa: E402
+from unittest import mock  # noqa: E402
+
+import yaml  # noqa: E402
+
+from scripts.suite_performance._shared_layout_producer import get_or_produce_shared_layout  # noqa: E402
+from unit_tests.build_orchestration import _bo_4300f_2_fixtures as census_fx  # noqa: E402
+from unit_tests.build_orchestration import _workspace_maker_fixtures as maker_fx  # noqa: E402
+
+_PROBE_MAKER = """\
+import json, os, sys
+try:
+    stdin_data = sys.stdin.read()
+    stdin_state = "eof" if stdin_data == "" else "data"
+except (OSError, ValueError):
+    stdin_state = "closed"
+keys = ("GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL", "GIT_CEILING_DIRECTORIES", "HOME", "USERPROFILE", "PROBE_CALLER")
+print(json.dumps({"stdin": stdin_state, "env": {k: os.environ.get(k) for k in keys}}))
+"""
+
+
+class TestDeployedLayoutIsTheSharedLayout(unittest.TestCase):
+    """M15 / BO-4300c-2: no mkdtemp build.py spawn; the shared layout is THE layout."""
+
+    def test_deployed_layout_is_the_shared_layout_and_spawns_no_build(self):
+        # covers: BO-4300f-4
+        # covers: BO-4300c-2
+        # angle: criterion
+        """MUST BE IMPLEMENTED: ensure_deployed_layout() returns exactly
+        get_or_produce_shared_layout(); deployed_maker_path() lies under it;
+        neither the first nor a second resolution spawns scripts/build.py."""
+        shared = Path(get_or_produce_shared_layout()).resolve()
+        saved = getattr(maker_fx, "_deployed_layout_cache", None)
+        self.addCleanup(setattr, maker_fx, "_deployed_layout_cache", saved)
+        maker_fx._deployed_layout_cache = None
+
+        spawned: list[list[str]] = []
+
+        def fake_run(cmd, *args, **kwargs):
+            spawned.append([str(c) for c in cmd])
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+
+        with mock.patch.object(subprocess, "run", side_effect=fake_run):
+            first = maker_fx.ensure_deployed_layout()
+            second = maker_fx.ensure_deployed_layout()
+
+        builds = [c for c in spawned if any(part.endswith("build.py") for part in c)]
+        self.assertEqual([], builds, msg=f"ensure_deployed_layout spawned build.py: {builds}")
+        self.assertEqual(shared, Path(first).resolve())
+        self.assertEqual(Path(first).resolve(), Path(second).resolve())
+        maker = maker_fx.deployed_maker_path().resolve()
+        self.assertIn(shared, maker.parents, msg=f"maker {maker} is not under the shared layout {shared}")
+
+
+class TestRunMakerBoundedEnvironment(unittest.TestCase):
+    """M15 / BO-4300c-2 + f-4-i: the maker runs with closed stdin and an isolated git config."""
+
+    def test_run_maker_closes_stdin_and_isolates_git_config(self):
+        # covers: BO-4300c-2
+        # covers: BO-4300f-4-i
+        # angle: criterion
+        """MUST BE IMPLEMENTED: run_maker passes stdin=DEVNULL and an env built
+        from _isolated_git_env() plus GIT_CEILING_DIRECTORIES, caller env on top."""
+        with tempfile.TemporaryDirectory(prefix="bo4300f4-probe-") as d:
+            root = Path(d)
+            probe = root / "probe_maker.py"
+            probe.write_text(_PROBE_MAKER, encoding="utf-8")
+            cwd = root / "fixture" / "project"
+            cwd.mkdir(parents=True)
+            real_global = str(root / "REAL-USER-gitconfig")
+            real_home = str(root / "REAL-USER-home")
+            with mock.patch.dict(
+                os.environ,
+                {"GIT_CONFIG_GLOBAL": real_global, "HOME": real_home, "USERPROFILE": real_home},
+            ):
+                result = maker_fx.run_maker(
+                    ["x"], cwd=cwd, maker_path=probe, env={"PROBE_CALLER": "kept"}, timeout=20,
+                )
+            env = result["answer"]["env"]
+            self.assertEqual("eof", result["answer"]["stdin"], msg=f"stdin was not closed: {result}")
+            self.assertEqual("1", env["GIT_CONFIG_NOSYSTEM"])
+            self.assertNotIn(env["GIT_CONFIG_GLOBAL"], (None, "", real_global))
+            self.assertNotEqual(real_home, env["HOME"])
+            self.assertNotEqual(real_home, env["USERPROFILE"])
+            self.assertTrue(env["GIT_CEILING_DIRECTORIES"], msg="GIT_CEILING_DIRECTORIES not set")
+            self.assertEqual("kept", env["PROBE_CALLER"], msg="caller env must merge on top")
+
+    def test_caller_env_overrides_the_bounded_defaults(self):
+        # covers: BO-4300c-2
+        # angle: boundary
+        """Control row: the caller's env wins over the bounded defaults."""
+        with tempfile.TemporaryDirectory(prefix="bo4300f4-probe2-") as d:
+            root = Path(d)
+            probe = root / "probe_maker.py"
+            probe.write_text(_PROBE_MAKER, encoding="utf-8")
+            result = maker_fx.run_maker(
+                ["x"], cwd=root, maker_path=probe,
+                env={"GIT_CEILING_DIRECTORIES": "caller-wins"}, timeout=20,
+            )
+            self.assertEqual("caller-wins", result["answer"]["env"]["GIT_CEILING_DIRECTORIES"])
+            self.assertEqual("1", result["answer"]["env"]["GIT_CONFIG_NOSYSTEM"])
+
+
+class TestLinkCheckoutExemptionIsDeclared(unittest.TestCase):
+    """M15: the census exemption for link_checkout is declared, not hidden by a split string."""
+
+    def test_link_checkout_exemption_is_declared_with_a_reason(self):
+        # covers: BO-4300f-4-i
+        # angle: failure
+        """MUST BE IMPLEMENTED: no split command string in the builders; the
+        EXEMPTIONS reason names link_checkout; the census over the repo is []."""
+        builders_rel = "unit_tests/build_orchestration/_workspace_maker_builders.py"
+        text = (REPO_ROOT / builders_rel).read_text(encoding="utf-8")
+        self.assertIsNone(
+            re.search(r"""["']work["']\s*\+\s*["']tree["']""", text),
+            msg="the raw command is still spelled as a split string",
+        )
+        self.assertNotIn("_LINK", text)
+        # with exemptions OFF the literal command must now be visible to the census
+        unexempted = census_fx.census(REPO_ROOT, [builders_rel], apply_exemptions=False)
+        self.assertTrue(unexempted, msg="the builders do not spell the command literally for the census")
+        entry = next(e for e in census_fx.EXEMPTIONS if e["path"] == builders_rel)
+        self.assertIn("link_checkout", entry["reason"])
+        self.assertEqual([], census_fx.census(REPO_ROOT, census_fx.tracked_files()))
+
+
+class TestCiHasDedicatedDeployedMakerJob(unittest.TestCase):
+    """M14 / A11 option 2: a dedicated CI job runs the manual-marked deployed-maker tests."""
+
+    FILTER_PATHS = (
+        "templates/scripts/worktree",
+        "templates/scripts/workspace_root.py",
+        "scripts/build_phases_script_deploy_standalone.py",
+        "scripts/build_deploy_manifest_helpers.py",
+        "unit_tests/build_orchestration/",
+    )
+    FAMILY_TESTS = (
+        "test_bo_4300a_1_deployed.py",
+        "test_bo_4300f_4.py",
+        "test_bo_4300a_1_budgets.py",
+    )
+
+    def test_ci_has_a_dedicated_deployed_maker_job_with_path_filter(self):
+        # covers: BO-4300f-4
+        # angle: criterion
+        """MUST BE IMPLEMENTED: a job (not test-shard) on pull_request whose
+        pytest run selects the three family files with -m including manual,
+        path-filtered, reporting skips (-r s/a)."""
+        doc = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+        triggers = doc.get("on", doc.get(True))
+        self.assertIn("pull_request", triggers)
+        candidates = []
+        for name, job in doc["jobs"].items():
+            if name == "test-shard":
+                continue
+            runs = "\n".join(str(s.get("run", "")) for s in job.get("steps", []))
+            if all(t in runs for t in self.FAMILY_TESTS) and "pytest" in runs:
+                candidates.append((name, job, runs))
+        self.assertTrue(candidates, msg="no dedicated job runs the three family test files")
+        name, job, runs = candidates[0]
+        m_expr = re.search(r"""-m\s+(?:"([^"]*)"|'([^']*)'|(\S+))""", runs)
+        self.assertIsNotNone(m_expr, msg=f"{name}: pytest has no -m selection")
+        expr = next(g for g in m_expr.groups() if g is not None)
+        self.assertRegex(expr, r"(?<!not )\bmanual\b", msg=f"{name}: -m {expr!r} does not include manual tests")
+        self.assertRegex(runs, r"\s-r[a-zA-Z]*[sa]", msg=f"{name}: skipped/deselected tests are not reported")
+        whole = yaml.safe_dump(job)
+        for path in self.FILTER_PATHS:
+            self.assertIn(path, whole, msg=f"{name}: path filter lacks {path}")
+        self.assertIn("pull_request", whole, msg=f"{name}: job is not conditioned on pull_request")
+
+
 if __name__ == "__main__":
     unittest.main()

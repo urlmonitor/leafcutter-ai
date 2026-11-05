@@ -86,57 +86,56 @@ def _emit_workflow_variant(raw: bytes, engine: str) -> bytes:
     return raw
 
 
-_WS_START = "// WORKSPACE-ANSWER-START"
-_WS_END = "// WORKSPACE-ANSWER-END"
+def _inline_shared_blocks(text: str, name: str, src_dir: Path) -> str:
+    """Fill every empty shared-block marker pair of a template from ``_shared/``.
 
-
-def _inline_workspace_answer(text: str, name: str, src_dir: Path) -> str:
-    """Fill a template's empty WORKSPACE-ANSWER marker pair from ``_shared/``.
-
-    BO-4300c-3: the single tracked block (``<src_dir>/_shared/workspace-answer.js``)
-    is copied between the markers at build time (E2 bodies have no ``require``,
-    ADR-030). A template without the pair is returned unchanged; a pair that
-    already holds text (a hand copy) or a missing source raises ``ValueError``
-    naming the template, so nothing is deployed. Runs before config injection.
+    BO-4500b-1 (generalising BO-4300c-3): each block's single tracked source is
+    copied between its markers at build time (E2 bodies have no ``require``,
+    ADR-030). The block and consumer sets are derived, never listed. The logic
+    is in build_shared_blocks.py; this wrapper supplies the package root. Runs
+    before config injection.
     """
-    start = text.find(_WS_START)
-    if start == -1:
-        return text
-    end = text.find(_WS_END, start)
-    if end == -1:
-        raise ValueError(f"{name}: {_WS_START} has no matching {_WS_END}")
-    if text[start + len(_WS_START):end].strip():
-        raise ValueError(
-            f"{name}: the WORKSPACE-ANSWER marker pair already holds text; it must be "
-            f"empty (the build fills it from _shared/workspace-answer.js) -- no hand copies"
-        )
-    source = src_dir / "_shared" / "workspace-answer.js"
-    if not source.is_file():
-        raise ValueError(f"{name}: carries WORKSPACE-ANSWER markers but {source} is missing")
-    block = source.read_text(encoding="utf-8").strip()
-    return text[:start + len(_WS_START)] + "\n" + block + "\n" + text[end:]
+    import build_phases as _bp
+    from build_shared_blocks import inline_shared_blocks
+
+    return inline_shared_blocks(text, name, src_dir, _bp.PACKAGE_ROOT)
+
+
+# Kept under its BO-4300c-3 name for existing callers.
+_inline_workspace_answer = _inline_shared_blocks
 
 
 def _workflow_source_bytes(js_file: Path, src_dir: Path) -> bytes:
-    """Return a workflow template's bytes with its WORKSPACE-ANSWER pair filled.
+    """Return a workflow template's bytes with its shared-block pairs filled.
 
     The one place the build and the output-mappings manifest agree on the
     pre-variant, pre-injection content of a workflow, so the recorded
     ``expected_output_hash`` predicts exactly what ``build_workflow_scripts``
-    writes (BO-4300c-3). A template without the markers is returned unchanged.
+    writes (BO-4300c-3). A template without markers is returned unchanged.
     """
-    raw = js_file.read_bytes()
-    if _WS_START.encode() not in raw:
-        return raw
-    return _inline_workspace_answer(raw.decode("utf-8"), js_file.name, src_dir).encode("utf-8")
+    import build_phases as _bp
+    from build_shared_blocks import fill_template_bytes
+
+    return fill_template_bytes(js_file.read_bytes(), js_file.name, src_dir, _bp.PACKAGE_ROOT)
 
 
-def _inline_all_workflow_sources(src_dir: Path) -> dict[str, bytes]:
+def _inline_all_workflow_sources(src_dir: Path, config: dict[str, Any]) -> dict[str, bytes]:
     """Return ``{filename: bytes}`` for every top-level workflow template.
 
-    Each entry has its WORKSPACE-ANSWER marker pair filled (BO-4300c-3); a
-    hand-filled pair or missing source raises ``ValueError`` before any write.
+    One validation pass first checks every route template and every ``_shared``
+    block source (unknown, empty, unused or stale-declared blocks, hand-filled,
+    nested, overlapping or unpaired markers, unresolvable ``{{config.*}}``
+    placeholders in block text) and collects all problems. If any exist it raises
+    ``SharedBlockError`` (a ``ValueError``) whose text lists each problem with
+    route path, 1-based line and block name, and nothing is filled or written.
+    Otherwise each entry has all of its shared-block marker pairs filled.
     """
+    import build_phases as _bp
+    from build_shared_validation import validate_or_fail
+
+    # BO-4500b-1-i..v: validate every template and source, collecting all failures,
+    # before any route is filled or written.
+    validate_or_fail(src_dir, _bp.PACKAGE_ROOT, config)
     return {
         js_file.name: _workflow_source_bytes(js_file, src_dir)
         for js_file in sorted(src_dir.glob("*.js"))
@@ -333,7 +332,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     # BO-4300c-3: fill every WORKSPACE-ANSWER marker pair BEFORE anything is
     # written, so a hand-filled pair or a missing source deploys nothing.
-    inlined = _inline_all_workflow_sources(workflows_js_src)
+    inlined = _inline_all_workflow_sources(workflows_js_src, config)
 
     for js_file in sorted(workflows_js_src.glob("*.js")):
         dest = output_dir / js_file.name
@@ -678,4 +677,11 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
 # - 2026-10-12 [python-coder/BP-300d-3-ii]: version probe takes the first x.y.z
 #   in `claude --version` ("2.1.294 (Claude Code)"), not the last token.
+# - 2026-10-22 [python-coder/BO-4500b-1]: Generalised the WORKSPACE-ANSWER-only fill
+#   to any shared block (_inline_shared_blocks, _workflow_source_bytes); the set of
+#   blocks and consumers is derived from _shared/ and the markers, not listed.
+# - 2026-10-23 [python-coder/BO-4500b-1]: _inline_all_workflow_sources now takes the
+#   build config and runs build_shared_validation.validate_or_fail first, so every
+#   route/source problem (including unresolvable block placeholders) is reported
+#   together and nothing is written on failure.
 # ===========================================================================

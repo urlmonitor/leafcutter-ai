@@ -44,11 +44,22 @@ DECISION HISTORY:
   - 2026-05-12 00:00 [Agent]: Created ADR cross-reference validator in warn-only
     mode (EPIC-ArchitectureDocs ticket 23). Starts warn-only (--strict=False) to
     surface existing drift; flip to --strict after backfill closes.
+  - 2026-10-21 [python-coder/GE-113c-5]: REPO_ROOT was parents[2] of this file
+    (templates/ or .leafcutter/), so the registry, ADR folder and staged files
+    were never found. It is now _resolve_root.find_project_root(); the registry
+    path and ADR folder derive from it. A staged ADR or docs file that cannot be
+    read emits check_outcome.OUTCOME_COULD_NOT_CHECK and exits 1, also in
+    warn-only mode; an empty scope still passes.
+  - 2026-10-21 [python-coder/GE-113c-5 review L-1]: _extract_frontmatter and
+    _get_file_content no longer swallow OSError into {} / "". A file that exists
+    but cannot be read (or is not UTF-8) propagates to main(), which reports
+    could_not_check and exits 1, exactly as a missing file does.
 """
 
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
 import subprocess
@@ -57,11 +68,14 @@ from pathlib import Path
 
 import yaml
 
+from _resolve_root import find_project_root
+from check_outcome import OUTCOME_COULD_NOT_CHECK, emit_result
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = find_project_root()
 COMPONENTS_JSON_PATH = REPO_ROOT / "docs" / "components.json"
 ADR_DIR_REL = "docs/architecture/adrs"
 ADR_PATTERN = re.compile(r"^docs/architecture/adrs/ADR-\d+.*\.md$", re.IGNORECASE)
@@ -77,10 +91,14 @@ def _get_staged_files() -> list[str]:
     Returns:
         List of staged file paths relative to repo root.
     """
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--name-status"],
-        capture_output=True, text=True, encoding="utf-8",
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-status"],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(f"[check-adr-cross-reference] cannot list staged files: {exc}", file=sys.stderr)
+        return []
     if result.returncode != 0:
         return []
     files = []
@@ -105,12 +123,13 @@ def _extract_frontmatter(path: Path) -> dict:
         path: Absolute path to a markdown file.
 
     Returns:
-        Parsed frontmatter dict; empty dict on error or missing frontmatter.
+        Parsed frontmatter dict; empty dict on malformed or missing frontmatter.
+
+    Raises:
+        OSError: when the file cannot be read (main() reports could_not_check).
+        UnicodeDecodeError: when the file is not valid UTF-8 (same handling).
     """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return {}
+    text = path.read_text(encoding="utf-8")
     if not text.startswith("---"):
         return {}
     end = text.find("---", 3)
@@ -129,18 +148,19 @@ def _extract_frontmatter(path: Path) -> dict:
 
 
 def _get_file_content(path: Path) -> str:
-    """Return the full text content of a file, empty string on error.
+    """Return the full text content of a file.
 
     Args:
         path: Absolute path to a file.
 
     Returns:
-        File content string or empty string if the file cannot be read.
+        File content string.
+
+    Raises:
+        OSError: when the file cannot be read (main() reports could_not_check).
+        UnicodeDecodeError: when the file is not valid UTF-8 (same handling).
     """
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
+    return path.read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -372,11 +392,9 @@ def _configure_stdout() -> None:
         None.
     """
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-            sys.stderr.reconfigure(encoding="utf-8")
-        except AttributeError:
-            pass
+        for stream in (sys.stdout, sys.stderr):
+            if isinstance(stream, io.TextIOWrapper):
+                stream.reconfigure(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -484,9 +502,22 @@ def main(argv: list[str] | None = None) -> int:
     if not staged_adrs and not staged_docs:
         return 0
 
-    components = _load_components(COMPONENTS_JSON_PATH)
-    adr_index = _build_adr_index()
-    findings = _collect_findings(staged_adrs, staged_docs, components, adr_index, strict)
+    unread = [f for f in staged_adrs + staged_docs if not (REPO_ROOT / f).is_file()]
+    findings: list[tuple[str, str]] = []
+    if not unread:
+        try:
+            components = _load_components(COMPONENTS_JSON_PATH)
+            adr_index = _build_adr_index()
+            findings = _collect_findings(staged_adrs, staged_docs, components, adr_index, strict)
+        except (OSError, UnicodeDecodeError) as exc:
+            unread = [str(getattr(exc, "filename", None) or exc)]
+    if unread:
+        print(
+            "[adr-cross-reference] could not read file(s): " + ", ".join(unread),
+            file=sys.stderr,
+        )
+        emit_result(OUTCOME_COULD_NOT_CHECK)
+        return 1
     return _report_findings(findings, strict)
 
 

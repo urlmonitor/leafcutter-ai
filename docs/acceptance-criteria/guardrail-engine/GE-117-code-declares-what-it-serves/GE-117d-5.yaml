@@ -1,5 +1,5 @@
 id: GE-117d-5
-readiness: draft
+readiness: approved
 priority: medium
 title: "Sequence diagram: the commit-time declaration-enforcement interaction"
 component: guardrail-engine
@@ -35,9 +35,11 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+change_target: docs
+test_required: false
 it_requirements:
   - "Author the diagram as a Mermaid sequenceDiagram with check_doc_frontmatter-compliant architecture frontmatter (title, type, status, created, last_updated, components, flight_level; diagram_type: sequence)."
-  - "Depict the two DISTINCT registries the guardrail consults: docs/components.json (module-component validity) and the AC store via _load_ac_by_id (AC-reference validity) — do not conflate them into one 'registry' actor."
+  - "Depict the two DISTINCT registries the guardrail consults: docs/components.json (module-component validity) and the AC store via the shared GE-124c-2-i id resolver (AC-reference validity) — do not conflate them into one 'registry' actor."
   - "Show both outcomes (satisfied -> proceed; missing/invalid -> reject with actionable report) and the developer's route back via GE-117e fix/opt-out; keep consistent with GE-117d-1 block behavior."
 delivers_to: null
 expects_from:

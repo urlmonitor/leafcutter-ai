@@ -397,6 +397,44 @@ def test_bp_900h_4_a_file_owned_by_the_operating_system_or_an_external_tool_is_n
     )
 
 
+def test_bp_900h_4_a_helper_shipped_as_a_package_is_present_and_a_helper_shipped_as_neither_is_missing(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-900h-4
+    # angle: criterion
+    """`import _x` loads `_x.py` or `_x/__init__.py`. A `_x.py` expectation
+    met by a deployed package must not be reported missing; a control helper
+    deployed in neither form must be."""
+    deployed_root = tmp_path / "deployed"
+    package_init = deployed_root / "scripts" / "commit_guardian" / "_as_package" / "__init__.py"
+    package_init.parent.mkdir(parents=True)
+    package_init.write_text("", encoding="utf-8")
+    extra_entries = [
+        {
+            "declaring_file": f"scripts/commit_guardian/{name}.py",
+            "read_by": "scripts/commit_guardian/synthetic_guard.py",
+            "expected_at": f"scripts/commit_guardian/{name}.py",
+            "ownership": "ours_to_ship",
+            "derivation": "test-injected",
+        }
+        for name in ("_as_package", "_shipped_as_neither")
+    ]
+    extra_json_path = tmp_path / "extra_inventory.json"
+    extra_json_path.write_text(json.dumps(extra_entries), encoding="utf-8")
+
+    result = _run_inspector(
+        "--deployed-root", str(deployed_root),
+        "--extra-inventory-json", str(extra_json_path),
+    )
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, f"The control helper must make the run fail.\n{combined}"
+    assert "MISSING: scripts/commit_guardian/_shipped_as_neither.py" in combined, combined
+    assert "_as_package.py" not in combined, (
+        f"A helper deployed as a package was reported missing.\n{combined}"
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -410,4 +448,6 @@ def test_bp_900h_4_a_file_owned_by_the_operating_system_or_an_external_tool_is_n
 #   TEST" convention. Reused git-clone/build timing probes from this
 #   session (build.py ~4s, well within the 60-120s subprocess timeouts used
 #   here) to size the timeouts.
+# - 2026-10-23 [GE-127d-3]: Added the package-helper test: GE-127d-3 ships
+#   _file_size_measure as a package, which the inspector reported missing.
 # ====================================================================

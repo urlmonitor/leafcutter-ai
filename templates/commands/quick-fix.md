@@ -110,8 +110,9 @@ maker as ONE command by the absolute path of the deployed `worktree.py` (the
 path `worktree.py where` prints; never a cwd-relative `python scripts/...`
 path):
 
+Run ONE exact command, unchanged, quoting the maker path and every value, and return its stdout verbatim:
 ```bash
-python <absolute-install-root>/scripts/worktree.py ensure --kind feature --slug <slug> --repo-root <absolute-project-root>
+python "<absolute-install-root>/scripts/worktree.py" ensure --kind feature --slug "<slug>" --repo-root "<absolute-project-root>"
 ```
 
 If the maker exits non-zero, stop: report its answer verbatim and do NOT invoke

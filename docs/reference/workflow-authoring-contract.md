@@ -407,7 +407,7 @@ throws when called, so `typeof` alone does not distinguish E1 from E2 reliably.
 - `docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md` —
   data flow diagram of the build-time transform and runtime routing.
 - `docs/reference/workflow-constraints.md` — runtime constraints (min version,
-  token cost, crash-resume) for deployed workflow scripts.
+  token cost, crash-resume) for deployed workflow scripts. Logic shared by several routes (markers, install failures, COMMIT-ANSWER): `docs/reference/shared-blocks.md`.
 
 <!--
 ====================================================================

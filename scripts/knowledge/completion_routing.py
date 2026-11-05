@@ -55,12 +55,45 @@ Public functions:
 
 from __future__ import annotations
 
-import fcntl
 import importlib.util
 import os
 import sys
 from pathlib import Path
 from typing import Any
+
+try:
+    import fcntl
+except ImportError:  # Windows has no fcntl
+    fcntl = None  # type: ignore[assignment]
+
+try:
+    import msvcrt
+except ImportError:  # POSIX has no msvcrt
+    msvcrt = None  # type: ignore[assignment]
+
+
+def _lock_exclusive(lock_fd: int) -> None:
+    """Take an exclusive lock on *lock_fd* (flock on POSIX, msvcrt on Windows).
+
+    Raises RuntimeError when the platform offers neither primitive, so a claim
+    is never merged unlocked.
+    """
+    if fcntl is not None:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    elif msvcrt is not None:
+        os.lseek(lock_fd, 0, os.SEEK_SET)
+        msvcrt.locking(lock_fd, msvcrt.LK_LOCK, 1)
+    else:
+        raise RuntimeError("no file-lock primitive available (neither fcntl nor msvcrt)")
+
+
+def _unlock(lock_fd: int) -> None:
+    """Release the lock taken by :func:`_lock_exclusive`."""
+    if fcntl is not None:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    elif msvcrt is not None:
+        os.lseek(lock_fd, 0, os.SEEK_SET)
+        msvcrt.locking(lock_fd, msvcrt.LK_UNLCK, 1)
 
 
 def _load_required_sibling_module(module_name: str, filename: str) -> Any:
@@ -470,11 +503,11 @@ def claim_and_confirm_routed(
         return _state.claim_without_arbitration(state_path, ids, widen_race_window=True)
 
     try:
-        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        _lock_exclusive(lock_fd)
         try:
             return _state.claim_without_arbitration(state_path, ids)
         finally:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            _unlock(lock_fd)
     finally:
         os.close(lock_fd)
 

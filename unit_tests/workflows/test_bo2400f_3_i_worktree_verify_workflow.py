@@ -173,7 +173,7 @@ class TestNoLaterPhaseRunsAgainstAClaimedLocation(_FixtureCase):
 
         self.assertEqual(
             _labels_seen(result),
-            ["workspace-ensure"],
+            ["resolve-maker-path", "workspace-ensure"],  # BO-4300a-1-ia: the one maker-path probe precedes the step (consumer_drift)
             f"Nothing may be dispatched after a workspace step that gave no answer. stderr={result.stderr!r}",
         )
 
@@ -256,7 +256,7 @@ class TestAnAbsentAnswerIsNotForgiven(_FixtureCase):
         payload = result.result or {}
         self.assertEqual(payload.get("status"), "error", f"An absent answer must halt, not fall back. Got: {payload}")
         self.assertIn("no valid answer", str(payload.get("message")).lower())
-        self.assertEqual(_labels_seen(result), ["workspace-ensure"], "no fallback location may be used")
+        self.assertEqual(_labels_seen(result), ["resolve-maker-path", "workspace-ensure"], "no fallback location may be used")  # BO-4300a-1-ia probe (consumer_drift)
 
 
 if __name__ == "__main__":

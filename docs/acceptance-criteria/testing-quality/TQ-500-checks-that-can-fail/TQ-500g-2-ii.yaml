@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -51,73 +51,204 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "Source of the 'to run later' list the runs take up."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Home of the shared wrong-version runner and writer (_wvr_*, _wvw_*) this AC extends."
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "TQ-500g-5 reference page; documents the database gate, the to-run-later files and non_blocking_survivors."
 assigned_agent: python-coder
-estimated_complexity: M
-delivers_to: null
+estimated_complexity: L
+delivers_to:
+- agent: llm-expert
+  ac_id: TQ-500g-2
+  contract: >-
+    For every in-scope test with requires_db: true, when check_test_db(<repo root>) reports any status
+    other than "reachable", each of its rows (the baseline and every wrong version) is {result: "not_run",
+    blocking: true, detail: "<status>: <checker message>"}. For not_configured the detail names
+    testing_context.db_connection_test; for unreachable it says the configured database could not be
+    reached. No user, password or full address appears. The verdict is gate_passed false, reason
+    "unfinished".
+- agent: python-coder
+  ac_id: TQ-500g-2-i
+  contract: >-
+    scripts/build_orchestration/_wvr_db.py exposes the per-run database gate (one check_test_db call per
+    `run`, its status and message) and the set of in-scope requires_db tests. TQ-500g-2-i's catalogue step
+    runs only after that gate reports "reachable".
 expects_from:
-  - ac_id: TQ-500g-2
-    contract: "The database test writer's 'to run later' wrong versions, in a form the runner takes up."
-  - ac_id: INF-1100d-3-i
-    contract: "The test database check's not-configured and unreachable outcomes, naming the setting and never the credentials."
+- ac_id: TQ-500g-2
+  contract: >-
+    User decision OQ-1 (A), 2026-10-22. Per-requirement files <git-dir>/leafcutter/to-run-later/<ac-id>.json,
+    shaped {ac_id: str, to_run_later: [{test: str ('<repo-relative POSIX test file path>::<test function
+    name>'), wrong_version: str, reason: str}]}. Absent means none.
+- ac_id: INF-1100d-3-i
+  contract: >-
+    check_test_db(target_root) in scripts/db_check/checker.py returns {status: "not_configured" |
+    "invalid" | "config_error" | "unreachable" | "reachable", setting: "testing_context.db_connection_test",
+    host, port, database, message}. It never contains a password or the raw configured value, and it
+    imports no driver.
+- ac_id: TQ-500g-1-i
+  contract: >-
+    The shared runner (`wrong_version_runner.py run --ac-ids --test-root --ac-root --base-ref
+    --alterations`) and its verdict JSON {gate_passed, applicable, verified, outcome, reason, results:
+    [{test, wrong_version, result, blocking, detail}], survivors, unfinished}.
+- ac_id: TQ-500g-1-x
+  contract: >-
+    `wrong_version_writer.py list` prints {owed: [{name, files, scope: "declared"|"derived"}], error}
+    through _wvw_list / _wvr_scope.owed_names. A name with no in_scope_files takes the derived scope (the
+    non-test files changed against --base-ref).
 it_requirements:
-- 'A test counts as a database test when its AC test_spec entry says requires_db: true. That is declared,
-  never inferred from the code.'
-- 'Before any database run, call check_test_db in scripts/db_check/checker.py (the one reader). not_configured:
-  every database run is not_run, naming testing_context.db_connection_test. unreachable: not_run, ''the
-  configured database could not be reached''. Both leave the work unfinished. Neither ever says caught
-  or passed. Credentials never appear.'
-- 'Extra wrong versions from to_run_later.json (the TQ-500g-2 shape) go through the preparer and the runs
-  like named ones. They are reported per test with blocking: false. Their survivors are named but never
-  set gate_passed false on their own. Survivors of named wrong versions still stop the work.'
-- The runner never constructs or defaults an address. Test processes get the resolved address through
-  the same mechanism as the INF-1100d-3-ii database-test pattern.
-- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
-  Files already over the limit must not grow.
-- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
-  INF-1100d-4 scans shipped files.
+- >-
+  Database tests are declared. A test is a database test when its own AC test_spec entry says
+  requires_db: true, read through the one AC reader (_wvr_records.load_records, used by _wvr_scope). It is
+  never inferred from the test's code or imports.
+- >-
+  The gate uses the one resolver and fails closed (alignment question 2). Once per `run`, before the
+  baseline, when any in-scope test is a database test, the runner calls check_test_db(<repo root>) from
+  scripts/db_check/checker.py. The repo root is the git toplevel the runner already resolves. Any status
+  other than "reachable" (not_configured, invalid, config_error, unreachable), or the call raising, means
+  no database test is selected into any pytest run, the baseline included. Its rows are not_run per the
+  delivers_to shape, and the verdict is unfinished. Non-database in-scope tests run as before.
+- >-
+  The runner never chooses an address. It never reads the setting itself, and never builds, defaults or
+  passes an address (no CLI flag, no environment variable). The pytest child runs with its working
+  directory at the repo root, so tests following the INF-1100d-3-ii pattern
+  (resolve_test_db_address(Path.cwd())) resolve the same setting the gate checked.
+- >-
+  Extra wrong versions (user decision Q2, 2026-09-28). The to-run-later files for the run's --ac-ids are
+  read by ONE new reader, scripts/build_orchestration/_wvr_extras.py. Both `wrong_version_writer.py
+  list` (through _wvw_list) and the runner (through _wvr_scope) call it, so the owed set and the run set
+  cannot drift. In `list`, each extra is an owed item with scope "derived" and two additive keys,
+  blocking: false and origin: "to_run_later". test-breaker prepares it like a named version, and the
+  writer's `write` step and the runner apply, run and restore it unchanged.
+- >-
+  Extras never decide gate_passed. Every row for an extra carries blocking: false whatever its result.
+  An extra that survives is listed by name in a new additive verdict key, non_blocking_survivors:
+  [{test, wrong_version}], and never in survivors. A named version's survivor still sets gate_passed
+  false. An extra whose matching key (_wvr_scope.wrong_version_key) equals a must_catch name of the same
+  test, or "the fix undone", is not an extra: it stays the named, blocking version. An extra whose test
+  is not a resolved in-scope test, and an unreadable or malformed to-run-later file, each give one
+  non-blocking row naming the test or the file. Neither is dropped silently, and neither stops the work.
+- >-
+  Routes stay unchanged. Files are found by requirement id, so the `list`, `write` and `finish` flags
+  and the three route workflows (build-feature.js, build-ticket.js, fast-lane-ship.js) and
+  /build-epic's supervisor text need no edit (user decision OQ-1 (A), 2026-10-22).
+- >-
+  File size (alignment question 5; scripts/commit_guardian/_file_size_ratchet.py count_content_lines,
+  .py limit 400). _wvr_scope.py is at 325 counted lines, so the extras reader goes in the new
+  _wvr_extras.py and the database gate in the new _wvr_db.py, and _wvr_scope.py gets at most a small
+  import and call. wrong_version_runner.py (305 on main, 318 with PR #1305) gets wiring only.
+  _wvr_verdict.py (85), _wvw_list.py (53) and wrong_version_writer.py (70) have room. Do not touch
+  scripts/ac_store/done_proof.py (956, over the limit and ratcheted) or fast_lane.py (391). Every new file
+  stays at or under 400.
+- >-
+  --record (PR #1305, not on main at this alignment). Nothing here depends on it. When it merges, the
+  record carries the same verdict, including these not_run rows and non_blocking_survivors, unchanged.
+- >-
+  Any database address in a template, fixture or doc is the placeholder
+  postgresql://<user>:<password>@<host>:<port>/<database>. INF-1100d-4 scans shipped files. Test
+  fixtures build any concrete loopback address at run time and never hold a literal one.
 test_spec:
-- name: test_p1_named_and_extra_wrong_versions_run_on_configured_database
+- name: test_p1_named_undone_and_extra_versions_run_on_configured_database
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: criterion
-  description: 'P1: DB1 and DB2 are run against the named version, the fix undone and the extra version,
-    with the database address taken only from the setting. The extra version has its own per-test outcomes.'
+  surface_invoked: wrong_version_runner.py run (subprocess)
+  description: >-
+    P1. DB1 and DB2 are run against "drop the retry_due condition", "the fix undone" and the extra "treat a
+    NULL retry_due as true". The extra has its own per-test rows. Every connection the stand-in driver
+    logged went to the one configured address.
   requires_db: false
+  must_catch:
+  - extra wrong versions silently dropped
+  - database tests left out of the runs
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_extras.py
+  - scripts/build_orchestration/_wvr_db.py
+  - scripts/build_orchestration/wrong_version_runner.py
 - name: test_extra_survivor_reported_but_not_blocking
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: discrimination
-  description: An extra-version survivor is named, with blocking false, and gate_passed stays true. A
-    named-version survivor in the same run makes gate_passed false.
+  description: >-
+    An extra-version survivor is named in non_blocking_survivors with blocking false, and gate_passed
+    stays true. A named-version survivor in the same run makes gate_passed false. An extra spelled like a
+    must_catch name stays blocking.
   must_catch:
   - writer's extra wrong versions block the work
-  - extra wrong versions silently dropped
   - named-version survivor made non-blocking
+  - extra named like a must_catch name downgrades it to non-blocking
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_verdict.py
+  - scripts/build_orchestration/_wvr_extras.py
 - name: test_p2_not_configured_reports_not_run_and_unfinished
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: reachability
-  surface_invoked: the shared runner CLI
-  description: The runner CLI, run as a subprocess on a temp project with no setting, reports the database
-    runs as not_run naming testing_context.db_connection_test, with gate_passed false and no caught result.
+  surface_invoked: wrong_version_runner.py run (subprocess)
+  description: >-
+    The runner CLI, run on a temp project with no setting, reports the database rows as not_run naming
+    testing_context.db_connection_test, with gate_passed false and no caught or passed row. No database
+    test appears in any pytest selection.
   must_catch:
   - not-configured database runs reported as passed
   - runner falls back to a default address
+  - database tests run without the check
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+  - scripts/build_orchestration/wrong_version_runner.py
 - name: test_p3_unreachable_reports_not_run
   target_dir: unit_tests/build_orchestration/
   framework: pytest
   type: integration
   angle: failure
-  description: 'P3: the setting names an unreachable placeholder host. The runs are not_run, ''could not
-    be reached'', and the work is unfinished. No connection is made to any other address.'
+  description: >-
+    P3. The setting names a closed loopback port, so the database rows are not_run ("could not be
+    reached") and the work is unfinished. The stand-in driver records no connection to any address.
   must_catch:
   - unreachable database read as caught
-test_rationale: P2 and P3 run through the real CLI with real project config and the real db_check reader,
-  and need no database. P1 uses a runner-level test double for the database execution, so it runs in CI.
-  The extra-versus-named survivor pair pins the Q2 decision in both directions.
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_invalid_or_unreadable_setting_fails_closed
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    An unparseable address (status invalid) and an unreadable skills_config.json (status config_error)
+    each give not_run database rows with the checker's message and never the raw value.
+  must_catch:
+  - invalid setting treated as reachable
+  in_scope_files:
+  - scripts/build_orchestration/_wvr_db.py
+- name: test_writer_list_shows_extras_like_runner
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: seam
+  surface_invoked: wrong_version_writer.py list (subprocess)
+  description: >-
+    `wrong_version_writer.py list` prints the extra as an owed item with scope derived, blocking false and
+    origin to_run_later, and the runner runs exactly the extras list printed.
+  must_catch:
+  - writer list and runner read different extras
+  in_scope_files:
+  - scripts/build_orchestration/_wvw_list.py
+  - scripts/build_orchestration/_wvr_extras.py
+test_rationale: >-
+  CI has no database (alignment question 4), so every test here runs without one, on real fixtures, and
+  none is skipped. P2 and P3, and the invalid/config_error case, run the real runner CLI with a real
+  .claude/skills_config.json and the real db_check checker; they need no server. P1 and the extra-survivor
+  pair use the shared harness unit_tests/build_orchestration/_tq_500g_2_db_harness.py: a loopback TCP
+  listener that makes check_test_db report "reachable", and a stand-in PostgreSQL DB-API module on the
+  pytest child's import path that logs every connect address. That log proves "on the database the
+  setting names and on no other". The extra-versus-named survivor pair pins the Q2 decision in both
+  directions, and the same-name case stops an agent's extra from downgrading a named version.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -150,3 +281,16 @@ notes: |
 
   IT-PO ENRICHMENT (2026-09-28)
   Lane: python-coder after TQ-500g-2 (prompt) and TQ-500g-1-i.
+
+  IT-PO TECHNICAL ALIGNMENT (2026-10-22, lane fast-lane/tq-500g-2)
+  The gate is check_test_db from scripts/db_check/checker.py, called once per runner `run`.
+  All four non-reachable statuses fail closed, including invalid and config_error, which
+  the criteria do not name. A database test is declared by test_spec requires_db: true.
+  The runner never handles an address; the tests resolve it themselves (INF-1100d-3-ii)
+  with their working directory at the repo root.
+  Extras (Q2) go through one new reader, _wvr_extras.py, used by both the writer's list
+  step and the runner. They are non-blocking rows, and extra survivors go in the additive
+  non_blocking_survivors key. An extra spelled like a must_catch name stays blocking.
+  USER DECISION (2026-10-22): OQ-1 (A). The to-run-later files are
+  <git-dir>/leafcutter/to-run-later/<ac-id>.json, found by requirement id, with no route
+  changes. Build this before TQ-500g-2-i in the lane.

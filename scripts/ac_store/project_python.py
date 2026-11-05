@@ -2,7 +2,7 @@
 MODULE: scripts/ac_store/project_python.py
 GOAL: Resolve the interpreter a gate must judge an adopter project's tests
     with, and read a collection-time ImportError of the project's own package
-    out of a pytest run (TQ-500f-3-v).
+    out of a pytest run (TQ-500f-3-vi).
 BUSINESS CONTEXT: The build routes launch their gates as bare ``python
     fast_lane.py ...``. In an adopter whose dependencies live in a project venv
     (DIAGraph: a uv-managed ``.venv`` in each worktree) that interpreter has
@@ -228,7 +228,7 @@ def project_import_refusal(test_root: Path, results: dict, judge: ProjectPython)
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-10-22 [python-coder/TQ-500f-3-v]: Created. The red-baseline gate ran
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: Created. The red-baseline gate ran
 #   the adopter's tests with whatever interpreter launched it, and an
 #   un-importable project package surfaced as "no red outcome". Resolution order
 #   (configured, .venv, uv, current) per the AC; the refusal is keyed on a
