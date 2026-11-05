@@ -93,6 +93,7 @@ _MODULE_FILES = (
     "_done_proof_reachability_gate.py",
     "pytest_outcome_reader.py",  # TQ-500g-4: done_proof imports it at module scope
     "project_python.py",  # TQ-500f-3-vi: done_proof imports it at module scope
+    "covers_tag_identity.py",  # TQ-500f-3-iii: done_proof imports it at module scope
 )
 
 

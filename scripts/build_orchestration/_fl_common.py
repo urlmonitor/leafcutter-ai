@@ -72,12 +72,12 @@ if str(_RELEASE_DIR) not in sys.path:
 
 from done_proof import (  # noqa: E402
     _TEST_DEF_RE,
-    _find_nodeid_for_test,
     _nodeid_function_name,
     _run_pytest_and_parse,
     _scan_test_root_for_covers_tags,
     verify_done_eligible,
 )
+from covers_tag_identity import aggregate_unit, resolve_tag  # noqa: E402  # TQ-500f-3-iii: the ONE shared tag-to-test matcher
 from scan_ac_store import (  # noqa: E402
     _build_id_index,
     _classify_ac,
@@ -121,7 +121,7 @@ __all__ = [
     "_build_id_index",
     "_classify_ac",
     "_drain_cycles",
-    "_find_nodeid_for_test",
+    "aggregate_unit",
     "_is_active",
     "_is_approved",
     "_is_leaf",
@@ -131,6 +131,7 @@ __all__ = [
     "_nodeid_function_name",
     "_run_pytest_and_parse",
     "_run_pytest_and_parse_with_kind",
+    "resolve_tag",
     "_scan_test_root_for_covers_tags",
     "_sort_ready",
     "_walk_ac_yamls",

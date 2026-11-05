@@ -165,6 +165,10 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    # covers_tag_identity.py (TQ-500f-3-iii) -- the ONE tag-to-test matcher. Imported
+    # by done_proof.py (check_done_proof hook) and by build_orchestration/_fl_common.py
+    # (fast_lane.py verify_red_baseline); missing here = ModuleNotFoundError in both.
+    ("scripts/ac_store/covers_tag_identity.py", "covers_tag_identity.py"),
     ("scripts/ac_store/project_python.py", "project_python.py"),  # TQ-500f-3-vi: imported by done_proof + fast_lane
     ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
