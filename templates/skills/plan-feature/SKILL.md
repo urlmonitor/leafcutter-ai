@@ -614,7 +614,8 @@ else: no startup verdict and no other argument.
 
 **The workspace answer.** The resume must work in the SAME workspace the run
 paused in, because only that workspace holds the run's pause record and drafts.
-Get its answer by running the maker's `locate` verb ONCE for that workspace's
+Get its answer by running the workspace maker's (`scripts/worktree.py`, see
+`docs/how-to/get-a-workspace.md`) `locate` verb ONCE for that workspace's
 kind and slug (the same `--kind ac` and `<slug>` that §WS.1 used), as ONE
 command by the absolute path of the deployed `worktree.py`; or reuse the maker
 answer this session already holds for that run:
@@ -622,9 +623,9 @@ answer this session already holds for that run:
 ```bash
 python "<absolute-install-root>/scripts/worktree.py" locate --kind ac --slug "<slug>" --repo-root "<absolute-project-root>"
 ```
-
 Pass its stdout JSON VERBATIM as `args.workspace`, exactly as §WS.2 requires --
-never re-typed, trimmed or re-shaped. `locate` never makes a workspace. If the
+never re-typed, trimmed or re-shaped. `locate` never makes a workspace (the maker's
+verbs are in `docs/how-to/get-a-workspace.md`). If the
 maker refuses (for example `NOT_FOUND`), stop, report the maker's answer
 verbatim and do NOT resume. Never run `ensure` for a resume: a fresh workspace
 holds neither the paused run's record nor its drafts.

@@ -2202,12 +2202,12 @@ const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-run
 const scriptStepAgentId = "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
-// Why a start with neither the maker's answer nor a verdict fails closed (ACD-2100d-5): docs/reference/plan-feature-workflow-rationale.md
+// Why a missing pre-flight verdict fails closed: docs/reference/plan-feature-workflow-rationale.md
 // The verdict is consulted only for a start without args.workspace; with the maker's answer the workspace-answer check and the shell-runner decline rule guard the run.
 const makersAnswerSupplied = !!args && args.workspace !== undefined && args.workspace !== null;
 if (!makersAnswerSupplied && (!workspaceSetupPermission || typeof workspaceSetupPermission !== "object")) {
-  const missingWorkspaceMessage = "No workspace was supplied: args.workspace (the workspace maker's answer) is missing. Run the maker step once -- Step 1 of the /plan-feature command, §WS.1 of the plan-feature skill: python {{config.output_root}}/scripts/worktree.py ensure --kind ac ... -- and start the workflow again with args.workspace set to that answer, verbatim (Step 2 of the command). args.workspace_setup_permission is only needed for a start without the maker's answer. Halting before any authoring agent is dispatched.";
-  log("[plan-feature][WARNING] " + missingWorkspaceMessage); return { status: "error", message: missingWorkspaceMessage };
+  const missingWorkspaceMessage = "No workspace was supplied: args.workspace (the workspace maker's answer) is missing. Run the maker step once -- Step 1 of the /plan-feature command, §WS.1 of the plan-feature skill: python \"<absolute-install-root>/scripts/worktree.py\" ensure --kind ac --slug \"<slug>\" --repo-root \"<absolute-project-root>\" -- and start the workflow again with args.workspace set to that answer, verbatim (Step 2 of the command). args.workspace_setup_permission is only needed for a start without the maker's answer. Halting before any authoring agent is dispatched.";
+  return { status: "error", message: missingWorkspaceMessage };
 }
 
 if (!makersAnswerSupplied && workspaceSetupPermission.permits !== true) {

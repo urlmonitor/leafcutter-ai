@@ -28,6 +28,7 @@ from unit_tests.workflows._acd_2100d_5_support import (
 from _workflow_engine_defaults import _default_args_for_script  # noqa: E402
 
 _WORKSPACE_ARG = re.compile(r"args\.workspace(?![\w])")
+_MAKER_COMMAND = re.compile(r'python "[^"]*worktree\.py"[^\n]*?(?= -- |$)')
 
 
 def _neither_report():
@@ -87,10 +88,15 @@ class TestNeitherArgumentHalt(unittest.TestCase):
         for name in re.findall(r"args\.(\w+)", report):
             if name != "workspace_setup_permission":
                 self.assertIn(name, start_names, f"the report asks for args.{name}, which the installed command does not pass")
-        paths = re.findall(r"[\w./\\-]*worktree\.py", report)
-        self.assertTrue(paths, f"the report gives no maker script path: {report!r}")
-        for path in paths:
-            self.assertTrue((route.root / path.replace("\\", "/")).is_file(), f"{path} is not in the installed copy")
+        commands = [m.group(0).strip() for m in _MAKER_COMMAND.finditer(report)]
+        self.assertTrue(commands, f"the report gives no maker command: {report!r}")
+        install_root = route.workflow_path.parent.parent
+        for command in commands:
+            self.assertIn(command, route.command_text, f"the report's maker command is not in the installed command: {command!r}")
+            script = re.search(r'"([^"]*worktree\.py)"', command).group(1)
+            self.assertTrue(script.startswith("<absolute-install-root>/"), f"the report's maker path is not install-root anchored: {script}")
+            installed = install_root / script[len("<absolute-install-root>/"):]
+            self.assertTrue(installed.is_file(), f"{script} resolves to {installed}, which is not in the installed copy")
         for step in re.findall(r"Step\s+\d+", report):
             self.assertRegex(route.command_text, rf"(?m)^#{{2,4}}\s+{re.escape(step)}\b", f"{step} is not in the installed command")
         for section in re.findall(r"§\s?[A-Z]+(?:\.\d+)?", report):
