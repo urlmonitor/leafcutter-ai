@@ -78,7 +78,8 @@ def stop_unresolved(draft: Draft, root_id: str, guard: str) -> list[str]:
             draft.put_item(item, status=WorkItemStatus.CANCELLED, interaction_ref=None,
                            limitations=[*item.limitations, "cancelled: the run was cancelled"])
         else:
-            text = guards.unresolved_text(guard, draft.request_of(item).goal)
+            step = item.binding.capability_id if item.binding else None
+            text = guards.unresolved_text(guard, draft.request_of(item).goal, step)
             draft.put_item(item, status=WorkItemStatus.BLOCKED, interaction_ref=None,
                            limitations=[*item.limitations, text])
     return ids

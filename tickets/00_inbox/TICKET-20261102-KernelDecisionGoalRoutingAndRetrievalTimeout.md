@@ -192,3 +192,53 @@ report gave no sign that its view of the repository was old.
 - Reversibility: code-only, revertible.
 
 ## Comments
+
+### 2026-11-04 21:50 — claude (status: handoff)
+feedback-id: (submit-failed)
+
+Defect 2 seen three more times on 2026-11-04, with the machine idle (CPU load 27%, no busy
+Python process), so load is not the cause:
+- `run-560b8dd4949c4000` stopped at `max_active_seconds` 300 while ranking (`partial`, no ranking).
+- `run-a51ddba49ea84482` (`max_active_seconds` raised to 900 by a per-run `--config`):
+  `retrieve.repository timed out after 120.0s` nine times; `blocked`, "research found no
+  evidence about the option space".
+- `run-0409a87664fc49f0` (same override, file cache warm): two 120 s timeouts; `blocked` the same way.
+
+Root cause, measured by calling `search_repo_text` per source against `leafcutter-ai`
+(kernel at `171aafa5d`):
+
+| source | files | cold cache | warm cache |
+|---|---|---|---|
+| repo.acceptance_criteria | 5416 | 112.3 s | 22.8 s |
+| repo.patterns | 1076 | 50.8 s | 3.8 s |
+| repo.docs | 632 | 26.9 s | 3.2 s |
+| repo.tickets | 1865 | 21.3 s | 3.6 s |
+| repo.flows | 133 | 7.3 s | 0.6 s |
+
+Every run re-reads and re-sections every file of every source. The sources of one need run in
+parallel worker threads under one GIL inside one 120 s `capability_timeout_seconds`, so a
+`task_context` need (acceptance_criteria + docs + tickets + analysis + ...) passes 120 s even
+warm, and far exceeds it cold. cProfile of repo.tickets (warm, 5.3 s): `_sectioned` 2.4 s,
+`access.relative`/`resolve` 1.35 s (`nt._getfinalpathname` 0.76 s for 7464 calls),
+`read_text` 1.27 s.
+
+Scope taken now (user decision 2026-11-04, "fix the kernel first"): AC-3, AC-4 and AC-5 on
+branch `feature/kernel-retrieval-partial-evidence`, as the Suggested direction's split allows.
+AC-1, AC-2 and AC-6 stay open on this ticket. Reducing the per-run scan cost itself (for
+example a per-file parse cache keyed by path, size and mtime, or a narrower AC source) is not
+in these ACs and needs its own decision; the kernel run that was to decide it
+(`run-0409a87664fc49f0`) was blocked by this same defect.
+
+Built on this branch: AC-3 (each source search has a deadline of 0.6 × `capability_timeout_seconds`;
+a cut source is reported unavailable and the answering sources are kept), AC-4 (a `timeout`
+failure is retried only while one more full timeout fits below `max_active_seconds`; an unknown
+attempt time counts as a full timeout), AC-5 (`unresolved_text` names the capability when the
+item has no goal). Open from review, not in this branch:
+- An abandoned source thread keeps running (it cannot be cancelled) and competes for the GIL
+  until it ends; `search_repo_text` / `search_knowledge_map` take no stop signal. The outer
+  `wait_for` in `nodes_execute` has the same trait.
+- `fetch_explicit` (explicit locators) still has no deadline of its own, so AC-3 covers searched
+  sources only.
+- `tests/kernel/grounding/test_sources_and_coverage.py::test_candidate_counts_and_scan_cost_stay_bounded`
+  failed locally (92.4 s against a 30 s bound) on a cold cache; it scans the real repo through
+  `search_repo_text`, which this branch does not change. Same cause as the table above.
