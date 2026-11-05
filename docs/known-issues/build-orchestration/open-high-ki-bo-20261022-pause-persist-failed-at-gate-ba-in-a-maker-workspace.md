@@ -13,7 +13,7 @@ related_docs:
   - docs/known-issues/build-orchestration/open-high-ki-bo-20260928-pause-verify-rejects-an-enveloped-read-back.md
   - docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-rule-check-resolves-the-store-root-against-the-session-cwd.md
-  - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+  - docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
   - docs/how-to/resume-a-paused-plan-feature-run.md
   - docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
 ---

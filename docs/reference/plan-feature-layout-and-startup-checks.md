@@ -4,7 +4,7 @@ description: "Which copy of each /plan-feature support file runs depending on wh
 type: reference
 status: active
 created: 2026-09-08
-last_updated: 2026-09-08
+last_updated: 2026-11-04
 components:
   - ac_driven_dev
 related_docs:
@@ -40,7 +40,7 @@ arrive holding.
 (`templates/workflows-js/plan-feature.js`, deployed to
 `.leafcutter/workflows/plan-feature.js`) dispatches or reads several other
 files while it is starting up — the agent registry
-(`config/agent_registry.json`), the workspace-setup permission pre-flight
+(`config/agent_registry.json`), the workspace-setup permission check for a start without the maker's answer
 (`scripts/worktree/check_workspace_setup_permission.py`), the worktree-setup
 script (`scripts/setup_ticket_worktree.py`), and the pause store
 (`scripts/pause_store.py`). Every one of these is resolved by the **same
@@ -154,38 +154,39 @@ was specifically built to avoid selecting.
 
 ## 3. Startup checks that can halt before the first question
 
-The Pre-Stage-0 Workspace-Setup Permission Gate is the check that decides
-whether `/plan-feature` may proceed to create its authoring worktree. It is
-the mandatory gate ahead of every authoring dispatch (`BO-1500f-1`), and per
-`ACD-2100b-4` it is a **closed set**: every outcome other than "granted" halts
-the run before any authoring agent is dispatched, before an authoring
-worktree or branch exists on disk, and reports an outcome that says the run
-did not proceed — never a success outcome. There is no fifth, unenumerated
-way for this gate to let a run through.
+A start is accepted in one of two ways. The installed `/plan-feature` command
+and skill pass exactly two arguments, `userInput` and `workspace`.
+`args.workspace` (the workspace maker's answer) is what a start needs: with it
+the workflow runs no workspace step of its own and neither requires nor consults
+`args.workspace_setup_permission`. That verdict is required only for a start
+without the maker's answer; the skill no longer runs a permission pre-flight
+(its former sec. WSP was retired on 2026-10-10), so a caller that starts
+without the answer must run
+`scripts/worktree/check_workspace_setup_permission.py` itself.
 
-As of the fix landed for `KI-ACD-009` (`ACD-2100b-5`), the check is a local
-read — `scripts/worktree/check_workspace_setup_permission.py`, run by the
-`/plan-feature` skill itself before the workflow starts — rather than an
-agent dispatch, so a transport failure can no longer masquerade as one of the
-outcomes below. The verdict it produces carries one of six `outcome` values,
-and the workflow renders a different, specific report for each. Every report
-below is quoted verbatim from `templates/workflows-js/plan-feature.js`
-(current as of the fixes above), with the agent id shown exactly as the source
-builds it: by string concatenation of the real `workspaceSetupAgentId`
-variable, which resolves to `args.workspace_setup_agent` or, when that is not
-set, defaults to `worktree-agent`. The quotes below show that default value;
-a run configured with a different `workspace_setup_agent` sees its own id in
-the same position, since the source substitutes the variable itself, never a
-literal placeholder token.
+For a start without the maker's answer, the Pre-Stage-0 Workspace-Setup
+Permission Gate decides whether `/plan-feature` may create its authoring
+worktree (`BO-1500f-1`). Per `ACD-2100b-4` it is a **closed set**: every
+outcome other than "granted" halts the run before any authoring agent is
+dispatched and before an authoring worktree or branch exists, and reports an
+outcome that says the run did not proceed. The check is a local read (not an
+agent dispatch, `ACD-2100b-5`), so a transport failure cannot masquerade as one
+of the outcomes. The verdict carries one of six `outcome` values, and the
+workflow renders a specific report for each. Every report below is quoted
+verbatim from `templates/workflows-js/plan-feature.js` (build-time
+`{{config.output_root}}` shown as `.leafcutter`), with the agent id shown as
+the source builds it: `args.workspace_setup_agent` or, when not set, the
+default `shell-runner`. A run configured with a different id sees its own id in
+the same position.
 
 | Outcome | What it means | What it does **not** mean | Report |
 |---|---|---|---|
-| No verdict supplied at all | The workflow was invoked directly, bypassing the skill's own pre-flight step, so no `args.workspace_setup_permission` reached it. | Not a permission denial — the check never ran. | "No workspace-setup permission pre-flight verdict was supplied in args (args.workspace_setup_permission). This workflow no longer resolves the workspace-setup permission itself: the plan-feature skill's pre-flight (scripts/worktree/check_workspace_setup_permission.py) must run BEFORE this workflow is invoked and pass its verdict through args. This is a MISSING pre-flight, not a permission denial — halting before any authoring agent is dispatched." |
-| `read_failure` | The registry file could not be obtained at all — no repository could be resolved, the file does not exist at the resolved location, or the process was denied permission to read it. | Says nothing about `worktree-agent`'s (or whichever agent id is configured) charter — it was never consulted. Do not edit the registry entry on this report alone. | "The workspace-setup permission pre-flight could not read the agent registry at '`<location>`'. `<reason>` Halting before any authoring agent is dispatched." — where `<reason>` is one of "No repository could be resolved from the current directory.", "No file exists at the resolved registry location.", "The process was denied permission to read the resolved registry location.", or "The registry could not be read." |
+| No answer and no verdict | Neither `args.workspace` (the maker's answer) nor `args.workspace_setup_permission` reached the workflow, for example because it was invoked directly. | Not a permission denial: no check ran. Remedy: run the maker step once (`python "<absolute-install-root>/scripts/worktree.py" ensure --kind ac --slug "<slug>" --repo-root "<absolute-project-root>"`) and start again with `args.workspace` set to its answer verbatim. | "No workspace was supplied: args.workspace (the workspace maker's answer) is missing. Run the maker step once -- Step 1 of the /plan-feature command, §WS.1 of the plan-feature skill: python "<absolute-install-root>/scripts/worktree.py" ensure --kind ac --slug "<slug>" --repo-root "<absolute-project-root>" -- and start the workflow again with args.workspace set to that answer, verbatim (Step 2 of the command). args.workspace_setup_permission is only needed for a start without the maker's answer. Halting before any authoring agent is dispatched." |
+| `read_failure` | The registry file could not be obtained at all — no repository could be resolved, the file does not exist at the resolved location, or the process was denied permission to read it. | Says nothing about `shell-runner`'s (or whichever agent id is configured) charter — it was never consulted. Do not edit the registry entry on this report alone. | "The workspace-setup permission pre-flight could not read the agent registry at '`<location>`'. `<reason>` Halting before any authoring agent is dispatched." — where `<reason>` is one of "No repository could be resolved from the current directory.", "No file exists at the resolved registry location.", "The process was denied permission to read the resolved registry location.", or "The registry could not be read." |
 | `parse_failure` | The registry file was read, but its contents are not valid JSON with an `agents` array. | Says nothing about any specific agent's entry — no entry could be looked up. | "The workspace-setup permission pre-flight read the agent registry successfully but its contents could not be interpreted as valid JSON. Halting before any authoring agent is dispatched." |
-| `agent_not_found` | The registry was read and parsed successfully; it simply has no entry for the configured agent id (a rename or a typo in `workspace_setup_agent` both look like this). | Not a permissions problem — nothing says the agent is denied, only that it is absent. | "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent 'worktree-agent', but that agent was not found in the registry (config/agent_registry.json). Halting before any authoring agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', agent='worktree-agent'." |
+| `agent_not_found` | The registry was read and parsed successfully; it simply has no entry for the configured agent id (a rename or a typo in `workspace_setup_agent` both look like this). | Not a permissions problem — nothing says the agent is denied, only that it is absent. | "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent 'shell-runner', but that agent was not found in the registry (config/agent_registry.json). Halting before any authoring agent is dispatched. Report this mis-assignment to the operator: step='worktree-setup', agent='shell-runner'." |
 | `no_entries_collection` | The registry parsed as JSON, but its `agents` field is not a list at all (missing key, or the wrong type). | A distinct fact from `agent_not_found` — the entries collection itself is malformed, not merely missing one entry. | "The agent registry (config/agent_registry.json) could not be used: its 'agents' field is not a list of agent entries. Halting before any authoring agent is dispatched. Fix config/agent_registry.json so that 'agents' is a list of agent entries." |
-| `permission_denied` | The registry was read, the configured agent id was found, and its entry's `permits_shell` field is not `true`. This is the **only** outcome that is genuinely a permissions verdict. | — | "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent 'worktree-agent', which is listed in the agent registry (config/agent_registry.json) but is not permitted to run repository-mutating shell commands. Halting before any authoring agent is dispatched. Fix config/agent_registry.json's permits_shell field for agent 'worktree-agent' to true, or report this mis-assignment to the operator: step='worktree-setup', agent='worktree-agent'." |
+| `permission_denied` | The registry was read, the configured agent id was found, and its entry's `permits_shell` field is not `true`. This is the **only** outcome that is genuinely a permissions verdict. | — | "The isolated-workspace setup step 'worktree-setup' was configured to dispatch to agent 'shell-runner', which is listed in the agent registry (config/agent_registry.json) but is not permitted to run repository-mutating shell commands. Halting before any authoring agent is dispatched. Fix config/agent_registry.json's permits_shell field for agent 'shell-runner' to true, or report this mis-assignment to the operator: step='worktree-setup', agent='shell-runner'." |
 
 Only the `permission_denied` row directs you at the `permits_shell` field.
 Every other row is deliberately silent about it — before `ACD-2100b-3` fixed

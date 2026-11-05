@@ -20,9 +20,12 @@ related_docs:
 - **Severity:** high. Every `/plan-feature` run started the documented way halts before any
   authoring agent runs. The halt is loud and nothing is lost, but the message points at a skill
   step that no longer exists, so the user cannot fix it from the docs.
-- **Status:** open. Traced to code. ACs drafted 2026-11-04: ACD-2100d-5 and ACD-2100d-5-i..iv (branch
-  `ac/plan-feature-entry-and-pause-fixes`); the person chose fix direction 2 (do not require the
-  verdict when the maker's answer is supplied).
+- **Status:** RESOLVED 2026-11-04 by ACD-2100d-5 (and -i..-iv), fix direction 2: the workflow no
+  longer requires `args.workspace_setup_permission` when the maker's answer is supplied, and a start
+  with neither stops before authoring naming only remedies that exist. Proved by
+  `unit_tests/workflows/test_acd_2100d_5*.py`, which start the installed workflow with the arguments
+  read from the installed command and skill (ACD-2100d-5-i), and
+  `unit_tests/reference/test_acd_2100d_5_iv.py`.
 - **Occurrences:** 3 (driving `/plan-feature` for KM-400d-4-i..iii from a workspace made by
   `.leafcutter/scripts/worktree.py ensure --kind ac`, 2026-10-22; `/plan-feature` run
   `wf_d2396526-264` for the TQ-200d before-score fixes, workspace `ac/tq-200d-before-score-fixes`,

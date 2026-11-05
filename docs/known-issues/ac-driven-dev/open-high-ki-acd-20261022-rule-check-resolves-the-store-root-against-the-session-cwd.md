@@ -12,7 +12,7 @@ related_docs:
   - docs/known-issues/ac-driven-dev.md
   - docs/known-issues/commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md
   - docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md
-  - docs/known-issues/ac-driven-dev/open-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
+  - docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-20261022-plan-feature-entry-omits-the-permission-verdict.md
   - docs/known-issues/build-orchestration/open-high-ki-bo-20261022-pause-persist-failed-at-gate-ba-in-a-maker-workspace.md
   - docs/known-issues/build-orchestration/open-low-ki-bo-20261101-plan-feature-script-steps-declined-by-worktree-agent.md
 ---
