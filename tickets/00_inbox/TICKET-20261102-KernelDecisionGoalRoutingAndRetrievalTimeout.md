@@ -242,3 +242,9 @@ item has no goal). Open from review, not in this branch:
 - `tests/kernel/grounding/test_sources_and_coverage.py::test_candidate_counts_and_scan_cost_stay_bounded`
   failed locally (92.4 s against a 30 s bound) on a cold cache; it scans the real repo through
   `search_repo_text`, which this branch does not change. Same cause as the table above.
+
+**2026-11-05 - AC-6 seen again (claude_code).** `run-b77fc79f09c44cdd` (goal "so what is still to
+be done regarding test quality?") read `repository_root` = the main checkout while it was 93
+commits behind origin/main; the register line it cited said Open 44 / Resolved 5 against the
+current Open 41 / Resolved 16, and the report gave no sign the view was old. Recorded with the
+run's other retrieval gaps in `TICKET-20261105-KernelStatusQuestionRetrievesTooLittle.md`.
