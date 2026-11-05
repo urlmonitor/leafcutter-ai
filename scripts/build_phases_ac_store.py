@@ -32,6 +32,7 @@ ARCHITECTURE: One module-level constant, ``AC_STORE_DEPLOY_MAP`` (the single,
     build_phases.py's own re-export of it -- keep working unchanged.
 
 DECISION HISTORY:
+  - 2026-11-05 [python-coder/BO-2500f-1]: Added _verification_record.py to the map.
   - 2026-10-15 [python-coder/ACS-900d-4]: Added scripts/ac_store/ac_retirement.py
     (the ONE retired-record predicate) to AC_STORE_DEPLOY_MAP, because
     _done_proof_composite.py imports it at module scope and the commit-guardian
@@ -158,16 +159,13 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
     ("scripts/ac_store/_done_proof_composite.py", "_done_proof_composite.py"),
     ("scripts/ac_store/ac_retirement.py", "ac_retirement.py"),  # ACS-900d-4: MUST deploy (see DECISION HISTORY)
-    # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
-    # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
-    # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
-    # same failure mode, same second-copy note above.
+    # _done_proof_entry_point_gate.py (BO-2900a-1): third done_proof.py sibling,
+    # imported at module scope; same failure mode and second-copy note as above.
     ("scripts/ac_store/_done_proof_entry_point_gate.py", "_done_proof_entry_point_gate.py"),
     ("scripts/ac_store/_done_proof_automation_gate.py", "_done_proof_automation_gate.py"),
     ("scripts/ac_store/_done_proof_reachability_gate.py", "_done_proof_reachability_gate.py"),
-    # done_proof_kind_support.py (TQ-500f-3-i) -- kind classification for the
-    # red-baseline gate, imported by _fl_common.py. No leading underscore
-    # (BP-900h-4): an underscore reads to the declaring-files inspector as
+    # done_proof_kind_support.py (TQ-500f-3-i): red-baseline kind classification,
+    # imported by _fl_common.py. No leading underscore (BP-900h-4): that reads as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
     ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
@@ -175,6 +173,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # done_proof_kind_support.py loads to read each test's real exception
     # type from pytest's own hook data. Must deploy alongside it.
     ("scripts/ac_store/_kind_plugin.py",              "_kind_plugin.py"),
+    ("scripts/ac_store/_verification_record.py",      "_verification_record.py"),  # BO-2500f-1
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so
