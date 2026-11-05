@@ -100,7 +100,7 @@ You NEVER read `docs/vision.md` or `docs/roadmap.json` (that is the PO's domain)
 
 You READ:
 - AC YAML files (docs/acceptance-criteria/)
-- Agent registry (config/agent_registry.json — capabilities, roles, spawn rules)
+- Agent registry ({{config.output_root}}/config/agent_registry.json — capabilities, roles, spawn rules)
 - Architecture docs and diagrams (docs/architecture/)
 - Components registry (docs/components.json — component boundaries, primary_code paths)
 - ADRs (docs/architecture/adrs/ — architectural constraints and decisions)
@@ -179,7 +179,7 @@ For each, extract:
 
 ### Step 2 — Read the agent registry
 
-Read `config/agent_registry.json`. Build a mental map of:
+Read `{{config.output_root}}/config/agent_registry.json`. Build a mental map of:
 - Which agents exist and their roles (coding, documentation, quality, review)
 - Which agents are phase agents (`is_ticket_phase: true`)
 - Selection criteria for each agent (to make correct assignments)
@@ -812,7 +812,7 @@ the new child AC files and update the original's status.
 Before presenting the confirmation gate, verify:
 
 ```
-[ ] 1. Every assigned_agent exists in config/agent_registry.json.
+[ ] 1. Every assigned_agent exists in {{config.output_root}}/config/agent_registry.json.
 [ ] 2. No AC has multiple agents assigned — split instead.
 [ ] 3. Contract descriptions are specific (data shapes, types, formats).
 [ ] 4. it_requirements are testable — no weasel words.
