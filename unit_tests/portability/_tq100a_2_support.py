@@ -14,7 +14,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from unit_tests.build_orchestration._workspace_maker_builders import link_checkout
+import unit_tests.build_orchestration._workspace_maker_fixtures  # noqa: F401,E402 -- load first: breaks the builders/fixtures import cycle
+from unit_tests.build_orchestration._workspace_maker_builders import link_checkout  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 IDENTITY_KEYS = ("user.name", "user.email")
