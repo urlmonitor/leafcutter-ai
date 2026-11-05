@@ -6,7 +6,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -205,7 +205,9 @@ superseded_by: null
 covered_by:
   - TQ-100a-2-i
   - TQ-100a-2-ii
-implemented_by: []
+implemented_by:
+  - scripts/suite_performance/pytest_git_identity_guard.py
+  - pytest.ini
 change_target: code
 risk_surface: internal
 notes: |
