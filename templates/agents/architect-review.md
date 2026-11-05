@@ -280,7 +280,7 @@ with migration context.
 ## Diagram Type Reference
 
 When suggesting a diagram for a ticket, use one of the canonical diagram_type
-values from `leafcutter/config/diagram_types.json`. Current valid types:
+values from `{{config.output_root}}/config/diagram_types.json`. Current valid types:
 
 | diagram_type | Description | Extra frontmatter required |
 |---|---|---|
@@ -297,7 +297,7 @@ Do not invent new diagram_type values — add them to `diagram_types.json` first
 ## Doc Type Reference
 
 When suggesting documentation for a ticket, use one of the canonical doc types
-from `leafcutter/config/doc_types.json`. Include the type in
+from `{{config.output_root}}/config/doc_types.json`. Include the type in
 `requires_documentation: [<doc_type>, ...]` in the architect-review output payload
 so ticket-wiring can flip the correct writer agent to `needed`.
 

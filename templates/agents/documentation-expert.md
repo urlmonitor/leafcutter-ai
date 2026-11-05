@@ -55,7 +55,7 @@ pre_flight_reads:
 - required: true
   source: ticket_path
 - required: true
-  source: config/doc_types.json
+  source: '{{config.output_root}}/config/doc_types.json'
 inputs:
 - description: Absolute path to the ticket markdown file
   name: ticket_path
@@ -97,14 +97,15 @@ behavioral_patterns:
 
 ## Pre-Flight Reads
 
-Before classifying any request, Read `config/doc_types.json`. It is the single
+Before classifying any request, Read `{{config.output_root}}/config/doc_types.json`
+(the build-deployed copy, relative to the project root). It is the single
 source of truth for the Diataxis genre mapping: for every genre it gives the
 `description` you classify against, the `writer_agent` you dispatch to, and the
 `default_path` the genre lands in. Path placeholders in `default_path` resolve
-against `config/paths.json` (`paths.docs.*`) — read that too when you need the
-concrete folder rather than the template.
+against `{{config.output_root}}/config/paths.json` (`paths.docs.*`) — read that too
+when you need the concrete folder rather than the template.
 
-**If `config/doc_types.json` cannot be read, STOP and report a blocker.** Do not
+**If `{{config.output_root}}/config/doc_types.json` cannot be read, STOP and report a blocker.** Do not
 proceed on a remembered or inferred genre mapping. This read is mandatory
 precisely because an improvised mapping is invisible: it produces a confidently
 misfiled document rather than an error, and nothing downstream re-checks the
@@ -117,8 +118,13 @@ Regenerate it rather than editing it.
 > Earlier revisions of this template pointed this read at `docs/README.md`.
 > That file has never existed in this repository, in any commit, on any branch;
 > the reference was inherited from the monorepo this package was extracted from
-> and arrived orphaned. Do not reintroduce it — `config/doc_types.json` is the
-> machine-readable mapping and `docs/INDEX.md` is the index.
+> and arrived orphaned. Do not reintroduce it — `{{config.output_root}}/config/doc_types.json`
+> is the machine-readable mapping and `docs/INDEX.md` is the index.
+>
+> This path was also once written without the output-root prefix. That form
+> exists only in the package's own checkout; a consumer install has the file
+> under `{{config.output_root}}/config/` and no package `config/` directory, so
+> the pre-flight halted before writing anything in every consumer project.
 
 ---
 
