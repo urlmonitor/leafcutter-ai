@@ -159,6 +159,11 @@ def _write_duplicate_collection(root, *, passing: bool):
         """\
         import copy
 
+        try:  # pytest >= 9.2 keeps a structured id; older versions a plain string
+            from _pytest.nodeid import NodeId
+        except ImportError:
+            NodeId = None
+
 
         def pytest_collection_modifyitems(items):
             items.extend(_second_root_copy(item) for item in list(items))
@@ -166,7 +171,11 @@ def _write_duplicate_collection(root, *, passing: bool):
 
         def _second_root_copy(item):
             clone = copy.copy(item)
-            clone._nodeid = "second_root/" + item.nodeid
+            nodeid = "second_root/" + item.nodeid
+            if NodeId is not None:
+                clone._id = NodeId.parse(nodeid)
+            else:
+                clone._nodeid = nodeid
             return clone
         """,
     )
