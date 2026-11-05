@@ -291,8 +291,8 @@ class TestDriftHooksMissingManifestNamesPathsTried(unittest.TestCase):
     def test_ac_ge118b_output_drift_missing_manifest_names_path_tried(self) -> None:
         # covers: GE-118b
         """With no manifest anywhere under the fake root, check_output_drift.py
-        must exit 0 (fail-open — a missing manifest is not itself a block)
-        but its warning must name a concrete absolute path it tried, not
+        must report could-not-read with exit 3 (BP-1500d-4 retired the old
+        exit-0 fail-open), and its report must name a concrete absolute path it tried, not
         just repeat the bare filename ".build_manifest.json" generically.
 
         FAILS TODAY: the current warning text is a fixed sentence that never
@@ -305,12 +305,12 @@ class TestDriftHooksMissingManifestNamesPathsTried(unittest.TestCase):
         result = _run_hook(hook_path, self.base)
 
         self.assertEqual(
-            0,
+            3,
             result.returncode,
-            msg=f"Missing manifest must fail-open (exit 0). stderr:\n{result.stderr}",
+            msg=f"Missing manifest must report could-not-read (exit 3, BP-1500d-4). stderr:\n{result.stderr}",
         )
         self.assertIn(
-            "not found",
+            "could not read",
             result.stderr.lower(),
             msg=f"Missing manifest must produce a visible warning. stderr:\n{result.stderr}",
         )
@@ -340,12 +340,12 @@ class TestDriftHooksMissingManifestNamesPathsTried(unittest.TestCase):
         result = _run_hook(hook_path, self.base)
 
         self.assertEqual(
-            0,
+            3,
             result.returncode,
-            msg=f"Missing manifest must fail-open (exit 0). stderr:\n{result.stderr}",
+            msg=f"Missing manifest must report could-not-read (exit 3, BP-1500d-4). stderr:\n{result.stderr}",
         )
         self.assertIn(
-            "not found",
+            "could not read",
             result.stderr.lower(),
             msg=f"Missing manifest must produce a visible warning. stderr:\n{result.stderr}",
         )
