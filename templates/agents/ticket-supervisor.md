@@ -208,7 +208,7 @@ still in their YAML, which the epic archival gate had to remediate.
 ### Agent Name Validation (Registry-Driven)
 
 When you first read a ticket's `agents:` map, validate each agent name by
-checking `leafcutter/config/agent_registry.json` (relative to the
+checking `{{config.output_root}}/config/agent_registry.json` (relative to the
 worktree root) if it exists:
 
 1. Load `agent_registry.json`. If the file does not exist, skip validation and
@@ -239,14 +239,14 @@ worktree root) if it exists:
 must-have: diagrams and ADRs before coding.
 
 **Flow-change pairs (architect + docs before coders):** For tickets generated
-from (change_target, risk_surface) pairs listed in `config/guardrail_gates.yaml`
+from (change_target, risk_surface) pairs listed in `{{config.output_root}}/config/guardrail_gates.yaml`
 `flow_change_gates:` (e.g. `code/production`, `code/all`, `schema/production`,
 `schema/all`), the computed agents map will include both `architect-review`
 (priority 4) and `documentation-expert` (priority 10). The canonical priority
 ordering above ensures these agents are dispatched before `python-coder` (6)
 and `sql-coder` (7) automatically — no special supervisor logic is required.
 This is the machine-readable complement to the flow-change gate registry in
-`config/guardrail_gates.yaml`.
+`{{config.output_root}}/config/guardrail_gates.yaml`.
 
 **frontend-coder dispatch (priority 8):**
 Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
@@ -268,8 +268,8 @@ separate phases — they are internal to `frontend-coder`'s execution. Only
 ### Produces-Trait Guardrail Dispatch
 
 Before dispatching any phase agent, the ticket-supervisor MUST read that agent's
-`produces` trait from `config/agent_registry.json` (or `leafcutter/config/agent_registry.json`
-in consumer installs) and use it to determine which guardrails apply. The registry
+`produces` trait from `{{config.output_root}}/config/agent_registry.json` (the deployed
+copy, present in every install) and use it to determine which guardrails apply. The registry
 is loaded once per ticket run (cached in memory across the agent loop).
 
 **Guardrail mapping by produces value:**
@@ -291,7 +291,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 
 ```python
 # At dispatch time, before spawning next_agent:
-registry = load_json("config/agent_registry.json")
+registry = load_json("{{config.output_root}}/config/agent_registry.json")
 entry = next(a for a in registry["agents"] if a["id"] == next_agent_name)
 produces = entry.get("produces")
 
