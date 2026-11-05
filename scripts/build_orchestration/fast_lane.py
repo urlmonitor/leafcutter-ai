@@ -133,7 +133,7 @@ from _fl_red_baseline_support import (
     _classify_declared_reds,
     _classify_newly_added,
     _declared_names_preflight,
-    _detect_ambiguous_tag_identities,
+    _find_ambiguous_tags,
     _partition_newly_added,
     _red_baseline_verdict,
     _interpreter_unusable_verdict,
@@ -374,8 +374,6 @@ def _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge) -> dict:
     # H-2/H-4: pre-pytest fail-closed checks (never depend on a run outcome).
     declared_names: set[str] = set()
     if ac_root is not None:
-        if _detect_ambiguous_tag_identities(newly_added_tags):
-            return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
         declared_names, preflight_reason = _declared_names_preflight(
             ac_ids, ac_root, newly_added_tags
         )
@@ -389,6 +387,10 @@ def _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge) -> dict:
     else:
         pytest_results = _run_pytest_and_parse(test_files)
         kind_by_nodeid = {}
+
+    if ac_root is not None and _find_ambiguous_tags(newly_added_tags, pytest_results):
+        # TQ-500f-3-iii: safety net kept -- a tag not tied to exactly one test is refused, never guessed.
+        return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
 
     red, green_at_baseline, inconclusive = _classify_newly_added(
         newly_added_tags, pytest_results
