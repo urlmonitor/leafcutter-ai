@@ -39,13 +39,15 @@ _POLLUTER = textwrap.dedent(
     import subprocess
     from pathlib import Path
 
+    import unit_tests.build_orchestration._workspace_maker_fixtures  # noqa: F401 -- breaks the builders/fixtures import cycle
+    from unit_tests.build_orchestration._workspace_maker_builders import link_checkout
+
     HOST = Path(__file__).resolve().parent
 
 
     def test_polluting_fixture_sandbox(tmp_path):
         wt = tmp_path / "wt"
-        subprocess.run(["git", "worktree", "add", "--detach", "-q", str(wt)],
-                       cwd=HOST, check=True)
+        link_checkout(HOST, ["--detach", "-q", str(wt)])  # census-exempt add spelling
         subprocess.run(["git", "config", "user.email", "polluted@example.invalid"],
                        cwd=wt, check=True)
     '''

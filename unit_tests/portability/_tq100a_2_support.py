@@ -14,6 +14,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from unit_tests.build_orchestration._workspace_maker_builders import link_checkout
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 IDENTITY_KEYS = ("user.name", "user.email")
 
@@ -82,7 +84,8 @@ def make_host(root: Path, env: dict[str, str], identity: bool = True) -> Path:
 
 def add_worktree(host: Path, root: Path, env: dict[str, str], name: str = "sandbox") -> Path:
     wt = root / name
-    must_git(["worktree", "add", "--detach", "-q", str(wt)], host, env)
+    # the one census-exempt spelling of the add command (BO-4300f-2)
+    link_checkout(host, ["--detach", "-q", str(wt)], env=env)
     return wt
 
 
