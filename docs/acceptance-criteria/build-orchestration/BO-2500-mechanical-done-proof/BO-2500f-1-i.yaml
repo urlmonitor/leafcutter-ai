@@ -7,7 +7,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,7 +44,7 @@ assigned_agent: python-coder
 estimated_complexity: S
 declared_files:
   - path: scripts/ac_store/_verification_record.py
-    state: to_be_created
+    state: existing
 it_requirements:
   - Added to BO-2500f-1's validator as one more problem kind, naming the ruling change_target
     value. Applied at mark time only; never at write time.
@@ -183,6 +183,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-25'
+- action: amended
+  agent: claude_code
+  date: '2026-11-05'
+  note: work_status in_progress; PR 1 scope noted (kernel run run-abe72d9d3c9e4e47).
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -195,3 +199,14 @@ notes: |
   change_target fails closed (23 test-free records had none on 2026-10-24), and a
   self-declared change_target cannot escape the derived kind. Without the last
   clause, flipping change_target to docs would re-open the hole this record closes.
+
+  Built in two PRs (user decision, kernel run run-abe72d9d3c9e4e47, 2026-11-05). PR 1
+  adds the change_target restriction to the BO-2500f-1 validator with the specs that
+  need no switch: docs, prompt and config allow an inspection and other values do not;
+  an absent or empty change_target rules it out; writing such a record without marking
+  it done is not refused. The two specs that run through check_done_proof.py with
+  BO-2500f-4's switch on (inspection on code, schema or pipeline refused through the
+  hook; a holding check record may be marked done on a code record) are written in the
+  done-gate PR. Clause 6 (a declared docs target does not lift a derived code kind)
+  waits for BO-3500c-2's derive_proof_kind, so it is not built and no path-to-kind
+  table is kept. This record stays in progress until both land.

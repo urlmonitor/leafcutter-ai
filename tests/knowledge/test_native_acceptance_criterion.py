@@ -81,6 +81,7 @@ def _complete():
         "hold_reason": "test design pending",
         "file_findings": [{"file": "src/final.py", "verdict": "consistent", "line_range": "1-9", "found_in": None, "reason": "Implements the behaviour.", "decision": None}],
         "file_findings_opened_files": ["src/final.py"],
+        "verified_by": {"method": "check", "check": "templates/scripts/x.py", "wired_as": "pre-commit:x"},
         "doc_links": [
             "docs/reference/ac-schema.md",
             {
@@ -142,7 +143,7 @@ def test_all_schema_fields_survive_validated_source_extraction(tmp_path):
 
     source = _complete()
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-    assert len(schema["properties"]) == 53  # + test_intent, test_design_authorship, test_design_opened_files (ACD-2500b-1-i, ACD-2500c-3), hold_reason (ACD-2500d-2-i), file_findings, file_findings_opened_files (ACD-2500d-3-i)
+    assert len(schema["properties"]) == 54  # + verified_by (BO-2500f-1), test_intent, test_design_authorship, test_design_opened_files (ACD-2500b-1-i, ACD-2500c-3), hold_reason (ACD-2500d-2-i), file_findings, file_findings_opened_files (ACD-2500d-3-i)
     assert set(source) == set(schema["properties"])
     path = _write(tmp_path, source)
     (record,) = extract(tmp_path)
