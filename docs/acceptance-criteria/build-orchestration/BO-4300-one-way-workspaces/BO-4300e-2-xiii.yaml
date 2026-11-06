@@ -1,0 +1,493 @@
+id: BO-4300e-2-xiii
+title: "A record-less leftover whose every remaining file matches its merged line of work is cleared"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose shared project's main line holds the merge of
+    the line of work "ac/omega", whose last commit "c1" is part of that main
+    line, and whose main checkout already holds that merge from its last
+    fetch, while the line "ac/omega" itself has since been deleted from the
+    shared project,
+  And shop's landing place holds the folder "ac/omega" with no workspace
+    record, whose repository is gone except one empty leftover file inside the
+    repository folder that names no shared project at all, and which still
+    holds the files "CLAUDE.md" and "src/app.py", each with exactly the content
+    a fresh checkout of "c1" in shop would write, while every other file of
+    "c1" is gone from it,
+  And, in a second run, the same folder "ac/omega" that also holds the file
+    "dist/app.whl", which "c1" does not contain and which shop's ignore rules
+    exclude,
+  And, in a third run, the same folder "ac/omega" as in the first run, in which
+    "src/app.py" differs from its content in "c1" by one line,
+  And, in a fourth run, the same folder "ac/omega" as in the first run that also
+    holds the file "notes.txt", which "c1" does not contain and which shop's
+    ignore rules do not exclude,
+  And, in a fifth run, a folder "ac/sigma" set up the same way, whose two
+    files have exactly the content of the last commit of the line of work
+    "ac/sigma", a line that was never merged into shop's main line,
+  And, in a sixth run, a project "blog" beside shop whose landing place holds
+    the folder "ac/omega" set up as in the first run,
+  When clearing is requested from shop in each run for that folder, with no
+    authorisation to lose work and with shop's shared project unreachable,
+  Then in the first run the request is answered cleared without a token, the
+    answer names the line of work "ac/omega" and the commit "c1" whose content
+    the remaining files matched, and nothing of "ac/omega" remains at its
+    location,
+  And in the second run the request is refused, stating that the workspace was
+    half-cleared and that its remaining files match the line of work "ac/omega"
+    as merged at commit "c1" except the files the ignore rules exclude; the
+    refusal lists only "dist/app.whl" and returns a one-time token bound to that
+    folder and exactly that file, and "ac/omega" is identical before and after,
+  And in the second run, clearing again with that token is answered cleared, the
+    answer lists "dist/app.whl" as discarded, and nothing of "ac/omega" remains
+    at its location,
+  And in the third, fourth and fifth runs the request is answered "not found"
+    with the folder's files listed and no token, exactly as a record-less
+    folder holding files is answered today, and the folder is identical before
+    and after,
+  And in the third run, a repeated request carrying the token from the second
+    run is answered "not found" the same way and "ac/omega" is identical before
+    and after,
+  And in the sixth run the request is refused, stating that shop has no
+    workspace at that location, and blog's "ac/omega" is identical before and
+    after,
+  And in no run does any request reach shop's shared project.
+depends_on: [BO-4300e-2, BO-4300e-2-iii, BO-4300e-2-v, BO-4300e-2-vi, BO-4300e-2-xii, BO-4300e-3-i]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; remove verb, marker and safety constraints.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: exists
+  relevance: The NOT_FOUND refusal of a record-less folder (kept unchanged for every non-matching folder), the half-cleared UNSENT_WORK refusal and discard token reused for ignored files, and the record-less leftover row of BO-4300e-2-xii that this record sits beside.
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: exists
+  relevance: The section "If the folder has no workspace record"; gains the matched-content case once this ships.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the test_spec the IT PO adds.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Templates are the source; deployed scripts are build outputs.
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+  relevance: The one workspace maker and its remove verb (Amendment 1); the maker is the only code that deletes a workspace.
+- path: docs/architecture/diagrams/c3-031-workspace-request-states.md
+  relationship: describes
+  status: exists
+  relevance: Workspace request states, including the half-cleared leftover this record adds a matched-content case to.
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+- path: templates/scripts/worktree_remove_match.py
+  state: to_be_created
+- path: templates/scripts/worktree_remove.py
+  state: existing
+- path: templates/scripts/worktree_remove_half.py
+  state: existing
+- path: scripts/build_phases_script_deploy_standalone.py
+  state: existing
+- path: docs/components.json
+  state: existing
+- path: docs/reference/workspace-maker-answer.md
+  state: existing
+- path: docs/how-to/clear-a-workspace.md
+  state: existing
+it_requirements:
+- 'Scope (D5, BO-4300e-2-iii): the rule applies only to a folder with no workspace record that sits at a workspace
+  position (kind/slug, a kind in VALID_KINDS) inside this project''s own landing place, whose .git is a folder (not a
+  file, not a link) and is not a readable repository, and whose repository leftovers name no shared project: each of
+  .git/FETCH_HEAD and .git/config is either absent or readable, FETCH_HEAD holds no non-blank line and config holds no
+  url entry. Any unreadable evidence file, any FETCH_HEAD line that cannot be parsed, or any address at all takes the
+  folder out of this rule. An address naming this project''s hub stays under the BO-4300e-2-xii rule (identified,
+  token for all files); any other or mixed address stays NOT_FOUND and is never matched by content. A record-less
+  folder with no .git at all keeps NOT_FOUND (BO-4300e-2-xii third run unchanged). Git failing to run on the folder''s
+  own .git (head_state "unknown") is not this case and stays NOT_FOUND.'
+- 'Design decision (a), how the matched commit is found, locally only, all git commands run in the main checkout
+  (the --repo-root project), never in the folder: the line is the canonical "<kind>/<slug>" of the folder''s position
+  (legacy spellings are not searched). Candidates, in this order: (1) the main checkout''s refs/remotes/origin/<kind>/<slug>,
+  then refs/heads/<kind>/<slug>, each used only if its tip is an ancestor of the main checkout''s refs/remotes/origin/main;
+  (2) merge commits on the first-parent history of refs/remotes/origin/main, newest first, whose subject names the line
+  exactly (the text "<kind>/<slug>" bounded so that "ac/omega" never matches "ac/omega-2", "ac/omega/x" or "xac/omega"),
+  taking the merge''s second parent, which must itself be an ancestor of refs/remotes/origin/main. A squash or rebase
+  merge has no such commit and stays NOT_FOUND. The whole folder is matched against one candidate at a time; the first
+  candidate every remaining file matches wins.'
+- 'Search bound: at most the 2000 most recent first-parent commits of refs/remotes/origin/main are scanned for merge
+  candidates, and at most 5 candidate commits are compared in total. Reaching either bound without a full match, a
+  missing refs/remotes/origin/main, or any candidate that is not an ancestor of it answers NOT_FOUND exactly as today;
+  nothing is deleted. Bound values are module constants, not options.'
+- 'Design decision (b), how files are compared without running git in the folder: a temporary index file in the OS
+  temp area (passed as GIT_INDEX_FILE to these calls only, never the main checkout''s .git/index, never inside the folder
+  or the main checkout) is loaded with read-tree of the candidate commit; every tracked path absent from the folder is
+  marked skip-worktree in that temporary index; then update-index --refresh, diff-files and ls-files -o (once with and
+  once with -i, --exclude-standard) run with --work-tree=<folder>. Per-file hash-object is not used (it would not apply
+  the checkout conversions of D4 in the same way and can write objects). The temporary index and its lock file are
+  removed on every path, including errors and timeouts.'
+- 'The main checkout is never written: its index, refs, config, object store and hooks are byte-identical before and
+  after, and no lock file is left in its .git. Every git call of the comparison runs with GIT_OPTIONAL_LOCKS=0,
+  core.fsmonitor off and the maker''s prompt-free environment (worktree_git.git_env). worktree_git.py is reused unchanged.'
+- 'Design decision (c), what counts as a loss (D3, D4): the inventory is worktree_remove_checks.remaining_files(folder)
+  (today it walks the folder, leaves out .git and the workspace record, lists every file individually and a symlinked
+  folder as one entry). Every inventory entry must be classified by git as either a tracked file of the candidate that
+  diff-files reports unchanged (checkout conversions such as line endings are not a difference) or an untracked file the
+  ignore rules exclude; ignore rules and attributes are those of a fresh checkout of the candidate with the main
+  checkout''s settings (the candidate''s .gitignore and .gitattributes are read from the temporary index when the folder
+  lost them). Tracked files of the candidate missing from the folder, and empty sub-folders, are no loss. A changed
+  tracked file, a new non-ignored file, or any inventory entry git does not classify gives NOT_FOUND with today''s
+  message and no token.'
+- 'Ignored-file listing (c): when every tracked file matches and ignored files remain, the answer is the BO-4300e-2-vi
+  half-cleared refusal (code UNSENT_WORK, unsent.commits [], unsent.files the ignored files, discard_token) using the
+  same stateless token scheme (worktree_remove_checks.half_token), bound to the folder path and exactly those files with
+  their content digests; no second token scheme. unsent.files lists every ignored file individually as remaining_files
+  does today (an ignored folder such as .leafcutter/ is listed as its files, never collapsed to one directory entry), so
+  the token binds exactly what is deleted. For readability the message (not the list) names the ignored items grouped by
+  top-level entry with a file count, for example ".leafcutter/ (N files), VERSION". The message states that the
+  workspace was half-cleared and that its remaining files match the line "<kind>/<slug>" as merged at commit <sha> except
+  the files the ignore rules exclude.'
+- 'Design decision (d): the match (scope, candidate search and comparison) is made again on every request, the token
+  request included, before any token is compared; a token never clears a folder that no longer matches, and the
+  NOT_FOUND path never honours a token from any run or folder.'
+- 'Design decision (e): the success answer and the second-run refusal are additive only: two new fields,
+  matched_line (string "<kind>/<slug>") and matched_commit (the 40-hex commit sha the files matched). The ok answer keeps
+  status, removed_path, the path fields and discarded ({commits: [], files: []} when only matching tracked files
+  remained, {commits: [], files: <ignored files>} when finished with the token). No existing code, field or message of
+  another case changes.'
+- 'Design decision (g), no network and time limits: no fetch, ls-remote or any other call to the shared project is made
+  (the comparison works with the hub unreachable). Each git call of the match is bounded at 120 seconds (the maker''s
+  60-second checkout bound proved too tight on a slow disk) and the whole match at 300 seconds. A timeout, a launch
+  failure or an unexpected non-zero exit answers NOT_FOUND exactly as today, logged at warning severity; it is never a
+  deletion and never a token.'
+- 'Deletion: a match (first run) or a valid token (second run) goes through the existing program check
+  (PROCESS_HOLDS_FILES before anything is deleted) and the existing whole-folder deletion, which also removes the .git
+  leftovers; ok is answered only after the post-check finds nothing at the location.'
+- 'Placement and file sizes: the scope test, candidate search, comparison and refusal wording have one home, the new
+  module templates/scripts/worktree_remove_match.py (stdlib only; imports worktree_answer, worktree_git and
+  worktree_remove_checks, never worktree_remove). worktree_remove_half.py (half_state gains one record-less kind for this
+  case) and worktree_remove.py (_finish_half dispatches it) take wiring only. Measured by the check-file-size rule today:
+  worktree_remove.py 274 counted lines (485 physical), worktree_remove_half.py 122 (208), worktree_remove_checks.py 140
+  (246), worktree_git.py 155 (363), worktree.py 230 (425); all are under the 400 limit, and the new module must stay
+  under it. No limit is raised, no ratchet is skipped.'
+- 'Deploy registration: the new module is added as a named entry to NAMED_STANDALONE_SCRIPTS in
+  scripts/build_phases_script_deploy_standalone.py and to the worktree_manager primary_code list in docs/components.json,
+  as worktree_remove_half.py was; the change reaches the deployed maker through the normal build (ADR-001), never by
+  editing a deployed copy.'
+- Every refusal (NOT_FOUND or UNSENT_WORK) must leave the folder and every item in it unmodified, and the NOT_FOUND
+  answer and message for a non-matching folder stay exactly as today, with no new hint.
+- Nothing outside this project's landing place is touched or content-matched, whatever it holds (BO-4300e-2-iii).
+test_intent:
+- clause: in the first run the request is answered cleared without a token, the answer names the line of work "ac/omega"
+    and the commit "c1" whose content the remaining files matched, and nothing of "ac/omega" remains at its location
+  needs_test: true
+  reason: Finding the merged commit locally and matching every remaining file against it is new computed behaviour whose
+    failure would either keep the folder or delete one that does not match.
+- clause: in the second run the request is refused, stating that the workspace was half-cleared and that its remaining
+    files match the line of work "ac/omega" as merged at commit "c1" except the files the ignore rules exclude; the refusal
+    lists only "dist/app.whl" and returns a one-time token bound to that folder and exactly that file, and "ac/omega" is
+    identical before and after
+  needs_test: true
+  reason: Separating ignored files from matching tracked files decides what the token binds, and a wrong split would hide
+    a file from the refusal.
+- clause: in the second run, clearing again with that token is answered cleared, the answer lists "dist/app.whl" as discarded,
+    and nothing of "ac/omega" remains at its location
+  needs_test: true
+  reason: The token path must redo the match and then delete the whole folder including its repository leftover, which is
+    computed behaviour.
+- clause: in the third, fourth and fifth runs the request is answered "not found" with the folder's files listed and no token,
+    exactly as a record-less folder holding files is answered today, and the folder is identical before and after
+  needs_test: true
+  reason: A changed file, a new non-ignored file or an unmerged line must not reach deletion, which a too-loose comparison
+    or ancestor check would silently break.
+- clause: in the third run, a repeated request carrying the token from the second run is answered "not found" the same way
+    and "ac/omega" is identical before and after
+  needs_test: true
+  reason: A token honoured without redoing the match would delete a folder whose tracked file changed.
+- clause: in the sixth run the request is refused, stating that shop has no workspace at that location, and blog's "ac/omega"
+    is identical before and after
+  needs_test: true
+  reason: Content matching must never run outside this project's landing place, and a wrong boundary check would delete
+    another project's folder.
+- clause: in no run does any request reach shop's shared project
+  needs_test: true
+  reason: The match must work from the main checkout alone, and a fetch or remote call would hang or fail with the hub
+    unreachable.
+test_spec:
+- name: test_matching_leftover_is_cleared_without_a_token_naming_line_and_commit
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: 'First run, through the real CLI (worktree.py remove --path --repo-root as a subprocess) with the hub moved away. Shared fixture (a MatchCase built on the xii OmegaCase/StopCase: real subprocess against the deployed maker, isolated git config, hub moved away with hub_moved_away() for every request). A scratch clone of the hub commits on branch ac/omega (landing kind ac is a valid kind): CLAUDE.md, src/app.py, src/util.py, docs/guide.md, .gitignore (dist/ and .leafcutter/) and .gitattributes (src/*.py text eol=crlf), then c1 is merged into main by a real merge commit (git merge --no-ff, message "Merge pull request #7 from owner/ac/omega"), main and the branch are pushed, the main checkout (self.project) is fetched, the branch is deleted on the hub and the main checkout runs git fetch --prune origin, so only refs/remotes/origin/main holds the merge and no ref named ac/omega is left. The folder <landing>/ac/omega has no workspace record and a .git folder holding only an empty FETCH_HEAD; CLAUDE.md and src/app.py are copied byte for byte from a throwaway checkout of c1 made with the same isolated config (so src/app.py is CRLF), every other file of c1 is absent. The request with no token and no authorisation answers ok (exit 0) with matched_line "ac/omega", matched_commit equal to the 40-hex sha of c1 (read from the hub history), discarded {commits: [], files: []}, no discard_token, and nothing of the folder remains (lexists false on the folder and on .git/FETCH_HEAD). src/app.py being CRLF while the blob is LF pins that a checkout conversion is not a difference, and the folder lacking .gitattributes pins that attributes come from the candidate.'
+  proves_clause: in the first run the request is answered cleared without a token, the answer names the line of work "ac/omega" and the commit "c1" whose content the remaining files matched, and nothing of "ac/omega" remains at its location
+  code_file: templates/scripts/worktree.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+- name: test_ignored_file_is_listed_with_a_token_bound_to_exactly_that_file
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Second run, same fixture plus dist/app.whl (not in c1, excluded by the .gitignore of c1 which the folder itself lacks). The request is refused UNSENT_WORK (exit 2), the message says the workspace was half-cleared and that its remaining files match the line ac/omega as merged at the commit sha of c1 except the files the ignore rules exclude, matched_line and matched_commit are present, unsent.commits is [] and unsent.files is exactly ["dist/app.whl"] (CLAUDE.md and src/app.py not listed), a 32-hex discard_token is returned, and the whole folder (.git included) is identical by sha256 before and after. Rewriting dist/app.whl with other bytes or adding a second ignored file gives a different token, and the first token no longer clears that folder.
+  proves_clause: in the second run the request is refused, stating that the workspace was half-cleared and that its remaining files match the line of work "ac/omega" as merged at commit "c1" except the files the ignore rules exclude; the refusal lists only "dist/app.whl" and returns a one-time token bound to that folder and exactly that file, and "ac/omega" is identical before and after
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - drop the ignore rules condition
+  - list the matching tracked files as unsent
+  - bind the token to the folder path only and not to the file digests
+  - omit matched_line and matched_commit from the refusal
+- name: test_token_finishes_the_matched_folder_including_its_repository_leftover
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'Second run, second request. The token from the refusal is repeated with --discard-token (hub still moved away) and answers ok (exit 0) with discarded {commits: [], files: ["dist/app.whl"]}, matched_line and matched_commit; read back from disk, lexists is false on the folder, on .git/FETCH_HEAD and on dist/app.whl, and the parent folder <landing>/ac is untouched.'
+  proves_clause: in the second run, clearing again with that token is answered cleared, the answer lists "dist/app.whl" as discarded, and nothing of "ac/omega" remains at its location
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+- name: test_changed_new_or_unmerged_content_stays_not_found_and_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Runs three to five, each on a fresh copy of the first-run folder, hub moved away. Third run: src/app.py differs from c1 by one line. Fourth run: notes.txt added, not in c1 and not ignored. Fifth run: folder ac/sigma holding the two files of the tip of branch ac/sigma, which is pushed to the hub and fetched into the main checkout (refs/remotes/origin/ac/sigma exists) but never merged into main, so its tip is not an ancestor of origin/main. Each request is refused NOT_FOUND (exit 2) with the remaining files listed in sorted order, no discard_token, the same message as a record-less folder holding files gets today ("holds files but is not shown to be a workspace of this project"), no matched_line or matched_commit field, and the folder identical before and after by sha256 including .git. Control in the same test: the unchanged first-run folder is answered ok, so NOT_FOUND is not a maker that never clears.'
+  proves_clause: in the third, fourth and fifth runs the request is answered "not found" with the folder's files listed and no token, exactly as a record-less folder holding files is answered today, and the folder is identical before and after
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - drop the changed tracked file condition
+  - drop the new non-ignored file condition
+  - drop the merged into main condition
+  - the gate always allows
+- name: test_token_from_the_ignored_file_run_is_never_honoured_once_the_content_changed
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Token replay, hub moved away. The token returned for the second-run folder (with dist/app.whl) is presented after src/app.py is changed by one line while dist/app.whl is kept: the request is refused NOT_FOUND the same way (files listed, no discard_token, no matched_line) and the folder is identical before and after. The same token is also presented on the fourth-run folder (notes.txt added) and on the fifth-run folder (ac/sigma, never merged): both NOT_FOUND, identical afterwards. Control: the unchanged second-run folder with its own token is cleared at the end.'
+  proves_clause: in the third run, a repeated request carrying the token from the second run is answered "not found" the same way and "ac/omega" is identical before and after
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - honour the token without redoing the match
+  - bind the token to the file names only and not to the folder
+  - the gate always allows
+- name: test_line_name_is_matched_exactly_and_the_search_is_bounded
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Boundary of the candidate search, hub moved away. (a) Exact line name: main holds only merge commits whose subjects name "ac/omega-2" and "xac/omega" (tips with the same content as the folder); the folder ac/omega is refused NOT_FOUND and identical, while a folder ac/omega-2 holding the same files is cleared (control, so the merge was findable). (b) Candidate bound of 5: line ac/tau has six merge commits on main whose subjects name it, each merging a different tip (distinct last line of src/app.py; the merge made with --no-ff -m from a temporary branch), and the folder matches only the OLDEST tip: NOT_FOUND, identical. Line ac/upsilon has five merges and its folder matches the oldest of the five: cleared. The 2000-commit scan bound and the 120 and 300 second limits are not designed here: they need 2000+ commits or a two-minute stall, and the bounds are module constants that a subprocess test cannot lower deterministically. The bound-5 arm is the cheap deterministic search-limit proof (reaching a bound is NOT_FOUND with nothing deleted).'
+  proves_clause: in the third, fourth and fifth runs the request is answered "not found" with the folder's files listed and no token, exactly as a record-less folder holding files is answered today, and the folder is identical before and after
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - drop the exact line name condition
+  - drop the candidate comparison bound condition
+  - lower the candidate bound below 5
+  - the gate always allows
+- name: test_leftover_naming_any_address_or_outside_the_position_is_not_content_matched
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'Scope arms, hub moved away; each case is the first-run folder rebuilt at ac/omega with one change, then removed by the test before the next. FETCH_HEAD naming the hub (a real tab-separated line ending "of <hub>") stays under the BO-4300e-2-xii rule: UNSENT_WORK, unsent.files ["CLAUDE.md", "src/app.py"], no matched_line, even though the content matches. The same for .git/config with a url equal to the hub. FETCH_HEAD naming blog''s hub, mixed hub plus blog lines, .git/config with a url of another place, a non-blank FETCH_HEAD line that cannot be parsed, and non-decodable FETCH_HEAD bytes are refused NOT_FOUND with the files listed, no token, folder identical. A folder with no .git at all, a .git that is a file, a folder at <landing>/omega (depth 1) and at <landing>/ac/group/omega (depth 3) are NOT_FOUND and identical. Controls cleared in the same test: an empty FETCH_HEAD with no config, and a .git folder holding no files at all.'
+  proves_clause: in the third, fourth and fifth runs the request is answered "not found" with the folder's files listed and no token, exactly as a record-less folder holding files is answered today, and the folder is identical before and after
+  code_file: templates/scripts/worktree_remove_half.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - drop the names no shared project condition
+  - drop the config url condition
+  - drop the unparsable FETCH_HEAD condition
+  - drop the workspace position condition
+  - drop the git folder is not a file condition
+  - the gate always allows
+- name: test_other_projects_folder_is_refused_with_no_workspace_message_and_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: 'Sixth run. A second project blog (make_project under blog-world, its own hub and landing place) holds <blog landing>/ac/omega built as in the first run with the bytes of c1 of shop (so shop''s main line would match it exactly). Removing it from shop (--repo-root shop) is refused NOT_FOUND (exit 2), the message names the path and says shop has no workspace at that location ("This project has no workspace at"), no discard_token, and the blog folder is identical by sha256 before and after, blog''s hub and main checkout untouched. Control in the same run: the own ac/omega of shop is cleared.'
+  proves_clause: in the sixth run the request is refused, stating that shop has no workspace at that location, and blog's "ac/omega" is identical before and after
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - drop the landing place boundary condition
+  - match content against the other project's folder
+  - the gate always allows
+- name: test_nothing_reaches_the_shared_project_and_the_main_checkout_is_not_written
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'No network and a read-only main checkout. The first-run, second-run (refusal and token), third-run and sixth-run requests are run with the hub moved away (made unreachable) and with GIT_TRACE on: no traced git line runs fetch, ls-remote, push, pull or clone, and after moving the hub back its refs are identical to before. Every byte under the .git of the main checkout (path plus sha256 of each file, taken before and after) is identical, and no *.lock file exists there; TMPDIR, TEMP and TMP point to a fresh empty directory that is empty again after every request, including the refused ones, so the temporary index and its lock are removed on every path. The first-run request still answers ok, so the comparison really ran without the hub.'
+  proves_clause: in no run does any request reach shop's shared project
+  code_file: templates/scripts/worktree_remove.py
+  convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+  must_catch:
+  - fetch from the shared project before the comparison
+  - write the index of the main checkout
+  - leave the temporary index behind
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-05"
+test_design_opened_files:
+- templates/scripts/worktree.py
+- templates/scripts/worktree_remove.py
+- templates/scripts/worktree_remove_half.py
+- templates/scripts/worktree_remove_checks.py
+- templates/scripts/worktree_git.py
+- unit_tests/build_orchestration/test_bo_4300e_2.py
+- unit_tests/build_orchestration/test_bo_4300e_2_v.py
+- unit_tests/build_orchestration/test_bo_4300e_2_vi.py
+- unit_tests/build_orchestration/test_bo_4300e_2_ix.py
+- unit_tests/build_orchestration/test_bo_4300e_2_xii.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+file_findings:
+- file: templates/scripts/worktree_remove.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: _finish_half and cmd_remove hold the record-less NOT_FOUND branch for kind foreign and the half-cleared token flow that the new matched-content case dispatches into.
+  decision: null
+- file: templates/scripts/worktree_remove_half.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: half_state returns the record-less foreign kind for a leftover whose repository is unreadable and names no hub, which is the kind the new case splits, so wiring one new kind here is the right surface.
+  decision: null
+- file: scripts/build_phases_script_deploy_standalone.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds NAMED_STANDALONE_SCRIPTS where worktree_remove_checks.py is registered, the tuple the new module must join.
+  decision: null
+file_findings_opened_files:
+- templates/scripts/worktree_remove.py
+- templates/scripts/worktree_remove_half.py
+- scripts/build_phases_script_deploy_standalone.py
+delivers_to: null
+expects_from: null
+package_surface: false
+test_required: true
+origin_agent: business-analyst
+created: 2026-11-05
+amended_by:
+  - reason: "user decisions 2026-11-05 (BA gate Q1-Q5): no token when only tracked, matching files remain; merged commit found locally (own copy of the line if on main, else a merge commit on main naming the line, its merged-in parent; squash/rebase merges stay NOT_FOUND); files the ignore rules exclude are listed and cleared only with a one-time token for exactly them (BO-4300e-2-vi flow), run added; content compared as a fresh checkout with the main checkout's settings would write it; scope stays a record-less folder whose repository leftover is present and names no shared project."
+    by: user
+    at: "2026-11-05"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User request 2026-11-04 (decision "Ticket a maker fix"): the maker's remove should be able
+  to clear a record-less leftover folder whose repository leftover holds no shared-project
+  address, when every file remaining in it matches a merged line of work on the shared
+  project. Any changed or new file, or no matching merged line, keeps today's NOT_FOUND
+  answer and leaves the folder untouched. Nothing outside this project's landing place is
+  ever deleted.
+
+  RULE HISTORY -- this record NARROWS the 2026-10-29 user decision a SECOND time and
+  REVERSES a scope exclusion at the user's request. 2026-10-29: a record-less folder holding
+  files is NOT_FOUND, because it cannot be told to be this project's. 2026-11-02
+  (BO-4300e-2-xii): first narrowing, for a leftover whose repository file names this
+  project's shared project (token required); at that time "content-matching leftover files
+  is out" of scope. This record brings content matching in, as the user asked on
+  2026-11-04. Content that is already on this project's main line is the evidence: clearing
+  such a folder cannot lose anything that is not already on the shared project. Every other
+  record-less folder holding files keeps the 2026-10-29 rule unchanged (runs three to five
+  pin that).
+
+  Observed case: leafcutter-ai-worktrees/ac/maker-remove-hardening has no workspace record.
+  Its repository folder holds only an empty FETCH_HEAD, so BO-4300e-2-xii cannot identify it
+  (no address at all). 15385 files were deleted; the remaining tracked files are 0 changed
+  and 0 new compared with the last commit of the line ac/maker-remove-hardening as merged in
+  PR #1372 (commit 1e0f5881b, reachable from origin/main through the merge). Verified
+  read-only by the caller with a temporary git index (read-tree of that commit; update-index
+  --refresh against the folder; diff-files; ls-files -o --exclude-standard). A further
+  read-only check on 2026-11-05 found the folder holds 5 ignored items, all install build
+  outputs (.build_manifest.json, .leafcutter.lock, .leafcutter/, .pre-commit-config.yaml,
+  VERSION), and no secrets file. So the real folder goes through the token path of the
+  second run: the refusal lists those items, and asking again with its token clears it.
+  The folder's position (kind ac, slug maker-remove-hardening) corresponds to the line
+  ac/maker-remove-hardening. After this ships, the real folder is finished that way
+  (operational check, not a CI test).
+
+  Decisions (user, 2026-11-05)
+  - D1 (was Q1, final gate) -- no token for a folder holding only tracked, matching files:
+    it is answered cleared at once (first run). Reason: nothing is lost; every remaining
+    byte is already on the shared project's main line.
+  - D2 (was Q2) -- the merged commit is found locally only, from two sources in order:
+    (1) the main checkout's own copy of the shared project's line "<kind>/<slug>", used only
+    if its last commit is part of the main line; otherwise (2) a merge commit on the main
+    line, as the main checkout last fetched it, whose message names the line (as in "Merge
+    pull request #1372 from <owner>/ac/maker-remove-hardening"): its merged-in parent is the
+    commit matched. A line that was squash-merged or rebased in has no such commit, so its
+    leftover stays NOT_FOUND. The shared project is never asked (the "unreachable" in the
+    When clause pins it). A wrong guess can only produce a non-match, never a deletion.
+  - D3 (was Q3) -- files the ignore rules exclude are listed, and the folder is cleared only
+    with a one-time token for exactly those files, using the BO-4300e-2-vi flow (half-cleared
+    refusal, token bound to the folder and exactly the listed files with their content;
+    finishing with it deletes the whole folder). The refusal names the matched line and
+    commit (second run). A token from that run never clears a folder in which a tracked file
+    changed (third run): such a folder is NOT_FOUND whatever token is presented. A
+    non-ignored file that the matched commit lacks (fourth run) is "new" and keeps NOT_FOUND;
+    it is never offered a token.
+  - D4 (was Q4) -- a file matches when it equals what a fresh checkout of the matched commit,
+    made with this project's main-checkout settings, would write; line-ending conversion and
+    the other checkout conversions are not a difference. The ignore rules applied are the
+    ones such a checkout would apply.
+  - D5 (was Q5) -- scope stays as the user first asked: only a record-less folder whose
+    repository leftover is present and names no shared project is covered. A record-less
+    folder with no repository folder at all keeps NOT_FOUND; BO-4300e-2-xii's third run is
+    unchanged.
+
+  Constraints carried over from BO-4300e-2-xii (for the IT PO):
+  - No network call: the shared project is never contacted to identify or match a folder.
+  - Git is never run inside the folder; its files are read as plain bytes. Matching uses
+    only what the main checkout already holds (D2).
+  - Every refusal leaves the folder byte-identical.
+  - The BO-4300e-2-iii project boundary: only a folder at a workspace position (kind/slug)
+    inside this project's own landing place qualifies; the sixth run pins that.
+  - The NOT_FOUND answer and message for a non-matching folder stay exactly as today; this
+    record adds no new hint to it.
+  - A leftover that BO-4300e-2-xii identifies (repository file names this project's shared
+    project) stays under -xii's rule; a leftover whose repository file names ANY other
+    shared project (or mixed addresses) is never matched by content and stays NOT_FOUND
+    (contradicting evidence beats matching content).
+  - The match is made again on every request, the token request included.
+
+  BA assumptions (settled here, not asked):
+  - "Merged" means the matched commit is part of the main line's history as the main
+    checkout last fetched it. A line whose commits are not on the main line (fifth run)
+    never matches, even if its content is identical.
+  - Only the files that remain are compared; files of the matched commit that are missing
+    from the folder are no loss. Empty sub-folders hold nothing.
+  - The whole folder is matched against ONE commit: every remaining tracked file must match
+    that same commit; files are never matched against different commits. If the line was
+    merged more than once, matching any one of its merged last commits in full suffices.
+  - The line of work a folder corresponds to is the canonical "<kind>/<slug>" of its
+    position; declared legacy spellings of the line name are not searched.
+  - A main checkout whose copy of the main line is older than the merge cannot see it: the
+    folder then stays NOT_FOUND (safe outcome); fetching the main checkout first and asking
+    again is the remedy, done by the person, not by the maker.
+  - A folder that holds both a changed tracked file and an ignored file is NOT_FOUND (the
+    change decides); the token path is reached only when every tracked file matches.
+  - How ignored items inside an ignored folder (for example ".leafcutter/") are listed
+    follows the existing half-cleared listing of BO-4300e-2-vi; this record does not change it.
