@@ -203,6 +203,8 @@ class TestLoaderInvocations(unittest.TestCase):
     def test_reuse_is_in_memory_only_and_bounded(self) -> None:
         bound = getattr(_tc, "_FRONTMATTER_CACHE_SIZE", None)
         self.assertIsInstance(bound, int, "the memo must declare a finite size bound")
+        # assertIsInstance does not narrow for mypy; repeat its check so `bound` is an int below.
+        assert isinstance(bound, int)
         self.assertGreater(bound, 0)
         memo = _tc._parsed_frontmatter
         with tempfile.TemporaryDirectory() as tmp:
