@@ -162,8 +162,15 @@ def _drop_foreign_remote_refs(workspace: Path) -> bool:
 
 
 def _fetch(fetch_args: list[str], workspace: Path, allow_stale_base: bool) -> tuple[str, dict[str, Any] | None]:
-    """Run one fetch; ``(status, refusal)`` where a failure refuses unless *allow_stale_base*."""
-    if wg.run_git(fetch_args, workspace).returncode == 0:
+    """Run one fetch; ``(status, refusal)`` where a failure refuses unless *allow_stale_base*.
+
+    The fetch leaves no ``FETCH_HEAD`` behind (git 2.29+; older git rejects the option and gets a plain fetch),
+    so a later clearing never meets a file the workspace's own work did not write (BO-4300e-2-xi).
+    """
+    proc = wg.run_git([fetch_args[0], "--no-write-fetch-head", *fetch_args[1:]], workspace)
+    if proc.returncode != 0 and "unknown option" in proc.stderr.lower():
+        proc = wg.run_git(fetch_args, workspace)
+    if proc.returncode == 0:
         return FETCH_OK, None
     if not allow_stale_base:
         return FETCH_FAILED, step_error("FETCH_FAILED", "fetch-hub",
@@ -300,4 +307,6 @@ def bootstrap_fields(bootstrap: dict[str, Any], config_path: Path | str, env_cop
 #   of any alternates link; every set-url/set-head/ref-delete result is
 #   checked; a stale base never reports origin_main_commit; failure_excerpt
 #   is always in bootstrap. (ADR-018)
+# - 2026-11-03 [python-coder/fast-lane bo-4300e-2, BO-4300e-2-x/-xi]: ensure's fetches pass --no-write-fetch-head so a workspace carries no FETCH_HEAD of its own.
+#   (#fast-lane/BO-4300e-2) (ADR-018)
 # ===========================================================================

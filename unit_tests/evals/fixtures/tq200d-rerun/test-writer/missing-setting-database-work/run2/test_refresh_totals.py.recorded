@@ -1,0 +1,57 @@
+"""Database test for the ``refresh_totals()`` stored procedure (TQ-9402).
+
+``refresh_totals()`` must return the rows of the ``totals`` table. The
+procedure does not exist yet; this test specifies the contract a coder must
+implement to turn it green.
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "<scripts-dir>")
+from db_check.checker import resolve_test_db_address  # noqa: E402
+
+import psycopg2  # noqa: E402
+
+
+class TestRefreshTotals(unittest.TestCase):
+    def setUp(self):
+        # resolve_test_db_address() raises DbConnectionTestNotConfiguredError
+        # when testing_context.db_connection_test is unset -- let it
+        # propagate rather than skipping the test.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
+        self.cur = self.conn.cursor()
+
+        # Seed the totals table, inside this uncommitted transaction, with a
+        # known set of distinct rows so the assertion below cannot pass
+        # against leftover data from another test run or an empty table.
+        self.cur.execute("DELETE FROM totals")
+        self.cur.execute(
+            "INSERT INTO totals (id, label, amount) VALUES "
+            "(1, 'alpha', 100), (2, 'beta', 250), (3, 'gamma', 75)"
+        )
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.cur.close()
+        self.conn.close()
+
+    def test_refresh_totals_returns_all_totals_rows(self):
+        # covers: TQ-9402
+        # angle: criterion
+        """refresh_totals() must return exactly the current rows of totals."""
+        self.cur.execute("SELECT id, label, amount FROM refresh_totals()")
+        rows = self.cur.fetchall()
+
+        self.assertEqual(
+            sorted(rows),
+            [(1, "alpha", 100), (2, "beta", 250), (3, "gamma", 75)],
+        )
+        self.assertEqual(len(rows), 3)
+
+
+if __name__ == "__main__":
+    unittest.main()

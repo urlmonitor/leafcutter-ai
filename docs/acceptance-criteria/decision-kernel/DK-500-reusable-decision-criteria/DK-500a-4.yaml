@@ -33,7 +33,7 @@ it_requirements:
 - A Mermaid sequenceDiagram on a new docs/architecture/diagrams/ c3-* page, with the frontmatter of the sibling decision-kernel flow diagrams (c3-013 to c3-022), linked from docs/architecture/components/decision-kernel.md.
 - 'Participants named as built: the person, the kernel CLI (criteria mine), the published decision store (docs/decisions/), the Langfuse observations API, the mining store (.leafcutter/criteria-mining/), Jev, the review kernel run and the run root''s staged area.'
 - Show the grouping step as dec-a070edfb6465bced decided it (exact matches by code, one Jev choice, p >= 0.8) and an alt branch for an unavailable source. Show no message from a decision run to Langfuse or to the mining store.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -59,6 +59,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-02'
+  reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500a's sequence-diagram trigger (Langfuse, the decision store, the mining job and a reviewing person).

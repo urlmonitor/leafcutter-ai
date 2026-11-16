@@ -36,7 +36,7 @@ it_requirements:
   - "The instructions a reader encounters when invoking /plan-feature must point to exactly one documented path (the Workflow tool path) with no competing manual runbook."
   - "Prompt/spec consistency change owned by llm-expert; do not add runtime logic to plan-feature.js. If a .js edit is unavoidable, split that portion to a JS-capable implementer rather than editing it here."
   - "Keep the reconciliation consistent with the parent ACD-300b-3 single-execution-model outcome — do not reintroduce a manual path this edge case would contradict."
-test_required: false
+test_required: true
 notes: |
   Verification method (spec-only, no executable behaviour): test_required is
   false. Verify by re-reading templates/skills/plan-feature/SKILL.md (and the
@@ -51,9 +51,13 @@ expects_from:
   contract: "A reconciled command/skill/workflow set with one canonical execution path"
 origin_agent: business-analyst-v3
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. change_target pipeline changed to prompt. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: pipeline
+change_target: prompt
 risk_surface: internal

@@ -36,6 +36,11 @@ expects_from:
   ac_id: ACD-1800b-1a
   contract: "The implemented per-deliverable sign-off record + done-computation whose flow the diagram depicts."
 test_required: false
+test_rationale: Here the output is a Mermaid sequenceDiagram in which a craft records its sign-off
+  on the requirement, the done state is computed from the whole set of sign-offs, and the grouping
+  ticket is never written. Only a person can say whether the absence of a ticket write is evident
+  in the drawing rather than merely implied. That call is made by review against the record
+  side ACD-1800b-1a and produce side ACD-1800b-1b, and later by a verified_by inspection.
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

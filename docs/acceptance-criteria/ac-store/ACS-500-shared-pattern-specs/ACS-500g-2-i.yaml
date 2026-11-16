@@ -59,13 +59,17 @@ expects_from:
   contract: "The parameterised-criteria authoring rule from templates/skills/authoring-patterns/SKILL.md — one Given/When/Then scenario with every declared slot present as a named placeholder."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
-test_required: false
+test_required: true
 notes: |
   Producer-side counterpart to ACS-500f-2. ACS-500f-2 aligns the CONSUMER's
   detection predicate with the hook's; this AC makes the PRODUCER emit records

@@ -1,0 +1,86 @@
+"""
+MODULE: test_buy_volume_window
+GOAL: Verify every row in a window of buy_volume_window has a non-null buy_volume >= 0.
+BUSINESS CONTEXT: buy_volume feeds downstream trading metrics; a negative or
+    missing value would silently corrupt aggregations built on this view.
+ARCHITECTURE: Tests view buy_volume_window using transaction-rollback isolation.
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestBuyVolumeWindow(unittest.TestCase):
+    """Tests for buy_volume_window."""
+
+    def setUp(self):
+        """Open a transaction that will be rolled back after the test."""
+        # resolve_test_db_address() takes the PROJECT ROOT; suites run with cwd
+        # at the project root, so Path.cwd() is that root. It raises
+        # DbConnectionTestNotConfiguredError, naming
+        # testing_context.db_connection_test, when the setting is unset — let it
+        # propagate. Never catch it to skip the test, never use a fallback address.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        """Always roll back — never commit."""
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_window_rows_have_non_negative_buy_volume(self):
+        # covers: TQ-9502
+        """Every row in this test's window of buy_volume_window has a non-null buy_volume >= 0."""
+        # Arrange: seed a known, bounded window of trades rows under symbols unique to
+        # this test, including a zero-volume boundary row, so the window is exactly
+        # these rows and nothing from other tests or data already in the database.
+        cur = self.conn.cursor()
+        window_symbols = ["TQ9502_BTCUSDT", "TQ9502_ETHUSDT", "TQ9502_SOLUSDT"]
+        seeded_volumes = [125.5, 0, 7.25]
+        cur.executemany(
+            "INSERT INTO trades (symbol, buy_volume) VALUES (%s, %s)",
+            list(zip(window_symbols, seeded_volumes)),
+        )
+
+        # Act: pull just this test's window out of the view.
+        cur.execute(
+            "SELECT symbol, buy_volume FROM buy_volume_window WHERE symbol = ANY(%s)",
+            (window_symbols,),
+        )
+        rows = cur.fetchall()
+
+        # Assert: the window has exactly the rows that were seeded. A bare
+        # "buy_volume >= 0 for every row" check would pass vacuously on an
+        # empty or truncated result, so the count is checked first and exactly.
+        self.assertEqual(len(rows), len(window_symbols))
+
+        volumes_by_symbol = {symbol: volume for symbol, volume in rows}
+        self.assertEqual(set(volumes_by_symbol), set(window_symbols))
+
+        # Assert: no row's buy_volume silently became NULL. A ">= 0" comparison
+        # alone is True-skipping on NULL in Postgres and would miss this in SQL;
+        # checking the non-null count in Python closes that gap explicitly.
+        non_null_volumes = [v for v in volumes_by_symbol.values() if v is not None]
+        self.assertEqual(len(non_null_volumes), len(window_symbols))
+
+        # Assert: every row in the window satisfies the invariant under test.
+        for volume in non_null_volumes:
+            self.assertGreaterEqual(volume, 0)
+
+        # Assert: the exact seeded values came back untouched, not just "some
+        # value >= 0" -- this also catches the view silently returning a
+        # different row for the same symbol (e.g. from a bad join).
+        self.assertEqual(volumes_by_symbol["TQ9502_BTCUSDT"], 125.5)
+        self.assertEqual(volumes_by_symbol["TQ9502_ETHUSDT"], 0)
+        self.assertEqual(volumes_by_symbol["TQ9502_SOLUSDT"], 7.25)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the exemption path — a finished record declared to need no test, carrying
@@ -41,7 +41,16 @@ criteria: |
   And the entry is the single statement of these rules, with each enforcement
     point that applies them pointing to it rather than carrying its own account,
     so the two layers cannot drift into disagreeing about which records may be
-    exempt.
+    exempt,
+  And once the typed verification record of BO-2500f is in force, the entry states
+    it as a third part of an honourable declaration: its two methods, check and
+    inspection, what each must name, that inspection is unavailable for code,
+    schema and pipeline work, and that a changed inspected file refuses marking
+    done with "re-inspection needed",
+  And from that point the earlier clause that no third or parallel field is
+    involved is read as replaced by the clause above, and the entry remains the
+    single statement of these rules, which the done-proof guides (BO-2500a-8-iii,
+    BO-2500f-5) link to rather than restate.
 depends_on:
   - TQ-400e
   - TQ-400e-3
@@ -96,6 +105,11 @@ doc_links:
       any done record, with no reason required; :491-495 is the change-scoped CI
       mode doing the same. 37 done records in the store carry it today, so the two
       layers are in live disagreement about those 37 records.
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
 assigned_agent: documentation-expert
 estimated_complexity: M
 it_requirements:
@@ -179,6 +193,22 @@ it_requirements:
   - >-
     The file is a tracked reference subject to check_doc_frontmatter and
     check_doc_links; keep both passing in the same commit.
+  - WAVE-1 EFFECT ON THE RECONCILED BOUNDARY (IT PO, 2026-10-25). After BO-2500a-8-i, a test-free
+    declaration without a reason is refused at authoring for EVERY record, at every readiness,
+    not only on approved leaf code records. The one-sentence eligibility rule and the three-enforcement-point
+    account must include that fourth point (the staged-records validator's reason check).
+  - WAVE-2 CLAUSES (appended 2026-10-25). State verified_by as the third part only once BO-2500f-4's
+    switch is on; until then describe it as the coming rule, in the entry's existing today-versus-tomorrow
+    split. Field names come from BO-2500f-1, refusal texts from BO-2500f-4 and its parts, as
+    delivered.
+  - LENGTH (supersedes the '846 lines, warn' figure above). docs/reference/ac-schema.md is 774
+    lines against the 300-line limit, and check-doc-length has blocked net growth of over-limit
+    docs since 2026-09-14. Extend in place and pay for additions by tightening elsewhere, or
+    move the exemption account to a dedicated reference page linked from the field rows. Moving
+    it is a user decision, because the entry must stay the single statement (open question).
+  - TEST CONTRACT GAP. The protected test_spec covers the original clauses; the test-designer
+    must add descriptors for the two appended clauses (the verification-record statement, and
+    the replaced 'no third field' clause).
 delivers_to:
   - agent: documentation-expert
     ac_id: TQ-400d-5
@@ -187,6 +217,15 @@ delivers_to:
       exemption, published in docs/reference/ac-schema.md. TQ-400d-5's triage guide
       LINKS here for the "legitimately absent from the pile" clause and must not
       carry its own account of who may be exempt.
+  - agent: documentation-expert
+    ac_id: BO-2500a-8-iii
+    contract: The exemption reference entry (an anchor in docs/reference/ac-schema.md) the three
+      done-proof guides link to as the single statement of when a declaration is honoured or
+      refused and which records may carry one.
+  - agent: documentation-expert
+    ac_id: BO-2500f-5
+    contract: The same entry, amended to state the verification record; the how-to links to
+      it and does not restate it.
 expects_from:
   - ac_id: TQ-400e-3
     contract: >-
@@ -204,6 +243,9 @@ expects_from:
       The stability guarantee: an honoured exemption is re-derived each run and
       nothing is written to the record, which the entry must state so no reader
       expects an acknowledgement to appear on the record.
+  - ac_id: BO-2500f-4
+    contract: 'The delivered verification-record rule: methods, required parts, the inspection
+      ban for code/schema/pipeline, and the ''re-inspection needed'' refusal.'
 test_spec:
   - name: test_tq400e6_entry_states_two_fields_the_refusal_set_and_the_reconciled_boundary
     target_dir: unit_tests/docs/
@@ -308,11 +350,30 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-18'
+- reason: scope-addition
+  by: business-analyst
+  at: 2026-10-25
+  directed_by: user
+  note: >-
+    Wave 2 of the done-proof remedy (BO-2500f): appended two clauses so the reference entry states the typed verification record as the third part of an honourable declaration and explicitly replaces the 'no third or parallel field' clause once BO-2500f is in force. This entry stays the single rulebook; BO-2500a-8-iii and BO-2500f-5 link to it. No existing clause removed. Directed by the user at the PO gate 2026-10-25 (scope change 3).
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-25'
+  note: 'Re-checked against the two clauses the BA appended on 2026-10-25. Added it_requirements:
+    BO-2500a-8-i adds a fourth enforcement point to the reconciled boundary, the wave-2 clauses
+    wait for BO-2500f-4''s switch, the doc-length ratchet (ac-schema.md is 774 lines and may
+    not grow), and the test-contract gap. delivers_to BO-2500a-8-iii and BO-2500f-5, and expects_from
+    BO-2500f-4, added. readiness returned to reviewed until the appended clauses have test
+    design. criteria and test_spec untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: docs
 risk_surface: internal
+declares_side_effect: false
 notes: |
   Satisfies the reference-doc entry in TQ-400e's documentation_triggers.
 

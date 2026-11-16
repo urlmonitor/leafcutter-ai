@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 CAPABILITY_ID = "retrieve.repository"
 CAPABILITY_VERSION = "1.0.0"
 NATIVE_KINDS = ("repo_text", "knowledge_map")
+SOURCE_DEADLINE_FRACTION = 0.6
 
 
 def source_policy(policy: ReadPolicy, source: SourceConfig) -> ReadPolicy:
@@ -96,15 +97,37 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
     return chosen, unavailable
 
 
+def source_deadline(ctx: ExecutionContext) -> float:
+    """Return the per-source search deadline: a fraction of the outer capability timeout.
+
+    It stays below `limits.capability_timeout_seconds` (the config is the source of truth) so a
+    stalled source is cut by this executor while time is left to rerank and return the evidence
+    of the sources that answered, instead of the scheduler discarding the whole capability.
+    """
+    return ctx.config.limits.capability_timeout_seconds * SOURCE_DEADLINE_FRACTION
+
+
 async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
                       terms: list[str], entities: QueryEntities, goal: str | None
                       ) -> SearchReport:
-    """Search one source inside a `retrieval.<source>` retriever observation."""
+    """Search one source inside a `retrieval.<source>` retriever observation, under a deadline.
+
+    A source that does not answer within `source_deadline` yields an unavailable report that
+    names the deadline; its worker thread may keep running but never blocks the result.
+    """
     meta = {"source_id": source.id, "strategy": source.kind, "term_count": len(terms)}
     policy = source_policy(policy, source)
+    deadline = source_deadline(ctx)
     with ctx.tracer.span(f"retrieval.{source.id}", "retriever", ctx.corr, input={"terms": terms},
                          metadata=meta) as span:
-        report = await _search_source(ctx, policy, source, terms, entities, goal)
+        try:
+            report = await asyncio.wait_for(
+                _search_source(ctx, policy, source, terms, entities, goal), deadline)
+        except TimeoutError:
+            logger.warning("retrieval source %s cut at its %.1fs deadline", source.id, deadline)
+            report = SearchReport(source_id=source.id)
+            report.unavailable_reason = (f"search timed out at its {deadline:.1f}s deadline "
+                                         "(source cut, partial evidence returned)")
         span.update(output={"files_scanned": report.files_scanned,
                             "candidates": len(report.candidates),
                             "skipped": dict(report.skipped),
@@ -119,14 +142,7 @@ async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: Sour
     """Search one source in a worker thread; unreachable sources become unavailable reports."""
     cfg = ctx.config.retrieval
     if source.kind == "knowledge_map":
-        timeout = ctx.config.limits.capability_timeout_seconds
-        try:
-            return await asyncio.wait_for(asyncio.to_thread(
-                search_knowledge_map, policy, source, terms, cfg), timeout)
-        except TimeoutError:
-            report = SearchReport(source_id=source.id)
-            report.unavailable_reason = f"knowledge map timed out after {timeout}s"
-            return report
+        return await asyncio.to_thread(search_knowledge_map, policy, source, terms, cfg)
     resolved = policy.resolve_roots(source.roots)
     if not resolved.roots:
         report = SearchReport(source_id=source.id)
@@ -287,6 +303,12 @@ class RepositoryRetrievalExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-04 [python-coder]: Each source search runs under its own deadline, 0.6 of
+#   limits.capability_timeout_seconds (also for the knowledge map, which had the full outer
+#   value). A source that misses it becomes an unavailable report naming the deadline, so the
+#   sources that answered are still reranked and returned inside the outer timeout; the stalled
+#   worker thread is abandoned, not awaited. 0.6 leaves 40% for rerank and evidence building.
+#   (#TICKET-20261102-KernelDecisionGoalRoutingAndRetrievalTimeout/AC-3)
 # - 2026-10-01 [python-coder]: The request's goal reaches the search (a document that reviews a
 #   kernel run of it is flagged), a source may carry its own `max_file_bytes` (one read policy per
 #   source, also for explicit locators), and a request may cap the rerank batches the requester's

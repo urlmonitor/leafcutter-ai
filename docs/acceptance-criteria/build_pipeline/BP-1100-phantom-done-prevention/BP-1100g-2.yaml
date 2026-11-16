@@ -73,19 +73,7 @@ delivers_to:
 expects_from:
   - ac_id: BO-2900g-4
     contract: "A reachability request that either names the production entry point, or carries the single stable sentinel stating the entry point is not declared and must be resolved before the test is written. The writer must be able to tell the two apart without parsing prose."
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, and saying so explicitly rather than
-  faking coverage. change_target is prompt: every Then clause here is a statement about
-  what an LLM agent writes into its own sign-off record, and no unit test can produce
-  that record — the only faithful check is an eval over agent output, which is not in
-  scope. The two proxy tests available are both dishonest: grepping
-  templates/agents/test-writer.md for the guidance text asserts prose presence, not
-  actionability (the same trap flagged on BP-1100g-1's second clause), and validating a
-  hand-typed sample manifest asserts the fixture, not the writer. The forcing function
-  this AC actually needs is BP-1100g-5-i's manifest reader extended to the entry-point
-  key; that extension is recommended as a follow-up rather than smuggled in here as a
-  test. Reviewing surfaces: pr-reviewer and the llm-expert Prompt-Quality Checklist.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
@@ -99,6 +87,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- action: amended
+  agent: it-po
+  date: '2026-11-03'
+  reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -139,3 +131,8 @@ notes: |
   it_requirements insist on ONE fixed key token: it is the difference between
   BP-1100g-5-i's reader being extendable to this key and a second convention
   having to be built.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

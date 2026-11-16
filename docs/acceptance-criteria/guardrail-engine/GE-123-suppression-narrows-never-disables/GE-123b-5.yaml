@@ -95,20 +95,7 @@ it_requirements:
   - "Examples must not contain credential-shaped literals, and any illustrative allowlist line must use an ordinary source filename. This file is scanned on every commit, and an environment-named example is unreachable in any case because such a path is short-circuited to its name-based result."
   - "Documentation check for this AC, in place of an automated test: (1) the section states that an entry which would leave a file with no rule able to report is declined for that file, with the file reported as though it were absent and no other file or entry affected; (2) it states that the judgement is made against every suppression in force for the file together, that the counted quantity is rules still able to report rather than results produced, and it names the three boundary cases that stay honoured; (3) it states the notice's fields and that the notice is not fatal; (4) PARITY, BOTH DIRECTIONS — every declined case listed is one the check declines and every honoured case is one it honours, verified against the shipped scanner with the implementation authoritative on disagreement."
   - "Verification is by review against the shipped behaviour. Do not author code tests for this AC, and do not add test descriptors to it."
-test_required: false
-test_rationale: |
-  This AC changes prose only, so it carries no executable behaviour and
-  test_required is false rather than test_spec being left empty. What is asserted in
-  place of a test is the four-part documentation check recorded in it_requirements,
-  whose last part is a two-directional parity review against the shipped scanner.
-  Both directions of failure land on the reader in the same place: a reference that
-  describes a refusal the check does not make tells an author they are protected
-  from a mistake nobody is catching, and a reference that omits a refusal the check
-  does make leaves an author reading their own restored results as a defect and
-  filing it as one. Mechanising the parity would mean deriving the declined and
-  honoured cases from the scanner and diffing them against prose, which is a code AC
-  of its own and out of scope here; it is raised as a recommended follow-up rather
-  than smuggled into a documentation AC.
+test_required: true
 delivers_to: null
 expects_from:
   ac_id: GE-123b-1
@@ -143,6 +130,10 @@ amended_by:
       second copy of a passage the whole GE-123 documentation set is written to keep in one
       place. Store precedent: 8 ACs naming a SKILL.md chose llm-expert, 0 chose
       documentation-expert.'
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -191,4 +182,9 @@ notes: |
   and what happens then". GE-123c-5 answers "is this suppression form accepted".
   GE-123a-4 answers "is a name-matched file's content examined". Cross-reference
   rather than restate; the grammar has exactly one home.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
 target_epic: EPIC-SuppressionNarrowsNeverDisables

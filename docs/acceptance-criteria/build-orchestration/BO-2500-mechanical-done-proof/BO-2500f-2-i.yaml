@@ -1,0 +1,222 @@
+id: BO-2500f-2-i
+components:
+  - build_orchestration
+  - testing_quality
+title: "A check that nothing runs verifies nothing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a check carrying an enforces tag for a record, and the record stating that
+    the check runs as commit-time hook "check-skill-refs" or as build phase
+    "docs-lint",
+  When the wiring is evaluated as part of the record's done-status,
+  Then the verification holds only if the hook is registered in the project's
+    active commit-time hook configuration and that registration invokes this check,
+    or the build phase is one the build pipeline dispatches and that phase invokes
+    this check,
+  And a check named only in text, such as a comment, a document or a disabled
+    registration, is not wired, because only an actual invocation counts
+    (BO-2900b-3),
+  And a check registered under a hook id other than the one the record states fails
+    the verification, naming both hook ids,
+  And a check that was wired when the record was written and has since been
+    unwired fails the next time that record's done-status is evaluated, naming the
+    missing registration,
+  And re-checking the wiring of records already finished, on a schedule and without
+    a change to them, is not done here; it is TQ-400a's.
+depends_on: [BO-2500f-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Only an actual invocation counts as a caller; a name in text does not. The brief's 'reuse the BO-2900 reachability-gate idea'."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: scripts/ac_store/_verification_wiring.py
+    state: to_be_created
+  - path: scripts/build_phases_ac_store.py
+    state: existing
+it_requirements:
+  - 'Hook wiring is read from the active hook configuration: the generated .pre-commit-config.yaml
+    at the repo root (in CI it exists after the build step). A hook counts only if it is present,
+    not disabled, in a stage that runs on commit, and its entry invokes the check. Map the
+    deployed entry path (.leafcutter/scripts/commit_guardian/<x>.py, run through run_hook.py)
+    back to its template source through the build''s deploy mapping, never by guessing from
+    the basename.'
+  - If .pre-commit-config.yaml is absent or unparseable, the verdict is 'could not evaluate'
+    (fail closed; BO-2500f-4-i), never 'holds' and never a silent 'not wired'.
+  - 'Build-phase wiring: a phase counts only if the build pipeline dispatches it and that
+    phase invokes the check. ''Build phase'' is read as a scripts/build.py phase (the build_phases*.py
+    modules). Confirm this with the user (open question) and do not invent a phase registry.'
+  - Whether a line invokes the check is decided by BO-2900b-3's collector (collected_invocations
+    in templates/scripts/commit_guardian/_reachability_invocation_collector.py), reused, not
+    copied. A name in a comment, a document or a disabled entry is not an invocation.
+  - A hook-id mismatch names both ids; an unwired check names the missing registration.
+  - Evaluated per record at mark time only; no periodic re-check here (TQ-400a).
+  - Every new module under scripts/ac_store/ is added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py,
+    and its import is proven in the DEPLOYED .leafcutter/ layout, not only the source tree
+    (the BO-2500a-1-ii ModuleNotFoundError precedent).
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: the verification holds only if the hook is registered in the project's active
+      commit-time hook configuration and that registration invokes this check, or the build
+      phase is one the build pipeline dispatches and that phase invokes this check
+    needs_test: true
+    reason: Wiring separates a check that runs from one that merely exists, and both the hook
+      route and the phase route need a positive case.
+  - clause: a check named only in text, such as a comment, a document or a disabled registration,
+      is not wired, because only an actual invocation counts (BO-2900b-3)
+    needs_test: true
+    reason: A name in text is the BO-2900b-3 trap; a comment and a disabled registration must
+      each be shown not to count.
+  - clause: a check registered under a hook id other than the one the record states fails
+      the verification, naming both hook ids
+    needs_test: true
+    reason: A check wired under another id passes an exists test, so the mismatch needs its
+      own case with both ids in the message.
+  - clause: a check that was wired when the record was written and has since been unwired
+      fails the next time that record's done-status is evaluated, naming the missing registration
+    needs_test: true
+    reason: Wiring is re-read at each evaluation; unwiring after the record was written shows
+      no cached verdict is reused.
+  - clause: re-checking the wiring of records already finished, on a schedule and without
+      a change to them, is not done here; it is TQ-400a's
+    needs_test: false
+    reason: This states a boundary (TQ-400a owns scheduled re-checks), and there is no behaviour
+      here to exercise.
+delivers_to:
+  - agent: python-coder
+    ac_id: BO-2500f-2
+    contract: 'wiring_verdict(check_path, wired_as, repo_root) -> {holds: bool, reason: str};
+      the reason names both hook ids on a mismatch and the missing registration when unwired;
+      ''could not evaluate'' when the hook configuration cannot be read.'
+expects_from:
+  - ac_id: BO-2500f-2
+    contract: "The check named by the record and its enforces tag."
+  - ac_id: BO-2900b-3
+    contract: "The invocation-not-mention rule for what counts as a caller."
+test_spec:
+  - name: test_bo_2500f_2_i_hook_route_and_build_phase_route_hold_when_the_registration_invokes_the_check
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "wiring_verdict(check_path, wired_as, repo_root) on a temporary repo: a generated .pre-commit-config.yaml hook 'check-skill-refs' whose entry runs the check (through run_hook.py, mapped back to its template source by the deploy mapping) holds; a scripts/build_phases module phase 'docs-lint' that the build dispatches and that invokes the check holds."
+    proves_clause: "the verification holds only if the hook is registered in the project's active commit-time hook configuration and that registration invokes this check, or the build phase is one the build pipeline dispatches and that phase invokes this check"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_i_a_name_in_a_comment_a_document_or_a_disabled_registration_is_not_wired
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The check named in a comment of the hook config, in a document, and in a disabled registration (and a stage that does not run on commit) each give holds false, because only an invocation seen by the BO-2900b-3 collector (collected_invocations) counts; the collector is reused, not copied."
+    proves_clause: "a check named only in text, such as a comment, a document or a disabled registration, is not wired, because only an actual invocation counts (BO-2900b-3)"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_i_check_registered_under_another_hook_id_fails_naming_both_ids
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Record says 'pre-commit:check-skill-refs' while the check is registered under 'check-other': holds false and the reason names both hook ids."
+    proves_clause: "a check registered under a hook id other than the one the record states fails the verification, naming both hook ids"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_i_unwiring_after_the_record_was_written_fails_the_next_evaluation
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Evaluate a wired check (holds), remove its registration, evaluate the same record again in the same process and in a fresh process: the second evaluation fails naming the missing registration, so no verdict is cached."
+    proves_clause: "a check that was wired when the record was written and has since been unwired fails the next time that record's done-status is evaluated, naming the missing registration"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a verdict cached by record id between evaluations"
+      - "a rule that trusts the wired_as text without re-reading the configuration"
+  - name: test_bo_2500f_2_i_unreadable_hook_configuration_is_could_not_evaluate_never_holds
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "An absent and an unparseable .pre-commit-config.yaml give a 'could not evaluate' verdict that refuses, neither 'holds' nor a silent 'not wired'."
+    proves_clause: "the verification holds only if the hook is registered in the project's active commit-time hook configuration and that registration invokes this check, or the build phase is one the build pipeline dispatches and that phase invokes this check"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_2_i_unwired_check_is_refused_through_the_precommit_cli
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess"
+    description: "Real precommit CLI subprocess with BO-2500f-4's switch turned on through its declared mechanism: a staged done record naming a tagged check exits 0 while the hook is registered in the repo's .pre-commit-config.yaml and exits 1, naming the missing registration, after the registration is removed and committed."
+    proves_clause: "a check that was wired when the record was written and has since been unwired fails the next time that record's done-status is evaluated, naming the missing registration"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_bo_2500f_2_i_wiring_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/_verification_wiring.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "the verification holds only if the hook is registered in the project's active commit-time hook configuration and that registration invokes this check, or the build phase is one the build pipeline dispatches and that phase invokes this check"
+    code_file: scripts/ac_store/_verification_wiring.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/_verification_wiring.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/build_phases_ac_store.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: scripts/build_phases_ac_store.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds AC_STORE_DEPLOY_MAP for the new wiring module, and as a build_phases module it is the kind of surface a build-phase wiring reads."
+    decision: null
+file_findings_opened_files:
+  - scripts/build_phases_ac_store.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. The hook and phase names in the Given are examples; the brief named
+  scripts/check_skill_refs.py as a candidate check. Per user scope change 4 the
+  periodic re-check stays in TQ-400 (TQ-400a/b); cross-referenced, not duplicated.

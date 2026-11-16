@@ -28,7 +28,7 @@ list â€” it cannot group related pages or say more about a page than its ow
 frontmatter already says.
 
 This file is hand-written and does something the generated index does not: it groups
-the 22 files in this directory by subject, and gives each one a one-line description
+the pages in this directory by subject (`docs/INDEX.md` lists them all, including any not grouped here), and gives each one a one-line description
 written after actually reading the page (not copied from a possibly-generic
 `description:` field). **Neither file supersedes the other** â€” do not delete this one
 as "redundant with `docs/INDEX.md`". If a page's frontmatter `description:` improves,
@@ -94,6 +94,7 @@ below by hand.
 | [proof-claims-and-completeness.md](proof-claims-and-completeness.md) | For each of the seven `# angle:` test-proof kinds: what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | [documentation-coverage-guarantee.md](documentation-coverage-guarantee.md) | How the `documentation_gates` trigger policy, the `documentation-verifier` phase, and the `## Agent Contracts` brief combine to guarantee demanded documentation is real, not a placeholder. |
 | [wrong-version-runs.md](wrong-version-runs.md) | The wrong-version runs before every commit: tests in scope, the wrong versions run, every result word and stop reason, the put-back, the build routes and the /build-epic backstop. |
+| [produced-tests-eval-assertion-kinds.md](produced-tests-eval-assertion-kinds.md) | What an assertion kind of the produced-tests eval is, and the four family pages that hold one entry per kind. |
 | [consumer-test-sweep.md](consumer-test-sweep.md) | The sweep of edits to existing tests: the recorded list, the check, its reasons, and the weakened, loosened, removed and inconclusive items. |
 
 ## Code Review (Code-Smell Pipeline)

@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/testing-quality.md
   - docs/known-issues/README.md
-  - docs/known-issues/testing-quality/open-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
+  - docs/known-issues/testing-quality/resolved/resolved-low-ki-tq-20261024-eval-harness-cannot-launch-claude-on-windows.md
 ---
 
 # KI-TQ-20261024-produced-tests-db-scoring-residual-misreads — the database-setting checks still misread some phrasings

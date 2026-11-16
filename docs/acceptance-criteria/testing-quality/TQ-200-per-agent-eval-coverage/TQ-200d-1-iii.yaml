@@ -1,0 +1,79 @@
+id: TQ-200d-1-iii
+components:
+  - testing_quality
+title: "A live produced-tests run can keep what the agent produced for each row, so a failed row can be checked against the real output"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a live produced-tests eval run (no --score-gold) with the environment
+      variable LEAFCUTTER_EVAL_KEEP_OUTPUTS naming a directory,
+  When a row's agent run finishes and the row is scored,
+  Then every file the agent produced for that row (its changed files, its
+      to-run-later evidence, its report and, when captured, its transcript)
+      is kept under <that directory>/<eval set name>/<row id>/ after the run
+      ends, whether the row passed or failed,
+    And a second run into the same directory replaces that row's kept files
+      instead of mixing old and new ones,
+    And with the variable unset, or in --score-gold mode, nothing is kept and
+      the run behaves exactly as before,
+    And the bug symptom ("a failed row's produced files, report and
+      transcript are deleted with the run's temporary folder, so the failure
+      cannot be checked") does not occur.
+depends_on:
+  - TQ-200d-1
+doc_links:
+  - path: scripts/evals/produced_tests_mode.py
+    relationship: modifies
+    status: exists
+  - path: scripts/evals/README.md
+    relationship: modifies
+    status: exists
+    relevance: The 'Produced-tests mode (local only)' section says how to keep a live run's outputs.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+test_required: true
+package_surface: false
+origin_agent: quick-fix
+created: 2026-11-02
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - scripts/evals/produced_tests_mode.py
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Quick-fix, 2026-11-02. The live re-run of the produced-tests evals failed 6
+  rows and none could be checked, because live_output() writes the agent's
+  output into the TemporaryDirectory score_one() deletes. The kernel decision
+  (run-c0b71afec3e34fc0, option opt-classify-then-fix) makes keeping the
+  outputs the first step before classifying the failures. An environment
+  variable, not a CLI flag, because run_agent_eval.py must not grow.
+test_spec:
+  - name: test_live_row_outputs_are_kept_when_keep_dir_is_set
+    target_dir: unit_tests/evals/tq200d1iii/
+    framework: pytest
+    type: unit
+    description: >-
+      With LEAFCUTTER_EVAL_KEEP_OUTPUTS set, a live row (agent invocation faked to write a test file and
+      reply) leaves files/<test>, report.md under <dir>/<set name>/<row id>/ after score_one returns, for
+      a failing row too.
+  - name: test_rerun_replaces_kept_row_outputs
+    target_dir: unit_tests/evals/tq200d1iii/
+    framework: pytest
+    type: unit
+    description: A stale file in the kept row folder is gone after a second run of the same row.
+  - name: test_nothing_kept_when_unset_or_score_gold
+    target_dir: unit_tests/evals/tq200d1iii/
+    framework: pytest
+    type: unit
+    description: With the variable unset, or with score_gold, no folder is created in the keep directory.

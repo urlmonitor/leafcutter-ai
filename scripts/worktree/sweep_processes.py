@@ -126,6 +126,20 @@ def _load_worktree_config(config: dict[str, Any] | None, config_path: Path | Non
         return dict(_DEFAULT_CONFIG)
 
 
+def _is_within(path: Path, root: str) -> bool:
+    """Return True when *path* is *root* or lies inside it (whole path components, not a name prefix).
+
+    Args:
+        path: A process current folder.
+        root: Resolved absolute path of the worktree.
+
+    Returns:
+        True for the worktree itself or any sub-folder; False for a sibling such as ``<root>2``.
+    """
+    here, base = os.path.normcase(str(path.resolve())), os.path.normcase(root)
+    return here == base or here.startswith(base.rstrip("\\/") + os.sep)
+
+
 def _is_process_in_worktree(proc: Any, worktree_path: str) -> bool:
     """Return True if the process cmdline or cwd contains worktree_path.
 
@@ -146,7 +160,7 @@ def _is_process_in_worktree(proc: Any, worktree_path: str) -> bool:
 
     try:
         cwd = proc.cwd()
-        if cwd and normalized in str(Path(cwd).resolve()):
+        if cwd and _is_within(Path(cwd), normalized):
             return True
     except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
         pass

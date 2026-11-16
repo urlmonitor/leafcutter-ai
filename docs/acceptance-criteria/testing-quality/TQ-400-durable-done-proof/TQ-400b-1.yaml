@@ -113,6 +113,11 @@ delivers_to:
       The write site itself, plus the verdict cause for the demoted record, into
       which TQ-400b-2 adds demotion_reason and demotion_date as part of the same
       targeted single-field write.
+  - agent: python-coder
+    ac_id: BO-2500f-4-ii
+    contract: 'The demotion write path: a finished record returned to work_status in_progress/todo
+      with every other field unchanged, used by the wave-2 migration for records that cannot
+      be verified.'
 expects_from:
   - ac_id: TQ-400e-1
     contract: >-

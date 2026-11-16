@@ -193,19 +193,21 @@ class TestCorruptManifestIsIndeterminateNotAcleanPass(unittest.TestCase):
         )
         self.assertIn("INDETERMINATE", combined, msg=f"Output:\n{combined}")
 
-    def test_genuinely_absent_manifest_still_fails_open(self) -> None:
+    def test_genuinely_absent_manifest_is_reported_apart_from_corrupt(self) -> None:
         # covers: BP-100k-3
-        """Sanity/regression guard: the fresh-clone case (no manifest
-        anywhere) must remain non-blocking — this round's fix must not
-        collapse the absent case into the corrupt case."""
+        """Regression guard: the absent case (no manifest anywhere) must stay
+        distinct from the corrupt case. BP-1500d-4 retired the old exit-0
+        fail-open: absence is now its own could-not-read verdict (exit 3),
+        never the all-clear and never the corrupt INDETERMINATE (exit 2)."""
         hook = self.deployed_dir / "check_output_drift.py"
         result = _run_hook(hook, self.workspace)
         combined = result.stdout + result.stderr
         self.assertEqual(
-            0,
+            3,
             result.returncode,
-            msg=f"A genuinely absent manifest must fail-open (exit 0). Output:\n{combined}",
+            msg=f"A genuinely absent manifest must report could-not-read (exit 3). Output:\n{combined}",
         )
+        self.assertIn("could not read", combined.lower())
 
 
 # ===========================================================================

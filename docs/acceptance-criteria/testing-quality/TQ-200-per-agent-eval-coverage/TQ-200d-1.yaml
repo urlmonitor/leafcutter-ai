@@ -391,6 +391,11 @@ amended_by:
 superseded_by: null
 covered_by:
   - TQ-200d-1-i
+  - TQ-200d-1-ii
+  - TQ-200d-1-iii
+  - TQ-200d-1-iv
+  - TQ-200d-1-v
+  - TQ-200d-1-vi
 implemented_by: []
 change_target:
   - config

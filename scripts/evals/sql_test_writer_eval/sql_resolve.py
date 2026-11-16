@@ -98,6 +98,8 @@ class SqlResolver:
         self.classes = {c.name: assigned_names(c) for c in ast.walk(tree) if isinstance(c, ast.ClassDef)}
         self.helpers = helper_index(tree)
         self.scopes: list[dict[str, ast.AST]] = []
+        self.functions: list[ast.AST] = []
+        self.pairs: list[tuple[str, ast.Call, ast.AST | None]] = []
         self.owner = ""
 
     def text(self, node: ast.AST, depth: int = 0) -> str:
@@ -159,13 +161,16 @@ class SqlResolver:
         if is_function:
             blanks = {name: ast.Constant(value=BLANK) for name in parameter_names(node)}
             self.scopes.append({**assigned_names(node), **blanks})
+            self.functions.append(node)
         query = self.query_of(node) if isinstance(node, ast.Call) else None
         if query is not None:
             found.append(query)
+            self.pairs.append((query, node, self.functions[-1] if self.functions else None))
         for child in ast.iter_child_nodes(node):
             self.visit(child, found)
         if is_function:
             self.scopes.pop()
+            self.functions.pop()
         self.owner = previous
 
 
@@ -174,3 +179,10 @@ def executed_queries(tree: ast.AST) -> list[str]:
     found: list[str] = []
     SqlResolver(tree).visit(tree, found)
     return found
+
+
+def executed_pairs(tree: ast.AST) -> list[tuple[str, ast.Call, ast.AST | None]]:
+    """``(lower-cased SQL, the executing call, its enclosing function or None)`` for every query the tree executes."""
+    resolver = SqlResolver(tree)
+    resolver.visit(tree, [])
+    return resolver.pairs

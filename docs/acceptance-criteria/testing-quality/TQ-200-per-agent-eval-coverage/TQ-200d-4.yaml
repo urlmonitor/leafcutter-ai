@@ -241,7 +241,13 @@ amended_by:
     by: orchestrator
     at: 2026-10-24
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-200d-4-i
+  - TQ-200d-4-ii
+  - TQ-200d-4-iii
+  - TQ-200d-4-iv
+  - TQ-200d-4-v
+  - TQ-200d-4-vi
 implemented_by: []
 change_target:
   - config
