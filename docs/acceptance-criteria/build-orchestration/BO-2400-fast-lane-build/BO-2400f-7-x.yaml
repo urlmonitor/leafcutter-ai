@@ -1,0 +1,241 @@
+id: BO-2400f-7-x
+components:
+  - build_orchestration
+title: "A held outcome relayed on standard error with empty standard output is still read as held"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the claim-step reply observed on 2026-11-16 — exit status 1, standard output empty,
+    and standard error holding
+    {"claimed": [], "excluded_claimed": ["KM-400e-5"], "target_refused": true},
+  When the run reads it at the claim step,
+  Then it halts as held, naming KM-400e-5 (BO-2400f-7-ix),
+  And it does not say the claim was never attempted.
+
+  Given a claim-step reply with the "held" exit status (BO-2400f-7-viii) whose standard
+    output holds the held outcome naming XY-100a-1 and whose standard error holds a
+    one-line deprecation warning,
+  When the run reads it,
+  Then the held outcome is taken from standard output, the halt names XY-100a-1, and the
+    warning text does not change the halt kind.
+
+  Given a claim-step reply with the "held" exit status whose standard output and standard
+    error are both empty, or hold no readable claim outcome,
+  When the run reads it,
+  Then it does not report a held halt naming no member,
+  And it halts as a claim command that ran and failed, quoting what came back.
+depends_on: [BO-2400f-7, BO-2400f-7-ix]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The claim-reply reader parses standard output only. On 2026-11-16 the runner relayed the command's standard-output JSON as standard error."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires the runner to relay both streams verbatim; the observed relay did not. This record makes the lane read the outcome either way rather than depend on that."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+declared_files:
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    claim_outcome_source:
+      type: string
+      enum: [stdout, stderr, none]
+      description: >-
+        Which stream the claim reader took the claim outcome from. Standard output is read
+        first; standard error is read only when standard output holds no readable claim
+        outcome; none means neither did, and the reply is then classified without a held
+        outcome (ran and failed on a non-success exit).
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      A READABLE CLAIM OUTCOME IS A WHOLE OBJECT. On either stream, the outcome counts only
+      when a complete JSON object with the claim outcome's fields (claimed, excluded_claimed,
+      target_refused) can be read from it. Ids that merely appear in a traceback, a warning or
+      other text never make a held outcome.
+    - >-
+      Standard output wins when both streams hold an outcome. A warning or other text on
+      standard error never changes the halt kind of a reply whose standard output holds the
+      outcome.
+    - >-
+      The fallback to standard error is a tolerance of a relay fault (BO-2400a-1-i says both
+      streams are relayed verbatim), not a new contract. It must not change how any other
+      command step reads its reply, and the relay fault itself is not fixed here.
+    - >-
+      The reply used for the first scenario is the one copied from the 2026-11-16 journal
+      (run wf_1d040da5-d48), exit status 1, kept as a fixture byte for byte.
+test_intent:
+  - clause: it halts as held, naming KM-400e-5 (BO-2400f-7-ix)
+    needs_test: true
+    reason: The observed relay put the outcome on standard error, and a reader of standard output alone turns this held claim into a wrong halt.
+  - clause: it does not say the claim was never attempted
+    needs_test: true
+    reason: The never-attempted wording is exactly what the 2026-11-16 run printed for this reply.
+  - clause: the held outcome is taken from standard output, the halt names XY-100a-1, and the warning text does not change the halt kind
+    needs_test: true
+    reason: A stream fallback that prefers standard error, or reads the warning as an error, would misclassify a correct reply.
+  - clause: it does not report a held halt naming no member
+    needs_test: true
+    reason: The reserved held status with no readable outcome is the shape most likely to produce an empty held halt.
+  - clause: it halts as a claim command that ran and failed, quoting what came back
+    needs_test: true
+    reason: Without a readable outcome the only honest halt is ran and failed, and the quote is what the operator acts on.
+test_spec:
+  - name: test_the_2026_11_16_relayed_on_standard_error_reply_halts_as_held_naming_km_400e_5
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Gives the claim step the reply copied byte for byte from the 2026-11-16 journal (run wf_1d040da5-d48), exit
+      status 1, empty standard output, the held outcome with KM-400e-5 on standard error, stored as a fixture file
+      and loaded in the test. Runs it through the workflow-engine harness and asserts halt_kind claim_held naming
+      KM-400e-5. The wrong version it catches is a reader of standard output alone, which turns this held claim into a
+      claim command failed halt.
+    proves_clause: it halts as held, naming KM-400e-5 (BO-2400f-7-ix)
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a reader that parses standard output only and so never sees the outcome
+      - a reader that finds the outcome on standard error but still ends in the never attempted halt
+  - name: test_relayed_on_standard_error_held_halt_does_not_say_never_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same journal reply. The terminal payload text, lower-cased, must contain none of the never attempted markers
+      of test_bo2400f_7_iii_claim_refusal_workflow.py, the wording the 2026-11-16 run printed for this reply.
+    proves_clause: it does not say the claim was never attempted
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the old never attempted message kept on the held halt
+  - name: test_standard_output_outcome_wins_over_a_warning_on_standard_error
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Builds a fixture store with XY-100a-1 at in_progress, runs the real claim command as a subprocess to capture
+      its exit status and standard output, and adds a one-line deprecation warning as standard error. The lane's halt
+      must be claim_held naming XY-100a-1, taken from standard output, with a halt kind unchanged by the warning.
+      A second case puts a different complete outcome on standard error and asserts the standard output one is the
+      one named.
+    proves_clause: the held outcome is taken from standard output, the halt names XY-100a-1, and the warning text does not change the halt kind
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a fallback that prefers standard error over standard output
+      - a warning on standard error read as an error that overrides the held outcome
+  - name: test_held_status_with_no_readable_outcome_never_gives_a_held_halt_naming_nobody
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Feeds the reserved held exit status with both streams empty, with a traceback on standard error that merely
+      mentions XY-100a-1, and with an incomplete JSON fragment, and asserts no payload carries halt_kind claim_held.
+      Ids that only appear in a traceback or warning must never make a held outcome.
+    proves_clause: it does not report a held halt naming no member
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a regex that pulls ids out of free text and calls them held
+      - the reserved status alone taken as proof of a held outcome
+  - name: test_held_status_with_no_readable_outcome_halts_as_ran_and_failed_quoting_what_came_back
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Same three replies. Each payload must carry halt_kind claim_command_failed with the exit status and a quote of
+      what came back, or the literal no reply wording where both streams were empty.
+    proves_clause: it halts as a claim command that ran and failed, quoting what came back
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_the_standard_error_fallback_does_not_change_how_other_command_steps_read_replies
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Gives the resolve-connected command step a reply with exit status 0, empty standard output and a JSON list of
+      ids on standard error, and asserts the run still ends in the resolver error it ends in today, because the
+      fallback is scoped to the claim step.
+    proves_clause: it halts as held, naming KM-400e-5 (BO-2400f-7-ix)
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the standard error fallback added to the shared reply reader and so applied to every command step
+  - name: test_relayed_held_outcome_is_reachable_through_the_workflow_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs fast-lane-ship.js as the engine does (run_workflow_under_e2 with args ac) with the claim-connected label
+      answered by the journal reply and asserts the run's terminal return value is the held halt.
+    proves_clause: it halts as held, naming KM-400e-5 (BO-2400f-7-ix)
+    code_file: templates/workflows-js/fast-lane-ship.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+file_findings:
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its interpretClaimRunnerReply parses standard output only, which is the claim-reply reader this record extends to a fallback on standard error.
+    decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is a sibling workflow script of the same type whose reply handling is written as pure functions plus a halt payload.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-ticket.js
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7-ix
+  contract: "The claim-reply reader that recognises a held outcome on any exit status and classifies the reply into one of five outcomes: usable claim | declined_step | claim_command_failed | claim_held (held non-empty) | state_unknown."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The first scenario is the reply copied from the 2026-11-16 journal (run wf_1d040da5-d48,
+  last line). Its exit status is 1, not BO-2400f-7-viii's reserved status, on purpose: the
+  lane must read a held refusal from the command as deployed that day as well as from the
+  fixed command.
+
+  The runner moving standard output into standard error is a fault in the relay
+  (BO-2400a-1-i says both streams are returned exactly as produced). It is not fixed here.
+  This record only stops that fault from turning a held claim into a wrong halt.
