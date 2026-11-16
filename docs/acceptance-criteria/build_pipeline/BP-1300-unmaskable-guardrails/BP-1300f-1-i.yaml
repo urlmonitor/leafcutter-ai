@@ -1,0 +1,114 @@
+id: BP-1300f-1-i
+components:
+  - build_pipeline
+title: "A type error is new only when its code and message occur more often at the head than at the merge base, so a moved old error is never charged and line numbers play no part"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given at the merge base the file scripts/svc.py has exactly one type error, code
+      "return-value", message 'Incompatible return value type (got "int", expected "str")',
+      at line 2.
+
+  Scenario: An old error on a moved line is not new
+    When the pull request inserts five lines above that function and changes nothing else,
+      so mypy now reports the same code and message at line 7,
+    Then the check passes,
+    And it reports 0 new errors and 1 existing error left untouched.
+
+  Scenario: A genuinely new error fails, naming where and what
+    When the pull request adds a function with an "assignment" error at head line 12,
+    Then the check fails with a non-zero exit,
+    And the output names scripts/svc.py, line 12, code "assignment" and mypy's message,
+    And the output gives a one-line remedy: fix the type; do not add a type-ignore.
+
+  Scenario: One more copy of an existing error is one new error
+    When the pull request adds a second function carrying the same "return-value" error
+      with the same message,
+    Then the check fails, reporting exactly 1 new error of that code and message,
+    And it names the head lines where that error occurs, saying the merge base already
+      had 1 identical error in the file.
+
+  Scenario: A line number inside a message is not part of the error's identity
+    Given an error whose message mentions a line, such as 'Name "x" already defined on
+      line 3',
+    When the pull request moves both definitions down so the message says line 8,
+    Then the two errors are the same error and neither is reported as new.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "IDENTITY: an error key is (head path, error code, message with every 'line <digits>' rewritten to 'line N'). The line and column mypy prints are carried for display only and never compared."
+  - "COUNTING: per key, new = max(0, head count - base count). When the base count is 0 every head occurrence is new and each is printed on its own line as '<path>:<line>: new error [<code>] <message>'. When the base count is above 0 the excess is reported once with every head line of that key and the base count, because which of identical errors is the new one cannot be known."
+  - "REMEDY: every new error is followed by one remedy line telling the author to fix the type and not to add a '# type: ignore' (an added ignore fails the same check)."
+  - "PARSING: mypy's text output is parsed with one regex accepting 'path:line[:col[:endline:endcol]]: error: message  [code]'; 'note:' lines are ignored; only errors whose path is one of the inspected files count (mypy also reports errors in modules it follows)."
+  - "MYPY FLAGS live in the module once: --ignore-missing-imports --explicit-package-bases (unchanged from the old job) plus --no-error-summary --show-error-codes --no-pretty --no-color-output --hide-error-context for a stable output format."
+test_spec:
+  - name: test_bp_1300f_1_i_shifted_old_error_is_not_new
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "matches errors by (path, line) so a moved error counts as new"
+    description: "Real git repo: base has the return-value error at line 2, head inserts five lines above it; the real module exits 0 and reports 0 new errors and 1 existing error untouched."
+  - name: test_bp_1300f_1_i_genuinely_new_error_fails_naming_line_code_and_remedy
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "reports a failure without the head line number"
+      - "exits 0 while printing the new error"
+    description: "Head adds an assignment error at line 12; exit 1; output names scripts/svc.py:12, [assignment], the message and the remedy line."
+  - name: test_bp_1300f_1_i_extra_copy_of_an_existing_error_is_new
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "compares sets instead of multisets, so a second identical error is absorbed by the first"
+    description: "Head duplicates the return-value error in a second function; exit 1 and exactly one new error reported, naming both head lines and the base count 1."
+  - name: test_bp_1300f_1_i_line_number_inside_a_message_is_not_identity
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: boundary
+    must_catch:
+      - "keys errors on the raw message, so 'already defined on line 3' and 'on line 8' differ"
+    description: "Pure comparison over parsed mypy lines: a no-redef error whose message says line 3 at base and line 8 at head is not new."
+test_rationale: >-
+  The behaviour is a verdict over two real mypy runs against two real git revisions,
+  so the criterion arms build a temporary git repository with a base commit and a
+  head commit and run the real module as a subprocess with the real mypy. The
+  message-normalisation arm is a pure function over mypy's output format, tested
+  directly with real mypy output lines so it does not pay two mypy runs.
+delivers_to:
+  - agent: python-coder
+    contract: "To BP-1300f-1-vi: the per-file new / existing-untouched / removed error counts that the summary line prints."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_mypy_ratchet.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary
