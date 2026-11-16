@@ -59,13 +59,15 @@ def git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def run_ratchet(repo: Path, cache_dir: Path | None, base: str = "main",
-                pathspecs: tuple[str, ...] = PATHSPECS) -> RatchetRun:
+                pathspecs: tuple[str, ...] = PATHSPECS,
+                env: dict[str, str] | None = None) -> RatchetRun:
     """Run the real module as CI does: --base, then the pathspecs after --."""
     argv = [sys.executable, str(RATCHET), "--repo", str(repo), "--base", base]
     if cache_dir is not None:
         argv += ["--cache-dir", str(cache_dir)]
     argv += ["--", *pathspecs]
-    done = subprocess.run(argv, cwd=str(repo), capture_output=True, text=True, timeout=TIMEOUT)
+    done = subprocess.run(argv, cwd=str(repo), capture_output=True, text=True,
+                          timeout=TIMEOUT, env=env)
     return RatchetRun(done.returncode, done.stdout + done.stderr)
 
 
@@ -144,8 +146,8 @@ class RatchetRepoCase(unittest.TestCase):
         git(self.root, "add", "-A")
         git(self.root, "commit", "-q", "-m", "head")
 
-    def ratchet(self, base: str = "main") -> RatchetRun:
-        return run_ratchet(self.root, self.cache, base=base)
+    def ratchet(self, base: str = "main", env: dict[str, str] | None = None) -> RatchetRun:
+        return run_ratchet(self.root, self.cache, base=base, env=env)
 
     def assert_passed(self, run: RatchetRun) -> dict[str, int]:
         counts = summary(run.out)

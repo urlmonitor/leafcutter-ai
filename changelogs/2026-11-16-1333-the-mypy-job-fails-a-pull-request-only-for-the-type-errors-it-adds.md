@@ -15,8 +15,10 @@ description: >-
   re-keys a renamed file's base errors from its old path, counts type-ignore
   comments with the tokenizer, and prints each new error with its head line and a
   remedy, plus one summary line. A run with nothing in scope says NOTHING INSPECTED;
-  a mypy exit status other than 0 or 1, a git failure or an unreadable file is
-  COULD NOT CHECK (exit 2). .github/workflows/ci.yml job typecheck is renamed, loses
+  a mypy exit status other than 0 or 1, a status 1 with no error line (what
+  `python -m mypy` gives when mypy is not installed), a failed `mypy --version`
+  probe, a git failure or an unreadable file is COULD NOT CHECK (exit 2). The
+  output names the mypy version it ran. .github/workflows/ci.yml job typecheck is renamed, loses
   continue-on-error and calls the module. Tests in unit_tests/build_guards/ build
   real git repositories and run the real module and mypy.
 breaking: false

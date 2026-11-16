@@ -103,8 +103,15 @@ class RatchetError(Exception):
     @classmethod
     def mypy_incomplete(cls, code: int, root: Path, output: str) -> RatchetError:
         return cls(
-            f"mypy exited with status {code} in {root}, so it produced no complete "
-            f"error list. mypy said:\n{output}"
+            f"mypy exited with status {code} in {root} without a complete error list "
+            f"(status 1 must come with error lines). mypy said:\n{output or '(nothing)'}"
+        )
+
+    @classmethod
+    def mypy_unusable(cls, code: int, output: str) -> RatchetError:
+        return cls(
+            f"`{sys.executable} -m mypy --version` did not answer with a mypy version "
+            f"(exit {code}): {output or '(nothing)'}"
         )
 
     @classmethod
@@ -194,16 +201,16 @@ def parse_name_status(raw: str) -> list[Change]:
     return [change for change in changes if change.head_path.endswith(".py")]
 
 
-def parse_mypy_output(text: str, wanted: Iterable[str]) -> list[MypyError]:
-    """The error lines of mypy's text output that name one of the *wanted* files."""
-    keep = set(wanted)
+def parse_mypy_output(text: str, wanted: Iterable[str] | None) -> list[MypyError]:
+    """The error lines of mypy's text output naming a *wanted* file (None: any file)."""
+    keep = None if wanted is None else set(wanted)
     errors: list[MypyError] = []
     for raw_line in text.splitlines():
         match = _ERROR_LINE.match(raw_line.rstrip())
         if match is None:
             continue
         path = match.group("path").replace("\\", "/")
-        if path in keep:
+        if keep is None or path in keep:
             code = match.group("code") or ""
             errors.append(MypyError(path, int(match.group("line")), code, match.group("message")))
     return errors
@@ -341,13 +348,28 @@ def changed_files(repo: Path, merge_base: str, pathspecs: list[str]) -> list[Cha
     return parse_name_status(raw)
 
 
+def mypy_version(root: Path) -> str:
+    """The version line of the mypy this run uses; anything else is RatchetError."""
+    done = _run([sys.executable, "-m", "mypy", "--version"], root, _GIT_TIMEOUT)
+    answer = done.stdout.strip()
+    if done.returncode != 0 or not answer.startswith("mypy "):
+        raise RatchetError.mypy_unusable(done.returncode, (done.stdout + done.stderr).strip())
+    return answer
+
+
 def run_mypy(root: Path, paths: list[str], cache_dir: Path) -> list[MypyError]:
-    """mypy over *paths* with *root* as cwd, so the whole tree is the context."""
+    """mypy over *paths* with *root* as cwd, so the whole tree is the context.
+
+    Status 0 = no errors, 1 = errors listed; anything else, or a status 1 with no
+    error line at all (e.g. ``No module named mypy``), is not an error list.
+    """
     argv = [sys.executable, "-m", "mypy", *MYPY_FLAGS, "--cache-dir", str(cache_dir), *paths]
     done = _run(argv, root, _MYPY_TIMEOUT)
-    if done.returncode not in (0, 1):
+    listed = parse_mypy_output(done.stdout, paths)
+    unlisted = done.returncode == 1 and not parse_mypy_output(done.stdout, None)
+    if done.returncode not in (0, 1) or unlisted:
         raise RatchetError.mypy_incomplete(done.returncode, root, (done.stdout + done.stderr).strip())
-    return parse_mypy_output(done.stdout, paths)
+    return listed
 
 
 def read_ignores(path: Path) -> IgnoreLines:
@@ -458,8 +480,9 @@ def run_ratchet(repo: Path, base: str, pathspecs: list[str], cache_dir: Path | N
             "no type check ran. This is not a pass on content."
         )
         return 0
+    print(f"Type checker: {mypy_version(repo)}")
     print(f"Changed Python files in scope ({len(changes)}), merge base {merge_base[:12]}:")
-    print("\n".join(_describe(change) for change in changes))
+    print("\n".join(_describe(change) for change in changes), flush=True)
     head_paths = [change.head_path for change in changes]
     with _cache_root(cache_dir) as cache_root:
         head_errors = run_mypy(repo, head_paths, cache_root / "head")
@@ -510,4 +533,9 @@ if __name__ == "__main__":
 #   from their old path, tokenizer-counted type-ignores, and a summary that
 #   never looks like a pass when nothing was inspected or mypy could not
 #   finish. (#TICKETLESS reason=bp-1300f-ac-driven-no-ticket-file)
+# - 2026-11-16 [python-coder/BP-1300f-1-vi]: Closed a fail-open found by
+#   reading this PR's own CI log: `python -m mypy` without mypy installed
+#   exits 1 with no error line, which read as "errors found, none ours" and
+#   passed. A version probe now names the mypy used, and a status 1 with no
+#   error line is COULD NOT CHECK. (#TICKETLESS reason=bp-1300f-ac-driven-no-ticket-file)
 # ====================================================================

@@ -13,6 +13,7 @@ GOAL: Behavioural proof. The integration tests build a real git repository with 
 from __future__ import annotations
 
 import importlib
+import os
 import re
 import unittest
 
@@ -110,6 +111,24 @@ class TestVerdictIsHonest(RatchetRepoCase):
         self.assertIn("COULD NOT CHECK", run.out)
         self.assertTrue(self.lines_with(run.out, "scripts/svc.py", "[syntax]"), run.out)
         self.assertIsNone(summary(run.out), run.out)
+
+    def test_bp_1300f_1_vi_missing_or_silent_mypy_is_could_not_check(self):
+        # covers: BP-1300f-1-vi
+        self.commit_base({"scripts/svc.py": "X = 1\n"})
+        self.commit_head({"scripts/svc.py": "X = 2\n"})
+        silent = ('import sys\nif sys.argv[1:] == ["--version"]:\n'
+                  '    print("mypy 0.0.0 (stub)")\n    sys.exit(0)\nsys.exit(1)\n')
+        missing = 'import sys\nsys.stderr.write("No module named mypy\\n")\nsys.exit(1)\n'
+        for label, body, named in (("silent", silent, "status 1"), ("missing", missing, "--version")):
+            stub = self.cache.parent / "stubs" / label / "mypy"
+            stub.mkdir(parents=True)
+            (stub / "__init__.py").write_text("", encoding="utf-8")
+            (stub / "__main__.py").write_text(body, encoding="utf-8")
+            run = self.ratchet(env={**os.environ, "PYTHONPATH": str(stub.parent)})
+            self.assertEqual(run.code, 2, f"{label}:\n{run.out}")
+            self.assertIn("COULD NOT CHECK", run.out)
+            self.assertIn(named, run.out)
+            self.assertIsNone(summary(run.out), run.out)
 
     def test_bp_1300f_1_vi_unresolvable_base_is_could_not_check(self):
         # covers: BP-1300f-1-vi

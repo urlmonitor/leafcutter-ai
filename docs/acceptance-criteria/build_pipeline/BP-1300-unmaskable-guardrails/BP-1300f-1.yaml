@@ -105,3 +105,10 @@ notes: |
   Real-range dry run, origin/main~5..origin/main (14 changed files): 0 new errors,
   2 existing untouched, 14 removed; whole-file mypy over the same files reported 12
   errors, 10 of them in modules the range never touched.
+
+  FOLLOW-UP ON THE SAME PR. The first CI run of the job on its own pull request passed
+  in under two seconds with no evidence mypy had run. Reading it exposed a fail-open:
+  `python -m mypy` without mypy exits 1, the status that means "errors found", and the
+  module parsed no error line and passed. Fixed (version probe printed in the log; a
+  status 1 with no error line is could-not-check) with a test that was red against
+  the pre-fix code (exit 0) and green after; see BP-1300f-1-vi.

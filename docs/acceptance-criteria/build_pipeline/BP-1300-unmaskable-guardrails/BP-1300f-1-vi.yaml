@@ -34,6 +34,14 @@ criteria: |
     And it states that it could not type-check and shows mypy's own output,
     And it prints no pass summary.
 
+  Scenario: A missing type checker, or one that lists nothing, is could-not-check
+    Given the interpreter that runs the check has no usable mypy, so
+      "python -m mypy" answers "No module named mypy" with exit status 1,
+      or a mypy that exits with status 1 without printing a single error line,
+    When the check runs,
+    Then it exits non-zero, states that it could not check, and prints no pass summary,
+    And on a usable mypy its output names the mypy version it ran.
+
   Scenario: A base that cannot be resolved is could-not-check
     Given the base given to the check names no revision in the repository,
     When the check runs,
@@ -54,6 +62,7 @@ it_requirements:
   - "SUMMARY ON PASS: 'mypy ratchet: <n> file(s), <k> new error(s) (<m> existing error(s) untouched, <r> removed), <t> new type-ignore(s)'; on failure the same counts follow 'mypy ratchet FAILED:'."
   - "NOTHING INSPECTED: 'mypy ratchet: NOTHING INSPECTED -- 0 changed Python files in scope ...; no type check ran. This is not a pass on content.' -- printed instead of the summary, exit 0 (a pull request that touches no Python must not go red), and mypy is not invoked."
   - "COULD NOT CHECK: 'mypy ratchet: COULD NOT CHECK -- <reason>', mypy's stdout and stderr relayed, exit 2. The pass summary never appears on this path."
+  - "STATUS 1 IS NOT ENOUGH: `python -m mypy` with mypy absent exits 1, the same status as 'errors found'. Before the first run the check probes `<python> -m mypy --version` and prints the answer ('Type checker: mypy <version>'); a probe that fails or does not answer 'mypy ...' is could-not-check. A mypy run with status 1 and no error line in its output is could-not-check too. (Found on this record's own pull request: the first CI run passed in under two seconds and its log gave no evidence that mypy had run, which is how the hole was noticed.)"
   - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): every git and mypy subprocess call and every file read is wrapped in a specific except (OSError, subprocess.SubprocessError, tokenize.TokenError, SyntaxError, UnicodeDecodeError), logged at WARNING and converted to the could-not-check outcome; pure parsing and comparison functions carry no try/except."
 test_spec:
   - name: test_bp_1300f_1_vi_pass_summary_names_files_new_existing_and_ignores
@@ -79,6 +88,14 @@ test_spec:
       - "treats mypy exit status 2 as 'errors found' and compares a partial error list"
       - "treats mypy exit status 2 as success"
     description: "Head introduces a syntax error so mypy exits 2; the module exits 2, says COULD NOT CHECK, relays mypy's syntax message, and prints no pass summary."
+  - name: test_bp_1300f_1_vi_missing_or_silent_mypy_is_could_not_check
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "reads mypy exit status 1 with no error line as 'errors found, none in the inspected files' and passes"
+    description: "A stub mypy package on PYTHONPATH (the real environment manipulated, the module untouched): one answers --version but exits 1 with no output, one answers every call with 'No module named mypy' and exit 1; both give exit 2, COULD NOT CHECK naming the cause, and no summary."
   - name: test_bp_1300f_1_vi_unresolvable_base_is_could_not_check
     target_dir: unit_tests/build_guards/
     framework: unittest
@@ -97,7 +114,9 @@ expects_from:
     contract: "Total new and removed type-ignore comments."
 origin_agent: BrainCandy
 created: 2026-11-16
-amended_by: []
+amended_by:
+  - reason: "BrainCandy (human user) via the BP-1300f-1 build session, 2026-11-16: added the missing-or-silent mypy scenario"
+    detail: "The first CI run on the introducing pull request showed `python -m mypy` exiting 1 (the 'errors found' status) is also what an interpreter without mypy returns, which the module read as a pass. Added one scenario (missing mypy, or status 1 with no error line, is could-not-check; the output names the mypy version), one it_requirement and one test_spec entry. No other clause changed."
 superseded_by: null
 covered_by:
   - unit_tests/build_guards/test_bp_1300f_1_ignores_and_verdict.py
