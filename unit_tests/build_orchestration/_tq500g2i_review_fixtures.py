@@ -71,10 +71,10 @@ def _drivers(root: Path, provide: str | None) -> tuple[Path, Path | None]:
     blocked = [d for d in DRIVERS if provide is None or DRIVERS.index(d) < DRIVERS.index(provide)]
     if provide is not None:
         _wb(driver / provide / "__init__.py", "from standin_pg import *  # noqa: F401,F403\n")
-    block = root / "block" if blocked else None
+    block = root / "block"
     for module in blocked:
         _wb(block / f"{module}.py", fx._BLOCKER)  # noqa: SLF001 -- the one blocker text
-    return driver, block
+    return driver, (block if blocked else None)
 
 
 def build(root: Path, *, address: str, tests: list[tuple[str, list[str]]] | None = None, wrongs: dict[str, str] | None = None,
