@@ -42,6 +42,7 @@ DECISION HISTORY
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 
 import pytest
 
@@ -58,7 +59,7 @@ from ._bp1500d1i_harness import (
 
 
 @pytest.fixture(scope="module")
-def paired_session() -> PairedSession:
+def paired_session() -> Iterator[PairedSession]:
     """Both layouts (same-directory + sibling), built ONCE, shared by every
     test in this module -- this AC's it_requirements #6 makes the paired
     two-layout run inside one session the contract, not a convenience."""
