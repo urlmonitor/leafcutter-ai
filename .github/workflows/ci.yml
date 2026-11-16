@@ -117,14 +117,16 @@
 #
 #   changelog-presence — a changelogs/ entry accompanies the change. BLOCKING.
 #
-#   typecheck  — mypy over the .py files changed in a PR (non-strict,
-#                --ignore-missing-imports, since the codebase has no type config
-#                yet). INFORMATIONAL ONLY (continue-on-error): the codebase is
-#                untyped, so touching any file surfaces dozens of pre-existing
-#                type errors unrelated to the change. The job surfaces type
-#                findings on changed files without blocking the merge. Promote
-#                to blocking once the codebase is annotated. On direct pushes
-#                there is no diff base, so it is a no-op.
+#   typecheck  — mypy RATCHET over the .py files changed in a PR (BP-1300f-1):
+#                scripts/ci/mypy_ratchet.py type-checks each changed file at the
+#                PR head and at its merge base (a temporary worktree, so both
+#                runs see the whole repository), matches errors by (path, code,
+#                message) without line numbers, and FAILS THE JOB only for errors
+#                the PR adds or for `# type: ignore` comments it adds. Errors a
+#                touched file already had are reported as untouched, never
+#                charged. No continue-on-error: its red is visible. NOT YET a
+#                required check -- the user promotes it once it runs clean on
+#                main. On direct pushes there is no diff base, so it is a no-op.
 #
 #   consumer-install-sim — empirical consumer-install simulation (AC BP-900h-1).
 #                Checks the package out into a leafcutter-ai/ subdirectory (so
@@ -969,14 +971,15 @@ jobs:
         run: python scripts/release/check_changelog_presence.py --base "origin/${{ github.base_ref }}"
 
   typecheck:
-    name: Type-check changed files (mypy, informational)
+    name: mypy ratchet (new errors only)
     runs-on: ubuntu-latest
-    # Informational only — see header. Surfaces type findings without blocking.
-    continue-on-error: true
+    # BP-1300f-1 -- see header. NO continue-on-error: a PR that adds a mypy
+    # error or a `# type: ignore` turns this job red. Not yet a required check.
     steps:
       - uses: actions/checkout@v4
         with:
-          # Need the PR base commit to diff against.
+          # Full history: the ratchet computes the PR's merge base and checks it
+          # out into a temporary worktree for the base-side mypy run.
           fetch-depth: 0
 
       - name: Set up Python
@@ -987,16 +990,16 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: mypy on changed Python files
+      - name: mypy ratchet on changed Python files
         # On push events github.base_ref is empty and this becomes a no-op.
         if: github.event_name == 'pull_request'
         run: |
           # No --depth on this fetch, on purpose (same as changelog-presence).
           # The checkout above has full history; --depth=1 would make the clone
           # shallow again at the base branch's tip. Once the base has moved past
-          # this PR's merge base, the three-dot diff below then fails with
-          # "fatal: origin/main...HEAD: no merge base" (exit 128) and mypy never
-          # runs. Seen on PR #985 (run 37006254096); fixed 2026-10-02.
+          # this PR's merge base, the merge-base lookup then fails with "no merge
+          # base" (exit 128) and mypy never runs. Seen on PR #985 (run
+          # 37006254096); fixed 2026-10-02.
           git fetch --no-tags origin "${{ github.base_ref }}"
           # KI-BP-20260831-0620: git pathspec '**/*.py' does NOT match files directly
           # inside the named directory (e.g. scripts/build.py) -- only files at least
@@ -1004,16 +1007,13 @@ jobs:
           # forms are required so top-level scripts are not silently excluded from
           # mypy, which previously reported SUCCESS while never seeing 64 of 123
           # tracked scripts, including scripts/build.py.
-          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' 'unit_tests/*.py' 'unit_tests/**/*.py' 'knowledge/*.py' 'knowledge/**/*.py' 'integrations/*.py' 'integrations/**/*.py' 'kernel/*.py' 'kernel/**/*.py')
-          if [ -z "$CHANGED" ]; then
-            echo "No changed Python files under scripts/, tests/, unit_tests/, knowledge/, integrations/, or kernel/ — skipping mypy."
-            exit 0
-          fi
-          echo "Type-checking changed files:"
-          echo "$CHANGED"
-          # --explicit-package-bases avoids "source file found twice" errors from
-          # the flat sys.path-based layout (scripts/ is not an installed package).
-          mypy --ignore-missing-imports --explicit-package-bases --no-error-summary $CHANGED
+          # The mypy flags (--ignore-missing-imports --explicit-package-bases, as
+          # before) live in scripts/ci/mypy_ratchet.py. Exit 1 = the PR added an
+          # error or a type-ignore; exit 2 = could not check; both fail the job.
+          python scripts/ci/mypy_ratchet.py --base "origin/${{ github.base_ref }}" -- \
+            'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' \
+            'unit_tests/*.py' 'unit_tests/**/*.py' 'knowledge/*.py' 'knowledge/**/*.py' \
+            'integrations/*.py' 'integrations/**/*.py' 'kernel/*.py' 'kernel/**/*.py'
 
   consumer-install-sim:
     name: Consumer install simulation (BP-900h-1)

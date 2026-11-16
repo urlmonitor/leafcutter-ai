@@ -1,0 +1,107 @@
+id: BP-1300f-1
+components:
+  - build_pipeline
+title: "The type check compares each changed file at the pull request's head with the same file at its merge base, and fails only on what the pull request adds"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given a pull request whose changed Python files lie in the type check's scope,
+    And each changed file is type-checked twice with the whole repository around it:
+      once as it is at the pull request's head, and once as it was at the merge base
+      of the pull request and its target branch (under its old name when it was renamed),
+    And an error is identified by the file's head path, its error code and its
+      message, never by its line number.
+
+  Scenario: Only what the pull request adds is charged
+    Given a changed file that had type errors at the merge base,
+    When the pull request leaves those errors in place, even on moved lines,
+    Then the check passes and reports them as existing errors left untouched.
+
+  Scenario: A new type error fails the check
+    When the pull request adds a type error to a changed file,
+    Then the check fails, naming the file, the head line, the error code and the
+      message, with a one-line remedy to fix the type rather than silence it.
+
+  Scenario: A new silencing comment fails the check
+    When the pull request raises the number of `# type: ignore` comments in a
+      changed file,
+    Then the check fails, naming the file and the lines carrying the added comments.
+
+  Scenario: Removed errors count in the pull request's favour
+    When the pull request removes type errors that existed at the merge base,
+    Then the check reports how many it removed and never fails because of them.
+
+  Scenario: An empty or broken run is never a pass
+    When the pull request changes no Python file in scope, the check says it
+      inspected nothing and type-checked nothing,
+    And when the type checker cannot run, the check fails and says it could not check.
+depends_on:
+  - BP-1300f
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f.yaml
+    relationship: parent
+    status: exists
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Job typecheck: becomes 'mypy ratchet (new errors only)', no continue-on-error, calls scripts/ci/mypy_ratchet.py with the existing pathspec scope."
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+    relevance: "The comparison: changed-file listing with rename detection, the two mypy runs, line-insensitive multiset matching, the tokenizer-based type-ignore count, and the verdict text."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300f-1-i
+  - BP-1300f-1-ii
+  - BP-1300f-1-iii
+  - BP-1300f-1-iv
+  - BP-1300f-1-v
+  - BP-1300f-1-vi
+  - BP-1300f-1-vii
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+  - .github/workflows/ci.yml
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE RULE, stated once for all children. For each changed file in scope, let H be
+  the multiset of (head path, error code, normalised message) over its mypy errors at
+  the head and B the same multiset over the file's mypy errors at the merge base
+  (re-keyed to the head path for a rename; empty for a file that did not exist). An
+  error key is new by max(0, H[k] - B[k]); it is existing-untouched by min(H[k], B[k]);
+  it is removed by max(0, B[k] - H[k]). The check fails when any key is new, or when a
+  file's count of `# type: ignore` comments (counted with the tokenizer) rose. There is
+  no stored baseline: the merge base is the baseline, so every error an earlier pull
+  request fixed stays fixed.
+
+  SHAPE. One L2 holding the rule, seven L3 arms: line-insensitive matching (-i),
+  existing errors not charged and removals reported (-ii), renames (-iii), new files
+  (-iv), type-ignore increase (-v), the honest summary and the never-silent empty or
+  broken run (-vi), and the CI job wiring (-vii). Tests build real git repositories
+  with a base and a head commit and run the real module and the real mypy.
+
+  BUILD EVIDENCE 2026-11-16. Red before the module existed: 20 tests, 18 failed and
+  2 errored (-vii red on the real ci.yml, whose job was still informational). Green
+  after: 20 of 20. Five named wrong versions were applied one at a time and each
+  turned its test red: errors keyed by line (-i shifted), sets instead of multisets
+  (-i extra copy), substring ignore counting (-v string and table), mypy exit 2
+  accepted (-vi could-not-check), renames read as new files (-iii both arms).
+  Real-range dry run, origin/main~5..origin/main (14 changed files): 0 new errors,
+  2 existing untouched, 14 removed; whole-file mypy over the same files reported 12
+  errors, 10 of them in modules the range never touched.
