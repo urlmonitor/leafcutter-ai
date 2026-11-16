@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: todo
+work_status: done
 parent: KM-400e
 criteria: |
   Given a configured canonical branch and a successful merge producing commit B
@@ -62,14 +62,37 @@ amended_by:
     it, which is the shape this repository's conventions forbid for a workflow AC and
     is why a wrong configuration default survived 60 consecutive failures; the
     appended clauses must be covered by tests that run the job."
+  - "2026-11-16: closed, work_status in_progress to done. The three appended clauses are
+    now covered by tests that run the job. Reclamation within the same successful
+    publication, and the reclaimed and retained counts in the job result: the new
+    tests/knowledge/test_km_400e_5.py runs the workflow's own sync line through main()
+    for repeated, out-of-order and missed merge events and checks the reclamation report
+    in each result (the figures are the backend double's, relayed; KM-400f-2 and
+    KM-400f-4 prove the backend computes them). An unset required backend setting ending
+    the job with a failure naming it: tests/knowledge/test_km_400e_8.py, which runs the
+    job and the workflow's steps and carries two tests tagged for this record. Also
+    added: a merge-job correlation (run id, attempt, repository, commit, generation) on
+    the sync result, independent of any retrieval request, from the runner's variables,
+    with no credential. The published SHA and the lag are reported by status and were
+    already covered by test_source_boundaries.py; the retrieval observations keep their
+    correlation in integrations/knowledge_observation.py. The sync result states graph
+    publication (published) and semantic readiness (semantic_ready) as separate fields;
+    the sync result carries semantic_ready from its plan summary, which is False because
+    this operation publishes the graph and does not run the semantic step. Criteria and
+    other fields are unchanged."
 superseded_by: null
 covered_by:
 - tests/knowledge/test_environment.py
 - tests/knowledge/test_source_boundaries.py::test_status_reports_requested_and_published_revision_lag
 - tests/knowledge/test_workflow.py::test_merge_workflow_is_canonical_secret_gated_and_uses_standalone_sync
 - tests/knowledge_live/neo4j_checks.py::test_live_sync_parented_history_rejects_late_and_non_descendant
+- tests/knowledge/test_km_400e_5.py
+- tests/knowledge/test_km_400e_8.py::test_km400_e_5_behavior
+- tests/knowledge/test_km_400e_8.py::test_km400_e_5_public_reachability
 implemented_by:
 - tickets/00_inbox/TICKET-20261001-KM-400e-5.md
+- knowledge/merge_correlation.py
+- knowledge/cli_sync.py
 change_target: code
 risk_surface: contract_boundary
 notes: |
