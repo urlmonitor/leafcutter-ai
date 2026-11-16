@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: todo
 parent: KM-400e
 criteria: |
   Given a configured canonical branch and a successful merge producing commit B
