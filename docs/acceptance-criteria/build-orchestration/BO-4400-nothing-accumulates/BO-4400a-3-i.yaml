@@ -90,6 +90,37 @@ test_spec:
     type: behavioral
     angle: boundary
     description: "With the workspace already removed by its route, the step reports nothing to clear and finalize completes."
+  - name: test_finalize_step_7_is_reached_and_makes_its_one_removal_capable_dispatch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed finalize-feature.js is run
+      under run_workflow_under_e2 on a merged-branch fixture with no gate replies scripted, to step 7: today step 7 is
+      one agent dispatch labelled step-7-remove-worktree to worktree-agent (finalize-feature.js line 1771) whose reply
+      is parsed for removed and conflict_pids, with no preceding maker locate. The test asserts step 7 was reached, no
+      gate dispatch is recorded (an unscripted gate is listed in HarnessResult.unscripted_labels), and, once
+      BO-4300g-3 is built, the step-7 dispatch is preceded by a shell-runner locate and carries
+      removal_authorization beside the name-based remove request.
+    code_file: templates/workflows-js/finalize-feature.js
+  - name: test_merged_squash_workspace_is_cleared_by_the_name_based_remove_without_a_token
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      At the maker: a workspace whose feature was squash-merged into the hub's main with its line deleted is cleared
+      by remove --kind K --slug S with no discard token. Red today: worktree_remove._unsent_commits judges by identity
+      only, so the door refuses UNSENT_WORK; green once BO-4400g-2's content check is in the door. When the door
+      refuses anyway, finalize reports the work as kept and completes, never forcing.
+    code_file: templates/scripts/worktree_remove.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/finalize-feature.js
+  - templates/scripts/worktree_remove.py
 test_rationale: >-
   Finalize's teardown deadlocked on a yes it could not give. Only an unattended run of the deployed
   workflow, with no replies scripted, shows the gate is gone rather than merely bypassed in source.

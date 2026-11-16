@@ -225,6 +225,170 @@ test_intent:
   - clause: 'no step of the fast lane, or of any other flow, was run between the flow''s return and that clearing'
     needs_test: true
     reason: The clear must come from the pass alone, not from a flow that has to be run again.
+test_spec:
+  - name: test_each_merged_flow_leaves_no_folder_at_its_workspace_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The deployed plan-feature, fast-lane-ship, build-feature plus finalize-feature, and quick-fix workflows are run
+      under unit_tests/_workflow_engine_harness.py run_workflow_under_e2 (a node subprocess), each with label-scripted
+      agent replies, a workspace made by the real deployed maker's ensure on a real project and bare hub, and its pull
+      request merged on the hub before the flow returns. PREREQUISITE the build must add: the harness today replays
+      static JSON label_responses (_build_shim serialises them into the node shim, which holds no process access), so a
+      shell-runner stand-in that really runs the dispatched maker command needs an additive exec bridge in the
+      harness (a label marked to execute its dispatched command host-side and return stdout). With it, after the
+      flow returns, os.path.lexists is false for the workspace location of each flow. Red today: no flow but
+      finalize clears (plan-feature.js, fast-lane-ship.js, build-feature.js and quick-fix.js carry no clearing dispatch).
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_final_result_contains_the_doors_own_clearing_answer
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result (the script's returned value) of each flow contains the maker's one-work answer verbatim,
+      including the door's remove answer with removed_path equal to the location the flow's ensure answered. A flow
+      that deletes by its own means or reports success without the answer leaves it out.
+    proves_clause: 'the flow''s final result contains the clearing door''s own answer for that workspace, reporting it cleared'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_clearing_request_names_the_work_the_workspace_was_obtained_by_and_no_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      From HarnessResult.agent_calls, take the dispatch whose command runs a maker clearing verb and compare its
+      flags with the ensure dispatch's: same kind and short name (or same line of work), no --path, no location
+      string of the workspace anywhere in the command. Today the shared helper builds only workspaceRemoveCommand(path)
+      through makerCommand, whose flags know kind, slug, ticket, path and force and no branch or clear-landed verb.
+    proves_clause: the clearing request the flow sent named its work by the same name it used to obtain the workspace, and gave no location
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_clearing_request_is_dispatched_after_the_merge_reached_the_hub_main_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The live stand-in records, at the moment it executes the clearing command, whether the hub's main contains
+      every commit the flow made (git merge-base --is-ancestor on the real bare hub), and the dispatch order puts
+      the merge before the clear. A variant that places the clear before the merge keeps the workspace as not_on_main
+      (the landed rule), so the folder remains and the test fails.
+    proves_clause: the clearing request was made after the work was merged into the main line
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_only_finalize_dispatches_a_removal_capable_agent_and_each_clear_is_the_one_command
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      For every flow except finalize, no recorded dispatch goes to an agent whose config/agent_registry.json entry
+      declares removal_capable true (the set is read from the registry at test time, as BO-4300g-2 does, not a list
+      kept here), and each clearing dispatch goes to shell-runner with a prompt equal to the one exact command,
+      unchanged (no extra words, one plain command, absolute path). Existing code to leave alone: finalize's
+      cleanup-baseline-worktree already sends remove --path through shellStepDispatch.
+    proves_clause: 'no flow other than finalizing dispatched an agent whose registered abilities include removing a workspace or deleting a branch: each of their clearing requests was the one clearing command, run exactly as given'
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_flow_ending_with_an_open_pull_request_keeps_its_workspace_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The fast lane for fastlane/tq-200d-4 is driven to a pull request that stays open (commits pushed to its own
+      line on the real hub, nothing merged). The workspace is byte-identical (files with .git, refs) to its snapshot
+      taken when the pull request was opened. The clearing command still ran (per-work clear-landed with no idle
+      threshold) and kept it.
+    proves_clause: the workspace of "fastlane/tq-200d-4" still exists, identical to its state when its pull request was opened
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_open_pull_request_result_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result carries the maker's real one-work answer with kept reason not_on_main, relayed verbatim,
+      and not reported as a failure or as removed.
+    proves_clause: 'the flow''s final result reports that workspace as kept because its work is not yet on the main line'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_landed_work_pass_clears_the_kept_fastlane_workspace_after_a_hand_merge
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      After the flow returned, the pull request is merged on the hub by hand (a real merge pushed from a scratch
+      clone), then python <deployed worktree.py> clear-landed --repo-root <project> runs as a subprocess. The
+      fastlane/tq-200d-4 folder is gone and the answer lists it in cleared. Depends on BO-4400g-2 being built.
+    proves_clause: the workspace of "fastlane/tq-200d-4" is cleared
+    code_file: templates/scripts/worktree.py
+  - name: test_nothing_ran_between_the_flow_return_and_the_pass_clearing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The harness recorded exactly the dispatches of the one flow run and none after it returned (the test makes
+      no second run_workflow_under_e2 call before the pass), and the stand-in log shows the only clearing command
+      after the return is the pass's own. A sibling flow's step is never invoked.
+    proves_clause: 'no step of the fast lane, or of any other flow, was run between the flow''s return and that clearing'
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_plan_feature_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed plan-feature.js (requirements authoring for ac/clear-merged-workspaces),
+      driven to its end: a clearing dispatch is recorded and the disk shows the effect.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_fast_lane_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed fast-lane-ship.js for fastlane/tq-200d-3 driven to a merged pull request:
+      the clearing dispatch is recorded and the folder is gone.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_feature_build_and_finalize_reach_their_clearing_in_the_deployed_flows
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      build-feature.js for feature/alpha is driven to its pull request and then finalize-feature.js through step 7:
+      build-feature sends its per-work clearing command (kept as not_on_main until the merge), and finalize's
+      step-7-remove-worktree is the one dispatch to the removal-capable agent, carrying the name-based clearing
+      request beside BO-4300g-3's removal_authorization.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/build-feature.js
+  - name: test_quick_fix_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed quick-fix.js for ticket/fix-null-slug driven to a merged pull request:
+      the clearing dispatch is recorded and the folder is gone.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/quick-fix.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/quick-fix.js
+  - templates/scripts/worktree.py
+  - unit_tests/_workflow_engine_harness.py
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -251,6 +415,50 @@ expects_from:
     contract: >-
       Finalize step 7 dispatch (label step-7-remove-worktree) carrying removal_authorization built from a fresh
       maker locate by the run's kind and slug.
+file_findings:
+  - file: templates/workflows-js/_shared/workspace-answer.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its makerCommand (lines 215-221) knows only --kind, --slug, --ticket, --path and --force and workspaceRemoveCommand (lines 253-256) builds remove --path, so it is the one shared helper that gains the name-based clearing form.
+    decision: null
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains a workspace through the shared helper and holds no clearing dispatch today, so it is the flow surface where the end-of-run clearing step is added.
+    decision: null
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the full-arc fast lane that opens a pull request and carries no clearing dispatch today, so the one clearing step is added here.
+    decision: null
+  - file: templates/workflows-js/build-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It creates the workspace and routes to the build flows and holds no clearing dispatch today, so it is a surface of the one clearing step, though build-ticket.js and build-epic.js are the flows BO-4400a-1 names for the same step.
+    decision: null
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its step-7-remove-worktree dispatch to worktree-agent (line 1771) is the one removal-capable dispatch whose door request takes the name form, and its cleanup-baseline-worktree step (line 501) already sends remove --path through the shared helper.
+    decision: null
+  - file: templates/workflows-js/quick-fix.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the quick fix driver and carries no clearing dispatch today, so the clearing step is added here.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/quick-fix.js
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:

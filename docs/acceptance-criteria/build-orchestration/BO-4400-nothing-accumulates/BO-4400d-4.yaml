@@ -78,6 +78,79 @@ test_intent:
   - clause: the guide shows the setting that controls the interval between automatic sweeps and its default of 24 hours
     needs_test: true
     reason: The key name and default must match the built config, which a doc test reads.
+test_spec:
+  - name: test_sweep_how_to_preview_and_real_commands_run_and_report_count_per_kind_and_bytes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Finds the sweep how-to the build writes under docs/how-to/ (its name is the documentation-expert's choice, so
+      the test selects it by the sweep key and the --dry-run command it publishes, and fails if none or two
+      match), takes the published preview command and the real command, and runs them as real subprocesses against
+      the deployed sweep on a fixture. Each exits 0; the page's example report names the same per-kind keys
+      (workspaces, scratch, outside) and total_bytes as the real --json report.
+    proves_clause: the guide shows the command to run a preview and the command to run a real sweep, each with an example report naming the count per kind and the bytes freed
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_sweep_how_to_kept_reasons_equal_the_passes_closed_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The workspace reasons listed on the sweep page (not_on_main, holds_unsent_work, no_own_work, in_use,
+      landing_unconfirmed, shared_project_unreachable) plus not_expired for scratch each have a remedy sentence, and
+      the workspace set equals the closed set in the deployed worktree_landed.py; the old four reasons alone fail.
+    proves_clause: 'the guide lists every reason an item is kept -- for a workspace, the landed-work pass''s reasons (not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable), and for scratch, not yet expired -- and what the person can do about each'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_sweep_how_to_idle_rules_match_the_named_defaults
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: >-
+      The 7 days for a workspace with no work of its own and the 14 days for pushed but unmerged work stated on the
+      sweep page equal the two named defaults kept in worktree_landed.py, and the page says the work stays on its
+      line on the shared project and links to clear-a-workspace.md for detail instead of copying its table.
+    proves_clause: the guide states that a workspace with no work of its own is cleared once no file in it has changed for 7 days, and that one whose work is pushed but never merged is cleared once it holds nothing unsent and no file in it has changed for 14 days, its work staying on its line on the shared project
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_sweep_how_to_durable_log_path_is_where_the_sweep_writes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      Runs the real sweep (the hook-started one of BO-4400d-3 or the entry point directly) in a temporary install
+      and reads back the durable report log it wrote; the path the page states (under debugging/logs/) is the file
+      that exists and holds the report, not the scratch location or the temp folder.
+    proves_clause: the guide states where the sweep's durable report log is written
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_sweep_how_to_interval_key_and_default_match_the_built_config
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The key worktree_cleanup.sweep_interval_hours and its default 24 on the page equal the entry in
+      config/skills_config.default.json and its schema entry (the worktree_cleanup section there has no such key
+      today, so it is added by BO-4400d-3 first) and the key is listed in docs/reference/skills-config-fields.md.
+    proves_clause: the guide shows the setting that controls the interval between automatic sweeps and its default of 24 hours
+    code_file: config/skills_config.default.json
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - templates/scripts/worktree_landed.py
+  - config/skills_config.default.json
+  - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by:

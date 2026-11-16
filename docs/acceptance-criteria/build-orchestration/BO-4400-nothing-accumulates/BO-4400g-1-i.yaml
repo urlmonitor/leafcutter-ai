@@ -103,12 +103,104 @@ test_intent:
   - clause: every remaining workspace of the project is identical before and after
     needs_test: true
     reason: A repeat request that resolves loosely when the workspace is gone could reach another workspace, which a snapshot catches.
+test_spec:
+  - name: test_older_spelling_clears_the_one_workspace_of_the_epic
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Make the epic workspace with the deployed maker's ensure --kind epic --slug EPIC-FilesStayWorkable (older
+      spelling) and a second one for "Files Stay Workable Two" (its own slug). Run remove --kind epic --slug
+      EPIC-FilesStayWorkable as a subprocess. Answer ok, exit 0, removed_path equals the location ensure answered,
+      and no folder remains there (the helper shape of test_bo_4300e_2.WorkspaceCase, KIND overridden to epic).
+    proves_clause: the one workspace of "Files Stay Workable" is answered cleared and no folder of it remains
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_neighbouring_epic_is_identical_after_the_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot of the "Files Stay Workable Two" workspace (files with .git and refs) is identical before and after
+      the older-spelling request, which cleared its own target in the same run.
+    proves_clause: the workspace of "Files Stay Workable Two" is identical before and after
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_lookup_by_current_name_answers_no_workspace_after_the_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      After the clear, locate --kind epic --slug <current short name> answers NOT_FOUND (locate keeps its own
+      NOT_FOUND answer, BO-4300e-1) and the landing place holds no folder for the epic under either spelling, so
+      no alias twin was left behind.
+    proves_clause: a lookup of the epic by its current kind and short name then answers that no workspace exists for it
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_repeated_clear_answers_no_workspace_not_a_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Request the clear again, once by the older spelling and once by the current kind and short name. Each answer
+      is status ok, exit 0, code OK, carries no removed_path, an additive field absent true and a message naming the
+      work. Today the same request answers NOT_FOUND, refused, exit 2 (cmd_remove finds no record and returns
+      NOT_FOUND), so this test is red until the build. A --path request for a location holding nothing keeps
+      NOT_FOUND (asserted in the same test, so the old answer is not weakened).
+    proves_clause: each request is answered with a definite statement that no workspace exists for that work, not with a failure
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_repeat_requests_change_nothing_anywhere
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot every remaining workspace of the project (files with .git, refs) plus the landing place's directory
+      listing and the main checkout's refs before and after the two repeat requests: identical, and a second pair of
+      repeats gives the same answers (idempotent). No file or lock is created in the landing place.
+    proves_clause: every remaining workspace of the project is identical before and after
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_repeat_clear_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv in a subprocess: python <deployed worktree.py> remove --kind epic --slug <name>
+      --repo-root <project> for work that has no workspace exits 0 with the no-workspace answer.
+    proves_clause: each request is answered with a definite statement that no workspace exists for that work, not with a failure
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-1
   contract: >-
     remove accepts the work's identity (--kind/--slug or --branch, older spellings included) through the one
     resolver that locate uses, and answers exactly as a --path request for the resolved location.
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove (lines 396-427) is where a request with no record ends in NOT_FOUND today, so it is the place the no-workspace answer is wired, with the logic beside the shared resolver.
+    decision: null
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the alias resolution that makes the older spelling and the current name reach the same single workspace, so the no-workspace decision sits beside it.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

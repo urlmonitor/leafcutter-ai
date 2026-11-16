@@ -98,12 +98,107 @@ test_intent:
   - clause: every workspace that disappears during the run disappears only after a recorded clearing request for it
     needs_test: true
     reason: This is the falsifiable form of "no flow carries its own deletion logic", across every deployed surface.
+test_spec:
+  - name: test_every_flow_keeps_its_folder_when_the_door_refuses_in_use
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The five flows of BO-4400g-4 are each run under run_workflow_under_e2 as in that record's first scenario
+      (pull request merged, nothing unsent), with the shell-runner stand-in replacing the door by a recorder that
+      logs every request and answers PROCESS_HOLDS_FILES (workspace in use) to each. After each flow returns the
+      workspace folder exists and every file hash equals the snapshot taken when the request was recorded. Needs the
+      additive exec bridge of unit_tests/_workflow_engine_harness.py named in BO-4400g-4 (the harness only replays
+      static label_responses today), declared in this record's declared_files.
+    proves_clause: 'every flow''s workspace folder still exists, with its files identical to their state when the clearing request was made'
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a flow that deletes its folder directly after a refusal
+      - a flow that retries with git worktree remove or another agent
+  - name: test_every_flow_relays_the_refusal_unchanged_and_reports_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result of each flow holds the recorder's refusal object equal to the object it sent (all keys, no
+      paraphrase) and reports the workspace as kept, not as success. The one relay lives in the shared helper of
+      _shared/workspace-answer.js, which shellStepReply and workspaceAcceptAnswer already parse for the ensure step.
+    proves_clause: 'every flow''s final result contains the door''s refusal unchanged and reports the workspace as kept'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_no_flow_retries_with_a_token_or_another_route_after_a_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The recorder holds exactly one request per flow: no second request, no --discard-token, no
+      --delete-remote-branch, no by-location (--path) request and no dispatch to any other agent after the refusal.
+      Note workspace-answer.js workspaceRemoveCommand today appends --force (which the maker accepts and ignores):
+      the recorder classifies it by the maker's own parser, so an accepted-and-ignored --force never reads as a
+      forced retry of the name-based request, and the assertion text says so.
+    proves_clause: no flow retried the clearing with a discard token or by any other route
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+    must_catch:
+      - a flow that re-sends the clearing with the discard token returned in the refusal
+  - name: test_workspaces_disappear_only_after_a_recorded_request_across_the_deployed_set
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Marked @pytest.mark.shared_layout_reader and requesting shared_reference_layout (no build.py spawn). The
+      flows, skills, commands and agent instructions are derived from the deployed layout (never from a list, no
+      surface exempted by name, ship's SKILL.md included by executing the clearing command it publishes). Each
+      workflow is run under the harness with a recorder door and a real temporary workspace per surface. For every
+      workspace that vanishes the recorder has a request for it before it vanished; a failing case names the
+      surface and the step. Fixture flows prove the check can fail: one that rmtree()s its folder directly and one
+      that retries with a discard token after a refusal are each reported, and the real flows are not.
+    proves_clause: every workspace that disappears during the run disappears only after a recorded clearing request for it
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a flow that deletes its folder directly (fixture flow)
+      - a flow that retries with a discard token (fixture flow)
+  - name: test_refused_flow_run_is_reachable_through_the_deployed_workflow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed quick-fix.js (the shortest flow) with the refusing recorder reaches the
+      clearing dispatch and relays the refusal, proving the relay is wired and not merely defined.
+    proves_clause: 'every flow''s final result contains the door''s refusal unchanged and reports the workspace as kept'
+    code_file: templates/workflows-js/quick-fix.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/quick-fix.js
+  - unit_tests/_workflow_engine_harness.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-4
   contract: >-
     Every flow builds its name-based clearing request through the one shared helper and relays the door's
     answer verbatim in its final result.
+file_findings:
+  - file: templates/workflows-js/_shared/workspace-answer.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It already holds the shared reply handling (shellStepReply, workspaceAcceptAnswer, workspaceRemovalRecord at lines 324-333), which is the one relay the no-fallback requirement names.
+    decision: null
+  - file: unit_tests/_workflow_engine_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the dispatch recorder (AgentCall, HarnessResult, run_workflow_under_e2) the recorder door and the shared clearing-command parser extend, though neither the parser nor any live shell stand-in exists in it yet.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - unit_tests/_workflow_engine_harness.py
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:

@@ -116,6 +116,81 @@ test_intent:
   - clause: 'the pass''s one answer lists "stale-1" as cleared by work name and location, and lists as kept: "ten-day-1" and "recent-1" as not yet on the main line, "stale-dirty" as holding unsent work naming the file by path, and "stale-ahead" as holding unsent work naming the commit by identifier'
     needs_test: true
     reason: The kept reasons and the named file and commit are computed by different checks, and the unattended caller acts only on this answer.
+test_spec:
+  - name: test_pushed_unmerged_workspace_idle_15_days_is_cleared_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Five workspaces of "shop", each with two commits pushed to its own line on the real bare hub and nothing
+      merged. Ages are set with os.utime over every file and directory of the workspace (repository internals
+      included): stale-1 15 days, ten-day-1 10 days, recent-1 has a file 3 days old, stale-dirty and stale-ahead 15
+      days. A gh script that fails the test if it is called is first on PATH (and no hosting API is reachable).
+      clear-landed --repo-root <shop> (deployed maker, separate process) lists stale-1 in cleared with the door's
+      remove answer and no folder remains. Red until branch (c) is built.
+    proves_clause: '"stale-1" is cleared through the same clearing door a single clearing request uses, and no folder of it remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_clearing_a_pushed_workspace_leaves_its_line_and_main_on_the_hub
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      The hub's refs (git for-each-ref on the bare hub, snapshotted before and after) are identical, main included,
+      and git fetch of stale-1's line from a fresh clone of the hub still yields its two commits, read back from the
+      real hub.
+    proves_clause: the line of work of "stale-1" on the shared project, and the shared main line, are identical before and after, so its two commits can still be fetched
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_ten_day_recent_dirty_and_ahead_workspaces_are_kept_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      ten-day-1 (10 days, catches the 7-day value reused), recent-1 (3 days), stale-dirty (one uncommitted change to
+      a tracked file, made 15 days ago) and stale-ahead (one further commit on neither its line nor main, 15 days)
+      are each identical before and after (files with .git, refs).
+    proves_clause: '"ten-day-1", "recent-1", "stale-dirty" and "stale-ahead" are each identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_answer_lists_cleared_and_each_kept_reason_for_the_pushed_workspaces
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The one answer lists stale-1 in cleared by kind, slug, branch and absolute location, ten-day-1 and recent-1 in
+      kept with reason not_on_main, stale-dirty as holds_unsent_work with files naming the tracked file by
+      workspace-relative path, stale-ahead as holds_unsent_work with commits holding the extra commit's full
+      40-character id. A per-work request clear-landed --kind feature --slug stale-1 (no idle threshold) keeps the
+      15-day pushed workspace as not_on_main, so a flow never clears pushed but unmerged work.
+    proves_clause: 'the pass''s one answer lists "stale-1" as cleared by work name and location, and lists as kept: "ten-day-1" and "recent-1" as not yet on the main line, "stale-dirty" as holding unsent work naming the file by path, and "stale-ahead" as holding unsent work naming the commit by identifier'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pushed_unmerged_pass_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The scenario is run with python <deployed worktree.py> clear-landed as a real subprocess with real argv and
+      the failing-gh PATH, never by importing a maker module.
+    proves_clause: '"stale-1" is cleared through the same clearing door a single clearing request uses, and no folder of it remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2

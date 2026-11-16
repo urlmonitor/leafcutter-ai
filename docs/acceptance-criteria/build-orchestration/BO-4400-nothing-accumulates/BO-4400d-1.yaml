@@ -191,6 +191,40 @@ test_spec:
     type: behavioral
     angle: failure
     description: "With stdin closed and a timeout, the sweep completes."
+  - name: test_sweep_workspace_part_runs_the_deployed_clear_landed_verb_once_per_project
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed sweep is run as a separate
+      process through its real entry point against two installed projects "shop" and "blog" (each its own real bare hub
+      and landing place; make_project fixes the directory names project and hub.git under its tmp, so each project is
+      built under its own tmp root). Each project's landed workspace (a real fast-forward merge on its hub) is cleared
+      by the deployed maker's clear-landed addressed with that project's --repo-root, the result lists each workspace
+      under its own project only, and a recording wrapper first on PATH shows the sweep ran no git push. No record
+      declares the sweep's entry point (the SURFACE requirement leaves it a maker verb or a sibling script), so the
+      build fixes it and this test is written against the path the build documents.
+    code_file: templates/scripts/worktree.py
+  - name: test_leftover_1_is_kept_as_landing_unconfirmed_until_the_door_leftover_rule_lands
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Builds leftover-1 as a record-less folder in the landing place whose repository leftovers (FETCH_HEAD and
+      config url) name only this project's shared project, the evidence worktree_remove_half.names_project uses. Until
+      the door rule of PR #1414 exists the sweep keeps it, reporting reason landing_unconfirmed, and it is
+      byte-identical afterwards. The assertion that it is removed is added only when that rule is on main
+      (BUILD ORDER it_requirement), so the first test above stays red for that part and the record cannot be
+      marked done before PR #1414.
+    code_file: templates/scripts/worktree_remove_half.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove_half.py
 test_rationale: >-
   The sweep's whole promise is its selection, and every one of the fourteen items is a distinct case.
   Only real repositories in real states, swept by the deployed script, show that each case lands on

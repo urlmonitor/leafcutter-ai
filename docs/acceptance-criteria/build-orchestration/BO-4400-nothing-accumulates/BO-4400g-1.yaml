@@ -151,6 +151,92 @@ test_intent:
   - clause: every request ends with exactly one answer and asks no question
     needs_test: true
     reason: Unattended callers stall on a prompt or misparse a second object, and both are observable on the deployed maker's output.
+test_spec:
+  - name: test_name_based_remove_answers_cleared_with_the_location_lookup_answered
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Fixture of the criteria: make alpha (feature), alpha-v2 (feature), tq-200d-3 (fastlane) and beta (feature,
+      one unpushed commit, one uncommitted file) with the deployed maker's ensure, record each workspace_path from
+      locate by the same name. Then run the deployed maker as a separate process, remove --kind feature --slug alpha
+      and remove --branch fastlane/tq-200d-3 (no --path). Each answer is status ok, exit 0, and its removed_path
+      equals the locate answer's workspace_path for that name. Today remove has no --branch option
+      (worktree_remove_half.add_target_args knows only --path, --kind, --slug), so the second request is a USAGE
+      refusal until the build adds it.
+    proves_clause: '"alpha" and "tq-200d-3" are each answered cleared, and each answer states the location that was cleared, equal to the location their lookup answered'
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_remove_leaves_no_folder_at_the_cleared_locations
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      After the two name-based requests of the fixture above, os.path.lexists is false for both locations (the
+      landing place's feature/alpha and fastlane/tq-200d-3 folders, repository folder included), and the maker's
+      list verb no longer reports either.
+    proves_clause: no folder remains at either of those two locations
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_remove_never_reaches_the_neighbouring_short_name
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshot alpha-v2 before and after the request for alpha (self.snap(ws, with_git=True) and the refs of its
+      repository, the helpers of test_bo_4300e_2.WorkspaceCase). Identical. The request for alpha really cleared
+      alpha in the same run, so identical is not nothing ran. The match is exact on the resolved identity, never by
+      prefix or substring.
+    proves_clause: '"alpha-v2" is identical before and after'
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_name_based_refusal_equals_the_refusal_of_a_location_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      For beta (WorkspaceCase.make_unsent: one unpushed commit, one uncommitted file) run remove --kind feature
+      --slug beta, then remove --path <beta>. Both answers are UNSENT_WORK, exit 2, and equal as objects (same
+      unsent.commits naming the commit by identifier, same unsent.files naming the file by path, same
+      discard_token). beta's files and refs are identical before and after both requests (snap with_git and refs).
+    proves_clause: '"beta" is refused exactly as a clearing request giving its location is refused: the refusal names the unpushed commit by identifier and the uncommitted file by path, and "beta" is identical before and after'
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_name_based_requests_end_with_one_answer_and_never_wait_for_input
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Each request of the scenario (three cleared or refused ones) runs as a Popen with stdin a real open pipe
+      that nobody writes to and is awaited with proc.wait(timeout), not communicate(): the fixture trap is that
+      WorkspaceCase.cli(stdin='open') in test_bo_4300e_2.py calls communicate(), which closes the pipe and so
+      never holds stdin open. Stdout is exactly one JSON object (one non-empty line parsed by parse_answer), and the
+      process ends within the timeout.
+    proves_clause: every request ends with exactly one answer and asks no question
+    code_file: templates/scripts/worktree.py
+  - name: test_remove_by_line_of_work_name_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Runs python <deployed worktree.py> remove --branch feature/alpha --repo-root <project> as a subprocess (main()
+      with real argv, dispatch to worktree_remove.cmd_remove) and asserts the new behaviour occurs: ok, exit 0, the
+      folder is gone. Fails today with a USAGE answer (exit 64) because --branch is unknown to remove.
+    proves_clause: '"alpha" and "tq-200d-3" are each answered cleared, and each answer states the location that was cleared, equal to the location their lookup answered'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_half.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_fixtures.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -173,6 +259,36 @@ expects_from:
     refused NOT_FOUND or INCOMPLETE otherwise, reached through the one identity rule of BO-4300a-2 (kind and
     short name, line-of-work name and older spellings; exact match only). A name-based remove must resolve to
     the same workspace_path.
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It owns the remove parser (lines 285-290, where --branch is absent) and the dispatch the new name form is wired through, and it is already 425 lines, so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove (line 396) is the one door whose path, program, unsent-work and own-project checks a name-based request must reuse, and it is 485 lines, so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the locate lookups (_find_by_branch with the alias spellings and AmbiguousBranch, _locate_by_name) that the one resolver for remove can reuse, at 270 lines.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: describes, does not implement
+    line_range: 146-154
+    found_in: null
+    reason: Its verb table row for remove (line 152) still shows only --path, which is the documentation the record says must gain every name form.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - docs/architecture/components/worktree-manager.md
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

@@ -215,6 +215,74 @@ test_spec:
       leaves its workspace identical and its final result reports it kept as not yet on the main line.
     must_catch:
       - "a route that clears on a pushed but unmerged line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
+  - name: test_route_clearing_is_the_per_work_clear_landed_command_sent_to_shell_runner
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). From HarnessResult.agent_calls of each
+      deployed route, the one clearing dispatch has agent_type shell-runner, a prompt that is one plain command with
+      the absolute deployed maker path, the verb clear-landed, --kind and --slug (or --branch) equal to the flags of
+      the route's own ensure dispatch, and no --path. The helper that builds it is the shared one in
+      _shared/workspace-answer.js, whose makerCommand today supports no branch flag and no clear-landed verb
+      (workspaceRemoveCommand builds remove --path with --force), so this is red until the build.
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_single_ticket_and_epic_routes_reach_their_clearing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed build-ticket.js (single ticket) is driven to a merged pull request under
+      run_workflow_under_e2 and the clearing dispatch is recorded, and the same for build-epic.js (three tickets),
+      each with the live shell-runner stand-in that runs the dispatched maker command for real. The record's
+      PROOF needs that stand-in, which the harness lacks today: run_workflow_under_e2 serialises static
+      label_responses into a node shim with no process access, so an additive exec bridge is a prerequisite.
+    code_file: templates/workflows-js/build-ticket.js
+  - name: test_epic_route_reaches_its_clearing_step_once
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed build-epic.js (and the epic path of build-feature.js) is run to the epic's end: one clearing
+      dispatch is recorded, after the last ticket and after the merge.
+    code_file: templates/workflows-js/build-epic.js
+  - name: test_quick_fix_requirements_authoring_and_fast_lane_routes_reach_their_clearing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      quick-fix.js, plan-feature.js and fast-lane-ship.js, each deployed and run to a merged pull request, record a
+      clearing dispatch (none of them carries one today) and leave no folder; one test per route in the file.
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_backlog_route_publishes_the_one_clearing_command_and_it_runs
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      templates/workflows/build-backlog.md has no .js driver, so the proof (as the record says) extracts the one
+      clearing command its prose publishes, fills in the fixture's project root and work name, and runs it as a
+      subprocess against a real merged workspace on a real bare hub: the folder is gone and the answer carries the
+      door's removed answer. The text check is limited to the absence of any other removal instruction.
+    code_file: templates/workflows/build-backlog.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/build-ticket.js
+  - templates/workflows-js/build-epic.js
+  - templates/workflows-js/quick-fix.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows/build-backlog.md
+  - unit_tests/_workflow_engine_harness.py
+  - templates/scripts/worktree.py
 test_rationale: >-
   The claim is that six different routes reach one door at one moment. Only a real run of each
   deployed workflow, with the maker executed for real against real repositories, can show the folder

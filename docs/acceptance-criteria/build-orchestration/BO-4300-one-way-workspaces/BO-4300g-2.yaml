@@ -331,9 +331,31 @@ test_spec:
       - a clearing command that names another work than the run's own
       - the end-of-run clear sent to worktree-agent or another removal-capable agent
       - a run that never reaches its clearing step, so zero clearing commands pass vacuously
+  - name: test_shared_command_parser_recognises_remove_and_clear_landed_and_nothing_else
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      Grounding added at the 2026-11-16 test-designer pass (the entry above is kept as written). The one shared command
+      parser of the WHICH COMMANDS CLEAR requirement does not exist yet: unit_tests/_workflow_engine_harness.py holds
+      AgentCall, HarnessResult and run_workflow_under_e2 and nothing that reads a command line, and the repository's
+      own makerCommand in templates/workflows-js/_shared/workspace-answer.js emits verbs ensure, remove and (once built)
+      clear-landed with the python3 launcher and double-quoted absolute path. Feeds the parser the exact strings that
+      helper builds (remove --path with --force, remove --kind/--slug, clear-landed --kind/--slug, clear-landed
+      --branch), a locate command, an ensure command and a prose sentence that merely mentions remove: only the
+      first four are clearing commands, and each is returned with its flags (kind, slug, branch, path) so the entry
+      above can assert no --path and the same work name as the ensure command. Both BO-4300g-2 and BO-4300g-2-i import
+      it from the harness, never a second copy. The harness is not in this record's declared_files, though the parser
+      must live there.
+    proves_clause: 'the only dispatch in the run whose command clears a workspace is the run''s own end-of-run clearing request -- the one permitted exception -- sent to such an agent as one clearing command that names the run''s own work by the name the run obtained its workspace with, and gives no location'
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a parser that matches on the substring remove anywhere in a prompt
+      - a parser that misses clear-landed, so the permitted exception goes unseen
 test_design_authorship:
   step: test-designer
-  date: "2026-10-25"
+  date: "2026-11-16"
 test_design_opened_files:
   - templates/workflows-js/plan-feature.js
   - templates/workflows-js/finalize-feature.js

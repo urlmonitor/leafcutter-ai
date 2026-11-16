@@ -237,6 +237,112 @@ test_intent:
   - clause: 'the pass ends with exactly one answer, without asking any question, which lists each cleared workspace by work name and location, and each kept workspace by work name, location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding unsent work naming the file by path, "landed-plus" as holding unsent work naming the commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for less than seven days'
     needs_test: true
     reason: Every kept reason is computed from a different check, and the unattended caller acts only on this one answer.
+test_spec:
+  - name: test_pass_clears_ff_mc_sq_and_idle_workspaces_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Fixture of the criteria on real repositories: project "shop" (make_project) with workspaces made by the
+      deployed maker's ensure; commits pushed from each workspace to its own line on the bare hub; then on a
+      scratch clone of the hub a real fast-forward merge (ff-1), a real merge commit (mc-1) and a real squash
+      merge of the three commits as one (sq-1) are pushed to main, and the squashed line is deleted on the hub
+      (the normal end of a pull request). idle-1 is made from an earlier main commit, carries no commit, and every
+      file and directory in it has its mtime set (os.utime) eight days back, read before the pass runs. The test runs
+      python <deployed worktree.py> clear-landed --repo-root <shop> as a separate process, with stdin closed. The
+      four are in cleared with the door's own remove answer verbatim (removed_path equal to the location), and
+      os.path.lexists is false for each. This needs the squash content check that the door lacks today (the
+      door's _unsent_commits in worktree_remove.py compares by identity only), so sq-1 is red until the build.
+    proves_clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_keeps_open_dirty_plus_and_fresh_workspaces_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      On the same run, open-1 (two commits pushed to its own line, a file changed an hour ago), landed-dirty (landed
+      commits, one uncommitted change to a tracked file), landed-plus (first commit landed, one further commit on
+      neither its own line nor main) and fresh-1 (made from the tip an hour ago, no commit) are each byte-identical
+      before and after (files with .git, refs, mtime-sensitive fresh-1 compared by content hash). The pass reads
+      the idle age before it or the door touches any workspace.
+    proves_clause: '"open-1", "landed-dirty", "landed-plus" and "fresh-1" are each identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_never_touches_another_project_or_the_main_checkout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A second real project "blog" (its own bare hub and clone in the same parent folder, built by a helper that
+      calls make_project with its own tmp root, since make_project fixes the directory names project and hub.git
+      and derives the landing place from the project directory name) has workspace ff-9 whose commits reached its
+      main. After the pass for shop, ff-9 and shop's main checkout (branch, index, files, refs) are identical, and
+      neither the ff-9 path nor the checkout path nor blog appears anywhere in the answer. The pass runs with
+      --repo-root shop and the blog project exists as a sibling that the maker's project search could mistake.
+    proves_clause: 'blog''s "ff-9" and shop''s main checkout are identical before and after, and neither appears in the pass''s answer'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_deletes_no_line_of_work_and_never_moves_the_main_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The refs of the bare hub (git for-each-ref on the hub, main line included) and the local branches of shop's
+      main checkout are byte-identical before and after the real pass, although it cleared four workspaces. The pass
+      is run with a git wrapper on PATH that fails the test if git push is ever invoked, so a push of any kind
+      (including --delete) is caught, not only a changed ref.
+    proves_clause: every line of work on the shared project, and the shared main line, are identical before and after
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_pass_answer_lists_cleared_and_each_kept_reason_with_commits_and_files
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stdout is exactly one JSON object, status ok, verb clear-landed, preview false. cleared lists the four by
+      kind, slug, branch and absolute location, sorted by kind then slug. kept lists open-1 as not_on_main,
+      landed-dirty as holds_unsent_work with files naming the tracked file by workspace-relative path,
+      landed-plus as holds_unsent_work with commits holding the full 40-character id of the extra commit, and
+      fresh-1 as no_own_work. blog and the main checkout appear in no list. The process is run with stdin as a real
+      open pipe nobody writes to (Popen with wait, not communicate(), the WorkspaceCase.cli(stdin='open') trap) and
+      ends within a timeout, so no question is asked.
+    proves_clause: 'the pass ends with exactly one answer, without asking any question, which lists each cleared workspace by work name and location, and each kept workspace by work name, location and reason: "open-1" as not yet on the main line, "landed-dirty" as holding unsent work naming the file by path, "landed-plus" as holding unsent work naming the commit by identifier, and "fresh-1" as carrying no work of its own yet and idle for less than seven days'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_clear_landed_is_reachable_through_the_deployed_maker_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv: python <deployed worktree.py> clear-landed --repo-root <shop> is dispatched by the
+      maker's verb table (worktree.py _DISPATCH today has no such verb and answers USAGE exit 64) and, once built,
+      clears ff-1 through worktree_remove.cmd_remove. It also runs the per-work form clear-landed --kind feature
+      --slug sq-1 and clear-landed --branch feature/ff-1 on fresh workspaces and asserts the same one-work answer
+      (cleared, or kept not_on_main for a pushed unmerged one with no idle threshold applied).
+    proves_clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+  - unit_tests/build_orchestration/_workspace_maker_builders.py
 delivers_to:
   - agent: python-coder
     contract: >-
@@ -270,6 +376,43 @@ expects_from:
       remove by work name (--kind/--slug or --branch) through the door, answering ok with removed_path, a
       refusal naming the unsent commits and files or the programs found, or the definite no-workspace answer
       of BO-4400g-1-i.
+file_findings:
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its parser (build_parser, lines 256-296) and _DISPATCH table (lines 299-307) are where a clear-landed verb is registered beside migrate-legacy, and the file is 425 lines so wiring only.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _unsent_commits (lines 119-136) judges commits by identity only, which is the door check the content-equivalence requirement must change, at 485 lines so wiring only.
+    decision: null
+  - file: scripts/build_phases_script_deploy_standalone.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: NAMED_STANDALONE_SCRIPTS (lines 53-74) is the deploy list every maker module is named in, so worktree_landed.py gets its entry there.
+    decision: null
+  - file: docs/components.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: The worktree_manager entry's primary_code list (lines 664-685) is where templates/scripts/worktree_landed.py is added.
+    decision: null
+  - file: docs/architecture/components/worktree-manager.md
+    verdict: describes, does not implement
+    line_range: 146-175
+    found_in: null
+    reason: Its verb table and module table (lines 146-175) describe the maker's verbs and modules and gain the clear-landed row and the worktree_landed.py row.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - scripts/build_phases_script_deploy_standalone.py
+  - docs/components.json
+  - docs/architecture/components/worktree-manager.md
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:

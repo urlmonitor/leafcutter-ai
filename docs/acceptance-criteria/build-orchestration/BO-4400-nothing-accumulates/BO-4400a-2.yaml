@@ -108,6 +108,49 @@ test_spec:
     type: behavioral
     angle: failure
     description: "A remove request with no discard authorisation removes the workspace once nothing is unsent; no lock or marker blocks it."
+  - name: test_halted_run_still_sends_the_clearing_command_and_keeps_its_failed_status
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed build-ticket.js is run
+      under run_workflow_under_e2 with a scripted halt after the coder step, two real commits and one uncommitted file
+      made in a real maker workspace; the clearing dispatch (shell-runner, per-work clear-landed) is recorded on the
+      halt path, the run's own status stays failed, and the workspace is byte-identical. A live shell stand-in is
+      needed for the real answer (the harness replays static label_responses today).
+    code_file: templates/workflows-js/build-ticket.js
+  - name: test_kept_answer_names_the_unsent_commits_and_files_as_the_door_lists_them
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Against the deployed maker on the same fixture: clear-landed --kind K --slug S answers kept holds_unsent_work
+      with commits equal to the two ids (full 40-character) and files equal to the changed file, and the door's own
+      remove --path answer (UNSENT_WORK, unsent.commits and unsent.files, as test_bo_4300e_2 asserts today) lists
+      the same; the route relays the kept entry as {workspace_path, reason, commits, files}.
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_list_verb_verdict_depends_on_the_unbuilt_listing_and_is_not_a_property_of_list_today
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Correction note as a test: the maker's list verb today answers per workspace only kind, slug, branch, the path
+      fields and a state of ready, incomplete or half-cleared (worktree_admin._list_entry), with no holds-work or
+      holds-nothing verdict. test_listing_shows_holds_work_then_holds_nothing_after_hand_push above therefore waits for
+      BO-4100e and BO-4100c-1 (both in depends_on). Until they are built, this test asserts the state field and the
+      ready marker of the halted workspace through list, so the follow-up reclaim does not rely on a verdict that
+      does not exist.
+    code_file: templates/scripts/worktree_admin.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/build-ticket.js
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_admin.py
 test_rationale: >-
   The promise has two halves that only a real halt can show together: work survives byte-for-byte,
   and nothing about having halted blocks the ordinary door later. A mock of git or of the maker

@@ -98,6 +98,94 @@ test_intent:
   - clause: the pass goes on to the remaining workspaces
     needs_test: true
     reason: A refusal that aborts the pass would leave every later landed workspace in place.
+test_spec:
+  - name: test_workspace_with_a_running_program_is_kept_identical_and_program_survives
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      busy-1's commits all reached main (real fast-forward on the bare hub). A real program, started with its
+      working folder inside busy-1 and holding a file open there (the HOLDER one-liner of test_bo_4300e_2.py, which
+      writes a flag file and sleeps), is running. clear-landed --repo-root <project> (deployed maker, separate
+      process) leaves busy-1 byte-identical (files with .git, refs), and the program is still alive afterwards
+      (poll() is None). The pass never stops or signals it.
+    proves_clause: '"busy-1" is identical before and after and the program is still running'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a pass that stops the program and clears (the single-request branch of BO-4300e-2-ii)
+  - name: test_in_use_workspace_is_kept_with_reason_in_use
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The answer lists busy-1 in kept with reason in_use (the door's PROCESS_HOLDS_FILES refusal mapped, the
+      program named by pid and name as the door names it), and the pass ended with status ok and exit 0, not as a
+      failure.
+    proves_clause: the answer lists "busy-1" as kept with the reason that it is in use
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_file_written_between_assessment_and_clear_is_not_deleted
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      quiet-1 is landed and holds nothing unsent when assessed. A seam that runs in the pass's own process between
+      the assessment and the clear (the build defines it as one documented environment-provided hook, such as a
+      script path the pass runs once for each workspace just before its door request; no sleep race) writes one new
+      untracked file into quiet-1. The file is then read back from disk and equals the bytes written; quiet-1's
+      folder still exists.
+    proves_clause: '"quiet-1" is not cleared and the new file is byte-identical to what was written'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a pass that trusts its own earlier assessment instead of the door's unsent-work check at clear time
+  - name: test_late_unsent_file_is_kept_naming_it_and_the_pass_goes_on
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The answer lists quiet-1 in kept with reason holds_unsent_work and files naming the new file by its
+      workspace-relative path exactly as the door lists it, with no discard_token anywhere in the answer. A landed
+      workspace sorted after quiet-1 (by kind then slug) is still cleared in the same pass, and one sorted before it
+      likewise, so one refusal never ends the pass.
+    proves_clause: the pass goes on to the remaining workspaces
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_late_unsent_file_is_reported_by_path_in_the_kept_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The kept entry for quiet-1 carries files equal to the door's unsent.files for a remove --path request made
+      by the test for the same state (compared as lists), so the relay is verbatim and not re-derived.
+    proves_clause: the answer lists "quiet-1" as kept for holding unsent work, naming that file by path
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_pass_with_a_busy_and_a_changed_workspace_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The whole scenario is driven by python <deployed worktree.py> clear-landed as a real subprocess with real
+      argv, never by importing a maker module.
+    proves_clause: the pass goes on to the remaining workspaces
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2

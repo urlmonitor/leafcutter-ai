@@ -69,6 +69,24 @@ test_spec:
     type: behavioral
     angle: seam
     description: "The result reports idle-1 as kept with the holds-work or in-use reason, and later items are still processed."
+  - name: test_sweep_race_through_the_deployed_sweep_runs_the_pass_with_its_seam
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed sweep is run as a separate
+      process; the barrier (the documented hook of the PROOF it_requirement) is the same seam BO-4400g-2-iii uses
+      inside the clear-landed pass, since under ONE RULE the sweep's workspace part is that pass. The test writes the
+      new file into idle-1 and starts a real program in it, releases the barrier, and asserts the sweep's result
+      reports idle-1 kept (holds_unsent_work naming the file, or in_use) while the later items are still processed.
+      One seam, documented once for both records, so the two tests share it rather than each inventing a hook.
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
 test_rationale: >-
   A list-then-delete race is invisible to any test that does not change the world between the two
   steps; a barrier makes that window deterministic instead of flaky.

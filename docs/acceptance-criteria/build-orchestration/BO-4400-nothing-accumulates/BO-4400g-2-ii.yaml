@@ -81,12 +81,85 @@ test_intent:
   - clause: the answer lists "gone-1" as kept for holding unsent work, naming its two commits by identifier
     needs_test: true
     reason: The named commits are the only way the person learns which work would be lost, and they are computed.
+test_spec:
+  - name: test_squash_merged_workspace_whose_line_was_deleted_is_cleared
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      sq-3 (three commits pushed to its own line) is squash-merged on a scratch clone of the real bare hub as one
+      combined commit with the same content, main is pushed, and the line is deleted on the hub. The workspace's
+      view of the hub is pruned (git fetch --prune in the workspace), as the record's PROOF says. clear-landed
+      --repo-root <project> (deployed maker, separate process) answers sq-3 in cleared with the door's remove
+      answer, and no folder remains. Red today: worktree_remove._unsent_commits sees three commits reachable from
+      neither origin/main nor a branch and refuses UNSENT_WORK.
+    proves_clause: '"sq-3" is cleared and no folder of it remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_deleted_unmerged_line_workspace_is_kept_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      gone-1's two commits were pushed, then its line was deleted on the hub without any merge, and the view is
+      pruned. After the pass gone-1 is identical (files with .git, refs), not cleared. A second variant leaves the
+      workspace's remote-tracking ref of the deleted line unpruned (the door's fetch in worktree_remove._fetch_origin
+      does not prune): it must still be kept, since a stale tracking ref is not evidence the commits are on the
+      shared project.
+    proves_clause: '"gone-1" is identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a deleted line on the shared project read as evidence of landing
+      - a stale remote-tracking ref of a deleted line read as the commits being sent
+  - name: test_deleted_unmerged_line_is_kept_as_holds_unsent_work_naming_its_commits
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      gone-1 is in kept with reason holds_unsent_work and commits equal to its two full 40-character ids. The door's
+      own UNSENT_WORK refusal for a plain request without a token (remove --path gone-1) still comes out exactly as today
+      (code UNSENT_WORK, unsent.commits the same two commits) and the pass relays it unchanged.
+    proves_clause: the answer lists "gone-1" as kept for holding unsent work, naming its two commits by identifier
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_squash_clear_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The per-work form python <deployed worktree.py> clear-landed --kind feature --slug sq-3, run as a subprocess
+      with real argv, clears the squash-merged workspace and also answers kept holds_unsent_work for gone-1.
+    proves_clause: '"sq-3" is cleared and no folder of it remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
   contract: >-
     The landed rule judged by content for the workspace's own commits taken together, sharing one containment
     primitive with the door's unsent-work check; kept reason holds_unsent_work with commits named.
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _unsent_commits and _fetch_origin (lines 119-159) are the door's identity-only unsent check and its non-pruning fetch, which the shared containment primitive must change.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

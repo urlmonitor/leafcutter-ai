@@ -99,6 +99,56 @@ test_spec:
     type: behavioral
     angle: boundary
     description: "The recorded dispatch list of each run contains no push and no pull-request step; the hub has no new branch."
+  - name: test_nothing_to_deliver_workspace_made_minutes_ago_is_cleared_at_once
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). A workspace made minutes ago by the real
+      deployed maker, with no commit of its own and nothing unsent, is cleared by the per-work command
+      clear-landed --kind K --slug S (the route's one clearing command) with no idle threshold, while the whole
+      pass over the same project keeps it as no_own_work (its newest file is minutes old). The test runs both
+      against the deployed maker in a subprocess, so the two behaviours are told apart on one fixture.
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_fast_lane_empty_build_set_exit_reaches_the_shared_clearing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed fast-lane-ship.js with a requirement whose build set resolves to zero items returns early through
+      its empty-set path; the recorded dispatches contain the clearing dispatch (shell-runner, per-work clear-landed)
+      and no push or pull-request dispatch. Needs the live shell stand-in the harness lacks today.
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_epic_all_tickets_done_exit_reaches_the_shared_clearing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed build-epic.js with every ticket already done returns early and still sends the clearing command.
+    code_file: templates/workflows-js/build-epic.js
+  - name: test_authoring_stopped_at_the_first_gate_reaches_the_shared_clearing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed plan-feature.js with the person stopping at the first gate (nothing drafted) returns and still
+      sends the clearing command; the workspace folder is gone.
+    code_file: templates/workflows-js/plan-feature.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-epic.js
+  - templates/workflows-js/plan-feature.js
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 test_rationale: >-
   An early return is where a cleanup call is classically skipped while the success path stays green.
   Driving each deployed no-op path and inspecting the disk is the only way to see the shared step is

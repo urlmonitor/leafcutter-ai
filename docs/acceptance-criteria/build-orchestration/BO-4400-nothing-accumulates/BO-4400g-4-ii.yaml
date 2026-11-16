@@ -119,12 +119,98 @@ test_intent:
   - clause: 'ship''s report to the person states that the workspace was kept because its work is not yet on the main line, and that the landed-work pass clears it after the merge'
     needs_test: true
     reason: The kept reason comes from the real answer, and a fixed "workspace is cleared" line would misreport it.
+test_spec:
+  - name: test_published_clearing_command_clears_the_merged_gamma_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      @pytest.mark.shared_layout_reader, requesting shared_reference_layout (no build.py spawn): read the DEPLOYED
+      ship SKILL.md from that layout, take the one command step 8 publishes (today the line
+      python "<project root>/.leafcutter/scripts/worktree.py" remove --path "<workspace-path>"), fill in the fixture's
+      absolute project root and the work name gamma, and run it as a subprocess against a real project and bare hub
+      where feature/gamma was merged directly into the hub's main (git merge --no-ff pushed from the main
+      repository, as step 7 does). The folder is gone. Red today: the published command carries --path and no
+      clear-landed.
+    proves_clause: no folder remains at the location of the "gamma" workspace
+    code_file: templates/skills/ship/SKILL.md
+  - name: test_published_command_names_the_work_by_kind_and_slug_with_no_location
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The extracted command is checked after the executed proof: it runs clear-landed with --kind feature and --slug
+      <name> (the identity of step 1's locate command), contains no --path and no workspace location, and is the
+      only removal command on the page (the text check of the absence of any other removal instruction is allowed
+      in addition to the executed proof, per the record).
+    proves_clause: 'the clearing command ship ran named the work by its kind "feature" and short name "gamma", the same name ship''s first step looked the workspace up by, and gave no location'
+    code_file: templates/skills/ship/SKILL.md
+  - name: test_answer_of_the_published_command_carries_the_doors_removed_answer
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      The stdout of the extracted command for gamma is one JSON object whose cleared entry carries the door's own
+      remove answer (status ok, removed_path equal to the location locate answered), which is what step 9 must quote.
+    proves_clause: 'ship''s report to the person contains the clearing door''s own answer for that workspace, reporting it cleared'
+    code_file: templates/skills/ship/SKILL.md
+  - name: test_published_command_keeps_the_delta_workspace_with_a_pull_request_open
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      delta is pushed and its pull request is not merged (hub main does not hold it). The extracted command run for
+      delta leaves the workspace byte-identical (files with .git, refs) to its state when the pull request was
+      opened. Today's step 8 clears on both paths, which this catches.
+    proves_clause: the "delta" workspace still exists, identical to its state when the pull request was opened
+    code_file: templates/skills/ship/SKILL.md
+  - name: test_published_command_answers_kept_not_on_main_for_delta
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      The command's answer for delta lists it in kept with reason not_on_main, the value ship's step 9 turns into the
+      report that the work is not yet on the main line and that the landed-work pass clears it after the merge. The
+      report wording is the skill's prose; the test asserts the answer carries the reason that wording is built from
+      and that step 9 no longer contains the fixed line That the workspace is cleared.
+    proves_clause: 'ship''s report to the person states that the workspace was kept because its work is not yet on the main line, and that the landed-work pass clears it after the merge'
+    code_file: templates/skills/ship/SKILL.md
+  - name: test_published_clearing_command_is_reachable_as_a_real_subprocess
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The extracted command is run exactly as published (shlex-split, python resolved to sys.executable, absolute
+      quoted maker path of the deployed layout) and its exit status 0 for gamma is asserted, so the skill's own text
+      reaches the real deployed maker.
+    proves_clause: no folder remains at the location of the "gamma" workspace
+    code_file: templates/skills/ship/SKILL.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/skills/ship/SKILL.md
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
   contract: >-
     The per-work command clear-landed --kind feature --slug <name> and its one-work answer: cleared (carrying
     the door's own remove answer) or kept with reason not_on_main or holds_unsent_work.
+file_findings:
+  - file: templates/skills/ship/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its step 8 (lines 51-54) is the one place ship publishes its clearing command, today remove --path, and its step 9 (lines 56-59) states the fixed line that the workspace is cleared, so it is the surface the record changes.
+    decision: null
+file_findings_opened_files:
+  - templates/skills/ship/SKILL.md
 origin_agent: business-analyst
 created: 2026-11-16
 amended_by: []

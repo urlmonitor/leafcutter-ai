@@ -92,6 +92,96 @@ test_intent:
   - clause: the answer is distinguishable from a pass that found nothing to clear
     needs_test: true
     reason: If the two answers look the same, a timer reports success while nothing is ever cleared.
+test_spec:
+  - name: test_squash_then_changed_again_keeps_the_workspace_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      sq-2 has two commits editing lines of one tracked file and pushed to its own line on the real bare hub. On a
+      scratch clone of the hub the test squash-merges them into main as one commit, then adds a second commit to
+      main that changes the same lines again, and pushes main. After clear-landed --repo-root <project> (deployed
+      maker, separate process) sq-2 is identical (files with .git, refs) and not in cleared.
+    proves_clause: '"sq-2" is identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a containment check that guesses landed when the squashed content changed again on the main line
+      - a containment check that compares only identifiers and clears a squash-merged workspace
+  - name: test_unconfirmed_landing_is_kept_naming_both_commits_by_full_identifier
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The one answer lists sq-2 in kept with reason landing_unconfirmed and commits equal to the two full 40-character
+      ids (git rev-list of the workspace's own commits), in the clear-landed shape of BO-4400g-2.
+    proves_clause: the answer lists "sq-2" as kept with the reason that its landing could not be confirmed, naming its two commits by identifier
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_unreachable_shared_project_clears_nothing_including_landed_ff_1
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      ff-1's commits reached main (real fast-forward on the hub) and the workspace has fetched it. Then the hub
+      folder is renamed away so origin cannot be reached, and the pass runs. ff-1 still exists and is identical,
+      the door is never called (no clearing marker is written into it).
+    proves_clause: no workspace is cleared, "ff-1" included
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a pass that decides from the main line remembered by the workspace's last fetch
+  - name: test_unreachable_answer_is_refused_fetch_failed_listing_every_workspace_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The same run answers exactly one JSON object, status refused, code FETCH_FAILED, exit 2, cleared empty, every
+      workspace of the project in kept with reason shared_project_unreachable, and a message saying the shared
+      project could not be reached and that nothing was cleared. The contact is bounded in time (the whole run ends
+      within a timeout, no prompt: the hub path is made unreachable, not an interactive host).
+    proves_clause: the pass ends with exactly one answer stating that the shared project could not be reached and that nothing was cleared
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_unreachable_pass_is_distinguishable_from_a_pass_with_nothing_to_clear
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Run the pass on the same project with the hub reachable and only a pushed unmerged workspace: answer status ok,
+      exit 0, code OK, cleared empty. Assert the two answers differ in status, code and exit code, so a timer can tell
+      them apart.
+    proves_clause: the answer is distinguishable from a pass that found nothing to clear
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_both_outcomes_are_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Both outcomes above are produced by running python <deployed worktree.py> clear-landed with real argv in a
+      subprocess, and the exit codes read from the process (2 for the unreachable pass, 0 for the empty one).
+    proves_clause: the answer is distinguishable from a pass that found nothing to clear
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2

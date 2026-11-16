@@ -119,6 +119,24 @@ test_spec:
     description: "Two hook processes released together produce exactly one sweep run."
     must_catch:
       - "check-then-write interval file without an atomic lock"
+  - name: test_started_sweep_clears_a_landed_workspace_not_a_pushed_unmerged_one
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). In the temporary installed project the
+      hook-started sweep runs the landed-work pass: the landed workspace (real fast-forward on the bare hub) is gone,
+      and a second workspace that is only pushed (open pull request, a file changed an hour ago) is byte-identical,
+      so the test fails on a sweep that clears by holds-nothing alone. templates/settings.json carries no SessionStart
+      section today (it opens with env and allowedTools), so the hook registration and the deployed hook script are
+      both new, and the test runs the deployed hook, not the template.
+    code_file: templates/settings.json
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/settings.json
 test_rationale: >-
   A session hook is only proven by running the deployed hook the way Claude Code runs it; timing,
   concurrency and the background hand-off cannot be observed from source.

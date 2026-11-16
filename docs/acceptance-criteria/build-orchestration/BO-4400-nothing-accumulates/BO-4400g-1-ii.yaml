@@ -90,12 +90,101 @@ test_intent:
   - clause: '"alpha" and "beta" are identical before and after all three requests'
     needs_test: true
     reason: A refusal issued after a partial deletion or a fetch would still change a workspace, which a snapshot of both catches.
+test_spec:
+  - name: test_mixed_and_incomplete_name_requests_are_each_refused_clearing_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Ready alpha and beta (feature, nothing unsent). Three real subprocess requests: remove --kind feature --slug
+      alpha --branch feature/beta; remove --kind feature --slug alpha --path <beta location>; remove --kind
+      feature (no slug). Each answer is refused or usage (non-ok, exit 2 or 64), never ok, and carries no
+      workspace_path or removed_path. Today the second request clears beta, because
+      worktree_remove_half.target_path returns the --path location before it looks at --kind and --slug, so this
+      test is red until the build.
+    proves_clause: each request is refused without clearing anything
+    code_file: templates/scripts/worktree_remove_half.py
+    must_catch:
+      - the line-of-work name or the location silently winning over kind and short name, clearing beta
+      - a mixed request refused only after a program check, fetch or deletion ran
+  - name: test_mixed_name_refusals_name_both_identities_and_say_they_differ
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      For the first two requests the answer is code USAGE, exit 64, and its message names both identities it was
+      given (feature/alpha or alpha, and feature/beta or the beta location) and states that they point at
+      different workspaces.
+    proves_clause: the first two refusals name both identities they were given and state that they point at different workspaces
+    code_file: templates/scripts/worktree_admin.py
+  - name: test_kind_without_short_name_is_refused_as_not_named_completely
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      remove --kind feature alone answers USAGE, exit 64, with a message stating the work was not named
+      completely, and the symmetric request with a short name and no kind gets the same refusal. Nothing is
+      guessed.
+    proves_clause: the third refusal states that the work was not named completely
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_workspaces_are_identical_after_all_three_refusals
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Snapshots (files with .git, refs, FETCH_HEAD absent as before) of alpha and beta, and of the shared project's
+      refs, are identical before and after the three requests: no fetch, no marker rewrite to clearing, nothing
+      deleted. A control remove of alpha by its own identity afterwards succeeds, so identical is not nothing ran.
+    proves_clause: '"alpha" and "beta" are identical before and after all three requests'
+    code_file: templates/scripts/worktree_remove.py
+    must_catch:
+      - a refusal issued after the maker fetched into the workspace or rewrote its record
+  - name: test_mixed_name_refusal_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      main() with real argv as a subprocess: python <deployed worktree.py> remove --kind feature --slug alpha
+      --branch feature/beta exits 64 with one JSON object (USAGE).
+    proves_clause: each request is refused without clearing anything
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_half.py
+  - templates/scripts/worktree_admin.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-1
   contract: >-
     The one resolver that maps each name form remove accepts (--kind/--slug, --branch, --path) to one
     workspace position, so two forms can be compared before anything runs.
+file_findings:
+  - file: templates/scripts/worktree_admin.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the identity resolution (_find_by_branch, _locate_by_name, _identity_mismatch) that the agreement check between the name forms belongs beside.
+    decision: null
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: cmd_remove calls target_path (via worktree_remove_half) first, and that is where mixed forms are silently resolved today, so the check must be wired in before any program check or fetch.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_admin.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_remove_half.py
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

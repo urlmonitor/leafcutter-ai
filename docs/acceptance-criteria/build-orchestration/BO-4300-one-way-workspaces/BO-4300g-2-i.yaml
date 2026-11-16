@@ -220,11 +220,30 @@ test_spec:
       - a check that accepts a --path clearing command because the agent cannot remove
       - a check that accepts a clearing command naming another work than the flow's own
       - a check that recognises remove but not clear-landed as a clearing verb
+  - name: test_the_flows_own_name_is_read_from_the_recorded_ensure_command_as_the_maker_helper_spells_it
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      Grounding added at the 2026-11-16 test-designer pass (the entry above is kept as written). The name a flow
+      "obtained its workspace with" is read from the same run's recorded ensure dispatch, which the shared helper
+      spells python3 "<abs maker>" ensure --kind <kind> --slug "<slug>" (makerCommand in
+      templates/workflows-js/_shared/workspace-answer.js double-quotes the slug and the path, escaping quote, backslash,
+      dollar and backtick). The shared parser must therefore unquote with the same rules, and a slug holding a
+      space or a dollar sign must still match the clearing command's own spelling. Tested on strings built by
+      running the helper's quoting rules against a slug such as "files stay $workable". A fixture directory
+      holds the .js fixture workflows, since run_workflow_under_e2 takes any absolute .js script_path (it raises
+      FileNotFoundError and ValueError for a missing path or a non-.js file). Both BO-4300g-2 and this record
+      consume the one parser; the harness is declared here and not in BO-4300g-2.
+    proves_clause: the one permitted exception -- a flow's own clearing request sent to an agent that cannot remove, as one clearing command -- passes only when that command names the flow's own work by the name the flow obtained its workspace with and gives no location; any other clearing command sent to such an agent fails the check, naming the workflow and the step
+    code_file: unit_tests/_workflow_engine_harness.py
 test_design_authorship:
   step: test-designer
-  date: "2026-10-25"
+  date: "2026-11-16"
 test_design_opened_files:
   - unit_tests/_workflow_engine_harness.py
+  - templates/workflows-js/_shared/workspace-answer.js
   - unit_tests/_workflow_engine_workspace.py
   - unit_tests/test_workflow_dual_engine.py
   - unit_tests/build_orchestration/test_bo_4300a_1_ia.py

@@ -95,6 +95,36 @@ test_spec:
       - "only clear on success (workspace left behind holding nothing, after its work landed)"
       - "the run's failed status replaced by the clearing answer"
       - "a squash-merged line judged by commit identity, so the landed workspace is kept"
+  - name: test_quick_fix_post_pr_failure_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The deployed quick-fix.js is run under
+      run_workflow_under_e2 with the scripted failing post-pull-request step (three variants); in each the clearing
+      dispatch is recorded after the failure, the result stays failed and names the failing step. quick-fix.js
+      carries no clearing dispatch today, so each variant is red until the build. The live shell stand-in is a
+      prerequisite (the harness replays static label_responses).
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_merged_squash_with_deleted_line_is_judged_by_content_in_the_real_maker
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Third variant, at the maker: after a real squash merge on the hub with the line deleted (the repository's
+      default), clear-landed --kind K --slug S clears the workspace. The door today compares commits by identity only
+      (worktree_remove._unsent_commits), so without BO-4400g-2's content check it answers UNSENT_WORK and the variant
+      fails, which is the wrong version this entry catches. The maker proof belongs to BO-4400g-2-ii, this entry
+      pins that quick fix's third variant depends on it.
+    code_file: templates/scripts/worktree_remove.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/quick-fix.js
+  - templates/scripts/worktree_remove.py
 test_rationale: >-
   The rule is that keeping or clearing follows the workspace's state, not the success flag, and the
   kept reason says which state. Three scripted failures make the set. Two differ only in whether a commit

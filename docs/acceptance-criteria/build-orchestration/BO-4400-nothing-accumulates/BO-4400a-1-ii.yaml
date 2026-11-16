@@ -102,6 +102,35 @@ test_spec:
     must_catch:
       - "clear on the pushed but unmerged epic line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
       - "kept workspace reported as removed or as a failure instead of not yet on the main line"
+  - name: test_epic_route_is_reachable_through_the_deployed_build_epic_workflow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). The three-ticket epic is run through the
+      deployed build-epic.js (via build-feature.js's epic path) under run_workflow_under_e2, with the per-ticket
+      delivery steps pushing to the one epic pull request; the clearing dispatch is recorded exactly once, after the
+      third ticket's push and the merge. The mid-drive observation of the folder needs the live shell stand-in
+      or a scripted coder reply that checks the path on disk, and the harness replays only static
+      label_responses today, so the observation uses the stand-in's host-side exec bridge (a prerequisite).
+    code_file: templates/workflows-js/build-epic.js
+  - name: test_epic_clearing_command_is_the_per_work_command_for_the_epics_own_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The one recorded clearing dispatch is a shell-runner clear-landed --kind epic --slug <the slug the epic
+      workspace was ensured with>, with no --path, never one per ticket; parallel ticket batches issue none.
+    code_file: templates/workflows-js/build-feature.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/build-epic.js
+  - templates/workflows-js/build-feature.js
+  - unit_tests/_workflow_engine_harness.py
 test_rationale: >-
   The failure this guards is a clear placed one level too deep, which a single-ticket run cannot
   see. Only a three-ticket deployed run observed at the third ticket's step distinguishes route end
