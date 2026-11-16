@@ -130,7 +130,7 @@ def _make_minimal_store(tmp: Path, *, include_eval: bool) -> Path:
     for _sibling in sorted(_SCRIPTS_DIR.glob("*.py")):
         (scripts_dir / _sibling.name).write_bytes(_sibling.read_bytes())
 
-    index = {
+    index: dict[str, list[object] | dict[str, object]] = {
         "artifacts": [],
         "entity_registry": [],
         "by_component": {},

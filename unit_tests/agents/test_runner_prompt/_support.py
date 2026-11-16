@@ -86,7 +86,7 @@ def prose(text: str) -> str:
 
 def sentences(text: str) -> list[str]:
     """Prose sentences; a blank line, a bullet or a heading always ends the sentence before it."""
-    found = []
+    found: list[str] = []
     for block in re.split(r"\n\s*\n|\n(?=\s*[-*] )|\n(?=#)", prose(text)):
         found.extend(s for s in re.split(r"(?<=[.!?])(?<!\.\.\.)\s+", flat(block)) if s)
     return found

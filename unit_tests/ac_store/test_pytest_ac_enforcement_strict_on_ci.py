@@ -168,6 +168,7 @@ class TestCiJobConfiguredStrict(unittest.TestCase):
             run_step,
             msg="Could not locate the 'Run test suite' step in the CI test-shard job.",
         )
+        assert isinstance(run_step, dict)
         env_block = run_step.get("env", {})
         ac_strict_value = str(env_block.get("AC_ENFORCE_STRICT", ""))
         self.assertEqual(

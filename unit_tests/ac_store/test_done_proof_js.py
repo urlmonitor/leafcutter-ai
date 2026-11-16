@@ -155,24 +155,35 @@ def _write_ts_test(test_root: Path, filename: str, content: str) -> Path:
     return path
 
 
-# ---------------------------------------------------------------------------
-# BO-2500e-1 — JS "// covers:" tags are discovered and linked
-# ---------------------------------------------------------------------------
+class _SyntheticAcStoreCase(unittest.TestCase):
+    """Per test: a fresh synthetic AC store holding one active AC, plus an empty test root.
 
+    Each subclass names its AC (``ac_id``) and, when not ``todo``, its ``work_status``.
+    """
 
-class TestJsCoversTagDiscovery(unittest.TestCase):
-    """BO-2500e-1: verify_done_eligible discovers "// covers:" in .ts/.tsx files."""
+    ac_id: str
+    work_status = "todo"
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         root = Path(self._tmp.name)
         self.ac_root = root / "acs"
         self.test_root = root / "tests"
-        self.ac_id = "BO-E1-TAG-001"
-        _write_ac(self.ac_root, self.ac_id, status="active")
+        _write_ac(self.ac_root, self.ac_id, status="active", work_status=self.work_status)
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
+
+
+# ---------------------------------------------------------------------------
+# BO-2500e-1 — JS "// covers:" tags are discovered and linked
+# ---------------------------------------------------------------------------
+
+
+class TestJsCoversTagDiscovery(_SyntheticAcStoreCase):
+    """BO-2500e-1: verify_done_eligible discovers "// covers:" in .ts/.tsx files."""
+
+    ac_id = "BO-E1-TAG-001"
 
     def test_js_covers_tag_discovered_and_linked(self) -> None:
         # covers: BO-2500e-1
@@ -391,19 +402,10 @@ class TestJsCoversTagDiscovery(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestVitestIntegration(unittest.TestCase):
+class TestVitestIntegration(_SyntheticAcStoreCase):
     """BO-2500e-2: A passing vitest result makes a JS-covered AC eligible."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.ac_root = root / "acs"
-        self.test_root = root / "tests"
-        self.ac_id = "BO-E2-VITEST-001"
-        _write_ac(self.ac_root, self.ac_id, status="active")
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    ac_id = "BO-E2-VITEST-001"
 
     def test_passing_vitest_makes_js_ac_eligible(self) -> None:
         # covers: BO-2500e-2
@@ -599,19 +601,10 @@ class TestVitestIntegration(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestFailingVitestBlocking(unittest.TestCase):
+class TestFailingVitestBlocking(_SyntheticAcStoreCase):
     """BO-2500e-3: A FAILED or unavailable vitest blocks eligibility (fail-closed)."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.ac_root = root / "acs"
-        self.test_root = root / "tests"
-        self.ac_id = "BO-E3-FAIL-001"
-        _write_ac(self.ac_root, self.ac_id, status="active")
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    ac_id = "BO-E3-FAIL-001"
 
     def test_failing_vitest_blocks_js_ac(self) -> None:
         # covers: BO-2500e-3
@@ -722,6 +715,7 @@ class TestFailingVitestBlocking(unittest.TestCase):
             "done_proof.JsRunnerUnavailable must be defined as an Exception subclass. "
             "It does not exist yet — this assertion is the primary red mechanism.",
         )
+        assert isinstance(JsRunnerUnavailable, type)
 
         _write_ts_test(
             self.test_root,
@@ -780,6 +774,7 @@ class TestFailingVitestBlocking(unittest.TestCase):
             JsRunnerUnavailable,
             "done_proof.JsRunnerUnavailable must exist to test the fail-closed contract.",
         )
+        assert isinstance(JsRunnerUnavailable, type)
 
         _write_ts_test(
             self.test_root,
@@ -818,19 +813,10 @@ class TestFailingVitestBlocking(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestMarkAcDoneJsPath(unittest.TestCase):
+class TestMarkAcDoneJsPath(_SyntheticAcStoreCase):
     """BO-2500e-4: mark_ac_done treats JS-covered ACs via the same eligibility path."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.ac_root = root / "acs"
-        self.test_root = root / "tests"
-        self.ac_id = "BO-E4-MARK-001"
-        _write_ac(self.ac_root, self.ac_id, status="active", work_status="todo")
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    ac_id = "BO-E4-MARK-001"
 
     def test_js_covered_ac_marked_done_via_shared_path(self) -> None:
         # covers: BO-2500e-4
@@ -1014,19 +1000,11 @@ class TestMarkAcDoneJsPath(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
-class TestCiGateJsIntegration(unittest.TestCase):
+class TestCiGateJsIntegration(_SyntheticAcStoreCase):
     """BO-2500e-6: The CI-gate engine (verify_done_eligible) includes JS-covered ACs."""
 
-    def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.ac_root = root / "acs"
-        self.test_root = root / "tests"
-        self.ac_id = "BO-E6-CI-001"
-        _write_ac(self.ac_root, self.ac_id, status="active", work_status="done")
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    ac_id = "BO-E6-CI-001"
+    work_status = "done"
 
     def test_ci_gate_verdict_includes_js_covered_acs(self) -> None:
         # covers: BO-2500e-6

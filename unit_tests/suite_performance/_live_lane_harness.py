@@ -84,7 +84,8 @@ class Listener:
     refused or reset)."""
 
     def __init__(self, mode: str = "accept") -> None:
-        self.mode, self.connections, self._held = mode, 0, []
+        self.mode, self.connections = mode, 0
+        self._held: list[socket.socket] = []
         self._sock = socket.socket()
         self._sock.bind(("127.0.0.1", 0))
         self._sock.listen(8)
@@ -262,8 +263,10 @@ def need_file(result: Verdict) -> dict:
 
 def need_live(result: Verdict) -> dict:
     """The verdict file's ``live_database`` object, or an assertion failure naming its absence."""
-    live = need_file(result).get("live_database")
-    CHECK.assertIsInstance(live, dict, f"the verdict file has no live_database object: keys {sorted(result.file)}")
+    verdict_file = need_file(result)
+    live = verdict_file.get("live_database")
+    CHECK.assertIsInstance(live, dict, f"the verdict file has no live_database object: keys {sorted(verdict_file)}")
+    assert isinstance(live, dict)
     return live
 
 

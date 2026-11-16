@@ -493,6 +493,8 @@ class TestBo2600a4Integration(unittest.TestCase):
             f"Ticket for DEP-100a-1 must be in the epic folder. "
             f"Got: {[t.name for t in tickets]}"
         )
+        assert isinstance(dep200_ticket, Path)
+        assert isinstance(dep100_ticket, Path)
 
         # Lower prefix on prerequisite: dep200 filename < dep100 filename
         # (lexicographic on "01_..." vs "02_..." works for up to 99 tickets).

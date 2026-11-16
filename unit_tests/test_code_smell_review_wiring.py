@@ -340,7 +340,9 @@ def test_fanout_lives_at_top_level_not_in_a_subagent() -> None:
     """
     assert _agent_entry(ORCHESTRATION_SKILL) is None  # it is a skill, not an agent
     for leaf in (STRUCTURAL_AGENT, DESIGN_AGENT):
-        assert _agent_entry(leaf).get("spawn_allowlist", []) == []
+        leaf_entry = _agent_entry(leaf)
+        assert isinstance(leaf_entry, dict)
+        assert leaf_entry.get("spawn_allowlist", []) == []
     fm = _frontmatter(_skill_md(ORCHESTRATION_SKILL))
     assert "Agent" in (fm.get("allowed-tools") or [])
     body = _skill_md(ORCHESTRATION_SKILL).lower()
@@ -356,6 +358,7 @@ def test_leaf_agents_are_readonly_and_return_findings() -> None:
         assert {"Bash", "Read", "Skill"} <= tools
         assert fm.get("requires_verification") is False
         entry = _agent_entry(leaf)
+        assert isinstance(entry, dict)
         assert entry.get("requires_verification") is False
         assert entry.get("produces") == "review_verdict"
         assert bucket in _skill_ids(entry.get("skills_invoked")) and bucket in _skill_ids(fm.get("skills"))

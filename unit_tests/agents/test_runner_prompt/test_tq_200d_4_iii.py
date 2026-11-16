@@ -18,10 +18,14 @@ from __future__ import annotations
 
 import importlib.util
 import re
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 
 _SUPPORT_FILE = Path(__file__).with_name("_support.py")
 _spec = importlib.util.spec_from_file_location("_tq_200d_4_support", _SUPPORT_FILE)
+assert isinstance(_spec, ModuleSpec)
+assert isinstance(_spec.loader, Loader)
 S = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(S)
 

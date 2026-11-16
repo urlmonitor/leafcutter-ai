@@ -80,7 +80,10 @@ def norm(text: str) -> str:
 
 def parse_page(text: str) -> list[dict]:
     """Entries of one page: {kind, parts: {label: [lines]}, labels: [label, ...]}. Fenced code is skipped."""
-    entries, cur, part, fenced = [], None, None, False
+    entries: list[dict] = []
+    cur: dict | None = None
+    part: str | None = None
+    fenced = False
     for line in text.splitlines():
         if line.lstrip().startswith(("```", "~~~")):
             fenced = not fenced
@@ -111,7 +114,8 @@ def all_entries(pages: dict[str, str]) -> list[tuple[str, dict]]:
 
 def check_kinds(pages: dict[str, str]) -> set[tuple[str, str]]:
     """Problems with the kind set: missing, stale, on_two_pages, wrong_page, missing_page."""
-    fam, problems, seen = family_of(), set(), {}
+    fam, problems = family_of(), set()
+    seen: dict[str, list[str]] = {}
     for name in ALL_PAGES:
         if name not in pages:
             problems.add(("missing_page", name))

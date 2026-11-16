@@ -21,7 +21,7 @@ def stream_calls(calls: list[tuple[str, str, bool]]) -> str:
     for i, (command, content, is_error) in enumerate(calls):
         events.append({"type": "assistant", "message": {"role": "assistant", "content": [
             {"type": "tool_use", "id": f"t{i}", "name": "Bash", "input": {"command": command}}]}})
-        block = {"type": "tool_result", "tool_use_id": f"t{i}", "content": content}
+        block: dict[str, str | bool] = {"type": "tool_result", "tool_use_id": f"t{i}", "content": content}
         if is_error:
             block["is_error"] = True
         events.append({"type": "user", "message": {"role": "user", "content": [block]}})

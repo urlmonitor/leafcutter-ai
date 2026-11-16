@@ -139,7 +139,7 @@ class TestNothingWrittenLeavesTheCommitUnchanged(_Base):
         # covers: INF-700a-1-iii
         # angle: discrimination
         baseline = self._commit_prompt(None)  # routing step's reply is the harness default stub
-        variants = {
+        variants: dict[str, dict[str, Any]] = {
             "completed, empty list": {
                 "case": "completed", "read": 0, "written": 0, "unwritten": 0,
                 "manifest": [],

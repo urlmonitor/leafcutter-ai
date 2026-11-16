@@ -56,7 +56,9 @@ MUTANTS = {
     "re-runs a hold run with the job's own GITHUB_TOKEN": ("reevaluate", [http_step("POST", "/actions/runs/1005/rerun", {})]),  # AMENDED 2026-10-12: only the App token may re-run
     "disables another workflow": ("reevaluate", [http_step("PUT", "/actions/workflows/ci.yml/disable", None)]),
 }
-CONTROLS = {"the unmutated notice job": ("notice", []), "the unmutated re-evaluation job": ("reevaluate", [])}
+CONTROLS: dict[str, tuple[str, list[str]]] = {
+    "the unmutated notice job": ("notice", []), "the unmutated re-evaluation job": ("reevaluate", []),
+}
 
 
 def mutated_copy(job, texts, destination):

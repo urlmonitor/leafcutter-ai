@@ -77,7 +77,7 @@ def _make_zero_artifact_store(tmp: Path) -> Path:
     (store / "flows").mkdir(parents=True)
     (store / "mock-data").mkdir(parents=True)
     (tmp / "acceptance-criteria").mkdir(parents=True)
-    index = {"artifacts": [], "entity_registry": []}
+    index: dict[str, list[object]] = {"artifacts": [], "entity_registry": []}
     (store / "index.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     return store
 

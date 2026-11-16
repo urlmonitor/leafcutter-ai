@@ -235,7 +235,8 @@ class TestOnlyTheExactNameIsTheHold(_FinalizeHoldCase):
                 self.assertFalse(payload.get("external_hold"), payload)
                 self.assertEqual(len(self.labels_of(result, _MERGE)), 1, self.labels(result))
                 self.assertEqual(payload.get("status"), "ok", payload)
-        for malformed in ("no json in this reply at all", {"oops": True}, []):
+        malformed_replies: tuple[object, ...] = ("no json in this reply at all", {"oops": True}, [])
+        for malformed in malformed_replies:
             with self.subTest(reply=malformed):
                 result = self.run_with(malformed)
                 self.assertEqual(len(self.labels_of(result, CHECKS_LABEL)), 1, self.labels(result))
