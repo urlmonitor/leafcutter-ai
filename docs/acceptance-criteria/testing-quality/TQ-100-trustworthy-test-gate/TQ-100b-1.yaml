@@ -46,12 +46,12 @@ expects_from:
   ac_id: TQ-100a-1
   contract: "A suite that runs to completion despite individual broken files, so the per-test linkage decision is applied across the whole loadable suite."
 test_spec:
-  - name: test_tq_100b_1_a_not_done_ac_failure_is_informational_and_does_not_fail_the_run
-    target_dir: unit_tests/ac_store/
+  - name: test_not_done_ac_test_is_informational
+    target_dir: tests/testing_quality/
     framework: unittest
     type: integration
     angle: criterion
-    description: "Run a real pytest session with scripts.ac_store.pytest_ac_enforcement loaded, AC_ENFORCE_STRICT unset, over a failing test tagged '# covers: <AC-ID>' whose AC is todo in a synthetic store: the test is reported as an expected failure that stays visible in the output, and the session exit status is 0."
+    description: "The existing tests/testing_quality/test_ac_linkage.py::TestNotDoneAcTestIsInformational::test_not_done_ac_test_is_informational. It runs a real pytest session with scripts.ac_store.pytest_ac_enforcement loaded over a failing test tagged '# covers: <AC-ID>' whose AC is todo in a synthetic store. With AC_ENFORCE_STRICT unset, the test is reported as an expected failure that stays visible in the output and the session exit status is 0; with it set, the failure surfaces as a real FAILED and the exit status is non-zero."
     must_catch:
       - "the not-done AC's failure is left as a real failure, so the run exits 1"
       - "the failure is dropped from the output instead of being reported informationally"
@@ -65,7 +65,7 @@ amended_by:
   - reason: "child added; test contract the schema requires"
     by: BrainCandy
     at: 2026-11-16
-    note: "Added TQ-100b-1-iv to covered_by. Staging this parent with it made check-ac-schema refuse the record, because an approved L2 code AC must carry a test_spec and this one never had one, so a test_spec derived from the criteria was added. criteria untouched."
+    note: "Added TQ-100b-1-iv to covered_by. Staging this parent with it made check-ac-schema refuse the record, because an approved L2 code AC must carry a test_spec and this one never had one, so a test_spec was added that names the existing covering test, tests/testing_quality/test_ac_linkage.py::test_not_done_ac_test_is_informational. criteria untouched."
 superseded_by: null
 covered_by:
   - TQ-100b-1-i
