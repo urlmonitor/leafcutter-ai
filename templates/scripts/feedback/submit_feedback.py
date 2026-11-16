@@ -561,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
             declared sink cannot be determined).
     """
     raw_argv = list(sys.argv[1:] if argv is None else argv)
-    reporter = _sf.open_reporter()
+    reporter = _sf.open_reporter(__file__)
     if reporter is None:
         return 1
     args = _build_parser(reporter, raw_argv).parse_args(raw_argv)

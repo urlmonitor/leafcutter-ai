@@ -127,10 +127,21 @@ class TestSignoffBlockSubmitFailedAndSelfVerify(unittest.TestCase):
         text = _read_signoff_block()
 
         self.assertIn(
+            "(submit-failed:",
+            text,
+            "block must record a failed submission as the reasoned marker "
+            "(submit-failed:<reason>:<category>) so that an unreachable feedback "
+            "sink does not cause the phase to fail and the cause stays visible.",
+        )
+        self.assertNotIn(
             "(submit-failed)",
             text,
-            "block must contain the (submit-failed) fallback so that an "
-            "unreachable feedback sink does not cause the phase to fail.",
+            "INF-500d-3: the bare (submit-failed) token is replaced by the reasoned marker.",
+        )
+        self.assertRegex(
+            text,
+            r"(?is)submit-failed.*?(continue|not abort|not a phase failure)",
+            "a failed submission must not stop the sign-off: the block must say to continue.",
         )
 
         self.assertIn(

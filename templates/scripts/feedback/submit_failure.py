@@ -54,19 +54,26 @@ class VocabularyError(Exception):
         super().__init__(f"{path}: {problem}")
 
 
-def vocabulary_path() -> Path:
-    """Return where ``submit_failure_reasons.json`` is expected: beside this module.
+def vocabulary_path(anchor: str = __file__) -> Path:
+    """Return where ``submit_failure_reasons.json`` is expected: beside ``anchor``.
 
-    The invoked (absolute) location is preferred so a symlinked deployed copy
-    stays anchored there; the resolved location is used when the first is absent.
+    The caller passes the ENTRY script's own ``__file__`` so the path follows the
+    copy being run: an in-process caller that loads a second copy of the entry
+    script gets a cached ``submit_failure`` whose own ``__file__`` points at the
+    first copy. The invoked (absolute) location is preferred so a symlinked
+    deployed copy stays anchored there; the resolved location is used when the
+    first is absent.
+
+    Args:
+        anchor: A file whose directory holds the vocabulary; this module by default.
 
     Returns:
         Path: The vocabulary file path (it may not exist).
     """
-    invoked = Path(os.path.abspath(__file__)).parent / VOCABULARY_NAME
+    invoked = Path(os.path.abspath(anchor)).parent / VOCABULARY_NAME
     if invoked.is_file():
         return invoked
-    return Path(__file__).resolve().parent / VOCABULARY_NAME
+    return Path(anchor).resolve().parent / VOCABULARY_NAME
 
 
 def load_reason_ids(path: Path | None = None) -> frozenset[str]:
@@ -152,15 +159,18 @@ class Reporter:
             raise
 
 
-def open_reporter() -> Reporter | None:
-    """Load the vocabulary and return a Reporter, or None after naming the unreadable file.
+def open_reporter(anchor: str = __file__) -> Reporter | None:
+    """Load the vocabulary beside ``anchor`` and return a Reporter, or None after naming the unreadable file.
+
+    Args:
+        anchor: The entry script's ``__file__`` (see ``vocabulary_path``).
 
     The caller must then fail (non-zero, empty stdout) WITHOUT a reason line:
     the run's error stream then holds none of the lines a caller recognises, and
     the caller rule yields facility-unavailable. No built-in list stands in.
     """
     try:
-        return Reporter(load_reason_ids())
+        return Reporter(load_reason_ids(vocabulary_path(anchor)))
     except VocabularyError as exc:
         print(f"[submit_feedback] ERROR: cannot read the failure-reason vocabulary: {exc}", file=sys.stderr)
         return None

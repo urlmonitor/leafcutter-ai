@@ -21,6 +21,7 @@ import pytest
 from unit_tests.feedback import _inf_500d_3_helpers as t
 from unit_tests.feedback import _inf_500d_4_helpers as h
 from unit_tests.feedback._inf_500d_3_ii_check import RUN_A, fill
+from unit_tests.feedback._inf_500d_3_marker import lift_capture_block, lift_recipes
 from unit_tests.feedback._inf_500d_4_vi_helpers import _commands, _declared_prompts, _prepare, _shell, _workspace_logs
 
 _TICKET = "tickets/00_inbox/TICKET-inf-500d-4-probe.md"
@@ -115,9 +116,10 @@ def test_live_surface_tester_capture_block_runs_unchanged_and_returns_the_single
     # angle: seam
     """The FB_ID=$(...) block of the deployed live-surface-tester, run as written, returns the record's id."""
     text = _deployed(shared_reference_layout, "agents/live-surface-tester.md")
-    start = text.index("FB_ID=$(python scripts/feedback/submit_feedback.py")
-    end = text.index('FB_ID="${FB_ID:-(submit-failed)}"', start) + len('FB_ID="${FB_ID:-(submit-failed)}"')
-    block = text[start:end].replace("<ticket_path>", _TICKET).replace("<one-sentence summary>", "live capture probe")
+    blocks = lift_capture_block(text)  # the agent's own fenced block that submits and sets FB_ID
+    assert len(blocks) == 1, f"live-surface-tester must carry exactly one executable capture block, found {len(blocks)}"
+    block = blocks[0].replace("<ticket_path>", _TICKET).replace("<one-sentence summary>", "live capture probe")
+    block = block.replace("<category>", "complete")  # the one category the block submits under and repeats in its markers
     block = fill(block, RUN_A)  # INF-500d-3-ii: the per-run error-stream name placeholders
     assert "<" not in block.replace("<<", ""), f"unfilled placeholder in the lifted block: {block}"
     layout = t.make_layout(tmp_path)
@@ -130,19 +132,23 @@ def test_live_surface_tester_capture_block_runs_unchanged_and_returns_the_single
 def test_epic_supervisor_capture_form_runs_unchanged_and_returns_the_single_line_id(shared_reference_layout, tmp_path):
     # covers: INF-500d-3-iii
     # angle: seam
-    """The epic-supervisor FB_ID=$(... 2>/dev/null) || FB_ID=(submit-failed) form, run in bash, returns the record's id."""
+    """The epic-supervisor python3 submit command (its stdout is the id), run in bash, returns the record's id."""
     text = _deployed(shared_reference_layout, "agents/epic-supervisor.md")
-    line = next(ln for ln in text.splitlines() if ln.strip().startswith("# FB_ID=$(python scripts/feedback/submit_feedback.py"))
-    # The deployed pseudo-code collapsed a multi-line shell comment onto one line, leaving the continuation
-    # markers ('#') between the arguments. Only comment markers are removed; every word is kept.
-    command = re.sub(r"\s+#\s+", " ", line.strip().removeprefix("# "))
-    command = (command.replace("<any_affected_ticket_path>", _TICKET).replace("<phase>", "python-coder")
+    recipes = lift_recipes("agents/epic-supervisor.md", text)
+    assert len(recipes) == 1, f"epic-supervisor must carry exactly one redirecting submit command, found {len(recipes)}"
+    command = (recipes[0].submit.command.replace("<affected_ticket_path>", _TICKET).replace("<phase>", "python-coder")
                .replace("<count>", "3").replace("<summary_prefix>", "epic capture probe"))
+    command = fill(command, RUN_A)  # the per-run error-stream name placeholders
     assert "<" not in command, f"unfilled placeholder: {command}"
     layout = t.make_layout(tmp_path)
+    command = command.replace("/tmp/", f"{layout.tmpdir}/").replace("scripts/feedback/", f"{layout.out_root}/scripts/feedback/")
     note = "Cross-ticket pattern: python-coder failed with 'epic capture probe' on 3 tickets."
-    fb_id = _capture_in_layout(command, layout, note)
-    assert fb_id != "(submit-failed)" and t.ID_RE.match(fb_id)
+    proc = _shell(command, layout.project, layout.tmpdir)
+    assert proc.returncode == 0, proc.stderr
+    sink_ids = [r["feedback_id"] for r in t.records(layout) if r["note"] == note]
+    assert len(sink_ids) == 1, f"the sink holds {len(sink_ids)} records for {note!r}"
+    assert proc.stdout.splitlines() == [sink_ids[0]], f"stdout {proc.stdout!r} is not the single-line id {sink_ids[0]!r}"
+    assert t.ID_RE.match(sink_ids[0])
 
 
 @pytest.mark.shared_layout_reader

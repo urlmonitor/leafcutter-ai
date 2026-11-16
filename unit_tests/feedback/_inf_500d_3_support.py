@@ -12,7 +12,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypedDict, Unpack
 
 from unit_tests.feedback import _inf_500d_4_helpers as h
 from unit_tests.feedback._inf_500d_4_vi_helpers import _enduring, _tmpdir, _worktree
@@ -191,8 +191,18 @@ def _jsonl(path_of: Callable[[Lay], str]) -> Callable[[Lay], list[str]]:
     return lambda lay: _argv(extra=("--jsonl", path_of(lay)))
 
 
-def _kw(**kwargs: object) -> Callable[[Lay], list[str]]:
-    return lambda lay: _argv(**kwargs)  # type: ignore[arg-type]
+class _ArgvOptions(TypedDict, total=False):
+    """The keyword options ``_argv`` accepts (each may be omitted, so its default applies)."""
+
+    category: str | None
+    phase: str | None
+    ticket: str | None
+    tags: str | None
+    extra: tuple[str, ...]
+
+
+def _kw(**kwargs: Unpack[_ArgvOptions]) -> Callable[[Lay], list[str]]:
+    return lambda lay: _argv(**kwargs)
 
 
 MALFORMED = {
