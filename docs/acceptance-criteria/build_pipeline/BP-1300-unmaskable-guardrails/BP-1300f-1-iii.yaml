@@ -40,7 +40,7 @@ estimated_complexity: S
 it_requirements:
   - "RENAMES: the changed-file list comes from `git diff --name-status -z -M --diff-filter=ACMR <merge base> HEAD -- <pathspecs>`; an R entry yields (old path, new path). The base run type-checks the OLD path inside the base checkout and re-keys every base error to the NEW path before comparing."
   - "A rename git does not detect (similarity under its threshold) arrives as an A entry and is judged as a new file (BP-1300f-1-iv); that is git's call, not this check's."
-  - "The base checkout is a temporary `git worktree add --detach` of the merge base, removed with `git worktree remove --force` in a finally block whatever the outcome; mypy runs there with the same flags and the same cwd-relative paths so the whole base repository is the type-checking context."
+  - "The base side is a temporary EXPORT of the merge-base tree, never a checkout: `git archive --format=tar <merge base>` read from the subprocess's stdout and extracted with Python's tarfile (no shell pipe), the directory removed in a finally block whatever the outcome. Only the workspace maker creates checkouts in this repository (BO-4300f-2 census). git archive drops paths marked export-ignore; this repository marks none (checked 2026-11-16), and a changed file that were marked so would be missing at the base, which makes mypy refuse to run: could-not-check, never a silent pass. mypy runs in the export with the same flags and the same cwd-relative paths, so the whole base tree is the type-checking context."
 test_spec:
   - name: test_bp_1300f_1_iii_renamed_file_keeps_its_old_errors_uncharged
     target_dir: unit_tests/build_guards/

@@ -10,7 +10,8 @@ description: >-
   BP-1300f-1 (new L1 BP-1300f under BP-1300, one L2, seven L3s). New
   scripts/ci/mypy_ratchet.py: lists the changed .py files with rename detection
   (git diff -M --diff-filter=ACMR, the job's twelve pathspecs unchanged), runs
-  mypy on them at the head and in a temporary detached worktree of the merge base,
+  mypy on them at the head and in a temporary export of the merge-base tree
+  (git archive streamed into tarfile, so no checkout is created),
   matches errors by (head path, code, message) as multisets without line numbers,
   re-keys a renamed file's base errors from its old path, counts type-ignore
   comments with the tokenizer, and prints each new error with its head line and a

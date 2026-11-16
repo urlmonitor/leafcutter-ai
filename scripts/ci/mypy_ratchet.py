@@ -17,9 +17,9 @@ ARCHITECTURE: One module, stdlib only, invoked by job ``typecheck`` of
     .github/workflows/ci.yml. Pure functions (``parse_name_status``,
     ``parse_mypy_output``, ``compare_errors``, ``type_ignore_lines``,
     ``compare_ignores`` and the renderers) hold the rule and carry no try/except.
-    The I/O boundary (``_run``, file reads, the temporary base worktree) turns
-    every failure into ``RatchetError``, which ``main`` reports as COULD NOT CHECK
-    with exit 2.
+    The I/O boundary (``_run``, file reads, the temporary export of the merge-base
+    tree made with ``git archive`` and ``tarfile``) turns every failure into
+    ``RatchetError``, which ``main`` reports as COULD NOT CHECK with exit 2.
 
     The rule: an error's key is (head path, error code, message with "line <n>"
     written as "line N"). Per key, new = max(0, head - base), untouched =
@@ -48,6 +48,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tokenize
 from collections import Counter
@@ -402,28 +403,41 @@ def _cache_root(cache_dir: Path | None) -> Iterator[Path]:
 
 
 @contextmanager
-def base_checkout(repo: Path, rev: str) -> Iterator[Path]:
-    """A detached temporary worktree of *rev*, removed whatever happens."""
+def base_tree(repo: Path, rev: str) -> Iterator[Path]:
+    """Every tracked file of *rev*, exported into a temporary directory removed afterwards.
+
+    Only the workspace maker creates checkouts in this repository, so the base side is
+    a plain export: no checkout, branch or git metadata is created.
+    """
     tmp = _make_temp_dir("mypy-ratchet-base-")
-    root = tmp / "base"
     try:
-        _git(repo, "worktree", "add", "--detach", "--quiet", str(root), rev)
-        yield root
+        _export_tree(repo, rev, tmp)
+        yield tmp
     finally:
-        _discard_checkout(repo, tmp, root)
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _discard_checkout(repo: Path, tmp: Path, root: Path) -> None:
-    if root.exists():
-        try:
-            _git(repo, "worktree", "remove", "--force", str(root))
-        except RatchetError as exc:
-            logger.warning("could not remove the base worktree %s: %s", root, exc)
-    shutil.rmtree(tmp, ignore_errors=True)
+def _export_tree(repo: Path, rev: str, dest: Path) -> None:
+    """Stream ``git archive --format=tar <rev>`` into tarfile (no shell pipe).
+
+    git archive drops paths marked ``export-ignore``; this repository marks none. Were
+    a changed file marked so, it would be missing at the base and mypy would refuse
+    to run on it: could-not-check, never a silent pass.
+    """
+    argv = ["git", "archive", "--format=tar", rev]
     try:
-        _git(repo, "worktree", "prune")
-    except RatchetError as exc:
-        logger.warning("git worktree prune failed: %s", exc)
+        with tempfile.TemporaryFile() as errors:
+            with subprocess.Popen(argv, cwd=str(repo), stdout=subprocess.PIPE, stderr=errors) as proc:
+                with tarfile.open(fileobj=proc.stdout, mode="r|") as archive:
+                    archive.extractall(dest, filter="tar")
+                code = proc.wait(timeout=_GIT_TIMEOUT)
+            errors.seek(0)
+            detail = errors.read().decode("utf-8", "replace").strip()
+    except (OSError, subprocess.SubprocessError, tarfile.TarError) as exc:
+        logger.warning("could not export %s: %s", rev, exc)
+        raise RatchetError.cannot_run(argv, exc) from exc
+    if code != 0:
+        raise RatchetError.git_failed(tuple(argv[1:]), code, detail)
 
 
 def _base_side(
@@ -437,7 +451,7 @@ def _base_side(
     if not pairs:
         return [], {}
     head_of = dict(pairs)
-    with base_checkout(repo, merge_base) as root:
+    with base_tree(repo, merge_base) as root:
         raw = run_mypy(root, [old for old, _new in pairs], cache_root / "base")
         ignores = {new: read_ignores(root / old) for old, new in pairs}
     errors = [MypyError(head_of[e.path], e.line, e.code, e.message) for e in raw]
@@ -528,7 +542,7 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ====================================================================
 # - 2026-11-16 [python-coder/BP-1300f-1]: Created. Ratchet over the CI mypy
-#   job: two runs (head, merge-base worktree) on the changed files with full
+#   job: two runs (head, merge-base tree) on the changed files with full
 #   repository context, line-insensitive multiset matching, renames re-keyed
 #   from their old path, tokenizer-counted type-ignores, and a summary that
 #   never looks like a pass when nothing was inspected or mypy could not
@@ -538,4 +552,9 @@ if __name__ == "__main__":
 #   exits 1 with no error line, which read as "errors found, none ours" and
 #   passed. A version probe now names the mypy used, and a status 1 with no
 #   error line is COULD NOT CHECK. (#TICKETLESS reason=bp-1300f-ac-driven-no-ticket-file)
+# - 2026-11-16 [python-coder/BP-1300f-1-iii]: The base side is now an export
+#   of the merge-base tree (git archive streamed into tarfile) instead of a
+#   linked checkout: only the workspace maker may create checkouts here
+#   (BO-4300f-2 census). Renames and new files behave as before.
+#   (#TICKETLESS reason=bp-1300f-ac-driven-no-ticket-file)
 # ====================================================================

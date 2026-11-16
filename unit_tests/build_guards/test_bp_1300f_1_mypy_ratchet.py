@@ -35,6 +35,9 @@ class TestLineInsensitiveMatching(RatchetRepoCase):
 
     def test_bp_1300f_1_i_genuinely_new_error_fails_naming_line_code_and_remedy(self):
         # covers: BP-1300f-1-i
+        # covers: BP-1300f-1
+        # The rule end to end through the real module: the inherited error at line 2
+        # is not charged, the added one at line 12 fails the run.
         self.commit_base({"scripts/svc.py": RETURN_ERR})
         filler = "\n\ndef h() -> None:\n    a = 1\n    b = a\n    print(b)\n\n\n"
         head = RETURN_ERR + filler + "def g() -> None:\n    y: int = \"s\"\n"
@@ -42,7 +45,7 @@ class TestLineInsensitiveMatching(RatchetRepoCase):
         self.commit_head({"scripts/svc.py": head})
         run = self.ratchet()
         counts = self.assert_failed(run)
-        self.assertEqual(counts["new"], 1)
+        self.assertEqual((counts["new"], counts["existing"]), (1, 1))
         named = self.lines_with(run.out, "scripts/svc.py:12:", "[assignment]")
         self.assertEqual(len(named), 1, run.out)
         self.assertIn("Incompatible types in assignment", named[0])

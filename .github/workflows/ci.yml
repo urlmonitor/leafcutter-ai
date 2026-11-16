@@ -119,9 +119,10 @@
 #
 #   typecheck  — mypy RATCHET over the .py files changed in a PR (BP-1300f-1):
 #                scripts/ci/mypy_ratchet.py type-checks each changed file at the
-#                PR head and at its merge base (a temporary worktree, so both
-#                runs see the whole repository), matches errors by (path, code,
-#                message) without line numbers, and FAILS THE JOB only for errors
+#                PR head and at its merge base (a temporary `git archive` export
+#                of that tree, so both runs see the whole repository), matches
+#                errors by (path, code, message) without line numbers, and
+#                FAILS THE JOB only for errors
 #                the PR adds or for `# type: ignore` comments it adds. Errors a
 #                touched file already had are reported as untouched, never
 #                charged. No continue-on-error: its red is visible. NOT YET a
@@ -978,8 +979,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: the ratchet computes the PR's merge base and checks it
-          # out into a temporary worktree for the base-side mypy run.
+          # Full history: the ratchet computes the PR's merge base and exports
+          # that tree (git archive) into a temporary directory for the base-side
+          # mypy run.
           fetch-depth: 0
 
       - name: Set up Python
