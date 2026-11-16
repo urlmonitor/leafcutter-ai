@@ -13,6 +13,7 @@ ARCHITECTURE: Unit tests over scripts/suite_performance/
 
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 import textwrap
@@ -69,10 +70,12 @@ class TestWindowsLockExcludesProcesses(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             first = self._spawn(tmp, 2.0)
             try:
+                assert isinstance(first.stdout, io.TextIOBase)
                 self.assertEqual(first.stdout.readline().strip(), "ACQUIRED")
                 held_at = time.monotonic()
                 second = self._spawn(tmp, 0.0)
                 try:
+                    assert isinstance(second.stdout, io.TextIOBase)
                     self.assertEqual(second.stdout.readline().strip(), "ACQUIRED")
                     waited = time.monotonic() - held_at
                 finally:

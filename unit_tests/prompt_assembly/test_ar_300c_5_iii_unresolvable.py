@@ -42,7 +42,7 @@ from _ar_300e_support import (  # noqa: E402
     write_template,
 )
 
-GHOST_ROW = {"id": "zz-ghost", "template_path": None, "role": "ghost role", "tier": "utility",
+GHOST_ROW: dict[str, object] = {"id": "zz-ghost", "template_path": None, "role": "ghost role", "tier": "utility",
              "is_ticket_phase": False, "spawn_allowlist": [], "skills_used": [], "skills_invoked": []}
 
 

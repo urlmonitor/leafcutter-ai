@@ -156,6 +156,7 @@ class TestTicketWiringWithFeedbackId(unittest.TestCase):
                 None,
             )
             self.assertIsNotNone(target, "feedback entry not found after resolve")
+            assert isinstance(target, dict)
             self.assertIn(
                 "resolved_at", target,
                 "resolved_at must be set when resolve_feedback.py is called with --ticket"

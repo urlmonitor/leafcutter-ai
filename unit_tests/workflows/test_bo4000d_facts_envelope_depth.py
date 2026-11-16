@@ -30,8 +30,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from unit_tests._workflow_engine_harness import (  # noqa: E402
-    run_workflow_under_e2,
+from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests._workflow_engine_workspace import (  # noqa: E402
     shell_step_reply,
     workspace_answer_of,
 )

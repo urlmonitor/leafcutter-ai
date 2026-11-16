@@ -115,7 +115,7 @@ class TestFreshInstallProductTruthRecord(unittest.TestCase):
         """
         scripts_dir_str = str(scripts_dir)
         sys.path.insert(0, scripts_dir_str)
-        self.addCleanup(lambda: scripts_dir_str in sys.path and sys.path.remove(scripts_dir_str))
+        self.addCleanup(lambda: sys.path.remove(scripts_dir_str) if scripts_dir_str in sys.path else None)
         for name in ("validate_product_truth", "generate_product_truth"):
             sys.modules.pop(name, None)
         module = importlib.import_module("validate_product_truth")
@@ -334,6 +334,10 @@ class TestUxp700a1ReachableFromEntryPoint(unittest.TestCase):
     (see unit_tests/commit_guardian/test_bp_100k_3_i.py's module docstring for
     the incident this avoids, KI-BP-002). Builds into a fresh tempdir instead.
     """
+
+    _isolated_tree: Path
+    _build_result: subprocess.CompletedProcess[str]
+    _pt: Path
 
     @classmethod
     def setUpClass(cls) -> None:
