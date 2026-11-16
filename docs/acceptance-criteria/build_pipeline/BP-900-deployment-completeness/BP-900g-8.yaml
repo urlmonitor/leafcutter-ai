@@ -254,12 +254,22 @@ amended_by:
     is still todo with no coverage. That claim was false before this change too;
     in_progress is the accurate state until BP-900g-8-iii lands. Its own 18 tests and
     the done children -i, -ii and -iv are unchanged. criteria untouched.'
+- reason: store-accuracy
+  by: python-coder
+  at: 2026-11-16
+  note: 'Added children BP-900g-8-v, -vi and -vii (template frontmatter parse reuse:
+    identical results, one parse per distinct text, pure-Python loader kept) to
+    covered_by. work_status stays in_progress: BP-900g-8-iii is still todo. criteria
+    untouched.'
 superseded_by: null
 covered_by:
   - BP-900g-8-i
   - BP-900g-8-ii
   - BP-900g-8-iii
   - BP-900g-8-iv
+  - BP-900g-8-v
+  - BP-900g-8-vi
+  - BP-900g-8-vii
   - unit_tests/test_bp_900g_8.py
   - unit_tests/test_bp_closure_guard_correctness.py
 implemented_by:

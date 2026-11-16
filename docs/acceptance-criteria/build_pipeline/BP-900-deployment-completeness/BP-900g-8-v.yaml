@@ -1,0 +1,95 @@
+id: BP-900g-8-v
+components:
+  - build_pipeline
+title: "A template's parsed frontmatter is exactly what the pure-Python YAML parse of its text gives, for every real template"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given every real frontmatter block under templates/ (agents, skills, workflows and
+    docs) and a set of synthetic edge cases (dates, quoted strings, multi-line
+    scalars, empty frontmatter, YAML that does not parse, non-mapping YAML, text with
+    no frontmatter at all),
+  When template_compiler.parse_frontmatter parses each text, including a second
+    parse of the same text in the same process,
+  Then the returned (frontmatter, body) pair is equal to the pair the reference parse
+    gives, where the reference is yaml.load(<frontmatter text>, Loader=yaml.SafeLoader)
+    applied with parse_frontmatter's own splitting rules,
+  And the value types are the reference's types (a date stays a datetime.date, a
+    number stays an int, a boolean stays a bool),
+  And the mapping's key order is the reference's key order,
+  And YAML that does not parse still gives an empty frontmatter dict with the body
+    split off, and a first and a second parse of it agree,
+  And a caller that mutates the frontmatter it was handed cannot change what a later
+    parse of the same text returns,
+  Because a parse that is reused rather than recomputed is only a speed-up if no
+    caller can tell the difference, and the build parses the same template text
+    about nine times over.
+depends_on:
+  - BP-900g-8
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Home of parse_frontmatter, which gains the reuse."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "parse_frontmatter keeps its signature, its splitting rules and its error behaviour. The reference in the test re-implements only the YAML step (yaml.load with yaml.SafeLoader), so a divergence in splitting is caught too."
+  - "The returned frontmatter is a fresh copy on every call. Several callers mutate it (they pop or set keys), so sharing one stored object would leak a mutation into the next parse."
+  - "Tests must not spawn build.py. The real inputs are the files under templates/ read from the source tree."
+test_spec:
+  - name: test_every_real_template_frontmatter_equals_the_reference_parse
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "template_compiler.parse_frontmatter over every .md under templates/ that starts with a frontmatter block, parsed twice, compared with the reference parse"
+    description: "For every real template the pair returned equals the reference pair on the first and on the second parse, with identical key order and identical value types."
+    must_catch:
+      - "A stored result returned by reference, so one parse's mutation shows in the next."
+      - "A cache keyed on something coarser than the frontmatter text (for example the first line), returning another template's frontmatter."
+      - "A reused result whose key order differs from the reference's."
+  - name: test_synthetic_edge_cases_match_the_reference_and_survive_caller_mutation
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "template_compiler.parse_frontmatter over dates, quoted strings, multi-line scalars, empty frontmatter, malformed YAML, a tab after a colon, a non-mapping document and text with no frontmatter"
+    description: "Each edge case equals the reference result on a first and a second parse, YAML that does not parse gives an empty dict, and mutating the returned dict (nested values included) does not change a later parse."
+    must_catch:
+      - "A parse failure remembered as an exception or as None instead of an empty dict."
+      - "A shallow copy, so mutating a nested list or dict leaks into the next parse."
+test_rationale: |
+  The criterion entry is the safety net: it compares the real package against an
+  independent computation, so a reuse bug that returns the wrong template's data or a
+  reordered mapping cannot hide. The boundary entry covers the inputs that real
+  templates do not currently contain but a hand-edited one could, and the mutation
+  check is the one property a plain equality comparison cannot show.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+created_by_ticket: null
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_8_v_frontmatter_reuse.py
+implemented_by:
+  - scripts/template_compiler.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Written 2026-11-16 with BP-900g-8-vi and BP-900g-8-vii for the frontmatter-parse
+  speed-up. Sits beside BP-900g-8-iv, the previous per-build speed-up, because that
+  record is where the build-time work was last cut.
