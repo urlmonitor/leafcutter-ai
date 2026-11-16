@@ -68,25 +68,18 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 # ---------------------------------------------------------------------------
 # Import attempt — build_epic_from_ids not yet implemented.
-# getattr returns None, making _FUNC_IMPORT_OK = False.
+# A missing name raises ImportError, making _FUNC_IMPORT_OK = False.
 # This IS the intended red state.
 # ---------------------------------------------------------------------------
 
 _FUNC_IMPORT_OK = False
 _FUNC_IMPORT_ERR = ""
-build_epic_from_ids = None
-_gte = None  # module-level reference so test_3 can inspect run() and getsource()
+# _gte (test_3 inspects its run()) stays unbound on a failed import; used only after _require_impl.
 
 try:
     import goal_to_epic as _gte  # noqa: E402
-    build_epic_from_ids = getattr(_gte, "build_epic_from_ids", None)
-    if build_epic_from_ids is None:
-        _FUNC_IMPORT_ERR = (
-            "build_epic_from_ids attribute not found in goal_to_epic module — "
-            "the function has not been implemented yet"
-        )
-    else:
-        _FUNC_IMPORT_OK = True
+    from goal_to_epic import build_epic_from_ids  # noqa: E402
+    _FUNC_IMPORT_OK = True
 except ImportError as exc:
     _FUNC_IMPORT_ERR = f"ImportError loading goal_to_epic: {exc}"
 
@@ -588,6 +581,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
             ac_yaml_path,
             "BO-5D1.yaml must exist in the AC store."
         )
+        assert isinstance(ac_yaml_path, Path)
         with open(ac_yaml_path, encoding="utf-8") as fh:
             ac_data = yaml.safe_load(fh)
 
@@ -675,6 +669,7 @@ class TestBuildEpicFromIds(unittest.TestCase):
             f"A ticket for BO-5E2 must exist in the epic folder. "
             f"Files: {sorted(f.name for f in epic_path.iterdir())}"
         )
+        assert isinstance(e2_ticket, Path)
 
         fm = _read_ticket_frontmatter(e2_ticket)
         depends_on: list = fm.get("depends_on") or []

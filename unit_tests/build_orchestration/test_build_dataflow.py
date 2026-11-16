@@ -66,8 +66,8 @@ _SCRIPT_PATH = _MODULE_DIR / "build_dataflow.py"
 
 _FUNC_IMPORT_OK = False
 _FUNC_IMPORT_ERR = ""
-build_dataflow = None  # type: ignore[assignment]
 
+# On a failed import the name stays unbound; tests reach it only after _require_impl.
 try:
     from build_dataflow import build_dataflow  # noqa: E402
     _FUNC_IMPORT_OK = True

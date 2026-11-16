@@ -16,13 +16,15 @@ yaml.safe_dump.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from unit_tests.ac_store import _tq500f3iii_fixtures as fx
 from unit_tests.build_orchestration import _tq500f3i_fixtures as gfx
 
 AMBIGUOUS = "ambiguous_test_identity"
 
 
-def _red_baseline(tmp_path, ac_ids, ac_root, build) -> dict:
+def _red_baseline(tmp_path, ac_ids, ac_root, build) -> tuple[Path, dict]:
     """Make a git worktree, let *build(work_dir)* write the tests, run the CLI."""
     work_dir, base_sha = gfx.make_worktree(tmp_path / "git")
     build(work_dir)

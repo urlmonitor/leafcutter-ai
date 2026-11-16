@@ -135,6 +135,7 @@ class Sandbox:
             cwd=self.project, env=self.env, stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
+        assert proc.stdout is not None and proc.stderr is not None, "both are opened as PIPE above"
         line = proc.stdout.readline()
         if not line:
             proc.kill()

@@ -56,7 +56,7 @@ def deny_env(tmp: Path) -> dict[str, str]:
 
 
 def _tree(ws: Path) -> list[str]:
-    out = []
+    out: list[str] = []
     for root, dirs, files in os.walk(ws):
         rel = Path(root).relative_to(ws)
         if rel.parts[:1] == (".git",) and rel.parts[:2] != (".git", "hooks"):

@@ -105,6 +105,15 @@ def resolve_in_process(cwds: list[Path], ceiling: Path | None = None) -> list[di
 
 
 class TestBO4300b1AnyStartingPoint(unittest.TestCase):
+    _tmp: tempfile.TemporaryDirectory[str]
+    tmp: Path
+    parent: Path
+    proj: Path
+    w1: Path
+    beta_path: Path
+    answers: dict[str, dict]
+    starts: dict[str, Path]
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._tmp = tempfile.TemporaryDirectory(prefix="bo4300b1-")
