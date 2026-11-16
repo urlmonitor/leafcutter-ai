@@ -44,6 +44,9 @@ def _rule_section() -> str:
 class TestDeployDependencyRuleWording(unittest.TestCase):
     """Each test fails on the pre-change wording (module-only definition)."""
 
+    section: str
+    lower: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.section = _rule_section()
