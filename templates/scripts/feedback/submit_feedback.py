@@ -122,12 +122,42 @@ def _find_config_root() -> Path:
     return Path(__file__).resolve().parents[2] / "config"
 
 
+def _categories_candidates(config_dir: Path) -> list[Path]:
+    """Return, in order, every place feedback_categories.yaml is looked for.
+
+    First the config directory found by _find_config_root() (the deployed
+    copy). Then the config/ two levels above the invoked script path, when
+    that is a different place. That second place is the source repo's own
+    config/ when the script runs through the build shim
+    leafcutter-ai/scripts/feedback -> .leafcutter/scripts/feedback.
+    (AC INF-100c-2)
+
+    Args:
+        config_dir: The directory _find_config_root() returned.
+
+    Returns:
+        list[Path]: One or two absolute candidate file paths.
+    """
+    primary = config_dir / _CATEGORIES_NAME
+    source = Path(os.path.abspath(__file__)).parents[2] / "config" / _CATEGORIES_NAME
+    if os.path.realpath(source) == os.path.realpath(primary):
+        return [primary]
+    return [primary, source]
+
+
+def _first_existing(candidates: list[Path]) -> Path:
+    """Return the first candidate that is a file, else the first candidate."""
+    return next((path for path in candidates if os.path.isfile(path)), candidates[0])
+
+
 # ---------------------------------------------------------------------------
 # Config loading
 # ---------------------------------------------------------------------------
 
+_CATEGORIES_NAME = "feedback_categories.yaml"
 _CONFIG_DIR = _find_config_root()
-_CATEGORIES_FILE = _CONFIG_DIR / "feedback_categories.yaml"
+_CATEGORIES_CANDIDATES = _categories_candidates(_CONFIG_DIR)
+_CATEGORIES_FILE = _first_existing(_CATEGORIES_CANDIDATES)
 
 VALID_SEVERITIES = ("low", "medium", "high")
 VALID_SOURCES = ("agent", "hook")
@@ -161,12 +191,14 @@ def _load_categories(config_path: Path | None = None) -> dict:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except OSError as exc:
-        checked_path = Path(path).resolve()
+        # Name every absolute path tried, one per line (AC INF-100c-4).
+        checked = [Path(path).resolve()] if config_path else [Path(os.path.abspath(p)) for p in _CATEGORIES_CANDIDATES]
+        checked_lines = "".join(f"  Checked path: {p}\n" for p in checked)
         print(
             f"ERROR: Cannot read feedback_categories.yaml.\n"
-            f"  Checked path: {checked_path}\n"
+            f"{checked_lines}"
             f"  OS error: {exc}\n"
-            f"  To fix: Place feedback_categories.yaml at {checked_path}",
+            f"  To fix: Place feedback_categories.yaml at {checked[0]}",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -489,6 +521,17 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-16 [python-coder/fastlane/inf-100c-2-4]:
+#   feedback_categories.yaml now has an ordered candidate list
+#   (_categories_candidates): first the _find_config_root() directory (the
+#   deployed copy, unchanged and still preferred), then config/ two levels above
+#   the INVOKED script path when that is a different place. Run through the
+#   source-repo build shim (leafcutter-ai/scripts/feedback ->
+#   .leafcutter/scripts/feedback), the script used to look only in
+#   .leafcutter/config/ and never in leafcutter-ai/config/. _CONFIG_DIR, and so
+#   the sink declaration lookup, is unchanged. When no candidate can be read,
+#   the error prints one "Checked path: <absolute>" line per candidate tried
+#   instead of only the first. (AC INF-100c-2, INF-100c-4)
 # - 2026-10-25 [python-coder/INF-500d-3-i]:
 #   The id-recovery ("sidecar") file was named after whole epoch seconds, so two
 #   submissions in one second shared a file and the later overwrote the earlier
