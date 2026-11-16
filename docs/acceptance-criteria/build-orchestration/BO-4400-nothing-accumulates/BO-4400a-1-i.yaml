@@ -55,9 +55,11 @@ it_requirements:
     The final result carries delivered: false and an explicit nothing-to-deliver reason alongside
     the door's answer, so a no-op is machine-distinguishable from a delivery without parsing prose.
   - >-
-    No push dispatch and no pull-request dispatch is issued on these paths; the clearing request is
-    still issued through the one maker's remove verb (E2 shell-agent dispatch per ADR-030, no
-    discard authorisation).
+    No push dispatch and no pull-request dispatch is issued on these paths. The clearing request is still
+    the route's one name-based per-work clear-landed command of BO-4400g-2, sent to shell-runner (ADR-030,
+    ADR-070; user decision D1), with no discard authorisation. With no commit of its own and nothing unsent,
+    that command clears the workspace at once through the door, with no idle threshold (user answer Q2,
+    2026-11-16).
   - >-
     PROOF as BO-4400a-1: deployed workflows under unit_tests/_workflow_engine_harness.py, maker
     executed for real against temporary repositories and a bare hub, assertions on the recorded
@@ -103,7 +105,13 @@ test_rationale: >-
   reached from every exit.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po, 2026-11-16: the third it_requirement names the per-work clear-landed command sent to shell-runner
+      (D1), which clears a no-op workspace at once with no idle threshold (Q2), in place of "the one maker's
+      remove verb". Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []

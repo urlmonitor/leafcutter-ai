@@ -34,12 +34,68 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-ix.yaml
+    relationship: constrains
+    status: exists
+    relevance: Made --kind/--slug and --path mutually exclusive on remove; this record pins what the refusal of a mixed request says.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: USAGE is the existing code for unusable arguments; any new code must be additive.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_admin.py
+    state: existing
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+it_requirements:
+  - >-
+    When a request names the work in more than one form (--kind/--slug, --branch, --path), every form is
+    resolved first. When they point at different workspaces, or one of them at none, the request is refused
+    before any program check, fetch, unsent-work check or deletion runs. The refusal names every identity it
+    was given and states that they point at different workspaces. Decided (user accepted the default, Q4,
+    2026-11-16): code USAGE (exit 64).
+  - >-
+    No form silently wins over another. When the forms resolve to the same workspace, the request goes ahead
+    as one request (decided, Q4, 2026-11-16).
+  - >-
+    A kind without a short name, or a short name without a kind, is refused USAGE with a message stating that
+    the work was not named completely. The missing half is never guessed.
+  - >-
+    Every refusal here leaves every workspace byte-identical and touches neither the shared project nor the
+    main checkout. It is one JSON answer under BO-4300c-2 and carries no workspace_path.
+  - >-
+    The agreement check lives with the one shared resolver of BO-4400g-1. worktree_remove.py (485 lines)
+    takes wiring only, with no net growth. No limit is raised.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER as a separate process against real temporary repositories with a real
+    bare hub (unit_tests/build_orchestration/_workspace_maker_fixtures.py). No git mock, no import of a maker
+    module for the asserted behaviour, no build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: each request is refused without clearing anything
+    needs_test: true
+    reason: A request that applies one identity and ignores the other would clear the wrong workspace, which is the loss this record exists to prevent.
+  - clause: the first two refusals name both identities they were given and state that they point at different workspaces
+    needs_test: true
+    reason: The caller can only correct the request if the refusal names both names, which is computed from the two resolutions.
+  - clause: the third refusal states that the work was not named completely
+    needs_test: true
+    reason: A kind with no short name must be refused rather than resolved by a guess, and the message is what the caller acts on.
+  - clause: '"alpha" and "beta" are identical before and after all three requests'
+    needs_test: true
+    reason: A refusal issued after a partial deletion or a fetch would still change a workspace, which a snapshot of both catches.
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-1
-  contract: "Clearing request accepted by work identity."
+  contract: >-
+    The one resolver that maps each name form remove accepts (--kind/--slug, --branch, --path) to one
+    workspace position, so two forms can be compared before anything runs.
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

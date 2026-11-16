@@ -19,16 +19,28 @@ criteria: |
   When a person reads the how-to guide for the routine sweep,
   Then the guide shows the command to run a preview and the command to run a real
     sweep, each with an example report naming the count per kind and the bytes freed,
-  And the guide lists the four reasons an item is kept (holds unsent work, no verdict,
-    in use, scratch not yet expired) and what the person can do about each,
+  And the guide lists every reason an item is kept -- for a workspace, the landed-work
+    pass's reasons (not yet on the main line, holds unsent work, no work of its own yet, in
+    use, landing could not be confirmed, shared project unreachable), and for scratch, not
+    yet expired -- and what the person can do about each,
+  And the guide states that a workspace with no work of its own is cleared once no file in
+    it has changed for 7 days, and that one whose work is pushed but never merged is
+    cleared once it holds nothing unsent and no file in it has changed for 14 days, its
+    work staying on its line on the shared project,
   And the guide states where the sweep's durable report log is written,
   And the guide shows the setting that controls the interval between automatic sweeps
     and its default of 24 hours.
-depends_on: [BO-4400d, BO-4400d-1, BO-4400d-2, BO-4400d-3]
+depends_on: [BO-4400d, BO-4400d-1, BO-4400d-2, BO-4400d-3, BO-4400g-2-v]
 doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The landed-work pass how-to (BO-4400g-5), which owns the kept reasons and the 7-day and 14-day rules;
+      state them here and link there for detail rather than repeating the full table.
 assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to: null
@@ -45,7 +57,27 @@ it_requirements:
   - >-
     The relation to the operator's machine-local ~/bin/wsl-reclaim timer is stated (the packaged
     sweep covers workspaces and scratch; the machine-local tool is not changed).
+  - >-
+    ONE RULE (user decision 2026-11-16): the workspace kept reasons and the 7-day and 14-day idle rules are
+    stated with the exact reason values and threshold defaults the built pass uses (BO-4400g-2, BO-4400g-2-v),
+    and the guide links to docs/how-to/clear-a-workspace.md for their detail instead of copying its table.
 test_required: true
+test_intent:
+  - clause: the guide shows the command to run a preview and the command to run a real sweep, each with an example report naming the count per kind and the bytes freed
+    needs_test: true
+    reason: The commands and report fields must be the built sweep's, which a doc test tied to the sources catches when they drift.
+  - clause: 'the guide lists every reason an item is kept -- for a workspace, the landed-work pass''s reasons (not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable), and for scratch, not yet expired -- and what the person can do about each'
+    needs_test: true
+    reason: The sweep now reports the pass's reasons, so a page still listing the old four would mislead, and the closed set can be checked against the sources.
+  - clause: the guide states that a workspace with no work of its own is cleared once no file in it has changed for 7 days, and that one whose work is pushed but never merged is cleared once it holds nothing unsent and no file in it has changed for 14 days, its work staying on its line on the shared project
+    needs_test: true
+    reason: The two figures must equal the pass's named defaults, which a doc test can compare with the maker's source.
+  - clause: 'the guide states where the sweep''s durable report log is written'
+    needs_test: true
+    reason: A wrong log path sends the person to an empty file, and the path can be checked against the built sweep.
+  - clause: the guide shows the setting that controls the interval between automatic sweeps and its default of 24 hours
+    needs_test: true
+    reason: The key name and default must match the built config, which a doc test reads.
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by:
@@ -53,8 +85,27 @@ amended_by:
   agent: it-po
   date: '2026-11-01'
   reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
+- action: amended
+  agent: business-analyst
+  date: '2026-11-16'
+  reason: >-
+    User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE: the sweep's workspace part runs the
+    landed-work pass): the kept-reasons clause now lists the pass's reasons for workspaces and not-yet-expired
+    for scratch, in place of "the four reasons", and one And-clause states the 7-day and 14-day idle rules.
+    depends_on gains BO-4400g-2-v; doc_links gains docs/how-to/clear-a-workspace.md. No technical field became
+    untrue.
+- action: amended
+  agent: it-po
+  date: '2026-11-16'
+  reason: >-
+    ONE RULE: test_intent added, one entry per outcome clause, and one it_requirement saying the reasons and
+    thresholds are the built pass's values, with a link to the clear-a-workspace guide. Criteria unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Satisfies BO-4400d documentation_triggers: how-to.
+
+  ONE RULE (user decision 2026-11-16): the sweep's workspace kept reasons and idle rules are
+  the landed-work pass's. This guide states them for the reader of a sweep report; the
+  clear-a-workspace guide (BO-4400g-5) owns their detail, so link there rather than repeat it.

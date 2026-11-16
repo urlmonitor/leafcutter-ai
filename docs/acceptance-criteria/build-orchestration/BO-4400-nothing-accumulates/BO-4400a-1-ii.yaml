@@ -1,5 +1,5 @@
 id: BO-4400a-1-ii
-title: "An epic's shared workspace is cleared once, after its last ticket is delivered, never mid-drive"
+title: "An epic's shared workspace is cleared once, after its last ticket is delivered and its pull request has merged, never mid-drive"
 component: build-orchestration
 components:
   - build_orchestration
@@ -20,10 +20,19 @@ criteria: |
   When the first and second tickets have been delivered and the third is still being
     built,
   Then the epic's workspace still exists and the third ticket's build continues in it,
-  And when the third ticket's commits have been pushed and the epic run returns, no
-    folder remains at the location the epic's workspace occupied,
+  And when the third ticket's commits have been pushed, the epic's pull request has been
+    merged into the main line and the epic run returns, no folder remains at the location
+    the epic's workspace occupied,
   And the one shared clearing door was asked to clear that workspace exactly once
     during the whole run.
+
+  Given the same epic run, except that after the third ticket's commits have been pushed
+    the epic's pull request is still open and not merged into the main line,
+  When the epic run returns its final result,
+  Then the epic's workspace still exists, identical to its state after the third ticket's
+    commits were pushed,
+  And the final result reports the workspace as kept because its work is not yet on the
+    main line.
 depends_on: [BO-4400a-1]
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-2700-defer-epic-pr/BO-2700.yaml
@@ -49,8 +58,10 @@ it_requirements:
     Over the whole epic run the clearing request is issued exactly once; parallel ticket batches
     inside the epic never issue it.
   - >-
-    Clearing uses the route-end step BO-4400a-1 delivers (one maker remove request via an E2
-    shell-agent dispatch, ADR-030; no discard authorisation).
+    Clearing uses the route-end step BO-4400a-1 delivers: the one name-based per-work clear-landed command of
+    BO-4400g-2 for the epic's own work, sent to shell-runner (ADR-030, ADR-070; user decisions D1 and D2), with
+    no discard authorisation. With the epic's pull request still open, that command keeps the workspace as
+    not_on_main, and the run relays that answer.
   - >-
     PROOF as BO-4400a-1 (deployed workflow under unit_tests/_workflow_engine_harness.py, maker run
     for real, assertions on the recorded dispatch list and disk; isolation and no-build.py rules).
@@ -71,20 +82,48 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "After the third ticket's commits are pushed and the run returns, no folder remains at the epic workspace location."
+    description: "After the third ticket's commits are pushed, the epic's pull request is merged on the hub and the run returns, no folder remains at the epic workspace location."
   - name: test_epic_run_asks_the_door_exactly_once
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "The recorded dispatch list contains exactly one clearing request for the epic workspace."
+  - name: test_epic_workspace_kept_while_epic_pull_request_is_open
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Same three-ticket deployed epic run, but the epic's pull request is left open on the hub (third ticket's
+      commits pushed, nothing merged) when the run returns. The epic workspace is byte-identical to a snapshot
+      taken right after the third ticket's push (with_git), the one clearing request was still made, and the
+      final result reports the workspace kept with reason not_on_main.
+    must_catch:
+      - "clear on the pushed but unmerged epic line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
+      - "kept workspace reported as removed or as a failure instead of not yet on the main line"
 test_rationale: >-
   The failure this guards is a clear placed one level too deep, which a single-ticket run cannot
   see. Only a three-ticket deployed run observed at the third ticket's step distinguishes route end
   from per-ticket PR events.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (Q3, merged timing of D2): the epic's
+      workspace is cleared at the run's end only once the epic's pull request has merged. Title and the
+      first scenario's closing clause gain the merge; a second scenario keeps the workspace, reported as not
+      yet on the main line, when the epic's pull request is still open at the run's end. Technical field
+      fixed: the test_epic_workspace_absent_after_epic_returns description gains the merge. The new scenario
+      has no test_spec entry yet (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16: test_spec gains test_epic_workspace_kept_while_epic_pull_request_is_open for the second
+      scenario. The clearing it_requirement now names the per-work clear-landed command (D1, D2) in place of
+      "one maker remove request". Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -94,3 +133,10 @@ notes: |
   intermediate pull-request event. Named wrong version: hooking the clear onto the
   per-ticket pull-request phase -- the third ticket loses its workspace and this record goes
   red while BO-4400a-1 (single ticket) stays green.
+
+  AMENDED 2026-11-16 (user decision Q3, merged timing D2): the clear at the epic run's end
+  happens only once the epic's pull request has merged; with the pull request still open the
+  workspace is kept as not yet on the main line and the landed-work pass (BO-4400g-2) clears
+  it after the merge. The second scenario is the epic's own case of BO-4400a-1's second
+  scenario: an epic's pull request is open for the whole drive, so a clear that treats a
+  pushed line as sent would remove the workspace there.

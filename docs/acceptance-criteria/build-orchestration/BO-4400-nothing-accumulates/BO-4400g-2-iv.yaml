@@ -34,12 +34,65 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-1-ii.yaml
+    relationship: constrains
+    status: exists
+    relevance: The maker's per-work lock (two requests for one work never race; bounded, IN_PROGRESS otherwise) is reused for clearing, never a second scheme.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+it_requirements:
+  - >-
+    CONCURRENT PASSES ARE SAFE: two passes may run at once (an hourly timer and a session start). For each
+    workspace, at most one clear runs at a time, through the maker's existing per-work lock (BO-4300d-1-ii),
+    which a clear takes as ensure does, with no second lock scheme. A workspace cleared by the other pass
+    between this pass's listing and its
+    turn is reported in already_gone (the BO-4400g-1-i no-workspace answer), never as a failure.
+  - >-
+    Waiting on the other pass is bounded in time. When the bound runs out, the workspace is reported as
+    already being cleared by another request (already_gone when the other request succeeded), never left
+    unreported. The pass never hangs.
+  - >-
+    No folder is ever left half-cleared by the two passes racing. A clear the other pass already finished
+    must never make this pass delete anything further at that location.
+  - >-
+    Both answers are complete. Every workspace either pass saw appears in exactly one of cleared, kept and
+    already_gone in each answer, and both passes exit with the status of a completed pass.
+  - >-
+    worktree_remove.py (485 lines) takes wiring only, with no net growth. worktree_ensure_state.py, which holds
+    the lock (399 lines), is reused as it is. No limit is raised.
+  - >-
+    PROOF RUNS TWO DEPLOYED MAKER PROCESSES started together against the same real temporary project and
+    bare hub, repeated several times so that an interleaving bug shows. It asserts on both answers and on the
+    disk afterwards. No git mock, no build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: afterwards no folder of "ff-1", "ff-2" or "ff-3" remains and "open-1" is identical before and after
+    needs_test: true
+    reason: Two passes racing can leave a half-deleted folder or clear the wrong one, which only the disk afterwards shows.
+  - clause: between the two answers each of "ff-1", "ff-2" and "ff-3" is reported cleared by exactly one pass
+    needs_test: true
+    reason: A double report means two clears ran on one folder, and a missing report means a clear went unrecorded.
+  - clause: the other pass reports each of them as already gone or not listed, never as a failure
+    needs_test: true
+    reason: A timer that sees a failure every time a session start ran first would raise a false alert every night.
+  - clause: both passes end with exactly one answer each, and neither asks a question
+    needs_test: true
+    reason: A pass blocked on the other's lock without a bound, or one that prompts, never answers its timer.
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
-  contract: "Landed-work pass."
+  contract: >-
+    The clear-landed answer with its already_gone list, and the door's no-workspace answer of BO-4400g-1-i for
+    work cleared by another request first.
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

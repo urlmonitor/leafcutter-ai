@@ -22,7 +22,11 @@ criteria: |
   Then the pause-store read, the gate-answer step, the pause-persist step and every
     stage-end script step are each dispatched to an agent whose registered abilities
     include neither removing a workspace nor deleting a branch,
-  And the run contains no dispatch at all to a removal-capable agent.
+  And the run contains no dispatch at all to a removal-capable agent,
+  And the only dispatch in the run whose command clears a workspace is the run's own
+    end-of-run clearing request -- the one permitted exception -- sent to such an agent as
+    one clearing command that names the run's own work by the name the run obtained its
+    workspace with, and gives no location.
 
   Given the finalize workflow is run end to end on a merged branch,
   When its dispatches are recorded,
@@ -120,6 +124,13 @@ it_requirements:
     under the workflow engine harness, records every dispatch, and judges each dispatched agent
     type by its registry declaration. A static lint may be added alongside but never replaces the
     executed run.
+  - >-
+    WHICH COMMANDS CLEAR (user decision D1, 2026-11-16): a dispatch's command clears a workspace when it runs
+    a maker verb that clears (remove, or the per-work clear-landed of BO-4400g-2). That set is recognised by
+    one shared command parser in the workflow engine harness, used by this record and BO-4300g-2-i, never a
+    second copy. The run's own end-of-run clearing command is the one permitted exception. It goes to
+    shell-runner (removal_capable false), names the run's own work as its workspace step named it, and gives
+    no location.
 delivers_to:
 - agent: python-coder
   contract: >-
@@ -148,6 +159,9 @@ test_intent:
   - clause: every other step that reads state or runs one command goes to an agent that cannot remove a workspace or delete a branch
     needs_test: true
     reason: Finalize's other read and command steps are the same defect-2 shape and would otherwise go unchecked.
+  - clause: 'the only dispatch in the run whose command clears a workspace is the run''s own end-of-run clearing request -- the one permitted exception -- sent to such an agent as one clearing command that names the run''s own work by the name the run obtained its workspace with, and gives no location'
+    needs_test: true
+    reason: Without it, any remove --path sent to shell-runner would pass, since shell-runner declares no removal capability.
 origin_agent: business-analyst
 test_spec:
   - name: test_plan_feature_pause_gate_answer_persist_and_stage_end_steps_go_to_non_removal_agents
@@ -295,6 +309,28 @@ test_spec:
       declares permits_shell true (shell-runner), so this lint stays green unchanged.
     proves_clause: every other step that reads state or runs one command goes to an agent that cannot remove a workspace or delete a branch
     code_file: config/agent_registry.json
+  - name: test_plan_feature_run_sends_only_its_own_name_based_clearing_command
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Runs the deployed plan-feature workflow under run_workflow_under_e2 on a behavioral request with one pause
+      and resume, driven to its end-of-run clearing step with the run's work merged on a real bare hub. From the
+      recorded dispatches it takes every one whose command runs a maker clearing verb (remove or clear-landed,
+      recognised by the one shared command parser of BO-4300g-2-i). It asserts there is exactly one, at the
+      end-of-run clearing step, dispatched to an agent whose registry entry declares removal_capable false. Its
+      command names the run's own work by the kind and slug (or line of work) that the run's workspace step
+      used, and carries no --path and no location. The test also asserts the clearing step was reached, so a
+      short run cannot pass.
+    proves_clause: the only dispatch in the run whose command clears a workspace is the run's own end-of-run clearing request -- the one permitted exception -- sent to such an agent as one clearing command that names the run's own work by the name the run obtained its workspace with, and gives no location
+    code_file: templates/workflows-js/plan-feature.js
+    must_catch:
+      - a clearing command sent to shell-runner with --path or another location
+      - a second clearing command in the run, for example a mid-run clear
+      - a clearing command that names another work than the run's own
+      - the end-of-run clear sent to worktree-agent or another removal-capable agent
+      - a run that never reaches its clearing step, so zero clearing commands pass vacuously
 test_design_authorship:
   step: test-designer
   date: "2026-10-25"
@@ -363,7 +399,28 @@ file_findings_opened_files:
   - unit_tests/test_workflow_dual_engine.py
   - unit_tests/ac_driven_dev/rule_check/test_acd_2500a_1.py
 created: 2026-10-23
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision D1, 2026-11-16 (BO-4400g plan-feature run): one And-clause added to the first scenario
+      naming the one permitted exception, the run's own end-of-run clearing request sent to a
+      non-removal-capable agent as a single name-based clearing command for the run's own work, with no
+      location. Every other clause unchanged; the finalize scenario is unchanged. The new clause has no
+      test_intent entry or test_spec entry yet (IT PO and test-designer to add).
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User answer Q1 at the BO-4400g plan-feature gate, 2026-11-16: finalize step 7 stays exactly as
+      BO-4300g-3 defines it. Notes only: the D1 note now records the confirmation. Criteria unchanged; the
+      finalize scenario already pins step 7 as the one removal-capable dispatch.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16, at the orchestrator's request: added a test_intent entry and one test_spec entry
+      (test_plan_feature_run_sends_only_its_own_name_based_clearing_command) for the D1 clause, plus a WHICH
+      COMMANDS CLEAR it_requirement. Nothing existing was weakened. The entry was written without opening
+      code, so the test-designer should ground it at its next pass.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4300g-2-i]
 implemented_by: []
@@ -394,6 +451,19 @@ notes: |
   gate-or-guard case the test-designer rule allows must_catch for. Even read narrowly, the entries
   stay as test-quality guidance; none is deleted.
 
+  USER DECISION D1, 2026-11-16 (BO-4400g plan-feature run): a flow's own end-of-run clearing
+  request (BO-4400g-4, BO-4400a-1) is sent as the exact name-based clearing command to
+  shell-runner, not to worktree-agent, and that one command is itself the caller's
+  authorization for exactly that one workspace. Plan-feature is one of those flows, so its run
+  now contains one command that clears. The added clause keeps the exception narrow: it is the
+  only clearing command in the run, it names the run's own work by the name used to obtain the
+  workspace, and it carries no location, so a "remove --path" sent to shell-runner is not
+  covered by it. "No dispatch at all to a removal-capable agent" still holds, since
+  shell-runner declares removal_capable false. Finalize's scenario is unchanged: its step-7
+  removal stays its one removal-capable dispatch, exactly as BO-4300g-3 defines it
+  (worktree-agent with removal_authorization), and finalize sends no clearing command of the
+  exception's kind. Confirmed by the user (Q1, 2026-11-16).
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -402,4 +472,7 @@ notes: |
 # - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
 #   Pattern C split (user decision): BO-4300e exceeded its 5-L2 cap, so this record was
 #   renumbered under the new sibling L1 BO-4300g. Criteria unchanged.
+# - 2026-11-16 [business-analyst/plan-feature/clear-merged-workspaces]:
+#   User decision D1: one And-clause added for the run's own name-based clearing command.
+#   User answer Q1: notes only -- finalize step 7 confirmed unchanged (BO-4300g-3).
 # ====================================================================

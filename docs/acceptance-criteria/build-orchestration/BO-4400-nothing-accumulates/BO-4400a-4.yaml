@@ -14,14 +14,16 @@ roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
 criteria: |
-  Given end-of-route clearing (BO-4400a-1, BO-4400a-1-i, BO-4400a-2) and the retired
-    removal paths (BO-4400a-3, BO-4400a-3-i) are in place,
+  Given end-of-route clearing (BO-4400a-1, BO-4400a-1-i, BO-4400a-2), the landed-work
+    pass (BO-4400g-2) and the retired removal paths (BO-4400a-3, BO-4400a-3-i) are in place,
   When a person reads the how-to guide for workspace clearing,
   Then the guide contains a table with one row for each of the six routes named in
     BO-4400a-1 stating the moment its workspace is cleared, including the
     nothing-to-deliver case,
-  And the guide states that finalizing a feature is not the cleanup point and that a
-    route never waits for it,
+  And the guide states that a workspace is cleared once its work has landed on the main
+    line -- at the route's end when its pull request has merged by then, at finalizing's
+    workspace removal, and otherwise by the landed-work pass -- and that a route never
+    waits for finalizing,
   And the guide walks through a stopped run: reading the kept workspace's location and
     unsent work from the run's result, sending that work, and clearing the workspace
     through the one door,
@@ -29,11 +31,15 @@ criteria: |
     states that clearing a workspace holding nothing unsent asks no question,
   And the guide contains no instruction to remove a workspace by forced removal or by
     deleting its folder.
-depends_on: [BO-4400a, BO-4400a-1, BO-4400a-2, BO-4400a-3]
+depends_on: [BO-4400a, BO-4400a-1, BO-4400a-2, BO-4400a-3, BO-4400g-2]
 doc_links:
   - path: docs/how-to/finalize-feature.md
     relationship: related
     status: exists
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: related
+    status: exists
+    relevance: The landed-work pass how-to (BO-4400g-5); cross-link it for the workspaces a route kept, do not repeat it.
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
@@ -53,7 +59,7 @@ it_requirements:
     The route table is taken from the built behaviour delivered by BO-4400a-1 (six routes, their
     end states incl. nothing-to-deliver); cross-link docs/how-to/finalize-feature.md and
     docs/how-to/fast-lane-build.md, and update them where they still describe finalize as the
-    cleanup point.
+    only cleanup point.
   - >-
     Commands are shown as the one maker's remove verb exactly as the built maker accepts it; no
     forced removal or folder deletion appears anywhere on the page.
@@ -65,6 +71,16 @@ amended_by:
   agent: it-po
   date: '2026-11-01'
   reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
+- action: amended
+  agent: business-analyst
+  date: '2026-11-16'
+  reason: >-
+    User decision at the BO-4400g plan-feature gate, 2026-11-16 (Q3, merged timing of D2): the clause saying
+    finalizing is not the cleanup point is replaced by one saying a workspace is cleared once its work has
+    landed -- at the route's end when its pull request has merged by then, at finalizing's workspace removal,
+    and otherwise by the landed-work pass -- and that a route never waits for finalizing. The Given names the
+    landed-work pass; depends_on gains BO-4400g-2 and doc_links gains docs/how-to/clear-a-workspace.md.
+    Technical field fixed: the second it_requirement now says "the only cleanup point".
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -72,3 +88,8 @@ notes: |
   Satisfies BO-4400a documentation_triggers: how-to. Per the BO-4100 framing decision this
   guide describes behaviour that holds by construction; it is not the instrument that makes
   cleanup happen.
+
+  AMENDED 2026-11-16 (user decision Q3): cleanup happens once the work lands. Finalize's
+  workspace removal (step 7) is one point where that happens, and the landed-work pass clears
+  whatever a route kept, so no route waits for or relies on finalize (BO-4400 KEY FRAMING
+  DECISION, as the PO amended it the same day).

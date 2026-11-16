@@ -37,22 +37,28 @@ assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: BO-4300e-2
-  contract: "The one clearing request and its answer."
+  ac_id: BO-4300g-3
+  contract: >-
+    Finalize step 7: a shell-runner locate by the run's kind and slug, then one worktree-agent dispatch
+    (label step-7-remove-worktree) carrying removal_authorization {workspace_path, branch} built from a definite
+    ok locate answer; no removal dispatch on any other answer.
 package_surface: false
 it_requirements:
   - >-
     SURFACE: templates/workflows-js/finalize-feature.js, the workspace-teardown step (Step 7). Its
-    interactive confirmation gate is removed; the step issues one maker remove request through an
-    E2 shell-agent dispatch (ADR-030) and records the door's answer in finalize's result.
+    interactive confirmation gate is removed. Step 7 is exactly what BO-4300g-3 defines: one read-only
+    worktree.py locate --kind <kind> --slug <slug> dispatched to shell-runner (ADR-070), then, only on a
+    definite ok answer for the run's branch, one dispatch to worktree-agent carrying removal_authorization
+    {workspace_path, branch} built from that answer (BO-4300g-1), beside its clearing request, the door's
+    remove by name (BO-4400g-4). The door's answer is recorded in finalize's result.
   - >-
-    A workspace that is already absent is the ordinary case: the step reports nothing-to-clear
-    (from the maker's locate / remove answer for an absent path) and finalize continues to
-    completion; absence is never an error and never a halt.
+    A workspace that is already absent is the ordinary case. The step-7 locate answers NOT_FOUND, no removal
+    dispatch is made (BO-4300g-3-i), and the step reports nothing-to-clear while finalize continues to
+    completion. Absence is never an error and never a halt.
   - >-
-    Finalize passes no discard authorisation. A merged feature's workspace reads holds-nothing via
-    squash-merge detection (BO-4100c-1-i); if the door refuses anyway, finalize reports the work as
-    kept and completes, it does not force.
+    Finalize passes no discard authorisation. A merged feature's workspace reads holds-nothing through the
+    door's content check for squash-merged work, built in the maker under BO-4400g-2 (user decision D3). If
+    the door refuses anyway, finalize reports the work as kept and completes; it does not force.
   - >-
     No regression of finalize's existing guards: the post-merge test HALT and deploy-parity checks
     keep their behaviour and their existing tests stay green (CLAUDE.md post-merge diff audit
@@ -89,7 +95,16 @@ test_rationale: >-
   workflow, with no replies scripted, shows the gate is gone rather than merely bypassed in source.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po, 2026-11-16 (user answer Q1, finalize step 7 stays as BO-4300g-3 defines it): the SURFACE
+      requirement now states step 7 as a shell-runner locate followed by one worktree-agent dispatch with
+      removal_authorization, instead of "one maker remove request through an E2 shell-agent dispatch". The
+      absent case comes from the locate's NOT_FOUND (BO-4300g-3-i), and the squash detection is the maker's
+      (BO-4400g-2, D3). expects_from moves from BO-4300e-2, which declares no delivery, to BO-4300g-3.
+      Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []

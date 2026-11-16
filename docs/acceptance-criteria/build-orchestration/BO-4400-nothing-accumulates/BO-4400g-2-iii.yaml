@@ -21,12 +21,12 @@ criteria: |
   Then "busy-1" is identical before and after and the program is still running,
   And the answer lists "busy-1" as kept with the reason that it is in use.
 
-  Given the landed-work pass has assessed workspace "idle-1" as landed and holding nothing
+  Given the landed-work pass has assessed workspace "quiet-1" as landed and holding nothing
     unsent,
-  And before the pass clears "idle-1", one new uncommitted file is written into it,
-  When the pass reaches "idle-1",
-  Then "idle-1" is not cleared and the new file is byte-identical to what was written,
-  And the answer lists "idle-1" as kept for holding unsent work, naming that file by path,
+  And before the pass clears "quiet-1", one new uncommitted file is written into it,
+  When the pass reaches "quiet-1",
+  Then "quiet-1" is not cleared and the new file is byte-identical to what was written,
+  And the answer lists "quiet-1" as kept for holding unsent work, naming that file by path,
   And the pass goes on to the remaining workspaces.
 depends_on: [BO-4400g-2, BO-4300e-2-ii]
 doc_links:
@@ -41,18 +41,85 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2-iv.yaml
+    relationship: constrains
+    status: exists
+    relevance: The door's program check runs before anything is fetched or deleted and refuses PROCESS_HOLDS_FILES.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: PROCESS_HOLDS_FILES and UNSENT_WORK refusals the pass relays.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+it_requirements:
+  - >-
+    IN USE: the pass relies on the door's program check (BO-4300e-2-iv), which runs first on every clear and
+    fails closed. A PROCESS_HOLDS_FILES refusal, the "check unavailable" form included, is relayed as kept
+    with reason in_use. The pass never stops, signals or waits on a program, and it never retries the clear
+    in the same pass.
+  - >-
+    THE GAP BETWEEN ASSESSING AND CLEARING: the pass's earlier assessment is never the only safety check. The
+    door's unsent-work check runs again at the moment of the clear. A door refusal of UNSENT_WORK is relayed
+    as kept with reason holds_unsent_work, naming the door's files and commits exactly as the door lists them,
+    and the pass never answers with a token.
+  - >-
+    A refusal for one workspace never ends the pass. Every remaining workspace is still assessed and handled,
+    and the one answer lists them all.
+  - >-
+    The pass keeps no state between runs that could mark a workspace as cleared before the door has answered
+    ok.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against real temporary repositories with a real bare hub and a real program
+    holding files open with its working folder inside busy-1. The write between assessment and clear is made
+    through a seam that runs in the pass's own process between the two steps, not by a sleep race. The program
+    is left running and is checked alive afterwards. No git mock, no build.py spawn, and isolated HOME and git
+    config.
+test_required: true
+test_intent:
+  - clause: '"busy-1" is identical before and after and the program is still running'
+    needs_test: true
+    reason: An unattended pass that stops a program or deletes under it breaks work nobody is there to see.
+  - clause: the answer lists "busy-1" as kept with the reason that it is in use
+    needs_test: true
+    reason: The door's refusal must be mapped to the in_use reason, not dropped or reported as a failure.
+  - clause: '"quiet-1" is not cleared and the new file is byte-identical to what was written'
+    needs_test: true
+    reason: A pass that trusts its earlier assessment instead of the door's check at clear time would delete the new file.
+  - clause: the answer lists "quiet-1" as kept for holding unsent work, naming that file by path
+    needs_test: true
+    reason: The door's refusal must reach the answer with the file it named, which a pass that swallows refusals would lose.
+  - clause: the pass goes on to the remaining workspaces
+    needs_test: true
+    reason: A refusal that aborts the pass would leave every later landed workspace in place.
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
-  contract: "Landed-work pass with kept reason in-use."
+  contract: >-
+    The clear-landed pass relaying the door's PROCESS_HOLDS_FILES refusal as kept in_use and its UNSENT_WORK
+    refusal as kept holds_unsent_work (files and commits as the door lists them), and continuing past both.
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      Fixture rename at the user's request, 2026-11-16: the second scenario's workspace "idle-1" is renamed
+      "quiet-1" in the criteria and in the two test_intent clauses that name it, so it no longer collides with
+      the "idle-1" of BO-4400g-2 and BO-4400g-3 (a different workspace: no own commits, idle eight days).
+      Behaviour unchanged.
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Unattended means nobody is there to notice a stopped program. BO-4300e-2-ii allows a
   single clearing request to stop a program and clear; the pass must not take that branch.
+
+  "quiet-1" (second scenario) is its own fixture, not the "idle-1" of BO-4400g-2 and
+  BO-4400g-3; the two names were the same until 2026-11-16.

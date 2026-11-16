@@ -39,12 +39,65 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: modifies
     status: exists
+    relevance: The clear-landed entry-points row gains --preview.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree.py
+    state: existing
+  - path: docs/architecture/components/worktree-manager.md
+    state: existing
+it_requirements:
+  - >-
+    ONE ASSESSMENT: the preview runs the same assessment and the same decision function as the real pass
+    (BO-4400g-2), with only the clearing step replaced by listing. There is no separately written, looser or
+    stricter rule.
+  - >-
+    WRITES NOTHING: the preview writes, renames or deletes nothing in any workspace folder (its repository
+    included), the main checkout, the landing place or the shared project. It sends no remove request to the
+    door, and it holds no lock or temporary item that outlives its answer.
+  - >-
+    The preview answer is the clear-landed answer with preview true and would_clear in place of cleared. Its
+    kept entries and reasons are exactly those a real pass would give at that moment. A shared project that
+    cannot be reached gives the same refused FETCH_FAILED answer as the real pass, with nothing in
+    would_clear.
+  - >-
+    Every list is in a stable order (by kind, then slug), so adding one workspace changes only that
+    workspace's own entry.
+  - >-
+    The flag is --preview on the clear-landed verb, the convention migrate-legacy --preview already uses.
+    worktree.py (425 lines) takes wiring only, with no net growth. No limit is raised.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against the eight-workspace fixture of BO-4400g-2 with a real bare hub. A
+    snapshot of every workspace folder (repository included), the main checkout and the hub's refs is taken
+    before and after the preview. The real pass then runs with nothing changed in between. No git mock, no
+    build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: every workspace folder, every line of work in the project and on the shared project, and the shared main line are identical before and after
+    needs_test: true
+    reason: A preview that fetches into a workspace or calls the door would change the disk, which only a full snapshot catches.
+  - clause: the pass ends with exactly one answer, marked as a preview, that lists "ff-1", "mc-1", "sq-1" and "idle-1" as would-be-cleared by work name and location, and the other four as kept with the same reasons a real pass gives
+    needs_test: true
+    reason: A preview whose list or reasons differ from the real decision misleads the person who reads it before running the pass.
+  - clause: when the real pass is run next, with nothing changed in between, it clears exactly "ff-1", "mc-1", "sq-1" and "idle-1"
+    needs_test: true
+    reason: A preview written as a separate rule passes its own checks and still disagrees with the real pass, which only running both shows.
+  - clause: given one more workspace "ff-4" whose commits reached the main line is added and the preview is run again, "ff-4" is added to the would-be-cleared list and nothing else in the answer changes
+    needs_test: true
+    reason: An unstable order or a decision that depends on the other workspaces would change more than one entry.
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
-  contract: "Landed-work pass and its cleared/kept answer."
+  contract: >-
+    The clear-landed assessment and decision function and its answer shape, of which the preview reuses
+    everything except the clearing step (would_clear in place of cleared, preview true).
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

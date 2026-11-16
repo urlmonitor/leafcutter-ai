@@ -18,8 +18,9 @@ criteria: |
 
   Any flow, or you, can ask for a piece of work's workspace to be cleared just by naming
   the work, the same way it was asked for in the first place. Every workspace of this
-  project whose work is already fully part of the shared main line, and that holds nothing
-  unsent, can be cleared in one unattended pass that never asks a question, can be
+  project whose work is already fully part of the shared main line, or is all on its own
+  line on the shared project, where it stays, with no file in it changed for 14 days, and
+  that holds nothing unsent, can be cleared in one unattended pass that never asks a question, can be
   previewed first, and reports everything it kept and why. Every flow that makes a
   workspace clears it through that same one place, so no flow carries its own way of
   deleting one -- and unsent work, other projects' workspaces and the main checkout are
@@ -50,7 +51,15 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the plan-feature gate, 2026-11-16 (14-day rule for pushed but unmerged work): the
+      criteria body's pass sentence also covers a workspace whose work is all on its own line on the shared
+      project, where it stays, with no file in it changed for 14 days, holding nothing unsent. Title, tagline
+      and every other sentence unchanged. Notes record the decision. A PO review of the added words is
+      recommended.
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4400g-4, BO-4400g-5]
 implemented_by: []
@@ -79,12 +88,29 @@ notes: |
     usable hosts.
 
   OUT OF SCOPE, OWNED ELSEWHERE: the rule for which caller may tell a workflow agent to
-  remove a workspace, and finalize step 7's authorization, belong to a separate record
-  family owned by another session; this L1 neither restates nor references it. The
-  discard token for unsent work stays BO-4300e-3 -- the landed-work pass never uses one.
+  remove a workspace, and finalize step 7's authorization, belong to the BO-4300g family;
+  this L1 does not restate it, and BO-4400g-4 builds on it (D1). Finalize step 7 stays
+  exactly as BO-4300g-3 defines it (user answer Q1, 2026-11-16). The discard token for
+  unsent work stays BO-4300e-3 -- the landed-work pass never uses one.
 
-  OPEN CONFLICT (flagged, not resolved): BO-4400's approved KEY FRAMING DECISION
-  (2026-10-09) is that a route clears its workspace as soon as its PR is OPEN (pushed counts
-  as sent, BO-4400a-1). This request says a flow clears once its PR is MERGED, else leaves the
-  workspace to the landed-work pass. BO-4400g-4 is written so it holds under either answer;
-  the user must say which timing wins before BO-4400a-1 or BO-4400g-4 is built.
+  TIMING CONFLICT, RESOLVED (user decision D2, 2026-11-16): a flow clears its workspace after
+  its pull request has merged, using the landed rule of BO-4400g-2 for its one workspace; a
+  flow that ends before its pull request is merged clears nothing and leaves the workspace to
+  the landed-work pass. BO-4400g-4 and BO-4400a-1 are amended to this timing, and the PO
+  amended BO-4400's KEY FRAMING DECISION and BO-4400a to it the same day. A flow that ends
+  with nothing to deliver clears its own workspace at once; the seven-day idle threshold
+  guards only the landed-work pass (user answer Q2, 2026-11-16). The older BO-4400a children
+  were brought in line (user answer Q3): BO-4400a-1-ii, BO-4400a-2-i, BO-4400a-4, BO-4400a-5.
+
+  USER DECISION 2026-11-16 (plan-feature gate): the landed-work pass also clears a workspace
+  whose work is pushed but never merged, once it holds nothing unsent and no file in it has
+  changed for 14 days; the work stays on its line on the shared project. The pass stays
+  git-only, so an open pull request untouched for 14 days counts the same and is cleared;
+  asking the maker for that work again resumes the line. The rule is the pass's alone; flows
+  are unchanged (BO-4400g-2-v; criteria body amended to match).
+
+  OTHER DECISIONS 2026-11-16 (IT PO gate): D1 -- every flow's own clearing request is the
+  exact name-based clearing command sent through shell-runner, which is itself the caller's
+  authorization for that one workspace (BO-4300g, BO-4300g-2, BO-4300g-2-i amended). D3 -- the
+  maker gains the squash content check under BO-4400g-2; BO-4100c-1 reuses it later. D4 --
+  ship's prose change is BO-4400g-4-ii.

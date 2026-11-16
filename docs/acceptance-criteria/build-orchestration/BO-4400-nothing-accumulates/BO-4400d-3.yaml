@@ -16,7 +16,8 @@ risk_surface: safety
 declares_side_effect: true
 criteria: |
   Given an installed project with the sweep interval set to 24 hours and no sweep
-    recorded in the last 24 hours, and one workspace holding nothing unsent,
+    recorded in the last 24 hours, and one workspace whose commits all reached the main
+    line and which holds nothing unsent, so the landed-work pass would clear it,
   When a working session starts in that project,
   Then a real sweep is started without anyone asking for it, and the workspace is gone
     once it finishes,
@@ -80,7 +81,7 @@ it_requirements:
   - >-
     PROOF: run the DEPLOYED hook script as a separate process with a SessionStart payload on stdin,
     in a temporary installed project; assert its return time, the spawned sweep's effect on a real
-    holds-nothing workspace, the durable log line, the second-start not-due output, and exactly one
+    landed workspace (its commits merged on a real bare hub), the durable log line, the second-start not-due output, and exactly one
     sweep for two concurrent starts (two processes released by a barrier). No build.py spawn.
 test_required: true
 test_spec:
@@ -89,7 +90,7 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: reachability
-    description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the holds-nothing workspace is gone once it finishes."
+    description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the landed workspace is gone once it finishes."
   - name: test_session_start_returns_before_sweep_finishes
     target_dir: unit_tests/build_orchestration/
     framework: unittest
@@ -123,11 +124,23 @@ test_rationale: >-
   concurrency and the background hand-off cannot be observed from source.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE: the sweep's workspace part runs
+      the landed-work pass): the Given's workspace is now one the pass would clear (commits all on the main
+      line, nothing unsent) instead of one that merely holds nothing unsent. Every other clause unchanged.
+      Technical fields fixed: the PROOF it_requirement and the first test_spec description now use a landed
+      workspace.
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  ONE RULE (user decision 2026-11-16): the workspace is landed because a workspace that only
+  holds nothing unsent (for example pushed but unmerged, or just made) is kept by the
+  landed-work pass, and then "gone once it finishes" would be false.
+
   Trigger choice (BO-4400d notes leave it to BA/IT PO): session start, rate-limited by a
   configurable interval, because a schedule needs a machine-level timer the package cannot
   install portably (Windows / WSL / macOS differ), while a session start exists in every

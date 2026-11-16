@@ -25,11 +25,15 @@ criteria: |
   And it lists every reason a workspace is kept -- not yet on the main line, holds unsent
     work, no work of its own yet, in use, landing could not be confirmed, shared project
     unreachable -- and what the person can do about each,
+  And it states that a workspace kept as not yet on the main line is cleared by the pass
+    once it holds nothing unsent and no file in it has changed for 14 days, that its work
+    stays on its line on the shared project, and that asking for that work's workspace
+    again resumes the line,
   And it shows how to run the pass unattended from a timer or at session start,
   And it states that the pass never touches another project's workspaces, the main
     checkout, or lines of work on the shared project,
   And there is still exactly one how-to guide for clearing a workspace.
-depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4300e-5]
+depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4300e-5, BO-4400g-2-v]
 doc_links:
   - path: docs/how-to/clear-a-workspace.md
     relationship: modifies
@@ -42,15 +46,101 @@ doc_links:
     relationship: related
     status: exists
     relevance: The routine sweep's how-to; cross-link rather than repeat.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: modifies
+    status: exists
+    relevance: Each new or changed answer (clear-landed, the no-workspace answer of remove, the refusals of mixed or incomplete names) is documented once here; the how-to links to it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: The last extension of the same two pages, with the doc test that pins their rows and messages.
 assigned_agent: documentation-expert
 estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: docs/how-to/clear-a-workspace.md
+    state: existing
+  - path: docs/reference/workspace-maker-answer.md
+    state: existing
+it_requirements:
+  - >-
+    EXTEND, NEVER DUPLICATE: the guide BO-4300e-5 produced (docs/how-to/clear-a-workspace.md) is extended.
+    No second clearing how-to is written, and the routine-sweep how-to of BO-4400d-4 is cross-linked, not
+    repeated.
+  - >-
+    Every command shown is the maker's exact command as built: remove --kind/--slug, remove --branch, remove
+    by an older spelling, clear-landed and clear-landed --preview, run by the absolute path that worktree.py
+    where prints. Every example answer is copied from the real deployed maker's output, never written by
+    hand. The page is written after BO-4400g-1, -2 (with -2-v) and -3 are implemented.
+  - >-
+    Each new or changed answer (the clear-landed answer, remove's no-workspace answer for a repeated clear,
+    and the refusals of mixed or incomplete names) is documented once, in docs/reference/workspace-maker-answer.md.
+    The how-to links to it and does not restate its fields.
+  - >-
+    The kept reasons are listed with the exact values the maker emits (not_on_main, holds_unsent_work,
+    no_own_work, in_use, landing_unconfirmed, shared_project_unreachable), each with a plain-words meaning
+    and what the person can do about it. A reason the maker does not emit is never documented.
+  - >-
+    Running the pass unattended is shown as the one command a timer or a session-start hook runs, with no
+    input, and the exit codes it can return. No machine-specific timer installer is prescribed; the
+    packaged session-start trigger belongs to BO-4400d-3.
+  - >-
+    No command on either page deletes a workspace folder or its repository outside the maker (no rm, rmdir,
+    Remove-Item, rmtree, del or git worktree remove), and none passes --delete-remote-branch as part of the
+    pass.
+  - >-
+    unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py pins the rows of "Refusals of remove" and a
+    fixed set of messages, and scans the maker sources for each documented code. That test file belongs to
+    the test author, not to this record. It must be updated in the same build when a pinned count or message
+    changes, and its source scan must cover templates/scripts/worktree_landed.py.
+  - >-
+    Must keep the frontmatter conventions of docs/how-to/ and docs/reference/, update last_updated on both
+    pages, and stay within the project's document length limits.
+test_required: true
+test_intent:
+  - clause: 'it shows how to ask for a workspace to be cleared by naming the work -- by kind and short name, by line-of-work name, and by an older spelling -- and states that asking again after it is gone is answered "no workspace exists", not an error'
+    needs_test: true
+    reason: The guide's commands must be the maker's real forms, and a doc test against the sources catches a form the maker does not accept.
+  - clause: it shows how to preview the landed-work pass and how to run it, with one example answer listing a cleared workspace and a kept workspace with its reason
+    needs_test: true
+    reason: A hand-written example drifts from the real answer shape, which a doc test tied to the maker's output catches.
+  - clause: it lists every reason a workspace is kept -- not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable -- and what the person can do about each
+    needs_test: true
+    reason: A missing or invented reason leaves the person without a remedy, and the closed set can be checked against the sources.
+  - clause: 'it states that a workspace kept as not yet on the main line is cleared by the pass once it holds nothing unsent and no file in it has changed for 14 days, that its work stays on its line on the shared project, and that asking for that work''s workspace again resumes the line'
+    needs_test: true
+    reason: The 14-day figure and the safety promise must match the maker's named default and behaviour, which a doc test tied to the sources catches.
+  - clause: it shows how to run the pass unattended from a timer or at session start
+    needs_test: true
+    reason: The unattended command must be one that needs no input, which a doc test can check on the published command.
+  - clause: 'it states that the pass never touches another project''s workspaces, the main checkout, or lines of work on the shared project'
+    needs_test: true
+    reason: The safety promise is what lets a person run the pass unattended, so its presence on the page is pinned.
+  - clause: there is still exactly one how-to guide for clearing a workspace
+    needs_test: true
+    reason: A second clearing guide splits the instructions and goes stale, which a scan of docs/how-to/ catches.
 delivers_to: null
 expects_from:
-  ac_id: BO-4400g-2
-  contract: "Landed-work pass answer shape and its fixed set of kept reasons."
+  - ac_id: BO-4400g-2
+    contract: >-
+      The clear-landed and clear-landed --preview commands, the answer shape and the closed set of kept
+      reasons (not_on_main, holds_unsent_work, no_own_work, in_use, landing_unconfirmed,
+      shared_project_unreachable).
+  - ac_id: BO-4400g-1
+    contract: >-
+      The remove name forms (--kind/--slug, --branch, older spellings) and remove's no-workspace answer for a
+      repeated clear.
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (14-day rule, BO-4400g-2-v): one And-clause
+      added so a reader of "not yet on the main line" learns the pass clears that workspace after 14 days with
+      no file changed and nothing unsent, that the work stays on the shared project, and that asking for the
+      work again resumes the line. depends_on gains BO-4400g-2-v. Technical field fixed: the second
+      it_requirement's build order now names -2-v. The new clause has no test_intent entry yet (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -58,3 +148,8 @@ notes: |
   Satisfies BO-4400g documentation_triggers [how-to]. Clearing by hand and clearing by
   name are the same user-facing action, so the guide BO-4300e-5 produced is extended rather
   than a second one written.
+
+  AMENDED 2026-11-16 (user decision): the 14-day rule for pushed but unmerged work
+  (BO-4400g-2-v) is stated beside the kept reasons, because "not yet on the main line" no
+  longer means "kept until merged". Under ONE RULE the routine sweep (BO-4400d-4) uses the
+  same reasons and rules and links here.

@@ -17,19 +17,23 @@ criteria: |
   Given the routine sweep (BO-4400d-1, BO-4400d-2, BO-4400d-3) is in place,
   When the component diagram for the routine sweep is read,
   Then it shows the sweep as one component with its session-start trigger,
-  And it shows the sweep's connections to each capability it uses: the complete
-    workspace listing, the holds-work / holds-nothing verdict, the in-use check, the
-    one shared clearing door, the outside-item inventory, and the scratch age and
-    ownership rule,
+  And it shows the sweep's connections to each capability it uses: the landed-work pass
+    for workspaces, which itself uses the complete workspace listing, the holds-work /
+    holds-nothing verdict, the in-use check and the one shared clearing door; the
+    outside-item inventory; and the scratch age and ownership rule,
   And it shows the sweep's two outputs: the preview / real report, and the durable
     report log,
   And it shows no direct connection from the sweep to deleting a workspace folder
     other than through the one shared clearing door.
-depends_on: [BO-4400d, BO-4400d-1, BO-4400d-3]
+depends_on: [BO-4400d, BO-4400d-1, BO-4400d-3, BO-4400g-2]
 doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: The landed-work pass the sweep's workspace part runs (ONE RULE, user decision 2026-11-16).
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 delivers_to: null
@@ -44,7 +48,13 @@ it_requirements:
     Go Stale'). Linked from docs/architecture/components/worktree-manager.md.
   - >-
     Component and connector names match the built sweep (BO-4400d-1) and its config key; the only
-    edge to workspace deletion goes through the one maker's remove verb.
+    edge to workspace deletion goes through the one maker's remove verb. Connector names, confirmed 2026-11-16
+    (ONE RULE): sweep to "landed-work pass (worktree.py clear-landed)" for workspaces; the pass to "workspace
+    listing (workspace records and landing place)", "unsent-work check (the door's, with the content check
+    of BO-4400g-2)", "program check (the door's in-use check, BO-4300e-2-iv)" and "clearing door
+    (worktree.py remove)"; sweep to "outside-item inventory (BO-4400b-1)" and "scratch age and ownership rule
+    (BO-4400f-1)"; outputs "preview / real report" and "durable report log". There is no edge from the sweep
+    to the door except through the pass.
 test_required: true
 origin_agent: business-analyst
 created: 2026-10-09
@@ -53,9 +63,28 @@ amended_by:
   agent: it-po
   date: '2026-11-01'
   reason: "BO-2500a-8-iv backfill batch A, user decision of 2026-11-01: a diagram label must match a real artefact, so test_required false changed to true. Criteria and readiness unchanged."
+- action: amended
+  agent: business-analyst
+  date: '2026-11-16'
+  reason: >-
+    User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE): the capabilities clause connects the
+    sweep to the landed-work pass for workspaces, which itself uses the listing, the verdict, the in-use check and
+    the door, instead of connecting the sweep straight to the verdict. depends_on and doc_links gain BO-4400g-2.
+    No technical field became untrue.
+- action: amended
+  agent: it-po
+  date: '2026-11-16'
+  reason: >-
+    Connector names confirmed against the ONE RULE design: the second it_requirement lists each connector by
+    the built name (clear-landed, the door's unsent-work and program checks, remove, the inventory, the
+    scratch rule, the two outputs). Criteria unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Satisfies BO-4400d documentation_triggers: component-diagram. Re-measure the next free
   diagram id immediately before publishing.
+
+  ONE RULE (user decision 2026-11-16): the sweep makes no workspace decision of its own, so
+  its only workspace edge is to the landed-work pass. This matches BO-4400d-1's diagram
+  contract.

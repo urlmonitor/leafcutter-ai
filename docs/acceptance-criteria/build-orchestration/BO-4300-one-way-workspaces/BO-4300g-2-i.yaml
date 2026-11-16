@@ -19,11 +19,17 @@ criteria: |
   Given every workflow the install deploys is run under the workflow engine harness
     with its recorded dispatches captured, the set of workflows being derived from
     what the install deploys and never from a hand-written list,
-  When every dispatch to a removal-capable agent is examined,
+  When every dispatch to a removal-capable agent is examined, along with every other
+    dispatch whose command clears a workspace,
   Then each such dispatch carries a caller authorization naming one exact workspace
     and one exact branch,
   And a dispatch to a removal-capable agent that carries no caller authorization
-    fails the check, naming the workflow and the step.
+    fails the check, naming the workflow and the step,
+  And the one permitted exception -- a flow's own clearing request sent to an agent that
+    cannot remove, as one clearing command -- passes only when that command names the
+    flow's own work by the name the flow obtained its workspace with and gives no
+    location; any other clearing command sent to such an agent fails the check, naming
+    the workflow and the step.
 
   Given a new workflow is added that dispatches a removal-capable agent for a step
     that only reads the pause store,
@@ -76,6 +82,13 @@ it_requirements:
     pause-store read is reported by workflow and step, and the same step sent to a non-removal agent
     is not.
   - >-
+    CLEARING COMMANDS TO NON-REMOVAL AGENTS (user decision D1, 2026-11-16): the check also examines every
+    dispatch whose command runs a maker verb that clears (remove, or the per-work clear-landed of
+    BO-4400g-2), whichever agent receives it. That set is recognised by one shared command parser in
+    unit_tests/_workflow_engine_harness.py, the same one BO-4300g-2 uses. A clearing command sent to an agent
+    that cannot remove passes only as the flow's own name-based command. "The flow's own work" is read from
+    the same recorded run's workspace step, never from a hand-written list.
+  - >-
     Recording each dispatch's request payload (not only the agent type) is the harness capability
     this check needs. The harness is extended, never forked, so the BO-4300g-2 and BO-4300g-3
     proofs use the same recordings.
@@ -104,6 +117,9 @@ test_intent:
   - clause: a dispatch to a removal-capable agent that carries no caller authorization fails the check, naming the workflow and the step
     needs_test: true
     reason: A guard that never reports a bad dispatch is inert, so its failure path has to be induced and seen.
+  - clause: 'the one permitted exception -- a flow''s own clearing request sent to an agent that cannot remove, as one clearing command -- passes only when that command names the flow''s own work by the name the flow obtained its workspace with and gives no location; any other clearing command sent to such an agent fails the check, naming the workflow and the step'
+    needs_test: true
+    reason: shell-runner declares no removal capability, so without this check any workflow could send it a remove --path and pass.
   - clause: it fails, naming that workflow and that step
     needs_test: true
     reason: Covering a newly added workflow without editing a list is the point of deriving the set, and only a fixture workflow shows it.
@@ -182,6 +198,28 @@ test_spec:
       it shows the harness is extended and not forked.
     proves_clause: it fails, naming that workflow and that step
     code_file: unit_tests/_workflow_engine_harness.py
+  - name: test_clearing_command_to_a_non_removal_agent_passes_only_as_the_flows_own_name_form
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Over the same derived set of deployed workflow runs, every recorded dispatch whose command runs a maker
+      clearing verb (remove or clear-landed, recognised by the one shared command parser in the harness) and
+      that goes to an agent declared removal_capable false is checked. It passes only when the command names
+      the flow's own work, read from the same run's workspace step (kind and slug, or line of work), and
+      carries no --path and no location. A temporary deployed directory adds fixture workflows that send
+      shell-runner "remove --path <workspace>", "remove --kind feature --slug other", a whole-project
+      "clear-landed" naming no work, and two clearing commands in one run. Each is reported by workflow file and
+      step label. The real flows' own end-of-run clearing commands are not reported, and at least one such
+      command was examined, so the check cannot pass vacuously.
+    proves_clause: the one permitted exception -- a flow's own clearing request sent to an agent that cannot remove, as one clearing command -- passes only when that command names the flow's own work by the name the flow obtained its workspace with and gives no location; any other clearing command sent to such an agent fails the check, naming the workflow and the step
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a check that only examines dispatches to removal-capable agents, so a clear sent to shell-runner is never looked at
+      - a check that accepts a --path clearing command because the agent cannot remove
+      - a check that accepts a clearing command naming another work than the flow's own
+      - a check that recognises remove but not clear-landed as a clearing verb
 test_design_authorship:
   step: test-designer
   date: "2026-10-25"
@@ -211,6 +249,23 @@ created: 2026-10-23
 amended_by:
 - reason: depends-on-finalize-step-7-authorization
   by: business-analyst
+- reason: >-
+    User decision D1, 2026-11-16 (BO-4400g plan-feature run): one And-clause added to the first scenario
+    stating the one permitted exception -- a flow's own clearing command sent to an agent that cannot
+    remove -- and its bound: it passes only when it names the flow's own work and no location, and any other
+    clearing command sent to such an agent fails, naming the workflow and the step. The first When gains
+    "along with every other dispatch whose command clears a workspace" so the new clause has dispatches to
+    examine. Every other clause unchanged, the existing Then clauses word for word. The new clause has no
+    test_intent or test_spec entry yet (IT PO and test-designer to add).
+  by: business-analyst
+  at: "2026-11-16"
+- reason: >-
+    it-po, 2026-11-16, at the orchestrator's request: added a test_intent entry and one test_spec entry
+    (test_clearing_command_to_a_non_removal_agent_passes_only_as_the_flows_own_name_form) for the D1 clause,
+    plus a CLEARING COMMANDS TO NON-REMOVAL AGENTS it_requirement. Nothing existing was weakened. The entry
+    was written without opening code, so the test-designer should ground it at its next pass.
+  by: it-po
+  at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -225,6 +280,14 @@ notes: |
   BO-4300g-3; depends_on (BA field) now names BO-4300g-3 alongside BO-4300g-2 and BO-4300g-1.
   The contract is recorded in expects_from BO-4300g-3.
 
+  USER DECISION D1, 2026-11-16 (BO-4400g plan-feature run): every flow's own end-of-run
+  clearing request is the exact name-based clearing command sent to shell-runner, and that
+  command is itself the caller's authorization for exactly that one workspace. Because
+  shell-runner declares removal_capable false, the check as first written would never look at
+  it, so a workflow could send shell-runner "remove --path <anything>" and pass. The added
+  clause closes that: dispatches to agents that cannot remove are now also examined when
+  their command clears a workspace, and only the name form for the flow's own work passes.
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -233,4 +296,6 @@ notes: |
 # - 2026-10-24 [business-analyst/ac-tree-split/caller-authorized-workspace-removal]:
 #   Pattern C split (user decision): renumbered under the new sibling L1 BO-4300g.
 #   Criteria unchanged.
+# - 2026-11-16 [business-analyst/plan-feature/clear-merged-workspaces]:
+#   User decision D1: one And-clause added for the permitted clearing-command exception.
 # ====================================================================

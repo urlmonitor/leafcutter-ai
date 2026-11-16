@@ -14,13 +14,15 @@ roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
 criteria: |
-  Given the seven workspaces, five scratch items and one orphaned outside item of
+  Given the nine workspaces, five scratch items and one orphaned outside item of
     BO-4400d-1, with the size of each item measured beforehand,
   When the sweep is run as a preview,
   Then nothing on disk changes,
   And the preview lists each item it would remove by kind and location with its size
     in bytes, lists each item it would keep with the reason, and states a count and a
     total in bytes for the items it would remove,
+  And the workspaces it lists as would-remove, and the kept workspaces with their reasons,
+    are exactly those the landed-work pass's preview gives for the same workspaces,
   And when the sweep is then run for real with nothing changed in between, it removes
     exactly the items the preview listed,
   And the real sweep's report states the count of items removed per kind (workspaces,
@@ -28,11 +30,15 @@ criteria: |
     the removed items' sizes measured beforehand,
   And when one more expired scratch item of 4096 bytes is added and the preview is run
     again, its count is one greater and its total is 4096 bytes greater.
-depends_on: [BO-4400d, BO-4400d-1, BO-4400b-1]
+depends_on: [BO-4400d, BO-4400d-1, BO-4400b-1, BO-4400g-3]
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d.yaml
     relationship: constrains
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-3.yaml
+    relationship: constrains
+    status: exists
+    relevance: The landed-work pass's preview, whose would-clear list and kept reasons the sweep's preview reports for workspaces (ONE RULE, 2026-11-16).
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
@@ -46,15 +52,22 @@ delivers_to:
       `--json` flag and as a one-line human summary ("<n> items cleared, <bytes> freed") otherwise.
       Preview is a `--dry-run` flag on the same entry point. Consumed by BO-4400d-3.
   - agent: documentation-expert
-    contract: "Preview and real commands, the report's fields and the four kept reasons, for the how-to BO-4400d-4."
+    contract: "Preview and real commands, the report's fields and the kept reasons (the landed-work pass's reasons for workspaces, not_expired for scratch), for the how-to BO-4400d-4."
 expects_from:
-  ac_id: BO-4400d-1
-  contract: "Per-item sweep outcome with kind, location and bytes."
+  - ac_id: BO-4400d-1
+    contract: "Per-item sweep outcome with kind, location and bytes."
+  - ac_id: BO-4400g-2
+    contract: >-
+      clear-landed --preview (BO-4400g-3): preview true, would_clear [{kind, slug, branch, location}] and kept
+      entries with their reasons, from the same decision function as the real pass.
 package_surface: false
 it_requirements:
   - >-
     Preview and real run share ONE selection code path; preview performs no write of any kind
-    (no removal, no log, no marker, no lock file left behind).
+    (no removal, no log, no marker, no lock file left behind). For workspaces that path is the landed-work
+    pass's own: the sweep's preview takes the would_clear list and kept reasons of clear-landed --preview
+    (BO-4400g-3) verbatim and only adds sizes, and the real sweep takes the real pass's answer. The sweep
+    holds no workspace selection of its own (ONE RULE, user decision 2026-11-16).
   - >-
     Byte figures use the single shared size measure delivered by BO-4400b-1 (apparent size, each
     inode once, symlinks not followed), measured immediately before each removal; preview and real
@@ -80,6 +93,19 @@ test_spec:
     type: behavioral
     angle: seam
     description: "The preview lists each would-remove item with kind, location and bytes, each kept item with its reason, a count and a total."
+  - name: test_sweep_preview_workspaces_equal_the_landed_work_pass_preview
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Over BO-4400d-1's nine workspaces, the test first runs the deployed maker's clear-landed --preview itself,
+      then the sweep's preview. The sweep's would-remove workspaces equal the pass's would_clear list by
+      location, and each kept workspace carries the same reason as the pass's kept entry for it. pushed-1 and
+      fresh-1 are kept in both.
+    must_catch:
+      - "sweep preview selects workspaces by holds-nothing alone instead of the pass's rule"
+      - "sweep preview computes its own kept reasons instead of relaying the pass's"
   - name: test_real_sweep_removes_exactly_what_preview_listed
     target_dir: unit_tests/build_orchestration/
     framework: unittest
@@ -108,7 +134,21 @@ test_rationale: >-
   figure cannot pass.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE: the sweep's workspace part runs
+      the landed-work pass): the Given now names BO-4400d-1's nine workspaces, and one And-clause says the
+      preview's workspace would-remove list and kept reasons are exactly those of the landed-work pass's
+      preview. depends_on and doc_links gain BO-4400g-3. Technical field fixed: the documentation-expert
+      contract no longer says "the four kept reasons". The new clause has no test_spec entry yet (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16 (ONE RULE): the ONE selection code path requirement names BO-4400g-3's preview as the
+      workspace selection. test_spec gains test_sweep_preview_workspaces_equal_the_landed_work_pass_preview, and
+      expects_from gains BO-4400g-2. Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4400d-2-i]
 implemented_by: []
@@ -118,3 +158,7 @@ notes: |
   exactly one item and exactly 4096 bytes. Bytes are the apparent size of files measured
   before removal; block-size rounding is the IT PO's call but must be the same measure in the
   preview and the real run.
+
+  ONE RULE (user decision 2026-11-16): for workspaces, the sweep's preview is the landed-work
+  pass's preview (BO-4400g-3) with sizes added; the sweep adds no workspace rule of its own.
+  Scratch and outside items keep this record's own selection and report.

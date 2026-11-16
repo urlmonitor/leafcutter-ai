@@ -43,7 +43,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Halt-path handling for every route: the route-end clearing request is still issued on a halted or failed
+      run, its answer decides kept or cleared, and the final result keeps the run's own failed status. A kept
+      workspace is relayed as {workspace_path: absolute, reason: the landed rule's kept reason (not_on_main or
+      holds_unsent_work), commits: [sha], files: [repo-relative path]}. Consumed by BO-4400a-2-i (quick fix
+      after its pull request opened).
 expects_from:
   ac_id: BO-4100c-1
   contract: "Holds-work / holds-nothing verdict per listed workspace."
@@ -51,8 +58,8 @@ package_surface: false
 it_requirements:
   - >-
     A halted or failed run still issues the route-end clearing request (BO-4400a-1's shared step);
-    whether the workspace is cleared follows the door's verdict, never the run's success flag. The
-    door's UNSENT_WORK refusal is relayed into the final result as kept work:
+    whether the workspace is cleared follows the landed rule of BO-4400g-2 (the per-work command a route
+    sends), never the run's success flag. The door's UNSENT_WORK refusal is relayed into the final result as kept work:
     {workspace_path: absolute, commits: [sha] from unsent.commits, files: [repo-relative path] from
     unsent.files}, reported as work kept, not as a clearing error.
   - >-
@@ -107,7 +114,13 @@ test_rationale: >-
   cannot show either.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po, 2026-11-16 (user decision D2, merged timing): the first it_requirement says that keeping or clearing
+      follows the landed rule of BO-4400g-2, not the door's verdict alone. delivers_to gains the halt-path
+      contract that BO-4400a-2-i expects. Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4400a-2-i]
 implemented_by: []

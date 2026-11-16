@@ -39,12 +39,65 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: exists
+    relevance: FETCH_FAILED is the existing refused code for a shared project that cannot be fetched.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+it_requirements:
+  - >-
+    KEEP, NEVER GUESS: landing counts as confirmed only on positive evidence that the workspace's own
+    commits, taken together, are on the current shared main line by identifier or by content. Anything else
+    keeps the workspace as landing_unconfirmed and names its own commits by full identifier: the content
+    changed again on the main line, objects that cannot be read, a git error, or a check that ran out of
+    time.
+  - >-
+    UNREACHABLE SHARED PROJECT: the pass contacts the shared project before it assesses anything. When that
+    contact fails, nothing is cleared, the door is not called, and the one answer is status refused, code
+    FETCH_FAILED, exit 2, listing every workspace as kept with reason shared_project_unreachable. That is
+    distinguishable by status and code from an ok pass whose cleared list is empty.
+  - >-
+    A main line the pass remembers from an earlier fetch is never a basis for clearing. The contact is
+    bounded in time, and a timeout counts as unreachable.
+  - >-
+    Neither outcome writes into any workspace folder or the main checkout, or changes the refs of the shared
+    project.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against real temporary repositories with a real bare hub. Unreachable is
+    made by moving the hub folder away, and the content conflict by a real squash merge followed by a real
+    commit on the main line that changes the same lines. No git mock, no build.py spawn, and isolated HOME
+    and git config.
+test_required: true
+test_intent:
+  - clause: '"sq-2" is identical before and after'
+    needs_test: true
+    reason: A containment check that guesses on changed content would clear sq-2 and lose its work, which a snapshot catches.
+  - clause: the answer lists "sq-2" as kept with the reason that its landing could not be confirmed, naming its two commits by identifier
+    needs_test: true
+    reason: The reason and the named commits are what a person needs to decide by hand, and both are computed.
+  - clause: no workspace is cleared, "ff-1" included
+    needs_test: true
+    reason: Deciding from the stale main line when the shared project cannot be reached is the wrong version this clause catches.
+  - clause: the pass ends with exactly one answer stating that the shared project could not be reached and that nothing was cleared
+    needs_test: true
+    reason: An unattended timer only learns of the failure through this answer, so its content must be pinned.
+  - clause: the answer is distinguishable from a pass that found nothing to clear
+    needs_test: true
+    reason: If the two answers look the same, a timer reports success while nothing is ever cleared.
 delivers_to: null
 expects_from:
   ac_id: BO-4400g-2
-  contract: "Landed-work pass with kept reasons landing-unconfirmed and shared-project-unreachable."
+  contract: >-
+    The clear-landed answer, with kept reasons landing_unconfirmed (own commits named by full identifier) and
+    shared_project_unreachable (status refused, code FETCH_FAILED, exit 2, nothing cleared).
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by: []

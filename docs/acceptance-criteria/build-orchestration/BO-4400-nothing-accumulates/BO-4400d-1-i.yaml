@@ -14,7 +14,8 @@ roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
 criteria: |
-  Given the sweep has listed workspace "idle-1" as holding nothing unsent,
+  Given the sweep has listed workspace "idle-1", whose commits all reached the main line
+    and which holds nothing unsent, as one the landed-work pass would clear,
   And before the sweep reaches "idle-1", one new uncommitted file is written into it
     and a run starts in it,
   When the sweep reaches "idle-1",
@@ -27,6 +28,12 @@ doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
     relationship: constrains
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2-iii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same race for the landed-work pass ("busy-1", "quiet-1"). Under ONE RULE the sweep's workspace part
+      runs that pass, so the two records guard one behaviour; see notes.
 assigned_agent: python-coder
 estimated_complexity: S
 delivers_to: null
@@ -67,7 +74,14 @@ test_rationale: >-
   steps; a barrier makes that window deterministic instead of flaky.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE: the sweep's workspace part runs
+      the landed-work pass): the race fixture's premise now names a workspace the pass would clear (commits
+      all on the main line, nothing unsent) instead of one that merely holds nothing unsent. The Then clauses
+      are unchanged. doc_links gains BO-4400g-2-iii. No technical field became untrue.
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -76,3 +90,9 @@ notes: |
   window between list and remove destroys fresh work. The verdict and the in-use check must be
   taken at the moment of removal (the door's own check already does the verdict half if the
   sweep asks the door rather than deleting directly).
+
+  ONE RULE (user decision 2026-11-16): the premise is a landed "idle-1", because under the
+  pass a workspace that only holds nothing unsent may be kept anyway (not yet on the main
+  line, or no work of its own yet), and then the race would test nothing. BO-4400g-2-iii
+  guards the same race for the pass itself. Now that the sweep runs the pass, this record
+  overlaps it. Both are kept; merging them is a possible later clean-up, flagged.
