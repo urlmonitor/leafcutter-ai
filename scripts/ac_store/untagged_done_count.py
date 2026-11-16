@@ -12,11 +12,20 @@ BUSINESS CONTEXT: KM-ADM-005-1. The ratchet in
     ``is_covers_tag_waived`` (BO-2500a-1-ii), looked up at call time and never copied.
     Grounds follow ACS-1100b-1: an exclusion whose ground is not on PUBLISHED_GROUNDS
     is an unexplained shortfall and fails the sum check.
-ARCHITECTURE: ``measure(ac_root, test_roots)`` loads every finished record, collects
-    the ``# covers:`` tags, then classifies each finished record exactly once, in this
-    order: tagged, superseded, waived, untagged. Hence
+    KM-ADM-005-3: a finished L0, L1 or docs-only composite whose children the done
+    gate's own composite rule proves leaves the count under a fourth ground that says
+    the tags were read and the tests were not run. The rule
+    ``_done_proof_composite._unproven_composite_children`` is reached as a module
+    attribute at call time, never copied.
+ARCHITECTURE: ``measure(ac_root, test_roots)`` reads the whole store once (records,
+    id set, live-children index) and collects the ``# covers:`` tags, then classifies
+    each finished record exactly once, in this order: tagged, superseded, waived,
+    proved through its children, untagged. Hence
     ``untagged + sum(exclusions) + tagged == finished`` (``sum_holds``) unless an
-    exclusion lacks a published ground (``unexplained_shortfall``).
+    exclusion lacks a published ground (``unexplained_shortfall``). A record reaches
+    the gate rule only when it is level L0/L1 or docs-only AND its covered_by lists
+    every live record whose parent it is. The gate rule resolves children through an
+    index of the store, so no per-child directory walk is paid.
 """
 
 from __future__ import annotations
@@ -29,13 +38,20 @@ from pathlib import Path
 import yaml
 
 try:  # flat import: the deployed store imports its siblings as top-level modules
+    import _done_proof_composite as _composite
     import _done_proof_phase_helpers as _helpers
+    import ac_parent_id
+    import ac_retirement
 except ImportError:  # pragma: no cover - package-style import (repo checkout)
+    from scripts.ac_store import _done_proof_composite as _composite
     from scripts.ac_store import _done_proof_phase_helpers as _helpers
+    from scripts.ac_store import ac_parent_id, ac_retirement
 
 GROUND_SUPERSEDED = "superseded"
 GROUND_WAIVED = "waived: declared test-free with a stated reason"
-PUBLISHED_GROUNDS = frozenset({GROUND_SUPERSEDED, GROUND_WAIVED})
+GROUND_PROVED = "proved through its children (tags read, tests not run)"
+PUBLISHED_GROUNDS = frozenset({GROUND_SUPERSEDED, GROUND_WAIVED, GROUND_PROVED})
+_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 _DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
 _SUPERSEDED_RE = re.compile(r"^superseded(_by)?$")
@@ -51,8 +67,10 @@ class Measurement:
     tagged: int = 0
     untagged: list[str] = field(default_factory=list)
     exclusions: dict[str, int] = field(default_factory=dict)
+    excluded_ids: dict[str, list[str]] = field(default_factory=dict)
     unexplained_shortfall: int = 0
     unreadable: list[str] = field(default_factory=list)
+    parent_field_only: int = 0  # records related to a parent only through the parent field
 
     @property
     def sum_holds(self) -> bool:
@@ -81,28 +99,76 @@ def _strip_quotes(token: str) -> str:
     return token.strip()
 
 
-def _load_finished(ac_root: Path) -> tuple[list[dict], list[str]]:
-    """Return the parsed done records and the paths that could not be read or parsed."""
-    records: list[dict] = []
-    unreadable: list[str] = []
+@dataclass
+class _Store:
+    """Everything read from the store in one walk (KM-ADM-005-3)."""
+
+    records: list[dict] = field(default_factory=list)  # every readable record with an id
+    paths: dict[str, Path] = field(default_factory=dict)  # filename stem -> first path
+    unreadable: list[str] = field(default_factory=list)  # done-record files that could not be read
+
+    @property
+    def finished(self) -> list[dict]:
+        """Return the records whose work_status is done."""
+        return [r for r in self.records if r.get("work_status") == "done"]
+
+
+def _read_record(path: Path, unreadable: list[str]) -> dict | None:
+    """Return the parsed record at *path*, or None; a done-looking file that fails is listed unreadable."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        unreadable.append(str(path))
+        return None
+    looks_done = bool(_DONE_RE.search(text))
+    try:
+        data = yaml.load(text, Loader=_LOADER)  # a safe loader (C or pure Python)
+    except yaml.YAMLError:
+        data = None
+    if isinstance(data, dict) and data.get("id") is not None:
+        return data
+    if looks_done:
+        unreadable.append(str(path))
+    return None
+
+
+def _load_store(ac_root: Path) -> _Store:
+    """Read every record under *ac_root* once."""
+    store = _Store()
     for path in sorted(Path(ac_root).rglob("*.yaml")):
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            unreadable.append(str(path))
-            continue
-        if not _DONE_RE.search(text):
-            continue
-        try:
-            data = yaml.safe_load(text)
-        except yaml.YAMLError:
-            unreadable.append(str(path))
-            continue
-        if not isinstance(data, dict) or data.get("id") is None:
-            unreadable.append(str(path))
-        elif data.get("work_status") == "done":
-            records.append(data)
-    return records, unreadable
+        store.paths.setdefault(path.stem, path)
+        data = _read_record(path, store.unreadable)
+        if data is not None:
+            store.records.append(data)
+    return store
+
+
+class _IndexedRoot:
+    """Stands in for the store root when the gate rule resolves a child by id.
+
+    The gate's ``_resolve_child_ac`` walks the whole store with ``rglob`` once per child; this answers
+    the same ``<id>.yaml`` query from the index built by the one walk of ``_load_store``.
+    """
+
+    def __init__(self, paths: Mapping[str, Path]) -> None:
+        self._paths = paths
+
+    def rglob(self, pattern: str) -> list[Path]:
+        """Return the one path whose stem is the queried id, or nothing."""
+        path = self._paths.get(pattern.removesuffix(".yaml"))
+        return [path] if path is not None else []
+
+
+@dataclass
+class _Context:
+    """Store-wide inputs, computed once per measurement."""
+
+    tags: set[str]  # the ratchet's own reading: decides the 'tagged' bucket only
+    gate_tags: set[str]  # the done gate's own reading (COVERS_TAG_RE): handed to the gate rule only
+    store_ids: frozenset[str]
+    root: _IndexedRoot
+    live_children: dict[str, set[str]]
+    parent_field_only: int = 0
 
 
 def _tags_in_file(path: Path) -> set[str]:
@@ -133,30 +199,104 @@ def collect_covers_tags(test_roots: Sequence[Path]) -> set[str]:
     return tagged
 
 
-def _exclusion_ground(record: Mapping) -> str | None:
-    """Return the ground on which the done gate leaves *record* out, or None."""
+def _index_live_children(store: _Store, store_ids: frozenset[str]) -> tuple[dict[str, set[str]], int]:
+    """Return ``{parent id: ids of its live records}`` and how many records only the parent field relates.
+
+    A record is a child of the parent named by its ``parent`` field or by ``derive_parent_id`` of its id
+    (either source counts). A record the shared retirement predicate retires is not live.
+    """
+    children: dict[str, set[str]] = {}
+    field_only = 0
+    for record in store.records:
+        if ac_retirement.is_retired(record, store_ids):
+            continue
+        ac_id = _strip_quotes(str(record["id"]))
+        derived = ac_parent_id.derive_parent_id(ac_id)
+        named = _strip_quotes(str(record.get("parent") or ""))
+        field_only += bool(named) and named != derived
+        for parent in {p for p in (named, derived) if p}:
+            children.setdefault(parent, set()).add(ac_id)
+    return children, field_only
+
+
+def _build_context(store: _Store, test_roots: Sequence[Path]) -> _Context:
+    """Compute the store-wide inputs once per measurement."""
+    store_ids = frozenset(store.paths)
+    live_children, field_only = _index_live_children(store, store_ids)
+    gate_tags: set[str] = set()
+    for root in test_roots:
+        gate_tags |= _composite._collect_all_covered_ids(Path(root))  # the gate's COVERS_TAG_RE scan
+    return _Context(
+        tags=collect_covers_tags(test_roots),
+        gate_tags=gate_tags,
+        store_ids=store_ids,
+        root=_IndexedRoot(store.paths),
+        live_children=live_children,
+        parent_field_only=field_only,
+    )
+
+
+def _docs_or_top_level(record: Mapping) -> bool:
+    """Return whether *record* is level L0/L1 or its change_target is exactly docs (fail closed)."""
+    if record.get("level") in ("L0", "L1"):
+        return True
+    target = record.get("change_target")
+    if isinstance(target, list):
+        target = target[0] if len(target) == 1 else None
+    return target == "docs"
+
+
+def _covered_by_complete(record: Mapping, ac_id: str, ctx: _Context) -> bool:
+    """Return whether covered_by lists every live record on disk whose parent is *ac_id*."""
+    listed = set(_composite._composite_child_ids(record.get("covered_by")))
+    return ctx.live_children.get(ac_id, set()) <= listed
+
+
+def _proved_through_children(record: Mapping, ac_id: str, ctx: _Context) -> bool:
+    """Return whether the gate's own composite rule finds no unproven child of *record* (and b, c hold)."""
+    if not _composite._composite_child_ids(record.get("covered_by")):
+        return False
+    if not _docs_or_top_level(record) or not _covered_by_complete(record, ac_id, ctx):
+        return False
+    unproven = _composite._unproven_composite_children(record, ctx.root, ctx.gate_tags, store_ids=ctx.store_ids)
+    return not unproven
+
+
+def _exclusion_ground(record: Mapping, ac_id: str, ctx: _Context) -> str | None:
+    """Return the ground on which *record* leaves the count, or None; tested superseded, waived, proved."""
     if _SUPERSEDED_RE.match(str(record.get("status", "")).strip()):
         return GROUND_SUPERSEDED
     if _helpers.is_covers_tag_waived(record):
         return GROUND_WAIVED
+    if _proved_through_children(record, ac_id, ctx):
+        return GROUND_PROVED
     return None
+
+
+def _place(result: Measurement, ac_id: str, ground: str | None) -> None:
+    """Put one finished, untagged record into its bucket."""
+    if ground is None:
+        result.untagged.append(ac_id)
+    elif ground in PUBLISHED_GROUNDS:
+        result.exclusions[ground] = result.exclusions.get(ground, 0) + 1
+        result.excluded_ids.setdefault(ground, []).append(ac_id)
+    else:
+        result.unexplained_shortfall += 1
 
 
 def measure(ac_root: Path, test_roots: Sequence[Path]) -> Measurement:
     """Measure the untagged-done backlog of the store at *ac_root*."""
-    records, unreadable = _load_finished(ac_root)
-    tags = collect_covers_tags(test_roots)
-    result = Measurement(finished=len(records), unreadable=unreadable)
-    for record in records:
+    store = _load_store(ac_root)
+    ctx = _build_context(store, test_roots)
+    finished = store.finished
+    result = Measurement(finished=len(finished), unreadable=store.unreadable, parent_field_only=ctx.parent_field_only)
+    for record in finished:
         ac_id = _strip_quotes(str(record["id"]))
-        ground = None if ac_id in tags else _exclusion_ground(record)
-        if ac_id in tags:
+        if ac_id in ctx.tags:
             result.tagged += 1
-        elif ground is None:
-            result.untagged.append(ac_id)
-        elif ground in PUBLISHED_GROUNDS:
-            result.exclusions[ground] = result.exclusions.get(ground, 0) + 1
         else:
-            result.unexplained_shortfall += 1
+            _place(result, ac_id, _exclusion_ground(record, ac_id, ctx))
     result.untagged.sort()
+    for ids in result.excluded_ids.values():
+        ids.sort()
     return result

@@ -7,7 +7,7 @@ component: knowledge-management
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -419,7 +419,8 @@ created: 2026-11-16
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/ac_store/untagged_done_count.py
 notes: |
   Authored by the business-analyst from a decision already taken (two independent
   analyses converged on it). The analysis report the brief cites
