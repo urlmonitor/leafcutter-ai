@@ -7,6 +7,8 @@ GOAL: Real-git tests of the sandbox pattern: real host, real linked worktree.
 
 from __future__ import annotations
 
+import importlib.abc
+import importlib.machinery
 import importlib.util
 import re
 import sys
@@ -24,6 +26,8 @@ def _fixture_env_overrides(filename: str) -> dict[str, str]:
     """The overrides dict the real fixture file merges into every git call."""
     path = S.REPO_ROOT / "unit_tests" / "portability" / filename
     spec = importlib.util.spec_from_file_location("_tq100a_2_probe_" + path.stem, path)
+    assert isinstance(spec, importlib.machinery.ModuleSpec), path
+    assert isinstance(spec.loader, importlib.abc.Loader), path
     mod = importlib.util.module_from_spec(spec)
     sys.path.insert(0, str(path.parent))
     try:

@@ -15,6 +15,7 @@ import json
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -34,7 +35,7 @@ _DEPLOYED = Path(".leafcutter/scripts/commit_guardian")
 
 
 @pytest.fixture(scope="module")
-def built() -> HarnessBuild:
+def built() -> Iterator[HarnessBuild]:
     hb = build_out_of_package_harness()
     assert hb.proc.returncode == 0, hb.proc.stderr[-500:]
     yield hb
