@@ -172,6 +172,8 @@ def _load_module_by_path(path: Path, module_name: str):
     if not path.exists():
         return None
     spec = _ilu.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(name=module_name, path=str(path))
     mod = _ilu.module_from_spec(spec)
     sys.modules[module_name] = mod
     spec.loader.exec_module(mod)

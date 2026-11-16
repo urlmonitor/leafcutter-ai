@@ -192,6 +192,7 @@ class TestEmptyOutputMappingsIsNotAcleanPass(unittest.TestCase):
         combined = result.stdout + result.stderr
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        assert isinstance(match, re.Match)
         self.assertEqual(0, int(match.group(2)), f"verified must be 0. Output:\n{combined}")
 
     def test_empty_output_mappings_blocked_message_names_zero_mappings(self) -> None:
