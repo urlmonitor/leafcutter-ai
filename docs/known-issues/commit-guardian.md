@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-25'
+last_updated: '2026-11-16'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 83** (1 blocker, 35 high, 47 low) · **Resolved: 29** (recounted from the directory 2026-10-25)
+**Open: 86** (1 blocker, 35 high, 50 low) · **Resolved: 29** (recounted from the directory 2026-10-25; +3 open 2026-11-16)
 
 ## Open
 
@@ -158,6 +158,9 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20261014-predone-scope-unions-only-staged-tickets — `check-predone-scope` compares the whole branch diff with only the done tickets staged in this commit, so every later group of a multi-commit epic branch is refused for files earlier groups' tickets declare; graded medium | [open-low-ki-cg-20261014-predone-scope-unions-only-staged-tickets.md](commit-guardian/open-low-ki-cg-20261014-predone-scope-unions-only-staged-tickets.md) |
 | `low` | KI-CG-20261014-doc-length-gate-crashes-instead-of-reporting — `check-doc-length` ends in a traceback, not a stated outcome, when a set-aside document matches no declared entry (`StopIteration` in `matching_entry`) or `commit_guardian.json` is not valid UTF-8 (`UnicodeDecodeError` past the DECLARATION PROBLEM report); both still refuse the commit | [open-low-ki-cg-20261014-doc-length-gate-crashes-instead-of-reporting.md](commit-guardian/open-low-ki-cg-20261014-doc-length-gate-crashes-instead-of-reporting.md) |
 | `low` | KI-CG-20261014-no-gate-keeps-the-document-length-standard-in-step — nothing checks `docs/reference/document-length-standard.md` against `doc_length.set_aside_locations`, so a location or ceiling changed in config leaves the published standard silently stale; the file-size rule has a parity gate, the doc-length rule has none | [open-low-ki-cg-20261014-no-gate-keeps-the-document-length-standard-in-step.md](commit-guardian/open-low-ki-cg-20261014-no-gate-keeps-the-document-length-standard-in-step.md) |
+| `low` | KI-CG-20261116-arch-bypass-token-reads-the-previous-commit-message — five pre-commit hooks read `[NO-ARCH-UPDATE]` from the previous commit's message (`COMMIT_EDITMSG` / `git log -1`), so a commit's own token is ignored and the next commit is silently excused; graded medium, same root cause as KI-CG-20260901 | [open-low-ki-cg-20261116-arch-bypass-token-reads-the-previous-commit-message.md](commit-guardian/open-low-ki-cg-20261116-arch-bypass-token-reads-the-previous-commit-message.md) |
+| `low` | KI-CG-20261116-removing-a-feedback-id-line-is-not-caught — `check-feedback-id` judges only sign-off headings a commit adds, so deleting the `feedback-id:` line under an existing heading passes unnoticed; left out of GE-123e by decision | [open-low-ki-cg-20261116-removing-a-feedback-id-line-is-not-caught.md](commit-guardian/open-low-ki-cg-20261116-removing-a-feedback-id-line-is-not-caught.md) |
+| `low` | KI-CG-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change — the shared change-set source checks only that git started, not its exit status, so a failing `git diff --cached` comes back as a clean empty change and every consumer passes having examined nothing; graded medium, fix scheduled under GE-123e-4-i | [open-low-ki-cg-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change.md](commit-guardian/open-low-ki-cg-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change.md) |
 
 ## Resolved
 
