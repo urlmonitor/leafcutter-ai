@@ -45,6 +45,16 @@ delivers_to:
 expects_from:
   ac_id: TQ-100a-1
   contract: "A suite that runs to completion despite individual broken files, so the per-test linkage decision is applied across the whole loadable suite."
+test_spec:
+  - name: test_tq_100b_1_a_not_done_ac_failure_is_informational_and_does_not_fail_the_run
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run a real pytest session with scripts.ac_store.pytest_ac_enforcement loaded, AC_ENFORCE_STRICT unset, over a failing test tagged '# covers: <AC-ID>' whose AC is todo in a synthetic store: the test is reported as an expected failure that stays visible in the output, and the session exit status is 0."
+    must_catch:
+      - "the not-done AC's failure is left as a real failure, so the run exits 1"
+      - "the failure is dropped from the output instead of being reported informationally"
 origin_agent: business-analyst
 created: 2026-06-24
 amended_by:
@@ -52,11 +62,16 @@ amended_by:
     by: it-po
     at: 2026-06-24
     note: "Added it_requirements (read-AC-store-once-per-session; reuse scan_ac_store.py loader not copy-paste; deterministic partition under pytest-randomly; fail-safe on unreadable AC => enforced; ADR-001 template/deploy parity). Confirmed python-coder + delivers_to test-runner. This is the core session-scoped linkage component the rest of the b/c/e family consumes via expects_from."
+  - reason: "child added; test contract the schema requires"
+    by: BrainCandy
+    at: 2026-11-16
+    note: "Added TQ-100b-1-iv to covered_by. Staging this parent with it made check-ac-schema refuse the record, because an approved L2 code AC must carry a test_spec and this one never had one, so a test_spec derived from the criteria was added. criteria untouched."
 superseded_by: null
 covered_by:
   - TQ-100b-1-i
   - TQ-100b-1-ii
   - TQ-100b-1-iii
+  - TQ-100b-1-iv
 implemented_by: []
 notes: |
   Mechanism (settled): the existing '# covers: <AC-ID>' tag (already mandated by
