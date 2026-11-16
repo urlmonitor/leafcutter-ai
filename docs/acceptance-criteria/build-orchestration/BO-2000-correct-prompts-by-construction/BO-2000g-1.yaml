@@ -1,0 +1,492 @@
+id: BO-2000g-1
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Every phase sign-off example an agent is told to copy opens its body with a feedback-id line"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g.yaml
+criteria: |
+  Given the Comments-entry examples that agent templates and skills give an agent to
+    write as its own phase sign-off, including at minimum:
+      - the python-coder template's red-baseline sign-off example, whose body today
+        opens with `red_baseline_results:` and carries no feedback-id line;
+      - the test-writer template's non-code skip entry
+        ("no production-code agent in this ticket — no tests required");
+      - the status-checker template's auto-close entry
+        ("auto-closed: matched merge commit <sha>");
+      - the signoff skill's own worked examples: the research-agent entry in the clean
+        sign-off's "before" excerpt, the python-coder and pr-reviewer entries in the
+        failed-path example, and the architect-review entry in the handoff example,
+  When an agent reads any one of those examples,
+  Then the first line of the example's body (the line directly under its heading) is a
+    `feedback-id:` line,
+  And that line's value is either a real-id placeholder spelling from the signoff
+    skill's documented list (telling the agent to put the id the feedback submission
+    step printed), or the failure fallback exactly as the signoff skill documents it
+    (today `feedback-id: (submit-failed)`),
+  And every body line the example carried before the change (for example
+    `red_baseline_results:` and its test entries) is still present, in its original
+    order, below the feedback-id line,
+  And no phase sign-off example uses `feedback-id: (not-a-signoff)`.
+
+  Given the signoff skill, which today documents no real-id placeholder spelling,
+  When an agent reads it,
+  Then it holds exactly one documented list of the real-id placeholder spellings that a
+    copyable example may use,
+  And that list includes every spelling a shipped example already uses --
+    `fb_<date>_<short-hash>` (documentation-verifier, live-surface-tester,
+    user-surface-smoker), `<fb_id>` (the write-c4-diagram skill) and
+    `fb_YYYY-MM-DD_XXXXXXXX` (test-writer) -- so none of those examples is rewritten
+    for its spelling,
+  And every copyable example in the agent templates and skills that carries a real-id
+    placeholder uses a spelling from that list.
+
+  Given the three heading examples that are shown only to illustrate the heading schema
+    and are not entries to copy -- the signoff skill's heading-schema block
+    (`### YYYY-MM-DD HH:MM — <agent-name> (status: ok|blocker|question|handoff)`), the
+    ticket-authoring skill's Comments-section heading line, and the building-epics
+    skill's routing illustration
+    (`### YYYY-MM-DD HH:MM — <agent> (status: ok|handoff|blocker|question)`),
+  When an agent reads any one of them,
+  Then it carries the explicit heading-schema-illustration mark that the signoff skill
+    defines, so a reader can tell it apart from an entry to copy.
+
+  Given live-surface-tester's skipped-run sign-off example, whose heading today carries
+    `(status: skipped)`, which is not one of the signoff skill's four status values
+    (ok, blocker, question, handoff),
+  When an agent reads it,
+  Then its heading carries `(status: ok)`,
+  And its body still states that the phase was skipped and why, in its existing
+    `Skipped: <reason ...>` line below the feedback-id line,
+  And no other live-surface-tester example changes its status value.
+depends_on:
+  - BO-2000g
+doc_links:
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/status-checker.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Added by the IT PO (2026-11-16): the routing illustration at ~:555 is a third heading-schema illustration that needs the mark. See it_requirements."
+  - path: templates/agents/live-surface-tester.md
+    relationship: modifies
+    status: exists
+    relevance: "Added by the IT PO (2026-11-16, final reconciliation): the skipped-run sign-off example's heading at ~:323 changes from (status: skipped) to (status: ok). Only that one heading line changes. See it_requirements."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Templates are the source; the built copies under .claude/ and the output root are never edited."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time check that the corrected examples must pass."
+assigned_agent: llm-expert
+estimated_complexity: M
+declared_files:
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/python-coder.md
+    state: existing
+  - path: templates/agents/test-writer.md
+    state: existing
+  - path: templates/agents/status-checker.md
+    state: existing
+  - path: templates/skills/ticket-authoring/SKILL.md
+    state: existing
+  - path: templates/skills/building-epics/SKILL.md
+    state: existing
+  - path: templates/agents/live-surface-tester.md
+    state: existing
+it_requirements:
+  - >-
+    Edit the template sources only (templates/agents/, templates/skills/). Never edit the
+    built copies under .claude/ or the output root (ADR-001). No build is needed to check this
+    record.
+  - >-
+    PLACEHOLDER SPELLINGS ARE DEFINED ONCE. The signoff skill does not document any real-id
+    placeholder spelling today. Its examples use only concrete ids such as
+    fb_2026-05-14_a3f2c891. This record adds one dedicated subsection to the signoff skill that
+    lists every real-id placeholder spelling a copyable example may use. Each spelling is written
+    as a code span, so the lint (BO-2000g-3) and the proof (BO-2000g-4) read the list from the
+    skill and keep no copy of it. The list must include every spelling already shipped in an
+    example: `fb_<date>_<short-hash>` (documentation-verifier, live-surface-tester,
+    user-surface-smoker), `<fb_id>` (write-c4-diagram) and `fb_YYYY-MM-DD_XXXXXXXX`
+    (test-writer.md ~:1211). The one exception: an example with an unlisted spelling may be
+    rewritten to a listed spelling in this same change. Only test-writer.md is declared here, so
+    the first two spellings must be listed.
+  - >-
+    HEADING-SCHEMA-ILLUSTRATION MARK. The signoff skill defines the mark once, as a fixed literal
+    token. The definition says which single line the mark annotates, and that it exempts that one
+    heading and nothing else in its fenced block or file. Place the mark on three illustrations:
+    the signoff skill's heading-schema block (~:721), the ticket-authoring skill's
+    Comments-section heading line (~:266), and the building-epics skill's routing illustration
+    (~:555, `### YYYY-MM-DD HH:MM — <agent> (status: ok|handoff|blocker|question)`). The criteria
+    do not list the third one, but the lint fails on it when it is unmarked. The mark must not
+    change how the illustrated heading reads to an agent.
+  - >-
+    Each corrected example opens with a documented real-id placeholder, never with the failure
+    fallback. An example whose default is (submit-failed) invites the hand-typed fallback that the
+    KI recorded on 2026-10-10 and 2026-10-13. The fallback stays described where signoff §2a
+    describes it. It follows that description when INF-500d-3 changes the form, and no example
+    copies the form.
+  - >-
+    INSERT ONLY. Each corrected example gains exactly one line, the feedback-id line, directly
+    under its heading. No existing body line is removed, reworded, re-indented or reordered. The
+    inserted line takes the example's own body indentation. Several examples are nested inside
+    list items, for example test-writer ~:273 and status-checker ~:230.
+  - >-
+    In the python-coder red-baseline example (~:332), the feedback-id line goes directly under
+    the heading, ahead of `red_baseline_results:`. Placing it anywhere below body line 1 is a
+    defect, even though the commit-time check reads two lines (BO-2000g-3-i, BO-2000g-4-i).
+  - >-
+    After the change, the research-agent entry in signoff §6.1's "before" excerpt (~:845) must be
+    identical to its copy in the "after" excerpt (~:858). Today the worked example shows an
+    append-only entry gaining a line between before and after.
+  - >-
+    Do not edit the templates whose examples already comply: user-surface-smoker,
+    documentation-verifier and write-c4-diagram. Their spellings are covered by the placeholder
+    list. live-surface-tester is edited in exactly one line: the heading of its skipped-run
+    sign-off example (~:323, `### YYYY-MM-DD HH:MM — live-surface-tester (status: skipped)`)
+    changes its status tag to `(status: ok)`. Nothing else in that file changes: not the
+    example's feedback-id line or its `Skipped: <reason ...>` body line, not the ok and blocker
+    examples (~:297, ~:307), not the frontmatter, and not the prose that mentions
+    `(status: skipped)` (about :10, :37, :52, :67, :90-92, :106, :142, :229-231, :291). See the
+    IT PO caveat on that prose.
+  - >-
+    SHARED FILE WITH INF-500d-3-iv AND INF-500d-3-v. templates/agents/live-surface-tester.md is
+    also edited by INF-500d-3-iv (approved), which rewrites the executable capture block in the
+    "Feedback Submission (signoff §2a)" section (~:355-380). INF-500d-3-v does not edit this
+    template source: it edits templates/agents/_signoff_block.md, which the build appends to the
+    deployed live-surface-tester, so the deployed file holds text from all three records. To
+    avoid conflicts: (1) this record touches only the one heading line in the "Signoff Comment
+    Schema" section (~:294-331) and never the "Feedback Submission" section or the appended
+    block; (2) locate the line by its text, not its line number, because INF-500d-3-iv may land
+    first and shift lines; (3) if both records are built in one delivery, apply them as separate
+    edits to the template source and rebuild once; (4) no record edits the deployed copy
+    (ADR-001).
+  - >-
+    The IT PO verified these locations on 2026-11-16. Line numbers drift, so find each one by its
+    text: python-coder.md:332, test-writer.md:273, status-checker.md:230, signoff SKILL.md :721,
+    :845, :858, :877, :880 and :894, ticket-authoring SKILL.md:266, building-epics SKILL.md:555,
+    live-surface-tester.md:323.
+test_intent:
+  - clause: "the first line of the example's body (the line directly under its heading) is a `feedback-id:` line"
+    needs_test: true
+    reason: "Each named example is a separate block in a separate file, and the test must catch both an example left without the line and one with the line below its first body line, as in today's python-coder block."
+  - clause: "that line's value is either a real-id placeholder spelling from the signoff skill's documented list (telling the agent to put the id the feedback submission step printed), or the failure fallback exactly as the signoff skill documents it (today `feedback-id: (submit-failed)`)"
+    needs_test: true
+    reason: "An example given an invented id that looks concrete, `TBD`, or a placeholder spelling the signoff skill does not list would still look fixed, so the value must be checked against the skill's own list."
+  - clause: "every body line the example carried before the change (for example `red_baseline_results:` and its test entries) is still present, in its original order, below the feedback-id line"
+    needs_test: true
+    reason: "A correction that drops, rewords or reorders the red_baseline_results entries or the skip-reason text passes a first-line check while changing what the agent is told to write."
+  - clause: "no phase sign-off example uses `feedback-id: (not-a-signoff)`"
+    needs_test: true
+    reason: "The lint accepts (not-a-signoff) on any example, so only a check over the phase sign-off examples catches a fix that uses the note value in place of a real-id placeholder."
+  - clause: "it carries the explicit heading-schema-illustration mark that the signoff skill defines, so a reader can tell it apart from an entry to copy"
+    needs_test: true
+    reason: "An unmarked illustration makes the lint fail on the corrected tree, and a mark placed on a copyable example instead would exempt the very entry that must be fixed."
+  - clause: "it holds exactly one documented list of the real-id placeholder spellings that a copyable example may use"
+    needs_test: true
+    reason: "The lint and the proof read the list from the skill, so a missing list leaves them nothing to read and a second list lets the two copies drift apart."
+  - clause: "that list includes every spelling a shipped example already uses -- `fb_<date>_<short-hash>` (documentation-verifier, live-surface-tester, user-surface-smoker), `<fb_id>` (the write-c4-diagram skill) and `fb_YYYY-MM-DD_XXXXXXXX` (test-writer) -- so none of those examples is rewritten for its spelling"
+    needs_test: true
+    reason: "A list that leaves out one shipped spelling makes the lint fail on a template that already complies, and only a check of each named spelling against the list catches the gap."
+  - clause: "every copyable example in the agent templates and skills that carries a real-id placeholder uses a spelling from that list"
+    needs_test: true
+    reason: "A new example with an unlisted spelling looks correct to a reader, and only a walk of the whole agent and skill trees against the list finds it."
+  - clause: "its heading carries `(status: ok)`"
+    needs_test: true
+    reason: "The skipped-run heading is one line in one file, and a correction that leaves `(status: skipped)` or picks another of the four values is a text difference a check can see."
+  - clause: "its body still states that the phase was skipped and why, in its existing `Skipped: <reason ...>` line below the feedback-id line"
+    needs_test: true
+    reason: "Changing the status to ok while dropping or rewording the Skipped line would hide that the phase did not run, so the line must be checked in place below the feedback-id line."
+  - clause: "no other live-surface-tester example changes its status value"
+    needs_test: true
+    reason: "A blanket replace of the status tags across the file would also change the blocker example, and only a check of every other example's status catches it."
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Consumed by BO-2000g-3, BO-2000g-3-ii and BO-2000g-4. Delivers the corrected phase sign-off
+      examples (including live-surface-tester's skipped-run example, whose heading now carries
+      (status: ok)) and three marked heading-schema illustrations, which the template lint checks and
+      the real-hook proof commits. Also delivers two definitions in the signoff skill
+      (templates/skills/signoff/SKILL.md): the real-id placeholder spellings, each a code span in
+      one dedicated subsection, and the literal token of the heading-schema-illustration mark. The
+      lint and the proof read both from there. The lint fails loudly when it cannot find either
+      one.
+expects_from:
+  - ac_id: INF-500d-3
+    contract: >-
+      The failure-fallback marker form "feedback-id: (submit-failed:<reason>:<category>)" and the
+      legacy bare "(submit-failed)", from templates/scripts/feedback/submit_failure_reasons.json.
+      Until INF-500d-3 and its instruction-surface companion land, the signoff skill documents
+      the bare form. This record names the fallback only by reference to the skill and copies no
+      form of it, so nothing here changes when the form changes.
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Locations verified 2026-11-16 in this checkout (line numbers drift; re-locate by text):
+  python-coder.md:332 (red-baseline example; the commit-time check looks at most two
+  added lines below a heading, so it refuses this block even with a real id placed after
+  `red_baseline_results:` and its first entry); test-writer.md:273; status-checker.md:230;
+  signoff SKILL.md:845, :877, :880, :894. :880 (the pr-reviewer blocker entry) was not
+  in the dispatch's list but has the same defect and sits in the same example block.
+  The heading-schema illustrations are signoff SKILL.md:721 and ticket-authoring
+  SKILL.md:266.
+
+  BOUNDARY. BO-2000a-3 (approved, done) specifies the undifferentiated `(submit-failed)`
+  fallback and is NOT reworded. This record refers to the fallback "as the signoff skill
+  documents it" so that when INF-500d-3 settles a reason vocabulary the examples follow
+  the skill without a change to this record. The commit-time check's own value-shape
+  check is out of scope here (it waits for INF-500d-3).
+
+  Several templates already comply and need no change: user-surface-smoker,
+  documentation-verifier, live-surface-tester (`fb_<date>_<short-hash>`) and the
+  write-c4-diagram skill (`<fb_id>`).
+
+  IT PO RECONCILIATION (2026-11-16, after the BA's final-gate amendment). The criteria
+  now also change live-surface-tester's skipped-run heading to (status: ok), so that
+  template is declared, edited in one heading line only. Its feedback-id spelling still
+  complies and is not rewritten. CAVEAT: the template's prose still tells the agent to
+  "emit (status: skipped)" in about ten places (:10, :37, :52, :67, :90-92, :106, :142,
+  :229-231, :291). Those lines are outside this record's criteria and are left as they
+  are, so after this change the example says ok while the prose says skipped. A
+  follow-up record for that prose is recommended.
+test_spec:
+  - name: test_named_signoff_examples_open_with_a_feedback_id_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Parametrised over the named phase sign-off examples (python-coder red-baseline, test-writer
+      non-code skip, status-checker auto-close, signoff 6.1 research-agent before entry, 6.2
+      python-coder and pr-reviewer entries, 6.3 architect-review entry). Each is located by its
+      heading text and agent name, never by line number, and the line directly under the heading
+      must start with feedback-id:. A blank line, red_baseline_results: or the id on body line 3
+      (today's python-coder block) fails.
+    proves_clause: 'the first line of the example''s body (the line directly under its heading) is a `feedback-id:` line'
+    code_file: templates/agents/python-coder.md
+  - name: test_feedback_id_value_is_a_documented_placeholder_or_the_documented_fallback
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      For the same named examples the value after feedback-id: is exactly one of the code-span
+      spellings read from the signoff skill's placeholder subsection, or the fallback exactly as
+      signoff 2a documents it (read from the skill, not retyped). Per the IT PO the corrected
+      examples must use a placeholder, so the test also fails when a corrected example carries the
+      fallback form. TBD, an invented concrete-looking id and an unlisted spelling fail.
+    proves_clause: 'that line''s value is either a real-id placeholder spelling from the signoff skill''s documented list (telling the agent to put the id the feedback submission step printed), or the failure fallback exactly as the signoff skill documents it (today `feedback-id: (submit-failed)`)'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_pre_change_body_lines_survive_in_order_below_the_feedback_id_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Frozen pre-change body lines of each named example are kept as test data (for python-coder
+      red_baseline_results: and its four test entries, the test-writer and status-checker lines,
+      the signoff 6.x entries). The corrected example's body minus its first line equals the frozen
+      lines exactly, same order and indentation. Also asserts the research-agent entry in the 6.1
+      before excerpt is identical to its copy in the after excerpt.
+    proves_clause: 'every body line the example carried before the change (for example `red_baseline_results:` and its test entries) is still present, in its original order, below the feedback-id line'
+    code_file: templates/agents/python-coder.md
+  - name: test_no_phase_signoff_example_uses_not_a_signoff
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The named phase sign-off examples (the same set as the first test) never carry
+      feedback-id: (not-a-signoff). The commit agent audit entry and the supervisor notes are
+      excluded because they are notes (BO-2000g-2).
+    proves_clause: 'no phase sign-off example uses `feedback-id: (not-a-signoff)`'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_three_heading_schema_illustrations_carry_the_defined_mark
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The mark token is read from its definition in the signoff skill (fail loudly if absent). The
+      signoff heading-schema block, the ticket-authoring Comments heading line and the building-epics
+      routing illustration are each located by file and heading text and must carry the mark. The
+      mark must not appear on any copyable example, and the illustrated heading text must still
+      read as before.
+    proves_clause: 'it carries the explicit heading-schema-illustration mark that the signoff skill defines, so a reader can tell it apart from an entry to copy'
+    code_file: templates/skills/ticket-authoring/SKILL.md
+  - name: test_signoff_skill_holds_exactly_one_placeholder_list
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The signoff skill has exactly one dedicated subsection listing real-id placeholder spellings,
+      each a code span. A second list elsewhere in the skill, or no list, fails.
+    proves_clause: 'it holds exactly one documented list of the real-id placeholder spellings that a copyable example may use'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_placeholder_list_includes_every_shipped_spelling
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Each of fb_<date>_<short-hash>, <fb_id> and fb_YYYY-MM-DD_XXXXXXXX is checked individually
+      against the list read from the skill, and the live-surface-tester, write-c4-diagram and
+      test-writer examples that use them are asserted still unrewritten for spelling.
+    proves_clause: 'that list includes every spelling a shipped example already uses -- `fb_<date>_<short-hash>` (documentation-verifier, live-surface-tester, user-surface-smoker), `<fb_id>` (the write-c4-diagram skill) and `fb_YYYY-MM-DD_XXXXXXXX` (test-writer) -- so none of those examples is rewritten for its spelling'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_every_placeholder_example_in_both_trees_uses_a_listed_spelling
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Walks templates/agents/ and templates/skills/ at any depth on each run and fails when no
+      placeholder-carrying feedback-id line is found. Every feedback-id: line whose value contains a
+      placeholder shape must match a spelling read from the signoff skill. Includes the write-c4-diagram
+      and test-writer ~:1211 examples. A new unlisted spelling in any file fails and names it.
+    proves_clause: 'every copyable example in the agent templates and skills that carries a real-id placeholder uses a spelling from that list'
+    code_file: templates/skills/write-c4-diagram/SKILL.md
+  - name: test_skipped_run_example_heading_carries_status_ok
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The live-surface-tester skipped-run example (found by its Skipped: body line) has a heading
+      ending (status: ok). (status: skipped) or any of blocker, question, handoff fails.
+    proves_clause: 'its heading carries `(status: ok)`'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_skipped_run_example_keeps_its_skipped_line_below_the_feedback_id_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      In the same example the feedback-id line is the first body line and the existing
+      Skipped: <reason ...> line is still present, unchanged, below it (after the completion_manifest
+      block).
+    proves_clause: 'its body still states that the phase was skipped and why, in its existing `Skipped: <reason ...>` line below the feedback-id line'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_other_live_surface_tester_examples_keep_their_status_values
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The three Signoff Comment Schema headings are exactly ok, blocker and ok (the former skipped).
+      The ok and blocker examples still carry their original statuses, and no fourth example appears.
+    proves_clause: 'no other live-surface-tester example changes its status value'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_corrected_examples_and_definitions_reach_the_deployed_agent_prompts
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Marked shared_layout_reader and takes the shared_reference_layout fixture. Reads the DEPLOYED
+      signoff skill and the deployed python-coder template (what an agent loads) and asserts the
+      feedback-id line under the python-coder red-baseline heading and the placeholder subsection are
+      present there. Fails, never skips, when the layout or either deployed file is missing. Spawns no
+      build.py and never writes into the layout.
+    proves_clause: 'the first line of the example''s body (the line directly under its heading) is a `feedback-id:` line'
+    code_file: templates/agents/python-coder.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/skills/ticket-authoring/SKILL.md
+  - templates/skills/write-c4-diagram/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/agents/python-coder.md
+  - templates/agents/test-writer.md
+  - templates/agents/status-checker.md
+  - templates/agents/live-surface-tester.md
+  - templates/agents/_signoff_block.md
+  - scripts/suite_performance/pytest_shared_reference_layout.py
+  - unit_tests/prompt_assembly/test_signoff_block_protocol.py
+file_findings:
+  - file: templates/skills/signoff/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the heading schema block, the section 6 worked examples and the 2a fallback text that the criteria change.
+    decision: null
+  - file: templates/agents/python-coder.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the red-baseline sign-off example (heading at 332, body opens with red_baseline_results:) that the criteria change.
+    decision: null
+  - file: templates/agents/test-writer.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the non-code skip entry at 273 with no feedback-id line, and a compliant example at 1210 using fb_YYYY-MM-DD_XXXXXXXX.
+    decision: null
+  - file: templates/agents/status-checker.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the auto-close entry at 230 with no feedback-id line.
+    decision: null
+  - file: templates/skills/ticket-authoring/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the Comments-section heading illustration at 266 that needs the mark.
+    decision: null
+  - file: templates/skills/building-epics/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the routing illustration at 555 that needs the mark.
+    decision: null
+  - file: templates/agents/live-surface-tester.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It holds the skipped-run example heading at 323 carrying (status: skipped) that the criteria change to ok."
+    decision: null
+file_findings_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/python-coder.md
+  - templates/agents/test-writer.md
+  - templates/agents/status-checker.md
+  - templates/skills/ticket-authoring/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/agents/live-surface-tester.md

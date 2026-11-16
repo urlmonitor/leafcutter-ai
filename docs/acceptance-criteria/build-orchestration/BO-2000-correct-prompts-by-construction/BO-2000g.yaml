@@ -1,0 +1,100 @@
+id: BO-2000g
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Copying an example from an agent's instructions never gets the commit refused"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The examples agents copy produce entries the commit accepts the first time.
+
+  Every example entry an agent's instructions or skills tell it to copy opens
+  with a valid feedback id. Notes that sign nothing off say so in the one
+  documented way, so an agent that copies an example faithfully is never
+  refused at commit. An automatic check of the instructions keeps every example
+  in that shape, and each corrected example is proven against the real commit
+  check rather than assumed to pass it.
+depends_on: [BO-2000]
+doc_links:
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+    relevance: "The defect this L1 closes: the instructions give literal entries with no feedback id, and the commit check later refuses the agents that copied them faithfully. Observed on two tickets of one epic (one refused entry on 2026-09-30, four on 2026-10-09)."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000a.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling, split from. BO-2000a owns the portable sign-off protocol itself. This L1 owns the copyable examples of it. The work was first placed under BO-2000a, which took that L1 to 9 L2s against a limit of 5. The person chose to split rather than waive the limit."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123e.yaml
+    relationship: related
+    status: exists
+    relevance: "Companion. GE-123e removes the message-word bypass on the feedback-id check, so a faithfully copied example without an id has no escape route left. This L1 is what makes that safe for agents."
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: "The reference agents read for Comments-entry rules is the signoff skill itself, which BO-2000g-1 and BO-2000g-2 change (llm-expert); no separate document describes it."
+origin_agent: product-owner
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - BO-2000g-1
+  - BO-2000g-2
+  - BO-2000g-3
+  - BO-2000g-4
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN L1. The business analyst wrote this capability as eight
+  records under BO-2000a. That took BO-2000a to 9 L2s against the limit of 5,
+  and the person chose a split over a limit waiver. The cut is natural: BO-2000a
+  is the PROTOCOL an agent follows when it signs off, and this L1 is the
+  EXAMPLES an agent copies. An example that contradicts the protocol is a
+  defect in what the agent is shown, not in what it knows. Its four L2s are
+  being renumbered from BO-2000a-6..9 to BO-2000g-1..4 by the BA in the same
+  change. covered_by lists those four direct children only.
+
+  THE CAPABILITY, in four parts (one per L2, for orientation only; the BA owns
+  the L2 wording):
+    1. Every sign-off example an agent is told to copy opens with a feedback-id
+       line, and nothing the example said before is lost.
+    2. Entries that sign nothing off carry the one documented value,
+       `(not-a-signoff)`. It describes the entry and grants nothing else.
+    3. An automatic check of the instructions fails on any copyable example that
+       is not in that shape. Only an explicitly marked illustration of the
+       heading format is exempt, and only that one heading.
+    4. Each corrected example, written exactly as the instructions give it,
+       passes the real commit check. The uncorrected form is shown to be refused
+       by the same route, so the proof cannot pass vacuously.
+
+  WHY THIS MATTERS NOW. GE-123e (authored the same day) removes the message-word
+  bypass on the feedback-id check. Once it lands, an agent that copies an
+  example without an id is refused with no way round it. These examples must be
+  corrected with or before GE-123e, or GE-123e will turn a known annoyance into
+  stalled drives.
+
+  BOUNDARY. BO-2000a-3 (done) owns the fallback value used when feedback cannot
+  be submitted, and is not reworded. The shape of that fallback's value waits on
+  INF-500d-3 and is out of scope here.
+
+  WHY NO DOCUMENTATION TRIGGER. The signoff skill is the reference agents read
+  for entry format. It must document `(not-a-signoff)` and the mark for a
+  heading-format illustration, or the examples will drift back. That update is
+  made by BO-2000g-1 and BO-2000g-2, which change the signoff skill directly,
+  not by a separate documentation record.
+
+  change_target is `prompt` because the artifacts corrected are agent
+  instructions and skills. Authored at the PO stage, L1 only. BO-2000 is now at
+  7 of 7 L1s. Any further capability here needs a split, not a cap waiver.

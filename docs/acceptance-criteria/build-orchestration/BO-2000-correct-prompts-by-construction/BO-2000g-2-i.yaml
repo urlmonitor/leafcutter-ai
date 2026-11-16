@@ -1,0 +1,229 @@
+id: BO-2000g-2-i
+components:
+  - build_orchestration
+  - feedback_collector
+title: "(not-a-signoff) is comment text only: it is never a feedback writer or category and widens no category's writers"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-2.yaml
+criteria: |
+  Given both copies of the feedback categories file (source and template), after
+    BO-2000g-2 has landed,
+  When either copy is read,
+  Then `not-a-signoff` appears in no category's allowed_writers and is the name of no
+    category,
+  And neither copy mentions `(not-a-signoff)` in a comment or note as a writer or
+    category value,
+  And every category's allowed_writers list is identical to its list before
+    BO-2000g-2, so ticket-supervisor has been added to none of them.
+
+  Given the feedback submission step is called once with `not-a-signoff` as the
+    submitting phase, and once with `not-a-signoff` as the category,
+  When each call runs,
+  Then each call is refused in the same way as any other unregistered writer or
+    unknown category, and no feedback record is written,
+  So the value cannot become a way to file feedback, or a sentinel that submission
+    honours.
+depends_on:
+  - BO-2000g-2
+doc_links:
+  - path: config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: templates/config/feedback_categories.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Sets the rule that no unimplemented sentinel is documented in either categories file. This record applies that rule to (not-a-signoff)."
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the declared sink. The submission runs here write to a declared sink in a temporary directory, never to the repository's feedback log."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+declared_files:
+  - path: unit_tests/feedback/test_bo_2000g_2_i.py
+    state: to_be_created
+it_requirements:
+  - >-
+    This record only adds a test; no production file changes. If a clause can pass only by
+    changing either categories file or submit_feedback.py, stop and report it, because it means
+    BO-2000g-2 was carried out the wrong way.
+  - >-
+    The assertions run on each copy of the categories file separately
+    (config/feedback_categories.yaml and templates/config/feedback_categories.yaml), so a change
+    to one copy alone is caught.
+  - >-
+    BASELINE, NOT ABSENCE. ticket-supervisor ALREADY appears in several categories'
+    allowed_writers (config/feedback_categories.yaml ~:124, :157, :190 and :204, verified
+    2026-11-16). The check is therefore "no category's allowed_writers changed", never
+    "ticket-supervisor appears nowhere". The baseline is each category's allowed_writers as it
+    stands on origin/main just before BO-2000g-2 lands. It is kept as data in the test, together
+    with the commit it was taken from. When a later change edits writers on purpose, it updates
+    the baseline in the same change, and the test's failure message says so.
+  - >-
+    The "no mention" clause is checked as: the text `not-a-signoff` does not occur anywhere in
+    either file. This is deliberately stricter than the criteria. Any mention in a categories
+    file amounts to documenting a sentinel, which INF-100c-5-ii forbids.
+  - >-
+    SUBMISSION ARM. Run the real entry point, templates/scripts/feedback/submit_feedback.py, as a
+    subprocess from a copied temporary layout. scripts/feedback/ is not tracked in this checkout,
+    so the template is the source. Each run gets its own declared sink and a confined TMPDIR
+    (ADR-069, INF-500d-4), so the repository's feedback log is never written. Reuse INF-500d-3's
+    temporary-layout helper if it exists.
+  - >-
+    "Refused in the same way" is judged against a control call in the same run that uses a
+    different unregistered writer (or a different unknown category). Both calls must exit with
+    the same status, both must leave stdout empty and the sink unchanged, and their stderr must
+    be identical once the offending value is masked. The test therefore stays valid after
+    INF-500d-3 adds its 'submit-failed:<reason>:<category>' line.
+  - >-
+    No build.py. Four submission runs plus file reads, all within 10 s.
+test_intent:
+  - clause: "`not-a-signoff` appears in no category's allowed_writers and is the name of no category"
+    needs_test: true
+    reason: "The wrong version is the rejected design itself: registering not-a-signoff as a writer or category so that note entries could carry a real id."
+  - clause: "neither copy mentions `(not-a-signoff)` in a comment or note as a writer or category value"
+    needs_test: true
+    reason: "A comment in either file that documents (not-a-signoff) as a sentinel violates INF-100c-5-ii, and only a text search over both copies catches it."
+  - clause: "every category's allowed_writers list is identical to its list before BO-2000g-2, so ticket-supervisor has been added to none of them"
+    needs_test: true
+    reason: "Adding ticket-supervisor to complete or to another category so that proxy sign-offs can submit is the wrong version the person rejected, and it changes nothing else a test would see."
+  - clause: "each call is refused in the same way as any other unregistered writer or unknown category, and no feedback record is written, So the value cannot become a way to file feedback, or a sentinel that submission honours"
+    needs_test: true
+    reason: "A submission path that special-cases not-a-signoff, by accepting it or by exiting 0 without writing, would turn the value into a sentinel, and only running the real entry point beside a control value shows it is treated like any other."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000g-2
+  contract: "The (not-a-signoff) value as defined in the signoff skill. This record proves the value stays out of the feedback submission vocabulary."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Nobody asked for this record. It is the boundary that stops BO-2000g-2 being carried
+  out the wrong way: by registering ticket-supervisor or a "not-a-signoff" sentinel as a
+  writer so that the entries could carry a "real" id. The person rejected adding
+  ticket-supervisor to any category's writers. INF-100c-5-ii forbids documenting a
+  sentinel that submission does not implement. Expect nothing to change in production
+  code for this record. It guards an absence, and each clause's wrong version is "someone
+  added it".
+test_spec:
+  - name: test_not_a_signoff_is_no_writer_and_no_category_in_either_copy
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Parametrised over config/feedback_categories.yaml and templates/config/feedback_categories.yaml,
+      each parsed on its own. No allowed_writers list contains not-a-signoff and no category id
+      equals it, in either copy.
+    proves_clause: '`not-a-signoff` appears in no category''s allowed_writers and is the name of no category'
+    code_file: templates/config/feedback_categories.yaml
+    must_catch:
+      - not-a-signoff added to a category's allowed_writers in only one of the two copies
+      - a category registered with the id not-a-signoff so that note entries could carry a real id
+      - a test that parses only the source copy and never the template copy
+  - name: test_neither_categories_copy_contains_the_text_not_a_signoff
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The raw text of each copy, read separately, does not contain the substring not-a-signoff
+      anywhere, including comments and header notes. Deliberately stricter than the criteria
+      because INF-100c-5-ii forbids documenting an unimplemented sentinel.
+    proves_clause: 'neither copy mentions `(not-a-signoff)` in a comment or note as a writer or category value'
+    code_file: config/feedback_categories.yaml
+    must_catch:
+      - a comment in the header of templates/config/feedback_categories.yaml documenting (not-a-signoff) as a sentinel
+      - a note in the source copy that mentions (not-a-signoff) as a writer value
+      - a check that scans only parsed YAML values and so misses comments
+  - name: test_every_categorys_allowed_writers_match_the_recorded_baseline
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Per copy and per category, allowed_writers equals a baseline kept as data in the test together
+      with the origin/main commit it was taken from (ticket-supervisor is already in four categories,
+      so absence is never asserted). The failure message tells a maintainer to update the baseline in
+      the same change when writers change on purpose.
+    proves_clause: 'every category''s allowed_writers list is identical to its list before BO-2000g-2, so ticket-supervisor has been added to none of them'
+    code_file: config/feedback_categories.yaml
+    must_catch:
+      - ticket-supervisor added to the complete category so proxy sign-offs could submit
+      - ticket-supervisor added to a different category than complete
+      - a writer silently removed from a category
+      - a baseline check that only asserts ticket-supervisor appears nowhere, which fails on the existing four categories
+  - name: test_submission_refuses_not_a_signoff_like_any_other_unregistered_value
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Runs templates/scripts/feedback/submit_feedback.py as a subprocess from a copied temporary
+      layout (scripts/feedback/ is not tracked here), each run with its own declared sink and a TMPDIR
+      inside tmp_path. Four runs: not-a-signoff as --phase and a control unregistered phase; not-a-signoff
+      as --category and a control unknown category. Per pair: same exit status (non-zero), empty
+      stdout, sink unchanged, and stderr identical once the offending value is masked.
+    proves_clause: 'each call is refused in the same way as any other unregistered writer or unknown category, and no feedback record is written, So the value cannot become a way to file feedback, or a sentinel that submission honours'
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - submission special-cases not-a-signoff and exits 0 without writing
+      - submission accepts not-a-signoff and writes a record
+      - a refusal for not-a-signoff whose message or exit status differs from the control
+      - a run that writes into the repository's own feedback log instead of the declared sink
+  - name: test_submit_feedback_entry_point_is_live_in_the_copied_layout
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      The same copied layout runs the real submit_feedback.py CLI with a registered writer
+      (python-coder, complete) as a subprocess and asserts exit 0 and a printed feedback id, so the
+      refusals above are known to come from validation and not from a broken layout.
+    proves_clause: 'each call is refused in the same way as any other unregistered writer or unknown category, and no feedback record is written, So the value cannot become a way to file feedback, or a sentinel that submission honours'
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_control_submission_record_is_read_back_from_the_declared_sink
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      The registered-writer control run is allowed to write to its real declared sink inside tmp_path,
+      and the test reads the JSONL back and finds exactly one record whose feedback_id equals the
+      printed stdout. This shows the sink is real, so the no-record assertion on the refused runs is
+      not vacuous.
+    proves_clause: 'each call is refused in the same way as any other unregistered writer or unknown category, and no feedback record is written, So the value cannot become a way to file feedback, or a sentinel that submission honours'
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/config/feedback_categories.yaml
+  - config/feedback_categories.yaml
+  - templates/scripts/feedback/submit_feedback.py
+  - unit_tests/feedback/test_submit_feedback_unknown_agent.py
+  - unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py
