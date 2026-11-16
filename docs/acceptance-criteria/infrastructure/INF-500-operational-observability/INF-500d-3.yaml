@@ -77,7 +77,11 @@ origin_agent: BrainCandy
 created: 2026-08-13
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-500d-3-i
+  - INF-500d-3-ii
+  - INF-500d-3-iii
+  - INF-500d-3-iv
 implemented_by: []
 change_target:
   - code
