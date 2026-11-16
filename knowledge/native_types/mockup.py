@@ -90,7 +90,7 @@ def extract(root: Path) -> list[NativeRecord]:
                 raise ValueError(f"Mockup {field} must be a nonempty string: {source_path}")
         if "renders" not in metadata or not isinstance(metadata["renders"], (str, type(None))):
             raise ValueError(f"Mockup renders must be a path or null: {source_path}")
-        derived = {"manifest_registered": native_id in manifests}
+        derived: dict[str, object] = {"manifest_registered": native_id in manifests}
         if native_id in manifests:
             entry, locator, declared = manifests[native_id]
             if relative(root, declared) != source_path:

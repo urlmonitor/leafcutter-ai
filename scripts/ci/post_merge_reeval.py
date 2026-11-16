@@ -118,6 +118,8 @@ def list_open_pull_requests(client: GitHubClient, repo: str) -> list[dict]:
 
     Raises ``GitHubError`` when a page cannot be read, is not a list, or a ``next`` link leaves the origin or repeats.
     """
+    path: str | None
+    query: dict | None
     path, query, seen, found = f"/repos/{repo}/pulls", {"state": "open", "base": "main", "per_page": PAGE_SIZE}, set(), []
     for _ in range(MAX_PAGES):
         payload, headers = client.get_with_headers(path, query)

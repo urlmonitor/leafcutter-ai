@@ -81,7 +81,7 @@ def _refused(exc: AppTokenError, what: str) -> PublishError:
     return PublishError(f"The hold App could not {what} ({_status_text(exc.status)}); no check run was published.")
 
 
-def _status_text(status: int) -> str:
+def _status_text(status: int | None) -> str:
     """``HTTP <status>``, or ``no response`` when the request got none (``GitHubError.status`` 0)."""
     return f"HTTP {status}" if status else "no response"
 

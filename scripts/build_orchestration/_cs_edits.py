@@ -170,7 +170,7 @@ def unlisted_edits(edits: list[Edit], entries: list[dict]) -> list[Edit]:
     An entry excuses an edit only when it names the same file and symbol, has status
     ``strengthened`` or ``removed``, and its fingerprint equals the edit's current one.
     """
-    listed = set()
+    listed: set[tuple[object, str, object]] = set()
     for e in entries:
         if e.get("status") in LISTED_STATUSES:
             test = str(e.get("test", ""))

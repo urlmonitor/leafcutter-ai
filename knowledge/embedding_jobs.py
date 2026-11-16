@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .contracts import ProjectionSnapshot
-from .ports import EmbeddingProvider
+from .ports import EmbeddingProvider, EmbeddingWriter
 
 import hashlib
 import json
@@ -15,7 +15,7 @@ NORMALIZATION = "provider-output-cosine-v1"
 
 
 async def embed_snapshot(
-    writer: object,
+    writer: EmbeddingWriter,
     snapshot: ProjectionSnapshot,
     provider: EmbeddingProvider | None,
     *,
