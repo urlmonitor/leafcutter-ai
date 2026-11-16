@@ -19,7 +19,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _tq100a_2_support as S  # noqa: E402
 
-_FIXTURE_FILES = ("test_ge_120e_1.py", "test_ge_120e_1_i.py")
+# Paths are relative to unit_tests/portability/. GE-120e-1's suite was split
+# into ge_120e_1/ (2026-11-16): its fixtures and _GIT_ENV_OVERRIDES live in
+# _support.py, and the identity scan below still reads every file of that suite.
+_FIXTURE_FILES = ("ge_120e_1/_support.py", "test_ge_120e_1_i.py")
+_SCANNED_FILES = _FIXTURE_FILES + (
+    "ge_120e_1/test_ge_120e_1_criterion.py",
+    "ge_120e_1/test_ge_120e_1_boundary_and_seam.py",
+    "ge_120e_1/test_ge_120e_1_failure_and_reachability.py",
+)
 
 
 def _fixture_env_overrides(filename: str) -> dict[str, str]:
@@ -59,7 +67,7 @@ class TestTq100a2(unittest.TestCase):
             for var in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
                         "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
                 self.assertIn(var, overrides, f"{fname} must supply {var} (all four)")
-            (wt / f"{fname}.txt").write_text("x\n", encoding="utf-8")
+            (wt / f"{Path(fname).name}.txt").write_text("x\n", encoding="utf-8")
             S.must_git(["add", "."], wt, self.env)
             res = S.git(["commit", "-q", "-m", fname], wt, dict(self.env, **overrides))
             self.assertEqual(res.returncode, 0, res.stderr)
@@ -109,7 +117,7 @@ class TestTq100a2(unittest.TestCase):
         S.must_git(["config", "user.email", S.FIXTURE_EMAIL], wt, self.env)
         self.assertEqual(S.read_key(host, "user.email", self.env), S.FIXTURE_EMAIL)
         # The shipped fixtures must not contain that mutation at any site.
-        for fname in _FIXTURE_FILES:
+        for fname in _SCANNED_FILES:
             src = (S.REPO_ROOT / "unit_tests" / "portability" / fname).read_text(encoding="utf-8")
             self.assertIsNone(
                 re.search(r"""["']config["']\s*,\s*["']user\.(name|email)["']""", src),

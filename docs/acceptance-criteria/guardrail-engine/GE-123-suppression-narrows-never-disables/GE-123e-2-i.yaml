@@ -1,0 +1,166 @@
+id: GE-123e-2-i
+components:
+  - commit_guardian
+title: "A token in the previous commit's message does not excuse the next commit"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with the commit checks installed,
+  And a first commit, made with the inline message "Tidy notes [NO-FEEDBACK-CHECK]",
+    that edits a ticket's prose, adds no sign-off heading, and succeeds,
+  And the file in which git keeps the last commit message, written by git itself
+    during that first commit, now holds the token,
+  When a second commit with the inline message "Add python-coder sign-off" appends
+    the heading "### 2026-11-16 10:05 — python-coder (status: ok)" with no
+    feedback-id line,
+  Then the second commit is refused and the branch tip stays at the first commit,
+  And no output of the second attempt says that the check was skipped.
+
+  Given a first commit made instead through the shared commit step, with a message
+    file whose subject is "Tidy notes" and whose body line is "[NO-FEEDBACK-CHECK]",
+    that adds no sign-off heading and succeeds,
+  When a second commit is made through the shared commit step with a message file
+    holding only "Add python-coder sign-off", appending the same id-less heading,
+  Then the second commit is refused and the branch tip stays at the first commit.
+
+  Given either of the first commits above,
+  When the second commit appends the same heading followed, on the next line, by
+    "feedback-id: fb_2026-11-16_a1b2c3d4",
+  Then the second commit succeeds,
+  Because a check that refuses whenever the previous message carried the token
+    passes the two refusal arms while still reading the wrong commit's message.
+depends_on:
+  - GE-123e-2
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "Directly observed: mid-refusal, the message file the check reads held the PREVIOUS commit's subject. Derived, not yet seen as a wrong outcome: a commit whose predecessor carried the token is silently skipped. The KI's own fix direction asks for exactly this subsequent-commit test."
+  - path: docs/testing/test-angles-failure-catalogue.md
+    relationship: describes
+    status: exists
+    relevance: "FP-7: why the stale file must be produced by a real prior commit, never written by the test."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: GE-123e-2
+  contract: "Removal of every message source the check read for the token, so no message, current or earlier, can change its verdict."
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+it_requirements:
+  - "NO CARRY-OVER: no state left by an earlier commit may influence this commit's verdict. That covers the commit-message file in the git directory, the previous commit's message, and anything cached by an earlier hook run."
+  - "TEST EVIDENCE (binding): git itself produces the stale COMMIT_EDITMSG, through a real successful first commit. One arm makes that commit with inline -m, the other through the shared commit step with a message file. Writing that file by hand is not evidence (FP-7). The precondition in the criteria (the file now holds the token) is asserted after the first commit, so the test cannot pass vacuously on a git version or route that leaves no such file behind."
+  - "Both commits of each arm run in one scratch repository with the hook installed, so the second commit really follows the first. Expected test home: unit_tests/commit_guardian/, reusing GE-123e-1's harness."
+  - "CONFIDENCE LABEL: the silent skip stays DERIVED. It follows from the directly observed stale file but has not been seen as a wrong outcome. Tickets, changelogs and the KI closure must not upgrade it."
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/check_feedback_id.py (ADR-001). The deployed copies are build outputs."
+test_intent:
+  - clause: the second commit is refused and the branch tip stays at the first commit
+    needs_test: true
+    reason: The clause appears in two scenarios, the inline route and the shared commit step's message-file route, and each carry-over path needs its own proof because the stale file must come from a real prior commit on that route, not from a file the test wrote.
+  - clause: no output of the second attempt says that the check was skipped
+    needs_test: true
+    reason: A silent skip honoured from the previous message is exactly the hole, and the skip line is its only trace.
+  - clause: the second commit succeeds, Because a check that refuses whenever the previous message carried the token passes the two refusal arms while still reading the wrong commit's message
+    needs_test: true
+    reason: This negative control fails a check that still reads the previous message and refuses on the token.
+test_spec:
+  - name: test_ge_123e_2_i_second_commit_refused_after_token_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Two real commits in ONE scratch repo with the hook installed, per route. Route A: first commit inline -m Tidy notes [NO-FEEDBACK-CHECK] editing ticket prose only; second inline Add python-coder sign-off appending the id-less heading. Route B: both through commit_changes.py with message files (token in the first file's body line). After the first commit assert the COMMIT_EDITMSG file git wrote in the git directory holds the token (precondition, so the test cannot pass vacuously). The second commit is refused and HEAD stays at the first commit. RED today (derived): the stale file is read and the check is skipped."
+    proves_clause: 'the second commit is refused and the branch tip stays at the first commit'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_2_i_second_attempt_never_says_skipped
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "On both routes the second attempt output (stdout plus stderr, shared-step route from hook_output) contains neither the word skipped nor the phrase escape hatch. The stale file is produced by git's own first commit, never written by the test."
+    proves_clause: 'no output of the second attempt says that the check was skipped'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the check still reads the previous commit's message from the git directory and skips silently
+      - the check reads the previous message and refuses but prints the skip line
+  - name: test_ge_123e_2_i_second_commit_with_id_succeeds_after_token_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "After either first commit, the second commit appends the heading followed by feedback-id: fb_2026-11-16_a1b2c3d4 and succeeds, with HEAD advancing by one. Fails a check that refuses whenever the previous message carried the token."
+    proves_clause: 'the second commit succeeds, Because a check that refuses whenever the previous message carried the token passes the two refusal arms while still reading the wrong commit''s message'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - a check that refuses whenever the previous commit's message held the token
+      - a check that skips when the previous commit's message held the token
+  - name: test_ge_123e_2_i_shared_step_two_commit_sequence_is_reachable
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Run commit_changes.py as a subprocess twice in one scratch repo (first answer committed, second answer hook_failed with HEAD still at the first sha)."
+    proves_clause: 'the second commit is refused and the branch tip stays at the first commit'
+    code_file: templates/scripts/commit_changes.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_changes.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _should_skip reads the COMMIT_EDITMSG file in the git directory, which is the carry-over this criterion removes.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMISE 2 OF GE-123e, second half (no carry-over), and the mandatory regression
+  "a commit after a token-carrying commit is still checked".
+
+  WHY THIS IS THE ARM THAT CATCHES THE DEFECT. The KI says it plainly: a test that
+  only asserts "token in message, check skipped", or its inverse, passes against the
+  defect. The defect is off by one commit in both directions. The token is unseen
+  in the commit that carries it and honoured in the commit after it. Only a
+  two-commit test exercises the second direction. Its confidence label stays
+  DERIVED: the silent skip follows from the directly observed stale file, but it
+  has not yet been observed as a wrong outcome. Do not upgrade that label in
+  tickets or changelogs.
+
+  THE STALE FILE MUST BE MADE BY GIT. The first commit writes the last-commit-message
+  file as a side effect of a real commit. Writing that file by hand reproduces a
+  state at a moment of the test's choosing, which is the FP-7 mistake. The third arm
+  stops a "detect the stale token and refuse" implementation from passing.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed.
+  Use both an inline -m message and a message file passed the way the shared commit
+  step passes it. Hand-writing the repository's last-commit-message file, or setting
+  the environment variables the check reads in place of making a commit, is NOT
+  evidence (test-angles failure catalogue, EPIC-ComputedQualityGates FP-7).

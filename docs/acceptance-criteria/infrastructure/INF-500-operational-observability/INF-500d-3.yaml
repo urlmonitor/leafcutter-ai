@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given an agent files a report and the caller cannot confirm the report landed,
@@ -69,19 +69,361 @@ doc_links:
     relationship: related
     status: exists
     relevance: "BOUNDARY. Done. Requires a WARNING plus a failed-write count for the TELEMETRY sink, a different sink from the report sink this AC governs."
-assigned_agent: null
-estimated_complexity: null
-delivers_to: null
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the declared-sink refusal that this AC files under destination-unwritable."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Consumes the vocabulary: its agents record a marker whose reason comes from this record's closed set, and written-uncited when a recovery file was announced but no id was recovered."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Pins a one-line stderr refusal for an unusable sink declaration. The reason line this record adds is a second stderr line on that path; see caveat in notes."
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: templates/scripts/feedback/submit_failure_reasons.json
+    state: to_be_created
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: templates/scripts/feedback/feedback_validation.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_3.py
+    state: to_be_created
+  - path: unit_tests/feedback/_inf_500d_4_helpers.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_4_i.py
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+    state: existing
+it_requirements:
+  - "REASON VOCABULARY (IT PO, 2026-11-16). The closed set has exactly five identifiers, mapped 1:1 to the criteria bullets in their order: writer-not-allowed (the submitter was not permitted to write the category); malformed-submission (refused as malformed before anything was written); facility-unavailable (the entry point is missing or a dependency is not installed); destination-unwritable (the destination could not be written); written-uncited (the report was written but the caller did not capture the id). Identifiers are stable once shipped and are never renamed; a new reason is added only by amending this record."
+  - 'MARKER FORM. A failed submission is recorded as the comment line "feedback-id: (submit-failed:<reason>:<category>)", for example "feedback-id: (submit-failed:destination-unwritable:complete)". <reason> is one of the five identifiers. <category> is the --category value the submission was given, or "-" when none was given or the value is not a single token free of whitespace, ":", "(" and ")". A parser tells the value after "feedback-id:" apart by its whole shape: a real id matches ^fb_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9a-f]{8}$; a reasoned marker matches ^\(submit-failed:([a-z][a-z0-9-]*):([^\s:()]+)\)$ with group 1 a member of the vocabulary; the legacy bare form matches ^\(submit-failed\)$ and reads as "reason unknown". The bare form stays parseable because about 780 historical markers carry it; whether a newly added bare marker is refused is the check-feedback-id change''s decision, not this record''s.'
+  - "WHERE THE VOCABULARY LIVES (decision): one JSON data file, templates/scripts/feedback/submit_failure_reasons.json, deployed by the build to <output root>/scripts/feedback/submit_failure_reasons.json. It holds the five identifiers and, for each, a one-sentence meaning, a record_written boolean (true for written-uncited alone) and who detects it (script or caller), plus the marker form and the three value patterns above. REASONS: (1) every consumer reads JSON with the standard library, whereas a YAML home such as feedback_categories.yaml cannot be read by the submitter in the very case it must report (PyYAML not installed) and check_feedback_id.py imports no YAML library today; (2) build_feedback deploys templates/scripts/feedback/ whole, .json files included, so the file is in the deploy manifest without a new deploy-map entry, and the closure guard already attributes scripts/feedback/ to build_feedback, while a config/ home would need a new build_feedback entry, a _CONFIG_FILE_PHASE_BY_NAME entry and the config/ versus templates/config/ dual copy that feedback_categories.yaml already carries; (3) a constant in submit_feedback.py was rejected because instruction surfaces cannot read a Python constant, the hook would have to import the submitter (which resolves its config root and sibling modules at import time), and that file is already over the size ratchet."
+  - "ONE SOURCE, NO COPIES. submit_feedback.py, the tests, the check-feedback-id hook and INF-500d-5 take the identifiers, record_written and the patterns from the vocabulary file; none defines its own list. An instruction surface may name an individual identifier where it tells the agent which one to record (facility-unavailable, written-uncited). Tests must prove that every identifier named in a deployed instruction is a member of the file, that every script-detected identifier is emitted by at least one exit path, and that every exit path emits a member."
+  - "STDERR / EXIT CONTRACT. On every failure exit the script controls, stderr carries exactly one line 'submit-failed:<reason>:<category>' (the marker text without its parentheses) and nothing else on that line; stdout stays empty; the exit status stays non-zero. On success the line never appears, and stdout, the 'sidecar:' line and the '[submit_feedback] sink:' line are unchanged (INF-500d-3-i, INF-500d-3-iii, INF-500d-4-ii). The existing human-readable ERROR lines stay (INF-100c-4 checked-path lines, INF-500d-4-i refusal line). A failed run carries no 'sidecar:' or 'sink:' line and a successful run carries no 'submit-failed:' line, so the three are mutually exclusive by construction. The line is emitted in hook mode (--source hook) as well, and emit_hook_finding callers must be unaffected."
+  - "EXIT PATH TO REASON (line numbers as of origin/main on 2026-11-16): argument-parser errors at parse_args (:426, for example a missing --phase or --category, an invalid choice, a non-integer count) -> malformed-submission; _validate_source_args (:428-431) -> malformed-submission; the PyYAML ImportError in _load_categories (:150-157) -> facility-unavailable; the OSError in _load_categories (:159-172) and an unparseable or empty feedback_categories.yaml (an uncaught traceback today) -> facility-unavailable; validate_category -> malformed-submission; validate_writer -> writer-not-allowed; validate_tags and validate_addressed_by -> malformed-submission; _prepare_sink returning None (:446-448, declaration refused or log directory not creatable) -> destination-unwritable; opening the sink (:458-462) and an OSError during the locked append (uncaught today) -> destination-unwritable. No failure path may end in an unhandled traceback without the reason line, except the module-level sibling imports covered by the caller rule."
+  - "CALLER-DETECTED REASONS. Two reasons are marked detected-by caller in the vocabulary. facility-unavailable: the run's own error file holds no 'submit-failed:', 'sidecar:' or '[submit_feedback] sink:' line (the entry point is missing, the interpreter could not start it, a module-level sibling import at :92-93 failed, or the vocabulary file is unreadable). written-uncited: stdout held no id and the error file holds a 'sidecar:' or 'sink:' line, but no id was recovered from the recovery file named by the run's own 'sidecar:' line (missing, empty or unread; INF-500d-3-iv). Capture precedence for every instruction: stdout id; then the id in that named recovery file; then the run's 'submit-failed:' line; then written-uncited; then facility-unavailable."
+  - "FAIL-OPEN. Reporting the reason must never make a failed write fatal for the caller or change the sign-off verdict (BO-2000a-3 continue-anyway). When the vocabulary file is unreadable the script still exits non-zero with empty stdout and the caller rule yields facility-unavailable; the script never substitutes a built-in list."
+  - "HOLD-SAFETY FLAG. record_written is the only property a retry, hold or re-file processor may use to decide whether a marker's report may be re-filed. The decision derives from the flag, never from a hard-coded reason name, so a reason added later inherits the rule (INF-500d-5 exactly-once)."
+  - "HOOK DEPENDENCY. The vocabulary file is a dependency of the planned check-feedback-id change. The deployed hook (scripts/commit_guardian/check_feedback_id.py) reaches it at ../feedback/submit_failure_reasons.json in the same output root; it must be verified from a consumer layout built with build.py --target-dir and must fail loudly, never fall back to a narrower built-in pattern, when the file is absent (CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'). The file carries no {{config.*}} placeholder, because build_feedback runs inject_config over .json files."
+  - "templates/scripts/feedback/submit_feedback.py is over the check-file-size limit: the change must stay within the ratchet (moving reason handling into a sibling module is allowed) and check-file-size is never SKIPped. scripts/feedback/ is not tracked in this checkout, so the template is the only source (ADR-001)."
+  - "The module docstring's Exit codes and Output streams sections and the DECISION HISTORY block of every edited module must document the failure line and the vocabulary file (doc-enforcer conventions)."
+  - "Tests run the real entry point as subprocesses against a copied temporary layout with its own declared sink and a confined TMPDIR, one run per exit path, and read the vocabulary from the copied layout rather than from a list in the test (INF-500d-4). Reading the vocabulary must add no network access and no measurable latency to a successful submission."
+  - "INF-500d-4-i REFUSAL-LINE COUNT (person's gate decision, 2026-11-16). INF-500d-4-i's tests assert that a refused sink declaration leaves exactly one stderr line: _assert_refusal in unit_tests/feedback/test_inf_500d_4_i.py and the sink-rule test in unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py (about :104-105) both count every non-blank line from stderr_lines, defined in unit_tests/feedback/_inf_500d_4_helpers.py. This record's 'submit-failed:' line is a second line on those paths. This record's change updates INF-500d-4-i's test helper so those assertions count the human-readable refusal lines EXCLUDING the one 'submit-failed:' line: 'exactly one human-readable refusal line' still holds, every other assertion of those tests (the line names the declaration, the condition that failed, nothing is created, the sink is untouched) is unchanged, and neither test is weakened. The exclusion removes at most one line, and only a line that begins with 'submit-failed:'; a second such line, or any other extra line, still fails. stderr_lines itself keeps its current meaning, because other tests (for example test_inf_500d_4_iv_inline_work_guard_fresh_install.py) call it. INF-500d-4-i's YAML is not edited, and its tests stay green on the same run as this record's own tests."
+test_intent:
+  - clause: "the marker names the reason, drawn from a closed set that distinguishes at minimum these five cases:"
+    needs_test: true
+    reason: The closed set is data that the script, the hook and the hold processor all read, so a missing or extra member silently breaks every consumer.
+  - clause: "the submitter was not permitted to write the category"
+    needs_test: true
+    reason: The writer refusal is one exit path among several, and only running it shows it emits writer-not-allowed rather than a neighbouring reason.
+  - clause: "the submission was refused as malformed before anything was written (an unrecognised category, a badly shaped tag, or a badly shaped reference list)"
+    needs_test: true
+    reason: Four separate validation paths must all map to malformed-submission and write nothing, and any one of them can be mis-filed.
+  - clause: "the submission facility itself was unavailable (its entry point is missing, or a library it depends on is not installed)"
+    needs_test: true
+    reason: The missing-library path is script-detected while the missing-entry-point path is caller-detected, and both must end in facility-unavailable.
+  - clause: "the destination could not be written"
+    needs_test: true
+    reason: The sink refusal, the directory failure and the open failure are distinct paths that must all report destination-unwritable.
+  - clause: "the report WAS written successfully but the caller did not capture the record identifier"
+    needs_test: true
+    reason: This reason is decided from the sidecar and sink lines of a successful run, and a wrong rule would file the dominant real case as a lost write.
+  - clause: "the marker also names the category the failed report was destined for"
+    needs_test: true
+    reason: The category part is filled from the submission's argument, including the no-category and unrepresentable cases, so it can be dropped or garbled.
+  - clause: "the agent's verdict is still delivered — the failed write never aborts or downgrades the sign-off it accompanied"
+    needs_test: true
+    reason: Making a failed write fatal is the regression the notes forbid, and only running a failing submission shows the caller is not stopped.
+  - clause: "the report is NOT held and NOT re-filed, because a stored record for it already exists"
+    needs_test: true
+    reason: The record_written flag is what every hold or re-file step filters on, and a wrong flag duplicates an existing record.
+  - clause: "the marker instead reports that the record exists but is uncited, So that the one failure mode in which nothing was actually lost cannot be turned into a duplicated record"
+    needs_test: true
+    reason: The marker text for this case must carry written-uncited and parse to a record_written reason, which a test can check from the marker alone.
+  - clause: "the five are distinguishable from one another by reason without inspecting any other artefact"
+    needs_test: true
+    reason: Five markers produced one per reason must parse to five distinct reasons using only the marker text and the vocabulary.
+test_spec:
+  - name: test_vocabulary_file_holds_exactly_the_five_closed_set_reasons_with_their_flags
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Reads submit_failure_reasons.json from the copied layout (the layout copy carries the whole scripts/feedback directory, so the file reaching it is also the deploy proof) with the standard library only. It holds exactly five objects with ids writer-not-allowed, malformed-submission, facility-unavailable, destination-unwritable, written-uncited, each with a non-empty one-sentence meaning, a boolean record_written (true for written-uncited alone) and detected_by of script or caller. No test file holds its own list of the five: every other test reads the ids from this file."
+    proves_clause: "the marker names the reason, drawn from a closed set that distinguishes at minimum these five cases:"
+    code_file: templates/scripts/feedback/submit_failure_reasons.json
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i.py
+    must_catch:
+      - a sixth reason added to the file
+      - one of the five ids missing or renamed
+      - record_written true on any reason other than written-uncited
+      - record_written missing or a string instead of a boolean
+      - a vocabulary kept as a constant in submit_feedback.py with no file shipped
+  - name: test_vocabulary_file_carries_the_marker_form_the_three_value_patterns_and_no_config_placeholder
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The same file holds the marker form and the three value patterns (real id, reasoned marker, legacy bare form). Each compiles, and the real-id pattern accepts fb_2026-11-16_1a2b3c4d and rejects a marker; the reasoned pattern accepts (submit-failed:destination-unwritable:complete), rejects a category with a colon, a space or parentheses, and its group 1 is read back as a member of the ids; the legacy pattern accepts only the bare (submit-failed). The file text carries no double-brace config placeholder, because the build runs inject_config over json files."
+    proves_clause: "the marker names the reason, drawn from a closed set that distinguishes at minimum these five cases:"
+    code_file: templates/scripts/feedback/submit_failure_reasons.json
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i.py
+  - name: test_writer_refusal_emits_one_writer_not_allowed_line_and_nothing_else_on_stdout
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Real submit_feedback.py in a subprocess from a copied layout (own declared sink in a temp dir, confined TMPDIR): phase python-coder with category subagent-quality is refused. Exit non-zero, stdout empty, exactly one stderr line beginning submit-failed: and equal to submit-failed:writer-not-allowed:subagent-quality, the human-readable ERROR line still present beside it, no sidecar line, no sink line, no traceback, and the declared sink file is not created."
+    proves_clause: the submitter was not permitted to write the category
+    code_file: templates/scripts/feedback/feedback_validation.py
+    must_catch:
+      - the writer refusal filed under malformed-submission because it shares a neighbouring validator
+      - the reason read off the exit status
+      - the reason line printed on stdout where a caller captures it as the id
+      - the human-readable ERROR line dropped in favour of the reason line
+  - name: test_every_malformed_submission_path_emits_malformed_submission_and_writes_nothing
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "One subprocess run per path, parametrized: unrecognised category; tag starting with a digit; tag with an uppercase letter; --addressed-by that is not JSON, not a list, holds a non-object, a bad type and an empty ref; an argument-parser error (missing --phase, invalid --severity choice, non-integer --staged-files-count); agent source without --ticket; hook source without --hook-name; hook source without --outcome. Each exits non-zero with empty stdout and exactly one line submit-failed:malformed-submission:<category>, leaves the human-readable ERROR or usage text, and creates no sink, no log directory and no sidecar (the temp tree snapshot is unchanged)."
+    proves_clause: "the submission was refused as malformed before anything was written (an unrecognised category, a badly shaped tag, or a badly shaped reference list)"
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - only the validators in feedback_validation.py emit the line while the argument-parser errors exit with usage text alone
+      - the source-argument check returning 1 with no reason line
+      - a bad tag filed as writer-not-allowed
+      - an addressed-by failure with no reason line
+  - name: test_missing_pyyaml_and_an_unusable_categories_file_each_emit_facility_unavailable_without_a_traceback
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Subprocess runs from a copied layout. PyYAML missing (a yaml.py that raises ImportError placed first on PYTHONPATH), feedback_categories.yaml absent, unparseable and empty (the last two are an uncaught traceback today). Each exits non-zero, stdout empty, exactly one line submit-failed:facility-unavailable:<category>, no Traceback text on stderr, the existing INF-100c-4 Checked path / To fix lines still present for the absent-file case, and no built-in category list used as a fallback."
+    proves_clause: "the submission facility itself was unavailable (its entry point is missing, or a library it depends on is not installed)"
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - an empty or unparseable categories file still ending in an AttributeError or YAML traceback
+      - the PyYAML failure filed under malformed-submission
+      - a built-in category list substituted when the file is unusable
+      - the absent-file case losing its Checked path and To fix lines
+  - name: test_missing_entry_point_and_unreadable_vocabulary_leave_no_reason_line_for_the_caller_rule
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Two runs in a copied layout. (1) submit_feedback.py deleted and invoked by its prescribed path: the interpreter reports the missing file, stdout is empty, exit non-zero, and the error text holds none of the lines submit-failed:, sidecar: or [submit_feedback] sink: (the facts the caller rule turns into facility-unavailable). (2) submit_failure_reasons.json deleted: the script still exits non-zero with empty stdout and no id, never substitutes a built-in reason list (no line naming a reason is printed), and again the error text holds none of the three lines."
+    proves_clause: "the submission facility itself was unavailable (its entry point is missing, or a library it depends on is not installed)"
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_every_destination_failure_path_emits_destination_unwritable
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Subprocess runs, parametrized: declaration absent; each unusable declaration variant (malformed json, zero-byte, a directory, not an object, keys missing, relative values); stale enduring root; feedback_sink not directly under operational_log_root; log directory not creatable (a regular file where the directory must go); --jsonl naming a directory (the open failure); --jsonl whose parent is a regular file (an uncaught mkdir error today); --jsonl /dev/full (an OSError during the locked append, an uncaught traceback today; skipped where /dev/full is absent). Each exits non-zero, stdout empty, exactly one submit-failed:destination-unwritable:<category> line, no Traceback, no sidecar line and no sink line; the pre-write refusals still create nothing."
+    proves_clause: the destination could not be written
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - the append OSError left as an uncaught traceback with no reason line
+      - the explicit --jsonl parent mkdir failure left as a traceback
+      - the declaration refusal emitting its human line only
+      - destination failures filed as facility-unavailable
+      - a sidecar line printed before the append failed
+  - name: test_successful_submission_prints_no_reason_line_and_keeps_its_stdout_sidecar_and_sink_lines
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A successful run in a copied layout: stdout is exactly the fb_ id, stderr holds one sidecar: line naming a recovery file that holds the id, one [submit_feedback] sink: line naming the declared sink, and no submit-failed: line, so the facts the caller rule reads for written-uncited (a sidecar or sink line with no id captured) exist only on a run that wrote the record. After deleting the recovery file the stderr and the sink record are unchanged, so a missing recovery file never turns into a failure line."
+    proves_clause: the report WAS written successfully but the caller did not capture the record identifier
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_category_part_is_the_submitted_value_or_a_dash_never_a_default
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Failure runs with different categories: complete, blocker, subagent-quality and an unrecognised single token zzz-unknown each appear verbatim as the third part of the line. A missing --category, a value holding a space, a colon, an opening or a closing parenthesis, and an empty value each give a dash. The line always splits on its colons into exactly three parts and its category part matches the reasoned-marker pattern read from the vocabulary file."
+    proves_clause: the marker also names the category the failed report was destined for
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - one fixed category such as complete for every failure
+      - the category part dropped so the line has two parts
+      - a raw value containing a colon printed unescaped so the line splits into four parts
+      - a dash printed for a plain valid category
+      - the category taken from the phase instead of the --category value
+  - name: test_failed_submission_stays_fail_open_for_hook_callers
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Hook mode in a subprocess (--source hook with --hook-name and --outcome, no ticket): a failure still prints the one reason line, empty stdout, non-zero exit. emit_finding driven through a fresh process against a layout with no declaration returns False and never raises, its surfaced reason names the declaration, and the reason line does not make it read as written. The exit status stays the only signal the script gives a caller; nothing in the script aborts a process other than itself."
+    proves_clause: "the agent's verdict is still delivered — the failed write never aborts or downgrades the sign-off it accompanied"
+    code_file: templates/scripts/feedback/submit_feedback.py
+  - name: test_only_a_written_uncited_marker_is_record_written_so_only_it_is_never_holdable
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Reads the vocabulary from the copied layout and the pattern from it, parses one marker per reason, and derives holdable as not record_written from the flag alone (never from a reason name). Only the written-uncited marker is not holdable; the other four are. A control copy of the vocabulary with an extra reason whose record_written is true is also classified not holdable with no code change, and the legacy bare marker parses as reason unknown and is never classified holdable."
+    proves_clause: "the report is NOT held and NOT re-filed, because a stored record for it already exists"
+    code_file: templates/scripts/feedback/submit_failure_reasons.json
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i.py
+    must_catch:
+      - record_written false on written-uncited so a stored record is re-filed
+      - record_written true on destination-unwritable so a lost write is never retried
+      - holdability decided from a hard-coded reason name
+      - the legacy bare marker treated as holdable
+  - name: test_written_uncited_marker_parses_as_a_record_that_exists_but_is_uncited
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The marker feedback-id: (submit-failed:written-uncited:complete), with the prefix removed, matches the reasoned-marker pattern from the vocabulary, group 1 is written-uncited, group 2 is complete, and the vocabulary entry for it has record_written true, detected_by caller and a meaning sentence that says the report was written."
+    proves_clause: "the marker instead reports that the record exists but is uncited, So that the one failure mode in which nothing was actually lost cannot be turned into a duplicated record"
+    code_file: templates/scripts/feedback/submit_failure_reasons.json
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i.py
+  - name: test_five_failures_in_one_run_are_distinguishable_by_reason_from_the_markers_alone
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "In one copied layout, one TMPDIR and one declared sink: run the real script into a writer refusal, a malformed submission, a facility failure (PyYAML missing), and a destination failure; the fifth is the written-uncited marker built from the vocabulary form after a successful run's recovery file is removed. Each marker is built from that run's own line, parsed with the vocabulary pattern, and the five reasons are all different and together equal the vocabulary ids, using no artefact beyond the markers and the vocabulary."
+    proves_clause: the five are distinguishable from one another by reason without inspecting any other artefact
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - two failure paths sharing one reason identifier
+      - a marker whose reason can only be told apart by reading the note or the stderr text
+      - the facility-unavailable and destination-unwritable cases both printing destination-unwritable
+  - name: test_every_emitted_reason_is_a_vocabulary_member_and_every_script_detected_reason_is_emitted
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Aggregates the reason parts of every failure run in this file. Every emitted reason is a member of the vocabulary read from the copied layout; every id whose detected_by is script is emitted by at least one run; written-uncited is never emitted by the script (it is decided by the caller); no failure run ended in a Traceback; and facility-unavailable, which both the script (PyYAML, categories file) and the caller can decide, is emitted by the script paths."
+    proves_clause: "the marker names the reason, drawn from a closed set that distinguishes at minimum these five cases:"
+    code_file: templates/scripts/feedback/submit_feedback.py
+    must_catch:
+      - an exit path that emits an identifier absent from the vocabulary file
+      - a script-detected reason that no exit path emits
+      - an exit path that ends in a traceback without the reason line
+      - written-uncited emitted by the script on a failed run
+  - name: test_refusal_line_helper_excludes_exactly_one_submit_failed_line_and_stderr_lines_keeps_its_meaning
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Exercises the new refusal-line helper of _inf_500d_4_helpers.py (named refusal_lines in this design; the implementer may choose another name, the test follows it) on synthetic completed processes: one human line plus one submit-failed: line counts 1; two human lines plus one submit-failed: line counts 2; one human line plus two submit-failed: lines counts 2; a single submit-failed: line alone counts 0; an indented line that does not begin with submit-failed: is not excluded; a blank line is not counted. stderr_lines on the same inputs still returns every non-blank line including the submit-failed: one."
+    proves_clause: the destination could not be written
+    code_file: unit_tests/feedback/_inf_500d_4_helpers.py
+    must_catch:
+      - helper count widened to two lines
+      - an exclusion that removes every line beginning with the submit-failed prefix
+      - an exclusion that removes any one extra line whatever it says
+      - stderr_lines itself changed to drop the submit-failed line
+  - name: test_declared_sink_refusals_leave_one_human_line_plus_the_reason_line_and_the_4_i_assertions_stay_strict
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Real script runs of the INF-500d-4-i cases (absent declaration, a bad declaration, a stale root, and the sink outside the root of the sink-rule file): the raw stderr_lines count is 2, the refusal helper count is exactly 1, that one line still names the declaration and the failed condition (and operational_log_root for the sink-rule case), nothing is created and the declared sink is untouched. The two INF-500d-4-i assertion sites (_assert_refusal and the sink-rule test around the stderr count) call the refusal helper and keep every other assertion; a run with an extra non-reason stderr line still fails the count."
+    proves_clause: the destination could not be written
+    code_file: unit_tests/feedback/_inf_500d_4_helpers.py
+  - name: test_submit_feedback_run_as_a_subprocess_emits_the_reason_line_on_a_real_failure
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs the real submit_feedback.py of the copied layout as a subprocess with real argv (python -B, own declared sink, confined TMPDIR) once into a refused writer and once with no sink declaration, and asserts the submit-failed:<reason>:<category> line appears on stderr with the matching reason, stdout stays empty and the exit status is non-zero. A third run with a usable declaration succeeds and prints no such line."
+    proves_clause: "the marker names the reason, drawn from a closed set that distinguishes at minimum these five cases:"
+    code_file: templates/scripts/feedback/submit_feedback.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/scripts/feedback/feedback_validation.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/_inf_500d_3_helpers.py
+  - unit_tests/feedback/test_inf_500d_4_i.py
+  - unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+file_findings:
+  - file: templates/scripts/feedback/submit_feedback.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds main() with every failure exit the criteria name (parse_args, source args, _load_categories, _prepare_sink, the sink open and the locked append) and the only stderr and exit contract the reason line extends.
+    decision: null
+  - file: templates/scripts/feedback/feedback_validation.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds validate_category, validate_writer, validate_tags and validate_addressed_by, each of which prints its error and exits 1, so these are the malformed and writer-not-allowed exit paths.
+    decision: null
+  - file: unit_tests/feedback/_inf_500d_4_helpers.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It defines stderr_lines (line 237) that INF-500d-4-i counts and the layout and run helpers the new tests reuse, so it is the right surface for the refusal-line helper.
+    decision: null
+  - file: unit_tests/feedback/test_inf_500d_4_i.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _assert_refusal (lines 82-88) asserts len(h.stderr_lines(proc)) == 1, which is the assertion the reason line breaks.
+    decision: null
+  - file: unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its sink-rule test (lines 104-105) asserts the same single-stderr-line count and so needs the same helper change.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/scripts/feedback/feedback_validation.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py
+  - unit_tests/feedback/test_inf_500d_4_i.py
+  - unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+delivers_to:
+  - agent: llm-expert
+    contract: "Consumed by INF-500d-3-iv. The vocabulary file <output root>/scripts/feedback/submit_failure_reasons.json (source templates/scripts/feedback/submit_failure_reasons.json) lists five reasons as objects {id: string kebab-case, meaning: string, record_written: boolean, detected_by: 'script' | 'caller'}: writer-not-allowed, malformed-submission, facility-unavailable, destination-unwritable, written-uncited (record_written true for written-uncited only; detected_by caller for facility-unavailable and written-uncited). A failed run's own error file holds exactly one line 'submit-failed:<reason>:<category>'; the agent records 'feedback-id: (submit-failed:<reason>:<category>)'. Capture precedence: stdout id; id in the recovery file named by the run's own 'sidecar:' line; the 'submit-failed:' line; written-uncited when a 'sidecar:' or '[submit_feedback] sink:' line exists but no id was recovered; otherwise facility-unavailable. <category> is the --category value or '-'."
+  - agent: python-coder
+    contract: "Consumed by INF-500d-5 (agent not yet assigned there). The same vocabulary file; a marker value matches ^\\(submit-failed:([a-z][a-z0-9-]*):([^\\s:()]+)\\)$ with group 1 a vocabulary id and group 2 the destined category or '-'. Only reasons whose record_written is false may enter the holding place; the decision reads the flag, never a reason name. The legacy bare '(submit-failed)' carries no reason and must be treated as reason unknown, never as holdable."
+  - agent: llm-expert
+    contract: "Consumed by INF-500d-3-v. The vocabulary file templates/scripts/feedback/submit_failure_reasons.json (deployed to <output root>/scripts/feedback/submit_failure_reasons.json): five objects {id: string, meaning: string, record_written: boolean, detected_by: 'script' | 'caller'} with ids writer-not-allowed, malformed-submission, facility-unavailable, destination-unwritable, written-uncited. On every failure exit the script controls, the error stream carries exactly one line 'submit-failed:<reason>:<category>' beside any human-readable ERROR lines, standard output stays empty and the exit status is non-zero; a successful run carries no such line. The marker form is 'feedback-id: (submit-failed:<reason>:<category>)', with <category> the --category value or '-'. Capture precedence: stdout id; id in the recovery file named by the run's own 'sidecar:' line; the run's 'submit-failed:' line; written-uncited when a 'sidecar:' or '[submit_feedback] sink:' line exists but no id was recovered; otherwise facility-unavailable. Lands in the same PR as INF-500d-3-v or before it."
+  - agent: llm-expert
+    contract: "Consumed by INF-500d-3-vi. On every failure exit the script controls, the error stream carries one line 'submit-failed:<reason>:<category>', with <reason> drawn from templates/scripts/feedback/submit_failure_reasons.json (deployed to <output root>/scripts/feedback/submit_failure_reasons.json). Standard output stays empty and the exit status is non-zero. The capture precedence's third step reads that line, which INF-500d-3-vi makes reachable for epic-supervisor by keeping its error stream. Lands in the same PR as INF-500d-3-vi or before it."
+  - agent: llm-expert
+    contract: "Consumed by BO-2000g-1. The failure-fallback marker form 'feedback-id: (submit-failed:<reason>:<category>)' and the legacy bare '(submit-failed)', both defined in templates/scripts/feedback/submit_failure_reasons.json. BO-2000g-1 names the fallback only by reference to the signoff skill and copies no form of it, so a change of form here needs no change there."
+  - agent: python-coder
+    contract: "Consumed by BO-2000g-3. templates/scripts/feedback/submit_failure_reasons.json holds the real-id pattern ^fb_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9a-f]{8}$, the reasoned-marker pattern ^\\(submit-failed:([a-z][a-z0-9-]*):([^\\s:()]+)\\)$ whose group 1 is one of the file's reason ids, and the legacy bare pattern ^\\(submit-failed\\)$. The template lint reads the file when it is present; until this record lands the file does not exist (BO-2000g-3's transition rule applies)."
+  - agent: python-coder
+    contract: "Consumed by BO-2000g-4. The fallback form for a failed submission run: before this record lands, the bare '(submit-failed)'; after, '(submit-failed:<reason>:<category>)', built from the run's single 'submit-failed:<reason>:<category>' stderr line, with <reason> one of the ids in scripts/feedback/submit_failure_reasons.json in the deployed layout."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
 superseded_by: null
 covered_by:
   - INF-500d-3-i
   - INF-500d-3-ii
   - INF-500d-3-iii
   - INF-500d-3-iv
+  - INF-500d-3-v
+  - INF-500d-3-vi
 implemented_by: []
 change_target:
   - code
@@ -133,3 +475,43 @@ notes: |
   Detection of an accumulating failure RATE is deliberately not in this AC — see
   INF-500d-5, which places that gate at the workspace-removal boundary rather than
   adding a per-ticket blocker.
+
+  IT PO ENRICHMENT (2026-11-16). The identifiers, the marker form, the vocabulary's
+  home and the stderr contract are fixed in it_requirements. Points for the reviewer:
+
+  - CHILDREN. INF-500d-3-i, -ii and -iii are done and do not touch the reason set.
+    None of the four children delivers the vocabulary or the script's reason line,
+    so this record carries its own build work and must land before INF-500d-3-iv,
+    which already depends on it. INF-500d-3-iv's expects_from names only
+    INF-500d-3-ii (the per-run error file). It should also name INF-500d-3 and the
+    vocabulary file templates/scripts/feedback/submit_failure_reasons.json, because
+    its test_spec reads the identifiers "from the delivered vocabulary". It was not
+    edited here because it is approved.
+  - CROSS-SURFACE GAP (recommended follow-up record, not created here). The criteria
+    have the CALLER record the marker, but the caller is an instruction surface
+    (llm-expert), while this record is assigned to python-coder for the vocabulary
+    file and the script's reason line. INF-500d-3-iv updates only the signoff skill
+    and live-surface-tester, and only for the missing-recovery-file case. These
+    surfaces still write the bare "(submit-failed)" and need a companion llm-expert
+    child that applies the capture precedence above: _signoff_block.md, python-coder.md,
+    documentation-verifier.md, user-surface-smoker.md, ticket-supervisor.md (four event
+    blocks and the feedback_id field), and epic-supervisor.md. epic-supervisor.md sends
+    the error stream to /dev/null, so it cannot see the reason line until it redirects
+    to a per-run file. Until that child lands, the first scenario holds only at the
+    script and vocabulary level.
+  - INF-500d-5 has no expects_from yet. When it is enriched, it should name INF-500d-3
+    and the record_written flag (see delivers_to).
+  - The planned check-feedback-id hook change is a third consumer. It reads the
+    patterns from the vocabulary file and must not keep a copy.
+  - STDERR LINE COUNT RISK. INF-500d-4-i's IT requirements say the sink refusal is "one
+    stderr line". If its tests assert the TOTAL stderr line count, the new
+    submit-failed line conflicts with them. The implementer must check this. If the
+    conflict is real, escalate it as a contract conflict; never weaken either test in
+    silence.
+    RESOLVED (2026-11-16, person's gate decision). The conflict is real: two INF-500d-4-i
+    test files count every stderr line. This record's change updates INF-500d-4-i's test
+    helper to count refusal lines excluding the one 'submit-failed:' line. The three test
+    files are now in declared_files and the rule is an it_requirement.
+  - CONSUMERS (2026-11-16, final reconciliation). delivers_to now also names BO-2000g-1,
+    BO-2000g-3, BO-2000g-4, INF-500d-3-v and INF-500d-3-vi, each matching that record's
+    expects_from.

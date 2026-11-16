@@ -1,0 +1,118 @@
+id: KM-400c-4-i
+title: "The embedding ingestion job requires a provider, and its contract does not admit a missing one"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-400c-4
+criteria: |
+  Given the embedding ingestion job embed_snapshot, which binds every vector it publishes to its provider's model and dimensions
+  When its declared parameter types are read
+  Then the provider parameter admits only an embedding provider and does not admit None
+  And the provider parameter has no default, so a caller cannot leave it out
+
+  Given the synthetic demonstration, the only caller of embed_snapshot outside the tests
+  When it runs its embedding step against a writer that records what it receives
+  Then it passes the provider it constructed, not None
+  And the job embeds the 3 Decision and Lesson records of its snapshot with that provider's model synthetic-fixture-v1 and 2 dimensions
+  And the writer receives those 3 vectors under that model and those dimensions
+depends_on: [KM-400c-4]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400c-4.yaml
+    relationship: context
+    status: exists
+    relevance: Parent behaviour. Vectors are bound to an embedding model, and changed content or model makes old vectors ineligible; the ingestion job can only bind a model it is given.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: States the ingestion API as embed_snapshot(writer,snapshot,provider,cache={}) with the provider positional, and that no provider calls run unless embeddings are enabled.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: context
+    status: exists
+    relevance: Component architecture for the knowledge ports, including the embedding provider and writer ports.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: '2026-11-16'
+amended_by: []
+superseded_by: null
+covered_by:
+  - tests/knowledge/test_km_400c_4_i.py
+implemented_by:
+  - knowledge/embedding_jobs.py
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The provider parameter of knowledge.embedding_jobs.embed_snapshot is annotated EmbeddingProvider (knowledge/ports.py), with no '| None' and no default value."
+  - "The change must not use '# type: ignore', typing.cast or Any to quiet the type checker; mypy --ignore-missing-imports --explicit-package-bases must report no union-attr error in knowledge/embedding_jobs.py."
+  - "Every call site of embed_snapshot found by 'git grep -n embed_snapshot' passes a constructed provider, and any call-site change lands in the same commit as the signature change."
+  - "QueryEmbeddings (knowledge/semantic.py) and KnowledgeService (knowledge/service.py) keep accepting a missing provider: on the query side a missing provider is a defined not-ready state under KM-400c-4. This AC narrows only the ingestion job."
+  - "The docstring of embed_snapshot states that the provider is required."
+test_intent:
+  - clause: "the provider parameter admits only an embedding provider and does not admit None"
+    needs_test: true
+    reason: The annotation is the contract every caller reads, and it advertised None while the body dereferenced the provider unconditionally.
+  - clause: "the provider parameter has no default, so a caller cannot leave it out"
+    needs_test: true
+    reason: A default of None would let a caller omit the provider and reach the same unconditional dereference.
+  - clause: "it passes the provider it constructed, not None"
+    needs_test: true
+    reason: The demonstration is the only real call path, so a contract test alone cannot show that the real caller conforms.
+  - clause: "the job embeds the 3 Decision and Lesson records of its snapshot with that provider's model synthetic-fixture-v1 and 2 dimensions"
+    needs_test: true
+    reason: Proves the real call path reaches the job and the job uses the provider it was handed, not only that the call was made.
+  - clause: "the writer receives those 3 vectors under that model and those dimensions"
+    needs_test: true
+    reason: The writer side effect is where a wrong model or dimension would be published.
+test_spec:
+  - name: test_embed_snapshot_provider_parameter_does_not_admit_none
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: Resolve the declared parameter types of embed_snapshot with typing.get_type_hints and assert the provider type is exactly knowledge.ports.EmbeddingProvider with no NoneType member, and that inspect.signature shows the provider parameter has no default.
+    proves_clause: "the provider parameter admits only an embedding provider and does not admit None"
+    code_file: knowledge/embedding_jobs.py
+    covers: [KM-400c-4-i]
+    requires_db: false
+    must_catch:
+      - "the provider parameter annotated EmbeddingProvider | None"
+      - "a provider parameter given a default of None so callers can leave it out"
+      - "the provider parameter annotated Any or object"
+  - name: test_synthetic_demo_embeds_with_the_provider_it_constructs
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Run knowledge.examples.synthetic_demo.run_demo with only the Neo4j backend replaced by a recording writer, wrap the real embed_snapshot to record the provider it is given and stop the demonstration after the embedding step, and assert the provider is the demonstration's FixtureEmbeddings, the result reports 3 embedded entities with model synthetic-fixture-v1 and 2 dimensions, and the writer received 3 vectors under that model and those dimensions.
+    proves_clause: "it passes the provider it constructed, not None"
+    code_file: knowledge/examples/synthetic_demo.py
+    covers: [KM-400c-4-i]
+    requires_db: false
+    must_catch:
+      - "the demonstration passing None as the provider"
+      - "the demonstration's embedding step removed, so the job is never reached"
+notes: |
+  Authored 2026-11-16 from the mypy cleanup (batch A, changelog
+  2026-11-16-1330). embed_snapshot declared provider: EmbeddingProvider | None
+  from its first commit (c2ddb6f12) but read provider.model, provider.dimensions
+  and provider.embed unconditionally, including in the returned dict when there
+  is nothing to embed, so a None provider always raised AttributeError. mypy
+  reported this as 9 union-attr errors.
+
+  Required rather than optional, on this evidence: the parameter never had a
+  default; the only callers (knowledge/examples/synthetic_demo.py and
+  tests/knowledge/test_embedding_jobs.py) always pass a constructed provider;
+  the operator's guide names the API embed_snapshot(writer,snapshot,provider,cache={})
+  and says no provider calls run unless embeddings are enabled, so the decision
+  not to ingest belongs to the caller; and no AC, ticket or document defines a
+  result for ingestion without a provider. The query side is different:
+  QueryEmbeddings and KnowledgeService accept None and report it as not ready,
+  and they are unchanged.

@@ -1,0 +1,222 @@
+id: GE-123e-4-i
+components:
+  - commit_guardian
+title: "When the merge relief cannot read what came in, the check says so instead of quietly passing or blocking every merge"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a conflicted merge of "main" into "feature" in the ticket file
+    "tickets/00_inbox/TICKET-demo.md", whose resolution appends the heading
+    "### 2026-11-16 11:00 — conflict-resolver (status: ok)" with no feedback-id line,
+  And the incoming side's copy of that ticket file cannot be read when the check
+    runs,
+  When the merge is concluded with an inline message,
+  Then the check does not refuse the commit,
+  And the error stream carries a warning that names
+    "tickets/00_inbox/TICKET-demo.md", says its sign-offs were not verified, and
+    says the incoming side of the merge could not be read,
+  And the check reports the could-not-check outcome, not a clean pass.
+
+  Given the same repository with no merge in progress,
+  When an ordinary commit appends the same heading with no feedback-id line,
+  Then the commit is refused,
+  Because a fault in the merge relief may open only the merge it could not judge.
+    It must never look like a check that ran and found nothing, and it must never
+    reach an ordinary commit.
+depends_on:
+  - GE-123e-4
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "'Machine-Readable Outcome Vocabulary': the could-not-check outcome, distinct from a clean pass, emitted independently of exit status. Also the fail-open-with-visible-warning shape GE-120a-1 established."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123e.yaml
+    relationship: related
+    status: exists
+    relevance: "'INHERITED, NOT REPEALED': fail open on an internal error, but say so visibly; never fail open by quietly skipping the check."
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: related
+    status: exists
+    relevance: "Decision §6: a git failure in the derivation is a could-not-check outcome, never a widened or partial result. This record relies on that guarantee holding for the text diff too (see it_requirements)."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Block-versus-announce is a per-check decision. This record decides 'announce, don't block' for check-feedback-id during an operation."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change.md
+    relationship: describes
+    status: exists
+    relevance: "The shared-source defect this record fixes (person's gate decision, 2026-11-16): a git diff that exits non-zero is treated as an empty change. The fault-injection test here depends on an honest could-not-check result."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: documentation-expert
+  contract: "The could-not-check disposition for GE-123e-5 to document. When the incoming side cannot be read while an operation is concluded, the check exits 0, prints a stderr WARNING naming each affected ticket file (its sign-offs were not verified, and the incoming side could not be read), and emits 'RESULT: could_not_check' on stdout. Ordinary commits are never opened by this path."
+expects_from:
+  ac_id: GE-123e-4
+  contract: "The merge-relief comparison of each id-less heading against both sides' copies of the ticket file. This criterion fixes its behaviour when one side cannot be read."
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_authored_change.py
+    state: existing
+it_requirements:
+  - "DISPOSITION 'ANNOUNCE, DON'T BLOCK' (this record's notes; per-check decision under GE-120a-2): when the incoming side cannot be read while an operation is concluded, the check exits 0. It prints a WARNING on stderr that names each affected staged ticket file and says that file's sign-offs were not verified and that the incoming side could not be read. It emits the could-not-check outcome line through the shared check_outcome vocabulary ('RESULT: could_not_check'), never the clean-pass outcome."
+  - "SCOPE OF THE OPENING: the fail-open covers only the operation the check could not judge. An ordinary commit has no incoming-side lookup. Any internal error there must still be visible (warning plus could-not-check) and must never become a quiet pass (second arm)."
+  - "NO WIDENING, NO QUIET PASS: a could-not-check derivation is never replaced by an unscoped diff (ADR-038 §6). The list of ticket names used for the warning is not used to judge headings. If the staged ticket set itself cannot be derived, the warning says so; a warning that names nothing does not satisfy this."
+  - "SHARED-SOURCE FIX (person's gate decision, 2026-11-16; KI-CG-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change). Fix templates/scripts/commit_guardian/_authored_change.py under this record. In the shared derivation (`_build_authored_change`, per the KI), BOTH git diff invocations, the text diff and the name-status diff, treat a non-zero exit status as could-not-check, with git's stderr carried in `error`, the same way another call site in that file already does. A git diff that started but failed never yields could_not_check=False with an empty or partial diff_text or name_status (ADR-038 §6). The fix is made once, in the shared source, for every consumer, never as a private workaround in this check. The ordinary-commit result for a successful diff stays byte-identical (ADR-038 §5)."
+  - "CONSUMERS STAY GREEN. The existing tests of the shared source's consumers, check-contract-shrinking and check-doc-frontmatter, and the existing tests of the _authored_change contract itself, are re-run in the same change and stay green without being edited to pass. If one of them turns red, it was passing on the silent empty result; that is reported as a finding in the delivery, never fixed by loosening the test or reverting the shared fix. This record's own fault-injection test is expected to be red before the fix."
+  - "HOUSEKEEPING for the implementing change: KI-CG-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change moves to resolved in the commit-guardian known-issues register and cites this record."
+  - "FAULT INJECTION (binding): assert the verdict, the warning and the outcome line from the output of a real `git commit` attempt that concludes a real conflicted merge with the hook installed. A direct call to the check is not evidence. Prefer a fault that lets git conclude the merge, so the branch outcome can be asserted too. One example: make the incoming side's stored copy of the ticket file unreadable while MERGE_HEAD itself stays valid. If the chosen fault makes git refuse after the pre-commit stage (for example a MERGE_HEAD that names a missing commit), assert the check's own verdict, warning and RESULT line on that attempt, and do not assert the final branch state. The test designer confirms the fault against the git version CI runs."
+  - "Cover both message routes: inline -m, and a message file with the shared commit step's git arguments (commit -q --cleanup=verbatim -F <file>). Hand-writing COMMIT_EDITMSG or MERGE_HEAD contents as a stand-in for a commit is not evidence (FP-7). Expected test home: unit_tests/commit_guardian/, reusing GE-123e-4's conflicted-merge harness."
+  - "CANONICAL SOURCE: templates/scripts/commit_guardian/check_feedback_id.py (ADR-001). Prove it from the deployed layout."
+test_intent:
+  - clause: the check does not refuse the commit
+    needs_test: true
+    reason: Blocking here would turn a relief-logic fault into a block on every merge, and only a real commit attempt shows the hook's verdict.
+  - clause: the error stream carries a warning that names "tickets/00_inbox/TICKET-demo.md", says its sign-offs were not verified, and says the incoming side of the merge could not be read
+    needs_test: true
+    reason: The warning is the only trace that the sign-offs went unverified, and a wrong fault path skips the code that emits it.
+  - clause: the check reports the could-not-check outcome, not a clean pass
+    needs_test: true
+    reason: Callers read the outcome line independently of exit status, so emitting the clean-pass outcome would hide the unverified merge.
+  - clause: the commit is refused, Because a fault in the merge relief may open only the merge it could not judge. It must never look like a check that ran and found nothing, and it must never reach an ordinary commit
+    needs_test: true
+    reason: This negative control fails an implementation that routes every internal error to a quiet pass.
+test_spec:
+  - name: test_ge_123e_4_i_unreadable_incoming_copy_merge_is_concluded_not_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Real conflicted merge of main into feature; resolution appends the id-less conflict-resolver heading and is git added. FAULT: overwrite the loose object of the incoming side's ticket blob with garbage (chmod then write) in the scratch repo, with no gc or pack; MERGE_HEAD stays valid. Precondition asserted: git diff --cached MERGE_HEAD exits non-zero. Probed on git 2.43.0: name-only and name-status still exit 0, the text diff exits 128 with empty stdout, and git concludes the merge. Conclude by real commit with inline -m, and again in a fresh scratch with -q --cleanup=verbatim -F; the hook does not refuse, exit 0, HEAD gains the merge commit."
+    proves_clause: 'the check does not refuse the commit'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_4_i_warning_on_stderr_names_ticket_and_unverified_incoming_side
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The installed hook wrapper writes the check's stdout and stderr to two files before re-emitting them, so the streams stay separable under a real git commit. Assert stderr carries a WARNING naming tickets/00_inbox/TICKET-demo.md, saying its sign-offs were not verified and that the incoming side of the merge could not be read. A warning that names nothing fails."
+    proves_clause: 'the error stream carries a warning that names "tickets/00_inbox/TICKET-demo.md", says its sign-offs were not verified, and says the incoming side of the merge could not be read'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_4_i_outcome_line_is_could_not_check_never_clean
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "From the same faulted real commit assert stdout carries the line RESULT: could_not_check, and no clean-pass outcome line, on both message routes."
+    proves_clause: 'the check reports the could-not-check outcome, not a clean pass'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - could_not_check treated as clean
+      - no outcome line emitted at all on the fault path
+      - the warning is printed but the outcome line says clean
+  - name: test_ge_123e_4_i_ordinary_commit_with_same_heading_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same repository content with no merge in progress; an ordinary real commit appends the same id-less heading and is refused with HEAD unchanged. Also run with the corrupt incoming blob still present in the object store, so a fail-open that leaks onto ordinary commits is caught."
+    proves_clause: 'the commit is refused, Because a fault in the merge relief may open only the merge it could not judge. It must never look like a check that ran and found nothing, and it must never reach an ordinary commit'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - every internal error routed to a quiet pass, ordinary commits included
+      - the fail-open path entered whenever any git diff fails regardless of an operation
+  - name: test_ge_123e_4_i_authored_change_nonzero_text_diff_is_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Bug-fix entry for the shared source (KI authored-change-treats-a-failed-git-diff-as-an-empty-change). In a real scratch repo with the same corrupt incoming blob and a real MERGE_HEAD, get_authored_change returns could_not_check True with git's stderr in error, for both the text diff and the name-status diff. RED before the fix: today it returns could_not_check False with empty diff_text because a non-zero exit is not checked. Also assert the successful ordinary-commit result is byte-identical (ADR-038 section 5)."
+    proves_clause: 'the check reports the could-not-check outcome, not a clean pass'
+    code_file: templates/scripts/commit_guardian/_authored_change.py
+    must_catch:
+      - a failed text diff returns could_not_check False with an empty diff_text
+      - a failed name-status diff returns could_not_check False with an empty name_status
+      - could_not_check is replaced by an unscoped diff of the whole staged tree
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/_authored_change.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+  - unit_tests/commit_guardian/test_folder_density_merge_commit.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the check whose verdict, stderr warning and outcome line this criterion fixes for the unreadable-incoming-side case.
+    decision: null
+  - file: templates/scripts/commit_guardian/_authored_change.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its _build_authored_change treats only a None result as could-not-check and never reads the exit status of either diff call, which is the defect this record fixes.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/_authored_change.py
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  SETTLES THE TENSION GE-123e NAMED. Refusing on every commit means a fault in the
+  merge-relief logic could block every merge. Chosen disposition: fail OPEN on that
+  fault, VISIBLY, and only for the merge being concluded. Failing closed was
+  rejected because it turns a relief-logic bug into a block on every merge in the
+  repository. That is the outcome the component's fail-open convention exists to
+  prevent, and the L1 says to fail open. The visibility clause and the
+  could-not-check outcome stop that choice becoming a quiet skip (GE-120: a check
+  that cannot run says so). Whether a could-not-check during a merge should ALSO
+  block is a per-check decision under GE-120a-2. This record decides "announce,
+  don't block" for this check.
+
+  THE SECOND ARM IS UNASKED-FOR. Without it, an implementation can route every
+  internal error, merge or not, to the same quiet pass and still satisfy arm one.
+
+  FAULT INJECTION CAVEAT (for the IT PO / test designer). Corrupting the merge record
+  so it names a commit the repository lacks may make git itself refuse to conclude
+  the merge AFTER the pre-commit stage has run. The criterion is about the check's
+  own verdict, warning and outcome on that real commit attempt. Pick a fault that
+  lets git conclude the merge, or assert the check's verdict and output and not the
+  final branch state. Do not replace the real commit attempt with a direct call to
+  the check.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed:
+  a real conflicted merge concluded by a real commit, with both an inline -m message
+  and a message file passed the way the shared commit step passes it. Hand-writing
+  the last-commit-message file or setting the environment the check reads in place
+  of a commit is NOT evidence (test-angles failure catalogue, FP-7).
+
+  IT PO RESOLUTION (2026-11-16). Fault injection: assert the check's own verdict,
+  warning and RESULT line on the real commit attempt. Prefer a fault that lets git
+  conclude the merge (an unreadable incoming copy of the ticket file, with a valid
+  MERGE_HEAD), and assert the branch state only when git concludes. IT PO CAVEAT,
+  DERIVED from code reading: the shared change-set source does not check the exit
+  status of its text diff. An unreadable incoming copy can therefore come back as
+  could_not_check=False with an empty diff, which is a quiet pass. Whether
+  _authored_change.py is fixed under this record (added to declared_files) or under
+  its own record or KI is left for the person to decide. It is not declared here.
+
+  RESOLVED (2026-11-16, person's gate decision). The shared source is fixed under this
+  record: templates/scripts/commit_guardian/_authored_change.py is now in
+  declared_files, with it_requirements for the fix and for re-running the consumers'
+  tests. The defect is filed as
+  KI-CG-20261116-authored-change-treats-a-failed-git-diff-as-an-empty-change.

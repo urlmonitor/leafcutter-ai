@@ -1,0 +1,330 @@
+id: BO-2000g-2
+components:
+  - build_orchestration
+  - supervisor_system
+title: "Comments entries that sign nothing off carry the one documented value feedback-id: (not-a-signoff)"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g.yaml
+criteria: |
+  Given the signoff skill,
+  When an agent reads its rules for the body of a Comments entry,
+  Then the skill defines, in exactly one place, the value `feedback-id: (not-a-signoff)`
+    for a Comments entry that does not sign off the writing agent's own phase,
+  And it states that this value is written without calling the feedback submission step,
+  And it states that the value never stands in for an id on an entry that signs off the
+    writing agent's own phase, and never replaces the failure fallback on a phase
+    sign-off whose submission failed,
+  And no other agent template or skill restates that definition; each one that uses the
+    value refers to the signoff skill for it.
+
+  Given the Comments-entry examples that record a note rather than the writing agent's
+    own phase sign-off:
+      - the commit agent's supervised-path audit entry
+        ("Auto-authorized commit gate: subject ...; files: ...");
+      - the ticket-supervisor template's test-writer skip entry and its
+        contract-shrinking warning;
+      - the building-epics skill's produces-trait warning and its contract-shrinking
+        warning;
+      - every entry in which ticket-supervisor marks a skipped phase signed off on that
+        phase's behalf -- in the building-epics skill, the ac-validator skip entry and
+        the test-writer skip entry,
+  When an agent reads any one of those examples,
+  Then the first line of the example's body (the line directly under its heading) is
+    exactly `feedback-id: (not-a-signoff)`,
+  And it is not a real-id placeholder, an invented id, or the failure fallback.
+depends_on:
+  - BO-2000g
+doc_links:
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/commit.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/ticket-supervisor.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-100-agent-reliability/INF-100c-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Forbids documenting a writer sentinel that submission does not implement. (not-a-signoff) is comment text, not a writer or category value, so it must not be documented in the feedback categories file. See BO-2000g-2-i."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Templates are the source; the built copies are never edited."
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+    relevance: "How a feedback id is obtained (signoff §2a) and why a note entry takes no id from submission."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123e-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Consumer. The refusal names feedback-id: (not-a-signoff) verbatim and points at this record's subsection in the signoff skill. This record must be on main first."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123e-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Consumer. The commit-guardian reference points at the same value and subsection."
+assigned_agent: llm-expert
+estimated_complexity: M
+declared_files:
+  - path: templates/skills/signoff/SKILL.md
+    state: existing
+  - path: templates/agents/commit.md
+    state: existing
+  - path: templates/agents/ticket-supervisor.md
+    state: existing
+  - path: templates/skills/building-epics/SKILL.md
+    state: existing
+it_requirements:
+  - >-
+    Edit the template sources only (templates/agents/, templates/skills/). Never edit the
+    built copies (ADR-001).
+  - >-
+    ONE DEFINITION. The whole definition of `feedback-id: (not-a-signoff)` lives in one
+    subsection of the signoff skill. It covers the value itself, which entries it applies to,
+    that it is written without calling submit_feedback.py, that it never stands in for an id on
+    the writing agent's own phase sign-off, and that it never replaces the failure fallback. Any
+    other template or skill that uses the value carries only the literal line in its example and
+    a pointer to that subsection, never a sentence restating the rule.
+  - >-
+    The subsection has a stable heading that BO-2000g-3, GE-123e-3 and GE-123e-5 can cite.
+    Renaming that heading later changes the contract with those consumers.
+  - >-
+    COMMENT TEXT ONLY. The person decided this on 2026-11-16 (see BO-2000g-2-i). The value is
+    never added as a feedback writer, a category or a submission sentinel. Neither
+    config/feedback_categories.yaml nor templates/config/feedback_categories.yaml is edited by
+    this record. ticket-supervisor is added to no category's allowed_writers. INF-100c-5-ii
+    forbids documenting a sentinel that submission does not implement.
+  - >-
+    PROXY SIGN-OFFS ARE INCLUDED. These entries carry (not-a-signoff): the entries in which
+    ticket-supervisor marks a skipped phase signed off on its behalf (ticket-supervisor.md ~:350;
+    building-epics SKILL.md ~:457 for the ac-validator skip and ~:496 for the test-writer skip),
+    the warnings (ticket-supervisor.md ~:373 and building-epics ~:546 for contract shrinking,
+    building-epics ~:605 for the produces trait), and the commit agent's supervised-path audit
+    entry (commit.md ~:302).
+  - >-
+    INSERT ONLY, as in BO-2000g-1. Insert one line directly under each heading, using the body's
+    own indentation. The pseudocode entries in building-epics (~:457, :496, :546) keep their
+    `<today> <time>` heading spelling, and no other body line changes.
+  - >-
+    SEQUENCING. This record must merge with or before GE-123e, which removes the
+    [NO-FEEDBACK-CHECK] bypass. GE-123e-3's refusal and GE-123e-5's reference name
+    `feedback-id: (not-a-signoff)` and point at the signoff skill subsection. If they ship first,
+    they point at something a reader cannot find. Once the bypass is gone, a copied note example
+    without the line also stalls the drive.
+  - >-
+    The IT PO verified these locations on 2026-11-16. Line numbers drift, so find each one by its
+    text: commit.md:302, ticket-supervisor.md:350 and :373, building-epics SKILL.md :457, :496,
+    :546 and :605.
+test_intent:
+  - clause: "the skill defines, in exactly one place, the value `feedback-id: (not-a-signoff)` for a Comments entry that does not sign off the writing agent's own phase"
+    needs_test: true
+    reason: "A definition written twice in the skill can drift into two different rules, and a missing definition leaves GE-123e-3's refusal pointing at nothing."
+  - clause: "it states that this value is written without calling the feedback submission step"
+    needs_test: true
+    reason: "Without this sentence an agent may run the submission for a note and file a feedback record for something that is not a sign-off."
+  - clause: "it states that the value never stands in for an id on an entry that signs off the writing agent's own phase, and never replaces the failure fallback on a phase sign-off whose submission failed"
+    needs_test: true
+    reason: "Without both prohibitions the value becomes a universal pass for any phase sign-off whose submission was skipped or failed, a misuse the lint cannot see."
+  - clause: "no other agent template or skill restates that definition; each one that uses the value refers to the signoff skill for it"
+    needs_test: true
+    reason: "A second copy of the rule in ticket-supervisor or building-epics is the drift to catch, so the check must search the whole agent and skill trees and not only the files this record edits."
+  - clause: "the first line of the example's body (the line directly under its heading) is exactly `feedback-id: (not-a-signoff)`"
+    needs_test: true
+    reason: "Every listed note entry, including the three building-epics pseudocode entries with `<today> <time>` headings, must open with the exact value, and a close variant or a later position would pass a looser check."
+  - clause: "it is not a real-id placeholder, an invented id, or the failure fallback"
+    needs_test: true
+    reason: "The tempting wrong version gives the proxy sign-offs a real-id placeholder or (submit-failed), which the person's decision forbids and which still looks correct to the lint."
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Consumed by BO-2000g-3 and BO-2000g-4. One documented value, `feedback-id: (not-a-signoff)`,
+      defined in one subsection of the signoff skill (templates/skills/signoff/SKILL.md) and used
+      verbatim as the first body line of every note example. The template lint accepts it, and
+      the real-hook proof commits it unchanged.
+  - agent: python-coder
+    contract: >-
+      Consumed by BO-2000g-2-i. The value is comment text only, and neither feedback categories
+      file changes.
+  - agent: python-coder
+    contract: >-
+      Consumed by GE-123e-3. The literal line "feedback-id: (not-a-signoff)" and the signoff
+      skill subsection that defines it. The refusal names the value verbatim, points at that
+      subsection, and gives no other convention. This record must be on main before GE-123e-3
+      ships.
+  - agent: documentation-expert
+    contract: >-
+      Consumed by GE-123e-5. The single definition of the literal line
+      "feedback-id: (not-a-signoff)", in one subsection with a stable heading in
+      templates/skills/signoff/SKILL.md. The commit-guardian reference
+      (docs/architecture/components/commit-guardian.md) points at that subsection by section and
+      restates neither the value's rule nor a second convention. This record must be on main
+      before GE-123e-5 ships.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - BO-2000g-2-i
+implemented_by: []
+notes: |
+  The person decided the value at the gate: `feedback-id: (not-a-signoff)`. It is comment
+  text only. It is NOT a feedback submission writer or category, and ticket-supervisor
+  is NOT added to any category's writers. The person rejected that. See BO-2000g-2-i.
+
+  Locations verified 2026-11-16 in this checkout (line numbers drift; re-locate by text):
+  commit.md:302; ticket-supervisor.md:350 (test-writer skip, which is also a proxy sign-off
+  of the skipped phase) and :373 (contract-shrinking warning); building-epics SKILL.md:605
+  (produces-trait warning). The building-epics skill holds three more note entries the
+  dispatch did not list: :457 (ac-validator skip proxy sign-off), :496 (test-writer skip
+  proxy sign-off) and :546 (contract-shrinking warning). These are the
+  "ticket-supervisor proxy sign-off of a skipped phase" entries. They write the heading as
+  `### <today> <time> — ` rather than `### YYYY-MM-DD HH:MM — `, so a lint keyed only on
+  the latter spelling misses them. BO-2000g-3 covers that.
+
+  Why the commit audit entry is a note: the commit agent signs off its own phase
+  separately. The audit entry records the auto-authorised gate before the commit runs
+  (KI-SS-20260927).
+test_spec:
+  - name: test_signoff_skill_defines_not_a_signoff_in_exactly_one_subsection
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The signoff skill has exactly one heading-delimited subsection that defines the value
+      feedback-id: (not-a-signoff). The literal appears in a definition once, a missing subsection
+      fails loudly, and a second definition elsewhere in the skill fails. The subsection heading is
+      stable and findable by the consumers GE-123e-3 and GE-123e-5.
+    proves_clause: 'the skill defines, in exactly one place, the value `feedback-id: (not-a-signoff)` for a Comments entry that does not sign off the writing agent''s own phase'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_definition_says_it_is_written_without_calling_submit_feedback
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Inside that one subsection a sentence states the value is written without calling the
+      feedback submission step (submit_feedback.py). The same sentence outside the subsection does
+      not count.
+    proves_clause: 'it states that this value is written without calling the feedback submission step'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_definition_forbids_use_on_own_phase_signoff_and_in_place_of_fallback
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The subsection carries two separate prohibitions: it never stands in for an id on the writing
+      agent's own phase sign-off, and it never replaces the failure fallback on a phase sign-off
+      whose submission failed. Each is asserted independently so a subsection with only one fails.
+    proves_clause: 'it states that the value never stands in for an id on an entry that signs off the writing agent''s own phase, and never replaces the failure fallback on a phase sign-off whose submission failed'
+    code_file: templates/skills/signoff/SKILL.md
+  - name: test_no_other_template_or_skill_restates_the_definition
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Walks templates/agents/ and templates/skills/ at any depth, excluding only the signoff skill.
+      Every file mentioning not-a-signoff carries the literal line in an example plus a pointer to
+      the signoff subsection, and no prose sentence restating the rule (written without submission,
+      never an id, never replaces the fallback). Covers building-epics and ticket-supervisor, and
+      files this record does not edit.
+    proves_clause: 'no other agent template or skill restates that definition; each one that uses the value refers to the signoff skill for it'
+    code_file: templates/skills/building-epics/SKILL.md
+  - name: test_each_note_example_opens_with_exactly_not_a_signoff
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Parametrised over the seven note examples located by heading plus body anchor text, never by
+      line number: commit audit entry, ticket-supervisor test-writer skip and contract-shrinking
+      warning, building-epics produces-trait warning, contract-shrinking warning, ac-validator skip
+      and test-writer skip. The three building-epics pseudocode entries keep their
+      <today> <time> heading spelling and indentation. The first body line, indentation removed,
+      equals feedback-id: (not-a-signoff) exactly; a variant, a blank line or a later position fails.
+    proves_clause: 'the first line of the example''s body (the line directly under its heading) is exactly `feedback-id: (not-a-signoff)`'
+    code_file: templates/agents/ticket-supervisor.md
+  - name: test_note_examples_carry_no_placeholder_invented_id_or_fallback
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      For the same seven examples no line carries a real-id placeholder spelling read from the
+      signoff skill, a concrete fb_ id or the failure fallback, and the commit.md audit entry in
+      particular carries only the one (not-a-signoff) line. Also asserts the commit agent
+      keeps its own separate sign-off.
+    proves_clause: 'it is not a real-id placeholder, an invented id, or the failure fallback'
+    code_file: templates/agents/commit.md
+  - name: test_note_example_definition_reaches_the_deployed_prompts
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Marked shared_layout_reader with shared_reference_layout. Reads the DEPLOYED signoff skill and
+      deployed ticket-supervisor template (what an agent loads) and asserts the single definition
+      subsection and the first-body-line literal under the supervisor skip entry are present. Fails,
+      never skips, when the layout or a deployed file is missing. No build.py, no writes into the layout.
+    proves_clause: 'the first line of the example''s body (the line directly under its heading) is exactly `feedback-id: (not-a-signoff)`'
+    code_file: templates/agents/ticket-supervisor.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/agents/commit.md
+  - templates/agents/ticket-supervisor.md
+  - scripts/suite_performance/pytest_shared_reference_layout.py
+  - unit_tests/prompt_assembly/test_signoff_block_protocol.py
+file_findings:
+  - file: templates/skills/signoff/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the skill where the single not-a-signoff definition belongs and it has no such subsection today.
+    decision: null
+  - file: templates/agents/commit.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the supervised-path audit entry at 302 whose body has no feedback-id line.
+    decision: null
+  - file: templates/agents/ticket-supervisor.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the test-writer skip entry at 350 and the contract-shrinking warning at 373, neither with a feedback-id line.
+    decision: null
+  - file: templates/skills/building-epics/SKILL.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the four note entries at 457, 496, 546 and 605 that the criteria change, three of them with the today-time heading spelling.
+    decision: null
+file_findings_opened_files:
+  - templates/skills/signoff/SKILL.md
+  - templates/agents/commit.md
+  - templates/agents/ticket-supervisor.md
+  - templates/skills/building-epics/SKILL.md
