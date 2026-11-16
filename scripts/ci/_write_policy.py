@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import TypeGuard
 
 FAMILY_LABELS = frozenset({"post-merge-red", "post-merge-timing", "post-merge-flaky"})
 CHECK_NAME = "Post-merge suite status"
@@ -83,7 +84,7 @@ def _marked(body) -> bool:
     return isinstance(text, str) and text.splitlines()[:1] == [MARKER]
 
 
-def _keys_within(body, allowed: frozenset) -> bool:
+def _keys_within(body, allowed: frozenset) -> TypeGuard[dict]:
     return isinstance(body, dict) and set(body) <= allowed
 
 

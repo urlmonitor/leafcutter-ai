@@ -310,7 +310,7 @@ def resolve_tag(tag: dict, pytest_results: dict[str, str]) -> tuple[list[list[st
     same = {key: cases for key, cases in units.items() if _same_file(key[0], tag["file"])}
     facts = _file_facts(tag["file"]) if same else None
     defining = _defining_chain(tag, facts[0]) if facts else None
-    if defining is None:
+    if facts is None or defining is None:
         return _pool_verdict(same or units, False)
     return _pool_verdict({k: v for k, v in same.items() if _inherits(k[1], defining, func, facts[1])}, True)
 

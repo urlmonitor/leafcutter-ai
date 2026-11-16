@@ -27,7 +27,17 @@ class KnowledgeError(Exception):
 
 
 class BackendUnavailable(KnowledgeError):
-    """Retryable backend connectivity or execution failure."""
+    """Retryable backend connectivity or execution failure.
+
+    A raiser may attach optional fields, each absent until set (readers use ``getattr`` with a
+    default): ``cause_class`` (the failure class named from the driver's code),
+    ``time_limit_seconds`` (the limit applied, on a time-limit failure only) and ``details``
+    (the discrete fields of a failed publication).
+    """
+
+    cause_class: str
+    time_limit_seconds: float
+    details: dict
 
     def __init__(self, message: str = "backend unavailable") -> None:
         """Store injected dependencies without performing network operations.

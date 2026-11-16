@@ -29,6 +29,21 @@ class EmbeddingProvider(Protocol):
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
 
 
+class EmbeddingWriter(Protocol):
+    """Writer interface that publishes model-bound vectors to one generation."""
+
+    async def put_embeddings(
+        self,
+        repository_id: str,
+        generation_id: str,
+        embeddings: dict,
+        *,
+        model: str,
+        dimensions: int,
+        content_hashes: dict,
+    ) -> None: ...
+
+
 class SourceResolver(Protocol):
     """Immutable source-reader interface with a byte limit."""
 
