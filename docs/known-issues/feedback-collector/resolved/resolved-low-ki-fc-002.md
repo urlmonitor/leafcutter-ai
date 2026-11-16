@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-25'
-last_updated: '2026-08-25'
+last_updated: '2026-11-16'
 components:
   - feedback_collector
 related_docs:
@@ -16,12 +16,20 @@ related_docs:
 # KI-FC-002 — The sidecar id-recovery fallback is keyed on whole seconds and shares one stderr file, so parallel agents can read each other's feedback id
 
 > One known issue, split out of `docs/known-issues/feedback-collector.md` on
-> 2026-09-14. Index: [feedback-collector.md](../feedback-collector.md).
+> 2026-09-14. Index: [feedback-collector.md](../../feedback-collector.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open (latent — mechanism confirmed, no wrong id observed in a ticket yet)
+- **Status:** **RESOLVED** (INF-500d-3-i, -ii, -iii; `300e82d6a`, PR #1368, branch
+  `ac/ki-fc-002`). Both halves of the fix direction landed. The recovery file is now
+  named per run rather than per second, so two submissions in the same second get
+  separate files (INF-500d-3-i). Every shipped submit instruction sends its error stream
+  to a per-run file named from the ticket base name and phase, and its recovery search
+  reads only that file (INF-500d-3-ii). An agent recovers only its own id (INF-500d-3-iii).
+  Still open as a guard, not part of this defect: INF-500d-3-iv (`todo`) forbids the
+  instructions from falling back to "the newest recovery file in the temporary directory"
+  when an agent's own file is missing.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/feedback/submit_feedback.py` (`:549-550`);

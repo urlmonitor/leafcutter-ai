@@ -41,7 +41,7 @@ criteria: |
 depends_on:
   - INF-500d-3
 doc_links:
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-002.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-002.md
     relationship: describes
     status: exists
   - path: templates/scripts/feedback/submit_feedback.py
