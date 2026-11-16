@@ -1,0 +1,281 @@
+id: BO-2400f-7-viii
+components:
+  - build_orchestration
+title: "The claim command tells 'held' apart from every other failure by its exit status, and names what is held"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criteria store in which the target XY-100a-1 reads work_status
+    in_progress,
+  When the claim command is run for a set whose target is XY-100a-1,
+  Then it changes no acceptance criterion,
+  And it ends with a non-success exit status reserved for "held", which it ends with on no
+    other outcome,
+  And its standard output carries its outcome: nothing claimed, XY-100a-1 named as held,
+    and the target marked refused.
+
+  Given a set in which every member, the target included, already reads in_progress,
+  When the claim command runs,
+  Then it ends with the same "held" exit status and names every member as held.
+
+  Given the claim command fails for any other reason — an id the store does not contain,
+    a store it cannot read, or an unexpected error,
+  When it ends,
+  Then its exit status is non-success and is not the "held" status.
+
+  Given a set in which only non-target members read in_progress and the rest read todo,
+  When the claim command runs,
+  Then it ends in success, claims the todo members and names the in_progress ones as
+    excluded, unchanged from BO-2400f-8-i.
+depends_on: [BO-2400f-7, BO-2400f-8, BO-2400f-8-i]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "The claim subcommand. Today a refused target and every other failure end with the same non-success status, so a caller cannot tell them apart without parsing output."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-8.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the refusal of an in_progress target. This record makes that refusal recognisable from the command's exit status."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+declared_files:
+  - path: scripts/build_orchestration/fast_lane.py
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    claim_exit_status:
+      type: integer
+      enum: [0, 1, 2, 3]
+      description: >-
+        Exit statuses of `fast_lane.py claim`. 0 is success (a claim made, possibly with
+        non-target members excluded). 3 is reserved for held (the target, and possibly other
+        members, already read in_progress) and is used on no other outcome. 1 is every other
+        failure (an unknown id, an unreadable store, a write that could not be made, an
+        unexpected error caught at the entry point). 2 stays the argument parser's usage
+        error. 3 collides with no status the command used before this record (0 and 1, plus
+        the parser's 2).
+    claim_held_outcome:
+      type: object
+      required: [claimed, excluded_claimed, target_refused]
+      properties:
+        claimed:
+          type: array
+          maxItems: 0
+        excluded_claimed:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: Every member read as in_progress, the target included.
+        target_refused:
+          const: true
+  reference_file_path: scripts/build_orchestration/_fl_lifecycle.py
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      The held status is one named constant, declared once and documented in the command's
+      own help or module documentation, so a caller reads it rather than guessing. Exit 3 is
+      returned on the held branch and on no other path, including the entry point's
+      unexpected-error handler.
+    - >-
+      The held outcome keeps its field names and its place on standard output exactly as
+      today ({claimed: [], excluded_claimed: [...], target_refused: true}). BO-2400f-7-x
+      reads the payload observed on 2026-11-16 and an older deployed command that still exits
+      1; changing the shape would break both readings.
+    - >-
+      The held list names the target itself as well as every other member read as in_progress.
+      A held outcome that names zero members cannot be produced.
+    - >-
+      Any existing test that pins the refused claim to exit 1 exactly is updated to the
+      reserved status in the same change; tests that require only a non-zero exit keep their
+      assertion and gain one on the reserved value. The success path (BO-2400f-8-i, only
+      non-target members in_progress) keeps exit 0 and its output unchanged.
+    - >-
+      A held refusal changes no record, as before: the store is read, never written, on that
+      branch.
+test_intent:
+  - clause: it changes no acceptance criterion
+    needs_test: true
+    reason: A refused claim that still wrote a record would strand another run's members.
+  - clause: it ends with a non-success exit status reserved for "held", which it ends with on no other outcome
+    needs_test: true
+    reason: The reserved status is the whole point of the record, and today the held branch shares exit 1 with every crash.
+  - clause: "its standard output carries its outcome: nothing claimed, XY-100a-1 named as held, and the target marked refused"
+    needs_test: true
+    reason: The lane reads the held members from this payload, so a missing or moved field silently empties the held halt.
+  - clause: it ends with the same "held" exit status and names every member as held
+    needs_test: true
+    reason: When every member is held the target must still be in the held list, which a filter that drops the target would miss.
+  - clause: its exit status is non-success and is not the "held" status
+    needs_test: true
+    reason: An unknown id, an unreadable store and an unexpected error must not be mistaken for a held claim.
+  - clause: it ends in success, claims the todo members and names the in_progress ones as excluded, unchanged from BO-2400f-8-i
+    needs_test: true
+    reason: The narrowing case must keep exit 0, and a held check that fires on any in_progress member would refuse it.
+test_spec:
+  - name: test_held_claim_changes_no_record_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      Writes a fixture store in a temp directory with yaml.safe_dump (target XY-100a-1 at in_progress, XY-100a-2 at
+      todo), snapshots every YAML file's bytes, runs python fast_lane.py claim as a subprocess, and compares every
+      file's bytes afterwards. The wrong version it catches is a refusal branch that still writes a record.
+    proves_clause: it changes no acceptance criterion
+    code_file: scripts/build_orchestration/fast_lane.py
+  - name: test_held_claim_exits_with_the_reserved_status_and_no_other_outcome_does
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Runs the claim subprocess for the held case and asserts the exit status equals the one named constant the
+      module documents (3). Runs a successful claim, an unknown id, an unreadable store and an entry-point error
+      and asserts none of them exits with that constant. The constant is read from the module, not retyped, and the
+      existing assertion that pins a refused claim to exit 1 is moved to the reserved value.
+    proves_clause: it ends with a non-success exit status reserved for "held", which it ends with on no other outcome
+    code_file: scripts/build_orchestration/fast_lane.py
+    must_catch:
+      - the held branch still exits 1, the same status as a crash
+      - the unexpected-error handler at the entry point also returns 3
+      - every non-zero claim failure was renumbered to 3
+  - name: test_held_claim_prints_its_outcome_on_standard_output_with_the_same_field_names
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Parses standard output of the held subprocess run as JSON and asserts it equals claimed empty,
+      excluded_claimed holding XY-100a-1, target_refused true, with exactly those keys and nothing on standard
+      output besides that one object. The wrong version it catches is the payload moved to standard error or its
+      field renamed, which would empty the lane's held halt.
+    proves_clause: >-
+      its standard output carries its outcome: nothing claimed, XY-100a-1 named as held, and the target marked refused
+    code_file: scripts/build_orchestration/fast_lane.py
+  - name: test_all_members_held_ends_held_and_names_every_member_including_the_target
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Fixture store where every member including the target reads in_progress. Asserts the reserved exit status and
+      that excluded_claimed lists every member id with the target among them, and is non-empty.
+    proves_clause: it ends with the same "held" exit status and names every member as held
+    code_file: scripts/build_orchestration/fast_lane.py
+    must_catch:
+      - a filter that drops the target from the held list
+      - a held outcome that names zero members
+  - name: test_other_failures_exit_non_zero_and_are_not_the_held_status
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Three subprocess runs of the claim command, an id the store does not contain, an ac-root that cannot be read
+      (a path that is a file), and an entry-point error. Each must exit non-zero and not with the held status, and
+      an argparse usage error must still exit 2.
+    proves_clause: its exit status is non-success and is not the "held" status
+    code_file: scripts/build_orchestration/fast_lane.py
+    must_catch:
+      - an unknown id reported with the held status
+      - the entry-point OSError handler returning the held status
+  - name: test_only_non_target_in_progress_members_still_claim_and_exit_zero
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Fixture store where the target and one other member read todo and one non-target member reads in_progress.
+      Runs the claim subprocess and asserts exit 0, target_refused false, the todo members claimed on disk (read back
+      with yaml.safe_load) and the in_progress member named in excluded_claimed and left unchanged.
+    proves_clause: it ends in success, claims the todo members and names the in_progress ones as excluded, unchanged from BO-2400f-8-i
+    code_file: scripts/build_orchestration/fast_lane.py
+    must_catch:
+      - a held check that fires on any in_progress member and so refuses the narrowing case
+  - name: test_claim_subcommand_is_reachable_through_the_real_cli_process
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Spawns python scripts/build_orchestration/fast_lane.py claim as a real process with real argv against a fixture
+      store in the held state and asserts the process exit status and standard output, so the held status is shown
+      to come out of the entry point the lane shells out to and not from a function called directly.
+    proves_clause: it ends with a non-success exit status reserved for "held", which it ends with on no other outcome
+    code_file: scripts/build_orchestration/fast_lane.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - scripts/build_orchestration/fast_lane.py
+  - unit_tests/build_orchestration/test_fastlane_lifecycle_cli.py
+  - unit_tests/build_orchestration/test_bo2400f_7_cli_proof.py
+file_findings:
+  - file: scripts/build_orchestration/fast_lane.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its main() holds the claim subcommand, which returns exit 1 on the refused branch and on a failed write alike, so it is the surface this record changes.
+    decision: null
+  - file: scripts/build_orchestration/_fl_lifecycle.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is the sibling module in the same area that holds the claim and release logic fast_lane.py calls, and its error handling and docstring form are the one the new constant must follow.
+    decision: null
+file_findings_opened_files:
+  - scripts/build_orchestration/fast_lane.py
+  - scripts/build_orchestration/_fl_lifecycle.py
+delivers_to:
+  agent: python-coder
+  contract: "Claim command (`fast_lane.py claim`): a held refusal ends with exit status 3, reserved for held, and prints {claimed: [], excluded_claimed: [<held ids, target included, non-empty>], target_refused: true} on standard output; any other failure ends with exit status 1 (argparse usage errors stay 2). BO-2400f-7-ix reads it; BO-2400f-7-xi runs the real command against fixture stores and gives its captured exit status and streams to the lane, rather than restating them."
+expects_from:
+  ac_id: BO-2400f-8
+  contract: "The refusal signal when the target AC is itself in_progress, plus the excluded already-in_progress ids."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-11-16, run wf_1d040da5-d48: the claim command exited 1 on a held target, the
+  same status it would give for a crash. The lane discards every non-zero claim reply as
+  "never attempted", so the held halt could not be reached.
+
+  The exact value is the IT PO's choice (the 2026-11-16 analysis suggests 3). It stays
+  non-success, so the existing CLI test that requires a non-zero exit on a refused target
+  still holds; that test gains an assertion on the reserved value.
+
+  The lane in BO-2400f-7-ix does not rely on this status alone: it also recognises the held
+  outcome from its output, because an older deployed command still exits 1. This record makes
+  the command honest on its own for any caller, not only the lane.
+
+  Placed under BO-2400f-7 (the claim) rather than BO-2400f-8 (the refusal rule) so that only
+  one done parent needs its work_status reset; the behaviour is the claim command's report.
+  Owner-aware claims (who holds it, and whether a committed in_progress is a live claim) are
+  out of scope here and come later.

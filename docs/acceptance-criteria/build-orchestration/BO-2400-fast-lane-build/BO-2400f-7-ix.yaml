@@ -1,0 +1,386 @@
+id: BO-2400f-7-ix
+components:
+  - build_orchestration
+title: "The lane reads the claim's reply on any exit status, and declined, ran-and-failed and held end as three different halts"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the claim step's reply is a decline that carries no exit status (BO-2400a-1-i),
+  When the run reads it,
+  Then it halts saying the claim was never attempted, naming the agent asked and quoting its
+    reason (BO-2400f-7-iii).
+
+  Given the claim step's reply carries a non-success exit status, and neither output stream
+    holds a held outcome naming at least one member — for example exit status 1 with a
+    traceback on standard error and nothing on standard output,
+  When the run reads it,
+  Then it halts saying the claim command ran and failed, naming the exit status and quoting
+    standard error,
+  And it does not say the claim was never attempted, and does not say anything is held,
+  And the claim is reconciled as BO-2400f-10-iv requires.
+
+  Given the claim step's reply carries an exit status and its output holds a held outcome
+    naming XY-100a-1 and XY-100a-2 as held, with the target marked refused,
+  When the run reads it,
+  Then it halts saying the claim is held, naming XY-100a-1 and XY-100a-2,
+  And the halt carries the claim command's outcome unchanged,
+  And it says this run did not find out who holds them, and that the remedy is to wait for
+    the run that holds them or, if no run does, to return them to todo,
+  And it does not say the claim was never attempted,
+  And no release is asked for, because this run claimed nothing and a release would return
+    another run's claim to todo.
+
+  Given any claim-step reply,
+  When the run classifies it,
+  Then it ends in exactly one of five outcomes — a usable claim (BO-2400f-7-iv), declined,
+    ran and failed, held, or state unknown (BO-2400f-7-vii) — each with its own halt kind,
+  And no held halt names zero held members (BO-2400f-7-iii).
+depends_on: [BO-2400f-7, BO-2400f-7-iii, BO-2400f-7-iv, BO-2400f-7-vii, BO-2400f-7-viii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The claim-reply reader returns nothing for any non-zero exit, which sends every held refusal and every command failure to the never-attempted halt; the contention halt is reachable only with exit 0 (2026-11-16 analysis)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires never-attempted and contention to be told apart, and contention to name its members. This record makes the contention (held) halt reachable from the reply the real command gives, and adds ran-and-failed as a third halt."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Ran-and-failed and held are halts an operator acts on differently: read the error, or wait for or free the holder."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+declared_files:
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    claim_step_outcome:
+      oneOf:
+        - description: usable claim (BO-2400f-7-iv); the run proceeds
+        - type: object
+          required: [halt_kind, agent, reason]
+          properties:
+            halt_kind:
+              const: declined_step
+        - type: object
+          required: [halt_kind, exit_status, stderr]
+          properties:
+            halt_kind:
+              const: claim_command_failed
+            exit_status:
+              type: integer
+            stderr:
+              type: string
+        - type: object
+          required: [halt_kind, held, claim_outcome]
+          properties:
+            halt_kind:
+              const: claim_held
+            held:
+              type: array
+              minItems: 1
+              items:
+                type: string
+            claim_outcome:
+              type: object
+              description: The claim command's outcome object, unchanged.
+            remedy:
+              type: string
+        - type: object
+          required: [halt_kind]
+          properties:
+            halt_kind:
+              const: state_unknown
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      ONE READER, FIVE OUTCOMES, IN A FIXED ORDER. The claim reply is classified once: a
+      decline shape (no exit_status) is declined; a reply with no exit_status that is not a
+      decline is state unknown (BO-2400f-7-vii); a reply whose output holds a readable held
+      outcome (target_refused true and a non-empty excluded_claimed) is held, whatever its exit
+      status; any other non-success exit is ran and failed; exit 0 with a usable claim is the
+      usable claim. Every reply lands in exactly one.
+    - >-
+      HELD IS READ FROM THE OUTCOME, NOT FROM THE STATUS ALONE. Exit status 3 (BO-2400f-7-viii)
+      without a readable held outcome is ran and failed, never a held halt naming nobody. Exit
+      status 1 with a readable held outcome is held, so the lane reads an older deployed
+      command correctly.
+    - >-
+      THE HELD HALT REPLACES THE OLD CONTENTION BRANCH. BO-2400f-7-iii's contention branch is
+      reached today only by an exit-0 reply the command never emits. The held halt is that
+      branch made reachable, not a second branch beside it, so the lane has one held halt kind.
+    - >-
+      A HELD HALT DISPATCHES NO RELEASE. This run claimed nothing, and a release would return
+      another run's members to todo (BO-2400f-8, BO-2400f-12-i). Ran and failed hands over to
+      BO-2400f-10-iv's reconciliation; it does not release on the strength of the resolved set.
+    - >-
+      The held halt names no owner and claims to know none: the claim records none today.
+      Its remedy text covers both cases the run cannot tell apart (a live run holds them; no run
+      does and they should be returned to todo).
+test_intent:
+  - clause: it halts saying the claim was never attempted, naming the agent asked and quoting its reason (BO-2400f-7-iii)
+    needs_test: true
+    reason: The genuine decline must keep its never-attempted halt while the other non-success replies are moved off it.
+  - clause: it halts saying the claim command ran and failed, naming the exit status and quoting standard error
+    needs_test: true
+    reason: Ran-and-failed is a new halt kind, and today this reply is reported as never attempted.
+  - clause: it does not say the claim was never attempted, and does not say anything is held
+    needs_test: true
+    reason: A crash reported as never attempted or as held sends the operator after the wrong cause.
+  - clause: the claim is reconciled as BO-2400f-10-iv requires
+    needs_test: true
+    reason: A command that failed part-way may have claimed members, and skipping the hand-over strands them.
+  - clause: it halts saying the claim is held, naming XY-100a-1 and XY-100a-2
+    needs_test: true
+    reason: This is the halt the real command could never reach before, so its reachability from a non-zero reply is the core proof.
+  - clause: the halt carries the claim command's outcome unchanged
+    needs_test: true
+    reason: Rewriting the outcome on the way into the halt could drop held members without anyone seeing it.
+  - clause: it says this run did not find out who holds them, and that the remedy is to wait for the run that holds them or, if no run does, to return them to todo
+    needs_test: true
+    reason: The remedy text is computed into the halt, and a halt that names an owner would claim knowledge the run does not have.
+  - clause: it does not say the claim was never attempted
+    needs_test: true
+    reason: The 2026-11-16 held claim was reported as never attempted, so the absence of that wording must be proved.
+  - clause: no release is asked for, because this run claimed nothing and a release would return another run's claim to todo
+    needs_test: true
+    reason: A release on a held halt would undo another run's claim, which is the costliest failure in this record.
+  - clause: it ends in exactly one of five outcomes — a usable claim (BO-2400f-7-iv), declined, ran and failed, held, or state unknown (BO-2400f-7-vii) — each with its own halt kind
+    needs_test: true
+    reason: Overlapping or missing branches in the classifier are what produced both observed defects.
+  - clause: no held halt names zero held members (BO-2400f-7-iii)
+    needs_test: true
+    reason: A held halt naming nobody is the 2026-09-23 self-contradicting payload, and it must stay unproducible.
+test_spec:
+  - name: test_a_runner_decline_at_claim_still_halts_as_never_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Gives the claim step the decline built by claim_declined (no exit_status) through the workflow-engine harness
+      and asserts halt_kind declined_step naming the agent command-step-runner and quoting the reason, with the
+      never attempted wording of BO-2400f-7-iii. The wrong version it catches is a lane that moves every
+      non-success reply off the never attempted halt, the genuine decline included.
+    proves_clause: it halts saying the claim was never attempted, naming the agent asked and quoting its reason (BO-2400f-7-iii)
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_a_command_failure_halts_as_ran_and_failed_with_exit_status_and_stderr
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The claim reply is captured by running the real fast_lane.py claim as a subprocess against a fixture store in a
+      temp directory with an id the store does not contain (exit status 1, empty standard output, a message on
+      standard error), never hand written. The lane's halt must carry halt_kind claim_command_failed, the integer
+      exit status and the standard error quoted. The wrong version it catches is the 2026-11-16 reading that reports
+      this reply as never attempted.
+    proves_clause: it halts saying the claim command ran and failed, naming the exit status and quoting standard error
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_ran_and_failed_halt_says_neither_never_attempted_nor_held
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same captured failure reply. The whole terminal payload text, lower-cased, must contain none of the never
+      attempted markers and none of the contention markers used by test_bo2400f_7_iii_claim_refusal_workflow.py.
+    proves_clause: it does not say the claim was never attempted, and does not say anything is held
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a crash reported with the never attempted wording
+      - a crash reported as held so the operator waits for a run that does not exist
+  - name: test_ran_and_failed_claim_hands_over_to_reconciliation
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      After the claim_command_failed halt the recorded dispatches must include the reconciliation read of
+      BO-2400f-10-iv, made after claim-connected and before the terminal return. The wrong version it catches is a
+      halt that returns at once and strands a claim the failed command made part-way.
+    proves_clause: the claim is reconciled as BO-2400f-10-iv requires
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_held_claim_reaches_the_held_halt_naming_every_held_member
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Builds a fixture store in which XY-100a-1 and XY-100a-2 read in_progress, runs the real claim command as a
+      subprocess to capture its exit status, standard output and standard error, and gives that reply to the lane
+      through the harness. The payload must carry halt_kind claim_held with held naming XY-100a-1 and XY-100a-2. It
+      is run twice, once with the exit status the command gives today (1) and once with the reserved status of
+      BO-2400f-7-viii (3), so an older deployed command is read as well.
+    proves_clause: it halts saying the claim is held, naming XY-100a-1 and XY-100a-2
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the reader returns nothing for any non-zero exit so the held halt stays unreachable as today
+      - held is recognised only on exit status 0, the shape the real command never emits
+      - held is recognised only on the reserved status so an older command exiting 1 is misread
+  - name: test_held_halt_carries_the_claim_outcome_unchanged
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The halt's claim_outcome must deep-equal the JSON object parsed from the standard output the real command
+      printed, with every member still present. The wrong version it catches is an outcome rebuilt on the way into the
+      halt that drops held members.
+    proves_clause: the halt carries the claim command's outcome unchanged
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_held_halt_says_the_holder_is_unknown_and_names_both_remedies
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The remedy text of the held halt must say this run did not find out who holds the members, tell the operator to
+      wait for the run that holds them or, if no run does, to return them to todo, and must name no owner or run id.
+    proves_clause: it says this run did not find out who holds them, and that the remedy is to wait for the run that holds them or, if no run does, to return them to todo
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_held_halt_does_not_say_never_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The held payload text, lower-cased, must contain none of the never attempted markers, because the 2026-11-16
+      held claim was reported with exactly that wording.
+    proves_clause: it does not say the claim was never attempted
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the held halt keeps the old never attempted message
+  - name: test_held_halt_dispatches_no_release
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      After the held halt the recorded dispatches must contain no dispatch whose label starts with release and none
+      whose request names the release subcommand, because this run claimed nothing and a release would return
+      another run's members to todo.
+    proves_clause: no release is asked for, because this run claimed nothing and a release would return another run's claim to todo
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - a held halt that releases the resolved set
+      - a held halt that hands over to the reconciliation release
+  - name: test_every_claim_reply_ends_in_exactly_one_of_five_outcomes
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Sweeps replies captured from the real command (usable claim with every member todo, held, ran-and-failed),
+      the runner decline, an unfinished reply, and the boundary shapes exit status 3 with empty streams and a held
+      outcome on the older exit status 1. Each must land in exactly one outcome, usable claim (the run dispatches
+      the context bundle) or exactly one halt_kind of declined_step, claim_command_failed, claim_held or
+      state_unknown, never two and never none. Exit status 3 with no readable outcome must be claim_command_failed.
+    proves_clause: it ends in exactly one of five outcomes — a usable claim (BO-2400f-7-iv), declined, ran and failed, held, or state unknown (BO-2400f-7-vii) — each with its own halt kind
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - exit status 3 without a readable held outcome reported as a held halt naming nobody
+      - overlapping branches that give one reply two halt kinds
+  - name: test_no_held_halt_ever_names_zero_members
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Feeds target_refused true with an empty excluded_claimed, with the key absent, and with a non-array value, each
+      with exit statuses 0, 1 and 3, and asserts no payload carries halt_kind claim_held with an empty held list.
+    proves_clause: no held halt names zero held members (BO-2400f-7-iii)
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the 2026-09-23 payload that says held while naming nobody
+  - name: test_claim_reply_reader_is_reachable_through_the_workflow_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs fast-lane-ship.js as the engine does (run_workflow_under_e2 with args ac) with the claim step answered by a
+      reply captured from the real claim command in the held state and asserts the run's terminal return value is
+      the claim_held halt, so the new reader is reached by the real control flow.
+    proves_clause: it halts saying the claim is held, naming XY-100a-1 and XY-100a-2
+    code_file: templates/workflows-js/fast-lane-ship.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - scripts/build_orchestration/fast_lane.py
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+file_findings:
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its interpretClaimRunnerReply returns null for any non-zero exit, which sends every held refusal and failure to the never attempted halt, so the claim-reply reader lives here.
+    decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is a sibling workflow script of the same type that turns agent replies into distinct structured halt kinds.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-ticket.js
+delivers_to:
+  agent: python-coder
+  contract: "Claim-step outcome, one of: usable claim | {halt_kind: 'declined_step', ...} | {halt_kind: 'claim_command_failed', exit_status, stderr} | {halt_kind: 'claim_held', held: [non-empty ids], claim_outcome (verbatim)} | {halt_kind: 'state_unknown', ...}. claim_command_failed triggers BO-2400f-10-iv; claim_held dispatches no release. BO-2400f-7-x extends the same reader to a held outcome relayed on standard error."
+expects_from:
+  ac_id: BO-2400f-7-viii
+  contract: "`fast_lane.py claim` ends with exit status 3 on held and prints {claimed: [], excluded_claimed: [<held ids, target included, non-empty>], target_refused: true} on standard output; any other failure ends with exit status 1."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-11-16, run wf_1d040da5-d48 (KM-400e-5). The claim command ran, found the
+  target in_progress, exited 1 and printed its held outcome. The lane said "The claim was
+  never attempted". BO-2400f-7-iii's genuine-contention branch exists, but the real command
+  can never reach it: it needs exit status 0 with target_refused true, and the command exits
+  non-zero on every refusal. Its test reaches it only by feeding that impossible shape
+  (BO-2400f-7-xi).
+
+  Held is recognised from the outcome, whatever the exit status, so the lane reads a held
+  refusal correctly from an older deployed command (exit 1) and from BO-2400f-7-viii's
+  reserved status alike. A non-success reply with no readable held outcome is ran-and-failed,
+  never held, so a held halt can never name nobody.
+
+  The held halt names no owner because the claim records none today. Owner-aware claims, and
+  treating an in_progress committed on main (for example after an amendment reopened the
+  record, as with KM-400e-5) as not a live claim, are out of scope here and come later. The
+  remedy text points the operator at both cases the run cannot tell apart.
+
+  Why held asks for no release: the run claimed nothing. Releasing would put another run's
+  members back to todo (BO-2400f-8, the same rule as BO-2400f-12-i).

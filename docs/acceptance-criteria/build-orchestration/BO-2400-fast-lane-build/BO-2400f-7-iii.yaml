@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -28,6 +28,10 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-xi.yaml
+    relationship: related
+    status: exists
+    relevance: "Replaces this record's exit-0 contention fixture with the real claim command's reply; this record's contention proof rests on that test."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -75,7 +79,11 @@ test_spec:
     angle: criterion
     description: "The non-regression arm: a claim that is attempted and finds members
       already held still reports contention, and the held members appear. Fails any
-      fix that turns every claim failure into 'not attempted'."
+      fix that turns every claim failure into 'not attempted'. Re-pointed 2026-11-16
+      (BO-2400f-7-xi): the held reply given to the lane is the exit status, standard
+      output and standard error the real claim command produced against a fixture
+      store whose target is already in_progress, captured in the same test run, never
+      an exit-0 hand-built reply."
   - name: test_a_contention_report_naming_no_held_member_is_impossible
     target_dir: unit_tests/workflows/
     framework: pytest
@@ -114,7 +122,9 @@ test_rationale: |
   test_bo2400f_3_i_worktree_verify_workflow.py already use. A test that greps the
   workflow for the performer's name satisfies nothing here — the defect is a dispatch
   that was present, correct-looking and wrong.
-delivers_to: null
+delivers_to:
+  agent: python-coder
+  contract: "The claim step's split between never-attempted and contention: a claim that was never attempted halts saying so, and a contention halt requires a non-empty held-member list. BO-2400f-5-iii keeps that split and applies the same decline reading to every other step."
 expects_from:
   ac_id: BO-2400f-7
   contract: "The claim step BO-2400f-7 specifies. This record constrains who attempts
@@ -122,7 +132,12 @@ expects_from:
     step rather than a separate one."
 origin_agent: BrainCandy
 created: 2026-09-23
-amended_by: []
+amended_by:
+- action: proof-replaced-by
+  agent: business-analyst
+  date: '2026-11-16'
+  by_record: BO-2400f-7-xi
+  reason: "This record's contention arm (an attempted claim that finds members held reports contention and names them) was proved by a workflow test that gave the lane a held reply with exit status 0, built by a fixture helper whose exit status defaults to 0. The real claim command never emits that shape: its own lifecycle test pins a non-zero exit for the same refusal, and on the 2026-11-16 lane a real held reply is read as never attempted. The contention claim is therefore not proved for any reply the lane can actually receive. BO-2400f-7-xi (approved at the BA gate 2026-11-16) replaces that fixture with the reply the real claim command produces against a fixture store, keeps every assertion of this record's covering test, and keeps this record's covers tag on that test. This record's proof now rests on BO-2400f-7-xi's test. Criteria and title unchanged; the description of test_genuine_contention_still_reports_contention_and_names_the_members is re-pointed at the real reply. work_status reset done -> todo because the claim is no longer proved. BO-2400f-7-xi is not added to depends_on: it depends on BO-2400f-7-ix, which depends on this record, so the link would be a cycle. Also filled delivers_to (was null) with the never-attempted/contention split that BO-2400f-5-iii already names in its expects_from, so the producer/consumer contract is stated on both sides; the contract itself is unchanged."
 superseded_by: null
 covered_by:
   - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
