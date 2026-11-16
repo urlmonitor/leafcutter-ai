@@ -58,6 +58,7 @@ import worktree_migrate
 import worktree_paths as wp
 import worktree_readiness as wr
 import worktree_remove
+import worktree_remove_half as wrh
 import worktree_ticket_record as wtr
 
 _log = logging.getLogger(__name__)
@@ -206,13 +207,12 @@ def _resume_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
 def _ensure_locked(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
                    args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
     """The ensure decision, taken while holding this work's lock: create, re-ready, or complete."""
-    refusal = wi.occupied_refusal(repo_root, ident, workspace_path, hub)
+    marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
+    refusal = wrh.half_cleared_refusal(workspace_path, marker, repo_root) or wi.occupied_refusal(repo_root, ident, workspace_path, hub)
     if refusal is not None and not (refusal.get("code") == "OCCUPIED" and wes.empty_folder(workspace_path)):
         return refusal
-    marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
-    if marker is None:
-        return _create_workspace(repo_root, hub, ident, place, workspace_path, args, ticket)
-    return _resume_workspace(repo_root, hub, ident, place, workspace_path, args, ticket, marker)
+    given = (repo_root, hub, ident, place, workspace_path, args, ticket)
+    return _create_workspace(*given) if marker is None else _resume_workspace(*given, marker)
 
 
 def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
@@ -283,7 +283,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify_p.add_argument("--repo-root")
 
     remove_p = sub.add_parser("remove")
-    remove_p.add_argument("--path", required=True)
+    wrh.add_target_args(remove_p)
     remove_p.add_argument("--force", action="store_true", help="accepted and ignored: loss needs --discard-token")
     remove_p.add_argument("--discard-token")
     remove_p.add_argument("--delete-remote-branch", action="store_true")

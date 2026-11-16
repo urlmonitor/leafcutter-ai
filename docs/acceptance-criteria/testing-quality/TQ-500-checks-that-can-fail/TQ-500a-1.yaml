@@ -129,16 +129,7 @@ delivers_to:
       duplicated are the non-conforming states TQ-500b-1 reads for. The reader must
       not need to inspect any requirement text to tell the two shapes apart.
 expects_from: null
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. Every
-  Then clause here describes what a WRITER must state in a template; the
-  deliverable is template prose in templates/agents/test-writer.md and
-  templates/skills/signoff/SKILL.md. A test asserting that an instruction is
-  present in a template is exactly the source-presence proof the anti-grep
-  constraint forbids — it passes on an implementation that never records
-  anything. The falsifiable half of this AC is TQ-500a-1-i, which asserts over
-  the records a run actually emitted, and it carries the test contract.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
@@ -153,6 +144,10 @@ amended_by:
       rather than a second record, and flagged that `not_applicable`'s spelling
       is unguarded until BP-1100g-5-i lands. test_required false with rationale;
       the falsifiable half is TQ-500a-1-i. criteria untouched.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by:
   - TQ-500a-1-i
@@ -175,3 +170,8 @@ notes: |
   DELIBERATELY NOT SPECIFIED HERE: what a good alteration is. That is the writer's
   judgement, guided by TQ-500d-2. This AC specifies only that the answer exists,
   is singular, is declared, and rides the record that is already read.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

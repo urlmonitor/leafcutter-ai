@@ -126,6 +126,10 @@ delivers_to:
       The same two scalar fields, plus the rule that demotion_date records the
       first demotion only. TQ-400b-4's idempotency guard reads
       "demotion_reason present" as the already-demoted signal.
+  - agent: python-coder
+    ac_id: BO-2500f-4-ii
+    contract: demotion_reason and demotion_date written with the demotion, so each migrated
+      record that is sent back carries why and when.
 expects_from:
   ac_id: TQ-400b-1
   contract: >-

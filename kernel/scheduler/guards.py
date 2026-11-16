@@ -124,10 +124,23 @@ def host_operations_available(budgets: Budgets, limits: LimitsConfig) -> int:
 
 
 def retry_allowed(budgets: Budgets, work_item_id: str, error: ErrorInfo | None,
-                  limits: LimitsConfig) -> bool:
-    """Return True if a failed result may be retried: transient error and retries left."""
+                  limits: LimitsConfig, attempt_seconds: object = None) -> bool:
+    """Return True if a failed result may be retried: transient error and retries left.
+
+    A `timeout` failure is also retried only while one more full capability timeout still fits
+    below `limits.max_active_seconds` (the time already charged plus `attempt_seconds`, the
+    time of the attempt being settled, which is not yet charged); other retryable failures keep
+    only the `limits.max_retries` bound. An unknown attempt time (missing or not a number)
+    counts as one full capability timeout, so such a result never earns an extra retry.
+    """
     if error is None or not error.retryable:
         return False
+    if error.code == "timeout":
+        known = isinstance(attempt_seconds, (int, float)) and not isinstance(attempt_seconds, bool)
+        attempt = float(attempt_seconds) if known else limits.capability_timeout_seconds  # type: ignore[arg-type]
+        spent = budgets.active_seconds + attempt
+        if spent + limits.capability_timeout_seconds >= limits.max_active_seconds:
+            return False
     return budgets.retries.get(work_item_id, 0) < limits.max_retries
 
 
@@ -248,9 +261,13 @@ def unresolved_item_ids(items: Mapping[str, WorkItem], root_id: str) -> list[str
     return [i.id for i in sorted(pending, key=lambda x: (x.created_seq, x.id))]
 
 
-def unresolved_text(guard: str, goal: str | None) -> str:
-    """Return the limitation line for work a tripped guard left unfinished."""
-    subject = (goal or "unnamed request").strip().replace(chr(10), " ")[:120]
+def unresolved_text(guard: str, goal: str | None, step: str | None = None) -> str:
+    """Return the limitation line for work a tripped guard left unfinished.
+
+    The subject is the goal when there is one, else the capability or step (`step`) that was cut,
+    else "unnamed request".
+    """
+    subject = (goal or step or "unnamed request").strip().replace(chr(10), " ")[:120]
     return f"unresolved_at_{guard}: {subject}"
 
 
@@ -289,6 +306,14 @@ def account_usage(budgets: Budgets, usages: Iterable[Usage],
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-04 [python-coder]: A `timeout` retry is capped against the remaining active-time
+#   budget (spent + one more capability timeout must stay below max_active_seconds), not by a
+#   fixed count. Chosen over "at most once" because it keeps max_retries for fast transient
+#   failures and for runs with a larger budget, and stays exact when the limits are overridden
+#   per run (900 s budgets still get their retries). At the defaults (120 s timeout, 300 s
+#   budget) a timing-out step is tried twice (240 s), leaving time for the decision step.
+#   `unresolved_text` takes the capability id as `step` for items without a goal.
+#   (#TICKET-20261102-KernelDecisionGoalRoutingAndRetrievalTimeout/AC-4,AC-5)
 # - 2026-10-01 23:00 [python-coder]: account_usage also folds each usage into a per-(provider,
 #   model) row, so host-reported usage and the Jev model id reach the envelope.
 #   (#KernelBootstrapV0/GROUND)

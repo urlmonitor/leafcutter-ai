@@ -498,7 +498,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
            GOTO top of loop (pick next pending agent from updated map).
       IF block is PRESENT but tests array is EMPTY (`tests: []`):
         LET has_code_producer = any agent in ticket agents: map whose
-            produces trait (from config/agent_registry.json) is "production_code"
+            produces trait (from {{config.output_root}}/config/agent_registry.json) is "production_code"
         IF NOT has_code_producer:
           → SKIP test-writer (same actions as absent block above).
           GOTO top of loop.
@@ -645,7 +645,7 @@ Knowledge routing is not a phase and has no row: it is not an agent, so a row or
 `commit` phase (priority 12) as part of that spawn. See §5.9.
 
 **Flow-change pair ordering note:** For tickets generated from (change_target,
-risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
+risk_surface) pairs listed in `{{config.output_root}}/config/guardrail_gates.yaml` `flow_change_gates:`
 (e.g. `code/production`, `code/all`, `schema/production`, `schema/all`),
 the computed agents map will include both `architect-review` (priority 4) and
 `documentation-expert` (priority 10). This table's ordering guarantees that

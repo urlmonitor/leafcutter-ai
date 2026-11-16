@@ -110,7 +110,7 @@ superseded_by: null
 covered_by:
 - unit_tests/commit_guardian/test_inf_700b_2_i.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/05_TICKET-20261016-INF-700b-2-i.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/05_TICKET-20261016-INF-700b-2-i.md
 - templates/scripts/commit_guardian/check_agent_registry.py
 - templates/scripts/commit_guardian/_resolve_root.py
 - scripts/registry_validator.py

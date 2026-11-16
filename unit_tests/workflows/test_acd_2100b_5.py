@@ -603,10 +603,12 @@ class TestStartupCheckConsumesPreflightVerdictFromArgs(unittest.TestCase):
         )
 
         report = _report_text(payload).lower()
+        # Amended 2026-11-04 (ACD-2100d-5, ACD-2100d-5-ii): the start with neither argument
+        # names the missing maker's answer (args.workspace), not a skill pre-flight.
         self.assertIn(
-            "pre-flight",
+            "args.workspace",
             report,
-            "The halt report does not name the missing pre-flight at all -- "
+            "The halt report does not name the missing maker's answer at all -- "
             "it must not assert a permission cause the run never "
             f"established. report={report!r}",
         )

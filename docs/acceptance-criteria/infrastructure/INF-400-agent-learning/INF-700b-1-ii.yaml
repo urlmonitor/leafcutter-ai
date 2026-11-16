@@ -114,7 +114,7 @@ covered_by:
 - tests/knowledge/test_inf_700b_1_ii.py
 - tests/knowledge/test_inf_700b_3.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/03_TICKET-20261016-INF-700b-1-ii.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/03_TICKET-20261016-INF-700b-1-ii.md
 - templates/skills/agent-telemetry/SKILL.md
 - templates/skills/signoff/SKILL.md
 - templates/agents/product-owner.md

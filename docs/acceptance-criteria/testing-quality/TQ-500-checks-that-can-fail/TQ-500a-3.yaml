@@ -91,14 +91,7 @@ expects_from:
     The declaration that this piece of work's answer is of the substitute kind.
     This AC specifies what that answer must contain; it does not decide which
     pieces of work carry it.
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary, on the BP-1100g-5 precedent. Every
-  Then clause describes what a writer must state; the deliverable is template
-  prose. The three non-conforming states this AC's contract names — revert not
-  stated, revert did not restore, alteration not named — are asserted over
-  emitted records by TQ-500a-3-i, which carries the test contract and names the
-  injection for its own must-not-report clauses.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-31
 amended_by:
@@ -111,6 +104,10 @@ amended_by:
       facts so TQ-500a-3-i's records S and T remain distinguishable — an
       implementation commonly collapses them. test_required false; the
       falsifiable half is TQ-500a-3-i. criteria untouched.
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by:
   - TQ-500a-3-i
@@ -137,3 +134,8 @@ notes: |
   claiming it could would be the self-certified non-vacuity KI-TQ-010 warns about.
   What this tree can establish is that the tests discriminate against a named,
   repeatable alteration, and that a later reader can see which one.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

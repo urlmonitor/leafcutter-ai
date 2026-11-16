@@ -1,0 +1,62 @@
+id: TQ-200b-1-i
+components:
+  - testing_quality
+title: "The eval runner hands an agent's template to the CLI through a file, so a large template runs on every platform"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the agent eval runner (scripts/evals/run_agent_eval.py) runs an agent whose
+    template is larger than the platform's command-line limit (for example
+    templates/agents/it-po.md at 51,263 bytes, above the Windows limit of about
+    32,767 characters),
+  When it invokes the claude CLI for a row, in label mode or in artifact mode,
+  Then the template text reaches the CLI through a file passed with
+    --system-prompt-file (label mode) or --append-system-prompt-file (artifact
+    mode), and never as a command-line argument,
+  And the file holds exactly the template text the runner would otherwise have
+    passed inline,
+  And the file is removed after the call, whether the call succeeded, failed or
+    raised,
+  And the bug symptom ("claude CLI could not be launched" on every row, score 0%,
+    for a template over the command-line limit) must not occur.
+depends_on: [TQ-200b-1]
+doc_links:
+  - path: scripts/evals/run_agent_eval.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: '2026-10-25'
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/evals/test_tq200b1i_prompt_file.py
+implemented_by:
+- scripts/evals/run_agent_eval.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_label_mode_passes_the_template_through_a_system_prompt_file
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: unit
+    description: "With subprocess.run recorded, invoke_via_cli with a 60 KB system prompt builds an argv that contains --system-prompt-file <path> and no --system-prompt argument and no argument longer than 30,000 characters; the file named by the path held exactly the prompt during the call and no longer exists afterwards."
+  - name: test_artifact_mode_passes_the_template_through_an_append_file
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: unit
+    description: "With subprocess.run recorded, the artifact-mode agent invocation builds an argv with --append-system-prompt-file <path> and no --append-system-prompt argument; the file held exactly the prompt during the call and is removed afterwards."
+  - name: test_prompt_file_is_removed_when_the_cli_call_raises
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: unit
+    description: "When subprocess.run raises OSError, the runner still reports 'claude CLI could not be launched' and the prompt file no longer exists."

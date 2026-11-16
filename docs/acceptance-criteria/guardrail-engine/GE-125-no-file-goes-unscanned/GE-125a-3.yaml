@@ -100,39 +100,15 @@ it_requirements:
   - "SEQUENCING AGAINST THE BEHAVIOUR. This text describes behaviour GE-125a-1 introduces, which is why depends_on names GE-125a-1 and GE-125a-2 alongside the parent. Written before that lands it documents an INTENTION, not the behaviour. Write it against the shipped result, or mark it explicitly pending and re-check it once GE-125a-1 and GE-125a-2 are both done — and note they must close as a pair, so a reference written after only GE-125a-1 may describe an entitlement that was narrowed too far."
   - "VERIFICATION IS BY REVIEW AGAINST SHIPPED BEHAVIOUR, NOT BY AN EXECUTABLE TEST, per the BA's instruction and the GE-123a-4 precedent. Do not author code tests for this record and do not add test descriptors to it. The documentation check standing in for a test: (1) the passage exists and is the only one describing when the check looks less; (2) it names the four locations and states they are recognised at the top of the project; (3) it states that a folder below the top reusing one of those names is scanned in full; (4) it states the exemption removes the opaque-token rule only and that the keyword and fixed-prefix rules still apply; (5) two-directional parity against the shipped scanner, with the implementation authoritative on disagreement."
   - "CLASSIFICATION NOTE, VERIFIED 2026-08-24 — do not 'correct' risk_surface to safety. This record is change_target docs with risk_surface contract_boundary. config/guardrail_gates.yaml maps docs/contract_boundary to [documentation-expert, pr-reviewer] and maps docs/safety to an EMPTY list, so choosing safety would silently remove ALL mandatory gating from a record whose only defence is review. The classification is deliberate. Note that the sibling documentation records GE-125c-4 and GE-125d-5 both carry docs/safety and are therefore ungated; that is raised as a caveat against those records and must not be used as precedent to change this one."
-test_required: false
-test_rationale: |
-  This record changes prose only, so it carries no executable behaviour and
-  test_required is false rather than test_spec being left empty — the BA asked for
-  this explicitly and cited GE-123a-4 as the in-component precedent for how a
-  review-verified documentation record is expressed. What stands in place of a test
-  is the five-part documentation check recorded in it_requirements, whose last part
-  is a two-directional parity review against the shipped scanner.
-  Parity is the part that matters and the part a test cannot cheaply take over. A
-  reference that claims the four locations are anchored at the top of the project
-  when the shipped check still substring-matches reproduces exactly the false
-  confidence this goal exists to remove; one that omits the exemption entirely — the
-  state today — leaves a reader believing the listed rules apply everywhere.
-  Mechanising that comparison would mean reading the scanner's declared location set
-  and its per-path behaviour and diffing them against the document, which is a code
-  AC of its own.
-  IT IS ALSO ALREADY OWNED ELSEWHERE, which is the decisive reason not to duplicate
-  it here. The sibling documentation record GE-125d-5 carries test_required true and
-  a mechanical test_spec covering the single-section rule and check-to-section
-  parity for the whole goal. Adding a competing parity test under this record would
-  assert the same property from a second place against the same passage — the exact
-  four-descriptions-of-one-behaviour failure the third arm of these criteria
-  forbids, reproduced at the test layer.
-  ONE GAP IS RECORDED RATHER THAN SMUGGLED IN: nothing mechanical prevents this
-  record's contribution from being written into a deployed build output instead of
-  the canonical templates/ source, and that failure is invisible in this record's
-  own output. It is pinned as the first it_requirement with a build round-trip as
-  the check, and raised as a recommended follow-up rather than turned into a test
-  under a documentation AC.
+test_required: true
 origin_agent: business-analyst
 created: 2026-08-19
 amended_by:
   - reason: "it-po-v3 technical enrichment (2026-08-24): assigned documentation-expert (following the BA's cited GE-123a-4 precedent for this component; note the sibling GE-125d-5 chose llm-expert for the same file, flagged as a tree-level caveat since all four documentation records amend ONE passage and should not be built by different agents), complexity S. VERIFIED THE BA'S guardrail_gates.yaml CLAIM AND UPHELD IT: config/guardrail_gates.yaml lines 209-222 map docs/safety to an EMPTY mandatory-agent list while docs/contract_boundary maps to [documentation-expert, pr-reviewer]; risk_surface contract_boundary is therefore correct and is now pinned with a do-not-correct note. Authored it_requirements covering the ADR-001 canonical-source and build round-trip, the create-not-amend correction from the GE-125.yaml adjudication, the sequencing constraint expressed WITHOUT depends_on edges between the four documentation records, the one-passage rule, this record's four content requirements fenced against the three siblings', the no-credential-literals rule, two-directional parity with the implementation authoritative, and the five-part documentation check standing in for a test. Added five doc_links. Set test_required false with a test_rationale recording that mechanical parity is already owned by GE-125d-5. criteria, depends_on, expects_from, priority, work_status and notes unchanged."
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -181,3 +157,8 @@ notes: |
   SEQUENCING. This text describes behaviour GE-125a-1 introduces. Written before
   that lands it documents an intention; write it against the shipped result, or
   mark it pending and re-check it once GE-125a-1 is done.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

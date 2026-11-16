@@ -1,0 +1,261 @@
+id: BO-2500f-4-ii
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "Finished test-free records with no covering test are each verified or sent back to in progress before the new rule takes effect"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the finished test-free records that no test tags, measured 2026-10-24 as 63
+    (31 with a stated reason, 32 without), plus any added to that population before
+    the migration starts,
+  When the migration is carried out,
+  Then each record ends in exactly one of two states: carrying a verification
+    record that holds under BO-2500f-4, or returned to in_progress through the
+    demotion path TQ-400b defines, with the reason and the date recorded on it,
+  And each record is entered in TQ-400d's worked list with its decision (prove it,
+    redo it, or retire it), so progress on this population is counted where the
+    unproven-finished pile is already counted,
+  And no verification record is produced from a template: an inspection is
+    recorded only through a review approved as BO-2500f-3-i requires, and a check
+    only where a wired check carries an enforces tag for the record,
+  And while any record in the population is still finished with no verification
+    record that holds, the new done rule (BO-2500f-4) does not take effect, and the
+    change that would switch it on is refused, naming the remaining records,
+  And finished test-free records that a test does tag are left as they are, since
+    their covering test proves them,
+  And the run reports the count in each end state, with the population's
+    measurement date and inclusion rule.
+depends_on: [BO-2500f-4]
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400d.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns triage of the finished-but-unproven pile; the migration records its decisions there."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400b.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the path that returns a finished record to unfinished work, with reason and date."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: scripts/ac_store/migrate_verification_records.py
+    state: to_be_created
+  - path: scripts/ac_store/_done_proof_waiver.py
+    state: to_be_created
+  - path: templates/scripts/commit_guardian/check_done_proof.py
+    state: existing
+it_requirements:
+  - Measure the population at the start by the stated rule (finished, active, test_required
+    false, no covers tag by the shared scanner) and report it with its date and rule. The
+    63 of 2026-10-24 is the expected figure, not an input.
+  - Two end states only. Demotion goes through TQ-400b's write path (TQ-400b-1's single-field
+    write; TQ-400b-2's demotion_reason and demotion_date); this record never writes work_status
+    itself. TQ-400b-1 and -2 are approved but not built, so this record waits for them.
+  - 'Decisions are recorded in TQ-400d''s worked list (TQ-400d-1), which is not built yet:
+    wait for it, or the user picks an interim (open question).'
+  - 'No templated verification records. The script never writes a verified_by it has not verified:
+    an inspection only after a qualifying approval exists (BO-2500f-3-i), a check only after
+    the enforces tag and the wiring hold (BO-2500f-2, -2-i). It proposes, and nothing is written
+    without the user''s approval per batch, as in BO-2500a-8-iv.'
+  - 'Targeted YAML writes: insert only the target keys, never a load-and-dump rewrite. Idempotent:
+    a second run writes nothing (verified by running twice and diffing).'
+  - 'Switch guard: committing BO-2500f-4''s switch turned on is refused while any record in
+    the population lacks a verification record that holds, naming them.'
+  - Tagged records are excluded by the shared scanner, never by a hand-kept list.
+  - 'Must handle errors gracefully per the project error handling policy: every failure path
+    logs at WARNING or higher and resolves to a refusal, never to a waiver.'
+test_required: true
+test_intent:
+  - clause: 'each record ends in exactly one of two states: carrying a verification record
+      that holds under BO-2500f-4, or returned to in_progress through the demotion path TQ-400b
+      defines, with the reason and the date recorded on it'
+    needs_test: true
+    reason: The two-end-state invariant is computed by the script, and a record left in neither
+      state is the failure to catch.
+  - clause: each record is entered in TQ-400d's worked list with its decision (prove it, redo
+      it, or retire it), so progress on this population is counted where the unproven-finished
+      pile is already counted
+    needs_test: true
+    reason: Each decision must reach the worked list, and a case for each end state shows
+      the entry is written.
+  - clause: 'no verification record is produced from a template: an inspection is recorded
+      only through a review approved as BO-2500f-3-i requires, and a check only where a wired
+      check carries an enforces tag for the record'
+    needs_test: true
+    reason: The script must refuse to write a verification record it has not verified; with
+      no approval and no wired check nothing must be written.
+  - clause: while any record in the population is still finished with no verification record
+      that holds, the new done rule (BO-2500f-4) does not take effect, and the change that
+      would switch it on is refused, naming the remaining records
+    needs_test: true
+    reason: 'The ordering guard is the safety interlock: turning the switch on with one record
+      left must be refused, naming it.'
+  - clause: finished test-free records that a test does tag are left as they are, since their
+      covering test proves them
+    needs_test: true
+    reason: A tagged record entering the migration would be demoted or rewritten for nothing,
+      so a tagged record must come out untouched.
+  - clause: the run reports the count in each end state, with the population's measurement
+      date and inclusion rule
+    needs_test: true
+    reason: The report's counts are computed and must sum to the measured population.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-400b-1
+    contract: 'The demotion path: the record''s file no longer reads finished, every other
+      field unchanged.'
+  - ac_id: TQ-400b-2
+    contract: The demoted record carries the reason it was knocked back and the date.
+  - ac_id: TQ-400d-1
+    contract: The worked list with a fixed decision per record and a declared population.
+  - ac_id: BO-2500f-4
+    contract: is_done_proof_waived and its single declared switch, off until this migration
+      turns it on.
+test_spec:
+  - name: test_bo_2500f_4_ii_each_record_ends_in_exactly_one_of_two_states
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the migration CLI, as a subprocess"
+    description: "Runs the migration CLI as a subprocess on a temporary git store of finished test-free untagged records (some with a stated reason, some without): after approval per batch each record either carries a verification record that holds under BO-2500f-4 or is demoted through TQ-400b's write path with demotion_reason and demotion_date; none ends in neither. Waits for TQ-400b-1 and -2."
+    proves_clause: "each record ends in exactly one of two states: carrying a verification record that holds under BO-2500f-4, or returned to in_progress through the demotion path TQ-400b defines, with the reason and the date recorded on it"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_ii_a_second_run_writes_nothing
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Runs the migration twice against the same real-shaped record files and diffs the files: only the target keys were inserted by the first run, the second run changes no byte, and no record is re-serialised by a load-and-dump."
+    proves_clause: "each record ends in exactly one of two states: carrying a verification record that holds under BO-2500f-4, or returned to in_progress through the demotion path TQ-400b defines, with the reason and the date recorded on it"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_ii_each_decision_is_entered_in_the_worked_list
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For one record of each end state (prove it, redo it, retire it) the worked list of TQ-400d-1 gains an entry carrying the decision; the producer is the real migration, the consumer the real worked-list reader. Waits for TQ-400d-1."
+    proves_clause: "each record is entered in TQ-400d's worked list with its decision (prove it, redo it, or retire it), so progress on this population is counted where the unproven-finished pile is already counted"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_ii_no_verification_record_is_written_that_was_not_verified
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "With no qualifying approval file and no wired check carrying an enforces tag, the migration proposes only and the record files are byte-identical afterwards; with a qualifying approval or wired tagged check present, only that record gets its verified_by."
+    proves_clause: "no verification record is produced from a template: an inspection is recorded only through a review approved as BO-2500f-3-i requires, and a check only where a wired check carries an enforces tag for the record"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+    must_catch:
+      - "a migration that writes a templated inspection or check record"
+      - "a migration that writes without the user's per-batch approval"
+  - name: test_bo_2500f_4_ii_turning_the_switch_on_is_refused_while_any_record_remains_naming_them
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Real precommit CLI subprocess in a temporary git repo: staging the switch turned on while one finished test-free untagged record has no holding verification record exits 1 naming that record; with none remaining it exits 0; with the switch left off nothing is refused."
+    proves_clause: "while any record in the population is still finished with no verification record that holds, the new done rule (BO-2500f-4) does not take effect, and the change that would switch it on is refused, naming the remaining records"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+    must_catch:
+      - "a guard that checks the switch value but not the remaining population"
+      - "a refusal that does not name the remaining records"
+  - name: test_bo_2500f_4_ii_finished_records_that_a_test_tags_come_out_untouched
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A finished test-free record tagged by a covers tag in a fixture test is excluded by the shared scanner (not a hand-kept list) and its file sha256 is identical before and after the migration; it appears in no end-state count."
+    proves_clause: "finished test-free records that a test does tag are left as they are, since their covering test proves them"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_ii_the_report_counts_sum_to_the_measured_population
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The report states the count in each end state, the measurement date and the inclusion rule (finished, active, test_required false, no covers tag by the shared scanner), and the counts sum to the measured population on a fixture store."
+    proves_clause: "the run reports the count in each end state, with the population's measurement date and inclusion rule"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_bo_2500a_7.py
+  - name: test_bo_2500f_4_ii_migration_module_imports_in_the_deployed_layout
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/ac_store/migrate_verification_records.py is in build_ac_store's deploy_map and imports in a fresh subprocess restricted to the deployed .leafcutter/scripts/ac_store directory."
+    proves_clause: "each record ends in exactly one of two states: carrying a verification record that holds under BO-2500f-4, or returned to in_progress through the demotion path TQ-400b defines, with the reason and the date recorded on it"
+    code_file: scripts/ac_store/migrate_verification_records.py
+    to_be_created: true
+    convention_test_file: unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-10-25"
+test_design_opened_files:
+  - scripts/ac_store/migrate_verification_records.py
+  - unit_tests/ac_store/test_bo_2500a_7.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - unit_tests/commit_guardian/test_bp_1100g_3_deployed.py
+  - scripts/ac_store/mark_ac_done.py
+  - scripts/ac_store/design_prepass.py
+  - scripts/ac_store/_rc_design_grounding.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_done_proof.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: "It is the commit-time hook entry where the refusal of turning the switch on early is raised."
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_done_proof.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Wave 2. User scope change 6 (PO gate 2026-10-25): sending finished records back
+  to in_progress reuses TQ-400b's path. User backfill decision: the 46 finished
+  records without a reason go to TQ-400d triage or this migration.
+
+  Population. Of 113 finished test-free records (2026-10-24), 67 have a reason and
+  46 do not. Only those no test tags need a verification record: 31 with a reason
+  and 32 without (the brief's breakdown of the 240 untagged-done backlog). The 14
+  tagged records without a reason are proven by their test and are out of scope.
+
+  The "does not take effect while any remain" clause is the ordering gate between
+  this migration and BO-2500f-4; without it the swap would refuse 63 finished
+  records on the next CI sweep.

@@ -1,0 +1,78 @@
+id: BP-900b-4
+components:
+  - build_pipeline
+title: "Every package config file a compiled prompt tells the agent to read exists where the prompt says, in a consumer install"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a consumer install produced by build.py into a project that is not the
+    package repository (the adopter layout, where package config is deployed to
+    <output_root>/config/ and there is no package config/ directory at the
+    project root),
+  When a compiled agent, skill, command or workflow prompt tells the agent to
+    read, load or open a package config file (for example doc_types.json,
+    paths.json, agent_registry.json, guardrail_gates.yaml),
+  Then the path the prompt names resolves, relative to the install root, to a
+    file that exists in that install,
+  And the template writes the path through the build's {{config.output_root}}
+    placeholder rather than as a bare "config/<file>" or "leafcutter/config/<file>",
+    so the same template is correct in the self-hosted layout and in every
+    adopter install whatever its configured output_root,
+  And the documentation-expert's mandatory pre-flight read of doc_types.json no
+    longer halts with "cannot be read" in a consumer install,
+  Because at leafcutter v15.0.9 (dcd93781) the documentation-expert template told
+    the agent to Read `config/doc_types.json` and to STOP with a blocker when it
+    could not, while the build deploys that file to `.leafcutter/config/doc_types.json`.
+    In the DIAGraph adopter every ticket with a documentation-expert phase halted
+    before writing anything (INF-120c-3 halted exactly this way).
+depends_on: [BP-900b]
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/agents/documentation-expert.md
+    relationship: modifies
+    status: exists
+  - path: scripts/template_compiler.py
+    relationship: describes
+    status: exists
+    relevance: "inject_config resolves {{config.output_root}} at build time; the same mechanism the build-ac and test-runner templates already use for deployed script paths."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_900b_4_prompt_config_reads.py
+implemented_by:
+  - templates/agents/documentation-expert.md
+  - templates/agents/it-po.md
+  - templates/agents/ticket-supervisor.md
+  - templates/agents/architect-review.md
+  - templates/skills/ticket-authoring/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/workflows/documentation.md
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_documentation_expert_doc_types_read_resolves_in_consumer_install
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "In the shared directed (consumer-layout) build, the compiled documentation-expert prompt names a doc_types.json path, and that path resolves to an existing file relative to the install root."
+  - name: test_every_config_read_in_compiled_prompts_resolves_in_consumer_install
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every package-config path that a compiled agent/skill/command/workflow prompt names on a read/load/open line resolves to an existing file in the consumer install; the scan fails on an empty population and must include the documentation-expert read as a positive control."

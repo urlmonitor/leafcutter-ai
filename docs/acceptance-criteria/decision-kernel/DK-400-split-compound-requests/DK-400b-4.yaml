@@ -53,6 +53,13 @@ it_requirements:
   - States that parts of an approved split are not split again (no nesting) and links ADR-067.
 risk_surface: internal
 test_required: false
+test_rationale: Delivered is an added section on the shared kernel splits reference page, listing
+  the three kinds of request that can be split with an example each, the two places a split
+  is found, the one gate both reach, and that research parts return findings rather than decision
+  records. Whether the examples keep the three kinds apart for a reader, and whether the no-nesting
+  rule reads as a rule rather than an aside, is a matter of reading that no test settles. A
+  reviewer judges it against DK-400b-1, DK-400b-2, DK-400b-3 and ADR-067, and from wave 2 a
+  verified_by inspection holds that judgement.
 origin_agent: business-analyst
 created: 2026-10-05
 amended_by:

@@ -53,10 +53,14 @@ expects_from:
   contract: "The retrospective sweep mode and its ranked candidate report, which this AC constrains to be idempotent on re-run."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: internal
-test_required: false
+test_required: true

@@ -37,14 +37,18 @@ it_requirements:
   - "The how-to must describe the scope rule in operator terms — target, work beneath it, genuine prerequisites — and must not restate the resolver's internal traversal or name the command-line flag as something the operator passes, because the operator passes nothing."
   - "It must be authored after BO-2600b-1 and BO-2600b-2 are implemented, so the scope described and the location of the scope statement in the run record both match what shipped."
   - "It must tell the operator how to get the wider set (aim at the parent), since that is the question the tightened scope will immediately raise."
-test_required: false
+test_required: true
 delivers_to: null
 expects_from:
   ac_id: BO-2600b-2
   contract: "The shipped scope statement and its location in the run record, which this how-to tells the operator where to find."
 origin_agent: BrainCandy
 created: 2026-08-19
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

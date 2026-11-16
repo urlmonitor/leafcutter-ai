@@ -33,6 +33,12 @@ expects_from:
   ac_id: ACD-1700c-1
   contract: "The effective-prompt assembly flow (template + channels + AC-graph context composition) that this sequence diagram depicts."
 test_required: false
+test_rationale: 'A sequence diagram of effective-prompt assembly: template, reproducible harness
+  channels and AC-graph context gathered and composed into one brief, with non-reproducible
+  channels marked and other agents'' AC content shown only as a pointer. No automated check
+  can say whether a reader comes away understanding why those two treatments differ. Someone
+  reading it beside ACD-1700c-1, ACD-1700c-3 and ACD-1700c-4 judges that, and wave 2 moves the
+  judgement into a verified_by inspection.'
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by: []

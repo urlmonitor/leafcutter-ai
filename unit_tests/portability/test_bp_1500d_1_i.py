@@ -185,7 +185,7 @@ def test_bp_1500d_1_i_the_sibling_layout_record_reduces_neither_half_to_nothing_
     )
     missing = [
         key for key in account_keys
-        if not (sibling.target_root / key).is_file()
+        if not (sibling.target_root / package_root_raw / key).is_file()  # BP-1500d-2: keys are package-relative
     ]
     assert not missing, (
         f"{len(missing)} of {len(account_keys)} account entries do not "
@@ -251,7 +251,11 @@ def test_bp_1500d_1_i_the_stated_position_and_the_named_package_files_agree_so_t
     # This is the failure the crash-shaped reading of this defect misses: a
     # dot-dot relative position keeps the derivation lexically successful
     # but can still yield a key space the recorded names do not share.
+    # BP-1500d-2: recorded keys are package-relative, so the reader re-anchors
+    # them at the stated position before matching; mirror that here.
     prefix_with_slash = agents_prefix.rstrip("/") + "/"
+    anchor = package_offset.replace("\\", "/").rstrip("/") + "/"
+    manifest = {(anchor + k if k.startswith("templates/") else k): v for k, v in manifest.items()}
     string_valued_keys = [k for k, v in manifest.items() if isinstance(v, str)]
     matching_keys = [k for k in string_valued_keys if k.startswith(prefix_with_slash)]
     assert matching_keys, (
@@ -314,8 +318,11 @@ def test_bp_1500d_1_i_an_automated_caller_cannot_receive_the_unavailable_produci
     sibling_keys = template_account_keys(sibling_manifest)
     assert same_dir_keys, "layout A's account must be non-empty to be a meaningful control"
     assert sibling_keys, "layout B's account must be non-empty for this comparison to mean anything"
-    assert same_dir_keys != sibling_keys, (
-        "layout A's and layout B's template-account key sets are IDENTICAL "
+    # BP-1500d-2: keys are package-relative (equal across layouts by design), so
+    # compare them anchored at each record's stated position, as the reader does.
+    anchored_sibling = {f"{sibling_position}/{k}" if k.startswith("templates/") else k for k in sibling_keys}
+    assert same_dir_keys != anchored_sibling, (
+        "layout A's and layout B's anchored template-account key sets are IDENTICAL "
         "-- an implementation that emits the same producing-end description "
         "in both layouts would pass every other entry in this AC while "
         "failing the one property distinguishability actually requires."

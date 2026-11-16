@@ -33,7 +33,7 @@ risk_surface: internal
 it_requirements:
 - Extend docs/how-to/file-and-reuse-decisions-with-the-kernel.md, or add a sibling how-to if the documentation expert judges it the better home. Cover how reused criteria appear at the approval, the gap verdict, keep / edit / drop / add, the empty-library case and the rule that a reused criterion gains no authority from earlier use. Follow the existing how-to frontmatter.
 - Use the payload labels as built (DK-500d-2) and the fit and cap rule of DK-500d-1.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -55,6 +55,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-02'
+  reason: "BO-2500a-8-iv backfill batch B, user decision of 2026-11-02: a label, name or value must match something built, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500d's how-to trigger. DK-500d's sequence-diagram trigger is answered by DK-500e-4, one diagram for the whole reuse-first forming sequence (DK-500d and DK-500e describe consecutive steps of the same run). Its deliverable is the document only.

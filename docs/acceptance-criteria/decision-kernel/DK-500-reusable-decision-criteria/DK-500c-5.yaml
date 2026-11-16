@@ -34,7 +34,7 @@ it_requirements:
 - One reference page under docs/reference/ (for example criterion-category-record.md) with reference frontmatter. Field names, types and enums match config/criterion_category_record.schema.json exactly.
 - State the settled defaults as settled once the user confirms them (the docs/criteria/ folder, the cat-<16 hex> id scheme, decisions publish as the publish command, the mining store location), and mark as pending only what is still unconfirmed at writing time.
 - Separate authored fields from derived views (usage_count, member_view, replaces), and state where each derived view is generated.
-test_required: false
+test_required: true
 doc_links:
 - path: docs/decisions/dec-93c1c730463c1f3c.yaml
   relationship: governs
@@ -62,6 +62,10 @@ amended_by:
   date: '2026-10-05'
   by: it-po
   summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 notes: |
   Documentation AC answering DK-500c's reference-doc trigger (the new record type). Pending items it must mark until confirmed: the id scheme, the published folder name, the publish command name.

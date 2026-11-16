@@ -228,7 +228,10 @@ amended_by:
     by: orchestrator
     at: 2026-10-25
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-200d-2-i
+  - TQ-200d-2-ii
+  - TQ-200d-2-iii
 implemented_by: []
 change_target:
   - config

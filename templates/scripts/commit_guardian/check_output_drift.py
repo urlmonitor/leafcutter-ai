@@ -166,6 +166,8 @@ from pathlib import Path
 import logging
 
 from _resolve_root import resolve_manifest_path as _resolve_manifest_path
+from _resolve_root import is_location_keyed as _is_location_keyed
+from _resolve_root import report_could_not_read as _report_could_not_read
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
@@ -227,20 +229,6 @@ def _err(message: str = "") -> None:
         message: Text to print; an empty string emits a bare blank line.
     """
     print(message, file=sys.stderr)
-
-
-def _warn_manifest_not_found(tried: list[Path]) -> None:
-    """Print a visible, path-naming warning when no manifest was found.
-
-    Args:
-        tried: Every absolute candidate path that was checked.
-    """
-    tried_str = "\n  ".join(str(p) for p in tried)
-    _err(
-        "check-output-drift: WARNING — .build_manifest.json not found. "
-        f"Tried:\n  {tried_str}\n"
-        "Run build.py to generate it. Skipping output drift check."
-    )
 
 
 def _sha256_of_file(path: Path) -> str:
@@ -460,7 +448,15 @@ def _reconcile_recorded(
     counts = {"verified": 0, "unreadable": 0, "missing": 0}
     drift_exempt = 0
     violations: list[tuple[str, str]] = []
+    location_keyed = 0
     for out_key, entry in output_mappings.items():
+        if _is_location_keyed(out_key) and not (repo_root / out_key).exists():
+            # BP-1500d-2: an entry keyed to the place the record was written
+            # (absolute, or reaching outside the project) that no longer
+            # resolves is an UNREADABLE record, not a deleted artifact.
+            counts["unreadable"] += 1
+            location_keyed += 1
+            continue
         status, current_hash = _hash_recorded(out_key, repo_root / out_key)
         counts[status] += 1
         if status != "verified":
@@ -474,6 +470,14 @@ def _reconcile_recorded(
             _err(f"DIRECT-DRIFT: EXEMPT {out_key} ground={ground}")
         else:
             violations.append((out_key, fields.get("template", "<unknown>")))
+    if location_keyed:
+        _err(
+            f"{_GATE_NAME}: UNREADABLE - COULD NOT READ the record {repo_root / '.build_manifest.json'} "
+            f"for the project at {repo_root} has {location_keyed} entr(ies) keyed to "
+            "the location it was written in (absolute or outside the project), "
+            "which do not resolve here. The record did not travel with the "
+            "project; re-run build.py in this project to rewrite it."
+        )
     return counts, drift_exempt, violations
 
 
@@ -885,6 +889,21 @@ def _default_floor_dirs(repo_root: Path) -> list[Path]:
     return [repo_root / ".claude" / name for name in names]
 
 
+def _record_unreadable_reason(record: object) -> str | None:
+    """Explain why a loaded record cannot be read here, or None when it can.
+
+    Args:
+        record: The parsed record, or None when it is not valid JSON.
+
+    Returns:
+        A short reason when the record is not valid JSON, else None. Entries
+        keyed to another location are counted by the scan (BP-1500d-2).
+    """
+    if not isinstance(record, dict):
+        return "the record file is present but is not valid JSON"
+    return None
+
+
 def main() -> int:
     """Entry point for the pre-commit hook.
 
@@ -934,10 +953,13 @@ def main() -> int:
     """
     manifest_path, tried = _resolve_manifest_path(_HOOK_FILE)
     if manifest_path is None:
-        _warn_manifest_not_found(tried)
-        return 0
+        return _report_could_not_read(_GATE_NAME, tried[0].parent, "the record file is absent")
+    record = _load_manifest(manifest_path)
+    unreadable = _record_unreadable_reason(record)
+    if unreadable:
+        return _report_could_not_read(_GATE_NAME, manifest_path.parent, unreadable, present=True)
 
-    blocker = _manifest_blocker(_load_manifest(manifest_path) or {})
+    blocker = _manifest_blocker(record or {})
     if blocker:
         _err(blocker)
         return 2

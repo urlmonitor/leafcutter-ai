@@ -120,15 +120,29 @@ def _assert_no_wrong_kind_for_shared_name(verdict: dict, shared_name: str) -> No
     )
 
 
+def _tails(entries: list[dict] | None) -> set[str]:
+    """Return the nodeid tails (path-independent) of *entries*: the part after the
+    first '.py::', e.g. 'TestAbsence::test_shared_name' or, for a module-level
+    function, 'test_shared_func' prefixed by its package dir ('pkg_a/...').
+    """
+    out: set[str] = set()
+    for entry in entries or []:
+        nodeid = str(entry.get("nodeid", "")).replace("\\", "/")
+        path, _, tail = nodeid.partition(".py::")
+        parent = path.rsplit("/", 2)[-2] if path.count("/") else ""
+        out.add(f"{parent}/{tail}" if tail and parent.startswith("pkg_") else tail)
+    return out
+
+
 class TestH4aSharedMethodNameAcrossClasses(_H4Case):
-    def test_h4a_shared_method_name_in_two_classes_fails_closed(self) -> None:
+    def test_h4a_shared_method_name_in_two_classes_is_judged_per_class(self) -> None:
         # covers: TQ-500f-3-i
         # angle: failure
         """TestAbsence.test_shared_name (declared, function-level absence)
         and TestAssertion.test_shared_name (an ordinary assertion failure)
         live in the SAME file with the SAME bare method name -- a real
-        (file_basename, func_name) collision. This PR's scope: fail closed
-        with 'ambiguous_test_identity' rather than guess either test's kind.
+        (file_basename, func_name) collision. TQ-500f-3-iii: each is judged
+        on its own result -- the absence test refused, the assertion test red.
         """
         ac_id = "TQ-H4A-001"
         shared_name = "test_shared_name"
@@ -156,22 +170,19 @@ class TestH4aSharedMethodNameAcrossClasses(_H4Case):
 
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=test_root, ac_root=self.ac_root)
 
-        self.assertFalse(
-            verdict.get("gate_passed"),
-            f"A same-file, same-method-name collision must fail the gate "
-            f"closed; verdict={verdict!r}.",
-        )
+        self.assertFalse(verdict.get("gate_passed"), f"verdict={verdict!r}.")
         self.assertEqual(
             verdict.get("reason"),
-            AMBIGUOUS_IDENTITY_REASON,
-            f"The reason must name the identity ambiguity, not any other "
-            f"reason; verdict={verdict!r}.",
+            REFUSAL_REASON,
+            f"TQ-500f-3-iii: the two same-named tests are told apart by class, so the "
+            f"absence-only declared test is refused on its OWN result; verdict={verdict!r}.",
         )
-        _assert_no_wrong_kind_for_shared_name(verdict, shared_name)
+        self.assertEqual(_tails(verdict.get("refused")), {"TestAbsence::test_shared_name"}, verdict)
+        self.assertEqual(_tails(verdict.get("red")), {"TestAssertion::test_shared_name"}, verdict)
 
 
 class TestH4bSharedBasenameAcrossPackageDirs(_H4Case):
-    def test_h4b_shared_basename_and_func_name_across_package_dirs_fails_closed(
+    def test_h4b_shared_basename_and_func_name_is_judged_per_package_dir(
         self,
     ) -> None:
         # covers: TQ-500f-3-i
@@ -182,7 +193,7 @@ class TestH4bSharedBasenameAcrossPackageDirs(_H4Case):
         basename AND the function name across two real, __init__.py-package
         directories (this repo's own convention for giving same-basename
         files distinct module identity) -- a real (file_basename, func_name)
-        collision. Fails closed with 'ambiguous_test_identity'.
+        collision. TQ-500f-3-iii: judged per package dir, not refused as ambiguous.
         """
         ac_id = "TQ-H4B-001"
         func_name = "test_shared_func"
@@ -213,18 +224,15 @@ class TestH4bSharedBasenameAcrossPackageDirs(_H4Case):
 
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=test_root, ac_root=self.ac_root)
 
-        self.assertFalse(
-            verdict.get("gate_passed"),
-            f"A same-basename, same-function-name collision across two "
-            f"package dirs must fail the gate closed; verdict={verdict!r}.",
-        )
+        self.assertFalse(verdict.get("gate_passed"), f"verdict={verdict!r}.")
         self.assertEqual(
             verdict.get("reason"),
-            AMBIGUOUS_IDENTITY_REASON,
-            f"The reason must name the identity ambiguity, not any other "
-            f"reason; verdict={verdict!r}.",
+            REFUSAL_REASON,
+            f"TQ-500f-3-iii: the two same-named tests are told apart by package dir; "
+            f"pkg_a's absence-only declared test is refused on its OWN result; verdict={verdict!r}.",
         )
-        _assert_no_wrong_kind_for_shared_name(verdict, func_name)
+        self.assertEqual(_tails(verdict.get("refused")), {"pkg_a/test_shared_func"}, verdict)
+        self.assertEqual(_tails(verdict.get("red")), {"pkg_b/test_shared_func"}, verdict)
 
 
 class TestH4cAmbiguousKindNeverGuessesAndNeverCorruptsSiblings(_H4Case):
@@ -313,17 +321,16 @@ class TestH4cAmbiguousKindNeverGuessesAndNeverCorruptsSiblings(_H4Case):
 
 
 class TestH4dCollisionElsewhereInBatchStillTripsFailClosed(_H4Case):
-    def test_h4d_unrelated_undeclared_collision_elsewhere_still_fails_closed(self) -> None:
+    def test_h4d_unrelated_collision_elsewhere_no_longer_taints_the_batch(self) -> None:
         # covers: TQ-500f-3-i
         # angle: failure
         """A declared absence-only test (test_declared_unique) whose own
         identity is perfectly unique sits in the SAME batch as an UNRELATED,
         UNDECLARED pair (TestX.test_shared_undeclared / TestY.test_shared_
         undeclared) that collides on (file_basename, func_name). Ambiguity
-        ANYWHERE in the batch is not ignored just because it doesn't touch
-        the declared test -- the gate still fails closed with
-        'ambiguous_test_identity', and the otherwise-legitimate declared
-        absence must NOT be silently accepted as a red-baseline pass.
+        no longer taints the batch (TQ-500f-3-iii): the pair is told apart by
+        class, and the declared absence-only test is refused on its OWN
+        result, never accepted as a red-baseline pass.
         """
         ac_id = "TQ-H4D-001"
         unique_name = "test_declared_unique"
@@ -359,23 +366,20 @@ class TestH4dCollisionElsewhereInBatchStillTripsFailClosed(_H4Case):
 
         verdict = verify_red_baseline(ac_ids=[ac_id], test_root=test_root, ac_root=self.ac_root)
 
-        self.assertFalse(
-            verdict.get("gate_passed"),
-            f"Ambiguity anywhere in the batch -- even in an UNDECLARED, "
-            f"unrelated pair -- must fail the gate closed; verdict={verdict!r}.",
-        )
+        self.assertFalse(verdict.get("gate_passed"), f"verdict={verdict!r}.")
         self.assertEqual(
             verdict.get("reason"),
-            AMBIGUOUS_IDENTITY_REASON,
-            f"verdict={verdict!r}.",
+            REFUSAL_REASON,
+            f"TQ-500f-3-iii: the unrelated same-named pair is told apart by class and "
+            f"no longer taints the batch; the declared absence-only test is refused on "
+            f"its own result; verdict={verdict!r}.",
         )
-        self.assertNotIn(
-            unique_name,
-            fx.names(verdict.get("red")),
-            f"The otherwise-legitimate declared-unique absence test must "
-            f"NOT be silently accepted as ordinary red evidence while "
-            f"unrelated ambiguity elsewhere in the batch is ignored; "
-            f"verdict={verdict!r}.",
+        self.assertEqual(_tails(verdict.get("refused")), {unique_name}, verdict)
+        self.assertNotIn(unique_name, fx.names(verdict.get("red")), verdict)
+        self.assertEqual(
+            _tails(verdict.get("red")),
+            {"TestX::test_shared_undeclared", "TestY::test_shared_undeclared"},
+            f"The unrelated pair is attributed per class (both ordinary red); verdict={verdict!r}.",
         )
 
 

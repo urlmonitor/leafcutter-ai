@@ -34,7 +34,7 @@ doc_links:
 assigned_agent: documentation-expert
 estimated_complexity: S
 change_target: docs
-test_required: false
+test_required: true
 it_requirements:
   - "Author the guide under docs/how-to/ with check_doc_frontmatter-compliant frontmatter for docs/** (title, type: how-to, status, created, last_updated, components); keep within the doc-length hook budget."
   - "Teach the SAME 'public' definition GE-117b-1 implements (underscore rule, __all__ authoritative) and the multi-AC citation form from GE-117b-1-ii; keep the cited-reference format consistent with what the coder implements."
@@ -45,7 +45,11 @@ expects_from:
   contract: "The symbol-AC declaration behavior and the public-symbol definition the how-to documents"
 origin_agent: business-analyst
 created: 2026-07-02
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

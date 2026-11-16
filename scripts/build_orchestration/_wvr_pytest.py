@@ -27,7 +27,6 @@ import logging
 import os
 import re
 import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,6 +35,7 @@ import _fl_common  # noqa: F401  (puts scripts/ac_store on sys.path)
 import done_proof_kind_support as kind_support
 from done_proof import _PYTEST_RUN_INCOMPLETE_SENTINEL, _resolve_pytest_timeout_seconds
 from pytest_outcome_reader import parse_pytest_outcomes
+from project_python import resolve_for_files  # TQ-500f-3-vi: the project's interpreter
 
 _LOG = logging.getLogger("wrong_version_runner")
 _PYTEST_FLAGS = ("-v", "--tb=no", "--no-header", "-p", "no:cacheprovider", "--continue-on-collection-errors", "-rs")
@@ -196,7 +196,8 @@ def _run_and_read(nodes: list[NodeSpec], kind_path: str, cwd: Path | None = None
     """Launch pytest, classify how it ended, and read a finished run."""
     files = sorted({n.file for n in nodes})
     budget = _resolve_pytest_timeout_seconds(files)
-    cmd = [sys.executable, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
+    judge = resolve_for_files([Path(cwd, f) if cwd else f for f in files])  # TQ-500f-3-vi: the project's interpreter
+    cmd = [*judge.argv, "-m", "pytest", *_PYTEST_FLAGS, "-p", kind_support._KIND_PLUGIN_MODULE_NAME]
     if extra is not None:
         cmd.extend(["-p", extra[0]])
     cmd.extend(n.arg for n in nodes)  # a relative file is relative to the child's cwd, never to this process's

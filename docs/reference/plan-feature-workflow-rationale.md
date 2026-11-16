@@ -4,7 +4,7 @@ description: "Rationale, tombstone, and decision-history comments moved verbatim
 type: reference
 status: active
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-11-04
 components:
   - ac_driven_dev
 related_docs:
@@ -62,9 +62,9 @@ _describeRegistryInterpretationFailure(), and
 _resolveWorkspaceSetupAgentEntryState() used to live here, supporting the
 Pre-Stage-0 workspace-setup permission dispatch above. ACD-2100b-5 removed
 that dispatch (the registry read now happens locally, in
-scripts/worktree/check_workspace_setup_permission.py, invoked by the
-plan-feature skill before this workflow runs — see that section's own
-comment) and these four helpers had no other caller, so they were removed
+scripts/worktree/check_workspace_setup_permission.py, run by the
+caller before this workflow, for a start without the maker's answer — see
+that section's own comment) and these four helpers had no other caller, so they were removed
 with it rather than left as dead code.
 ```
 
@@ -84,15 +84,21 @@ pipeline, phase, log, args, workflow, budget — no module loader and no
 filesystem primitive of any kind (canonical statement: unit_tests/
 _workflow_engine_harness.py docstring, "ENGINE FIDELITY" section) — so
 this workflow physically cannot read config/agent_registry.json itself.
-The agent()-dispatch round-trip this section used to make existed only to
-work around that sandbox; it is gone. The plan-feature SKILL now runs a
-LOCAL pre-flight script (scripts/worktree/check_workspace_setup_permission.py)
-BEFORE invoking this workflow — the skill runs in the main agent loop,
-which has real Bash/Read access — and passes that script's verdict through
+A LOCAL script (scripts/worktree/check_workspace_setup_permission.py) reads
+it outside the body and the caller passes that script's verdict through
 `args.workspace_setup_permission`, the only injected global that carries
 caller-supplied data. This workflow makes NO agent() dispatch and touches
 no filesystem for this check at all; it only consumes the pre-computed
-verdict, and fails closed whenever one does not reach it.
+verdict. The permission pre-flight the plan-feature skill used to run
+(section WSP) was retired on 2026-10-10: the command and skill now pass only
+userInput and workspace.
+
+The verdict is for a start WITHOUT the maker's answer (args.workspace).
+With the answer the workspace already exists and this workflow runs no
+workspace step of its own, so there is nothing the verdict could permit: it
+is neither required nor consulted, and the workspace-answer check and the
+shell-runner decline rule guard the run (ACD-2100d-5). With neither the
+maker's answer nor a verdict the run fails closed.
 ```
 
 ## Final-gate falsy-result guard
@@ -268,18 +274,22 @@ object already built above for the persisted record, just never
 returned until now.
 ```
 
-## No pre-flight verdict at all fails closed
+## A start with neither the maker's answer nor a verdict fails closed
 
-Explains: The Pre-Stage-0 workspace-setup permission check.
+Explains: The Pre-Stage-0 workspace-setup permission check (ACD-2100d-5).
 
 ```text
-Fail closed when NO pre-flight verdict reaches this workflow at all. A
-caller that invokes this workflow directly — e.g. Workflow({ scriptPath:
-'.leafcutter/workflows/plan-feature.js' }), a real, currently-used
-invocation path that bypasses the skill's own pre-flight step entirely —
-supplies no such verdict. This is a DISTINCT fact from "the pre-flight ran
-and denied permission" (handled below): the report here must name the
-MISSING pre-flight itself, never assert a permission cause this run never
-established (ACD-2100b-5 it_requirements; this is a new outcome of the
-startup path and must not be worded as any of ACD-2100b-1/-2/-3's outcomes).
+Fail closed when a start supplies neither the maker's answer
+(args.workspace) nor a pre-flight verdict (args.workspace_setup_permission).
+A caller that invokes this workflow directly — e.g. Workflow({ scriptPath:
+'.leafcutter/workflows/plan-feature.js' }) with no further args — is such a
+start. The run could not tell whether a workspace exists or whether one may
+be made, so it stops before any authoring agent is dispatched. This is a
+DISTINCT fact from "the pre-flight ran and denied permission" (handled
+below): the report names the MISSING workspace and gives the remedy (run the
+maker step once, start again with args.workspace set to its answer), never
+asserting a permission cause this run never established (ACD-2100b-5
+it_requirements; this is a new outcome of the startup path and must not be
+worded as any of ACD-2100b-1/-2/-3's outcomes). A verdict is needed only for
+a start without the maker's answer.
 ```

@@ -1,13 +1,13 @@
 ---
 title: "Workspace States — What Asking for the Same Work Does in Each Situation"
-description: "L3 state view of the place a piece of work's workspace lives, as the one workspace maker sees it on an ensure request for that work: absent, half-made, ready, or occupied by other work. Absent becomes ready or is refused, half-made is finished in place or refused, ready is re-readied, and occupied by other work is left as it is and refused. Every refused edge names its refusal codes, and no request moves the place out of occupied by other work."
+description: "L3 state view of the place a piece of work's workspace lives, as the one workspace maker sees it on an ensure request for that work: absent, half-made, ready, or occupied by other work. Absent becomes ready or is refused, half-made is finished in place or refused, ready is re-readied, half-cleared (a clearing that stopped part-way) is refused HALF_CLEARED until it is cleared again, and occupied by other work is left as it is and refused. Every refused edge names its refusal codes, and no request moves the place out of occupied by other work."
 type: architecture
 flight_level: L3-Component
 diagram_type: state
 status: draft
 root: true
 created: 2026-10-13
-last_updated: 2026-10-13
+last_updated: 2026-11-04
 source_ticket: "tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md"
 components:
   - worktree_manager
@@ -24,11 +24,13 @@ related_code:
   - templates/scripts/worktree_identity.py
   - templates/scripts/worktree_readiness.py
   - templates/scripts/worktree_answer.py
+  - templates/scripts/worktree_remove_half.py
 tags:
   - workspace
   - worktree-manager
   - safe-re-request
   - BO-4300d-5
+  - BO-4300e-5-ii
 ---
 
 # Workspace States — What Asking for the Same Work Does in Each Situation
@@ -39,19 +41,23 @@ of work, given what is already at its place?** The request is always
 (BO-4300d-1 to BO-4300d-3).
 
 **Status: built.** The decision is `_ensure_locked` in `templates/scripts/worktree.py`. It
-asks `worktree_identity.occupied_refusal` first, then reads the workspace's marker
-(`.leafcutter/workspace.json`). With no marker it creates the workspace. A marker in state
+reads the workspace's marker (`.leafcutter/workspace.json`), asks
+`worktree_remove_half.half_cleared_refusal` first and `worktree_identity.occupied_refusal` next. With no marker it creates the workspace. A marker in state
 `creating` means half-made, and the workspace is finished in place. A marker in state
-`ready` means the workspace is re-readied.
+`ready` means the workspace is re-readied. A marker in state `clearing`, or one in state `ready`
+whose repository can no longer be read, means half-cleared: `ensure` and `locate` refuse it
+(`worktree_remove_half.half_cleared_refusal`).
 
 ```mermaid
 stateDiagram-v2
     state "Absent - nothing at the work's place, or an empty folder" as Absent
     state "Half-made - marker state creating" as HalfMade
     state "Ready - marker state ready" as Ready
+    state "Half-cleared - a clearing stopped part-way, left as it is" as HalfCleared
     state "Occupied by other work - left as it is" as Occupied
 
     [*] --> Absent
+    [*] --> HalfCleared : a clearing stopped part-way, or a ready marker whose repository can no longer be read
     [*] --> Occupied : the place, or an old-style workspace, already holds other work
     Absent --> Ready : ok - created
     Absent --> Absent : refused before a copy is kept - AMBIGUOUS_LINE, TICKET_NOT_ON_BASE, FETCH_FAILED
@@ -59,6 +65,10 @@ stateDiagram-v2
     HalfMade --> Ready : ok - completed in place, never deleted
     HalfMade --> HalfMade : refused - INCOMPLETE, WORK_AT_RISK, FETCH_FAILED, BOOTSTRAP_FAILED, HOOKS_INACTIVE, VERIFY_FAILED
     Ready --> Ready : ok - re-readied, the work in it untouched
+    Ready --> HalfCleared : a remove that stopped part-way after its checks passed
+    HalfCleared --> HalfCleared : refused for ensure and locate - HALF_CLEARED
+    HalfCleared --> Absent : remove asked again - finished, a token first when files cannot be checked
+    [*] --> Absent : remove of a leftover with no record naming the hub of this project - a token first, as its files cannot be checked
     Occupied --> Occupied : refused - OCCUPIED, OCCUPIED_LEGACY_WORKTREE
     note right of Ready : a re-ready that fails a check is refused and leaves the workspace and its work as they were
 ```
@@ -74,6 +84,7 @@ See also: [Worktree Manager — One Workspace Maker, Per-Feature Clones](../comp
 | Absent | No folder at `<landing place>/<kind>/<slug>`, or an empty one. An empty folder is treated as absent, not as occupied | `_ensure_locked`, `empty_folder` |
 | Half-made | A marker in state `creating`: written right after the clone, before the line of work is checked out and the tools are installed | `_create_workspace`, `_resume_workspace` |
 | Ready | A marker in state `ready`: written last, atomically, only after every readiness ingredient was proven | `write_ready_marker` |
+| Half-cleared | A marker in state `clearing` (a `remove` passed its checks, then stopped), or a marker in state `ready` whose repository can no longer be read. Also, for `remove` only, a leftover with no marker whose repository leftovers name this project's hub | `is_half_cleared`, `half_state` |
 | Occupied by other work | The place holds another project's workspace, a folder with no marker, or a checkout of another line. Or the main copy still registers an old-style linked worktree for this work's line | `occupied_refusal` (occupant kinds `other-project`, `plain-folder`, `other-line`, `legacy-worktree`) |
 
 ## The transitions
@@ -87,6 +98,8 @@ See also: [Worktree Manager — One Workspace Maker, Per-Feature Clones](../comp
 | Half-made | refused: `INCOMPLETE` (the folder is on another line, has no `.git`, or its marker state is unknown), `WORK_AT_RISK` (an earlier request was killed while it held the work's changes aside), or a creation or readiness code as above | Stays half-made, untouched |
 | Ready | `ok`, `workspace_action: re-readied` | Fetched, rebuilt and proven again. The work's uncommitted changes are set aside and put back byte for byte. The line keeps its recorded start and is never moved or rebased |
 | Ready | refused: `FETCH_FAILED` (without `--allow-stale-base`), `WORK_AT_RISK`, `INCOMPLETE`, or a readiness code (the note in the diagram) | Stays ready: the marker is not rewritten, and the next request proves every ingredient again |
+| Half-cleared | refused: `HALF_CLEARED` for `ensure` and `locate` | Left untouched. Nothing is fetched, pushed or changed, and the answer is never ready |
+| Half-cleared | `remove` asked again: `ok`, or `UNSENT_WORK` with a one-time `discard_token` when its files cannot be checked | Becomes absent once finished. A clearing that had checked the work finishes without a token |
 | Occupied | refused: `OCCUPIED` or `OCCUPIED_LEGACY_WORKTREE`, with an `occupant` object describing what is there | **Left as it is.** Nothing is created, moved, overwritten or deleted |
 
 **No edge leaves Occupied.** The maker never changes an occupant to answer a request for
@@ -126,6 +139,9 @@ takes a ready workspace back to absent, or refuses `UNSENT_WORK` with a one-time
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-11-04 [documentation-expert, BO-4300e-5-ii]: Added the half-cleared state and the
+  HALF_CLEARED refusal of ensure and locate (user decision 2026-11-03), matching
+  templates/scripts/worktree_remove_half.py. Existing states and edges unchanged.
 - 2026-10-13 [architecture-diagram-author, EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13]:
   Initial creation (BO-4300d-5). Numbered c3-031, not the c3-010 the AC
   named or the c3-011 the ticket proposed: both were taken by then, and the
