@@ -222,15 +222,16 @@ class TestOutputDriftCoversAllShimmedDirs(unittest.TestCase):
             captured["output_dirs"] = list(output_dirs)
             return 0
 
-        original_resolve = module._resolve_manifest_path
-        original_check = module.check_output_drift
+        # The probe manifest is not on disk; stub a readable empty record so
+        # main() reaches the scan instead of the could-not-read report (BP-1500d-4).
+        originals = (module._resolve_manifest_path, module.check_output_drift, module._load_manifest)
         module._resolve_manifest_path = _fake_resolve
         module.check_output_drift = _fake_check
+        module._load_manifest = lambda _path: {"output_mappings": {}}
         try:
             module.main()
         finally:
-            module._resolve_manifest_path = original_resolve
-            module.check_output_drift = original_check
+            module._resolve_manifest_path, module.check_output_drift, module._load_manifest = originals
 
         self.assertIn(
             "output_dirs",

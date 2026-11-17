@@ -205,6 +205,7 @@ class TestUnreadableOutputCannotBypassDriftDetection(unittest.TestCase):
         combined = result.stdout + result.stderr
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        assert isinstance(match, re.Match)
         unreadable = match.group(8)
         self.assertIsNotNone(
             unreadable,
@@ -281,6 +282,7 @@ class TestOutputReplacedByDirectoryIsUnreadableNotInvisible(unittest.TestCase):
         )
         match = _RESULT_LINE_RE.search(combined)
         self.assertIsNotNone(match, f"No RESULT summary line. Output:\n{combined}")
+        assert isinstance(match, re.Match)
         self.assertEqual(0, int(match.group(2)), f"verified must be 0. Output:\n{combined}")
         self.assertEqual(0, int(match.group(7)), f"missing must be 0 (path exists). Output:\n{combined}")
         unreadable = match.group(8)

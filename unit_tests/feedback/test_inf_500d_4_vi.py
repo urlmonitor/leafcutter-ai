@@ -37,11 +37,13 @@ from __future__ import annotations
 import json
 import re
 import shutil
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from unit_tests.feedback import _inf_500d_4_helpers as h
+from unit_tests.feedback._inf_500d_3_ii_check import RUN_A, fill, name_problems
 from unit_tests.feedback._inf_500d_4_vi_helpers import (
     _ANY_MENTION,
     _DECLARED,
@@ -237,9 +239,18 @@ def test_signoff_id_capture_contract_survives_the_prompt_change(shared_reference
     root = _enduring(tmp_path)
     project, out_root = _worktree(tmp_path, "wt", root)
     tmpdir = _tmpdir(tmp_path)
-    command = _prepare(submit, out_root, tmpdir)
-    err_file = f"{tmpdir}/feedback_err.txt"
-    assert f"2>{err_file}" in command.replace(" ", ""), f"signoff Call 1 must redirect stderr to /tmp/feedback_err.txt: {command}"
+    # INF-500d-3-ii: the error stream goes to a file of this run's own (ticket + phase), so Call 1, Call 2 and the
+    # grep line are all filled in for the SAME concrete run before they are executed.
+    run = RUN_A
+    command = _prepare(replace(submit, raw=fill(submit.raw, run)), out_root, tmpdir)
+    redirect = re.search(r"2>\s*(\S+)", command)
+    assert redirect, f"signoff Call 1 must redirect stderr to a file: {command}"
+    err_file = redirect.group(1)
+    assert err_file.startswith(f"{tmpdir}/"), f"signoff Call 1 must redirect stderr into the temp dir: {command}"
+    assert err_file != f"{tmpdir}/feedback_err.txt", "signoff Call 1 still redirects to the one file every caller shares"
+    # The name is judged as the instruction prescribes it (/tmp/<name>), before the test confines /tmp to its tmpdir.
+    prescribed = err_file.replace(f"{tmpdir}/", "/tmp/", 1)
+    assert not name_problems(prescribed, run.ticket, run.phase), name_problems(prescribed, run.ticket, run.phase)
     if variant == "with_the_old_override":
         # Control: the pre-change shape (explicit workspace-relative --jsonl) must be CAUGHT by this harness.
         command = command.replace(" 2>", " --jsonl debugging/logs/feedback.jsonl 2>", 1)
@@ -255,7 +266,9 @@ def test_signoff_id_capture_contract_survives_the_prompt_change(shared_reference
     assert re.fullmatch(r"fb_\d{4}-\d{2}-\d{2}_[0-9a-f]{8}", feedback_id), f"stdout must be exactly the id, got {proc.stdout!r}"
     assert proc.stdout == feedback_id + "\n"
 
-    grep = _shell(grep_line.replace("/tmp/", f"{tmpdir}/"), project, tmpdir)
+    grep_filled = fill(grep_line, run).replace("/tmp/", f"{tmpdir}/")
+    assert grep_filled.rstrip().endswith(err_file), f"Call 2 must search the file Call 1 wrote ({err_file}): {grep_filled}"
+    grep = _shell(grep_filled, project, tmpdir)
     matches = grep.stdout.splitlines()
     assert len(matches) == 1, f"the sidecar grep must find exactly one match, found {matches!r} in {Path(err_file).read_text()!r}"
     sidecar = Path(matches[0].split("sidecar:", 1)[1])

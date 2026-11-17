@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
 criteria: |
   Given the project rule that requires a new guardrail or gate dependency to be added
@@ -60,8 +60,10 @@ created: 2026-08-18
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/test_bp_900g_8_iii.py
+implemented_by:
+  - CLAUDE.md
 change_target: docs
 risk_surface: internal
 notes: |

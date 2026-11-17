@@ -98,6 +98,8 @@ class TestFaultOnlyInDeployedCopyFailsSuite(unittest.TestCase):
     the faulted copy via the override seam, and require it fails naming
     the broken behaviour."""
 
+    layout_root: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.layout_root = ensure_deployed_layout()
@@ -163,6 +165,8 @@ class TestSuiteRunsDeployedMakerFromEveryStartingPoint(unittest.TestCase):
     process) and asserts the consumer's observable behaviour: the resolved
     maker path is under the install layout (never templates/), and every
     starting point's real subprocess run answers the same real location."""
+
+    layout_root: Path
 
     @classmethod
     def setUpClass(cls) -> None:

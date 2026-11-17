@@ -226,7 +226,8 @@ def _probe_blocks(prompts: dict[str, str]) -> list[tuple[str, str]]:
     marker = "pre-drive-reachability-check"
     blocks: list[tuple[str, str]] = []
     for surface in ("building-epics", "epic-supervisor"):
-        fence, current = False, []
+        fence = False
+        current: list[str] = []
         for line in prompts[surface].splitlines():
             if line.strip().startswith("```"):
                 if fence and marker in "\n".join(current):

@@ -31,6 +31,8 @@ def _load_template() -> str:
 class TestPythonCoderTemplateFailOpenCarveout(unittest.TestCase):
     """AC BO-2000b-1 / BO-2000b-1-i: fail-open hook carve-out."""
 
+    content: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.content = _load_template()
@@ -79,6 +81,8 @@ class TestPythonCoderTemplateFailOpenCarveout(unittest.TestCase):
 class TestPythonCoderTemplatePathAwarenessAndDelegation(unittest.TestCase):
     """AC BO-2000b-2 / BO-2000b-3: path context awareness and delegation."""
 
+    content: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.content = _load_template()
@@ -114,6 +118,8 @@ class TestPythonCoderTemplatePathAwarenessAndDelegation(unittest.TestCase):
 class TestPythonCoderTemplateReadBeforeEditAndShell(unittest.TestCase):
     """AC BO-2000b-4 / BO-2000b-6: read-before-Edit and shell discipline."""
 
+    content: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.content = _load_template()
@@ -146,6 +152,8 @@ class TestPythonCoderTemplateReadBeforeEditAndShell(unittest.TestCase):
 
 class TestPythonCoderTemplateRealArtifactAndPhantom(unittest.TestCase):
     """AC BO-2000b-5: real-artifact spot-check and phantom-test prohibition."""
+
+    content: str
 
     @classmethod
     def setUpClass(cls) -> None:

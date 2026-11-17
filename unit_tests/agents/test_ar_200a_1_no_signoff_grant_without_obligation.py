@@ -18,6 +18,8 @@ import importlib.util
 import sys
 import tempfile
 import unittest
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,8 @@ import yaml
 
 _HELPER = Path(__file__).resolve().parent / "_ar_200b_2_support.py"
 _spec = importlib.util.spec_from_file_location("_ar_200b_2_support", _HELPER)
+assert isinstance(_spec, ModuleSpec)
+assert isinstance(_spec.loader, Loader)
 S: Any = sys.modules.get("_ar_200b_2_support") or importlib.util.module_from_spec(_spec)
 if "_ar_200b_2_support" not in sys.modules:
     sys.modules["_ar_200b_2_support"] = S

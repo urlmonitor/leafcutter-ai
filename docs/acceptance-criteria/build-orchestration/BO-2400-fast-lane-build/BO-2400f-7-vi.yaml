@@ -1,0 +1,213 @@
+id: BO-2400f-7-vi
+components:
+  - build_orchestration
+title: "Every command step the lane asks for states its time budget, and the store-wide steps are given at least 600 seconds"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run driven through every command step it has, from resolve to opening
+    the pull request,
+  And a second run that halts after its claim and asks for a release,
+  When each command-step request either run sends is read,
+  Then every request states a time budget in seconds,
+  And the requests for resolve, producibility, claim, release and marking acceptance
+    criteria done — the steps that read the whole acceptance-criteria store — each state a
+    budget of no less than 600 seconds,
+  And no command-step request leaves its budget to the runner's or the shell's default.
+
+  Given a command step is added to the lane after this record,
+  When the run sends its request,
+  Then that request states a time budget as well.
+depends_on: [BO-2400f-7, BO-2400f-5-i, BO-2400f-7-v]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Composes every command-step request. Today none states a budget, so the runner falls to the shell's 120-second default."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Declares which dispatches are command steps; the budget rule applies to exactly that set."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+declared_files:
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    command_step_time_budget:
+      type: integer
+      minimum: 1
+      description: >-
+        The wait budget, in whole seconds, stated in every command-step request as
+        `time_budget_seconds: <n>`. Store-wide steps (resolve, producibility, claim, release,
+        mark_done, and the claim reconciliation read of BO-2400f-10-iv) state no less than
+        600; the claim states 900 because it walks the store twice (one walk measured 119 s
+        at load average about 36 on 2026-11-16). Every other command step states its own
+        value; none is left to a default.
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "all"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      Each step's budget is declared once, beside the step's command-step declaration
+      (BO-2400f-5-i), and every request reads it from there. No request carries a literal
+      budget of its own, so a new command step cannot be added without the declaration
+      asking for one, and the covering test reads the budgets from the dispatches the run
+      actually records, not from the source text.
+    - >-
+      The budget is stated in the request in the exact form `time_budget_seconds: <n>`, the
+      form the runner (BO-2400f-7-v) reads. A budget phrased any other way is a budget the
+      runner does not see.
+    - >-
+      The claim's 900 seconds is a decision for this record, not a promise that the claim
+      fits: store-walk speed-ups are out of scope. Raising a budget later is a one-line
+      change to the declaration.
+    - >-
+      Budgets change no step's behaviour beyond the request text: the order of steps, the
+      commands, and the classification of replies stay as they are.
+test_intent:
+  - clause: every request states a time budget in seconds
+    needs_test: true
+    reason: A single request left without a budget falls back to the 120-second shell default that killed the 2026-11-16 claim.
+  - clause: the requests for resolve, producibility, claim, release and marking acceptance criteria done — the steps that read the whole acceptance-criteria store — each state a budget of no less than 600 seconds
+    needs_test: true
+    reason: The floor is a number the run sends, and a smaller value on any one store-wide step reproduces the timeout.
+  - clause: no command-step request leaves its budget to the runner's or the shell's default
+    needs_test: true
+    reason: A request that omits the budget looks the same as one that states it until the step runs long, so only the recorded dispatches show it.
+  - clause: that request states a time budget as well
+    needs_test: true
+    reason: The rule must keep holding for steps added later, which it does only if every request takes its budget from the step declaration.
+test_spec:
+  - name: test_every_command_step_request_the_lane_sends_states_time_budget_seconds
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Drives fast-lane-ship.js through the workflow-engine harness (run_workflow_under_e2) on a full happy-path run
+      and on a second run that halts after its claim and so asks for a release. The command-step requests are
+      discovered from the recorded dispatches (agentType command-step-runner, plus the producibility, release and
+      mark_done dispatches), never from a hand list. Each request text must carry time_budget_seconds followed by a
+      colon and a positive integer. The wrong version it catches is a lane whose release or mark_done request states
+      no budget and so falls to the 120 second shell default that killed the 2026-11-16 claim.
+    proves_clause: every request states a time budget in seconds
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_store_wide_steps_state_a_budget_of_at_least_600_seconds
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Same two harness runs. The recorded requests for resolve-connected, the producibility check, claim-connected,
+      the release and mark_done are each read and their stated budget must be 600 or more, and the claim must state
+      900 as the contract fixes. The wrong version it catches is a store-wide step given 120 or 300 seconds, or the
+      claim given the 600 floor only.
+    proves_clause: the requests for resolve, producibility, claim, release and marking acceptance criteria done — the steps that read the whole acceptance-criteria store — each state a budget of no less than 600 seconds
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_no_command_step_request_is_left_to_a_default_budget
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Sweeps every command-step request recorded across a happy-path run, a post-claim halt run and a run whose
+      workspace was not newly created (which reaches the fastlane-wv-recover step), and fails on the first request
+      with no time_budget_seconds, with a budget phrased in prose, or with a non-integer value. The budget is read
+      from the recorded request, not from the source text.
+    proves_clause: no command-step request leaves its budget to the runner's or the shell's default
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - one request, for example the release or the wrong-version recover step, omits the budget while the others state it
+      - a budget written as prose such as wait up to ten minutes instead of the time_budget_seconds form
+      - a budget declared only on the claim request and left to the default on every other command step
+  - name: test_a_command_step_added_later_is_covered_because_requests_are_discovered_not_listed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The sweep takes its set of command-step requests from the dispatches the harness recorded, so a step added
+      after this record is checked without editing the test. The test also asserts the discovered set is not empty
+      and contains each store-wide step, so a sweep that silently finds nothing cannot pass. The wrong version it
+      catches is a new command step whose request is composed with its own literal and states no budget.
+    proves_clause: that request states a time budget as well
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_the_lane_is_reachable_through_the_workflow_dispatch_and_stamps_budgets
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs fast-lane-ship.js as the engine does (run_workflow_under_e2 with args ac) to the end of a happy-path run
+      and asserts the terminal payload reached the pull request step and that the dispatches it recorded carry the
+      budget. This proves the budgets are stated by the real top-level control flow and not by a helper nothing calls.
+    proves_clause: every request states a time budget in seconds
+    code_file: templates/workflows-js/fast-lane-ship.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+file_findings:
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It composes every command-step request (resolve, claim, wrong-version steps) and the release and commit dispatches, and none of them states a budget today, so it is the right surface.
+    decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is a sibling workflow script of the same type that dispatches phase agents by agent() and declares its response schemas the way the lane must declare its budgets.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-ticket.js
+delivers_to:
+  agent: llm-expert
+  contract: "Every command-step request states `time_budget_seconds: <positive integer>`; store-wide steps (resolve, producibility, release, mark_done, claim reconciliation) state no less than 600 and the claim states 900. BO-2400f-7-v's runner waits up to that budget."
+expects_from:
+  ac_id: BO-2400f-5-i
+  contract: "Every lane dispatch is declared either a command step (with its kind) or a specialist phase, readable without running a model."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Why the lane states the budget as well as the runner having a default: the runner's
+  waiting is model behaviour and cannot be proved by a unit test, while the budget on the
+  request is a fact a workflow test can read from the recorded dispatches. Stating it also
+  makes each step's budget a decision someone took, rather than whatever the shell does.
+
+  600 seconds is the floor, not a promise that the steps fit. On 2026-11-16 one store walk
+  took 119 s at load average about 36, and the claim does two. Making the walks faster is
+  out of scope here (store-walk speed-ups come later); the IT PO may set a higher budget for
+  the claim, because the runner in BO-2400f-7-v waits on a background command beyond one
+  shell call.

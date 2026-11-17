@@ -108,7 +108,9 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/30_TICKET-20260825-GE-120e-2.md
 - templates/scripts/commit_guardian/change_set_source.py
 - templates/scripts/commit_guardian/commit_guardian.json
-- unit_tests/portability/test_ge_120e_2.py
+- unit_tests/portability/ge_120e_2/_support.py
+- unit_tests/portability/ge_120e_2/test_ge_120e_2_determination.py
+- unit_tests/portability/ge_120e_2/test_ge_120e_2_consumers_and_reachability.py
 change_target:
   - code
   - config

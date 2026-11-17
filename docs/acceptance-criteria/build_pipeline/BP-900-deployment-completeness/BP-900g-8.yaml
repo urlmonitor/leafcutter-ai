@@ -9,7 +9,7 @@ req_status: active
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: in_progress
+work_status: done
 created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
 criteria: |
   Given any script the build deploys into a consumer install,
@@ -254,12 +254,30 @@ amended_by:
     is still todo with no coverage. That claim was false before this change too;
     in_progress is the accurate state until BP-900g-8-iii lands. Its own 18 tests and
     the done children -i, -ii and -iv are unchanged. criteria untouched.'
+- reason: store-accuracy
+  by: python-coder
+  at: 2026-11-16
+  note: 'BP-900g-8-iii landed (CLAUDE.md deploy-dependency rule now names data and
+    configuration files, covered by unit_tests/test_bp_900g_8_iii.py, work_status
+    done), so every child -i, -ii, -iii and -iv is done and this composite is
+    restored from in_progress to done. criteria untouched.'
+- reason: store-accuracy
+  by: python-coder
+  at: 2026-11-16
+  note: 'Added children BP-900g-8-v, -vi and -vii (template frontmatter parse reuse:
+    identical results, one parse per distinct text, pure-Python loader kept) to
+    covered_by. All three are done with unit_tests/test_bp_900g_8_v_frontmatter_reuse.py
+    and every other child (-i to -iv) is done, so work_status stays done. criteria
+    untouched.'
 superseded_by: null
 covered_by:
   - BP-900g-8-i
   - BP-900g-8-ii
   - BP-900g-8-iii
   - BP-900g-8-iv
+  - BP-900g-8-v
+  - BP-900g-8-vi
+  - BP-900g-8-vii
   - unit_tests/test_bp_900g_8.py
   - unit_tests/test_bp_closure_guard_correctness.py
 implemented_by:

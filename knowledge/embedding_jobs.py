@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .contracts import ProjectionSnapshot
-from .ports import EmbeddingProvider
+from .ports import EmbeddingProvider, EmbeddingWriter
 
 import hashlib
 import json
@@ -15,9 +15,9 @@ NORMALIZATION = "provider-output-cosine-v1"
 
 
 async def embed_snapshot(
-    writer: object,
+    writer: EmbeddingWriter,
     snapshot: ProjectionSnapshot,
-    provider: EmbeddingProvider | None,
+    provider: EmbeddingProvider,
     *,
     cache: dict | None = None,
 ) -> dict:
@@ -31,8 +31,9 @@ async def embed_snapshot(
     Args:
         writer: Writer adapter that publishes model-bound vectors to a generation.
         snapshot: Immutable generation manifest or source projection.
-        provider: Embedding provider with a declared model and dimensions.
-
+        provider: Embedding provider with a declared model and dimensions. Required: every
+            vector is bound to its model and dimensions, so there is no ingestion without
+            one. A caller whose embeddings are disabled does not call this job (KM-400c-4-i).
 
     Returns:
         dict: Generation identity, embedded entity count, provider call count and model metadata.

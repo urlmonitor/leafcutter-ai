@@ -25,7 +25,7 @@ def stream(commands: list[str], *, error_on: int | None = None, result_error: bo
         events.append({"type": "assistant", "message": {"role": "assistant", "content": [
             {"type": "tool_use", "id": f"t{i}", "name": "Bash", "input": {"command": command}}]}})
         content, is_error = ("boom", True) if i == error_on else result_for(command)
-        block = {"type": "tool_result", "tool_use_id": f"t{i}", "content": content}
+        block: dict[str, str | bool] = {"type": "tool_result", "tool_use_id": f"t{i}", "content": content}
         if is_error:
             block["is_error"] = True
         events.append({"type": "user", "message": {"role": "user", "content": [block]}})

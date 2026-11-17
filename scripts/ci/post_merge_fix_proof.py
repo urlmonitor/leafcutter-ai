@@ -396,7 +396,7 @@ def _distinct_status(report) -> str:
     wasxfail = hasattr(report, "wasxfail")
     if report.failed:
         return "failed"
-    if getattr(report, "outcome", None) == "xfailed":  # pytest_ac_enforcement's mask: neither failed nor skipped
+    if getattr(report, "outcome", None) == "xfailed":  # an OLDER pytest_ac_enforcement's mask; TQ-100b-1-iv's is skipped + wasxfail
         return "xfailed"
     if report.skipped:
         return "xfailed" if wasxfail else "skipped"

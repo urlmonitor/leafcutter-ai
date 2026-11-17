@@ -133,7 +133,7 @@ from _fl_red_baseline_support import (
     _classify_declared_reds,
     _classify_newly_added,
     _declared_names_preflight,
-    _detect_ambiguous_tag_identities,
+    _find_ambiguous_tags,
     _partition_newly_added,
     _red_baseline_verdict,
     _interpreter_unusable_verdict,
@@ -141,6 +141,7 @@ from _fl_red_baseline_support import (
     _resolve_git_baseline_context,
 )
 from _fl_heavy_lane_gate import heavy_lane_gate  # noqa: F401 — re-exported, used by main()
+from project_python import project_import_refusal, resolve_project_python  # TQ-500f-3-vi
 from _fl_selection import _is_structural_parent, _topo_order_build_set, select_batch
 
 # ---------------------------------------------------------------------------
@@ -337,10 +338,24 @@ def verify_red_baseline(
             TQ-500f-3-i — additive. Declared covering tests refused as
             absence-only red, each ``{"nodeid", "ac_id", "kind": "absence",
             "message"}``. Always ``[]`` when *ac_root* is omitted.
+
+        ``interpreter`` (str)
+            TQ-500f-3-vi — the PROJECT interpreter that judged the tests
+            (``project_python.resolve_project_python``: configured command,
+            else the worktree ``.venv``, else ``uv run``, else
+            ``sys.executable``). When it cannot import the project's own
+            package, the reason is ``"project_package_not_importable"`` and an
+            additive ``refusal`` names the interpreter and the package --
+            never ``"no_red_outcome_among_new_tests"``.
     """
-    unusable = _interpreter_unusable_verdict()
-    if unusable is not None:
-        return unusable
+    judge = resolve_project_python(test_root)
+    verdict = _interpreter_unusable_verdict(judge) or _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge)
+    verdict["interpreter"] = judge.display
+    return verdict
+
+
+def _judge_red_baseline(ac_ids, test_root, base_ref, ac_root, judge) -> dict:
+    """verify_red_baseline's reader, run with the project interpreter *judge*."""
     batch_set = set(ac_ids)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     linked_tags = [t for t in all_tags if t["ac_id"] in batch_set]
@@ -359,8 +374,6 @@ def verify_red_baseline(
     # H-2/H-4: pre-pytest fail-closed checks (never depend on a run outcome).
     declared_names: set[str] = set()
     if ac_root is not None:
-        if _detect_ambiguous_tag_identities(newly_added_tags):
-            return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
         declared_names, preflight_reason = _declared_names_preflight(
             ac_ids, ac_root, newly_added_tags
         )
@@ -375,10 +388,17 @@ def verify_red_baseline(
         pytest_results = _run_pytest_and_parse(test_files)
         kind_by_nodeid = {}
 
+    if ac_root is not None and _find_ambiguous_tags(newly_added_tags, pytest_results):
+        # TQ-500f-3-iii: safety net kept -- a tag not tied to exactly one test is refused, never guessed.
+        return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
+
     red, green_at_baseline, inconclusive = _classify_newly_added(
         newly_added_tags, pytest_results
     )
     preexisting = _report_preexisting(preexisting_tags, pytest_results)
+    refusal = None if red or green_at_baseline else project_import_refusal(test_root, pytest_results, judge)
+    if inconclusive and refusal is not None:
+        return _red_baseline_verdict(gate_passed=False, reason="project_package_not_importable", inconclusive=inconclusive, preexisting=preexisting, refusal=refusal)
 
     if ac_root is not None:
         red, _refused, early_verdict = _classify_declared_reds(
@@ -409,11 +429,7 @@ def verify_red_baseline(
             preexisting=preexisting,
         )
 
-    reason = (
-        "all_new_tests_green_at_baseline"
-        if not inconclusive
-        else "no_red_outcome_among_new_tests"
-    )
+    reason = "no_red_outcome_among_new_tests" if inconclusive else "all_new_tests_green_at_baseline"
     return _red_baseline_verdict(
         gate_passed=False,
         reason=reason,
@@ -627,4 +643,7 @@ if __name__ == "__main__":
 #   the test suite (_load_ac, traverse_ac_tree, _run_pytest_and_parse)
 #   still resolves through this module's own namespace exactly as before.
 #   (#TICKETLESS reason=fast-lane-file-size-split)
+# - 2026-10-22 [python-coder/TQ-500f-3-vi]: verify_red_baseline judges with the
+#   project interpreter (project_python) and refuses an un-importable project
+#   package as project_package_not_importable; body moved to _judge_red_baseline.
 # ====================================================================

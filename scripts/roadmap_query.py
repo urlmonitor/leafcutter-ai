@@ -283,7 +283,7 @@ def _rollup(
         print(f"\n{phase_id}: {title}{marker}")
         print(f"  Tickets: {len(phase_tickets)}")
         if phase_tickets:
-            status_counts: dict[str, int] = {}
+            status_counts = {}
             for t in phase_tickets:
                 s = t["fm"].get("status", "unknown")
                 status_counts[s] = status_counts.get(s, 0) + 1

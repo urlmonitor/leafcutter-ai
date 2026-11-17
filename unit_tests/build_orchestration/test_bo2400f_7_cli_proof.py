@@ -57,20 +57,20 @@ if str(_MODULE_DIR) not in sys.path:
 # Import the fast_lane module and select_batch — RED until both exist.
 # ---------------------------------------------------------------------------
 
+# A name whose import fails stays unbound; every test checks the matching
+# _OK flag before it reaches the name.
 _FAST_LANE_MODULE_OK = False
-fast_lane = None  # type: ignore[assignment]
 
 try:
-    import fast_lane  # type: ignore[no-redef]
+    import fast_lane
     _FAST_LANE_MODULE_OK = True
 except ImportError:
     pass
 
 _SELECT_BATCH_IMPORT_OK = False
-select_batch = None  # type: ignore[assignment]
 
 try:
-    from fast_lane import select_batch  # type: ignore[no-redef]
+    from fast_lane import select_batch
     _SELECT_BATCH_IMPORT_OK = True
 except (ImportError, AttributeError):
     pass

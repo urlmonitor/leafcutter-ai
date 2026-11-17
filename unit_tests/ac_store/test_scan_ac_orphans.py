@@ -69,12 +69,12 @@ class TestExtractCoveredBy:
 
     def test_returns_empty_list_when_absent(self) -> None:
         # covers: ACS-100i-4
-        data = {}
+        data: dict[str, object] = {}
         assert _extract_covered_by(data) == []
 
     def test_returns_empty_list_for_empty_list(self) -> None:
         # covers: ACS-100i-4
-        data = {"covered_by": []}
+        data: dict[str, object] = {"covered_by": []}
         assert _extract_covered_by(data) == []
 
     def test_returns_empty_list_for_none(self) -> None:
@@ -145,17 +145,13 @@ class TestFindOrphanedChildren:
         }
 
     def _make_index_all_linked(self) -> dict:
-        """Build an index where all children are in their parent's covered_by."""
-        return {
-            "ACS-300h": {
-                "id": "ACS-300h",
-                "covered_by": ["ACS-300h-1", "ACS-300h-2", "ACS-300h-3"],
-                "_path": "/fake/ACS-300h.yaml",
-            },
-            "ACS-300h-1": {"id": "ACS-300h-1", "covered_by": [], "_path": "/fake/ACS-300h-1.yaml"},
-            "ACS-300h-2": {"id": "ACS-300h-2", "covered_by": [], "_path": "/fake/ACS-300h-2.yaml"},
-            "ACS-300h-3": {"id": "ACS-300h-3", "covered_by": [], "_path": "/fake/ACS-300h-3.yaml"},
-        }
+        """Build an index where all children are in their parent's covered_by.
+
+        The same four records as ``_make_index_with_orphan``, with the parent listing all three.
+        """
+        index = self._make_index_with_orphan()
+        index["ACS-300h"]["covered_by"] = ["ACS-300h-1", "ACS-300h-2", "ACS-300h-3"]
+        return index
 
     def test_detects_orphaned_children(self) -> None:
         # covers: ACS-100i-4

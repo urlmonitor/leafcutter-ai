@@ -1,0 +1,171 @@
+id: BO-2000g-4-i
+components:
+  - build_orchestration
+  - commit_guardian
+title: "The proof reaches the real check: the pre-correction python-coder example is refused by the same harness"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-4.yaml
+criteria: |
+  Given the scratch repository, the active feedback-id check and the scratch ticket of
+    BO-2000g-4,
+  And two variants of the python-coder red-baseline sign-off example as it stood before
+    BO-2000g-1:
+      (a) the heading, then `red_baseline_results:` and its two test entries, with no
+          feedback-id line;
+      (b) the heading, then `red_baseline_results:`, then
+          `  - test_name: test_foo_raises_on_empty_input`, then
+          `feedback-id: fb_2026-05-08_aa112233` as the third body line, then the
+          remaining entries,
+  When each variant is appended and committed in the same way BO-2000g-4 commits a
+    corrected example,
+  Then both commits are refused by the feedback-id check, and the refusal names the
+    heading,
+  And neither variant leaves a commit in the scratch repository's history,
+  So a harness that never reaches the check (the hook not installed, the ticket outside
+    the inspected path, or the check skipped) cannot report BO-2000g-4 as passing.
+depends_on:
+  - BO-2000g-4
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: unit_tests/prompt_assembly/test_bo_2000g_4_i.py
+    state: to_be_created
+it_requirements:
+  - >-
+    Use BO-2000g-4's harness unchanged: the same hook install, ticket path, environment clean-up
+    and commit call. A harness variant built for this test would prove nothing about
+    BO-2000g-4's reach.
+  - >-
+    The two pre-correction variants are frozen test data, copied verbatim from python-coder.md
+    ~:332-338 as of 2026-11-16 (the heading, `red_baseline_results:` and its two test entries),
+    with the date and time filled. Variant (b) puts the concrete id fb_2026-05-08_aa112233 on
+    body line 3.
+  - >-
+    Evidence of refusal has three parts: git commit exits non-zero, the hook's output contains
+    the heading text, and HEAD and the commit count are unchanged. The refused staged change is
+    discarded before the next variant.
+  - >-
+    Mark the test `@pytest.mark.shared_layout_reader`, like BO-2000g-4. No build.py.
+  - >-
+    The pair only means something together. With the hook uninstalled, the ticket moved outside
+    the inspected path, or SKIP=check-feedback-id set, BO-2000g-4 would still pass, and this
+    record must fail. These three are the wrong versions this record exists to catch.
+test_intent:
+  - clause: "both commits are refused by the feedback-id check, and the refusal names the heading"
+    needs_test: true
+    reason: "If the hook is not installed, the ticket is outside the inspected path or the check is skipped, both variants commit, so this goes red exactly when BO-2000g-4 could pass vacuously."
+  - clause: "neither variant leaves a commit in the scratch repository's history, So a harness that never reaches the check (the hook not installed, the ticket outside the inspected path, or the check skipped) cannot report BO-2000g-4 as passing"
+    needs_test: true
+    reason: "A harness that reads a refusal from the hook's text but still lets the commit land, for example by ignoring the hook's exit code, is caught only by checking the history."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000g-4
+  contract: "The real-hook commit harness whose reach this negative control proves"
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Variant (b) is the KI's sharpest case: a REAL id is still refused because it sits on
+  body line 3. It shows that the fix has to move the id to the first body line. Adding
+  an id somewhere in the block is not enough. If this record's mutation (skip the hook,
+  or write the ticket outside the inspected path) turns BO-2000g-4 green and leaves this
+  record green as well, the harness is vacuous.
+test_spec:
+  - name: test_both_pre_correction_python_coder_variants_are_refused_and_name_the_heading
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Marked shared_layout_reader. Uses BO-2000g-4's harness unchanged (same hook install, ticket path,
+      environment clean-up and commit call). Variant (a) is the frozen pre-correction red-baseline entry
+      with no feedback-id line. Variant (b) is the same entry with feedback-id: fb_2026-05-08_aa112233 as
+      body line 3. Date and time are filled. For each, git commit exits non-zero and the hook output
+      contains the heading text.
+    proves_clause: 'both commits are refused by the feedback-id check, and the refusal names the heading'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - the hook not installed in the scratch repository, so both variants commit
+      - the scratch ticket placed outside tickets/ so the hook never inspects it
+      - SKIP=check-feedback-id set in the commit environment
+      - a harness that accepts variant (b) because the id is present somewhere in the block
+      - a refusal asserted on exit code alone without the heading in the hook output
+  - name: test_a_refused_variant_leaves_no_commit_and_no_staged_change
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Before and after each refused variant HEAD and the commit count are identical and the refused staged
+      change is discarded before the next variant, so (b) is not judged on top of (a). A harness that
+      shows a refusal in the hook's text but lets the commit land fails here.
+    proves_clause: 'neither variant leaves a commit in the scratch repository''s history, So a harness that never reaches the check (the hook not installed, the ticket outside the inspected path, or the check skipped) cannot report BO-2000g-4 as passing'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - a harness that ignores the hook's exit code and lets the commit land
+      - a harness that leaves the refused change staged for the next variant
+      - a check of the hook text only, never of git history
+  - name: test_negative_control_goes_red_when_the_harness_cannot_reach_the_hook
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Three mutated copies of the same harness (hook uninstalled, ticket moved outside tickets/,
+      SKIP=check-feedback-id set) are run on the variants and the negative control fails for each, while
+      the unmutated harness passes. This pins that BO-2000g-4 alone could pass vacuously.
+    proves_clause: 'neither variant leaves a commit in the scratch repository''s history, So a harness that never reaches the check (the hook not installed, the ticket outside the inspected path, or the check skipped) cannot report BO-2000g-4 as passing'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - a negative control that stays green with the hook uninstalled
+      - a negative control that stays green with the ticket outside the inspected path
+      - a negative control that stays green with SKIP set
+  - name: test_refusal_comes_from_the_deployed_hook_run_by_git_commit
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      A real git commit in the scratch repo whose pre-commit hook is the layout's check-feedback-id
+      entry (run_hook.py with check_feedback_id.py) refuses variant (a), and the output carries the hook's
+      own BLOCK line from check_feedback_id.py. The check function is not called directly and no build.py
+      is spawned.
+    proves_clause: 'both commits are refused by the feedback-id check, and the refusal names the heading'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/agents/python-coder.md
+  - scripts/suite_performance/pytest_shared_reference_layout.py
+  - unit_tests/feedback/test_inf_500d_4_i_fresh_install.py

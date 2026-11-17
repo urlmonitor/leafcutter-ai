@@ -39,9 +39,9 @@ def _fake_cli(monkeypatch: pytest.MonkeyPatch, *, returncode: int, stdout: str, 
     monkeypatch.setattr(ev.subprocess, "run", fake_run)
 
 
-def _label_row_error(monkeypatch: pytest.MonkeyPatch, **cli: object) -> str:
+def _label_row_error(monkeypatch: pytest.MonkeyPatch, *, returncode: int, stdout: str, stderr: str = "") -> str:
     """Run one live-mode label row through the real CLI path; return its row error."""
-    _fake_cli(monkeypatch, **cli)
+    _fake_cli(monkeypatch, returncode=returncode, stdout=stdout, stderr=stderr)
     agent_cfg = {"label_axes": ["needs_flow"], "input_field": "request", "model": "haiku"}
     rows = [{"id": "row-1", "request": "anything", "expected": {"needs_flow": False}}]
     [record] = ev.run_label_eval(rows, "system", agent_cfg, self_test=False, timeout=5, backend="cli")
@@ -49,9 +49,11 @@ def _label_row_error(monkeypatch: pytest.MonkeyPatch, **cli: object) -> str:
     return record["parse_error"]
 
 
-def _artifact_error(monkeypatch: pytest.MonkeyPatch, sandbox: Path, **cli: object) -> str:
+def _artifact_error(
+    monkeypatch: pytest.MonkeyPatch, sandbox: Path, *, returncode: int, stdout: str, stderr: str = ""
+) -> str:
     """Invoke the artifact-mode writer against the recorded CLI; return the raised message."""
-    _fake_cli(monkeypatch, **cli)
+    _fake_cli(monkeypatch, returncode=returncode, stdout=stdout, stderr=stderr)
     with pytest.raises(ev.ModelInvocationError) as excinfo:
         ev.invoke_agent_writer("system", "anything", "opus", 5, sandbox, "Read")
     return str(excinfo.value)

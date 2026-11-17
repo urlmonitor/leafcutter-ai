@@ -146,6 +146,7 @@ class KeepCase(MigrateCase):
     def entry(self, answer: dict[str, Any], folder: Path, bucket: str) -> dict[str, Any]:
         found = next((e for e in answer[bucket] if norm(e["path"]) == norm(folder)), None)
         self.assertIsNotNone(found, msg=f"{folder} is not in {bucket} (it is in {self.bucket_of(answer, folder)}): {answer}")
+        assert isinstance(found, dict)
         return found
 
     def assert_kept(self, answer: dict[str, Any], folder: Path, why: str | None = None) -> dict[str, Any]:

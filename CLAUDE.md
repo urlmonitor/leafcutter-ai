@@ -291,13 +291,44 @@ not whether it was red.
 
 ### New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest
 
-When a commit-guardian hook or a CI gate imports a module, that module MUST be added to
-the build deploy list (`build_ac_store` `deploy_map` in `scripts/build_phases.py`, or the
-equivalent phase for its directory). The hook runs from the **deployed** layout, not the
-source tree, so a dependency that is not deployed raises `ModuleNotFoundError` at hook
-runtime. Once the gate is a **required** status check, that crash blocks **every** merge.
-Verify by running the deployed hook (or `build.py` then the hook) — not just the unit tests,
-which import from the source tree and mask the gap.
+A dependency of a commit-guardian hook or a CI gate is any file the guardrail reads in
+order to do its job, not only the modules it imports. Schemas, type vocabularies,
+registries and data tables count exactly as imported modules do. Every such file MUST be
+added to the build deploy list (`build_ac_store` `deploy_map` in `scripts/build_phases.py`,
+or the equivalent phase for its directory). Do not decide scope by asking whether a missing
+file would raise an import error: a configuration JSON never does.
+
+The hook runs from the **deployed** layout, not the source tree, and a dependency that is
+not deployed fails there in one of two ways:
+
+- **A missing module** raises `ModuleNotFoundError` at hook runtime.
+- **A missing data file** raises `FileNotFoundError` naming a path that the reader resolved
+  to and that does not exist, or, worse, the reader falls back silently to a narrower
+  built-in default and the guardrail enforces less than it claims, with no error at all.
+
+Once the gate is a **required** status check, that crash blocks **every** merge, and the
+silent fallback weakens it unnoticed.
+
+Verify by running the guardrail from an install that does not contain the package's own
+source tree, such as a consumer layout produced by `build.py --target-dir <consumer root>`.
+Running it from the package workspace cannot show the gap, because the workspace source
+tree contains every module and every config file by construction, so the same check
+passes there whether or not the file ships. The unit tests import from the source tree and
+mask the gap for the same reason.
+
+Worked example, a non-code file: `config/doc_types.json` is the type vocabulary read by the
+document-frontmatter guardrail, and `config/ac_store_schema.json` is the schema read by the
+AC-schema guardrail. Neither is a module, and both were absent from a deployed output root
+on 2026-08-18 while the build stayed green.
+
+The mechanism that enforces this is the closure guard, not memory of this rule. Per
+BP-900g-8 and BP-900g-8-ii, `compute_intra_package_closure` in
+`scripts/build_referential_integrity.py` derives from the code the modules a deployed
+script imports and the non-code files it reads, and `_check_intra_package_closure_guard`
+in `scripts/build.py` fails the build, naming the file, the script that needs it and the
+deploy phase that would have to carry it, when that set is not in the deploy manifest. Still
+declare the dependency in the deploy list: the guard checks the declaration, it does not
+replace it.
 
 **Why this matters:** `done_proof.py` (backing the `check_done_proof` hook and the required
 CI done-proof gate) was created in `scripts/ac_store/` but omitted from `build_ac_store`'s

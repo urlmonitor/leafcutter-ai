@@ -95,7 +95,8 @@ class TestBO4300b3(unittest.TestCase):
         self.args = ["ensure", "--kind", "scratch", "--slug", "alpha"]
 
     def _state(self) -> dict:
-        state = {str(p): (git_out(["branch", "-a"], p), tree_listing(p)) for p in (self.shop, self.blog)}
+        state: dict[str, tuple[str, list[str]] | list[str]] = {
+            str(p): (git_out(["branch", "-a"], p), tree_listing(p)) for p in (self.shop, self.blog)}
         state["parent"] = tree_listing(self.parent)
         return state
 

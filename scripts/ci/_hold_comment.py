@@ -107,7 +107,7 @@ def read_event(path: str | None) -> tuple[int, str | None]:
         raise EventError(message) from exc
     pull = payload.get("pull_request") if isinstance(payload, dict) else None
     number = pull.get("number") if isinstance(pull, dict) else None
-    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
+    if not isinstance(pull, dict) or not isinstance(number, int) or isinstance(number, bool) or number < 1:
         message = "the event has no pull_request.number that is a positive integer"
         raise EventError(message)
     head = pull.get("head")
@@ -125,7 +125,7 @@ def _link(url: object) -> str:
     """A link from the API as plain text when it is a clean URL, as inert code otherwise."""
     if isinstance(url, str) and URL_RE.fullmatch(url):
         return url
-    return code(url)
+    return code(str(url))
 
 
 def _short_code(text: object, limit: int = SHORT_LIMIT) -> str:
@@ -177,7 +177,9 @@ def _run_lines(verdict: dict) -> list[str]:
         if state == RED:
             lines.append("The fix route is unavailable until the notice exists; re-running the notice job of the run above creates it.")
         return lines
-    block = notice.get("state_block") if isinstance(notice.get("state_block"), dict) else {}
+    block = notice.get("state_block")
+    if not isinstance(block, dict):
+        block = {}
     since = "Red since" if state == RED else "Not green since"
     lines.append(f"Notice: {_link(notice.get('html_url'))}")
     lines.append(f"{since}: {_short_code(block.get('red_since'), 64)}")
@@ -285,6 +287,8 @@ def list_comments(client: GitHubClient, repo: str, pr_number: int) -> list[dict]
     Raises ``GitHubError`` when a page cannot be read or a ``next`` link leaves the API's origin (it is never
     requested: the request would carry the token).
     """
+    path: str | None
+    query: dict | None
     path, query, seen, comments = f"/repos/{repo}/issues/{pr_number}/comments", {"per_page": PAGE_SIZE}, set(), []
     for _ in range(MAX_PAGES):
         payload, headers = client.get_with_headers(path, query)

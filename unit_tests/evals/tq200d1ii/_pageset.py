@@ -61,7 +61,8 @@ def render_entry(kind: str, template: str, sentence: str | None, wrap: bool = Fa
 
 def synthetic_pages() -> dict[str, str]:
     """A minimal valid page set: hub plus four family pages, built from the real registry."""
-    fam, pool, used = h.family_of(), {}, {}
+    fam, pool = h.family_of(), {}
+    used: dict[str, int] = {}
     pages = {h.HUB: "---\ntitle: hub\ntype: reference\n---\n\n# Hub\n\nSee the family pages.\n"}
     for family, name in h.FAMILY_PAGE.items():
         pool[family] = sentences(SYN_TEMPLATE[family])

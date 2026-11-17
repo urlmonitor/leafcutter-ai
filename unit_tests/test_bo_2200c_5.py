@@ -380,6 +380,7 @@ class TestBlockLineShapeMatchesBothReaderContracts(unittest.TestCase):
             f"by content up to the next '## ' heading or end of string.\n\n"
             f"Actual body:\n{body}",
         )
+        assert isinstance(agent_contracts_match, re.Match)
 
         contracts_content = agent_contracts_match.group(1)
 
@@ -398,6 +399,7 @@ class TestBlockLineShapeMatchesBothReaderContracts(unittest.TestCase):
             f"same block.\n\n"
             f"Agent Contracts section content:\n{contracts_content}",
         )
+        assert isinstance(doc_expert_match, re.Match)
 
         doc_expert_content = doc_expert_match.group(1)
 

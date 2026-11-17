@@ -63,9 +63,10 @@ def executed_parameter(fn: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None
 def helper_index(tree: ast.AST) -> dict[tuple[str, str], int]:
     """``(owner class or "", function name) -> executed parameter index`` for each module function and method that executes a parameter."""
     index: dict[tuple[str, str], int] = {}
-    for holder in (tree, *(c for c in ast.walk(tree) if isinstance(c, ast.ClassDef))):
-        owner = "" if holder is tree else holder.name
-        for fn in (f for f in holder.body if isinstance(f, FUNCTIONS)):
+    holders: list[tuple[str, list[ast.stmt]]] = [("", getattr(tree, "body", []))]
+    holders += [(c.name, c.body) for c in ast.walk(tree) if isinstance(c, ast.ClassDef)]
+    for owner, body in holders:
+        for fn in (f for f in body if isinstance(f, FUNCTIONS)):
             position = executed_parameter(fn)
             if position is not None:
                 index[(owner, fn.name)] = position
@@ -158,12 +159,12 @@ class SqlResolver:
         if isinstance(node, ast.ClassDef):
             self.owner = node.name
         is_function = isinstance(node, FUNCTIONS)
-        if is_function:
+        if isinstance(node, FUNCTIONS):
             blanks = {name: ast.Constant(value=BLANK) for name in parameter_names(node)}
             self.scopes.append({**assigned_names(node), **blanks})
             self.functions.append(node)
         query = self.query_of(node) if isinstance(node, ast.Call) else None
-        if query is not None:
+        if query is not None and isinstance(node, ast.Call):
             found.append(query)
             self.pairs.append((query, node, self.functions[-1] if self.functions else None))
         for child in ast.iter_child_nodes(node):

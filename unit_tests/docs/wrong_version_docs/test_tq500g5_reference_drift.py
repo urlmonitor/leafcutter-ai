@@ -77,7 +77,10 @@ def sweep_reasons() -> set[str]:
     for node in ast.walk(_tree("consumer_sweep.py")):
         if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "reason" for t in node.targets):
             reasons |= _strs(node.value)
-        if isinstance(node, ast.keyword) and node.arg == "reason" and isinstance(node.value, ast.Constant):
+        if (
+            isinstance(node, ast.keyword) and node.arg == "reason"
+            and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)
+        ):
             reasons.add(node.value.value)
     reasons.discard("")
     return reasons

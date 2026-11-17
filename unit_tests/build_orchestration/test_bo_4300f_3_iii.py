@@ -88,6 +88,7 @@ class TestKeptForDecision(MigrateCase):
         for key, word in _KEPT_WORDS.items():
             entry = kept.get(norm(world[key]))
             self.assertIsNotNone(entry, msg=f"{key} is not listed for a decision: {answer}")
+            assert isinstance(entry, dict)
             reasons[key] = entry["reason"]
             self.assertIn(word, reasons[key].lower(), msg=f"{key}'s reason must say why: {reasons[key]!r}")
         self.assertEqual(len(set(reasons.values())), 3, msg=f"the three reasons must differ: {reasons}")

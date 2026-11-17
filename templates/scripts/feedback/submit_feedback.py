@@ -44,8 +44,11 @@ Exit codes:
 
 Output streams on success (callers parse these -- keep them stable):
     stdout: exactly one line, the feedback_id (fb_YYYY-MM-DD_xxxxxxxx).
-    stderr: "sidecar:<tmpdir>/feedback_id_<epoch>.txt" -- the id-recovery
-        fallback the signoff skill greps for (KI-FC-002); then
+    stderr: "sidecar:<tmpdir>/feedback_id_<digits>.txt" -- the id-recovery
+        fallback the signoff skill greps for (KI-FC-002). <digits> is a
+        digits-only run built from time_ns, process id, random digits and a
+        retry index, so each submission owns its file; it is created
+        exclusively and never overwrites another's. Then
         "[submit_feedback] sink: <absolute path>" -- the resolved file the
         record was appended to (AC INF-500d-4-ii, KI-FC-001). The sink line
         is on stderr, never stdout, because callers capture stdout verbatim
@@ -67,8 +70,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -117,12 +122,42 @@ def _find_config_root() -> Path:
     return Path(__file__).resolve().parents[2] / "config"
 
 
+def _categories_candidates(config_dir: Path) -> list[Path]:
+    """Return, in order, every place feedback_categories.yaml is looked for.
+
+    First the config directory found by _find_config_root() (the deployed
+    copy). Then the config/ two levels above the invoked script path, when
+    that is a different place. That second place is the source repo's own
+    config/ when the script runs through the build shim
+    leafcutter-ai/scripts/feedback -> .leafcutter/scripts/feedback.
+    (AC INF-100c-2)
+
+    Args:
+        config_dir: The directory _find_config_root() returned.
+
+    Returns:
+        list[Path]: One or two absolute candidate file paths.
+    """
+    primary = config_dir / _CATEGORIES_NAME
+    source = Path(os.path.abspath(__file__)).parents[2] / "config" / _CATEGORIES_NAME
+    if os.path.realpath(source) == os.path.realpath(primary):
+        return [primary]
+    return [primary, source]
+
+
+def _first_existing(candidates: list[Path]) -> Path:
+    """Return the first candidate that is a file, else the first candidate."""
+    return next((path for path in candidates if os.path.isfile(path)), candidates[0])
+
+
 # ---------------------------------------------------------------------------
 # Config loading
 # ---------------------------------------------------------------------------
 
+_CATEGORIES_NAME = "feedback_categories.yaml"
 _CONFIG_DIR = _find_config_root()
-_CATEGORIES_FILE = _CONFIG_DIR / "feedback_categories.yaml"
+_CATEGORIES_CANDIDATES = _categories_candidates(_CONFIG_DIR)
+_CATEGORIES_FILE = _first_existing(_CATEGORIES_CANDIDATES)
 
 VALID_SEVERITIES = ("low", "medium", "high")
 VALID_SOURCES = ("agent", "hook")
@@ -156,12 +191,14 @@ def _load_categories(config_path: Path | None = None) -> dict:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except OSError as exc:
-        checked_path = Path(path).resolve()
+        # Name every absolute path tried, one per line (AC INF-100c-4).
+        checked = [Path(path).resolve()] if config_path else [Path(os.path.abspath(p)) for p in _CATEGORIES_CANDIDATES]
+        checked_lines = "".join(f"  Checked path: {p}\n" for p in checked)
         print(
             f"ERROR: Cannot read feedback_categories.yaml.\n"
-            f"  Checked path: {checked_path}\n"
+            f"{checked_lines}"
             f"  OS error: {exc}\n"
-            f"  To fix: Place feedback_categories.yaml at {checked_path}",
+            f"  To fix: Place feedback_categories.yaml at {checked[0]}",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -354,6 +391,55 @@ def _prepare_sink(jsonl_arg: str | None) -> Path | None:
     return path
 
 
+_SIDECAR_MAX_ATTEMPTS = 50
+
+
+def _sidecar_digits(attempt: int) -> str:
+    """Build the digits-only name part from per-submission values.
+
+    Args:
+        attempt: Zero-based retry index, so a repeated first choice still
+            yields a different name on the next attempt.
+
+    Returns:
+        str: Decimal digits: time_ns, process id, 9 random digits, attempt.
+    """
+    return f"{time.time_ns()}{os.getpid()}{secrets.randbelow(10**9):09d}{attempt}"
+
+
+def _write_sidecar(feedback_id: str) -> Path | None:
+    """Create this submission's own id-recovery file, never touching another's.
+
+    The file is created exclusively (mode ``x``), so an existing file is
+    never overwritten or truncated; on ``FileExistsError`` a new name is
+    chosen, up to ``_SIDECAR_MAX_ATTEMPTS`` times. Fail-open: any failure logs
+    a WARNING on stderr and returns None.
+
+    Args:
+        feedback_id: The id to store as the file's entire content.
+
+    Returns:
+        Path | None: The created file, or None when it could not be written.
+    """
+    tmpdir = Path(tempfile.gettempdir())
+    for attempt in range(_SIDECAR_MAX_ATTEMPTS):
+        path = tmpdir / f"feedback_id_{_sidecar_digits(attempt)}.txt"
+        try:
+            with open(path, "x", encoding="utf-8") as fh:
+                fh.write(feedback_id)
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
+            return None
+        return path
+    print(
+        f"[submit_feedback] WARNING: sidecar write failed: no unused name after {_SIDECAR_MAX_ATTEMPTS} attempts",
+        file=sys.stderr,
+    )
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -419,19 +505,11 @@ def main(argv: list[str] | None = None) -> int:
             if _FCNTL_AVAILABLE:
                 _fcntl.flock(fh, _fcntl.LOCK_UN)
 
-    # ------------------------------------------------------------------
-    # Sidecar temp file — fallback recovery when stdout capture fails
-    # ------------------------------------------------------------------
-    # Write feedback_id to a deterministic-suffix temp file so calling
-    # agents can recover the ID even if stdout capture returned empty.
-    # The path is printed to stderr (not stdout) to avoid disrupting FB_ID.
-    ts_epoch = int(datetime.now(timezone.utc).timestamp())
-    sidecar_path = Path(tempfile.gettempdir()) / f"feedback_id_{ts_epoch}.txt"
-    try:
-        sidecar_path.write_text(feedback_id, encoding="utf-8")
+    # Sidecar temp file -- fallback recovery when stdout capture fails. The
+    # path goes to stderr (not stdout) to avoid disrupting FB_ID=$(...).
+    sidecar_path = _write_sidecar(feedback_id)
+    if sidecar_path is not None:
         print(f"sidecar:{sidecar_path}", file=sys.stderr)
-    except OSError as exc:
-        print(f"[submit_feedback] WARNING: sidecar write failed: {exc}", file=sys.stderr)
 
     print(f"[submit_feedback] sink: {jsonl_path.resolve()}", file=sys.stderr)
     return 0
@@ -443,6 +521,27 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-11-16 [python-coder/fastlane/inf-100c-2-4]:
+#   feedback_categories.yaml now has an ordered candidate list
+#   (_categories_candidates): first the _find_config_root() directory (the
+#   deployed copy, unchanged and still preferred), then config/ two levels above
+#   the INVOKED script path when that is a different place. Run through the
+#   source-repo build shim (leafcutter-ai/scripts/feedback ->
+#   .leafcutter/scripts/feedback), the script used to look only in
+#   .leafcutter/config/ and never in leafcutter-ai/config/. _CONFIG_DIR, and so
+#   the sink declaration lookup, is unchanged. When no candidate can be read,
+#   the error prints one "Checked path: <absolute>" line per candidate tried
+#   instead of only the first. (AC INF-100c-2, INF-100c-4)
+# - 2026-10-25 [python-coder/INF-500d-3-i]:
+#   The id-recovery ("sidecar") file was named after whole epoch seconds, so two
+#   submissions in one second shared a file and the later overwrote the earlier
+#   (KI-FC-002 half 1). It is now feedback_id_<digits>.txt with digits built from
+#   time_ns + pid + 9 random digits + retry index, and is created with open mode
+#   "x" (O_EXCL): on FileExistsError a new name is chosen (max 50 attempts), so
+#   uniqueness holds by construction and an existing file is never overwritten or
+#   truncated. Digits-only keeps the documented search
+#   'sidecar:[^ ]*feedback_id_[0-9]*.txt' matching once. Stderr line shape, file
+#   content, stdout and fail-open warning are unchanged. (AC INF-500d-3-i, KI-FC-002)
 # - 2026-10-12 [python-coder/EPIC-OneDurableLogRootForEveryWorkspace/02_INF-500d-4-i]:
 #   Without --jsonl the sink is now the declared feedback_sink (feedback_sink.py,
 #   which reads config/knowledge_sink.json through the shared sink_resolution

@@ -89,6 +89,16 @@ def _names_template_and_skill(out: str) -> list[str]:
 class TestCiDoorThroughBuildPy(unittest.TestCase):
     """Three real build.py runs over ONE private package copy (see module docstring)."""
 
+    _tmp: tempfile.TemporaryDirectory[str]
+    root: Path
+    target: Path
+    clean_rc: int
+    clean_out: str
+    dangling_rc: int
+    dangling_out: str
+    neutralised_rc: int
+    neutralised_out: str
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._tmp = tempfile.TemporaryDirectory()

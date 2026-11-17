@@ -198,7 +198,8 @@ def first_plain_step(store: Path) -> tuple[Path, dict, dict]:
 
 
 def registered_screens(store: Path) -> list[str]:
-    return sorted({load_json(p).get("screen") for p in (store / "mockups").rglob("*.mockup.json")} - {None})
+    screens = {load_json(p).get("screen") for p in (store / "mockups").rglob("*.mockup.json")}
+    return sorted(screen for screen in screens if screen is not None)
 
 
 def sync_copied_scalar_fields(store: Path) -> None:

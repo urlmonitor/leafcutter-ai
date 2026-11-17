@@ -65,7 +65,7 @@ def _joined_constant(node: ast.AST) -> str | None:
         constant = _str_value(node.right)
         if constant is not None and _has_gettempdir(node.left):
             return constant
-    if _call_name(node) in _JOINERS:
+    if isinstance(node, ast.Call) and _call_name(node) in _JOINERS:
         args = node.args
         constants = [c for c in map(_str_value, args) if c is not None]
         if constants and any(_has_gettempdir(arg) for arg in args if _str_value(arg) is None):
@@ -74,7 +74,7 @@ def _joined_constant(node: ast.AST) -> str | None:
 
 
 def _fixed_dir_and_prefix(node: ast.AST) -> str | None:
-    if _call_name(node) not in _TEMPFILE_CALLS:
+    if not isinstance(node, ast.Call) or _call_name(node) not in _TEMPFILE_CALLS:
         return None
     directory, prefix = _kwarg_str(node, "dir"), _kwarg_str(node, "prefix")
     if directory is None or prefix is None:
@@ -90,7 +90,7 @@ def _fixed_location(node: ast.AST) -> str | None:
     return _joined_constant(node) or _fixed_dir_and_prefix(node)
 
 
-def _declared_exempt(lines: list[str], node: ast.AST) -> bool:
+def _declared_exempt(lines: list[str], node: ast.expr) -> bool:
     first = node.lineno
     last = getattr(node, "end_lineno", None) or first
     return any(_EXEMPT.search(line) for line in lines[first - 1 : last])
@@ -102,7 +102,9 @@ def find_offenders(source: str) -> list[tuple[int, str]]:
     lines = source.splitlines()
     seen: dict[tuple[int, str], None] = {}
     for node in ast.walk(tree):
-        if not hasattr(node, "lineno"):
+        # Every fixed-site shape (literal, joined constant, tempfile call) is an
+        # expression node, so only expressions can carry a fixed location.
+        if not isinstance(node, ast.expr):
             continue
         location = _fixed_location(node)
         if location is not None and not _declared_exempt(lines, node):

@@ -1,0 +1,169 @@
+id: GE-123e
+title: "A sign-off without its feedback record is always caught, and no message can wave it through"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A missing feedback id is refused every time; no message can switch that off.
+
+  Whether a person or an agent makes the commit, a ticket change that adds a
+  sign-off without its feedback id is refused, and the refusal says how to get a
+  real id; nothing written in this commit's message, and nothing left behind by
+  an earlier one, can quietly turn the check off. Finishing a merge is never
+  blocked by sign-offs that arrived unchanged from the other branch.
+depends_on:
+  - GE-123
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "The defect this L1 closes. The message-token bypass is unreachable when wanted and reachable when not: read at the stage where the file still holds the PREVIOUS commit's message, so one commit's token silently switches the check off for the next. This L1 retires that known issue."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "Where a sign-off and its feedback id are defined. The refusal's 'how to get a real id' guidance must point at the route this skill describes, not invent a second one."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "FENCE, not scope. The structural-change bypass token on other checks is approved behaviour (GE-113b-1, GE-113b-1-i, GE-113b-2). This L1 must not reword, remove or widen it. Its own off-by-one-commit defect is KI-CG-20261116 and has no AC."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-arch-bypass-token-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "FENCE. The same stale-message pattern on five other checks, kept OUT of this L1 by decision on 2026-11-16 because that bypass is approved and this one is not. Do not close either as a duplicate of the other."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g.yaml
+    relationship: related
+    status: exists
+    relevance: "Companion. BO-2000g makes every example an agent copies carry a valid feedback id, and defines (not-a-signoff) for entries that sign nothing off. With this L1's bypass removed, those examples are what keep agents from being refused. Neither record duplicates the other."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - GE-123e-1
+  - GE-123e-2
+  - GE-123e-3
+  - GE-123e-4
+  - GE-123e-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS SITS UNDER GE-123 (placement approved at the gate, 2026-11-16).
+    GE-123's through-line is "a suppression is a scalpel and it currently
+    behaves like a switch." The message-token bypass on the feedback-id check is
+    the purest switch in the family: one word turns the whole check off for the
+    whole commit, with no narrowing form at all. The honest application of
+    "narrows, never disables" here is therefore to remove the switch, not to
+    sharpen it. Nobody asked for a narrower bypass, so none is specified.
+
+  WIDENING ACKNOWLEDGED, NOT HIDDEN. The feedback-id check is a traceability
+    control, not a credential control, so this L1 widens the population GE-123
+    protects from security checks to any check a suppression can switch off. It
+    does so on the conduct axis GE-123 already owns (author-written instructions
+    that silence a check). The person approved that widening at the gate on
+    2026-11-16, and GE-123's title, tagline and benefit text were reworded the
+    same day to cover any check (recorded in GE-123's amended_by). GE-125's notes
+    rejected GE-123e for a DIFFERENT defect on the opposite grounds: that defect
+    had no author and no line. This one has both: a token a person or agent
+    writes. The two decisions are consistent.
+
+  THE DEFECT, WITH CONFIDENCE LABELS (carry them through; do not upgrade them).
+    DIRECTLY OBSERVED, TWICE (KI-CG-20260901, 2026-09-01 and 2026-10-12): the
+    token in the subject or body of a commit made with an inline message, and in
+    a message file passed by the shared commit step agents use, changed nothing.
+    The check refused identically and never printed its skip line.
+    DIRECTLY OBSERVED: mid-refusal, the message file the check reads held the
+    subject of the commit that landed BEFORE it.
+    DERIVED FROM THAT OBSERVATION, NOT YET SEEN AS A WRONG OUTCOME: a commit whose
+    predecessor legitimately carried the token is skipped although its own
+    message never asked. This is the silent hole, and the reason the severity is
+    worse than an unusable bypass. Nobody can tell from the output that it
+    happened.
+    REPORTED WORKAROUND THAT WORKED: passing the message file's location through
+    the environment. Under this L1 that route must not bypass the check either.
+    The promise is about the WORD, whatever route carries the message.
+
+  WHAT IS IN SCOPE (the four promises; each is separately testable).
+    1. Refusal: a ticket change that adds a sign-off heading with no feedback id
+       is refused, on every commit, whatever its message says.
+    2. No carry-over: nothing left from an EARLIER commit's message affects this
+       commit's verdict.
+    3. Actionable refusal: the refusal tells the author how to obtain a real
+       feedback id, and no longer advertises a bypass. A refusal that keeps
+       offering a dead escape hatch sends every reader down a dead end, which is
+       the anti-precedent recorded on GE-123c.
+    4. Merge relief: completing a merge is not blocked by sign-off headings that
+       came in unchanged from the other branch. A heading ADDED or EDITED while
+       resolving the merge is new work and is still checked. The BA must draw
+       that line explicitly, not leave it to the implementation.
+    Person and agent paths must reach the same verdict on the same change. Today
+    they differ only by accident; under this L1 they cannot differ.
+
+  WHAT IS OUT OF SCOPE.
+    - The structural-change bypass token on other checks (GE-113b-2 and
+      siblings; its own stale-message defect is KI-CG-20261116). Do not reword it.
+    - The commit framework's general per-hook skip setting. It is not a word in
+      a commit message, it applies to every check equally, and it is a
+      deliberate operator action rather than a silent one. If the BA judges it a
+      real hole, it belongs in its own record, not here.
+    - What counts as a sign-off heading (the heading grammar). This L1 consumes
+      that grammar and does not change it. The KI's honest workaround, writing
+      non-sign-off headings outside that grammar, stays valid, and the refusal
+      may mention it as the second route.
+    - The examples agents copy, and the one documented value for an entry that
+      signs nothing off, `(not-a-signoff)`. Both belong to BO-2000g (authored
+      2026-11-16). That value is set per entry and names what the entry is, so
+      it narrows rather than disables, which is consistent with this L1. The
+      refusal's guidance should name it for entries that are not sign-offs, and
+      should not invent a second convention.
+
+  NEGATIVE AND REGRESSION ARMS ARE MANDATORY.
+    - A sign-off WITH a real feedback id still passes. Every refusal scenario is
+      satisfied by an implementation that refuses all sign-offs.
+    - A commit whose PREDECESSOR carried the token is still checked. The KI says
+      it plainly: a test that only asserts "token in message, check skipped" (or
+      its inverse) passes against the defect. The carry-over arm is the one that
+      catches it.
+    - A merge that brings in already-identified sign-offs completes.
+
+  VERIFICATION STANDARD (inherited from GE-123, and sharper here).
+    Every scenario must run through a real commit: an inline-message commit and a
+    message-file commit as the shared commit step makes it. Simulating the
+    message by setting the environment the check reads is NOT evidence. The test
+    angles failure catalogue (EPIC-ComputedQualityGates FP-7) records exactly
+    that mistake on this check: tests set the variable themselves, reproducing a
+    state real commits never produce at that stage, and stayed green over a
+    bypass that never fired.
+
+  INHERITED, NOT REPEALED. The component's fail-open-on-internal-error
+    convention and GE-120's "a check that cannot run says so" both apply. The
+    tension to settle at L2: refusing on every commit means a fault in the
+    merge-relief logic could block every merge. Fail open on an internal error,
+    but say so visibly. Never fail open by quietly skipping the check.
+
+  WHY reference-doc. The commit-guardian component reference does not describe
+    this check, its refusal, or the merge relief today. The only written
+    description of the bypass is in the known-issues register and a
+    retrospective. Once the bypass is gone, the rule must be written down where
+    a reader of the guardrails would look. The KI must also be closed. That is
+    housekeeping, not a documentation trigger.
+
+  Authored at the PO stage, L1 only. The BA decomposes to L2/L3 and the IT PO
+  adds the technical constraints. GE-123 is now 5 of 7 L1s.

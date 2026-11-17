@@ -154,6 +154,11 @@ class TestDeployedCheckHarnessGE120c1(unittest.TestCase):
     Per this AC's own RUNTIME BUDGET requirement ("Build each copy ONCE per
     sweep, never per check"), extended here to "once per test class"."""
 
+    _tmp: tempfile.TemporaryDirectory[str]
+    copy_a: Path
+    copy_b: Path
+    harness: dch.DeployedCheckHarness
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._tmp = tempfile.TemporaryDirectory()
