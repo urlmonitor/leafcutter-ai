@@ -60,6 +60,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_layout.py",
     "worktree_readiness.py",
     "worktree_canaries.py",
+    "worktree_install.py",
     "worktree_log_root.py",
     "worktree_identity.py",
     "worktree_ensure_state.py",
@@ -108,6 +109,9 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry): the readiness proofs (BO-4300c-1, BO-4300b-4).
     - ``templates/scripts/worktree_canaries.py`` → ``scripts/worktree_canaries.py``
       (NAMED entry): the per-stage canary proofs worktree_readiness imports.
+    - ``templates/scripts/worktree_install.py`` → ``scripts/worktree_install.py``
+      (NAMED entry): what builds a new workspace's install, in the package's own and
+      in an adopter's layout (BO-4300b-2-iii, -iv); worktree_readiness imports it.
     - ``templates/scripts/worktree_log_root.py`` → ``scripts/worktree_log_root.py``
       (NAMED entry): the durable log root the maker's install build inherits (INF-500d-4-iii).
     - ``templates/scripts/worktree_identity.py`` → ``scripts/worktree_identity.py``
@@ -297,4 +301,6 @@ def _check_named_standalone_scripts(templates_scripts_src: Path) -> None:
 #   it; the deployed maker would otherwise crash with ModuleNotFoundError). (ADR-018)
 # - 2026-10-16 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17)
 #   Added worktree_log_root.py as a NAMED entry (worktree_readiness imports it). (ADR-018)
+# - 2026-11-17 [python-coder/BO-4300b-2-iii]: (#TICKETLESS reason=quick-fix-ac-first)
+#   Added worktree_install.py as a NAMED entry (worktree_readiness imports it). (ADR-018)
 # ===========================================================================

@@ -1,0 +1,102 @@
+id: BO-4300b-2-iv
+title: "A project that declares its own install command gets its workspace built by that command"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" whose install must run through a wrapper of its own
+    (one that runs the tools' build and then re-applies settings the build
+    alone would drop), and which declares that wrapper as its install command
+    in its install configuration,
+  When a workspace for the work "alpha" is requested,
+  Then the new workspace is built by the declared command, run inside the
+    workspace,
+  And the request is answered ready,
+  And a declared command that fails is refused as a failed install quoting the
+    command's own message, never answered ready,
+  And a declaration that is not a list of words is refused as a failed install
+    naming the setting, without running anything,
+  And a project that declares nothing is built exactly as before.
+depends_on: [BO-4300b-2]
+doc_links:
+- path: templates/scripts/worktree_install.py
+  relationship: modifies
+  status: exists
+- path: config/skills_config.schema.json
+  relationship: modifies
+  status: exists
+- path: docs/reference/skills-config-fields.md
+  relationship: modifies
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-2-iii
+  contract: The package folder inside the workspace, found from the workspace itself.
+package_surface: false
+it_requirements:
+- 'The declaration is the install-config key workspace_install_command: a list of strings (argv, never a
+  shell string), read from the config file the maker already derives for the workspace. Placeholders
+  {python}, {workspace}, {config_path} and {package_dir} are replaced word by word; the command runs with
+  the workspace as its working directory, with the same log-root flag handling as the default build.'
+- An absent key, or an empty list, means the default build (BO-4300b-2-iii). Any other non-list or
+  non-string value is BOOTSTRAP_FAILED naming workspace_install_command; {package_dir} with no package
+  found is BOOTSTRAP_FAILED naming it.
+- The key is documented in config/skills_config.schema.json and docs/reference/skills-config-fields.md.
+- Proof runs the DEPLOYED maker as a separate process against real temporary git repositories with real
+  bare hubs; the declared command is a fixture wrapper that runs the package's stub build, never the
+  package's own scripts/build.py.
+test_required: true
+test_spec:
+- name: test_declared_install_command_builds_the_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Shop declares a wrapper; ensure answers ok and both the package build's marker and the
+    wrapper's own marker are present in the workspace.
+- name: test_failing_declared_command_is_bootstrap_failed_quoting_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A declared wrapper that exits 1 gives BOOTSTRAP_FAILED, no workspace_path, and the excerpt
+    quotes the wrapper's own stderr.
+- name: test_malformed_declaration_is_bootstrap_failed_naming_the_key
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A string instead of a list gives BOOTSTRAP_FAILED whose excerpt names workspace_install_command.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer and the files the declared command left in the workspace.
+origin_agent: Hendrik Henze
+created: 2026-11-17
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_2_iv.py]
+implemented_by:
+- templates/scripts/worktree_install.py
+- templates/scripts/worktree_readiness.py
+- config/skills_config.schema.json
+- docs/reference/skills-config-fields.md
+notes: |
+  DIAGraph's install must go through scripts/rebuild_leafcutter.py, which runs build.py and then
+  re-applies two DIAGraph-owned commit-guardian hook registrations a bare build.py drops (DIAGraph
+  ADR-013). Its declaration would be:
+  ["{python}", "scripts/rebuild_leafcutter.py", "--target-dir", "{workspace}", "--config-path", "{config_path}"].

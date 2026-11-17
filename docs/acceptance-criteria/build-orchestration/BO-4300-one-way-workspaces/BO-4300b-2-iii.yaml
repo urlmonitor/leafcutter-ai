@@ -1,0 +1,116 @@
+id: BO-4300b-2-iii
+title: "A project that holds the tools in a sub-folder or submodule gets a ready workspace built by those tools"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" that keeps the tools' package in a sub-folder of its own
+    (a git submodule, or an ordinary tracked folder), so that shop's own
+    "scripts" folder holds no install build of the tools,
+  When a workspace for the work "alpha" is requested,
+  Then the package's submodule is fetched into the new workspace when it is a
+    submodule,
+  And the workspace is built by the package's own install build at its real
+    location inside the workspace,
+  And the request is answered ready,
+  And a build entry point that shop itself keeps in its own "scripts" folder is
+    not mistaken for the package's,
+  And the package's own development layout, where the project IS the package, is
+    still built by its own top-level install build exactly as before.
+depends_on: [BO-4300b-2]
+doc_links:
+- path: templates/scripts/worktree_install.py
+  relationship: modifies
+  status: exists
+- path: templates/scripts/worktree_readiness.py
+  relationship: modifies
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-2
+  contract: A project that installed the tools gets its workspaces the same way.
+package_surface: false
+it_requirements:
+- 'The package folder inside a workspace is found from the workspace itself, in this order: the workspace
+  root when it is the package (self-host); each submodule path the workspace''s own .gitmodules declares;
+  each immediate sub-folder. A folder is the package only when it holds both scripts/build.py and
+  templates/scripts/worktree.py. When none is found, a top-level scripts/build.py is still used (the
+  existing fixture and legacy layout).'
+- A submodule is initialised in the fresh workspace (git submodule update --init -- <path>, run in the
+  workspace) only when the main checkout's copy at that path is the package and the workspace's copy is
+  not yet populated; no other submodule is touched. A failed initialisation is BOOTSTRAP_FAILED quoting
+  git's own message.
+- When no build entry point is found anywhere, the refusal stays BOOTSTRAP_FAILED and its excerpt still
+  says scripts/build.py is absent, naming the places searched.
+- Proof runs the DEPLOYED maker as a separate process against real temporary git repositories with real
+  bare hubs (one for shop, one for the package); fixture builds are stubs, never the package's own
+  scripts/build.py (CLAUDE.md 'Tests must not spawn their own build.py').
+test_required: true
+test_spec:
+- name: test_submodule_adopter_workspace_is_ready_and_built_by_the_package
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Shop holds the package as a submodule and has no scripts/build.py; ensure answers ok, the
+    submodule is populated in the workspace, and the install marker carries the package's stamp.
+- name: test_adopters_own_build_entry_point_is_not_mistaken_for_the_package
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Shop also keeps a failing scripts/build.py of its own; ensure still answers ok, built by
+    the package's build.
+- name: test_nested_package_folder_adopter_workspace_is_ready
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: The package is an ordinary tracked sub-folder (not a submodule); ensure answers ok, built
+    by that folder's build.
+- name: test_self_host_package_project_is_still_built_by_its_top_level_build
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: discrimination
+  description: A project that IS the package is still built by its own top-level scripts/build.py and
+    answers ok.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer and the state of the workspace afterwards. A direct-import unit test would pass while
+  the deployed copy is stale (F13), and only real submodules show whether the fresh clone is populated.
+origin_agent: Hendrik Henze
+created: 2026-11-17
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_2_iii.py]
+implemented_by:
+- templates/scripts/worktree_install.py
+- templates/scripts/worktree_readiness.py
+- scripts/build_phases_script_deploy_standalone.py
+notes: |
+  Reproduced in the DIAGraph adopter (leafcutter build v21.0.93, pin 67a7b443): the package is the
+  submodule <repo>/leafcutter/, so build.py lives at <workspace>/leafcutter/scripts/build.py while
+  <workspace>/scripts/ is DIAGraph's own folder. run_install_build hard-coded
+  <workspace>/scripts/build.py, so `worktree.py ensure --kind epic --slug <x>` cloned the workspace and
+  then refused with BOOTSTRAP_FAILED "scripts/build.py is absent"; the submodule was never initialised
+  either. Same adopter-layout class as #1307 and #1408.

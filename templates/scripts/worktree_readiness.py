@@ -30,13 +30,13 @@ import logging
 import os
 import stat
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
 import workspace_root
 import worktree_answer as wa
 import worktree_git as wg
+import worktree_install as wi
 import worktree_log_root as wlr
 from worktree_canaries import (  # noqa: F401  (hooks_dir/install_dir re-exported for callers)
     declared_stages, hooks_dir, install_dir, install_shims, run_canaries,
@@ -49,8 +49,13 @@ PROTECTED_BRANCHES = ("main", "master")
 _EXCERPT_BYTES = 4096
 
 
-def run_install_build(workspace: Path, config_path: Path) -> dict[str, Any]:
+def run_install_build(workspace: Path, config_path: Path, project_root: Path | None = None) -> dict[str, Any]:
     """Run the workspace's own install build; never creates a link (BO-4300b-4).
+
+    What runs is ``worktree_install.install_command``: an adopter's declared
+    ``workspace_install_command``, else the package's ``scripts/build.py`` at its
+    real location (its submodule fetched first from *project_root*'s layout),
+    else a top-level ``scripts/build.py`` (BO-4300b-2-iii, -iv).
 
     Returns:
         ``{"ok": bool, "code": str | None, "excerpt": str}``. ``code`` is
@@ -59,14 +64,17 @@ def run_install_build(workspace: Path, config_path: Path) -> dict[str, Any]:
         the build's own stderr, one line per `` | `` -- also relayed to stderr,
         never stdout.
     """
-    build_script = workspace / "scripts" / "build.py"
-    if not build_script.is_file():
-        return {"ok": False, "code": "BOOTSTRAP_FAILED", "excerpt": "scripts/build.py is absent"}
+    try:
+        cmd = wi.install_command(workspace, config_path, project_root)
+    except wi.InstallSetupError as exc:
+        _log.warning("run_install_build: %s", exc)
+        return {"ok": False, "code": "BOOTSTRAP_FAILED", "excerpt": str(exc)[-(_EXCERPT_BYTES - 64):]}
+    build_script = cmd[1] if len(cmd) > 1 else cmd[0]
     if not config_path.is_file():
         return {"ok": False, "code": "NO_CONFIG", "excerpt": ""}
     try:
         proc = wlr.build_with_inherited_log_root(
-            [sys.executable, str(build_script), "--target-dir", str(workspace), "--config-path", str(config_path)],
+            cmd,
             Path(__file__).resolve().parents[1],
             cwd=str(workspace), capture_output=True, text=True, timeout=300, check=False,
             env={**os.environ, "LEAFCUTTER_SHIM_STRATEGY": "copy"},
@@ -279,7 +287,7 @@ def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_ro
     any ingredient is false, else ``{"checks", "bootstrap", "hooks_stages_declared"}``.
     """
     before = snapshot_tracked(workspace)
-    build = run_install_build(workspace, config_path)
+    build = run_install_build(workspace, config_path, project_root)
     boot: dict[str, Any] = {"build_ok": build["ok"], "restored_tracked": []}
     if not build["ok"]:
         boot["failure_excerpt"] = build["excerpt"]
@@ -340,6 +348,10 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
 # DECISION HISTORY
 # - 2026-10-25 [python-coder/EPIC-WorkspaceMakerHardening/11]: (#EPIC-WorkspaceMakerHardening/11)
 #   prove_ready takes ``base_ref`` (the SHA the line was built from) so base_is_fresh never reads a moved ref. (ADR-018)
+# - 2026-11-17 [python-coder/BO-4300b-2-iii]: (#TICKETLESS reason=quick-fix-ac-first)
+#   run_install_build no longer hard-codes <workspace>/scripts/build.py (refused every adopter that keeps
+#   the package in a submodule, e.g. DIAGraph); it runs worktree_install.install_command, and prove_ready
+#   passes project_root so the package submodule can be fetched first. (ADR-018)
 # ===========================================================================
 # - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]:
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)

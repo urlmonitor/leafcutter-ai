@@ -3,7 +3,7 @@ title: 'Reference: skills_config.json Fields'
 type: reference
 status: active
 created: 2026-05-27
-last_updated: 2026-10-14
+last_updated: 2026-11-17
 components:
 - infrastructure
 related_docs:
@@ -126,6 +126,7 @@ Controls the epic worktree workflow and the close-worktree cleanup procedure.
 |---|---|---|---|
 | `worktree_base_path` | string | `../` | Parent directory for epic worktrees, relative to the repo root or absolute. The default places worktrees as siblings of the project root. |
 | `settings_module` | string | `settings` | Python module to verify after worktree bootstrap. Set to a module that exists in your project; the bootstrap step imports it to confirm the environment is functional. |
+| `workspace_install_command` | string[] | `[]` | The command the workspace maker runs to build the install inside a new workspace, as an argument list (never a shell string), run with the workspace as its working directory. Placeholders `{python}`, `{workspace}`, `{config_path}` and `{package_dir}` are replaced in each word. Empty or absent means the package's own `scripts/build.py`, found at its real location: the workspace root when the project is the package, else the submodule or sub-folder holding `scripts/build.py` and `templates/scripts/worktree.py` (initialised first when it is a submodule). Set it when your install must go through a wrapper of your own, e.g. `["{python}", "scripts/rebuild_leafcutter.py", "--target-dir", "{workspace}", "--config-path", "{config_path}"]`. Any other value is refused as `BOOTSTRAP_FAILED` (BO-4300b-2-iii, BO-4300b-2-iv). |
 
 ### `worktree_cleanup` (object)
 

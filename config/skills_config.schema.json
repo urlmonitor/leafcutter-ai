@@ -139,6 +139,12 @@
       "description": "Python module to verify after worktree bootstrap. Set to a module that exists in your project.",
       "default": "settings"
     },
+    "workspace_install_command": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "The command the workspace maker runs to build the install inside a new workspace, as an argument list (never a shell string), run with the workspace as its working directory. Placeholders {python}, {workspace}, {config_path} and {package_dir} are replaced in each word. Empty or absent means the package's own scripts/build.py at its real location: the workspace root when the project is the package, else the submodule or sub-folder holding scripts/build.py and templates/scripts/worktree.py (fetched first when it is a submodule). Set it when the install must go through a wrapper of the project's own (BO-4300b-2-iii, BO-4300b-2-iv).",
+      "default": []
+    },
     "docs_root": {
       "type": "string",
       "description": "Root directory for project documentation (relative to project root, with trailing slash). All docs-related paths in paths.json, commit guardian, and doc compliance derive from this value.",
