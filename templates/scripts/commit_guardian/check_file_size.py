@@ -149,6 +149,12 @@ _NOT_REMEDIES_ADVICE = (
     "and joining lines are not ways to bring this file within its limit."
 )
 
+# GE-127f-3: the largest demand (measured lines that must leave a refused file) the
+# author may take out inside the same change. A larger demand is handed to a
+# restructuring specialist. At least one, and below the ten a 410-line file over a
+# 400-line limit is asked for, so both bands exist. See DECISION HISTORY 2026-11-17.
+AUTHOR_CLEARABLE_DEMAND = 5
+
 
 def _report_indeterminate(reason: str) -> int:
     """Print the one, shared ``INDETERMINATE: reason=<text>`` line and return
@@ -383,6 +389,26 @@ def _print_asymmetry_advice() -> None:
     print(f"   {_NOT_REMEDIES_ADVICE}")
 
 
+def _print_demand(lines_to_remove: int) -> None:
+    """State how many measured lines must leave the file, and who takes them out.
+
+    GE-127f-3: shared by both refusal printers. *lines_to_remove* is the refused
+    length less the length the refusing comparison requires, never a second
+    derivation. Which party is named follows from the size of the demand alone,
+    never from the file's size or how far over its limit it stands.
+
+    Args:
+        lines_to_remove: Measured lines that must leave the file (at least one).
+    """
+    print(f"   Must leave the file: {lines_to_remove} measured line(s).")
+    if lines_to_remove <= AUTHOR_CLEARABLE_DEMAND:
+        print(f"   A demand of {lines_to_remove} measured line(s) is within {AUTHOR_CLEARABLE_DEMAND}: "
+              "the author may take it out inside this change.")
+    else:
+        print(f"   A demand of {lines_to_remove} measured line(s) is above {AUTHOR_CLEARABLE_DEMAND}: "
+              "it is handed to a restructuring specialist, not to the author inside this change.")
+
+
 def _print_grown_file(filepath: str, previous_length: int, current_length: int, limit: int) -> None:
     """Print the refusal block for a file that grew while already oversized.
 
@@ -433,6 +459,7 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
         f"   Required length: {required} lines or below (the less demanding of the "
         "permitted length and previous length minus what this change added)."
     )
+    _print_demand(current_length - required)
     _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
@@ -460,6 +487,7 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print("❌ FILE TOO LARGE:")
     print(f"   {filepath}")
     print(f"   Lines: {lines} (Limit: {limit})")
+    _print_demand(lines - limit)
     _print_measures_line()
     print()
     _print_file_description(filepath, lines)
@@ -1097,5 +1125,19 @@ DECISION HISTORY
   rule and advice list them as not counted. A file brought from over its limit to at or under it
   prints no Previous/New length lines (GE-127e-4); _ensure_utf8_stdout no longer swallows
   AttributeError. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-11-17 [python-coder/GE-127f-3]: Both refusal printers now state, through the shared
+  _print_demand, how many measured lines must leave the file (the refused length less the
+  length the refusing comparison requires: `max(limit, previous - added)` for a grown file,
+  the limit for a crossing) and which party takes them out. The threshold is
+  AUTHOR_CLEARABLE_DEMAND, set to five: a demand at or below it may be taken out by the author
+  inside the same change, a larger one is handed to a restructuring specialist. Five because
+  the AC fixes the threshold at one or more measured lines and requires a 410-line file over
+  a 400-line limit (a demand of at most ten) to be able to sit above it; within that range,
+  five keeps a typo-sized demand off the specialist. The disposition follows from the demand
+  alone, never from the file's size. The rule itself is unchanged: any addition still engages
+  it (no threshold exempts a small change), and `_classify_file` is untouched. The statement
+  is an outcome only: this hook prints no refusal record, so nothing in a run acts on it yet
+  (the check-file-size remedy declaration still names python-coder, per BrainCandy's
+  2026-10-12 table). (#GE-127f-3)
 ====================================================================
 """

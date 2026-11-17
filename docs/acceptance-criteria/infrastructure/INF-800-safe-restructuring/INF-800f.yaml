@@ -7,6 +7,7 @@ title: "Refactoring specialist recognized as a first-class agent"
 component: infrastructure
 level: L1
 status: active
+work_status: done
 criteria: |
   Dedicated agent with its own identity, tools, and dispatch rules.
 
