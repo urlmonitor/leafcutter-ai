@@ -7,7 +7,7 @@ status: active
 type: reference
 root: true
 created: 2026-06-08
-last_updated: 2026-10-22
+last_updated: 2026-11-17
 source_ticket: "tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md"
 components:
   - worktree_manager
@@ -225,6 +225,15 @@ decision: [ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md)). The ma
 call (`run_install_build` in `scripts/worktree_readiness.py`) does not pass either flag yet,
 so a maker-made workspace declares its own `debugging/logs`. Porting the behaviour is
 tracked as separate work.
+
+## Where the install build is found (BO-4300b-2-iii, BO-4300b-2-iv)
+
+`scripts/worktree_install.py` decides what the maker runs to build a new workspace's
+install. An adopter's `workspace_install_command` (an argument list in its install config)
+wins. Otherwise the maker runs the package's own `scripts/build.py` from the folder that holds
+it together with `templates/scripts/worktree.py`: the workspace root in the package's own
+layout, else a submodule or sub-folder (DIAGraph: `leafcutter/`). A package submodule is
+fetched into the fresh clone first. A top-level `scripts/build.py` is the last resort.
 
 <!--
 =============================================================
