@@ -378,11 +378,13 @@ pass.
 
 #### 6a — Helper Script Scan (TODO/PLACEHOLDER/FIXME/Replace-with/QUESTION)
 
-Call `scripts/build_placeholder_detection.py`'s `scan_for_placeholders` function
-via Bash. Use a single `python3 -c` invocation per file:
+Call `{{config.output_root}}/scripts/build_placeholder_detection.py`'s
+`scan_for_placeholders` function via Bash. The build deploys it (with the
+`build_placeholder_table_context.py` module it imports) into the install's
+scripts directory. Use a single `python3 -c` invocation per file:
 
 ```bash
-python3 -c "import json, sys; sys.path.insert(0, '<worktree_root>/scripts'); from build_placeholder_detection import scan_for_placeholders; from pathlib import Path; print(json.dumps(scan_for_placeholders(Path('<worktree_root>'), [Path('<absolute_file_path>')]))) "
+python3 -c "import json, sys; sys.path.insert(0, '<worktree_root>/{{config.output_root}}/scripts'); from build_placeholder_detection import scan_for_placeholders; from pathlib import Path; print(json.dumps(scan_for_placeholders(Path('<worktree_root>'), [Path('<absolute_file_path>')]))) "
 ```
 
 Replace `<worktree_root>` with the absolute worktree root from Step 3 and
@@ -875,6 +877,13 @@ DECISION HISTORY
   with the capitalised word naming the `PLACEHOLDER` marker). Left the
   fail-closed-on-script-error instruction and the JSON parsing contract
   (path/line/marker/context) unchanged. (#TICKETLESS reason=llm-expert-direct-dispatch-no-ticket)
+- 2026-11-17 [BrainCandy]: Step 6a now inserts the DEPLOYED scripts directory,
+  `<worktree_root>/{{config.output_root}}/scripts`, instead of `<worktree_root>/scripts`.
+  The build never deployed `build_placeholder_detection.py`, and a consumer
+  project's own `scripts/` does not hold it, so in every adopter the scan failed
+  closed with ModuleNotFoundError and blocked every ticket with this phase
+  (DIAGraph, leafcutter v21.0.93, INF-120c-3). The build now deploys the module
+  and its `build_placeholder_table_context.py` import. (#TICKETLESS reason=quick-fix-bp-900b-5)
 ====================================================================
 """
 

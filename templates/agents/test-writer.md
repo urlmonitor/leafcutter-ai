@@ -770,7 +770,7 @@ Before writing any file:
 
 2. **Load testing context** — in priority order:
    1. `.claude/skills_config.json` → `testing_context` key.
-   2. Fall back to `leafcutter/config/skills_config.default.json`.
+   2. Fall back to `{{config.output_root}}/config/skills_config.default.json`.
    3. Fall back to built-in defaults (see skills_config.default.json for defaults).
 
 3. **Read the test README** at `testing_context.readme_path` (if it exists).
@@ -1252,7 +1252,7 @@ red_baseline:
   helpers, constants, module-level marks) and record the list once after your last
   edit; hand back a test that could pass only by weakening it.
 - Do NOT use `Grep`, `Glob`, or MCP search tools — delegate to `research-agent`.
-- The `## Test Requirements` section you read must conform to `leafcutter/config/test_requirements.schema.json` (`$id`: `https://leafcutter/config/test_requirements.schema.json`, version `1.0.0`).
+- The `## Test Requirements` section you read must conform to `{{config.output_root}}/config/test_requirements.schema.json` (`$id`: `https://leafcutter/config/test_requirements.schema.json`, version `1.0.0`).
 - Spawn sub-agents only for the agents in your spawn allowlist (the generated
   sub-agent section at the end of this prompt).
 

@@ -186,7 +186,7 @@ features and their version requirements.
 
 ## Step 2 — skills_config.json Classification
 
-Read `leafcutter/config/skills_config.default.json` (the full key set).
+Read `{{config.output_root}}/config/skills_config.default.json` (the full key set).
 Read `.claude/skills_config.json` if it exists.
 
 For each key in defaults:
