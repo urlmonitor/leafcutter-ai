@@ -115,3 +115,15 @@ notes: |
   - TKT-500b-3 (tests_after set by IT-PO reverses order): unaffected; sequencing stays a
     planner call.
   Named alteration: planner writes a test_spec alongside intent -> clause 4 must go red.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

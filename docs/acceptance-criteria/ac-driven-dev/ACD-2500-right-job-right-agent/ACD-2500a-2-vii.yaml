@@ -295,3 +295,25 @@ notes: |
   Item 2, the owner-map half. The request: "The IT PO hand-back may legitimately change
   assigned_agent and the finding decision." The CLI's stage names today are po, ba, itpo,
   test-design, approval; how the hand-back pass is named to the check is the IT PO's call.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: handback
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

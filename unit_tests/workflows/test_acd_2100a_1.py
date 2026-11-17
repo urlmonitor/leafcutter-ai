@@ -70,11 +70,16 @@ _UT_DIR = Path(__file__).resolve().parent.parent
 if str(_UT_DIR) not in sys.path:
     sys.path.insert(0, str(_UT_DIR))
 from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+if str(_WORKTREE_ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(_WORKTREE_ROOT / "scripts"))
+from template_compiler import inject_config  # noqa: E402  (the renderer the deployed build uses)
 from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT  # noqa: E402
 
 _ADD_VERB = repr(OLD_WAY_ADD_TEXT.split()[1:])  # the stub's add-a-checkout argv tail
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
+# The deployed build renders `{{config.*}}` placeholders from the project's config before a workflow runs.
+_DEFAULT_CONFIG = json.loads((_WORKTREE_ROOT / "config" / "skills_config.default.json").read_text(encoding="utf-8"))
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
@@ -406,7 +411,9 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     set to the given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
     """
-    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
+    source = inject_config(
+        fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8")), {"output_root": _DEFAULT_CONFIG["output_root"]}
+    )
     body = _strip_exports(source)
 
     shim = (

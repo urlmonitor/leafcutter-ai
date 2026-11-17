@@ -10,7 +10,8 @@ status: active
 req_status: active
 work_status: done
 criteria: |
-  Given the /create-ac workflow has completed a stage and the user has approved,
+  Given the /plan-feature workflow has completed a stage and its output has been
+    approved (by the user at its gate, or automatically for the technical planner's stage),
   And the working tree contains other uncommitted changes outside the AC store
     (e.g. modified configuration files or unrelated documentation),
   When the workflow creates the stage commit,
@@ -22,7 +23,7 @@ criteria: |
     after the stage commit completes.
 depends_on: [ACD-300g]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -65,7 +66,14 @@ test_spec:
     description: "Unrelated uncommitted working-tree changes remain uncommitted and keep their index state after the stage commit completes"
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: names only — the /plan-feature workflow,
+    not /create-ac; a stage''s output may be approved automatically (the technical
+    planner''s stage) as well as by the user; doc_links point at the plan-feature skill.
+    Staging behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-300g-2-i
@@ -74,3 +82,14 @@ implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/03_TICKET-20260618-ACD-300g-2.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

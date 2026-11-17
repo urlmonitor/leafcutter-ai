@@ -62,6 +62,7 @@ from __future__ import annotations
 import atexit
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -584,16 +585,26 @@ class TestSetupFailureIsAFailureNotASkip(unittest.TestCase):
         bogus_repo_root = Path(tempfile.gettempdir()) / "ge120e2i-bogus-repo-root-42"
         harness = _harness_mod.DeployedCheckHarness(bogus_repo_root)
 
+        missing_build = str(bogus_repo_root / "scripts" / "build.py")
         with tempfile.TemporaryDirectory() as tmp:
             target_dir = Path(tmp) / "second-copy"
-            with self.assertRaises(Exception) as ctx:
+            with (
+                self.assertLogs(_harness_mod.logger, level="WARNING") as logged,
+                self.assertRaises(subprocess.CalledProcessError) as ctx,
+            ):
                 harness.create_second_copy(target_dir)
 
-        self.assertNotIsInstance(
-            ctx.exception,
-            KeyboardInterrupt,
-            "A setup failure must surface as a reported failure, never be "
-            "swallowed into a bare pass/skip.",
+        # A failed build.py run, not a SkipTest (itself an Exception) or a
+        # pass: the error is the deploy step of the missing build.py.
+        self.assertIn(
+            missing_build,
+            ctx.exception.cmd,
+            "A setup failure must surface as the failed deploy of the bogus "
+            "repo_root's build.py, never be swallowed into a bare pass/skip.",
+        )
+        self.assertTrue(
+            any("build.py failed to deploy" in line for line in logged.output),
+            f"The setup failure must be reported at WARNING; logged: {logged.output!r}",
         )
 
 

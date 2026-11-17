@@ -111,8 +111,9 @@ class TestWorkspaceComesFromTheMaker:
     def test_pre_flight_asks_the_maker_once_before_step_0(self):
         result = _run(workspace_ensure_reply(_ELSEWHERE, branch=_ELSEWHERE_BRANCH))
         labels = [c.label for c in result.agent_calls]
-        assert labels[0] == "workspace-ensure" and labels.count("workspace-ensure") == 1, labels
-        prompt = str(result.agent_calls[0].prompt)
+        # BO-4300a-1-ia: the one maker-path probe precedes the maker request (consumer_drift: one more dispatch).
+        assert labels[:2] == ["resolve-maker-path", "workspace-ensure"] and labels.count("workspace-ensure") == 1, labels
+        prompt = str(result.agent_calls[1].prompt)
         assert "worktree.py" in prompt and "ensure" in prompt and "epic-elsewhere" in prompt, prompt
         assert not any("worktree list" in str(c.prompt) for c in result.agent_calls), (
             "No step may resolve the workspace by listing the worktrees around the session CWD")
@@ -136,7 +137,7 @@ class TestBranchAndRootFromTheWorkspace:
         result = _run(workspace_ensure_reply(_ELSEWHERE, branch="main"))
         assert result.result.get("status") == "error", result.result
         assert result.result.get("action_required") == "switch_to_feature_branch", result.result
-        assert [c.label for c in result.agent_calls] == ["workspace-ensure"]
+        assert [c.label for c in result.agent_calls] == ["resolve-maker-path", "workspace-ensure"]
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +165,7 @@ class TestNoWorktreeFoundError:
         message = str(result.result.get("message", ""))
         assert result.result.get("status") == "error", result.result
         assert "Workspace step failed" in message and reason in message, message
-        assert [c.label for c in result.agent_calls] == ["workspace-ensure"]
+        assert [c.label for c in result.agent_calls] == ["resolve-maker-path", "workspace-ensure"]
 
     def test_no_worktree_error_action_required_field(self):
         """The early-return is the shared failure, which is a structured error that quotes the reply (the

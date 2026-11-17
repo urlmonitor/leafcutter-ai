@@ -48,3 +48,15 @@ change_target:
   - prompt
   - config
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

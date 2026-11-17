@@ -545,7 +545,6 @@ class TestGE122e1(unittest.TestCase):
         self.assertNotEqual(new_id, OLD_ID, "moved record has not been given a new identifier")
 
         old_pattern = _citation_pattern(OLD_ID)
-        new_pattern = _citation_pattern(new_id)
 
         tags_by_file: dict[Path, list[str]] = {}
         for path in _iter_scan_files(UNIT_TESTS_ROOT, {".py"}):
@@ -560,7 +559,10 @@ class TestGE122e1(unittest.TestCase):
 
         all_tags = [(path, tag) for path, tags in tags_by_file.items() for tag in tags]
         old_tags = [(p, t) for p, t in all_tags if old_pattern.search(t)]
-        new_tags = [(p, t) for p, t in all_tags if new_pattern.search(t)]
+        # A child id (e.g. GE-111f-1) is its own record, not a citation of the
+        # moved one, so a tag continuing with "-<suffix>" is not counted here.
+        own_id = re.compile(re.escape(new_id) + r"(?![A-Za-z0-9-])")
+        new_tags = [(p, t) for p, t in all_tags if own_id.search(t)]
 
         self.assertEqual(
             old_tags,

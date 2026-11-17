@@ -313,7 +313,10 @@ def _handoff(root: Path, check: str | None, output: str) -> dict | None:
     if check is None or script is None:
         return None
     try:
-        proc = subprocess.run([sys.executable, str(script), "--hook-id", check], cwd=root, input=output, capture_output=True, text=True, check=False)
+        # The check output is UTF-8 whatever the locale code page; both ends of the pipe say so (BO-4500a-4-viii).
+        env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+        proc = subprocess.run([sys.executable, str(script), "--hook-id", check], cwd=root, env=env, input=output,
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
         return json.loads(proc.stdout) if proc.returncode == 0 else None
     except (OSError, ValueError) as exc:
         print(f"[commit_changes] warning: no handoff built: {exc}", file=sys.stderr)

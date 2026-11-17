@@ -159,3 +159,14 @@ notes: |
   that result. Whether ACD-9990a-1 (written and read back cleanly) stays approved in the
   failed run is left to the IT PO; the criteria only forbid reporting ACD-9990a-2 approved
   and committing the batch as approved.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

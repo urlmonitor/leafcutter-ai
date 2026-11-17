@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700b-2.yaml"
@@ -103,10 +103,18 @@ amended_by:
   - reason: "IT PO technical enrichment, 2026-08-26. Named the three concrete deployed-layout hazards the criteria describe abstractly: the checker is not in templates/ so it is never deployed; it computes its root from __file__ and would scan the package checkout through a symlinked .leafcutter; and it resolves skills at templates/skills/, a directory that does not exist in a consumer install where skills deploy to .claude/skills/. Added the silence-is-not-a-pass requirement because the natural repair for the third hazard (treat a missing directory as an empty known-set) produces either a storm of false violations or, on the next repair, a vacuous pass."
     by: it-po
     at: 2026-08-26
+  - reason: "Closed with tests only on BrainCandy's 2026-10-23 decision that 'a template in the deployed tree' means the package's templates/ in the consumer project (leafcutter-ai/templates/**), as ticket 04 gates. The behaviour was delivered by INF-700b-2 (PR #1319); this AC adds the deployed-layout proof (unit_tests/commit_guardian/test_inf_700b_2_i.py). Discrimination proven by pr-reviewer's 4-mutation run (2026-10-23)."
+    by: ac-fulfillment-gate
+    at: 2026-10-23
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/commit_guardian/test_inf_700b_2_i.py
 implemented_by:
-- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/05_TICKET-20261016-INF-700b-2-i.md
+- tickets/99_done/EPIC-ALearningAnAgentHasTodayActuallyGets/05_TICKET-20261016-INF-700b-2-i.md
+- templates/scripts/commit_guardian/check_agent_registry.py
+- templates/scripts/commit_guardian/_resolve_root.py
+- scripts/registry_validator.py
+- scripts/check_skill_refs.py
 notes: |
   Included because this repository has shipped this exact failure twice: a hook
   dependency omitted from the build deploy manifest crashed the deployed hook

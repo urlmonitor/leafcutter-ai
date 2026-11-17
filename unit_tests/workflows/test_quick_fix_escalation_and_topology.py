@@ -300,6 +300,7 @@ class TestBP600WorkflowFullRunTopology:
         in this order, and returns status: ok."""
         result = run_workflow_under_e2(_JS_PATH, label_responses=_full_success_responses())
         assert _labels(result) == [
+            "resolve-maker-path",  # BO-4300a-1-ia: the one maker-path probe (consumer_drift)
             "workspace-ensure",
             "guard-checks",
             "ac-creation",

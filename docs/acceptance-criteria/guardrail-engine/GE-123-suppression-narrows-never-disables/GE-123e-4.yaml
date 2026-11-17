@@ -1,0 +1,440 @@
+id: GE-123e-4
+components:
+  - commit_guardian
+title: "Concluding a merge, revert or cherry-pick is not refused for sign-offs carried in unchanged, while a sign-off added or edited during the resolution still is"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with two branches, "main" and "feature", that both
+    changed the ticket file "tickets/00_inbox/TICKET-demo.md", so that merging
+    "main" into "feature" conflicts in that file,
+  And "main"'s copy of the ticket holds the heading
+    "### 2026-05-01 09:00 — test-writer (status: ok)" with no feedback-id line,
+    committed before the commit checks were installed, and "feature"'s copy
+    does not,
+  And the commit checks are now installed,
+  When the conflict is resolved keeping that heading word for word, and the
+    merge is concluded with an inline message,
+  Then the merge commit succeeds.
+
+  Given the same conflicted merge,
+  When the resolution keeps the carried-in heading word for word and also appends
+    "### 2026-11-16 11:00 — conflict-resolver (status: ok)" with no feedback-id line,
+  Then concluding the merge is refused,
+  And the refusal names the appended heading and does not name the carried-in
+    heading.
+
+  Given the same conflicted merge,
+  When the resolution changes the carried-in heading to
+    "### 2026-05-01 09:30 — test-writer (status: ok)", still with no feedback-id line,
+  Then concluding the merge is refused, and the refusal names the changed heading.
+
+  Given "feature"'s own copy of the ticket held, before the merge began, the
+    heading "### 2026-05-02 08:00 — sql-coder (status: ok)" with no feedback-id
+    line, committed before the checks were installed, and "main"'s copy does not,
+  When the resolution keeps that heading word for word and the merge is concluded,
+  Then the merge commit succeeds,
+  Because a heading identical to its copy on either side of the merge is not work
+    done in the resolution.
+
+  Given "main"'s copy instead holds "### 2026-11-15 16:00 — python-coder (status: ok)"
+    followed, on the next line, by "feedback-id: fb_2026-11-15_0f1e2d3c",
+  When the conflict is resolved keeping it word for word and the merge is concluded
+    with a message file handed to the commit by file, as the shared commit step does,
+  Then the merge commit succeeds.
+
+  Given a conflicted revert on "feature" of an earlier commit that removed the
+    heading "### 2026-05-03 14:00 — test-runner (status: ok)", which has no
+    feedback-id line and was added before the checks were installed, so that the
+    revert brings that heading back and conflicts in the ticket file,
+  And, separately, a conflicted cherry-pick onto "feature" of a commit from "main"
+    that added the id-less test-writer heading above to the ticket file before the
+    checks were installed, conflicting in that file,
+  When each is resolved keeping its carried-in heading word for word and then
+    concluded,
+  Then both the revert commit and the cherry-pick commit succeed.
+
+  Given the same conflicted revert and the same conflicted cherry-pick,
+  When each resolution keeps its carried-in heading word for word and also appends
+    "### 2026-11-16 11:00 — conflict-resolver (status: ok)" with no feedback-id line,
+  Then concluding the revert is refused and concluding the cherry-pick is refused,
+  And each refusal names the appended heading and does not name the carried-in
+    heading,
+  Because undoing or replaying a recorded change carries someone else's sign-offs
+    in as literally as a merge does, and the component already treats all three
+    operations alike.
+
+  Given no merge, revert or cherry-pick is in progress, and "main" holds the
+    id-less test-writer heading above,
+  When an ordinary commit on "feature" appends that same heading, copied word for
+    word, with no feedback-id line,
+  Then the commit is refused,
+  Because the relief belongs to a merge, revert or cherry-pick being concluded, and
+    covers a heading identical to its copy on either side of that operation, not a
+    heading that merely exists elsewhere in the repository.
+depends_on:
+  - GE-123e
+  - GE-123e-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "'Merge-Aware Checks (Authorship, Not Operation, Is the Discriminator)': a merge changes which content is attributed to the author, never whether the author's content is inspected. Also the shared change-set source, its could-not-check outcome, and the change_set_source manifest field."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Standing rule this criterion must honour: no check skips its inspection on the grounds that a merge is under way; the author's own resolution is still judged, in the same verification as the carried-in arm."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. The component treats undoing (revert) or replaying (cherry-pick) a recorded change the same way as a merge, through one general predicate. Gate decision 2 (2026-11-16) gives this check's relief to both, and the criteria now carry arms for each."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "Decision §1 (one shared source, no private git diff --cached), §4 (incoming-side-only scoping during an operation), §5 (byte-identical on ordinary commits), §6 (could-not-check, never widened), and Amendment 2 (the change_set_source field). This record reuses the source and records a check-local heading-level exception to §4's effect."
+  - path: docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md
+    relationship: modifies
+    status: planned
+    relevance: "Created by this record (adr-author): Amendment 3 to ADR-038, recording the 'either side' relief for merge, revert and cherry-pick as a check-local exception to §4. Filed by the amendments-folder convention of ADR-034."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Manifest rule: a check that works out its own change set is declared self_derived and must use the shared source. That is why this record flips check-feedback-id's change_set_source."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20261116-removing-a-feedback-id-line-is-not-caught.md
+    relationship: related
+    status: exists
+    relevance: "FENCE (gate decision 3). Deleting a feedback-id line is out of scope during an operation as on an ordinary commit."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: related
+    status: exists
+    relevance: "The check and its manifest are edited in templates/; the copies under scripts/ and config/ are build outputs."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    contract: "The merge-relief comparison GE-123e-4-i builds on. During an operation, each id-less added heading in a staged tickets/**/*.md file is compared, by exact heading-line text, with the HEAD-side copy and the incoming-side copy of the same path. A match on either side is not judged, and anything else is judged. The change set comes from _authored_change.get_authored_change(), and a could_not_check result from it is a signal GE-123e-4-i must handle."
+  - agent: documentation-expert
+    contract: "The settled relief rule for GE-123e-5 to document. A heading identical to its copy on either side (HEAD or the incoming state) is not judged, and a heading added or changed during the resolution is judged. The same rule applies to a conflicted merge, revert and cherry-pick through the shared operation-record predicate. It is a check-local exception layered on the incoming-side-only shared derivation of ADR-038 §4, recorded in ADR-038 Amendment 3 (docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md), which the reference cross-references."
+expects_from:
+  ac_id: GE-123e-1
+  contract: "The refusal verdict for a heading the commit adds. This criterion settles what 'adds' means when the commit concludes a merge."
+declared_files:
+  - path: templates/scripts/commit_guardian/check_feedback_id.py
+    state: existing
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    state: existing
+  - path: docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md
+    state: to_be_created
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    state: existing
+it_requirements:
+  - "CHANGE SET FROM THE SHARED SOURCE (ADR-038 §1, GE-120e-2): the check stops computing its own `git diff --cached` and gets what the commit changed from `_authored_change.get_authored_change()`. On an ordinary commit that derivation equals `git diff --cached` byte for byte (ADR-038 §5), so every GE-123e-1 verdict must stay unchanged. A could_not_check result from the shared source is handled as GE-123e-4-i specifies, never by falling back to an unscoped diff (ADR-038 §6)."
+  - "MANIFEST: in templates/scripts/commit_guardian/commit_guardian.json (the check-feedback-id entry, about lines 819-829), change_set_source changes from handed_by_commit_path to self_derived, and pass_filenames stays false. The entry was already inaccurate before this change: the script computes its own diff today while declaring that the commit path hands it its files. After the change, change_set_source.py's determination must place the entry in self_deriving with zero failures, which requires the script text to reference the shared source. The manifest copies under scripts/commit_guardian/ and config/commit_guardian/ are build outputs (ADR-001) and are never edited by hand."
+  - "MERGE RELIEF = 'EITHER SIDE' (gate decision 1, 2026-11-16): while a commit concludes an operation, an id-less sign-off heading is not judged when its heading line appears word for word in the HEAD-side (first-parent) copy of the same ticket file or in the incoming-side copy. Every other id-less heading in the change is judged, including a heading typed or edited during the resolution. 'Edited' means the heading line's text changed."
+  - "HOW THE SHARED SOURCE IS REUSED (gate decision 1): the shared derivation stays incoming-side-only, as ADR-038 §4 requires for its other consumers (check-contract-shrinking, check-doc-frontmatter). It is NOT changed to a both-sides predicate. This check applies the both-sides rule as a heading-level comparison on top of the shared change set. That is a recorded, check-local exception to the effect of ADR-038 §4 that the author's own pre-merge content stays judged during a merge. The justification: this check judges headings ADDED, and each such heading was judged, or pre-dates the check, when its own commit added it. Record the exception in the merge-aware section of docs/architecture/components/commit-guardian.md (via GE-123e-5) and in an ADR-038 amendment (next it_requirement)."
+  - "ADR-038 AMENDMENT (person's gate decision, 2026-11-16; written by adr-author, not by the coder). The 'either side' relief is an exception to ADR-038 §4 and covers merge, revert and cherry-pick. adr-author records it as Amendment 3 to ADR-038, filed by the amendments-folder convention ADR-034 uses: the full text in docs/architecture/adrs/amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md (to be created; frontmatter type adr, says it is part of ADR-038 and not a separate ADR), plus a pointer in ADR-038 itself (an Amended row in its Status table, the amendment path in related_docs, and last_updated). ADR-038's existing inline Amendment 1 and Amendment 2 are not moved or reworded. The amendment states: the scope (check-feedback-id only; the shared derivation stays incoming-side-only for every other consumer); the rule (an id-less added sign-off heading whose heading line appears word for word in the HEAD-side or incoming-side copy of the same ticket file is not judged while a merge, revert or cherry-pick is being concluded); the predicate (the shared operation-record signal, never a record name); the justification (each such heading was judged, or pre-dates the check, when its own commit added it); the could-not-check disposition of GE-123e-4-i; and the fence (deleting a feedback-id line stays out of scope). It must agree with GE-123e-5's commit-guardian.md section, and it must land in the same change as the check, so the code never ships an undocumented exception to an accepted ADR."
+  - "ADR NUMBERING: an amendment takes no new ADR number, so ADR-029's number-collision rule does not apply. If adr-author judges the exception too large for an amendment and opens a new ADR instead, that is a change to this record's declared files and comes back to the IT PO."
+  - "ONE GENERAL PREDICATE: whether relief applies is read from the shared source's own operation-record signal, a derivation scoped against more than one state. It is never decided by testing for MERGE_HEAD or any other record by name (GE-120e-4's fourth clause; `states` is provenance, not a mode selector). The incoming-side copy is read at the same incoming state the shared source scoped against, which for a revert is the reverted commit's parent. It is never re-derived from a record name. Reading the HEAD-side and incoming-side file content to compare heading lines is a content lookup, not a second change-set derivation."
+  - "REVERT AND CHERRY-PICK (gate decision 2, 2026-11-16): a conflicted revert and a conflicted cherry-pick get the same relief as a merge, consistent with GE-120e-4, through the shared operation-record predicate as it stands (_operation_record.py). No operation-specific branch is added. Verification must include one real conflicted revert and one real conflicted cherry-pick in addition to the merge arms. Each needs a carried-in id-less heading that passes and a resolution-added id-less heading that is refused."
+  - "NO RELIEF OUTSIDE AN OPERATION (sixth arm): with no operation record present, a heading copied word for word from another branch is judged like any other added heading."
+  - "STANDING RULE GE-120e-3-ii: no arm skips inspection because an operation is under way. The refusal arms run in the same verification, against the same repository, as the relief arms."
+  - "FENCE (gate decision 3): deleting the feedback-id line from an existing heading stays out of scope during an operation, as on an ordinary commit (KI-CG-20261116-removing-a-feedback-id-line-is-not-caught)."
+  - "DEPLOYED LAYOUT: the check now depends on _authored_change.py, _operation_record.py and check_outcome.py beside it. These ship today through the whole-directory copy in build_commit_guardian. Even so, prove the check from a consumer layout that does not contain the package source (repo CLAUDE.md, 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest'), and the build's intra-package closure guard must pass."
+  - "LATENCY: at most one shared derivation per commit (it is memoised), plus at most one content read per side for each staged ticket file that carries an id-less added heading during an operation. No extra git call on the ordinary-commit path."
+  - "TEST EVIDENCE (binding): a real conflicted git merge, revert or cherry-pick in a scratch repository, resolved in the working tree and concluded by a real commit. Conclude each with inline -m and with a message file using the shared commit step's git arguments (commit -q --cleanup=verbatim -F <file>, templates/scripts/commit_changes.py). Do not drive commit_changes.py itself to conclude an operation, because it builds a private index seeded from HEAD that cannot carry a merge resolution. Commit the id-less pre-check headings on either side before installing the hook. Writing MERGE_HEAD by hand and environment simulation are not evidence (FP-7). Expected test home: unit_tests/commit_guardian/."
+test_intent:
+  - clause: the merge commit succeeds
+    needs_test: true
+    reason: The clause appears in two scenarios, an incoming-side heading concluded with an inline message and a heading with a real id concluded by message file as the shared commit step does, and only a real commit concluding each real conflicted merge shows that the hook lets it through on both routes.
+  - clause: concluding the merge is refused
+    needs_test: true
+    reason: A heading added during the resolution must still be judged, and this clause fails an implementation that switches the check off during merges.
+  - clause: the refusal names the appended heading and does not name the carried-in heading
+    needs_test: true
+    reason: Naming the carried-in heading would show that the relief is not applied per heading.
+  - clause: concluding the merge is refused, and the refusal names the changed heading
+    needs_test: true
+    reason: An edited heading line differs from both sides, so the word-for-word comparison must catch it.
+  - clause: the merge commit succeeds, Because a heading identical to its copy on either side of the merge is not work done in the resolution
+    needs_test: true
+    reason: This is the HEAD-side relief of gate decision 1, which the incoming-side-only shared source does not give, so it fails without the both-sides comparison.
+  - clause: both the revert commit and the cherry-pick commit succeed
+    needs_test: true
+    reason: Relief for a revert and a cherry-pick comes from the shared operation-record predicate, and a merge-only test (or a MERGE_HEAD-by-name branch) would pass while both of these are still refused.
+  - clause: concluding the revert is refused and concluding the cherry-pick is refused
+    needs_test: true
+    reason: A heading added while resolving a revert or cherry-pick is new work, and this clause fails an implementation that switches the check off whenever any operation record is present.
+  - clause: each refusal names the appended heading and does not name the carried-in heading, Because undoing or replaying a recorded change carries someone else's sign-offs in as literally as a merge does, and the component already treats all three operations alike
+    needs_test: true
+    reason: Naming the carried-in heading in a revert or cherry-pick refusal would show the relief is applied per operation rather than per heading, and for a revert the incoming side is the reverted commit's parent, which is easy to read from the wrong state.
+  - clause: the commit is refused, Because the relief belongs to a merge, revert or cherry-pick being concluded, and covers a heading identical to its copy on either side of that operation, not a heading that merely exists elsewhere in the repository
+    needs_test: true
+    reason: This negative control fails relief granted to any heading found on any branch outside an operation.
+test_spec:
+  - name: test_ge_123e_4_conflicted_merge_with_carried_in_headings_concludes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Real conflicted git merge of main into feature in tickets/00_inbox/TICKET-demo.md; the id-less heading is committed on main BEFORE the hook is installed; resolve in the working tree keeping it word for word, git add, then conclude by a real commit with inline -m and (second scratch) with commit -q --cleanup=verbatim -F file. Also the real-id heading from main concluded by file. Each merge commit succeeds and HEAD gains a two-parent commit. No hand-written MERGE_HEAD."
+    proves_clause: 'the merge commit succeeds'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_ge_123e_4_heading_appended_in_resolution_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same conflicted merge, resolution keeps the carried-in heading and appends the 2026-11-16 11:00 conflict-resolver id-less heading. Concluding is refused, HEAD is unchanged, MERGE_HEAD still present. Run in the same repository build as the relief arm (GE-120e-3-ii)."
+    proves_clause: 'concluding the merge is refused'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the check is switched off whenever an operation record is present
+      - relief granted to the whole ticket file once any heading in it matches a side
+  - name: test_ge_123e_4_refusal_names_appended_not_carried_in_heading
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "From the previous refusal assert the output contains the conflict-resolver heading and does not contain the test-writer 2026-05-01 heading."
+    proves_clause: 'the refusal names the appended heading and does not name the carried-in heading'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - a refusal that lists every id-less heading in the touched ticket file
+      - a refusal that names the carried-in heading as well as the appended one
+  - name: test_ge_123e_4_edited_carried_in_heading_is_refused_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Resolution changes the carried-in heading to the 09:30 form, still id-less. Concluding is refused and the refusal names the 09:30 heading."
+    proves_clause: 'concluding the merge is refused, and the refusal names the changed heading'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - relief decided by agent name or date prefix instead of the whole heading line
+      - relief decided by the heading existing anywhere in the ticket file
+  - name: test_ge_123e_4_head_side_heading_identical_is_relieved
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Roles swapped: feature itself already holds the id-less 2026-05-02 sql-coder heading (committed pre-hook) and main does not. Resolution keeps it word for word; the real merge commit succeeds. The shared derivation scopes against the incoming side only, so this arm is RED without the HEAD-side comparison."
+    proves_clause: 'the merge commit succeeds, Because a heading identical to its copy on either side of the merge is not work done in the resolution'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - relief granted from the incoming side only
+      - the HEAD-side copy is read from the working tree instead of from HEAD
+  - name: test_ge_123e_4_conflicted_revert_and_cherry_pick_carried_in_heading_succeed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "One real conflicted git revert on feature of the commit that removed the id-less test-runner heading (heading comes back), and separately one real conflicted git cherry-pick of main's commit that added the id-less test-writer heading; heading commits pre-date the hook. Resolve keeping the heading and conclude each by real commit (inline and -F). Both succeed. Revert's incoming side is the reverted commit's parent."
+    proves_clause: 'both the revert commit and the cherry-pick commit succeed'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - relief tested by MERGE_HEAD by name so revert and cherry-pick are still refused
+      - the revert's incoming copy is read at REVERT_HEAD instead of its parent
+  - name: test_ge_123e_4_revert_and_cherry_pick_resolution_added_heading_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Same conflicted revert and cherry-pick, resolution also appends the conflict-resolver id-less heading. Concluding each is refused with HEAD unchanged and REVERT_HEAD or CHERRY_PICK_HEAD still present."
+    proves_clause: 'concluding the revert is refused and concluding the cherry-pick is refused'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the check is switched off whenever any operation record is present
+      - relief applies to the whole file for revert and cherry-pick
+  - name: test_ge_123e_4_revert_and_cherry_pick_refusal_names_only_appended
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "From each of the two refusals assert the conflict-resolver heading is named and the carried-in test-runner (revert) or test-writer (cherry-pick) heading is not."
+    proves_clause: 'each refusal names the appended heading and does not name the carried-in heading, Because undoing or replaying a recorded change carries someone else''s sign-offs in as literally as a merge does, and the component already treats all three operations alike'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - the carried-in heading is named because the revert incoming side is read from the wrong state
+      - relief applied per operation type instead of per heading
+  - name: test_ge_123e_4_same_heading_outside_an_operation_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "No operation in progress; main holds the id-less test-writer heading (pre-hook). An ordinary real commit on feature appends that heading verbatim, id-less, and is refused with HEAD unchanged."
+    proves_clause: 'the commit is refused, Because the relief belongs to a merge, revert or cherry-pick being concluded, and covers a heading identical to its copy on either side of that operation, not a heading that merely exists elsewhere in the repository'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - relief granted to any heading found on any branch outside an operation
+      - the relief lookup runs on ordinary commits
+  - name: test_ge_123e_4_merge_conclusion_is_reachable_through_git_commit_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Real git merge conflict concluded through git commit (hook wrapper installed from the deployed layout, check run through run_hook.py) with -q --cleanup=verbatim -F. Do not drive commit_changes.py to conclude the merge (private index cannot carry a resolution). Assert the relief and refusal arms through the real hook only."
+    proves_clause: 'the merge commit succeeds'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/_authored_change.py
+  - templates/scripts/commit_guardian/_operation_record.py
+  - unit_tests/commit_guardian/_ge_133a_harness.py
+  - unit_tests/commit_guardian/test_folder_density_merge_commit.py
+file_findings:
+  - file: templates/scripts/commit_guardian/check_feedback_id.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It runs its own git diff --cached and judges added headings, which is the behaviour the relief changes, and it does not yet use _authored_change.
+    decision: null
+  - file: templates/scripts/commit_guardian/commit_guardian.json
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its check-feedback-id entry (lines 818-830) declares change_set_source handed_by_commit_path, the value this criterion flips to self_derived.
+    decision: null
+  - file: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    verdict: describes, does not implement
+    line_range: 1-80
+    found_in: null
+    reason: It describes the shared change-set derivation and its amendments in prose, and the relief itself is implemented in check_feedback_id.py, so this file only receives the amendment pointer.
+    decision:
+      choice: assignment stands
+      reason: ADR-038 is declared only for the amendment pointer (Status-table Amended row, related_docs, last_updated); the relief is implemented in check_feedback_id.py and documented in the to-be-created amendment file, so the finding changes nothing about who does the work.
+      by: it-po
+file_findings_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - GE-123e-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PROMISE 4 OF GE-123e (merge relief), and the mandatory regression "a merge bringing
+  in headings that already have ids completes" (fifth arm).
+
+  THE LINE, DRAWN EXPLICITLY AS THE L1 DEMANDS. When a commit concludes a merge, an
+  id-less sign-off heading is judged only if its text, word for word, appears in
+  NEITHER side's copy of that ticket file: not the branch being merged into, and not
+  the incoming branch. A heading identical to either side's copy is not judged. A
+  heading typed or altered during the resolution is. "Edited" means the heading
+  line's text changed. This is the ordinary-commit rule (judge what the commit adds
+  relative to its parent) applied to both parents of a merge.
+
+  WHY BOTH SIDES AND NOT ONLY THE INCOMING SIDE (fourth arm, deliberate). The
+  dispatcher framed the relief as "unchanged from the incoming branch". Scoping to
+  the incoming side alone would newly judge the merging branch's OWN old id-less
+  headings on every merge. Those headings are untouched and were not judged when
+  they were committed (GE-123e-1, third arm). A long-lived branch carrying
+  pre-epoch tickets would then be blocked from taking in main for content nobody
+  wrote in the resolution. FLAGGED DIVERGENCE: the component's shared change-set
+  source scopes a merge against the incoming side alone, on purpose, for checks that
+  judge whole diffs (architecture doc, ADR-038 Decision §4). This check judges
+  headings added, so the two-parent rule is the natural reading. The IT PO should
+  confirm whether the shared source is reused with a heading-level comparison on
+  top, or whether a documented exception is recorded.
+
+  STANDING RULE HONOURED (GE-120e-3-ii). No arm skips the check because a merge is
+  under way. Arms two and three run in the same verification as arm one, against the
+  same repository, because the difference between them IS the criterion. A test that
+  only asserts the carried-in merge completes passes on a check that is switched off
+  for merges.
+
+  SIXTH ARM IS UNASKED-FOR AND LOAD-BEARING. Without it, "relief for any heading that
+  exists on any branch" satisfies arms one, four and five. The relief exists only
+  while a merge is being concluded.
+
+  FLAGGED, NOT DECIDED: revert and cherry-pick. GE-120e-4 (done) treats undoing or
+  replaying a recorded change the same way as a merge through one general predicate,
+  and forbids a merge-specific branch in the shared source. GE-123e promises merge
+  relief only. If the implementation consumes the shared operation-record source, a
+  conflicted cherry-pick or revert would inherit the same relief. That is consistent
+  with the component's convention but not asked for by the L1. The person decides.
+
+  MANIFEST CONSEQUENCE (for the IT PO). The check is registered today as inspecting
+  only files the commit path hands it, yet it is given no file names. Comparing
+  against each side of a merge means it works out its own change set. The
+  component's manifest rule (GE-120e-2) then requires the self-derived declaration
+  and the shared source.
+
+  SET-UP NOTE. The id-less headings on each side are committed BEFORE the hook is
+  installed, because once installed it refuses them. That is the honest way to
+  produce pre-epoch or pre-check content in a scratch repository. It is not a
+  simulation of a message.
+
+  TEST-EVIDENCE RULE (for the IT PO; non-negotiable). Every scenario is verified
+  through REAL git commit calls in a scratch repository with the hook installed:
+  a real conflicted git merge, resolved in the working tree, concluded by a real
+  commit with both an inline -m message and a message file passed the way the shared
+  commit step passes it. Writing the merge record by hand, or setting the
+  environment the check reads in place of a commit, is NOT evidence (FP-7).
+
+  IT PO RESOLUTIONS (2026-11-16, gate decisions; binding through it_requirements).
+    Decision 1, "either side": the flagged divergence above is settled. The shared
+    change-set source is reused unchanged: it stays incoming-side-only for its
+    other consumers, per ADR-038 §4. This check adds a heading-level comparison
+    against the HEAD-side copy on top of it. That is recorded as a check-local
+    exception to the effect of ADR-038 §4. It still needs writing into
+    commit-guardian.md (GE-123e-5) and an ADR-038 amendment (adr-author). No record
+    in this tree declares the ADR file yet.
+    Decision 2, revert and cherry-pick: the flagged question above is settled. They
+    get the same relief through the shared operation-record predicate as it stands,
+    consistent with GE-120e-4. The test plan must include one real conflicted revert
+    and one real conflicted cherry-pick.
+    Decision 3: deleting a feedback-id line is out of scope (fence,
+    KI-CG-20261116-removing-a-feedback-id-line-is-not-caught).
+    Manifest: check-feedback-id becomes change_set_source: self_derived in this
+    record. Its current handed_by_commit_path value was already inaccurate before
+    GE-123e, because the script runs its own git diff --cached today.
+    Wording note, criteria unchanged: the sixth arm's Because says the relief
+    "belongs to the incoming side of a merge". Read it together with the fourth arm
+    and decision 1: the relief covers both sides of an operation being concluded,
+    and no heading outside one.
+
+  BA AMENDMENT AT THE FINAL GATE (2026-11-16, person approved). The criteria now
+    carry decision 2. Two scenarios were added before the negative control: a
+    conflicted revert and a conflicted cherry-pick, each with a carried-in id-less
+    heading that passes, and each with a resolution-added id-less heading that is
+    refused while the carried-in one is not named. The revert's carried-in heading
+    comes back because the revert undoes the commit that removed it; its incoming
+    side is the reverted commit's parent, per the it_requirement. The negative
+    control's Given now says no merge, revert or cherry-pick is in progress, and its
+    Because was reworded to remove the contradiction the wording note above
+    describes: the relief belongs to the operation being concluded and covers either
+    side of it. The title names all three operations. The "FLAGGED, NOT DECIDED"
+    paragraph above is kept as the record of the question; decision 2 answers it.
+    FOR THE IT PO: the matching test_intent clause for the reworded Because was
+    updated to the new text, with its needs_test and reason unchanged. The two new
+    scenarios have no test_intent entries yet.
+
+  IT PO RECONCILIATION (2026-11-16). Resolved: the revert and cherry-pick clauses
+  have test_intent entries, and the two identical "the merge commit succeeds"
+  entries (first and fifth arms) are merged into one, as the rule check requires
+  one entry per distinct clause. Resolved: the ADR-038 amendment is now declared
+  (amendments/ADR-038/amendment-3-feedback-id-either-side-heading-relief.md,
+  to be created, plus the pointer in ADR-038), with an it_requirement that
+  adr-author writes it. ADR-038's own two earlier amendments are inline; this one
+  follows the amendments-folder convention (ADR-034's amendments/ folder), with a
+  pointer added to ADR-038.

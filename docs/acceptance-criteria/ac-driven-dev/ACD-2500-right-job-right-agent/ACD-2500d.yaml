@@ -48,3 +48,15 @@ notes: |
   Covers the planner's intent-versus-surface check and the reference-file choice
   introduced by BO-2000d. The code-aware step from ACD-2500c is a natural host; the
   BA may merge the two if one step can own both without widening its brief.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

@@ -19,6 +19,7 @@ from __future__ import annotations
 from bisect import bisect_right
 
 Range = tuple[int, int]
+Break = tuple[int, int]
 
 _BOM = chr(0xFEFF)
 
@@ -76,27 +77,70 @@ def _collect_removals(lines: list[str], ranges: list[Range]) -> tuple[dict[int, 
     return removals, touched
 
 
-def counted_keys(text: str, ranges: list[Range]) -> list[str]:
+def _collect_breaks(lines: list[str], breaks: list[Break]) -> dict[int, dict[int, int]]:
+    """Map each row to ``{column: indent step}`` for every further statement starting on it."""
+    starts = line_starts(lines)
+    columns: dict[int, dict[int, int]] = {}
+    for offset, step in breaks:
+        row = bisect_right(starts, offset) - 1
+        if 0 <= row < len(lines) and 0 < offset - starts[row] < len(lines[row]):
+            columns.setdefault(row, {})[offset - starts[row]] = step
+    return columns
+
+
+def _step(indent: str, step: int, unit: str) -> str:
+    """*indent* one *unit* deeper (step 1), shallower (step -1) or unchanged."""
+    if step > 0:
+        return indent + unit
+    if step < 0 and indent.endswith(unit):
+        return indent[: -len(unit)]
+    return indent
+
+
+def _pieces(line: str, removals: list[Range], cuts: dict[int, int], unit: str) -> list[str]:
+    """Split *line* at *cuts* and mask each piece, keyed with the indentation it would have alone."""
+    indent = line[: len(line) - len(line.lstrip())]
+    bounds = [0, *sorted(cuts), len(line)]
+    pieces: list[str] = []
+    for index, (low, high) in enumerate(zip(bounds, bounds[1:], strict=False)):
+        shifted = [(max(a, low) - low, min(b, high) - low) for a, b in removals if a < high and b > low]
+        masked = _mask(line[low:high], shifted)
+        if index:
+            indent = _step(indent, cuts[low], unit)
+        pieces.append(masked if index == 0 else indent + masked.strip())
+    return pieces
+
+
+def counted_keys(text: str, ranges: list[Range], breaks: list[Break] | None = None, unit: str = "    ") -> list[str]:
     """Return the key of every COUNTED line of *text*, in order.
 
     Args:
         text: The normalised file text.
         ranges: Half-open offsets of every uncounted region.
+        breaks: ``(offset, step)`` for each further statement starting on a
+            line that already holds one (GE-127d-3-v). The line is counted
+            once per statement; each piece is keyed as if it stood on its own
+            line, its indentation moved by ``step`` units (1 for a block or
+            compound body opened on the line, -1 for a closing brace or
+            keyword, 0 otherwise) (GE-127d-3-vi).
+        unit: One indentation level in the language (four spaces in Python,
+            two in the JavaScript family).
 
     Returns:
-        One entry per counted line: the line with its uncounted regions cut
-        out and trailing whitespace stripped. A line holding no token
-        outside every region -- whitespace-only anywhere (between code,
-        inside a comment, a standalone string or a used string) or wholly
-        inside a region -- is never counted.
+        One entry per counted line (or statement piece): the line with its
+        uncounted regions cut out and trailing whitespace stripped. A line
+        holding no token outside every region -- whitespace-only anywhere
+        (between code, inside a comment, a standalone string or a used
+        string) or wholly inside a region -- is never counted.
     """
     lines = split_physical_lines(text)
     removals, _touched = _collect_removals(lines, ranges)
+    cuts = _collect_breaks(lines, breaks or [])
     keys: list[str] = []
     for row, line in enumerate(lines):
-        masked = _mask(line, removals[row]) if row in removals else line
-        if masked.strip():
-            keys.append(masked.rstrip())
+        for masked in _pieces(line, removals.get(row, []), cuts.get(row, {}), unit):
+            if masked.strip():
+                keys.append(masked.rstrip())
     return keys
 
 
@@ -110,4 +154,12 @@ DECISION HISTORY
   when a code token survives outside the uncounted ranges; a whitespace-only line is never counted
   or keyed, anywhere. This supersedes the 2026-10-20 rule, under which a whitespace-only line
   outside every range counted. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-23 [GE-127d-3-v]: counted_keys takes the lexer's statement breaks and counts a line once
+  per statement it holds. Each later piece is keyed with the line's indentation, so `a(); b();` and
+  the same two statements on two lines yield identical keys: joining or splitting statements moves
+  neither the measured length nor the added-lines diff. (#EPIC-FilesStayWorkable/GE-127d-3)
+- 2026-10-25 [GE-127d-3-vi]: A break carries an indent step. A piece after a compound header or an
+  opening block brace is keyed one unit deeper, a closing brace one unit shallower, so `if x: y` and
+  `if (x) { a(); }` key exactly like their expanded forms and joining or splitting them adds 0 to the
+  repayment diff. (#EPIC-FilesStayWorkable/GE-127d-3)
 """

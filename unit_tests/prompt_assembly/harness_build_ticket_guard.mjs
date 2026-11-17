@@ -800,6 +800,22 @@ async function agent(prompt, opts = {}) {
     return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
   }
 
+  // BO-4300a-1-ia: every maker command is absolute, so a workflow first asks the shell-runner for the repository
+  // (git common dir, one `resolve-maker-path` probe). A scenario scripts it with `resolve_maker_path` (served
+  // verbatim); absent, it answers with a repository -- the same default the python engine harness scripts for this
+  // label. Infrastructure, like the workspace step: never recorded as a phase dispatch.
+  // Probes of the maker's location (BO-4300a-1-ia): `read-workspace-marker` (a handed-in workspace names its project,
+  // override `resolve_workspace_marker`) and `resolve-maker-path` (override `resolve_maker_path`); served verbatim,
+  // never recorded as phase dispatches, like the workspace step.
+  if (label === "read-workspace-marker") {
+    const named = JSON.stringify({ project_root: "/tmp/harness-default-repo" });
+    return scenario.resolve_workspace_marker !== undefined ? scenario.resolve_workspace_marker : { command: "cat", exit_status: 0, stdout: named, stderr: "" };
+  }
+  if (label === "resolve-maker-path") {
+    if (scenario.resolve_maker_path !== undefined) return scenario.resolve_maker_path;
+    return { command: "git rev-parse", exit_status: 0, stdout: "/tmp/harness-default-repo/.git\n", stderr: "" };
+  }
+
   // BO-4300c-3: the ONE workspace step. A scenario scripts it with `workspace_ensure` (the reply served
   // verbatim, so a refusal, prose or no answer can be presented); absent, the shell-runner answers ready at
   // the scenario's own working copy -- the same default the python engine harness scripts for this label.

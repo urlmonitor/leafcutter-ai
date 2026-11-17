@@ -16,7 +16,8 @@ risk_surface: safety
 declares_side_effect: true
 criteria: |
   Given an installed project with the sweep interval set to 24 hours and no sweep
-    recorded in the last 24 hours, and one workspace holding nothing unsent,
+    recorded in the last 24 hours, and one workspace whose commits all reached the main
+    line and which holds nothing unsent, so the landed-work pass would clear it,
   When a working session starts in that project,
   Then a real sweep is started without anyone asking for it, and the workspace is gone
     once it finishes,
@@ -49,7 +50,16 @@ expects_from:
   ac_id: BO-4400d-2
   contract: "Sweep entry point and its report."
 package_surface: false
+declared_files:
+  - path: templates/hooks/sweep_on_session_start.py
+    state: to_be_created
+  - path: templates/settings.json
+    state: existing
 it_requirements:
+  - >-
+    NAMES, DECIDED 2026-11-17: the hook script is templates/hooks/sweep_on_session_start.py, beside the existing
+    hooks there. It starts the sweep entry point decided in BO-4400d-1 (the deployed
+    scripts/worktree_sweep.py), never the maker's verbs directly.
   - >-
     SURFACE: a new Claude Code SessionStart hook script under templates/hooks/, registered in the
     SessionStart section of templates/settings.json (none exists today), both reaching the install
@@ -80,17 +90,41 @@ it_requirements:
   - >-
     PROOF: run the DEPLOYED hook script as a separate process with a SessionStart payload on stdin,
     in a temporary installed project; assert its return time, the spawned sweep's effect on a real
-    holds-nothing workspace, the durable log line, the second-start not-due output, and exactly one
+    landed workspace (its commits merged on a real bare hub), the durable log line, the second-start not-due output, and exactly one
     sweep for two concurrent starts (two processes released by a barrier). No build.py spawn.
 test_required: true
+test_intent:
+  - clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
+    needs_test: true
+    reason: A hook that is registered but never starts the sweep reclaims nothing, which only the deployed hook run shows.
+  - clause: the session is ready for input before the sweep finishes
+    needs_test: true
+    reason: A sweep run in the foreground holds up every session start, which the hook's return time shows.
+  - clause: 'the sweep''s report is written to a durable log location and its one-line summary (items cleared, bytes freed) is shown in the session'
+    needs_test: true
+    reason: A report kept only in the workspace or the temp folder is lost, and the durable file can be read back.
+  - clause: when a second session starts 10 minutes later, no second sweep is started and the session states when the next sweep is due
+    needs_test: true
+    reason: Without the interval check, a burst of sessions sweeps repeatedly, which a second start shows.
+  - clause: when two sessions start at the same moment, exactly one sweep runs
+    needs_test: true
+    reason: A check-then-write interval file races, and two hook processes released together expose it.
 test_spec:
   - name: test_session_start_launches_a_real_sweep_when_due
+    proves_clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: reachability
-    description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the holds-nothing workspace is gone once it finishes."
+    description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the landed workspace is gone once it finishes."
   - name: test_session_start_returns_before_sweep_finishes
+    proves_clause: the session is ready for input before the sweep finishes
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -99,18 +133,30 @@ test_spec:
     must_catch:
       - "hook runs the sweep in the foreground"
   - name: test_sweep_report_written_to_durable_log_and_summary_surfaced
+    proves_clause: 'the sweep''s report is written to a durable log location and its one-line summary (items cleared, bytes freed) is shown in the session'
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: seam
     description: "The durable log holds the report and the one-line summary (items cleared, bytes freed) is emitted to the session."
   - name: test_second_start_within_interval_runs_no_sweep_and_states_next_due
+    proves_clause: when a second session starts 10 minutes later, no second sweep is started and the session states when the next sweep is due
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "A start 10 minutes later spawns no sweep and prints when the next sweep is due."
   - name: test_two_simultaneous_starts_run_exactly_one_sweep
+    proves_clause: when two sessions start at the same moment, exactly one sweep runs
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -118,16 +164,54 @@ test_spec:
     description: "Two hook processes released together produce exactly one sweep run."
     must_catch:
       - "check-then-write interval file without an atomic lock"
+  - name: test_started_sweep_clears_a_landed_workspace_not_a_pushed_unmerged_one
+    proves_clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). In the temporary installed project the
+      hook-started sweep runs the landed-work pass: the landed workspace (real fast-forward on the bare hub) is gone,
+      and a second workspace that is only pushed (open pull request, a file changed an hour ago) is byte-identical,
+      so the test fails on a sweep that clears by holds-nothing alone. templates/settings.json carries no SessionStart
+      section today (it opens with env and allowedTools), so the hook registration and the deployed hook script are
+      both new, and the test runs the deployed hook, not the template.
+    code_file: templates/settings.json
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/settings.json
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 test_rationale: >-
   A session hook is only proven by running the deployed hook the way Claude Code runs it; timing,
   concurrency and the background hand-off cannot be observed from source.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (ONE RULE: the sweep's workspace part runs
+      the landed-work pass): the Given's workspace is now one the pass would clear (commits all on the main
+      line, nothing unsent) instead of one that merely holds nothing unsent. Every other clause unchanged.
+      Technical fields fixed: the PROOF it_requirement and the first test_spec description now use a landed
+      workspace.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (the new hook script templates/hooks/sweep_on_session_start.py
+      and templates/settings.json, which gains the SessionStart section), plus a NAMES requirement: the hook starts
+      the sweep entry point of BO-4400d-1. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  ONE RULE (user decision 2026-11-16): the workspace is landed because a workspace that only
+  holds nothing unsent (for example pushed but unmerged, or just made) is kept by the
+  landed-work pass, and then "gone once it finishes" would be false.
+
   Trigger choice (BO-4400d notes leave it to BA/IT PO): session start, rate-limited by a
   configurable interval, because a schedule needs a machine-level timer the package cannot
   install portably (Windows / WSL / macOS differ), while a session start exists in every

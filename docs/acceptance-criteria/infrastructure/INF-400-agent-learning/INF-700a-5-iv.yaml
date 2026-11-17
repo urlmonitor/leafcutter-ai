@@ -1,0 +1,100 @@
+id: INF-700a-5-iv
+components:
+  - infrastructure
+  - knowledge_system
+title: "The claim-store lock works on Windows as well as POSIX, so the completion routing step loads and arbitrates claims on both"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: approved
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
+criteria: |
+  Given the completion routing step (scripts/knowledge/completion_routing.py,
+    dispatched through completion_routing_cli.py's stage entry point) merges
+    claims into the shared claim store under an exclusive lock on a lock file
+    beside it (INF-700a-5-iii),
+  And a unit of work completes on a Windows host, where the POSIX-only fcntl
+    module does not exist,
+  When the fast lane (or any other completion path) imports
+    completion_routing and runs its stage step there,
+  Then the module imports without error on Windows and on POSIX alike,
+  And claim_and_confirm_routed takes an exclusive lock on the lock file
+    through fcntl.flock on POSIX and through msvcrt.locking on Windows, each
+    imported only on the platform that provides it, holds it for the state
+    update alone and releases it afterwards,
+  And two claims of the same published record made under that lock on either
+    platform still yield exactly one new claim,
+  And a platform that offers neither primitive raises an error naming the
+    missing lock primitive rather than silently
+    proceeding without the lock,
+  And the bug symptom ("On Windows the fast lane's knowledge-routing step
+    (completion_routing_cli.py stage) crashes at import with
+    ModuleNotFoundError: No module named 'fcntl' (wf_d4381e19-613,
+    2026-10-24); the step fails open, so completed work stages no knowledge
+    on Windows") must not occur.
+depends_on:
+  - INF-700a-5-iii
+doc_links:
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+origin_agent: BrainCandy
+created: 2026-10-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_completion_routing_windows_lock.py
+implemented_by: []
+test_spec:
+  - name: test_completion_routing_imports_when_fcntl_is_unavailable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Simulate a Windows host: make 'import fcntl' raise ModuleNotFoundError (sys.modules['fcntl'] = None) and provide a stub msvcrt with locking and the LK_LOCK/LK_UNLCK constants, then load scripts/knowledge/completion_routing.py fresh. Assert the import succeeds. Against the unfixed module this raises ModuleNotFoundError: No module named 'fcntl' — the reported symptom."
+  - name: test_claim_lock_uses_msvcrt_locking_on_windows
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "With fcntl unavailable and a recording msvcrt stub, call claim_and_confirm_routed against a tmp_path claim store. Assert msvcrt.locking was called to lock and then to unlock the lock file beside the store, and that the claim store holds the claimed record afterwards."
+  - name: test_claim_lock_uses_fcntl_flock_on_posix
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "With a recording fcntl stub (flock, LOCK_EX, LOCK_UN) and msvcrt absent, call claim_and_confirm_routed and assert flock was called with LOCK_EX then LOCK_UN on the lock file, so the POSIX path is unchanged."
+  - name: test_claim_lock_raises_when_no_lock_primitive_exists
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "With both fcntl and msvcrt unavailable, load the module and call the lock path. Assert it raises rather than returning having merged the claim without a lock."
+test_rationale: |
+  The bug is an import-time crash on one platform, so the decisive test loads
+  the module with fcntl made unimportable — the CI runner is Linux and would
+  never see the symptom otherwise. The two recording-stub tests prove the lock
+  is actually taken and released on each platform rather than skipped to make
+  the import pass, and the no-primitive test pins that the fix does not trade
+  the crash for a silent unarbitrated claim.
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: completion_routing.py imports the
+  POSIX-only fcntl module unconditionally at module level for its file lock.
+  Windows has no fcntl. Fix: take an exclusive lock through fcntl.flock on
+  POSIX and msvcrt.locking on Windows (the same approach
+  scripts/suite_performance/_shared_layout_coordination.py uses since
+  0e4ff28ae), imported per platform; a platform with neither still raises
+  rather than silently skipping the lock..
+
+  WHY AN L3 UNDER INF-700a-5. INF-700a already has five L2 children (at the
+  cap), and this is a platform constraint on the flock-arbitrated claim
+  mechanism INF-700a-5-iii specified under INF-700a-5, not a new behaviour.

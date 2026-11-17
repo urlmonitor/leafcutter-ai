@@ -631,8 +631,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
 
-        orphans = scan_draft_orphans_in_worktree(worktree, args.ac_root_rel)
-        print(json.dumps(orphans, indent=2))
+        draft_orphans = scan_draft_orphans_in_worktree(worktree, args.ac_root_rel)
+        print(json.dumps(draft_orphans, indent=2))
         return 0
 
     # -----------------------------------------------------------------------

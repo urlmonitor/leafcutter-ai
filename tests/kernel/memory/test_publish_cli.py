@@ -54,6 +54,13 @@ class PublishCase(StoreCase):
         return make_record(id=NEWER_ID, supersedes=[FIRST_ID],
                            question="Where should the kernel file approved decisions now?", **kw)
 
+    def index_ids(self) -> list[str]:
+        """The record ids in the store's index; a missing or unusable index fails the test."""
+        index = read_index(self.folder / INDEX_NAME)
+        if index is None:
+            self.fail(f"{INDEX_NAME} is missing or unusable")
+        return [e.id for e in index]
+
 
 class TestPublish(PublishCase):
     """What publish writes and what it refuses."""
@@ -144,7 +151,7 @@ class TestAStagedRecordIsNotPrecedent(PublishCase):
         path = self.run_root / "runs" / RUN / "staged" / "decisions" / f"{NEWER_ID}.yaml"
         self.assertTrue(path.is_file())  # it stays only in the run folder
         self.assertFalse((self.folder / f"{NEWER_ID}.yaml").exists())
-        self.assertNotIn(NEWER_ID, [e.id for e in read_index(self.folder / INDEX_NAME)])
+        self.assertNotIn(NEWER_ID, self.index_ids())
         for question in (STAGED_QUESTION, staged.question, make_record().question):
             self.assertNotIn(NEWER_ID, self.lookup(question), question)
         self.assertEqual(self.lookup(make_record().question), [FIRST_ID])  # sanity: lookup works
@@ -198,8 +205,7 @@ class TestPublishChangesOnlyTheStoreAndLeavesGitAlone(PublishCase):
         # covers: DK-600d-4
         self.stage()
         self.assertTrue(self.publish().ok)
-        index = read_index(self.folder / INDEX_NAME)
-        self.assertEqual([e.id for e in index], [FIRST_ID])
+        self.assertEqual(self.index_ids(), [FIRST_ID])
         scope = Scope(workspace_id="ws", repository_root=str(self.root))
         found = find_precedents(FileColonyMemory(self.root, self.run_root), make_record().question,
                                 scope, [], load_kernel_config().memory)

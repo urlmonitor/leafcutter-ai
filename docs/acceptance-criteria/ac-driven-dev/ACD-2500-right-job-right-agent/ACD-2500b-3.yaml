@@ -93,3 +93,15 @@ notes: |
   findable for the later must_catch work, which can choose to re-design them. Flagged as
   an open question for the user in the BA report.
   Counts measured with a grep over the store on 2026-09-25; they drift.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: scan
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

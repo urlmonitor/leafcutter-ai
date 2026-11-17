@@ -1,0 +1,253 @@
+id: KM-500a-4-vii
+title: S1 is scored per category against thresholds frozen before scoring, with every denominator shown
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given these S1 thresholds are fixed with the set before any scored run:
+    explicit_known_operation: 100% of cases match deterministically, with 0 Jev calls beyond the deterministic validation
+    injected_provider_failure, injected_denied and injected_budget_exhausted cases reported as missing_query: 0 allowed
+    missing-query precision, over the cases the system reported as missing_query: at least 95%
+    clarification recall, over missing_typed_input and ambiguous_population: at least 90%
+    unnecessary clarification, over fully_specified_no_clarification: at most 10%
+    selection accuracy, over one_suitable_query and several_plausible_one_correct: at least 90%
+    selection_uncertain share, over one_suitable_query and several_plausible_one_correct: at most 10%
+  When a run is scored
+  Then the report gives each category's result as a numerator over a denominator, and each threshold verdict names the categories and the denominator it was computed over
+  And selection_uncertain outcomes are counted in their own column, as neither correct nor wrong, and the selection result shows the accuracy over decided cases beside the selection_uncertain count and its share of the selection cases
+  And a selection_uncertain share above 10% of the selection cases fails the selection threshold even when accuracy over decided cases is at least 90%
+  And a single injected failure, denial or exhausted budget reported as missing_query fails that threshold whatever the other figures are
+  And a threshold whose denominator is 0, for example missing-query precision when the system reported no missing_query at all, has the verdict not_run, never pass
+  And a threshold changed after a scored run invalidates comparison with that run until the set and thresholds are fixed again
+  And an explicit_known_operation case with even one extra Jev call fails that threshold although its selected operation is correct.
+depends_on:
+- KM-500a-4
+- KM-500a-4-i
+- KM-500a-4-ii
+- KM-500a-4-iv
+- KM-500a-4-v
+- KM-500a-4-x
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires thresholds frozen before scoring and unavailable/denied/exhausted never counted as correct
+    missing-query decisions.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-3.yaml
+  relationship: context
+  status: exists
+  relevance: Missing query versus missing input versus failed retrieval, the distinction the zero-tolerance threshold
+    measures.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing rule; every figure states its denominator and method.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: knowledge/evaluation_scoring.py
+  state: to_be_created
+it_requirements:
+- "Thresholds are read from policy.json, whose sha256 is fixed in set.lock.json (format KM-500a-4-v, committed by the S1 data run KM-500a-4-x). The scorer holds no threshold literals of its own, so the frozen file is the single source; a run report records the policy hash it was scored under."
+- "The scorer is a pure function in neutral knowledge/ over per-case results (outcome, category, Jev call count) and the oracle. It is opened only after all actual results exist, makes no I/O of its own beyond reading the frozen files, and never reruns a case."
+- "Every figure is a numerator over a denominator, and every threshold verdict names the categories and the denominator it used (ACS-1100 standing rule). Missing-query precision is computed over cases the system reported missing_query; clarification recall over missing_typed_input plus ambiguous_population; unnecessary clarification over fully_specified_no_clarification; selection accuracy over decided one_suitable_query plus several_plausible_one_correct cases."
+- "selection_uncertain is its own column, counted as neither correct nor wrong; the selection result shows accuracy over decided cases beside the uncertain count and its share. The user set a ceiling at the final gate on 2026-11-17: an uncertain share above 10% of the selection cases fails the selection threshold whatever the accuracy over decided cases. The ceiling lives in policy.json with the other thresholds and is hashed into the lock."
+- "Zero-tolerance rules are exact: one injected failure, denial or exhausted budget reported as missing_query fails that threshold; one extra Jev call on an explicit_known_operation case fails that threshold; an unknown (null) call count cannot pass it. A threshold whose denominator is 0 has verdict not_run, never pass."
+- "Comparison across runs is allowed only when both reports carry the same policy hash; a threshold changed after a scored run invalidates the comparison until the set and thresholds are frozen again."
+- "Only all-real results (KM-500a-4-ii) receive threshold verdicts for model-judged categories; scripted results in those categories are reported without a verdict."
+test_required: true
+test_intent:
+- clause: "the report gives each category's result as a numerator over a denominator, and each threshold verdict names the categories and the denominator it was computed over"
+  needs_test: true
+  reason: The per-category arithmetic and the verdict attribution are computed and easy to get wrong.
+- clause: "selection_uncertain outcomes are counted in their own column, as neither correct nor wrong, and the selection result shows the accuracy over decided cases beside the selection_uncertain count and its share of the selection cases"
+  needs_test: true
+  reason: Counting uncertain as wrong or as right changes the accuracy figure without any visible error.
+- clause: "a selection_uncertain share above 10% of the selection cases fails the selection threshold even when accuracy over decided cases is at least 90%"
+  needs_test: true
+  reason: Without this check a selector that answers selection_uncertain on every hard case passes on accuracy alone; only a run with high decided accuracy and an uncertain share over the ceiling shows the check is applied.
+- clause: "a single injected failure, denial or exhausted budget reported as missing_query fails that threshold whatever the other figures are"
+  needs_test: true
+  reason: A rate-based implementation would let one zero-tolerance miss pass, which only a single-miss test catches.
+- clause: "a threshold whose denominator is 0, for example missing-query precision when the system reported no missing_query at all, has the verdict not_run, never pass"
+  needs_test: true
+  reason: A vacuous pass on an empty denominator is the classic false green this clause forbids.
+- clause: "a threshold changed after a scored run invalidates comparison with that run until the set and thresholds are fixed again"
+  needs_test: true
+  reason: The invalidation is computed from the policy hash and would otherwise let thresholds be moved to fit results.
+- clause: "an explicit_known_operation case with even one extra Jev call fails that threshold although its selected operation is correct"
+  needs_test: true
+  reason: The call-count rule is independent of correctness, and a check on correctness alone would miss it.
+test_spec:
+- name: test_scored_report_gives_numerator_over_denominator_and_names_each_threshold_basis
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Score a hand-built per-case result list against an oracle and a policy.json in tmp_path; each category is numerator over denominator equal to hand counts, each threshold verdict names its categories and denominator (missing-query precision over reported missing_query, recall over missing_typed_input plus ambiguous_population, unnecessary clarification over fully_specified_no_clarification), and the scorer holds no threshold literal so changing the policy file changes the verdict.
+  proves_clause: the report gives each category's result as a numerator over a denominator, and each threshold verdict names the categories and the denominator it was computed over
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a threshold literal hard-coded in the scorer rather than read from policy.json
+    - a verdict that names no denominator
+- name: test_selection_uncertain_is_its_own_column_neither_correct_nor_wrong
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With 20 selection cases of which 14 correct, 2 wrong and 4 selection_uncertain, accuracy over decided cases is 14 of 16, the uncertain count is 4 and its share is 0.2; counting uncertain as wrong gives 14 of 20 and as right 18 of 20, and both must fail the test.
+  proves_clause: selection_uncertain outcomes are counted in their own column, as neither correct nor wrong, and the selection result shows the accuracy over decided cases beside the selection_uncertain count and its share of the selection cases
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - selection_uncertain counted as wrong in the accuracy denominator
+    - selection_uncertain counted as correct
+    - the uncertain share left out of the selection result
+- name: test_uncertain_share_above_ten_percent_fails_selection_despite_high_decided_accuracy
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With 20 selection cases of which 15 correct, 0 wrong and 5 selection_uncertain, accuracy over decided cases is 15 of 15 (100%) but the uncertain share is 5 of 20 (25%), so the selection threshold fails and the verdict names the uncertain ceiling; with 18 correct, 0 wrong and 2 selection_uncertain (share 10%) it passes, which pins the boundary as at most 10%.
+  proves_clause: a selection_uncertain share above 10% of the selection cases fails the selection threshold even when accuracy over decided cases is at least 90%
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - selection judged on decided accuracy alone, so an all-uncertain-on-hard-cases selector passes
+    - the ceiling applied as strictly below 10% instead of at most 10%
+    - the ceiling hard-coded in the scorer instead of read from policy.json
+- name: test_single_injected_failure_reported_as_missing_query_fails_whatever_the_rest
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 100 otherwise perfect results plus one injected_provider_failure case reported as missing_query; the zero-tolerance threshold fails, and the same holds for one injected_denied and one injected_budget_exhausted case.
+  proves_clause: a single injected failure, denial or exhausted budget reported as missing_query fails that threshold whatever the other figures are
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a rate-based check that lets one miss in 100 pass
+    - a zero-tolerance threshold evaluated only for provider failure
+- name: test_zero_denominator_threshold_is_not_run_never_pass
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A run in which the system reported no missing_query at all gives the missing-query precision threshold the verdict not_run, and an absent category gives not_run for its threshold; no empty denominator yields pass.
+  proves_clause: a threshold whose denominator is 0, for example missing-query precision when the system reported no missing_query at all, has the verdict not_run, never pass
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a vacuous pass on an empty denominator
+    - 0 of 0 reported as 100 percent
+- name: test_changed_threshold_invalidates_comparison_with_the_earlier_run
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Two scored reports with different policy_sha256 are refused for comparison with an invalidation reason; the same policy hash compares; a threshold edited in policy.json after a scored run changes the recomputed hash and invalidates the earlier run.
+  proves_clause: a threshold changed after a scored run invalidates comparison with that run until the set and thresholds are fixed again
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - thresholds moved to fit results with the comparison still allowed
+    - the policy hash taken from the report instead of recomputed from the file
+- name: test_one_extra_jev_call_fails_explicit_operation_threshold_even_when_correct
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: An explicit_known_operation case with the correct operation and jev_calls 1 beyond deterministic validation fails the 100 percent and 0 extra calls threshold; a case with jev_calls None (unknown) also fails it; only 0 extra calls passes.
+  proves_clause: an explicit_known_operation case with even one extra Jev call fails that threshold although its selected operation is correct
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - an unknown jev_calls passing a zero-extra-calls threshold
+    - the threshold judged on operation correctness alone
+- name: test_scripted_results_in_model_judged_categories_get_no_verdict
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Scripted-labelled results in the selection and clarification categories are reported with counts but no threshold verdict; only all-real results receive one.
+  proves_clause: selection_uncertain outcomes are counted in their own column, as neither correct nor wrong, and the selection result shows the accuracy over decided cases beside the selection_uncertain count and its share of the selection cases
+  code_file: knowledge/evaluation_scoring.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a scripted judgment scored against the 90 percent selection threshold
+- name: test_scored_report_is_reachable_from_knowledge_cli
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the sibling kernel-path command of integrations/knowledge_cli.py as a subprocess over a tmp_path frozen S1 copy and assert the printed report holds categories, selection, thresholds and policy_sha256.
+  proves_clause: the report gives each category's result as a numerator over a denominator, and each threshold verdict names the categories and the denominator it was computed over
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- integrations/knowledge_cli.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+delivers_to:
+- agent: python-coder
+  contract: 'Scored report {categories {name: {numerator int, denominator int}}, selection {decided_correct int, decided int, selection_uncertain int, uncertain_share float},
+    thresholds [{name str, categories [str], numerator int, denominator int, verdict pass|fail|not_run}], policy_sha256 str}.'
+- agent: documentation-expert
+  contract: The frozen threshold list with each threshold's categories and denominator and the separate selection_uncertain column, for the how-to.
+expects_from:
+- ac_id: KM-500a-4-i
+  contract: Per-case outcome kind and Jev call counts.
+- ac_id: KM-500a-4-iv
+  contract: Category label per case.
+- ac_id: KM-500a-4-ii
+  contract: Per-case evidence label (scripted|mixed|real|synthetic) and the run's real-model sections, so only all-real results receive
+    threshold verdicts in model-judged categories and scripted results in those categories are reported without a verdict.
+- ac_id: KM-500a-4-x
+  contract: Committed oracle.json and set.lock.json from the S1 data run; the lock fixes the policy.json hash the thresholds are read under,
+    and no S1 verdict is given without the committed lock.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Thresholds copied from audit 2026-11-16 section 3.4 (S1) and the user request. Open point for the user: with
+  selection_uncertain kept out of the accuracy denominator, a selector that answers selection_uncertain on every hard
+  case can still reach 90% over decided cases. This record shows the uncertain share next to the accuracy so that is
+  visible, but it sets no ceiling on it because none was given. A ceiling needs a user decision before the thresholds
+  are frozen. Draft. OPEN QUESTION FOR THE USER (decided at the final plan-feature gate, not by the BA or the IT PO):
+  should the selection threshold also cap the share of selection cases answered selection_uncertain, and if so, at
+  what percentage? Until the user answers, no ceiling exists, and the S1 thresholds must not be frozen with one
+  invented. BA 2026-11-17: KM-500a-4-ii added to depends_on so it matches the it_requirements reliance on all-real
+  results; no cycle, because KM-500a-4-ii depends only on KM-500a-4 and KM-500a-4-i. IT PO 2026-11-17: expects_from
+  KM-500a-4-ii added to match that depends_on (producer side added to KM-500a-4-ii delivers_to). expects_from
+  KM-500a-4-x added, because the scorer scores against the frozen S1 oracle and the lock-fixed policy hash; the BA
+  should add the matching depends_on KM-500a-4-x. No cycle: KM-500a-4-x depends only on KM-500a-4, KM-500a-4-iv and
+  KM-500a-4-v. The selection_uncertain ceiling question above stays open for the user; the IT PO did not decide it, and
+  the S1 lock cannot be written until it is answered. DECIDED 2026-11-17 at the final plan-feature gate by the user:
+  the selection_uncertain share is capped at 10% of the selection cases (at most 10%); above it the selection
+  threshold fails whatever the decided accuracy. Added to criteria, it_requirements, test_intent and test_spec;
+  the open question above is closed.'

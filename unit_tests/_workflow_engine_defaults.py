@@ -107,6 +107,19 @@ def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
 
 
 
+_MAKER_PATH_PROBE_LABEL = "resolve-maker-path"
+_MARKER_PROBE_LABEL = "read-workspace-marker"
+# A handed-in workspace's marker (<workspace>/<output root>/workspace.json): names the project it belongs to.
+_MARKER_PROBE_DEFAULT_REPLY = {
+    "command": "cat workspace.json", "exit_status": 0,
+    "stdout": json.dumps({"project_root": "/tmp/harness-default-repo"}), "stderr": "",
+}
+_MAKER_PATH_PROBE_DEFAULT_REPLY = {
+    "command": "git rev-parse --path-format=absolute --git-common-dir", "exit_status": 0,
+    "stdout": "/tmp/harness-default-repo/.git\n", "stderr": "",
+}
+
+
 def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     """Return baseline label_responses every caller of `script_path` implicitly needs.
 
@@ -124,6 +137,10 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     `args`, not a label — see _default_args_for_script() (ACD-2100b-5).
     """
     defaults = _workspace_step_default_responses(script_path)
+    if defaults:
+        # BO-4300a-1-ia: a workflow with a workspace step first dispatches the one `resolve-maker-path` probe
+        # (git common dir) so every maker command is absolute; it answers with a repository.
+        defaults = {_MAKER_PATH_PROBE_LABEL: _MAKER_PATH_PROBE_DEFAULT_REPLY, _MARKER_PROBE_LABEL: _MARKER_PROBE_DEFAULT_REPLY, **defaults}
     if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
         return {
             **defaults,

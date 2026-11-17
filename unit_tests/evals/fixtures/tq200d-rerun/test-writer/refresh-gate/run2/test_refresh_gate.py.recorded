@@ -1,0 +1,33 @@
+import unittest
+
+from refresh_gate import should_refresh
+
+
+class TestShouldRefresh(unittest.TestCase):
+    def test_refresh_runs_when_both_due(self):
+        # covers: TQ-9201
+        # angle: criterion
+        self.assertTrue(should_refresh(refresh_due=True, retry_due=True))
+
+    def test_no_refresh_when_retry_not_due(self):
+        # covers: TQ-9201
+        # angle: discrimination
+        # Catches reverting to the old gate `if refresh_due:`, which ignores
+        # retry_due and would wrongly return True here.
+        self.assertFalse(should_refresh(refresh_due=True, retry_due=False))
+
+    def test_no_refresh_when_refresh_not_due(self):
+        # covers: TQ-9201
+        # angle: discrimination
+        # Catches a wrong `if refresh_due or retry_due:` version, which
+        # would wrongly return True here.
+        self.assertFalse(should_refresh(refresh_due=False, retry_due=True))
+
+    def test_no_refresh_when_neither_due(self):
+        # covers: TQ-9201
+        # angle: boundary
+        self.assertFalse(should_refresh(refresh_due=False, retry_due=False))
+
+
+if __name__ == "__main__":
+    unittest.main()

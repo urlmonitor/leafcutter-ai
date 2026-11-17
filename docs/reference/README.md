@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-10-20
+last_updated: 2026-10-23
 components:
   - documentation_system
 related_docs:
@@ -28,7 +28,7 @@ list â€” it cannot group related pages or say more about a page than its ow
 frontmatter already says.
 
 This file is hand-written and does something the generated index does not: it groups
-the 22 files in this directory by subject, and gives each one a one-line description
+the pages in this directory by subject (`docs/INDEX.md` lists them all, including any not grouped here), and gives each one a one-line description
 written after actually reading the page (not copied from a possibly-generic
 `description:` field). **Neither file supersedes the other** â€” do not delete this one
 as "redundant with `docs/INDEX.md`". If a page's frontmatter `description:` improves,
@@ -48,6 +48,8 @@ below by hand.
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it â€” this index does. |
 
 | [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
+| [description-field-convention.md](description-field-convention.md) | The required `description:` frontmatter field on documentation files: purpose, enforcement hook and backfill script, what to write, and scope. |
+| [knowledge-graph-visualization.md](knowledge-graph-visualization.md) | Output format, invocation and failure exit of `visualise_knowledge_graph.py`. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 | [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
 | [knowledge-retention-evaluation-details.md](knowledge-retention-evaluation-details.md) | Detail sections of the retention evaluation result: active generation, reclaimable bases, entity-node reconciliation, assessment outcome and the read-only condition. |
@@ -91,6 +93,9 @@ below by hand.
 | [fixture-policy.md](fixture-policy.md) | Which test fixtures must be produced by the real serializer, the round-trip requirement for parser/validator tests, and the real-artifact behavioral-check rule. |
 | [proof-claims-and-completeness.md](proof-claims-and-completeness.md) | For each of the seven `# angle:` test-proof kinds: what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | [documentation-coverage-guarantee.md](documentation-coverage-guarantee.md) | How the `documentation_gates` trigger policy, the `documentation-verifier` phase, and the `## Agent Contracts` brief combine to guarantee demanded documentation is real, not a placeholder. |
+| [wrong-version-runs.md](wrong-version-runs.md) | The wrong-version runs before every commit: tests in scope, the wrong versions run, every result word and stop reason, the put-back, the build routes and the /build-epic backstop. |
+| [produced-tests-eval-assertion-kinds.md](produced-tests-eval-assertion-kinds.md) | What an assertion kind of the produced-tests eval is, and the four family pages that hold one entry per kind. |
+| [consumer-test-sweep.md](consumer-test-sweep.md) | The sweep of edits to existing tests: the recorded list, the check, its reasons, and the weakened, loosened, removed and inconclusive items. |
 
 ## Code Review (Code-Smell Pipeline)
 

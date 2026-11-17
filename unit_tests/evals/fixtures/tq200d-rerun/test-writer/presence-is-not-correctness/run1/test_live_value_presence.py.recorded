@@ -1,0 +1,15 @@
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from live_values import live_values
+
+
+class TestLiveValuePresence(unittest.TestCase):
+    def test_every_symbol_has_the_live_value_the_feed_holds(self):
+        # covers: TQ-9303
+        feed = {"AAPL": 190.12, "MSFT": 410.55, "TSLA": 248.50}
+        result = live_values(["AAPL", "MSFT", "TSLA"], feed)
+        self.assertEqual(result["AAPL"], 190.12)
+        self.assertEqual(result["MSFT"], 410.55)

@@ -8,9 +8,9 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 criteria: |
-  Given the /create-ac workflow attempts to commit after a stage approval,
+  Given the /plan-feature workflow attempts to commit after a stage approval,
   And the commit fails because a pre-commit hook rejects the staged files
     (e.g. AC schema validation fails on a malformed YAML file),
   When the workflow detects the non-zero exit code from the commit operation,
@@ -21,7 +21,7 @@ criteria: |
   And all AC files from the failed stage remain on disk as uncommitted changes
     so the user can inspect and correct them.
 
-  Given the /create-ac workflow attempts to commit after a stage approval,
+  Given the /plan-feature workflow attempts to commit after a stage approval,
   And the commit fails because the git index has a conflict
     (e.g. another process modified the same files concurrently),
   When the workflow detects the non-zero exit code,
@@ -30,7 +30,7 @@ criteria: |
   And it does NOT silently retry or force-overwrite the conflicting changes.
 depends_on: [ACD-300g-1]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -50,12 +50,166 @@ it_requirements:
   - "Must preserve all AC files on disk as uncommitted changes after a commit failure"
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the workflow does NOT dispatch the next authoring agent
+  needs_test: true
+  reason: Stopping the pipeline on a failed commit is a branch in the stage loop that a missing status
+    check would skip.
+- clause: it reports the specific hook name and error message to the user
+  needs_test: true
+  reason: The hook name and the error text are carried from the commit outcome into the message, and dropping
+    either leaves a generic failure.
+- clause: it lists the file paths that failed validation
+  needs_test: true
+  reason: The failing file list is copied from the commit outcome into the message, and an empty or wrong
+    list leaves the user guessing.
+- clause: it advises the user to fix the validation errors and re-run the workflow
+  needs_test: true
+  reason: Which advice the user gets depends on the hook-versus-conflict branch, so a wrong branch would
+    give the wrong next step.
+- clause: all AC files from the failed stage remain on disk as uncommitted changes so the user can inspect
+    and correct them
+  needs_test: true
+  reason: The workflow must issue no restore, checkout or delete after a failed commit, and any such call
+    would destroy the stage's files.
+- clause: it reports "index conflict" with the conflicting file paths
+  needs_test: true
+  reason: The conflict branch is chosen from the commit outcome, and a wrong branch would report a hook
+    failure instead of an index conflict.
+- clause: it does NOT silently retry or force-overwrite the conflicting changes
+  needs_test: true
+  reason: Exactly one commit attempt with no retry or force flag is behaviour a retry loop would silently
+    break.
+test_spec:
+- name: test_acd_300g_1_i_hook_rejection_stops_the_pipeline
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Drives the real workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py),
+    strategic route with gate-po approve, commit agent returning status error with hook_name check-ac-schema:
+    no business-analyst dispatch follows and the run returns status error.'
+  proves_clause: the workflow does NOT dispatch the next authoring agent
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the next authoring agent is dispatched after a hook rejection
+- name: test_acd_300g_1_i_message_names_hook_and_its_error
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'formatCommitError via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with hook_name
+    check-ac-schema and message ''criteria assert ... declares_side_effect is not set'': the returned
+    text contains both the hook name and that error text.'
+  proves_clause: it reports the specific hook name and error message to the user
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the message says only 'A pre-commit hook rejected the staged files' when hook_name is set
+  - the hook's own error message is dropped from the user-facing text
+- name: test_acd_300g_1_i_message_lists_failing_files
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'formatCommitError via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with two
+    failing_files: each path appears in the returned text; with failing_files absent the text still renders
+    without a file list.'
+  proves_clause: it lists the file paths that failed validation
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_i_hook_failure_advises_fix_and_rerun
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'formatCommitError via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) on the hook
+    branch (is_conflict false): the text tells the user to fix the validation errors and re-run /plan-feature;
+    the conflict branch does not give this advice.'
+  proves_clause: it advises the user to fix the validation errors and re-run the workflow
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_i_failed_commit_leaves_files_on_disk
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: 'Workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) with a failing
+    commit: no dispatch after the commit carries git restore, git checkout, git reset or rm, the commit
+    instructions say to leave the files as uncommitted changes, and the run''s acs_as_drafts lists the
+    stage''s ids.'
+  proves_clause: all AC files from the failed stage remain on disk as uncommitted changes so the user
+    can inspect and correct them
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_1_i_conflict_reports_index_conflict_and_paths
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 'formatCommitError via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with is_conflict
+    true and a failing path: the text contains ''index conflict'' and the path, and does not claim a hook
+    rejected the files.'
+  proves_clause: it reports "index conflict" with the conflicting file paths
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - an index conflict is reported as a pre-commit hook rejection
+- name: test_acd_300g_1_i_conflict_is_not_retried_or_forced
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: discrimination
+  description: 'Workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py) with a commit
+    agent returning is_conflict true: exactly one commit-stage-output dispatch is recorded, and its instructions
+    forbid a retry and --no-verify and contain no force flag.'
+  proves_clause: it does NOT silently retry or force-overwrite the conflicting changes
+  code_file: templates/workflows-js/plan-feature.js
+  must_catch:
+  - the workflow re-dispatches the commit after a conflict
+  - the commit instructions allow --no-verify or a force overwrite
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/test_commit_stage_output_behavioral.py
+- unit_tests/test_commit_stage_output_staging.py
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/test_partial_run_recovery.py
+- unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: names only — the /plan-feature workflow,
+    not /create-ac; doc_links point at the plan-feature skill (the create-ac skill no
+    longer exists). Behaviour unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_intent recorded,
+    one entry per Then/And outcome clause, each with needs_test and a one-sentence reason. Criteria and
+    readiness unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_spec written
+    for every needs_test clause (with a reachability entry through the real workflow body), grounded in
+    templates/workflows-js/plan-feature.js and the existing plan-feature E2 tests. No declared files,
+    so no file findings. Criteria and readiness unchanged.'
+  date: '2026-10-23'
+  by: test-designer
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/02_TICKET-20260618-ACD-300g-1-i.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

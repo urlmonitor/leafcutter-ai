@@ -86,6 +86,9 @@ it_requirements:
 - All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
   isolated global and system config; afterwards the developer's own repository's branches, registered
   worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+- A dedicated CI job runs every deployed-maker test of this family on every pull request that changes
+  templates/scripts/worktree*.py, templates/scripts/workspace_root.py, the maker's deploy-manifest entries
+  or this family's tests; a test it does not run is reported as not run, never as passed.
 test_required: true
 test_spec:
 - name: test_fault_only_in_deployed_copy_fails_the_suite_naming_the_behaviour
@@ -138,6 +141,10 @@ amended_by:
     branch name as given (legacy spellings, Q4) and defaults to the old way's folder, with an optional
     placement, so BO-4300d-3-i and BO-4300f-3 can prove "never twinned" across the move. readiness stays
     approved.
+- reason: bo4300-hardening-A11
+  by: human:user
+  at: '2026-10-22'
+  note: New IT - a dedicated CI job runs the family's deployed-maker tests on PRs that touch the maker's files.
 superseded_by: null
 covered_by:
 - BO-4300f-4-i
@@ -153,6 +160,11 @@ implemented_by:
 - unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
 - unit_tests/build_orchestration/test_bo_4300f_4.py
 - unit_tests/build_orchestration/test_bo_4300f_4_i.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- scripts/suite_performance/_shared_layout_producer.py
+- unit_tests/build_orchestration/_bo_4300f_2_fixtures.py
+- .github/workflows/ci.yml
+- unit_tests/build_orchestration/test_bo_4300a_1_budgets.py
 notes: |
   F13: most behavioural fast-lane tests exercise the tracked scripts/ copy rather than the
   deployed template, no test runs the template's ac or fast-lane create against a real

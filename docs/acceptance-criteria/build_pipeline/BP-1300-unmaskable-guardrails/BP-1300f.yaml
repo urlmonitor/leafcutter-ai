@@ -1,0 +1,76 @@
+id: BP-1300f
+components:
+  - build_pipeline
+title: "CI's type check stops a pull request for the type errors it adds, never for the ones it inherited"
+component: build-pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  New type errors are caught before they land; old ones never block your change.
+
+  A pull request that adds a type error, or adds a comment that silences one, gets a
+  red type check that names each new error, where it is and how to fix it. Type
+  errors a file already had before the pull request touched it are never charged to
+  the pull request, however far the lines around them moved, and errors it fixes are
+  counted in its favour. When the check had nothing to look at, or could not run, it
+  says so instead of looking like a clean result.
+depends_on: [BP-1300]
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The ratchet shape reused here (what existed is allowed, what is new or worse
+      is refused, no stored baseline), applied to type errors instead of function
+      complexity, and to a pull request against its merge base instead of a commit
+      against its parents.
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: "Job typecheck: informational (continue-on-error) mypy over whole changed files until this record."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - BP-1300f-1
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  The check documents itself where a contributor meets it: the failing job prints
+  each new error with its line and the remedy, the summary line states what was
+  inspected, and the job's comment in .github/workflows/ci.yml states the rule.
+  No how-to or reference page is planned for this slice; one is warranted once the
+  job becomes a required check and the procedure for clearing a red run matters.
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  USER DECISION (BrainCandy, 2026-11-16). mypy findings become blocking as a
+  RATCHET: a pull request fails only for mypy errors it ADDS and for
+  `# type: ignore` comments it adds. Errors that already exist in a file the pull
+  request touches do not block. Other agents clear the existing errors in batches
+  (baseline measured 2026-11-16 over all tracked files: 789 errors in 158 files,
+  371 existing `# type: ignore` lines); this record never fixes existing errors.
+
+  WHY BP-1300. The L0 promises checks that matter block instead of emitting a
+  warning nobody sees. The typecheck job was continue-on-error for exactly the
+  reason this record removes: whole-file mypy charged every pull request for every
+  old error in any file it touched, so the job could only ever be informational.
+
+  WHAT IS NOT YET DONE AT THE L1 LEVEL. "Stops a pull request" is complete only when
+  the job is a required status check. That promotion is deliberately out of scope
+  of the first slice (BP-1300f-1): the user adds it to the required checks once the
+  job runs clean on main. Until then the job's red is visible but does not block a
+  merge, so this L1 stays todo while BP-1300f-1 can be done.

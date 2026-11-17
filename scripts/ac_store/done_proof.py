@@ -177,6 +177,7 @@ from pathlib import Path
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+from project_python import resolve_for_files, with_import_failures  # TQ-500f-3-vi
 from pytest_outcome_reader import (  # TQ-500g-4: the ONE shared reading of a pytest run
     _PYTEST_RUN_INCOMPLETE_SENTINEL,
     describe_subcases,
@@ -204,6 +205,9 @@ from _done_proof_phase_helpers import (
     _split_linked_tests_by_language,
     is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
+# TQ-500f-3-iii: the ONE tag-to-test matcher; legacy names re-exported for direct callers
+from covers_tag_identity import (AMBIGUOUS_PREFIX, _find_nodeid_for_test, _find_nodeids_for_test,  # noqa: F401
+                                 _nodeid_function_name, judge_tag)
 from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
 from _done_proof_composite import (  # noqa: F401  # re-exported for phase helpers
     _has_resolvable_child,
@@ -567,20 +571,13 @@ def _observe_reachability(
     }
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # Deliberately Path(tmp_dir, name) rather than Path(tmp_dir) / name:
-            # the latter's AST shape (a "/"-joined leading-underscore ".py"
-            # string literal) is exactly what BP-900h-4's declaring-files
-            # scanner (_declaring_files_scan._helper_module_declaring_files)
-            # treats as "this guardrail loads a deployed sibling module" and
-            # requires to exist under the deployed tree. This file is a
-            # runtime-only script materialised fresh inside a TemporaryDirectory
-            # and never a deployed sibling of done_proof.py, so it must not
-            # produce that declaring-file entry. Same resulting Path either way.
+            # Path(tmp_dir, name), never Path(tmp_dir) / name: BP-900h-4's declaring-files scanner reads the
+            # "/"-joined "_x.py" shape as a deployed sibling; this runtime-only temp script is not one.
             script_path = Path(tmp_dir, "_reachability_runner.py")
             script_path.write_text(_REACHABILITY_RUNNER_SCRIPT, encoding="utf-8")
             proc = subprocess.run(
                 [
-                    sys.executable,
+                    *resolve_for_files([test_file]).argv,
                     str(script_path),
                     str(test_file),
                     function_name,
@@ -1314,6 +1311,16 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     no such rootdir ancestor exists at all, so the original OS-temp-dir
     fixture motivation above is unchanged.
 
+    TQ-500f-3-vi (2026-10-22): the child runs under the PROJECT's interpreter
+    (``project_python.resolve_for_files``: configured command, else the
+    worktree ``.venv``, else ``uv run``, else ``sys.executable``), not under
+    whatever launched this process — an adopter whose package lives only in
+    its venv otherwise fails every conftest import. An unfinished run's
+    sentinel dict also carries the modules it could not import
+    (``missing_modules``), so a caller can name an un-importable project
+    package instead of reporting "no red". The reachability observation's
+    child runs under the same resolved interpreter.
+
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
     :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
@@ -1350,7 +1357,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     """
     if not test_files:
         return {}
-    cmd = [sys.executable, "-m", "pytest", "-v", "--tb=no", "--no-header"]
+    cmd = [*resolve_for_files(test_files).argv, "-m", "pytest", "-v", "--tb=no", "--no-header"]
     cmd.extend([*_manual_opt_in_args(linked_functions), *(str(f) for f in test_files)])
     child_env = {**os.environ, "AC_ENFORCE_STRICT": "1"}
     timeout_seconds = _resolve_pytest_timeout_seconds(test_files)
@@ -1379,7 +1386,7 @@ def _run_pytest_and_parse(test_files: list[Path], linked_functions: tuple[str, .
     if proc.returncode not in (0, 1):
         message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
+        return with_import_failures({_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, proc)
     return _parse_pytest_verbose_output(proc.stdout, proc.returncode)
 
 
@@ -1437,97 +1444,6 @@ def _collect_linked_tests(ac_id: str, all_tags: list[dict]) -> list[dict]:
 # _done_proof_composite.py and are re-exported by the import near the top.
 
 
-def _nodeid_function_name(nodeid: str) -> str:
-    """Return the bare function/method name a pytest nodeid's final segment names.
-
-    A pytest nodeid's last ``::``-delimited segment is the function (or
-    method) name, optionally followed by a ``[params]`` suffix when the test
-    is parametrized (e.g. ``path::TestClass::test_widget[case1]``). The
-    bracket suffix is stripped FIRST, by splitting on the first ``[``, and
-    only then is the last ``::`` segment taken. This repository parametrizes
-    tests over nodeid strings, so a parameter id can itself legitimately
-    contain ``::`` (e.g. ``test_nodeid[path.py::test_x]``); stripping the
-    bracket first guarantees such a ``::`` is never mistaken for the
-    file/function delimiter. Splitting on the last ``::`` first (before
-    stripping brackets) would instead pick a segment from inside the
-    parameter id, which is the realistic failure mode here -- a parameter id
-    containing ``[`` in the file path is the only way this order fails, and
-    that is pathological rather than realistic.
-
-    Args:
-        nodeid: A pytest nodeid, e.g. ``"path::test_widget[case1]"``.
-
-    Returns:
-        The bare function/method name, e.g. ``"test_widget"``.
-    """
-    base = nodeid.split("[", 1)[0]
-    return base.rsplit("::", 1)[-1]
-
-
-def _find_nodeids_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> list[str]:
-    """Return every pytest nodeid belonging to a function, same-file first.
-
-    A parametrized test (e.g. ``test_b[0]``, ``test_b[1]``, ...) produces
-    multiple nodeids that all share the same bare function name. ACS-200f-2:
-    a caller that inspects only the first match (as the single-nodeid
-    ``_find_nodeid_for_test`` used to do on its own) silently ignores every
-    later case, so a parametrised covering test with one failing case among
-    several passing ones was wrongly read as proof of done. This helper
-    collects the FULL match set so a caller can inspect every case.
-
-    Matching compares *func_name* for exact equality against the nodeid's
-    final ``::``-delimited segment with any trailing ``[params]`` suffix
-    stripped (see :func:`_nodeid_function_name`), never a substring/prefix/
-    ``endswith`` check, so a lookup for ``test_foo`` cannot match an
-    unrelated sibling such as ``test_foo_bar`` or its parametrized form
-    ``test_foo_bar[X]``.
-
-    Same-file precedence is unchanged from the original single-match
-    behaviour: nodeids whose text contains *file_basename* are preferred as
-    a group over name-only matches elsewhere. When at least one same-file
-    match exists, only those are returned; the name-only fallback is used
-    solely when the same-file set is empty.
-
-    Args:
-        func_name: Python function name (e.g. ``"test_foo"``).
-        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
-        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
-
-    Returns:
-        All matching nodeid strings, same-file matches preferred as a group;
-        an empty list if nothing matches.
-    """
-    matches = [nodeid for nodeid in pytest_results if _nodeid_function_name(nodeid) == func_name]
-    return [nodeid for nodeid in matches if file_basename in nodeid] or matches
-
-
-def _find_nodeid_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> str | None:
-    """Find the pytest nodeid for a function, preferring a match in the expected file.
-
-    Built on :func:`_find_nodeids_for_test`'s full match set. ACS-200f-2: when
-    a parametrised test has multiple matching cases, any non-``PASSED`` case
-    makes the function non-passing overall, so the first such non-passing
-    nodeid (in *pytest_results* order, independent of which case pytest
-    happened to report first) is returned instead of whichever case merely
-    matched first. Only when every matched case is ``PASSED`` is the first
-    match returned. This keeps the single-nodeid return contract
-    (:func:`_classify_outcomes` and the fast-lane caller
-    ``_fl_red_baseline_support._resolve_tag_outcome`` both read exactly one
-    nodeid's outcome) correct without either call site needing to change.
-
-    Args:
-        func_name: Python function name (e.g. ``"test_foo"``).
-        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
-        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
-
-    Returns:
-        A matching nodeid string, or ``None`` if no match is found.
-    """
-    matches = _find_nodeids_for_test(func_name, file_basename, pytest_results)
-    default = matches[0] if matches else None
-    return next((nodeid for nodeid in matches if pytest_results[nodeid] != "PASSED"), default)
-
-
 def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     """Return a refusal phrase naming *why* a linked test is not proof of done.
 
@@ -1545,6 +1461,8 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     Returns:
         A phrase such as ``"linked test failed: <nodeid>"``.
     """
+    if nodeid.startswith(AMBIGUOUS_PREFIX):  # TQ-500f-3-iii: names the tag + every candidate
+        return nodeid
     outcome = pytest_results.get(nodeid)
     label = outcome.lower() if outcome else "not run"
     return f"linked test {label}: {nodeid}{describe_subcases(pytest_results, nodeid)}"
@@ -1602,17 +1520,9 @@ def _classify_outcomes(
     passing: list[str] = []
     failing: list[str] = []
     for test in linked_tests:
-        func_name = test["function"]
-        file_basename = Path(test["file"]).name
-        matched = _find_nodeid_for_test(func_name, file_basename, pytest_results)
-        if matched is None:
-            # Could not locate result — treat as non-passing (fail-closed).
-            failing.append(f"{test['file']}::{func_name}")
-            continue
-        if pytest_results[matched] == "PASSED":
-            passing.append(matched)
-        else:
-            failing.append(matched)
+        test_passing, test_failing = judge_tag(test, pytest_results)  # TQ-500f-3-iii
+        passing.extend(test_passing)
+        failing.extend(test_failing)
     return passing, failing
 
 

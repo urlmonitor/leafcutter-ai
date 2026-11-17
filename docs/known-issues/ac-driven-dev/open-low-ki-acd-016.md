@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-11-16'
 components:
   - ac_driven_dev
 related_docs:
@@ -22,8 +22,10 @@ related_docs:
 
 - **Severity:** low
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 2 (2026-11-16: DIAGraph `TICKET-20261022-AGT-300g-1-i.md`, line
+  `AC-22: ... error state for an`; seen while filing
+  KI-ACD-20261116-generator-checklists-given-and-when-preconditions, same function)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-11-16
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `- [ ] AC-N:` checklist
   rendering
 

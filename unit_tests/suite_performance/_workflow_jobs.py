@@ -53,6 +53,7 @@ __all__ = [
     "condition_holds",
     "find_job",
     "load_workflow",
+    "with_live_lane_absent",
 ]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -89,6 +90,17 @@ class JobResult:
 
     def log_text(self):
         return "\n".join(f"--- {name}\n{text}" for name, text in self.logs)
+
+
+def with_live_lane_absent(needs: dict) -> dict:
+    """``needs`` plus the post-merge suite's two live-database jobs as skipped (TQ-600a-13-xxi).
+
+    The ``verdict`` job of ``post-merge-suite.yml`` needs ``live_run`` and ``live_retry``. A test about the correctness lane alone
+    drives a synthetic project with no live folder, so those jobs did not take part: a skipped job with no report is the
+    verdict producer's "the live lane took no part" state, which leaves every correctness-lane field and the verdict as before.
+    The live lane itself is driven for real by the xxi / xxii / xxiii / xxv tests.
+    """
+    return {"live_run": JobResult("live_run", "skipped"), "live_retry": JobResult("live_retry", "skipped"), **needs}
 
 
 # --------------------------------------------------------------------------- the executor

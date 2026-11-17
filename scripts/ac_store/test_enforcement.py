@@ -42,6 +42,7 @@ from __future__ import annotations
 import inspect
 import re
 import sys
+import types
 from pathlib import Path
 
 import yaml
@@ -225,6 +226,9 @@ def extract_covers_tag(item: object) -> str | None:
         is found or the source cannot be retrieved.
     """
     func = getattr(item, "function", item)
+    # the kinds inspect.getsource reads; anything else has no source to read
+    if not (callable(func) or isinstance(func, (types.ModuleType, types.TracebackType, types.FrameType, types.CodeType))):
+        return None
     try:
         source = inspect.getsource(func)
     except (OSError, TypeError):

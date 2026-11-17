@@ -128,8 +128,9 @@ Take the first entry from `READY_LIST` as `CURRENT_ITEM`. Announce:
    absolute path of the deployed `worktree.py` (never a cwd-relative path, never
    chained with another command):
 
+   Run ONE exact command, unchanged, quoting the maker path and every value, and return its stdout verbatim:
    ```bash
-   python <absolute-install-root>/scripts/worktree.py ensure --kind epic --slug <slug> --repo-root <absolute-project-root>
+   python "<absolute-install-root>/scripts/worktree.py" ensure --kind epic --slug "<slug>" --repo-root "<absolute-project-root>"
    ```
 
    `<slug>` is the epic folder's name, lower-cased. The maker is idempotent (a second run

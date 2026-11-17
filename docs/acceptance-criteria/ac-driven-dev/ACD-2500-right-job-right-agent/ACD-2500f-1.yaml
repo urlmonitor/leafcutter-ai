@@ -224,3 +224,15 @@ notes: |
   analysis but already mutates [{name: requirement_records, surface: AC YAML store}];
   config/agent_registry.json mirrors produces: analysis for all three. "requirement_records"
   is already in the closed produces vocabulary (ACD-2500e-1, ticket 41).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: author
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Request
+    source: real
+    asof: '2026-10-23'

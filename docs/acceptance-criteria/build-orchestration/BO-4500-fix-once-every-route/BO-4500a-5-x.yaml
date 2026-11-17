@@ -49,10 +49,14 @@ delivers_to: null
 expects_from:
   ac_id: BO-4500a-5
   contract: "The migrated commit flow as built."
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-10-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill batch A, user decision of 2026-11-01: a diagram label must match a real artefact, so test_required false changed to true. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

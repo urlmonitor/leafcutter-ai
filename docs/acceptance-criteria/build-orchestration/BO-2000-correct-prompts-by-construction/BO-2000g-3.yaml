@@ -1,0 +1,487 @@
+id: BO-2000g-3
+components:
+  - build_orchestration
+  - commit_guardian
+title: "A template lint fails on any comment example whose first body line is not an approved feedback-id line"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g.yaml
+criteria: |
+  Given the package's agent templates and skills (every file in the agent-template tree
+    and the skill tree, at any depth),
+  When the template lint runs as part of the project's automated checks,
+  Then it examines every Comments-heading example in those files. A Comments-heading
+    example is a line that begins, after any indentation and inside or outside a fenced
+    block, with `### `, then a date slot and a time slot, then ` — ` (em-dash), then an
+    agent name and a `(status: ...)` tag. The date and time slots may be digits
+    (`2026-05-08 14:30`), the `YYYY-MM-DD HH:MM` placeholder, or angle-bracket
+    placeholders (`<today> <time>`),
+  And it passes an example only when the line directly under the heading is a
+    `feedback-id:` line whose value is one of:
+      - a concrete feedback id: `fb_`, a date, `_` and eight lowercase hex characters
+        (`fb_2026-05-08_aa112233`);
+      - a real-id placeholder spelling that the signoff skill documents;
+      - the failure fallback exactly as the signoff skill documents it (today
+        `(submit-failed)`);
+      - `(not-a-signoff)`,
+  And it fails on any other example, including one whose feedback-id value is empty,
+    `TBD` or `none`, and it names the file, the line number of the heading, and the
+    text it found on the first body line,
+  And, run against the templates as they stand before BO-2000g-1 and BO-2000g-2, it
+    fails and names at least the python-coder red-baseline example, the test-writer
+    skip entry, the commit audit entry and the signoff skill's failed-path pr-reviewer
+    entry.
+
+  Given a synthetic skill file is placed in the skill tree, containing one example
+    `### 2026-05-08 15:12 — python-coder (status: ok)` followed directly by
+    `Implemented the parser. Tests green.`,
+  When the lint runs,
+  Then it fails and names that file and that heading's line number,
+  And when the line `feedback-id: (not-a-signoff)` is inserted directly under the same
+    heading, the lint passes that file.
+
+  Given the templates and skills after BO-2000g-1 and BO-2000g-2 have landed,
+  When the lint runs,
+  Then it passes,
+  And no template that already opened its examples with `fb_<date>_<short-hash>` or
+    `<fb_id>` fails unless that template is rewritten to a documented spelling in the
+    same change.
+depends_on:
+  - BO-2000g
+  - BO-2000g-1
+  - BO-2000g-2
+doc_links:
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time feedback-id check whose heading recognition the lint must not drift from."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the failure-fallback vocabulary file the lint reads (templates/scripts/feedback/submit_failure_reasons.json)."
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+  - path: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    state: to_be_created
+  - path: unit_tests/prompt_assembly/test_bo_2000g_3.py
+    state: to_be_created
+it_requirements:
+  - >-
+    FORM. The lint is a unit test under unit_tests/prompt_assembly/. It is not a commit hook and
+    not a deployed script, so it gets no hooks_manifest entry and no deploy-map entry. It runs in
+    the ordinary pytest suite, which includes CI's required pytest check. Its enumeration and
+    verdict logic lives in one importable support module, shared with BO-2000g-3-i, BO-2000g-3-ii
+    and BO-2000g-4, so the lint and the proof cover one population.
+  - >-
+    THE POPULATION IS DERIVED ON EVERY RUN. The lint walks templates/agents/ and
+    templates/skills/ to any depth (every .md file) and never holds a list of files or examples.
+    It reports two counts, examples examined and examples exempted. It fails when the examined
+    count is zero, when either tree is missing, or when a file cannot be decoded as UTF-8. A
+    vacuous pass is a defect (KI-ACS-001).
+  - >-
+    THE EXTENT OF AN EXAMPLE IS DEFINED ONCE, in the support module, because BO-2000g-4 appends
+    exactly that extent. Suggested rule: the heading line plus the lines that follow it, up to the
+    first blank line, the end of the fenced block, the next heading, or a line indented less than
+    the heading, whichever comes first. The example's own leading indentation is removed. The rule
+    must hold for the nested and pseudocode layouts in test-writer ~:273, status-checker ~:230,
+    ticket-supervisor ~:373 and building-epics ~:457, :546.
+  - >-
+    ONE HEADING PATTERN WITH THE HOOK. A concrete-date line counts as a heading for the lint
+    exactly when the commit-time check (templates/scripts/commit_guardian/check_feedback_id.py)
+    treats it as a sign-off heading. Take the check's pattern by import, or from a shared constant
+    that both read, never by retyping it. The lint adds only the placeholder date and time
+    spellings (`YYYY-MM-DD HH:MM`, `<today> <time>`). A test asserts on concrete samples that the
+    lint and the check agree, so the two cannot drift. If sharing the pattern needs an edit to
+    check_feedback_id.py, that edit must leave the check's behaviour unchanged and be coordinated
+    with GE-123e, which edits the same file. The IT PO has not read the check's source (ADR-009),
+    so the coder confirms whether the pattern can be imported.
+  - >-
+    ONE SOURCE FOR EACH ACCEPTED VALUE, NO COPIES. (a) The real-id placeholder spellings and the
+    heading-schema-illustration mark are read from the signoff skill's template source
+    (templates/skills/signoff/SKILL.md), where BO-2000g-1 defines them. (b) `(not-a-signoff)` is
+    read from the subsection BO-2000g-2 defines. (c) The concrete id shape and the failure
+    fallback are read from INF-500d-3's vocabulary file,
+    templates/scripts/feedback/submit_failure_reasons.json. That file supplies the real-id
+    pattern, the reasoned-marker pattern (its group 1 is checked against the file's reason ids)
+    and the legacy bare pattern. If a value cannot be found where it is defined, the lint fails
+    and names what is missing. It never falls back to a built-in value.
+  - >-
+    TRANSITION FOR THE FALLBACK. Until the vocabulary file exists (that is, until INF-500d-3
+    lands), the lint accepts two things: the bare `(submit-failed)`, which is the form signoff
+    §2a step 4 documents today, and the concrete id shape the criteria state (`fb_`, a
+    YYYY-MM-DD date, `_`, then eight lowercase hex characters). In this state it also emits a
+    visible pytest warning that names the missing file. Once the file exists in the repository,
+    reading it is mandatory. The bare form is then accepted only through the file's legacy
+    pattern, and an unreadable file, or one missing a pattern, fails the lint. Whether a newly
+    added bare marker is refused at commit is the check-feedback-id change's decision, not this
+    lint's.
+  - >-
+    THE FIRST BODY LINE IS EXACT (BO-2000g-3-i). It is the line directly under the heading, with
+    the example's own indentation removed. A blank line, or any other line, in that position
+    fails, whatever follows it. The lint never copies the hook's two-line window.
+  - >-
+    AN EXEMPTION COMES FROM THE MARK ONLY (BO-2000g-3-ii). It is never inferred from
+    placeholders, from a status tag that lists several values, from the end of a fenced block, or
+    from where the heading sits in its block or file. The mark exempts only the one heading it
+    annotates. A heading quoted in the middle of a sentence, rather than at line start after
+    indentation, is not an example.
+  - >-
+    REPORT. Each failure names the repo-relative file, the 1-based line number of the heading,
+    and the first body line exactly as found (or says it is blank). All failures are reported in
+    one run; the lint never stops at the first. The status tag matches any value, not only the
+    signoff skill's four, so a heading with an unlisted value (as live-surface-tester.md ~:323
+    `(status: skipped)` had until BO-2000g-1 changes it to ok) is still examined.
+  - >-
+    PRE-CORRECTION ARM. The clause about the templates "as they stand before BO-2000g-1 and
+    BO-2000g-2" is proven against a frozen copy of the pre-correction text of the four named
+    examples, kept as test data: python-coder ~:332, test-writer ~:273, commit ~:302 and signoff
+    ~:880, as of 2026-11-16. The lint function runs over that copy on the same code path as the
+    live run. Checking out history is not used.
+  - >-
+    The synthetic files for the second scenario are written to a temporary copy of the skill
+    tree, never into templates/skills/.
+  - >-
+    PERFORMANCE. The lint reads about 130 Markdown files. It must finish in under 5 s, and it
+    spawns no subprocess and no build.py.
+test_intent:
+  - clause: "it examines every Comments-heading example in those files. A Comments-heading example is a line that begins, after any indentation and inside or outside a fenced block, with `### `, then a date slot and a time slot, then ` — ` (em-dash), then an agent name and a `(status: ...)` tag. The date and time slots may be digits (`2026-05-08 14:30`), the `YYYY-MM-DD HH:MM` placeholder, or angle-bracket placeholders (`<today> <time>`)"
+    needs_test: true
+    reason: "A recogniser keyed only on the `YYYY-MM-DD HH:MM` spelling passes the three building-epics `<today> <time>` entries unexamined, two of them proxy sign-offs, and one keyed on unindented lines misses the examples nested in list items."
+  - clause: "it passes an example only when the line directly under the heading is a `feedback-id:` line whose value is one of:"
+    needs_test: true
+    reason: "A lint that checks only that some feedback-id line exists, or that the value is not blank, copies the hook's weakness and lets `TBD` through."
+  - clause: "a concrete feedback id: `fb_`, a date, `_` and eight lowercase hex characters (`fb_2026-05-08_aa112233`)"
+    needs_test: true
+    reason: "A concrete-id rule that accepts uppercase hex, fewer than eight characters or a missing date would accept invented ids."
+  - clause: "a real-id placeholder spelling that the signoff skill documents"
+    needs_test: true
+    reason: "A placeholder list hard-coded in the lint drifts away from the signoff skill, and a lint that accepts any `<...>` text accepts spellings the skill never lists."
+  - clause: "the failure fallback exactly as the signoff skill documents it (today `(submit-failed)`)"
+    needs_test: true
+    reason: "Hard-coding `(submit-failed)` breaks on the day INF-500d-3 changes the documented form, and accepting any text in parentheses would accept `(skipped)`."
+  - clause: "`(not-a-signoff)`"
+    needs_test: true
+    reason: "The value must be accepted exactly, and a close variant such as `(not a signoff)` or the bare word without parentheses must fail."
+  - clause: "it fails on any other example, including one whose feedback-id value is empty, `TBD` or `none`, and it names the file, the line number of the heading, and the text it found on the first body line"
+    needs_test: true
+    reason: "A report without the heading's line number or the text found cannot be acted on, and treating `none` as a fallback is a plausible wrong version."
+  - clause: "run against the templates as they stand before BO-2000g-1 and BO-2000g-2, it fails and names at least the python-coder red-baseline example, the test-writer skip entry, the commit audit entry and the signoff skill's failed-path pr-reviewer entry"
+    needs_test: true
+    reason: "A lint that passes the known violators is vacuous, which is the wrong version this arm exposes."
+  - clause: "it fails and names that file and that heading's line number"
+    needs_test: true
+    reason: "A lint that scans a fixed file list instead of walking the skill tree never sees a newly added file."
+  - clause: "when the line `feedback-id: (not-a-signoff)` is inserted directly under the same heading, the lint passes that file"
+    needs_test: true
+    reason: "This shows the previous failure came from the missing line and not from some other rule tripping on the synthetic file."
+  - clause: "it passes"
+    needs_test: true
+    reason: "The lint must pass on the corrected tree, or it fails every pytest run once it is merged."
+  - clause: "no template that already opened its examples with `fb_<date>_<short-hash>` or `<fb_id>` fails unless that template is rewritten to a documented spelling in the same change"
+    needs_test: true
+    reason: "A lint that accepts only one placeholder spelling would fail the four templates that already comply, which the criteria forbid unless they are rewritten in the same change."
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Consumed by BO-2000g-4. A function in the support module that returns the examined,
+      non-exempt examples, derived on each call from templates/agents/ and templates/skills/. Each
+      record is {file: repo-relative POSIX path, heading_line: int (1-based), heading: str, body:
+      list[str] (the example's extent with its indentation removed)}. The module also provides
+      the accepted-value reader (placeholder spellings, (not-a-signoff), fallback patterns), so
+      the proof fills placeholders from the same list the lint accepts.
+  - agent: python-coder
+    contract: >-
+      Consumed by BO-2000g-3-i and BO-2000g-3-ii. A lint entry point that takes a root directory
+      (the real trees or a temporary copy) and returns {examined: int, exempted: int, failures:
+      [{file: str, heading_line: int, first_body_line: str | null}]}. first_body_line is null
+      when the first body line is blank.
+expects_from:
+  - ac_id: BO-2000g-1
+    contract: >-
+      Corrected phase sign-off examples, plus two definitions in the signoff skill: the
+      documented real-id placeholder spellings (code spans in one subsection) and the explicit
+      heading-schema-illustration mark (a literal token).
+  - ac_id: BO-2000g-2
+    contract: >-
+      The (not-a-signoff) value, defined in one subsection of the signoff skill, and the note
+      examples that open with it.
+  - ac_id: INF-500d-3
+    contract: >-
+      templates/scripts/feedback/submit_failure_reasons.json, holding the real-id pattern
+      ^fb_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9a-f]{8}$, the reasoned-marker pattern
+      ^\(submit-failed:([a-z][a-z0-9-]*):([^\s:()]+)\)$ whose group 1 is one of the file's reason
+      ids, and the legacy bare pattern ^\(submit-failed\)$. The lint reads the file when it is
+      present. The file does not exist until INF-500d-3 lands; the transition rule is in
+      it_requirements.
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - BO-2000g-3-i
+  - BO-2000g-3-ii
+implemented_by: []
+notes: |
+  Why the heading recognition is wider than the KI's wording. The KI says
+  "every `### YYYY-MM-DD HH:MM — ` example". The building-epics skill writes three note
+  headings as `### <today> <time> — ` (:457, :496, :546), including both proxy sign-offs
+  of a skipped phase. A lint keyed only on the YYYY-MM-DD spelling passes them
+  unexamined.
+
+  The lint is a shape check. It cannot tell a note from a phase sign-off, so it accepts
+  `(not-a-signoff)` on any example. Misuse (a phase sign-off example using it) is
+  prevented by BO-2000g-1's last clause and the signoff skill's rule (BO-2000g-2), not by
+  this lint.
+
+  Accepting the fallback "as the signoff skill documents it" keeps this record valid
+  when INF-500d-3 changes the fallback's spelling. Out of scope: the commit-time hook's
+  own value check, and removing the [NO-FEEDBACK-CHECK] bypass (GE-123).
+
+  Observed and NOT in scope: live-surface-tester.md:323 uses `(status: skipped)`, which
+  is outside the signoff skill's four status values. The lint keys on `(status: ...)` with
+  any value, so it still examines that example.
+test_spec:
+  - name: test_recogniser_finds_digit_placeholder_indented_and_fenced_headings
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Synthetic skill files in a tmp_path copy of the tree. The recogniser examines headings with
+      digit dates, the YYYY-MM-DD HH:MM placeholder and the <today> <time> placeholder, indented
+      (list item, 13-space pseudocode) and unindented, inside and outside a fence, with any status
+      value including skipped. It does not examine a heading quoted mid-sentence. Counts examined
+      and exempted are reported.
+    proves_clause: 'it examines every Comments-heading example in those files. A Comments-heading example is a line that begins, after any indentation and inside or outside a fenced block, with `### `, then a date slot and a time slot, then ` — ` (em-dash), then an agent name and a `(status: ...)` tag. The date and time slots may be digits (`2026-05-08 14:30`), the `YYYY-MM-DD HH:MM` placeholder, or angle-bracket placeholders (`<today> <time>`)'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_lint_and_commit_hook_agree_on_concrete_date_headings
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The hook's _HEADING_RE is taken by importing templates/scripts/commit_guardian/check_feedback_id.py
+      from its file path (never retyped). On concrete unindented samples the lint and the hook agree on
+      heading or not heading, so the two cannot drift. The hook pattern is anchored at line start with
+      no indentation, so indented concrete lines are a documented difference to assert explicitly.
+    proves_clause: 'it examines every Comments-heading example in those files. A Comments-heading example is a line that begins, after any indentation and inside or outside a fenced block, with `### `, then a date slot and a time slot, then ` — ` (em-dash), then an agent name and a `(status: ...)` tag. The date and time slots may be digits (`2026-05-08 14:30`), the `YYYY-MM-DD HH:MM` placeholder, or angle-bracket placeholders (`<today> <time>`)'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_example_passes_only_when_first_body_line_is_an_approved_feedback_id
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Table of first-body-lines against the lint verdict: no feedback-id line, a blank first line,
+      feedback-id with an empty value, TBD, none and a prose line all fail. A feedback-id line one
+      line down fails. Each accepted kind passes only through its own source.
+    proves_clause: 'it passes an example only when the line directly under the heading is a `feedback-id:` line whose value is one of:'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that only checks some feedback-id line exists anywhere in the example
+      - a lint that accepts any non-blank value after feedback-id as the hook does
+      - a lint that accepts the id within the two-line window the hook uses
+  - name: test_concrete_id_shape_is_exact
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      fb_2026-05-08_aa112233 passes. Uppercase hex, seven or nine hex characters, a missing or
+      malformed date, a missing fb_ prefix and trailing text all fail.
+    proves_clause: 'a concrete feedback id: `fb_`, a date, `_` and eight lowercase hex characters (`fb_2026-05-08_aa112233`)'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_placeholder_spellings_are_read_from_the_signoff_skill
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The accepted placeholders come from the code spans in the signoff skill's placeholder
+      subsection (read from a tmp_path copy of the skill). A spelling added to the copied skill is
+      accepted, one removed from it is rejected, an unlisted <anything> is rejected, and a skill
+      without the subsection makes the lint fail loudly naming what is missing and never fall back
+      to a built-in list.
+    proves_clause: 'a real-id placeholder spelling that the signoff skill documents'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a placeholder list hard-coded in the lint
+      - a lint that accepts any angle-bracket text as a placeholder
+      - a lint that silently falls back to a built-in list when the skill has no list
+  - name: test_fallback_form_comes_from_vocabulary_file_or_transition_rule
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      templates/scripts/feedback/submit_failure_reasons.json does not exist today. In that state the
+      bare (submit-failed) passes and a visible pytest warning names the missing file (pytest.warns),
+      while (skipped) and other parenthesised text fail. With a tmp_path root that holds the file, the
+      patterns are read from it: the reasoned form passes only when group 1 is a listed reason id, the
+      bare form only through the legacy pattern, and an unreadable or pattern-less file fails the lint.
+    proves_clause: 'the failure fallback exactly as the signoff skill documents it (today `(submit-failed)`)'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that hard-codes (submit-failed) and ignores the vocabulary file once it exists
+      - a lint that accepts any parenthesised text such as (skipped) as a fallback
+      - a lint that emits no warning while the vocabulary file is missing
+      - a lint that tolerates an existing but unparseable vocabulary file
+  - name: test_not_a_signoff_is_accepted_exactly_and_variants_fail
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      feedback-id: (not-a-signoff) passes. (not a signoff), not-a-signoff without parentheses,
+      (Not-A-Signoff) and (not-a-signoff) with trailing text all fail. The value is read from the
+      subsection BO-2000g-2 defines and the lint fails loudly if that subsection is missing.
+    proves_clause: '`(not-a-signoff)`'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_failures_name_file_heading_line_and_found_text_and_all_are_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A tmp_path tree with several violations (empty value, TBD, none, blank first line) returns every
+      failure in one run as {file, heading_line, first_body_line} with the repo-relative POSIX path, the
+      1-based heading line and the first body line exactly as found, null for a blank one. The lint
+      never stops at the first failure.
+    proves_clause: 'it fails on any other example, including one whose feedback-id value is empty, `TBD` or `none`, and it names the file, the line number of the heading, and the text it found on the first body line'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_pre_correction_text_of_the_four_named_examples_fails_and_is_named
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A frozen copy of the 2026-11-16 pre-correction text of python-coder (red_baseline_results:
+      block), test-writer skip, commit audit entry and signoff 6.2 pr-reviewer entry is kept as test
+      data, written into a tmp_path tree and run through the same lint function as the live run. Each
+      of the four is reported by file and heading line. History is not checked out.
+    proves_clause: 'run against the templates as they stand before BO-2000g-1 and BO-2000g-2, it fails and names at least the python-coder red-baseline example, the test-writer skip entry, the commit audit entry and the signoff skill''s failed-path pr-reviewer entry'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that passes the known violators and so is vacuous
+      - a lint that names only the first of the four violators
+      - a pre-correction arm that runs a different code path than the live run
+  - name: test_a_new_skill_file_is_found_by_walking_the_tree_and_fails_by_name
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      A tmp_path copy of the skill tree gets a synthetic skill file holding
+      ### 2026-05-08 15:12 — python-coder (status: ok) then Implemented the parser. Tests green.
+      The lint fails and names that relative file and the heading's line number. The real templates/skills/
+      is never written.
+    proves_clause: 'it fails and names that file and that heading''s line number'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_inserting_not_a_signoff_under_the_same_heading_makes_the_file_pass
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The same synthetic file with feedback-id: (not-a-signoff) inserted directly under the heading
+      passes, and no other failure appears for that file.
+    proves_clause: 'when the line `feedback-id: (not-a-signoff)` is inserted directly under the same heading, the lint passes that file'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_lint_passes_on_the_real_trees_and_never_passes_vacuously
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Runs the lint on the real templates/agents/ and templates/skills/ trees, freshly walked, and
+      expects no failures. It also fails when examined is zero, when either tree is missing, and when a
+      file is not valid UTF-8 (tmp_path trees). It finishes in under 5 s and spawns no subprocess or
+      build.py. It is red until BO-2000g-1 and BO-2000g-2 land.
+    proves_clause: 'it passes'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that reports success when it examined zero examples
+      - a lint that keeps a list of files and so skips a newly added template
+      - a lint that silently skips a file it cannot decode
+      - a lint that passes when templates/skills/ is missing
+  - name: test_templates_with_fb_date_hash_or_fb_id_spellings_do_not_fail
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      After BO-2000g-1 the live-surface-tester (fb_<date>_<short-hash>) and write-c4-diagram (<fb_id>)
+      examples produce no failure in the lint of the real trees, unless the template was rewritten to a
+      documented spelling. Asserted per named file, so a lint that accepts only one spelling fails here.
+    proves_clause: 'no template that already opened its examples with `fb_<date>_<short-hash>` or `<fb_id>` fails unless that template is rewritten to a documented spelling in the same change'
+    code_file: templates/agents/live-surface-tester.md
+  - name: test_lint_tests_are_collected_by_pytest_with_the_repo_configuration
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs python -m pytest --collect-only -q on unit_tests/prompt_assembly/test_bo_2000g_3.py as a
+      subprocess from the repo root (pytest.ini applies, strict markers on), so the lint is shown to
+      run in the ordinary suite. Asserts exit 0 and that the lint test ids appear. It does not execute
+      the tests, which avoids recursion, and spawns no build.py.
+    proves_clause: 'it passes'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - templates/skills/signoff/SKILL.md
+  - templates/skills/building-epics/SKILL.md
+  - templates/agents/live-surface-tester.md
+  - templates/skills/write-c4-diagram/SKILL.md
+  - templates/agents/python-coder.md
+  - templates/agents/test-writer.md
+  - templates/agents/commit.md
+  - templates/agents/_signoff_block.md
+  - unit_tests/prompt_assembly/test_signoff_block_protocol.py

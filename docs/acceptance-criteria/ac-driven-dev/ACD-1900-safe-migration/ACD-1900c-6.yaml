@@ -40,10 +40,14 @@ it_requirements:
   - "The flip condition is EXACTLY ADR-026 non-negotiable rule 5: enforce=true AND zero in-flight fat tickets. When enforce=false OR one or more fat tickets remain, retain the dual-read / advisory fallback authored in ACD-1900b-5 (do not block). Read the enforce flag from config/guardrail_gates.yaml (ac_unit_of_work.enforce) consistent with the enforce-enable guard ACD-1900c-3, and derive the fat-ticket condition from the live inventory (data-driven), never a hard-coded flag."
   - "Supersession-safe co-existence: this is the enforce-side twin of the read-side dual-read gate ACD-1900b-5. Do NOT remove the read-side dual-read path -- both co-exist across the cutover window; the skip path is only retired at enforce after fat tickets drain."
   - "No executable pytest surface is authored here (agent-template prose change) -- see test_required. Per CLAUDE.md 'Gate/Workflow ACs verify behaviorally', behavioral correctness is proven by an ADR-026 rule-7 real-thin-ticket spot-check that runs the gate under both states -- (enforce=true + zero fat -> blocker) and (enforce=false OR fat present -> advisory/no-block) -- never grep-only."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

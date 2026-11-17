@@ -191,6 +191,7 @@ class TestCIWorkflowDefinition(unittest.TestCase):
             "proof-of-done job must exist in ci.yml before its checkout step "
             "can be verified.  Add the job first.",
         )
+        assert isinstance(done_proof_job, dict)
 
         steps = done_proof_job.get("steps", [])
         checkout_steps = [
@@ -218,6 +219,7 @@ class TestCIWorkflowDefinition(unittest.TestCase):
             "proof-of-done job must exist in ci.yml before its build step "
             "can be verified.  Add the job first.",
         )
+        assert isinstance(done_proof_job, dict)
 
         steps = done_proof_job.get("steps", [])
         build_steps = [
@@ -248,6 +250,7 @@ class TestCIWorkflowDefinition(unittest.TestCase):
             "proof-of-done job must exist in ci.yml before its check step "
             "can be verified.  Add the job first.",
         )
+        assert isinstance(done_proof_job, dict)
 
         steps = done_proof_job.get("steps", [])
         check_steps = [
@@ -290,6 +293,7 @@ class TestCIVerdictCommittedStateOnly(unittest.TestCase):
             done_proof_job,
             "proof-of-done job must exist in ci.yml.  Add the job first.",
         )
+        assert isinstance(done_proof_job, dict)
 
         steps = done_proof_job.get("steps", [])
 
@@ -305,6 +309,7 @@ class TestCIVerdictCommittedStateOnly(unittest.TestCase):
             "The proof-of-done CI job must include an actions/checkout step "
             "so the verdict is based on committed branch content only.",
         )
+        assert isinstance(checkout_index, int)
 
         # No 'run' step must appear before the checkout (would read uncommitted state)
         run_steps_before_checkout = [

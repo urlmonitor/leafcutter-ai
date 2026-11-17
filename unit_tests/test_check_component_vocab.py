@@ -18,7 +18,9 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 import check_component_vocab as ccv  # noqa: E402
 
-_REGISTRY = {"components": {"knowledge_system": {}, "ac_store": {}, "build_orchestration": {}}}
+_REGISTRY: dict[str, dict[str, dict[str, object]]] = {
+    "components": {"knowledge_system": {}, "ac_store": {}, "build_orchestration": {}}
+}
 
 
 def _make_repo(tmp: Path) -> Path:

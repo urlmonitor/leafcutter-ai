@@ -28,7 +28,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from unit_tests._workflow_engine_harness import run_workflow_under_e2, workspace_answer_of  # noqa: E402
+from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests._workflow_engine_workspace import workspace_answer_of  # noqa: E402
 from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
@@ -119,7 +120,7 @@ class TestNewLocationIsNamedByTheWorkflow(unittest.TestCase):
             workspace_calls = _workspace_calls(result)
             self.assertEqual(len(workspace_calls), 1, f"stderr={result.stderr!r}")
             commands.append(workspace_calls[0].prompt or "")
-            self.assertIn(f"--slug {_SLUG}", commands[-1])
+            self.assertIn(f'--slug "{_SLUG}"', commands[-1])
             planner = _ticket_planner_calls(result)
             self.assertTrue(planner, f"stderr={result.stderr!r}")
             self.assertIn(bfx.NAMED_LOCATION, planner[0].prompt or "")
@@ -212,7 +213,7 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         named = _run(bfx.success_label_responses(ticket_paths=[TICKET]))
         workspace_calls = _workspace_calls(named)
         self.assertTrue(workspace_calls)
-        self.assertIn(f"--slug {_SLUG}", workspace_calls[0].prompt or "")
+        self.assertIn(f'--slug "{_SLUG}"', workspace_calls[0].prompt or "")
 
 
 if __name__ == "__main__":

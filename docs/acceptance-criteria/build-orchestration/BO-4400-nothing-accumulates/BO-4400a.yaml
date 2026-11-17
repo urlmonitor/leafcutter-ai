@@ -1,5 +1,5 @@
 id: BO-4400a
-title: "Every run clears its own workspace as soon as its work is up for review"
+title: "Every run's workspace is cleared as soon as its work has landed"
 component: build-orchestration
 components:
   - build_orchestration
@@ -14,12 +14,16 @@ roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
 criteria: |
-  Work handed over for review means the workspace is gone -- no wrap-up step needed.
+  Once your work lands, its workspace is gone -- no wrap-up step needed.
 
   Whichever route did the work, its workspace is cleared through the one shared door
-  the moment the work has safely reached the team, at the latest right after it is
-  put up for review; a run that stopped or failed keeps its work and is listed so it
-  can be reclaimed once nothing unsent remains, and the older ways of clearing are gone.
+  once that work has landed on the shared main line -- by the run itself when the work
+  lands before the run ends or there was nothing to deliver, and otherwise by the
+  routine landed-work pass with no one having to step in. A run that stopped or failed
+  keeps its work and is listed, and once nothing unsent remains the landed-work pass
+  clears its workspace as soon as its work lands or after 14 days with no change,
+  because work already sent stays safe on the shared project; the older ways of
+  clearing are gone.
 depends_on: [BO-4400]
 doc_links: []
 assigned_agent: null
@@ -28,7 +32,25 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16: a workspace is cleared once its
+      work has landed on the main line (its pull request merged, or its work merged directly), not at
+      the latest right after it is put up for review. Title, tagline and the timing clause of the
+      criteria body reworded; the stopped-or-failed and older-ways clauses unchanged. Notes: the G1
+      timing sentence reworded to match, and an AMENDED line added.
+    by: product-owner
+    at: "2026-11-16"
+  - reason: >-
+      Second user decision at the BO-4400g plan-feature gate, 2026-11-16: work sent to the shared
+      project but never landed (failed run, abandoned or closed pull request) stays safe on the shared
+      project, so the landed-work pass clears its workspace once nothing unsent remains and no file in it
+      has changed for 14 days; unsent work is never removed. Criteria: the stopped-or-failed clause
+      ("listed so it can be reclaimed once nothing unsent remains") reworded to this rule, made its own
+      sentence. Notes: the G1 halted-runs sentence reworded to match, the first AMENDED line's "unsent
+      or unmerged work is never removed" corrected, and an AMENDED (2) line added.
+    by: product-owner
+    at: "2026-11-16"
 superseded_by: null
 covered_by: [BO-4400a-1, BO-4400a-2, BO-4400a-3, BO-4400a-4, BO-4400a-5]
 implemented_by: []
@@ -40,10 +62,17 @@ notes: |
 
   G1 -- every route, no exceptions: fast-lane ship (BOTH the success path AND the
   empty-set no-op path), quick-fix, AC-authoring, build-feature single-ticket and epic,
-  build-backlog. Each calls the central clear (BO-4300e) at its end state, at the latest
-  right after the pull request is opened (opened = pushed = holds nothing unsent per
-  BO-4100c). Halted/failed runs keep their work (ACD-2100c-5 guard) and appear in the
-  listing (BO-4100e) as reclaimable once the verdict reads holds-nothing.
+  build-backlog. Each calls the central clear (BO-4300e) at its end state once its work
+  has landed on the main line (pull request merged, or work merged directly; amended
+  2026-11-16, formerly "at the latest right after the pull request is opened"). A route
+  whose pull request is still open at its end keeps its workspace as not yet on the main
+  line and leaves it to the landed-work pass (BO-4400g); a route that ends with no commits
+  of its own clears its workspace right away. Halted/failed runs keep their work
+  (ACD-2100c-5 guard) and appear in the listing (BO-4100e); once the verdict reads
+  holds-nothing (nothing unsent), the landed-work pass (BO-4400g) clears the workspace as
+  soon as its work lands, or once no file in it has changed for 14 days, and keeps younger
+  ones (amended 2026-11-16, formerly "reclaimable once the verdict reads holds-nothing").
+  Unsent work (not on the shared project, or uncommitted) is never removed.
 
   G6 -- retire the older removal routes in favour of the central clear: close-worktree's
   remove-without-force path, worktree-agent removal, and finalize Step 7's interactive
@@ -58,3 +87,15 @@ notes: |
   Q8 DECIDED 2026-10-09 (BrainCandy): no confirmation token for clearing a holds-nothing
   workspace; the BO-4100c verdict is the safety check. Unsent work is discarded only with
   up-front permission (BO-4300e-3). See BO-4400 notes.
+
+  AMENDED 2026-11-16 (user decision at the BO-4400g plan-feature gate): cleared once the work
+  has landed on the main line, not when its pull request is opened. A run whose pull request
+  is still open at its end keeps its workspace for the landed-work pass (BO-4400g); a run with
+  nothing to deliver clears right away; unsent work is never removed. BO-4400a-1 carries the
+  same timing (amended by the BA the same day).
+
+  AMENDED (2) 2026-11-16 (second user decision, same gate): work that was sent to the shared
+  project but never landed (a failed run, an abandoned or closed pull request) is not lost by
+  clearing, because it stays on its line on the shared project. Once nothing unsent remains,
+  the landed-work pass clears such a workspace after 14 days with no change to any file in it,
+  and keeps younger ones.

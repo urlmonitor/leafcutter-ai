@@ -44,12 +44,17 @@ DECISION HISTORY
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
+
+from scripts.suite_performance._shared_layout_producer import (
+    SharedReferenceLayoutError,
+    get_or_produce_shared_layout,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -105,55 +110,31 @@ _deployed_layout_cache: Path | None = None
 
 
 def ensure_deployed_layout() -> Path:
-    """Build the shared deployed layout EXACTLY ONCE per interpreter session.
+    """Return the session's ONE shared deployed layout (a shim over the producer).
 
-    Spawns ``python scripts/build.py --target-dir <fresh tmp dir>`` the
-    FIRST time it is called, caches the resulting target directory at module
-    scope, and returns that same directory on every later call -- the "one
-    new build.py spawn site" this ticket's own Implementation Notes justify
-    (CLAUDE.md "Tests must not spawn their own build.py" otherwise forbids
-    it). Every later BO-4300 maker proof, and BO-4300a-1's own deployed
-    fixture module, reuse this SAME cached layout rather than spawning their
-    own.
+    This IS :func:`get_or_produce_shared_layout`: it spawns no ``build.py`` of
+    its own (CLAUDE.md "Tests must not spawn their own build.py"). The
+    producer's single real build is the only spawn, once per run, and it seeds
+    the maker's own ``.leafcutter/`` state before that build so the layout
+    also proves the build leaves it intact (BO-4300a-1 IT9). The v2 name is
+    kept because parallel tickets import it.
 
     Returns:
-        Absolute path to the built target directory.
+        Absolute path to the shared layout's root (the build's target dir).
 
     Raises:
-        DeployedMakerNotFoundError: the build could not be launched, or
-            exited non-zero.
+        DeployedMakerNotFoundError: the shared layout could not be produced.
     """
     global _deployed_layout_cache
     if _deployed_layout_cache is not None:
         return _deployed_layout_cache
-
-    target_dir = Path(tempfile.mkdtemp(prefix="bo4300f4-deployed-"))
-    build_script = REPO_ROOT / "scripts" / "build.py"
     try:
-        proc = subprocess.run(
-            [sys.executable, str(build_script), "--target-dir", str(target_dir)],
-            cwd=str(REPO_ROOT),
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        msg = (
-            f"ensure_deployed_layout: could not launch {build_script} "
-            f"--target-dir {target_dir}: {exc}"
-        )
+        root = Path(get_or_produce_shared_layout())
+    except SharedReferenceLayoutError as exc:
+        msg = f"ensure_deployed_layout: the shared deployed layout could not be produced: {exc}"
         raise DeployedMakerNotFoundError(msg) from exc
-
-    if proc.returncode != 0:
-        msg = (
-            f"ensure_deployed_layout: {build_script} --target-dir {target_dir} "
-            f"exited {proc.returncode}. stdout={proc.stdout!r} stderr={proc.stderr!r}"
-        )
-        raise DeployedMakerNotFoundError(msg)
-
-    _deployed_layout_cache = target_dir
-    return target_dir
+    _deployed_layout_cache = root
+    return root
 
 
 def _reject_tracked_source(path: Path) -> None:
@@ -259,6 +240,22 @@ def _parse_one_json_object(stdout: str) -> dict[str, Any] | None:
     return parsed[0]
 
 
+def _bounded_maker_env(extra: dict[str, str] | None) -> dict[str, str]:
+    """Build the maker's bounded environment: isolated git config, ceiling, caller on top."""
+    from unit_tests.build_orchestration._workspace_maker_builders import _isolated_git_env
+
+    run_env = _isolated_git_env()
+    # Fixtures live in a directory made under the temp dir, so the fixture's parent is the temp
+    # dir itself: git may find the fixture's own repo from any depth inside it (a maker run from
+    # inside a checkout), but never a repository at or above the temp dir. A ceiling at
+    # ``cwd.parent`` would hide the checkout's own ``.git`` from a run started inside it.
+    ceiling = Path(tempfile.gettempdir()).resolve()
+    run_env["GIT_CEILING_DIRECTORIES"] = str(ceiling)
+    if extra:
+        run_env.update(extra)
+    return run_env
+
+
 def run_maker(
     args: list[str],
     cwd: Path,
@@ -274,20 +271,21 @@ def run_maker(
         maker_path: Overrides :func:`deployed_maker_path`'s resolution --
             the override seam's ONLY other consumption point, used solely by
             the meta-test (see this module's own docstring).
-        env: Extra environment variables merged over the current environment.
+        env: Extra environment variables merged over the bounded defaults
+            (isolated git config, ``GIT_CEILING_DIRECTORIES``); caller wins.
         timeout: Seconds to wait before the subprocess is killed.
 
     Returns:
-        ``{"answer": dict, "exit_code": int, "stdout": str, "stderr": str}``.
+        ``{"answer": dict, "exit_code": int, "stdout": str, "stderr": str,
+        "elapsed_seconds": float}``. stdin is closed (``DEVNULL``).
 
     Raises:
         AssertionError: the maker could not be launched, or its stdout was
             not exactly one JSON object.
     """
     resolved = Path(maker_path) if maker_path is not None else deployed_maker_path()
-    run_env = dict(os.environ)
-    if env:
-        run_env.update(env)
+    run_env = _bounded_maker_env(env)
+    started = time.monotonic()
     try:
         proc = subprocess.run(
             [sys.executable, str(resolved), *args],
@@ -296,6 +294,7 @@ def run_maker(
             text=True,
             timeout=timeout,
             env=run_env,
+            stdin=subprocess.DEVNULL,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         msg = f"run_maker: could not launch {resolved} {args} (cwd={cwd}): {exc}"
@@ -313,6 +312,7 @@ def run_maker(
         "exit_code": proc.returncode,
         "stdout": proc.stdout,
         "stderr": proc.stderr,
+        "elapsed_seconds": time.monotonic() - started,
     }
 
 

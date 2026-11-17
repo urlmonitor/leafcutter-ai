@@ -110,6 +110,11 @@ def _copy(src: Path, dst: Path) -> None:
 class _HookRepoBase(unittest.TestCase):
     """One deployed-layout git repo per class (copy once, reset per test)."""
 
+    _tmp: tempfile.TemporaryDirectory[str]
+    config: dict
+    entry: str
+    repo: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._tmp = tempfile.TemporaryDirectory()

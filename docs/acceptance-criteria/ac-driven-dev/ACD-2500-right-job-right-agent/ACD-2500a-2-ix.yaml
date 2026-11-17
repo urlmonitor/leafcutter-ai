@@ -76,7 +76,13 @@ it_requirements:
 declared_files:
 - path: templates/workflows-js/plan-feature.js
   state: existing
-delivers_to: null
+delivers_to:
+  agent: python-coder
+  contract: "For ACD-2500a-2-ix-a (resume of the hand-back): a mid-pipeline commit on the run's authoring branch
+    whose subject is exactly 'plan-feature(TEST-DESIGN-HANDBACK): <component>' (no ', final' suffix) and whose
+    body carries the lines 'AC IDs: <comma-separated AC ids>' and 'run-id: <run id>'; it holds the test-design
+    output (test_spec, test-design authorship, file_findings and their opened-files lists) and is made once,
+    before hand-back round 1, only after the test-design stage check passed."
 expects_from:
   ac_id: ACD-2500a-2-vii
   contract: "The rule check accepts the hand-back stage (planner decision: --stage itpo-handback) and applies that stage's owner map: assigned_agent, file_findings[].decision, it_requirements, declared_files, delivers_to and expects_from allowed; every other protected field (criteria, test_intent, test_spec, a file finding's fields other than its decision, file_findings_opened_files and test_design_* marks) reported as a 'protected fields' finding with disposition 'needs a decision'; exit 0 only on verdict passed."
@@ -214,7 +220,8 @@ amended_by:
   agent: approve_acs
   date: '2026-10-21'
 superseded_by: null
-covered_by: []
+covered_by:
+- ACD-2500a-2-ix-a
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgentFollowUps/04_TICKET-20261021-ACD-2500a-2-ix.md
 change_target:
@@ -226,3 +233,14 @@ notes: |
   run the check after the hand-back pass, so the family would never be called. The step goes
   in templates/workflows-js/plan-feature.js, which is over its size limit and must not grow
   (GE-127b-1).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: handback
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

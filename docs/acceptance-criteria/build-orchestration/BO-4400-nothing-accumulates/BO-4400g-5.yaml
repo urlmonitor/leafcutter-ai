@@ -1,0 +1,280 @@
+id: BO-4400g-5
+title: "How-to: clearing a workspace by naming its work, and previewing and running the landed-work pass"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given clearing by work name (BO-4400g-1), the landed-work pass (BO-4400g-2) and its
+    preview (BO-4400g-3) are in place,
+  When a person opens the existing how-to guide for clearing a workspace,
+  Then it shows how to ask for a workspace to be cleared by naming the work -- by kind and
+    short name, by line-of-work name, and by an older spelling -- and states that asking
+    again after it is gone is answered "no workspace exists", not an error,
+  And it shows how to preview the landed-work pass and how to run it, with one example
+    answer listing a cleared workspace and a kept workspace with its reason,
+  And it lists every reason a workspace is kept -- not yet on the main line, holds unsent
+    work, no work of its own yet, in use, landing could not be confirmed, shared project
+    unreachable -- and what the person can do about each,
+  And it states that a workspace kept as not yet on the main line is cleared by the pass
+    once it holds nothing unsent and no file in it has changed for 14 days, that its work
+    stays on its line on the shared project, and that asking for that work's workspace
+    again resumes the line,
+  And it shows how to run the pass unattended from a timer or at session start,
+  And it states that the pass never touches another project's workspaces, the main
+    checkout, or lines of work on the shared project,
+  And there is still exactly one how-to guide for clearing a workspace.
+depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4300e-5, BO-4400g-2-v]
+doc_links:
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: modifies
+    status: exists
+    relevance: The existing clearing guide (BO-4300e-5) is extended, not duplicated.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-4.yaml
+    relationship: related
+    status: exists
+    relevance: The routine sweep's how-to; cross-link rather than repeat.
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: modifies
+    status: exists
+    relevance: Each new or changed answer (clear-landed, the no-workspace answer of remove, the refusals of mixed or incomplete names) is documented once here; the how-to links to it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-5-ii.yaml
+    relationship: related
+    status: exists
+    relevance: The last extension of the same two pages, with the doc test that pins their rows and messages.
+assigned_agent: documentation-expert
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: docs/how-to/clear-a-workspace.md
+    state: existing
+  - path: docs/reference/workspace-maker-answer.md
+    state: existing
+it_requirements:
+  - >-
+    EXTEND, NEVER DUPLICATE: the guide BO-4300e-5 produced (docs/how-to/clear-a-workspace.md) is extended.
+    No second clearing how-to is written, and the routine-sweep how-to of BO-4400d-4 is cross-linked, not
+    repeated.
+  - >-
+    Every command shown is the maker's exact command as built: remove --kind/--slug, remove --branch, remove
+    by an older spelling, clear-landed and clear-landed --preview, run by the absolute path that worktree.py
+    where prints. Every example answer is copied from the real deployed maker's output, never written by
+    hand. The page is written after BO-4400g-1, -2 (with -2-v) and -3 are implemented.
+  - >-
+    Each new or changed answer (the clear-landed answer, remove's no-workspace answer for a repeated clear,
+    and the refusals of mixed or incomplete names) is documented once, in docs/reference/workspace-maker-answer.md.
+    The how-to links to it and does not restate its fields.
+  - >-
+    The kept reasons are listed with the exact values the maker emits (not_on_main, holds_unsent_work,
+    no_own_work, in_use, landing_unconfirmed, shared_project_unreachable), each with a plain-words meaning
+    and what the person can do about it. A reason the maker does not emit is never documented.
+  - >-
+    Running the pass unattended is shown as the one command a timer or a session-start hook runs, with no
+    input, and the exit codes it can return. No machine-specific timer installer is prescribed; the
+    packaged session-start trigger belongs to BO-4400d-3.
+  - >-
+    No command on either page deletes a workspace folder or its repository outside the maker (no rm, rmdir,
+    Remove-Item, rmtree, del or git worktree remove), and none passes --delete-remote-branch as part of the
+    pass.
+  - >-
+    unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py pins the rows of "Refusals of remove" and a
+    fixed set of messages, and scans the maker sources for each documented code. That test file belongs to
+    the test author, not to this record. It must be updated in the same build when a pinned count or message
+    changes, and its source scan must cover templates/scripts/worktree_landed.py.
+  - >-
+    Must keep the frontmatter conventions of docs/how-to/ and docs/reference/, update last_updated on both
+    pages, and stay within the project's document length limits.
+test_required: true
+test_intent:
+  - clause: 'it shows how to ask for a workspace to be cleared by naming the work -- by kind and short name, by line-of-work name, and by an older spelling -- and states that asking again after it is gone is answered "no workspace exists", not an error'
+    needs_test: true
+    reason: The guide's commands must be the maker's real forms, and a doc test against the sources catches a form the maker does not accept.
+  - clause: it shows how to preview the landed-work pass and how to run it, with one example answer listing a cleared workspace and a kept workspace with its reason
+    needs_test: true
+    reason: A hand-written example drifts from the real answer shape, which a doc test tied to the maker's output catches.
+  - clause: it lists every reason a workspace is kept -- not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable -- and what the person can do about each
+    needs_test: true
+    reason: A missing or invented reason leaves the person without a remedy, and the closed set can be checked against the sources.
+  - clause: 'it states that a workspace kept as not yet on the main line is cleared by the pass once it holds nothing unsent and no file in it has changed for 14 days, that its work stays on its line on the shared project, and that asking for that work''s workspace again resumes the line'
+    needs_test: true
+    reason: The 14-day figure and the safety promise must match the maker's named default and behaviour, which a doc test tied to the sources catches.
+  - clause: it shows how to run the pass unattended from a timer or at session start
+    needs_test: true
+    reason: The unattended command must be one that needs no input, which a doc test can check on the published command.
+  - clause: 'it states that the pass never touches another project''s workspaces, the main checkout, or lines of work on the shared project'
+    needs_test: true
+    reason: The safety promise is what lets a person run the pass unattended, so its presence on the page is pinned.
+  - clause: there is still exactly one how-to guide for clearing a workspace
+    needs_test: true
+    reason: A second clearing guide splits the instructions and goes stale, which a scan of docs/how-to/ catches.
+test_spec:
+  - name: test_how_to_name_forms_are_commands_the_deployed_maker_accepts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Reads docs/how-to/clear-a-workspace.md (path as in test_bo_4300e_5_i_docs.CLEAR_DOC), takes each published
+      remove command that names the work (--kind/--slug, --branch, an older spelling) and runs it, with the
+      placeholder values replaced by a fixture's, as a subprocess against the deployed maker with real repositories
+      and a bare hub. Each is accepted (no USAGE refusal). It then runs the same command a second time and asserts the
+      answer is the no-workspace answer (ok, absent true), and that the page says asking again is answered "no
+      workspace exists", not an error.
+    proves_clause: 'it shows how to ask for a workspace to be cleared by naming the work -- by kind and short name, by line-of-work name, and by an older spelling -- and states that asking again after it is gone is answered "no workspace exists", not an error'
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_example_answer_has_the_shape_the_deployed_pass_prints
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Extracts the page's example clear-landed answer (a JSON block listing one cleared and one kept workspace with
+      its reason), runs clear-landed --preview on a fixture with one landed and one fresh workspace, and compares the
+      key sets of the example's top level, its cleared or would_clear entry and its kept entry with the real answer's.
+      Also runs the page's preview and real-pass commands as subprocesses and checks both exit 0.
+    proves_clause: it shows how to preview the landed-work pass and how to run it, with one example answer listing a cleared workspace and a kept workspace with its reason
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_lists_exactly_the_kept_reasons_the_maker_emits
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The reasons named on the page (not_on_main, holds_unsent_work, no_own_work, in_use, landing_unconfirmed,
+      shared_project_unreachable), each with a remedy sentence, equal as a set the closed set found in the deployed
+      worktree_landed.py (text scan of its source as the convention test does for the answer codes); a reason the
+      maker never emits, or one it emits and the page omits, fails.
+    proves_clause: it lists every reason a workspace is kept -- not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable -- and what the person can do about each
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_states_the_14_day_rule_matching_the_named_default
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: >-
+      The 14 on the page equals the pushed-unmerged default named in worktree_landed.py (and 7 the no-own-work
+      default), the page says the work stays on its line on the shared project and that asking for the workspace
+      again resumes the line. A page that gives 7 for pushed work, or a source whose default changed, fails. The
+      behaviour behind the sentence is proven by BO-4400g-2-v.
+    proves_clause: 'it states that a workspace kept as not yet on the main line is cleared by the pass once it holds nothing unsent and no file in it has changed for 14 days, that its work stays on its line on the shared project, and that asking for that work''s workspace again resumes the line'
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_unattended_command_runs_with_no_input_and_returns_documented_exit_codes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The one command the page shows for a timer or a session-start hook is run as a real subprocess with stdin
+      closed and a timeout against the deployed maker on a fixture: it ends with one JSON answer and an exit code the
+      page documents (0, and 2 for an unreachable shared project, checked by moving the hub away).
+    proves_clause: it shows how to run the pass unattended from a timer or at session start
+    code_file: templates/scripts/worktree.py
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_how_to_states_what_the_pass_never_touches
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The page states that the pass never touches another project's workspaces, the main checkout or lines of work on
+      the shared project, and no command on either page deletes outside the maker (the DELETE_COMMANDS pattern of
+      the convention test) nor passes --delete-remote-branch as part of the pass.
+    proves_clause: 'it states that the pass never touches another project''s workspaces, the main checkout, or lines of work on the shared project'
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_there_is_exactly_one_clearing_how_to
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Lists docs/how-to/ and asserts exactly one page is a guide for clearing a workspace of the maker (by its
+      frontmatter components and its commands), and that the routine-sweep how-to links to it rather than repeating
+      it.
+    proves_clause: there is still exactly one how-to guide for clearing a workspace
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+delivers_to: null
+expects_from:
+  - ac_id: BO-4400g-2
+    contract: >-
+      The clear-landed and clear-landed --preview commands, the answer shape and the closed set of kept
+      reasons (not_on_main, holds_unsent_work, no_own_work, in_use, landing_unconfirmed,
+      shared_project_unreachable).
+  - ac_id: BO-4400g-1
+    contract: >-
+      The remove name forms (--kind/--slug, --branch, older spellings) and remove's no-workspace answer for a
+      repeated clear.
+file_findings:
+  - file: docs/how-to/clear-a-workspace.md
+    verdict: describes, does not implement
+    line_range: 1-30
+    found_in: null
+    reason: It is the one existing clearing guide (frontmatter and step 1, locate then clear by location) and is the page the record extends rather than duplicates.
+    decision:
+      choice: assignment stands
+      reason: A how-to page is documentation-expert's surface and the record extends it, so the assignment is right.
+      by: it-po
+  - file: docs/reference/workspace-maker-answer.md
+    verdict: describes, does not implement
+    line_range: 1-40
+    found_in: null
+    reason: It is the answer reference whose caller rule 1 (anything other than ok stops the caller) is why the no-workspace and kept answers are documented there as ok, and it gains each new or changed answer once.
+    decision:
+      choice: assignment stands
+      reason: The answer reference is documentation-expert's surface and gains each new answer once, so the assignment is right.
+      by: it-po
+file_findings_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - docs/reference/workspace-maker-answer.md
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the two page findings (how-to, answer reference) are decided as assignment
+      stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (14-day rule, BO-4400g-2-v): one And-clause
+      added so a reader of "not yet on the main line" learns the pass clears that workspace after 14 days with
+      no file changed and nothing unsent, that the work stays on the shared project, and that asking for the
+      work again resumes the line. depends_on gains BO-4400g-2-v. Technical field fixed: the second
+      it_requirement's build order now names -2-v. The new clause has no test_intent entry yet (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400g documentation_triggers [how-to]. Clearing by hand and clearing by
+  name are the same user-facing action, so the guide BO-4300e-5 produced is extended rather
+  than a second one written.
+
+  AMENDED 2026-11-16 (user decision): the 14-day rule for pushed but unmerged work
+  (BO-4400g-2-v) is stated beside the kept reasons, because "not yet on the main line" no
+  longer means "kept until merged". Under ONE RULE the routine sweep (BO-4400d-4) uses the
+  same reasons and rules and links here.

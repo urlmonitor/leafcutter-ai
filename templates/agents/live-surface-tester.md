@@ -367,16 +367,36 @@ Use the two-step capture pattern (stdout + sidecar fallback) from signoff §2a:
 FB_ID=$(python scripts/feedback/submit_feedback.py \
   --ticket <ticket_path> \
   --phase live-surface-tester \
-  --category complete \
+  --category <category> \
   --note "<one-sentence summary>" \
-  2>feedback_err.txt)
+  2>/tmp/feedback_err_<ticket_basename>_live-surface-tester.txt)
 if [ -z "$FB_ID" ]; then
-  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' feedback_err.txt \
-            | sed 's/sidecar://' | head -1)
-  [ -n "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
+  SIDECAR=$(grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err_<ticket_basename>_live-surface-tester.txt)
+  SIDECAR="${SIDECAR#sidecar:}"
+  [ -n "$SIDECAR" ] && [ -s "$SIDECAR" ] && FB_ID=$(cat "$SIDECAR")
 fi
-FB_ID="${FB_ID:-(submit-failed)}"
+if [ -z "$FB_ID" ]; then
+  FB_ID=$(sed -n 's/^\(submit-failed:.*\)$/(\1)/p' /tmp/feedback_err_<ticket_basename>_live-surface-tester.txt)
+fi
+if [ -z "$FB_ID" ] && [ -n "$SIDECAR" ]; then
+  FB_ID="(submit-failed:written-uncited:<category>)"
+fi
+if [ -z "$FB_ID" ] && grep -q '^\[submit_feedback\] sink:' /tmp/feedback_err_<ticket_basename>_live-surface-tester.txt; then
+  FB_ID="(submit-failed:written-uncited:<category>)"
+fi
+FB_ID="${FB_ID:-(submit-failed:facility-unavailable:<category>)}"
+true
 ```
+
+`<category>` is the one value you chose above (`complete`, `blocker` or `tooling-issue`),
+used in the `--category` flag and in all three fallback markers.
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`). This block
+follows INF-500d-3's capture precedence: the id on stdout; else the id in the recovery
+file your own `sidecar:` line names (a missing or empty file gives `written-uncited`);
+else your own `submit-failed:` line in parentheses; else `written-uncited` or
+`facility-unavailable`. The reasons live only in `scripts/feedback/submit_failure_reasons.json`.
+Read only your own error file. Never look through the temp directory for another recovery
+file, and never take one that your own error file does not name.
 
 ## Sign-off (when ticket_path is provided)
 

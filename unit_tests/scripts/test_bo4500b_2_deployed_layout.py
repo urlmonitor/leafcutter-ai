@@ -35,9 +35,11 @@ def _real_config(package_root: Path, layout: Path) -> dict:
 @pytest.mark.shared_layout_reader
 def test_every_deployed_copy_of_every_shared_block_matches_its_source(shared_reference_layout):
     # covers: BO-4500b-2
+    # covers: BO-4500b
     # angle: deployed
     """Wrong version caught: a check that passes by inspecting nothing, or a deployed consumer
-    of WORKSPACE-ANSWER that is skipped."""
+    of WORKSPACE-ANSWER that is skipped. Also the parent promise (BO-4500b): one source, every
+    deployed route carrying it identical."""
     from shared_block_identity import check_identity
 
     layout = Path(shared_reference_layout)

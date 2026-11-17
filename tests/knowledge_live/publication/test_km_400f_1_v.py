@@ -45,7 +45,9 @@ def test_live_reconciliation_matches_a_real_backends_own_node_total():
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:  # unreachable service
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         try:
             for gen, size in sizes.items():
                 await db._run(

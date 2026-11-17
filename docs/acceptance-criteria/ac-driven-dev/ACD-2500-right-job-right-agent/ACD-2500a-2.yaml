@@ -157,3 +157,15 @@ notes: |
   Safe-repair definition used here: the repair is fully determined by data already in
   the store and can only restore a documented invariant (append a missing id, fill an
   unambiguous id, restore a prior readiness). Anything else is reported.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

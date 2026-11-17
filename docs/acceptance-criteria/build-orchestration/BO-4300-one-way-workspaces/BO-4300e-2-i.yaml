@@ -73,6 +73,7 @@ superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300e_2_i.py
 implemented_by:
+- templates/scripts/worktree_remove.py
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   close-worktree.md carries a \\?\ escape for MAX_PATH on remove; the decision memo keeps it

@@ -44,3 +44,8 @@ implemented_by: []
 change_target: docs
 risk_surface: internal
 test_required: false
+test_rationale: A Mermaid sequence diagram under docs/architecture/ in which the ticket generator
+  writes source_ac and a checklist with no copied criteria, and a phase agent follows that pointer
+  to the store. Whether the picture keeps those two hand-offs in the order ADR-026's read-side-first
+  rule requires is something only a person reading it can judge. A reviewer checks it against
+  ACD-1600a-1 and ACD-1600a-2, and from wave 2 a verified_by inspection records that reading.

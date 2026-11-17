@@ -160,6 +160,7 @@ class TestUxp511IndexRebuild(unittest.TestCase):
                 if target:
                     break
             self.assertIsNotNone(target)
+            assert isinstance(target, tuple)
             flow_id, _step, ac_id = target
             ac_path = pt.parent / "acceptance-criteria" / "zz.yaml"
 

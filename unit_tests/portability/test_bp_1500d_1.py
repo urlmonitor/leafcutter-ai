@@ -29,6 +29,7 @@ DECISION HISTORY
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -44,7 +45,7 @@ from ._bp1500d1_harness import (
 
 
 @pytest.fixture(scope="module")
-def harness() -> HarnessBuild:
+def harness() -> Iterator[HarnessBuild]:
     """One real out-of-package build, shared by every test in this module."""
     hb = build_out_of_package_harness()
     yield hb
@@ -322,7 +323,7 @@ def test_bp_1500d_1_inspection_goes_red_on_a_record_filed_with_the_package_and_o
     assert ok, f"run 3 (restored) unexpectedly red: {msg}"
 
     # Run 4 -- record present but accounts for nothing. Must go red.
-    empty_record = {"output_mappings": {}}
+    empty_record: dict[str, dict[str, dict[str, str]]] = {"output_mappings": {}}
     harness.manifest_path.write_text(json.dumps(empty_record), encoding="utf-8")
     try:
         ok, msg = _inspect(harness.target_root)

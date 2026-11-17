@@ -56,13 +56,17 @@ delivers_to: null
 expects_from:
   ac_id: ACS-1300b-1
   contract: "The classified enumeration of delivery paths, which fixes both the participant set the diagram draws and the reaching/bypassing/exempt distinction it must show."
-test_required: false
+test_required: true
 origin_agent: business-analyst
 created: 2026-09-01
 amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-01'
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class artefact-backed: test_required false changed to true; a test is designed for this record when it is built. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -27,7 +27,7 @@ from urllib.parse import parse_qs, urlparse
 
 from ._notice_fakes import REPO, FakeIssueService, NoticeTestCase
 from ._workflow_conditions import HarnessError
-from ._workflow_jobs import REPO_ROOT, JobResult, WorkflowRun
+from ._workflow_jobs import REPO_ROOT, JobResult, WorkflowRun, with_live_lane_absent
 
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "post-merge-suite.yml"
 FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "tq_600a_13_v"
@@ -132,7 +132,7 @@ def drive_lane(api, tests, *, continue_on_errors=True, run_number=5, skip_retry=
         wf = WorkflowRun(WORKFLOW, base / "project", base / "scratch", _env(run_number), api.url)
         run = wf.execute_job("run")
         retry = JobResult("retry", "skipped") if skip_retry else wf.execute_job("retry", {"run": run})
-        verdict = wf.execute_job("verdict", {"run": run, "retry": retry})
+        verdict = wf.execute_job("verdict", with_live_lane_absent({"run": run, "retry": retry}))
         return Drive(run, retry, verdict, _verdict_file(wf))
 
 
@@ -165,7 +165,7 @@ def drive_verdict(api, run_result, retry_result="skipped", *, artifacts=None, ca
             message = f"cannot seed artifact {name!r}: {exc}"
             raise AssertionError(message) from exc
         needs = {"run": JobResult("run", run_result), "retry": JobResult("retry", retry_result)}
-        verdict = wf.execute_job("verdict", needs, cancelled=cancelled)
+        verdict = wf.execute_job("verdict", with_live_lane_absent(needs), cancelled=cancelled)
         return Drive(needs["run"], needs["retry"], verdict, _verdict_file(wf))
 
 

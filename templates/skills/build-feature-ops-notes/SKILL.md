@@ -205,8 +205,13 @@ did not come from the workspace maker.
 (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace
 again; it finishes a half-made workspace in place and builds its own install:
 
+Run ONE exact command with the ABSOLUTE, quoted path to the deployed maker, unchanged
+(`<project root>/.leafcutter/scripts/worktree.py`, project root from
+`git rev-parse --show-toplevel`), and return its stdout verbatim. Never a
+cwd-relative path:
+
 ```bash
-python scripts/worktree.py ensure --kind <kind> --slug <slug>
+python "<project root>/.leafcutter/scripts/worktree.py" ensure --kind <kind> --slug "<slug>"
 ```
 
 **Prevention.** The workspace maker builds the workspace's own `.leafcutter/`
@@ -276,8 +281,10 @@ regressions (this repo has a known pre-existing failing set):
 
 ```bash
 # Baseline (a scratch workspace from the workspace maker, scripts/worktree.py;
-# see docs/how-to/get-a-workspace.md), checked out at origin/main:
-python scripts/worktree.py ensure --kind scratch --slug base
+# see docs/how-to/get-a-workspace.md), checked out at origin/main. Run the maker as
+# ONE exact command by its absolute, quoted path (project root from
+# `git rev-parse --show-toplevel`), unchanged, and return stdout verbatim:
+python "<project root>/.leafcutter/scripts/worktree.py" ensure --kind scratch --slug "base"
 python -m pytest <BASE_WORKSPACE_PATH>/tests <BASE_WORKSPACE_PATH>/unit_tests -q --continue-on-collection-errors
 # Branch (origin/main already merged in):
 python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors

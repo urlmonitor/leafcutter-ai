@@ -148,3 +148,14 @@ notes: |
   Item 1, second half: create_ac_workflow.py:209-215 writes approved without consulting the
   approval-hold report. "test design pending" is the example hold reason; the IT PO should
   confirm the exact HOLD_REASONS spelling (any reason from the closed vocabulary works).
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

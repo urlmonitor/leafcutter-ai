@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 child_limit_override: 6
 criteria: |
   Use evidence deliberately and recognize when it is unavailable.
@@ -67,6 +67,20 @@ amended_by:
     child_limit_override is reduced from 8 to 6 rather than removed — a deliberate,
     smaller waiver, not an oversight. work_status stays in_progress, correctly:
     KM-400e-5 is in_progress and KM-400e-8 is todo.'
+  - '2026-11-17: business-analyst moved work_status from in_progress to done. The record
+    is closed through its children''s proof under KM-ADM-005-3, not through a test or a
+    waiver of its own. All six children named in covered_by — KM-400e-1, KM-400e-2,
+    KM-400e-3, KM-400e-4, KM-400e-5 and KM-400e-8 — are work_status done, each carries
+    at least one covers tag in tests/knowledge/, and covered_by lists every live child on
+    disk. The promise is met by what they deliver: choosing when knowledge is needed and
+    stopping once it is enough (KM-400e-2, KM-400e-3), obtaining attributable evidence
+    through the existing working process (KM-400e-3), staying usable when the capability
+    is disabled (KM-400e-1), and never presenting an outage, a missing prerequisite or an
+    unset setting as proof that no knowledge exists (KM-400e-1, KM-400e-2, KM-400e-4,
+    KM-400e-8). The statement in the previous entry that KM-400e-5 is in_progress and
+    KM-400e-8 is todo was true when written and is now superseded; both are done. The
+    notes line saying all work remains todo was corrected in the same pass. No criteria,
+    covered_by, title or child_limit_override changed.'
 superseded_by: null
 covered_by:
   - KM-400e-1
@@ -82,7 +96,9 @@ notes: |
   Authored by PO for the user-authorized full Knowledge Retrieval implementation
   (guide dated 2026-10-01, stages 0-4). Approval records the user's delegation to
   orchestrate building and to have PO, BA and IT PO create/amend/use ACs; it is not
-  evidence of completion. All work remains todo until behavioral proof exists.
+  evidence of completion. Completion rests on behavioral proof: as of 2026-11-17 every
+  child (KM-400e-1 to KM-400e-5 and KM-400e-8) is done with covers-tagged tests, and
+  this record is done through that proof.
   KM-400 is the next available flat family after KM-300; existing IDs are retained.
   Stage 0 must reconcile the guide with actual canonical entities, capability
   contracts, kernel integration and tracing ownership before production mapping.

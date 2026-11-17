@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -461,8 +461,15 @@ origin_agent: BrainCandy
 created: 2026-10-21
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_13_xxi.py
+  - tests/knowledge_live/lane/test_tq_600a_13_xxi.py
+implemented_by:
+  - .github/workflows/post-merge-suite.yml
+  - scripts/ci/_live_lane.py
+  - scripts/ci/post_merge_suite.py
+  - scripts/ci/_notice_render.py
+  - scripts/ci/post_merge_notice.py
 change_target: pipeline
 risk_surface: internal
 notes: |

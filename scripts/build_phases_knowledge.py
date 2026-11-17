@@ -153,6 +153,14 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   its three siblings (_state, _git, _cli), the durability step the wired
     #   completion workflows now call; they were in no deploy list, so nothing
     #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
+    # - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py (the
+    #   capture-health CLI) to deploy_scripts, mirrored in
+    #   _manifest_knowledge_scripts(). (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
+    # - 2026-10-23 [python-coder/INF-700b-3]: The entry is the sub-path
+    #   health/capture_health_report.py (check-folder-density caps
+    #   scripts/knowledge/ at 15 non-markdown files); the loop joins names onto
+    #   both source and output dirs, so it deploys to scripts/knowledge/health/.
+    #   (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
     """
     import build_phases as _bp
 
@@ -171,6 +179,7 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "completion_routing_state.py",
         "completion_routing_git.py",
         "completion_routing_cli.py",
+        "health/capture_health_report.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -650,6 +659,8 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
     #   rather than through a build_phases.py re-export, since
     #   scripts/build_phases.py was intentionally left untouched by this
     #   extraction. (#INF-400c-5)
+    # - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py,
+    #   matching deploy_scripts. (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
     """
     result: set[str] = set()
     knowledge_src = package_root / "scripts" / "knowledge"
@@ -667,6 +678,7 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "completion_routing_state.py",
         "completion_routing_git.py",
         "completion_routing_cli.py",
+        "health/capture_health_report.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
@@ -806,4 +818,11 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
 #   WORKFLOW_TOOL_SCRIPTS, the one list both the workflow-tool manifest and
 #   build_workflow_tools() read, with knowledge_rendering.py added. It was
 #   missing from both hand lists, so deployed knowledge_query.py crashed.
+# - 2026-10-23 [python-coder/INF-700b-3]: Added capture_health_report.py to
+#   both hand-kept lists (deploy_scripts in build_knowledge_scripts and the
+#   tuple in _manifest_knowledge_scripts); it sits beside sink_resolution.py,
+#   which it imports, so a consumer install needs both. The entry is the
+#   sub-path health/capture_health_report.py (folder-density limit on
+#   scripts/knowledge/), deployed to scripts/knowledge/health/.
+#   (#EPIC-ALearningAnAgentHasTodayActuallyGets/06)
 # ===========================================================================

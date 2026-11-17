@@ -10,19 +10,21 @@ status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given the /create-ac workflow creates a commit after a stage approval,
+  Given the /plan-feature workflow creates a commit after a stage approval,
   When the commit is recorded in git history,
-  Then the commit message first line contains: the text "create-ac",
-    the stage name (one of "PO", "BA", or "IT-PO"), and the target component name,
+  Then the commit message first line contains: the text "plan-feature",
+    the stage name (one of "PO", "BA", "IT-PO", "TEST-DESIGN-HANDBACK" for the test
+    design committed before a hand-back round, or "TEST-DESIGN" for the final commit),
+    and the target component name,
   And the commit message body lists every AC ID included in the commit
     (e.g. "ACD-300g, ACD-300g-1, ACD-300g-2"),
   And the commit message body states whether this is a mid-pipeline commit
     or the final commit of the run,
-  And a reviewer reading only the git log can determine which /create-ac stage
+  And a reviewer reading only the git log can determine which /plan-feature stage
     produced each committed AC file without opening the files.
 depends_on: [ACD-300g]
 doc_links:
-  - path: templates/skills/create-ac/SKILL.md
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
@@ -41,12 +43,123 @@ it_requirements:
   - "Commit message must be parseable by standard git log tooling without custom parsers"
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: 'the commit message first line contains: the text "plan-feature", the stage name (one of "PO",
+    "BA", "IT-PO", "TEST-DESIGN-HANDBACK" for the test design committed before a hand-back round, or "TEST-DESIGN"
+    for the final commit), and the target component name'
+  needs_test: true
+  reason: The subject is built from the stage-name mapping, the final flag and the component, and a wrong
+    mapping would mislabel the stage in the log.
+- clause: the commit message body lists every AC ID included in the commit (e.g. "ACD-300g, ACD-300g-1,
+    ACD-300g-2")
+  needs_test: true
+  reason: The AC id list is joined from the stage's written ids, and a dropped id would hide a committed
+    record from the log.
+- clause: the commit message body states whether this is a mid-pipeline commit or the final commit of
+    the run
+  needs_test: true
+  reason: The mid-pipeline or final marker comes from the isFinal flag, and an inverted flag would mislabel
+    the run's last commit.
+- clause: a reviewer reading only the git log can determine which /plan-feature stage produced each committed
+    AC file without opening the files
+  needs_test: false
+  reason: It is the reader's view of the three clauses above, which already prove the subject and body
+    a reviewer sees, so a separate test would only restate them.
+test_spec:
+- name: test_acd_300g_3_subject_names_command_stage_and_component
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'commitStageOutput via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) for each
+    stage key po, ba, itpo, test-design-handback and test-design (final), component ac-driven-dev: the
+    captured commit message''s first line reads plan-feature(<PO|BA|IT-PO|TEST-DESIGN-HANDBACK|TEST-DESIGN,
+    final>): ac-driven-dev.'
+  proves_clause: 'the commit message first line contains: the text "plan-feature", the stage name (one
+    of "PO", "BA", "IT-PO", "TEST-DESIGN-HANDBACK" for the test design committed before a hand-back round,
+    or "TEST-DESIGN" for the final commit), and the target component name'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_3_commit_subjects_from_a_real_run
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: 'Drives the real workflow body via run_plan_feature_e2 (unit_tests/_plan_feature_e2_runner.py)
+    on the technical route to a final-gate approve: the two captured commit messages start plan-feature(IT-PO):
+    and plan-feature(TEST-DESIGN, final): with the run''s component.'
+  proves_clause: 'the commit message first line contains: the text "plan-feature", the stage name (one
+    of "PO", "BA", "IT-PO", "TEST-DESIGN-HANDBACK" for the test design committed before a hand-back round,
+    or "TEST-DESIGN" for the final commit), and the target component name'
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_3_body_lists_every_ac_id
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'commitStageOutput via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with written
+    [ACD-300g, ACD-300g-1, ACD-300g-2]: the message body carries ''AC IDs: ACD-300g, ACD-300g-1, ACD-300g-2''.'
+  proves_clause: the commit message body lists every AC ID included in the commit (e.g. "ACD-300g, ACD-300g-1,
+    ACD-300g-2")
+  code_file: templates/workflows-js/plan-feature.js
+- name: test_acd_300g_3_body_marks_mid_pipeline_or_final
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'commitStageOutput via run_isolated_e2 (unit_tests/_plan_feature_e2_runner.py) with isFinal
+    false and then true: the body says ''mid-pipeline commit'' and ''final commit of run'' respectively,
+    never both.'
+  proves_clause: the commit message body states whether this is a mid-pipeline commit or the final commit
+    of the run
+  code_file: templates/workflows-js/plan-feature.js
+test_design_authorship:
+  step: test-designer
+  date: '2026-10-23'
+test_design_opened_files:
+- templates/workflows-js/plan-feature.js
+- unit_tests/_plan_feature_e2_runner.py
+- unit_tests/test_commit_stage_output_behavioral.py
+- unit_tests/test_commit_stage_output_staging.py
+- unit_tests/test_final_gate_and_commit_message.py
+- unit_tests/test_partial_run_recovery.py
+- unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py
 origin_agent: business-analyst-v3
 created: 2026-06-08
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: the first line carries "plan-feature", not
+    "create-ac"; the stage names now include TEST-DESIGN-HANDBACK (test design committed
+    before an it-po hand-back round) and TEST-DESIGN (the final commit after the final gate);
+    doc_links point at the plan-feature skill. Traceability intent unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_intent recorded,
+    one entry per Then/And outcome clause, each with needs_test and a one-sentence reason. Criteria and
+    readiness unchanged.'
+  date: '2026-10-23'
+  by: it-po
+  directed_by: user
+- reason: 'legacy approved record gains a test contract required by check-ac-schema: test_spec written
+    for every needs_test clause (with a reachability entry through the real workflow body), grounded in
+    templates/workflows-js/plan-feature.js and the existing plan-feature E2 tests. No declared files,
+    so no file findings. Criteria and readiness unchanged.'
+  date: '2026-10-23'
+  by: test-designer
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-CommitAcOutputPerStage/05_TICKET-20260618-ACD-300g-3.md
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

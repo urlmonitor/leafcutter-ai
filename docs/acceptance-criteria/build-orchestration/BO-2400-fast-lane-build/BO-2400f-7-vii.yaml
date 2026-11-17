@@ -1,0 +1,342 @@
+id: BO-2400f-7-vii
+components:
+  - build_orchestration
+title: "A command step whose reply carries no exit status and is not a decline ends as 'state unknown', never as declined or never attempted"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run asks the command-step-runner to perform one of its command steps,
+  When the reply carries no exit status and is not a decline — it is an unfinished reply
+    (BO-2400f-7-v), a reply saying the command was moved to the background, an empty reply,
+    or text that is not one of the runner's reply shapes,
+  Then the run halts at that step as "state unknown", a halt kind distinct from a declined
+    step, a command that ran and failed, a held claim and a gate failure,
+  And the halt names the step and the agent asked, and quotes what came back or says that
+    nothing came back,
+  And the halt says the command may have run and that what it changed is not known,
+  And the halt does not say the step was declined or never attempted, and does not say the
+    set is held by another run.
+
+  Given the reply is a decline — it says declined, names the step, the agent and a reason,
+    and carries no exit status (BO-2400a-1-i),
+  When the run reads it,
+  Then the run halts as a declined step (BO-2400f-5-iii), not as state unknown.
+
+  Given the claim-step reply observed on 2026-11-16 — the runner's one shell call passed
+    120 seconds, was moved to the background, and the runner replied without an exit status
+    and ended its turn,
+  When that reply is given to the run at the claim step,
+  Then the run halts as "state unknown" at the claim step,
+  And the claim is reconciled as BO-2400f-10-iv requires rather than taken as never made.
+
+  Given a release step whose reply is "state unknown",
+  When the run reports the release,
+  Then every acceptance criterion the run claimed is reported as not confirmed released and
+    possibly left at in_progress, as BO-2400f-10-ii's fail-closed reading requires,
+  And the release is not reported as declined.
+depends_on: [BO-2400f-7, BO-2400f-5-iii, BO-2400f-7-v]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "The shared reply classifier treats any command-step reply without exit_status as declined (2026-11-16 analysis). This record splits that into declined and state unknown."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the declined-step halt. This record narrows what counts as a decline for a command step to the runner's explicit decline."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "What an operator is told when a run halts. State unknown is a new halt kind."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+declared_files:
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+it_requirements:
+  config_schema_fragment:
+    state_unknown_halt:
+      type: object
+      required: [halt_kind, step, agent, reply_excerpt, target]
+      properties:
+        halt_kind:
+          const: state_unknown
+        step:
+          type: string
+        agent:
+          type: string
+        reply_excerpt:
+          type: string
+          description: >-
+            What came back, verbatim (bounded in length with an explicit truncation mark),
+            or the literal text 'no reply' when nothing came back.
+        target:
+          type: string
+        effect:
+          type: string
+          description: >-
+            Fixed wording that the command may have run and that what it changed is not
+            known.
+  reference_file_path: templates/workflows-js/build-ticket.js
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - >-
+      ONE CLASSIFIER, NARROWED FOR COMMAND STEPS ONLY. The lane's single reply classifier
+      decides result, decline and state unknown for every command step. A decline is only the
+      runner's explicit decline shape (BO-2400a-1-i: declined, step, agent and reason, no
+      exit_status). Every other command-step reply without an exit_status, including an
+      unfinished reply, an empty or null reply, a reply that says the command was moved to the
+      background, and unparseable text, is state unknown. The classification of specialist
+      phases (test-writer, coder, pr-reviewer) by BO-2400f-5-iii is unchanged.
+    - >-
+      NO KEYWORD INFERENCE. Whether a reply is a decline is read from its shape, never from
+      words such as "declined", "refused" or "cannot" appearing in free text. A runner that
+      quotes a command's error text must not be turned into a decline by that text.
+    - >-
+      FAIL CLOSED ON STATE. Before the claim (resolve, producibility) a state-unknown halt
+      asks for no release, as BO-2400f-10-iii's pre-claim rule says. At the claim it hands over
+      to BO-2400f-10-iv's reconciliation. After the claim, the release is reported by
+      BO-2400f-10-ii's fail-closed reading. A state-unknown reply is never treated as proof
+      that the command did not run.
+    - >-
+      EXISTING TESTS THAT ENCODE THE OLD READING. BO-2400f-5-iii's tests treat an empty or
+      unparseable command-step reply as a declined step. Those assertions are re-pointed at
+      state unknown for command steps in the same change; their specialist-phase assertions
+      stay as they are. Removing an assertion instead of re-pointing it does not satisfy this
+      record.
+    - >-
+      The halt kinds used by the lane (declined step, ran and failed, held, gate failure,
+      state unknown) stay mutually exclusive: every halt carries exactly one of them.
+test_intent:
+  - clause: the run halts at that step as "state unknown", a halt kind distinct from a declined step, a command that ran and failed, a held claim and a gate failure
+    needs_test: true
+    reason: The lane today folds every reply without an exit status into the declined halt, and only a run fed each reply form shows the new halt kind is reached.
+  - clause: the halt names the step and the agent asked, and quotes what came back or says that nothing came back
+    needs_test: true
+    reason: The halt payload is assembled from the reply, and an empty reply is the case most likely to lose its quote.
+  - clause: the halt says the command may have run and that what it changed is not known
+    needs_test: true
+    reason: This wording is what tells the operator to check the store, and dropping it reproduces the misleading 2026-11-16 halt.
+  - clause: the halt does not say the step was declined or never attempted, and does not say the set is held by another run
+    needs_test: true
+    reason: The observed defect was the never-attempted wording on a claim that may have run, so its absence must be proved.
+  - clause: the run halts as a declined step (BO-2400f-5-iii), not as state unknown
+    needs_test: true
+    reason: Narrowing the decline must not swallow the genuine decline, which would break BO-2400f-5-iii.
+  - clause: the run halts as "state unknown" at the claim step
+    needs_test: true
+    reason: The 2026-11-16 claim reply is the case the record exists for and must be replayed against the lane.
+  - clause: the claim is reconciled as BO-2400f-10-iv requires rather than taken as never made
+    needs_test: true
+    reason: The hand-over to reconciliation is control flow that a halt-only change would leave out.
+  - clause: every acceptance criterion the run claimed is reported as not confirmed released and possibly left at in_progress, as BO-2400f-10-ii's fail-closed reading requires
+    needs_test: true
+    reason: A release of unknown outcome reported as done would strand claims without anyone being told.
+  - clause: the release is not reported as declined
+    needs_test: true
+    reason: A declined release means nothing ran, which is the wrong fact for a release that may have run.
+test_spec:
+  - name: test_every_reply_without_exit_status_that_is_not_a_decline_halts_as_state_unknown
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Drives fast-lane-ship.js through the workflow-engine harness to the claim step and feeds, one per subTest, an
+      unfinished reply (unfinished true, no exit_status, no declined), a reply saying the command was moved to the
+      background, an empty string, null, and free text that is not a runner shape. Each terminal payload must carry
+      halt_kind state_unknown and none may carry halt_kind declined_step, claim_held, claim_command_failed or a gate
+      failure. The same sweep runs once at the resolve-connected step to show the classifier is shared.
+    proves_clause: the run halts at that step as "state unknown", a halt kind distinct from a declined step, a command that ran and failed, a held claim and a gate failure
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the lane keeps folding every reply without exit_status into the declined_step halt as it does today
+      - an empty or null reply is still read as a decline
+      - the new halt kind is added only at the claim step and not at the other command steps
+  - name: test_state_unknown_halt_names_step_and_agent_and_quotes_the_reply_or_says_no_reply
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      For a non-empty reply the halt payload must name step claim-connected and agent command-step-runner and carry
+      the reply text verbatim in reply_excerpt (a long reply keeps a head with an explicit truncation mark). For a
+      null reply and an empty string reply reply_excerpt must be the literal no reply. The wrong version it catches
+      is an empty reply whose quote is dropped or replaced by the string null.
+    proves_clause: the halt names the step and the agent asked, and quotes what came back or says that nothing came back
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_state_unknown_halt_says_the_command_may_have_run_and_its_effect_is_not_known
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      The halt message and its effect field are read from the payload the harness captured and must say the command
+      may have run and that what it changed is not known. The wrong version it catches is the 2026-11-16 halt that
+      read as if nothing had been changed.
+    proves_clause: the halt says the command may have run and that what it changed is not known
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_state_unknown_halt_never_says_declined_never_attempted_or_held_by_another_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Over the same reply sweep the whole terminal payload text, lower-cased, must contain none of the never attempted
+      markers of test_bo2400f_7_iii_claim_refusal_workflow.py, none of its contention markers and not the word
+      declined as a halt description. A reply whose free text itself contains the words declined or refused must
+      still halt as state unknown, so the classifier reads the shape and never the wording.
+    proves_clause: the halt does not say the step was declined or never attempted, and does not say the set is held by another run
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the old never attempted wording is kept on the state unknown halt
+      - a reply that merely quotes the words declined or refused is turned into a decline by keyword inference
+      - the held by another run wording is reused for an unknown outcome
+  - name: test_an_explicit_runner_decline_still_halts_as_declined_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Gives the claim step the runner decline built by claim_declined (declined true, step, agent, reason, no
+      exit_status) and asserts the payload carries halt_kind declined_step with the agent and reason, and not
+      state_unknown. Run again for the specialist phases (test-writer, coder, pr-reviewer) to show their
+      BO-2400f-5-iii classification is unchanged.
+    proves_clause: the run halts as a declined step (BO-2400f-5-iii), not as state unknown
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - narrowing the decline so far that the runner's own explicit decline is read as state unknown
+      - the specialist phases reclassified as state unknown
+  - name: test_the_2026_11_16_background_claim_reply_halts_state_unknown_at_claim
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Replays the claim reply observed on 2026-11-16 (run wf_f26bd73c-98c, no exit status, moved to the background)
+      against the lane and asserts halt_kind state_unknown with step claim-connected. The reply text is copied from
+      that run's journal and stored as a fixture, not typed from memory.
+    proves_clause: the run halts as "state unknown" at the claim step
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_state_unknown_claim_is_handed_to_reconciliation_not_taken_as_never_made
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      After the state unknown claim halt the recorded dispatches must include a command-step read of the store made
+      after claim-connected and before the run returns, and the payload must carry the reconciliation figures of
+      BO-2400f-10-iv. For a reply at resolve or producibility no reconciliation dispatch and no release dispatch may
+      follow. The wrong version it catches is a halt-only change that returns without ever reconciling.
+    proves_clause: the claim is reconciled as BO-2400f-10-iv requires rather than taken as never made
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_release_with_unknown_outcome_reports_every_claimed_id_as_not_confirmed_released
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Runs a lane that claims successfully and then halts after its claim (a coder blocker), discovers the
+      release-on label the harness recorded, and reruns with that release reply set to an unfinished reply with no
+      exit_status. Every id the run claimed must be reported as not confirmed released and possibly left at
+      in_progress, and a later run aimed at them is said to be refused. The wrong version it catches is a release of
+      unknown outcome reported as done.
+    proves_clause: every acceptance criterion the run claimed is reported as not confirmed released and possibly left at in_progress, as BO-2400f-10-ii's fail-closed reading requires
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_release_with_unknown_outcome_is_not_reported_as_declined
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Same rerun as above. The halt payload must carry no declined wording and no declined_step halt kind for the
+      release, because a declined release means nothing ran.
+    proves_clause: the release is not reported as declined
+    code_file: templates/workflows-js/fast-lane-ship.js
+    must_catch:
+      - the release reply is classified through the old rule so a reply without exit_status becomes a declined release
+  - name: test_state_unknown_is_reachable_through_the_workflow_dispatch
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs fast-lane-ship.js as the engine does (run_workflow_under_e2 with args ac and the claim-connected label
+      answered with an unfinished reply) and asserts the run's own terminal return value carries halt_kind
+      state_unknown, so the halt is reached by the real top-level control flow and not by a helper nothing calls.
+    proves_clause: the run halts at that step as "state unknown", a halt kind distinct from a declined step, a command that ran and failed, a held claim and a gate failure
+    code_file: templates/workflows-js/fast-lane-ship.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - unit_tests/_workflow_engine_harness.py
+  - unit_tests/workflows/_bo2400f5iii_fixtures.py
+  - unit_tests/workflows/_fast_lane_claim_fixtures.py
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+file_findings:
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds classifyStepReply, which today reads every command-step reply without an exit status as declined, and so is the one classifier this record narrows.
+    decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Chosen as the reference file because it is a sibling workflow script of the same type that classifies agent replies and halts with a structured error kind.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-ticket.js
+delivers_to:
+  agent: python-coder
+  contract: "A terminal halt {halt_kind: 'state_unknown', step, agent, reply_excerpt (verbatim, or an explicit 'no reply'), target} from the lane's single reply classifier; at the claim step it triggers BO-2400f-10-iv's reconciliation."
+expects_from:
+  ac_id: BO-2400f-7-v
+  contract: "The runner's unfinished reply {command, workspace, step, waited_seconds, unfinished: true}: no exit_status key and no declined key."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-11-16, run wf_f26bd73c-98c: a claim killed part-way was reported as "never
+  attempted" and nothing was released, "because a decline nothing was claimed on". That
+  sentence is only true of a decline. A reply that says nothing about whether the command ran
+  must not be read as proof that it did not.
+
+  CONTRADICTION WITH A DONE RECORD, FLAGGED NOT FIXED. BO-2400f-5-iii (done) says, in its
+  it_requirements, that for a command-step-runner dispatch "a reply without exit_status is a
+  decline", and its test_spec treats an empty or unparseable reply as a declined step. This
+  record narrows that for command steps: only the runner's explicit decline is a decline;
+  every other reply without an exit status is state unknown. For specialist agents
+  (test-writer, coder, pr-reviewer) BO-2400f-5-iii is unchanged. BO-2400f-5-iii needs an
+  amendment, and its work_status a reset, once this record is approved; the BA does not edit
+  another run's record.
+
+  Before the claim (resolve, producibility) a state-unknown step changed no acceptance
+  criterion, because those steps only read the store; BO-2400f-10-iii's pre-claim rule (no
+  release) still applies. After the claim, BO-2400f-10-iii's release rule still applies.

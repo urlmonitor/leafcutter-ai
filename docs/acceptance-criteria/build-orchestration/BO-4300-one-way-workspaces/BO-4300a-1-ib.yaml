@@ -157,6 +157,7 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300a_1_ib.py
+- unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/09_TICKET-20260928-BO-4300-entry-skills.md
 - templates/commands/plan-feature.md
@@ -168,6 +169,11 @@ implemented_by:
 - templates/skills/quick-fix/SKILL.md
 - templates/skills/build-single-ticket/SKILL.md
 - templates/skills/feature/SKILL.md
+- templates/skills/ship/SKILL.md
+- templates/skills/build-feature-ops-notes/SKILL.md
+- templates/agents/worktree-agent.md
+- templates/workflows/close-worktree.md
+- templates/workflows/build-backlog.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), entry-skill half. Criteria are extracted from the parent''s
   clauses (''receives the workspace maker''s answer as part of its input'', ''run unchanged and its answer
   relayed word for word'', ''no ... create, copy, set up, link or repair ... by steps of the agent''s

@@ -380,6 +380,7 @@ class TestMissingOutputIsCountedInTheRunSummary(unittest.TestCase):
             match,
             msg=f"No RESULT summary line found at all. Output:\n{combined}",
         )
+        assert isinstance(match, re.Match)
         missing_group = match.group(6)
         self.assertIsNotNone(
             missing_group,
@@ -423,6 +424,7 @@ class TestMissingOutputIsNotCountedAmongVerifiedOutputs(unittest.TestCase):
             baseline_match,
             msg=f"No RESULT summary line in the baseline run. Output:\n{baseline_combined}",
         )
+        assert isinstance(baseline_match, re.Match)
         baseline_verified = int(baseline_match.group(2))
 
         self.scenario["tracked_path"].unlink()
@@ -433,6 +435,7 @@ class TestMissingOutputIsNotCountedAmongVerifiedOutputs(unittest.TestCase):
             after_match,
             msg=f"No RESULT summary line after deletion. Output:\n{after_combined}",
         )
+        assert isinstance(after_match, re.Match)
         after_verified = int(after_match.group(2))
 
         self.assertEqual(

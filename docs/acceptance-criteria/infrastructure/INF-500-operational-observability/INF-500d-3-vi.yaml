@@ -1,0 +1,243 @@
+id: INF-500d-3-vi
+components:
+  - infrastructure
+  - feedback_collector
+title: "epic-supervisor keeps its submission's error stream, so a failure records the script's reason and not a default"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given epic-supervisor's cross-ticket pattern submission, which today sends the
+    submission's error stream to /dev/null and falls back to a bare `(submit-failed)`,
+  And a run of that submission that prints nothing on standard output, exits non-zero,
+    and writes `submit-failed:destination-unwritable:subagent-quality` on its error
+    stream,
+  When epic-supervisor follows its instruction for that submission,
+  Then the run's error stream is written to that run's own file, named as INF-500d-3-ii
+    requires from the ticket the submission names, the epic-supervisor phase and the
+    cross-ticket-pattern event, and is not discarded,
+  And epic-supervisor records `(submit-failed:destination-unwritable:subagent-quality)`,
+  And it does not record `(submit-failed:facility-unavailable:subagent-quality)` or a
+    bare `(submit-failed)`,
+  And no step in epic-supervisor's instructions sends a submission's error stream to
+    /dev/null or to any other place it cannot read back.
+
+  Given the same submission fails, whatever the reason,
+  When epic-supervisor surfaces the blocked payloads of the affected tickets to the user,
+  Then those payloads are identical to the ones it surfaces when the submission
+    succeeds.
+depends_on:
+  - INF-500d-3
+  - INF-500d-3-ii
+doc_links:
+  - path: templates/agents/epic-supervisor.md
+    relationship: implements
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: "Marks epic-supervisor DEPRECATED. It still ships, so its instruction must be correct. Retiring it is a separate decision."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Done. Owns the naming rule and the check in unit_tests/feedback/test_inf_500d_3_ii.py, which discovers any submit_feedback.py command whose error stream goes to a file other than /dev/null. Once this record lands, that check discovers epic-supervisor's redirect and runs it."
+assigned_agent: llm-expert
+estimated_complexity: S
+declares_side_effect: true
+declared_files:
+  - path: templates/agents/epic-supervisor.md
+    state: existing
+it_requirements:
+  - "LANDING ORDER (IT PO, 2026-11-16). This record lands in the same PR as INF-500d-3 or after it, because the 'submit-failed:' line it makes readable does not exist until INF-500d-3 lands. It lands with INF-500d-3-v or before it, because INF-500d-3-v's epic-supervisor case depends on it."
+  - "PER-RUN NAME. The cross-ticket pattern submission sends its error stream to /tmp/feedback_err_<ticket basename>_epic-supervisor_cross-ticket-pattern.txt. The ticket part names the same affected ticket that the command's --ticket argument names. The placeholder for it must be one the INF-500d-3-ii check fills to a file name: underscore spelling, containing 'ticket' together with 'basename' or 'name' (for example <affected_ticket_basename>), never <any_affected_ticket_path>, which fills to a path with separators. The phase part is the literal epic-supervisor."
+  - "RUNNABLE AS LIFTED. Today, at about :373, the command is a '#'-commented line inside a Python pseudo-code block. Its continuation markers have collapsed into '#   ' fragments, so a shell runs nothing after the first '#'. It also uses 'python' where every other surface uses 'python3', and a '$(...) || FB_ID=' form, which is a subshell plus '||' and breaks the shell convention. The submission must be a shell command that an agent, and the INF-500d-3-ii harness, can lift and run as written. It is a single simple command; the id read-back and the failure-line read are separate steps. Once the error stream goes to a file, test_inf_500d_3_ii.py discovers the line and runs it with bash -c (test_prescribed_submit_commands_run_as_written_from_the_deployed_instructions), so a form that cannot run turns that test red. Neither that test nor its discovery may be weakened."
+  - "No epic-supervisor step sends a submission's error stream to /dev/null or to any place it cannot read back: not a merged stream, not a pipe, and not a path that is deleted before the read-back."
+  - "The marker follows INF-500d-3's capture precedence, as INF-500d-3-v applies it: stdout id; id in the recovery file named by the run's own 'sidecar:' line; the run's own 'submit-failed:<reason>:<category>' line copied verbatim; written-uncited; facility-unavailable. facility-unavailable is reached only when the error file holds none of the 'submit-failed:', 'sidecar:' or '[submit_feedback] sink:' lines, never as a default."
+  - "PAYLOAD INVARIANCE. epic-supervisor's own feedback id or marker is never written into, and never changes, the blocked payloads it surfaces to the user. Each child payload, including any feedback_id field a ticket-supervisor put there, passes through byte-identical. The non-blocking contract at about :376-378 stays."
+  - "epic-supervisor is marked DEPRECATED (ADR-006) but still ships and can still be dispatched, so this instruction must still be correct. Retiring the agent is a separate decision, not this record's."
+  - "Edits are made in the template source only. The deployed copy is refreshed by the build (ADR-001)."
+  - "Test home: unit_tests/feedback/test_inf_500d_3_vi.py, created by the test phase. It is not in declared_files because this record's own change is prompt-only, and test files belong to test-writer and python-coder per the surface map, as on INF-500d-3-ii and INF-500d-3-iv. The tests reuse the INF-500d-3-ii harness (_inf_500d_3_helpers, _inf_500d_3_ii_check, _inf_500d_3_ii_run). They lift epic-supervisor's submission and read-back from the shared reference layout (marker shared_layout_reader, never their own build.py). They run it with bash in a copied layout with a confined TMPDIR, against an entry point that fails with destination-unwritable. A grep for '/dev/null' alone is not sufficient (CLAUDE.md 'Gate / Workflow ACs'); the /dev/null scan carries positive controls."
+test_intent:
+  - clause: "the run's error stream is written to that run's own file, named as INF-500d-3-ii requires from the ticket the submission names, the epic-supervisor phase and the cross-ticket-pattern event, and is not discarded"
+    needs_test: true
+    reason: Running the lifted command and reading the file back is the only way to show the stream lands at the per-run name and is not dropped.
+  - clause: "epic-supervisor records `(submit-failed:destination-unwritable:subagent-quality)`"
+    needs_test: true
+    reason: The recorded reason comes from the line in the kept error file, so a run that fails with destination-unwritable shows whether the read-back reaches it.
+  - clause: "it does not record `(submit-failed:facility-unavailable:subagent-quality)` or a bare `(submit-failed)`"
+    needs_test: true
+    reason: Keeping the /dev/null redirect and swapping in the facility-unavailable fallback is the wrong version this record exists to catch, and only an executed run tells the two apart.
+  - clause: "no step in epic-supervisor's instructions sends a submission's error stream to /dev/null or to any other place it cannot read back"
+    needs_test: true
+    reason: A second submit step left on /dev/null reintroduces the default, and a scan of the deployed instruction with positive controls finds it.
+  - clause: "those payloads are identical to the ones it surfaces when the submission succeeds"
+    needs_test: true
+    reason: An instruction that routes the marker into the surfaced payloads changes what the user sees, and comparing the payload rule for a failed and a successful run shows it.
+test_spec:
+  - name: test_epic_supervisor_submission_is_discovered_and_names_a_per_run_error_file_for_its_ticket
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "From the deployed epic-supervisor of the shared reference layout (shared_layout_reader), redirects() of the INF-500d-3-ii check discovers exactly one redirecting submit_feedback.py command. Its target filled for tickets 03-add-parser and 05-wire-cli gives two different single-component names, each holding the ticket basename, the literal epic-supervisor and cross-ticket-pattern, with no collision and no name problem; the ticket in the name is the ticket the command's own --ticket argument names. A zero-discovery result fails the test."
+    proves_clause: "the run's error stream is written to that run's own file, named as INF-500d-3-ii requires from the ticket the submission names, the epic-supervisor phase and the cross-ticket-pattern event, and is not discarded"
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_lifted_epic_supervisor_command_runs_as_written_and_leaves_the_error_stream_in_its_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Lifts the discovered command, fills its placeholders, confines /tmp to the test's TMPDIR and runs it with bash from the copied layout against an entry point that prints nothing on stdout, exits non-zero and writes the line submit-failed:destination-unwritable:subagent-quality and a human ERROR line to stderr. The per-run file named by the command exists afterwards and holds exactly those two lines, written by the run; stdout is empty. The command text is one simple command: it begins with python3 and carries no leading hash, no dollar-parenthesis form and no double-pipe fallback."
+    proves_clause: "the run's error stream is written to that run's own file, named as INF-500d-3-ii requires from the ticket the submission names, the epic-supervisor phase and the cross-ticket-pattern event, and is not discarded"
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_the_lifted_command_is_a_single_simple_runnable_shell_command_the_3_ii_check_accepts
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "On the deployed text, the cross-ticket submission is no longer a hash-commented line with collapsed continuation fragments inside the Python pseudo-code block, uses python3 as every other surface does, and the whole INF-500d-3-ii check (check over every deployed surface) still passes with the epic-supervisor redirect included in its inspected count. The discovered command, run with bash, exits like the script it runs (non-zero on the failing entry point, zero against the real script with a declared sink)."
+    proves_clause: "the run's error stream is written to that run's own file, named as INF-500d-3-ii requires from the ticket the submission names, the epic-supervisor phase and the cross-ticket-pattern event, and is not discarded"
+    code_file: templates/agents/epic-supervisor.md
+    must_catch:
+      - the submission left as a hash-commented line that bash runs as nothing
+      - python instead of python3
+      - a dollar-parenthesis capture with a double-pipe fallback
+      - a ticket placeholder spelled with a path so the file name holds path separators
+      - a hyphenated or spaced placeholder that the 3-ii fill does not replace
+  - name: test_read_back_records_destination_unwritable_from_the_kept_error_file
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "After the failing run above, the lifted read-back step (a command over the same per-run file, finding the submit-failed: line by its prefix beside the ERROR line) returns submit-failed:destination-unwritable:subagent-quality, and the marker built from it is (submit-failed:destination-unwritable:subagent-quality). The read-back exits 0, reads only that run's own file, and a decoy per-run file for another ticket in the same TMPDIR is never read."
+    proves_clause: "epic-supervisor records `(submit-failed:destination-unwritable:subagent-quality)`"
+    code_file: templates/agents/epic-supervisor.md
+  - name: test_swapping_in_the_facility_unavailable_fallback_over_a_dev_null_redirect_is_caught
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Runs the same recipe-and-read-back assertions on mutated copies of the lifted command: the redirect target replaced by /dev/null, a merged stream, and the bare fallback restored. Each mutant records facility-unavailable:subagent-quality or the bare form on the destination-unwritable run and fails the assertions that the real deployed text passes, so the check is shown able to go red. The deployed text records destination-unwritable and neither forbidden value."
+    proves_clause: "it does not record `(submit-failed:facility-unavailable:subagent-quality)` or a bare `(submit-failed)`"
+    code_file: templates/agents/epic-supervisor.md
+    must_catch:
+      - the 2>/dev/null redirect kept and the bare fallback swapped for the facility-unavailable marker
+      - one fixed reasoned value recorded for every failure
+      - the reason read off the exit status
+      - the bare (submit-failed) fallback left beside the new read-back
+  - name: test_no_step_in_epic_supervisor_discards_or_hides_a_submission_error_stream
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "Scans the full deployed epic-supervisor text, including hash-commented lines and the pseudo-code block, for every submit_feedback.py command and asserts none sends the error stream to /dev/null, to a merged stream, into a pipe, to a closed descriptor or to a path removed before the read-back. Positive controls: planted variants of each wrong form are flagged by the same scan, and a conforming per-run file is not. The scan is paired with the executed tests above and never stands alone."
+    proves_clause: "no step in epic-supervisor's instructions sends a submission's error stream to /dev/null or to any other place it cannot read back"
+    code_file: templates/agents/epic-supervisor.md
+    must_catch:
+      - a second submit step left on /dev/null
+      - an error stream merged into stdout with 2>&1
+      - an error stream piped to tee or another command
+      - a per-run file deleted before the read-back
+      - the old commented line left in the pseudo-code beside the new command
+  - name: test_blocked_payload_rule_is_identical_when_the_submission_fails_or_succeeds
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The supervisor itself cannot be run, so this reads the deployed instruction after running both recipes (failing entry point and successful real script): the id or marker is held in the supervisor's own record only, and no step writes it into, or changes, any child payload; the payload passthrough and the non-blocking contract paragraph (a failed call must not alter the blocked payload surfaced to the user) are still present; no step branches on the submission result before the surfacing step. Positive controls: planted steps that set a feedback_id on child payloads, or surface payloads only when the submission succeeded, are flagged by the same scan."
+    proves_clause: those payloads are identical to the ones it surfaces when the submission succeeds
+    code_file: templates/agents/epic-supervisor.md
+    must_catch:
+      - an instruction that writes epic-supervisor's own marker into a child payload feedback_id field
+      - an instruction that surfaces the payloads only after a successful submission
+      - the non-blocking contract paragraph removed when the read-back was added
+      - an instruction that halts when the marker is recorded
+  - name: test_epic_supervisor_recipe_reachable_as_bash_against_the_real_submit_script
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Reachability: the deployed epic-supervisor command is run with bash in a copied layout (own declared sink absent, confined TMPDIR) against the real submit_feedback.py (needs INF-500d-3), so the script writes submit-failed:destination-unwritable:subagent-quality itself to the per-run file; the lifted read-back returns it and the marker is the destination-unwritable one. A control run with a declared sink returns an id on stdout, leaves a sidecar line in the file and no failure line."
+    proves_clause: "epic-supervisor records `(submit-failed:destination-unwritable:subagent-quality)`"
+    code_file: templates/agents/epic-supervisor.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/agents/epic-supervisor.md
+  - unit_tests/feedback/_inf_500d_3_helpers.py
+  - unit_tests/feedback/_inf_500d_3_ii_check.py
+  - unit_tests/feedback/_inf_500d_3_ii_run.py
+  - unit_tests/feedback/test_inf_500d_3_ii.py
+file_findings:
+  - file: templates/agents/epic-supervisor.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the cross-ticket pattern submission at line 373 with the 2>/dev/null redirect and the bare fallback, and the non-blocking contract at lines 376-378, which are what the criteria change.
+    decision: null
+file_findings_opened_files:
+  - templates/agents/epic-supervisor.md
+delivers_to:
+  - agent: llm-expert
+    contract: "Consumed by INF-500d-3-v. epic-supervisor's cross-ticket pattern submission is a runnable single shell command whose error stream goes to /tmp/feedback_err_<ticket basename placeholder>_epic-supervisor_cross-ticket-pattern.txt, with the ticket the same affected ticket --ticket names. That file holds the run's 'submit-failed:<reason>:<category>', 'sidecar:' or '[submit_feedback] sink:' line for the read-back. No epic-supervisor step sends a submission's error stream to /dev/null."
+expects_from:
+  - ac_id: INF-500d-3
+    contract: "On every failure exit the script controls, the error stream carries one line 'submit-failed:<reason>:<category>', with <reason> drawn from templates/scripts/feedback/submit_failure_reasons.json (deployed to <output root>/scripts/feedback/submit_failure_reasons.json). Standard output stays empty and the exit status is non-zero. The capture precedence's third step, which this record makes reachable for epic-supervisor, reads that line. Must land in the same PR as this record or before it."
+  - ac_id: INF-500d-3-ii
+    contract: "The per-run error-file naming rule: /tmp/feedback_err_<ticket_basename>_<phase>[_<event-kind>].txt as one path component, with the ticket as its file name, checked by unit_tests/feedback/_inf_500d_3_ii_check.py. epic-supervisor's redirect follows it with the literal phase epic-supervisor and the event kind cross-ticket-pattern."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS ITS OWN RECORD. With the error stream sent to /dev/null, the capture
+  precedence in INF-500d-3 falls through every step: there is no id, no recovery line
+  and no failure line. It ends at facility-unavailable on EVERY failure. A template
+  that kept `2>/dev/null` and swapped the bare fallback for the facility-unavailable
+  marker would satisfy INF-500d-3-v's wording for epic-supervisor ("a reasoned marker
+  from the vocabulary"). It would still misreport every writer refusal, malformed
+  submission and unwritable destination as an unavailable facility. The
+  destination-unwritable case in the first scenario turns that version red. That
+  wrong version is the reason this record exists.
+
+  Location verified 2026-11-16: epic-supervisor.md:373, a commented shell equivalent
+  inside a Python-style pseudocode block, `... 2>/dev/null) || FB_ID="(submit-failed)"`.
+  The non-blocking contract it must keep is at :376-378.
+
+  Observed, not in scope: epic-supervisor is marked DEPRECATED (ADR-006) but is still
+  shipped and dispatchable, so its instruction must still be correct. Retiring it is
+  not this record's decision.
+
+  IT PO ENRICHMENT (2026-11-16). The criteria are unchanged. Points for the reviewer:
+
+  - SAME-DELIVERY EFFECT ON INF-500d-3-ii's TESTS. Today the INF-500d-3-ii check skips
+    epic-supervisor because its error stream goes to /dev/null. Once it goes to a file,
+    the check discovers the line, judges its name and runs it with bash -c. So the name
+    must use a ticket placeholder the check fills to a file name, and the command must
+    run as lifted. The current '#'-commented, collapsed line would make
+    test_inf_500d_3_ii.py red.
+  - OVERLAP WITH INF-500d-3-v. Both records list epic-supervisor and both name the
+    marker. This record owns the redirect and the destination-unwritable case.
+    INF-500d-3-v owns the full precedence across every surface. Build the two in one
+    delivery, or this one first.
+  - The second scenario holds today only by instruction text (the non-blocking
+    contract), because the grouping algorithm is pseudo-code that the agent carries
+    out. A test can show that no step routes the marker into a surfaced payload, but it
+    cannot run the supervisor.

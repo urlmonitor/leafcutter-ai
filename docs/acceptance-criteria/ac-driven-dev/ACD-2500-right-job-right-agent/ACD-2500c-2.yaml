@@ -113,3 +113,15 @@ notes: |
   Ordering inside the goal: ACD-2500b and ACD-2500c ship together (ACD-2500 notes). If
   this AC ships without ACD-2500c-1, ACD-2500b-2 holds every new code requirement at
   "test design pending" - visible, not silent, but blocking. IT-PO should batch them.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

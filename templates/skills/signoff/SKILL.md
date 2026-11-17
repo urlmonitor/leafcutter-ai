@@ -177,16 +177,27 @@ capture the returned `feedback_id`.
 
    **Call 1** — run the submit script:
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --tags <tags_or_omit_flag> --note "<one-sentence note>" 2>/tmp/feedback_err.txt
+   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --tags <tags_or_omit_flag> --note "<one-sentence note>" 2>/tmp/feedback_err_<ticket_basename>_<agent_name>.txt
    ```
    Read the feedback ID directly from the Bash tool result (stdout).
+   `<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
 
    **Call 2** (only if Call 1 stdout was empty) — check the sidecar fallback:
    ```bash
-   grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err.txt
+   grep -o 'sidecar:[^ ]*feedback_id_[0-9]*.txt' /tmp/feedback_err_<ticket_basename>_<agent_name>.txt
    ```
    If this returns a path like `sidecar:/tmp/feedback_id_12345.txt`, read that
-   file in a third call to retrieve the ID.
+   file in a further call to retrieve the ID. This search reads only your own error
+   file, so it returns nothing when your own file holds no `sidecar:` line. A recovery
+   file that is missing or empty gives the `written-uncited` marker (step 4), never
+   another agent's id. Never fall back to any recovery file your own error file does
+   not name, and never list, glob or sort the temp directory.
+
+   **Call 3** (only if Call 1 stdout was empty) — read back this run's own failure line
+   (prints nothing and exits 0 when there is none):
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_<agent_name>.txt
+   ```
 
    **Why separate calls**: The shell convention (CLAUDE.md) requires each Bash
    tool call to be a single simple command. Compound commands with `$()`, `if`,
@@ -194,11 +205,16 @@ capture the returned `feedback_id`.
    prompts. The Bash tool result already provides stdout, making shell variable
    capture redundant.
 
-4. **Capture stdout → `feedback_id`** using the recipe above. If the script
-   exits non-zero, `FB_ID` will be empty after both the stdout and sidecar
-   checks; use `feedback-id: (submit-failed)` as the fallback value in the
-   comment body. **Do NOT abort signoff** — a failed feedback submission is not a
-   phase failure.
+4. **Capture `feedback_id`** using the recipe above, by INF-500d-3's capture
+   precedence: the id on stdout; else the id inside the recovery file named by your
+   own `sidecar:` line; else your own `submit-failed:<reason>:<category>` line copied
+   verbatim into `feedback-id: (submit-failed:<reason>:<category>)`; else
+   `(submit-failed:written-uncited:<category>)` when a `sidecar:` or
+   `[submit_feedback] sink:` line exists but no id was recovered; else
+   `(submit-failed:facility-unavailable:<category>)` when none of those lines exist.
+   The reasons live only in `scripts/feedback/submit_failure_reasons.json`.
+   **Do NOT abort signoff** — a failed feedback submission is not a phase failure;
+   the sign-off continues unchanged.
 
 5. **Use the `feedback_id`** as the first line of the comment body in §3.
 
@@ -1083,4 +1099,4 @@ Amendment 2 A2.8). Include `--ticket` only when you have a ticket path in hand.
 - **Don't** invent new status values or comment status tags. Adding new ones is an edit to this skill, never an ad-hoc choice in an agent prompt.
 - **Don't** edit other agents' lines in `agents:` or `## Sign-offs`. You only ever modify your own row.
 - **Don't** combine your sign-off Edit with substantive content edits in a way that obscures the audit trail. Sign off in its own dedicated Edit pair after your work is complete.
-- **Don't** skip the `submit_feedback.py` call (§2a). If the script fails, use `feedback-id: (submit-failed)` and proceed — do not abort signoff. An empty feedback entry is not a valid substitute for calling the script.
+- **Don't** skip the `submit_feedback.py` call (§2a). If the script fails, record the id or the reasoned `(submit-failed:<reason>:<category>)` marker by §2a step 4's precedence and proceed — do not abort signoff. An empty feedback entry is not a valid substitute for calling the script.

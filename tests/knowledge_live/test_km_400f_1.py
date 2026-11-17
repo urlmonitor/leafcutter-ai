@@ -39,7 +39,9 @@ def test_policy_evaluation_changes_no_generation():
         try:
             await db.setup()
         except (OSError, BackendUnavailable) as exc:  # unreachable service
-            pytest.skip(f"live Neo4j not reachable: {exc}")
+            from tests.knowledge_live.lane._live_skip import unreachable_reason  # noqa: PLC0415 -- the one shared no-database skip reason
+
+            pytest.skip(unreachable_reason(exc))
         previous = None
         for n in range(4):
             gen = f"g{n}"

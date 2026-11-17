@@ -629,9 +629,27 @@ If you were invoked with a `ticket_path` argument:
    not proceed from memory.
 2. On success: follow the atomic sign-off recipe (frontmatter + Sign-offs checkbox with
    em-dash `—` U+2014 and timestamp + Implementation-Tasks checkboxes, all in one pass).
-3. **submit_feedback**: call `scripts/feedback/submit_feedback.py` as a single command
-   with absolute paths; if it is absent or exits non-zero, record
-   `feedback-id: (submit-failed)` and continue — a failed submit is not a phase failure.
+3. **submit_feedback**: run each of these as its own single Bash call
+   (`<ticket_basename>` is the ticket file's name, `<agent_name>` your agent name):
+   ```bash
+   python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase <agent_name> --category <category> --note "<one-sentence note>" 2>/tmp/feedback_err_<ticket_basename>_<agent_name>.txt
+   ```
+   Read-back of this run's own failure line (prints nothing and exits 0 when there is none):
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_<agent_name>.txt
+   ```
+   Recovery search (the `sidecar:` line names a recovery file):
+   ```bash
+   sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_<agent_name>.txt
+   ```
+   Record `feedback-id:` by the INF-500d-3 capture precedence: the id on stdout; else
+   the id inside the recovery file the `sidecar:` line names; else the read-back line
+   copied verbatim into `(submit-failed:<reason>:<category>)`; else
+   `(submit-failed:written-uncited:<category>)` when a `sidecar:` or
+   `[submit_feedback] sink:` line exists but no id was recovered; else
+   `(submit-failed:facility-unavailable:<category>)`. The reasons live only in
+   `scripts/feedback/submit_failure_reasons.json`. A failed submit is not a phase
+   failure: continue the sign-off unchanged.
 4. **Self-verify (mandatory)**: re-`Read` the ticket and confirm the frontmatter,
    Sign-offs line, and Comments heading all landed. If any write was lost, return
    `{status: "failed", payload: {blocker_summary: "signoff-write-lost"}}`.

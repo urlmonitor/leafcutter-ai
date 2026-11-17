@@ -395,6 +395,18 @@ def tearDownModule() -> None:  # noqa: N802 - unittest module-fixture protocol
         tmp.cleanup()
 
 
+def _authored_fault_repo() -> Path:
+    """Return the authored-fault fixture repo setUpModule built."""
+    assert isinstance(_AUTHORED_FAULT_REPO, Path), f"fixture repo not built: {_SETUP_ERROR}"
+    return _AUTHORED_FAULT_REPO
+
+
+def _carried_in_only_repo() -> Path:
+    """Return the carried-in-only fixture repo setUpModule built."""
+    assert isinstance(_CARRIED_IN_ONLY_REPO, Path), f"fixture repo not built: {_SETUP_ERROR}"
+    return _CARRIED_IN_ONLY_REPO
+
+
 class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
     """Real-repo, real-subprocess coverage of GE-120e-3-ii's two arms."""
 
@@ -416,7 +428,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         _merge_scoped_paths was hardened in a prior ticket. This is a
         regression guard for that hardening, not new red for this ticket.
         """
-        outcome = _run_check(_CONTRACT_SHRINKING, _AUTHORED_FAULT_REPO)
+        outcome = _run_check(_CONTRACT_SHRINKING, _authored_fault_repo())
         combined = outcome.stdout + outcome.stderr
         self.assertNotEqual(
             0,
@@ -431,7 +443,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         """AC-1 (arm A(ii)): frontmatter the author typed while resolving a
         conflict — an invalid status value matching NEITHER parent — still
         trips check_doc_frontmatter, and the commit is blocked."""
-        outcome = _run_check(_DOC_FRONTMATTER, _AUTHORED_FAULT_REPO)
+        outcome = _run_check(_DOC_FRONTMATTER, _authored_fault_repo())
         combined = outcome.stdout + outcome.stderr
         self.assertNotEqual(
             0,
@@ -457,7 +469,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         check_contract_shrinking's half of this assertion is expected to
         already pass.
         """
-        contract_outcome = _run_check(_CONTRACT_SHRINKING, _AUTHORED_FAULT_REPO)
+        contract_outcome = _run_check(_CONTRACT_SHRINKING, _authored_fault_repo())
         contract_combined = contract_outcome.stdout + contract_outcome.stderr
         self.assertIn("test_thing.py", contract_combined)
         self.assertNotIn(
@@ -467,7 +479,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
             "(tests/test_bystander.py) that the author never touched.",
         )
 
-        fm_outcome = _run_check(_DOC_FRONTMATTER, _AUTHORED_FAULT_REPO)
+        fm_outcome = _run_check(_DOC_FRONTMATTER, _authored_fault_repo())
         fm_combined = fm_outcome.stdout + fm_outcome.stderr
         self.assertIn("docs/foo.md", fm_combined)
         self.assertNotIn(
@@ -501,8 +513,8 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         check_contract_shrinking's assertions are expected to already pass.
         """
         # --- Arm 1: authored resolution — must be blocked -----------------
-        blocked = _run_check(_CONTRACT_SHRINKING, _AUTHORED_FAULT_REPO)
-        blocked_fm = _run_check(_DOC_FRONTMATTER, _AUTHORED_FAULT_REPO)
+        blocked = _run_check(_CONTRACT_SHRINKING, _authored_fault_repo())
+        blocked_fm = _run_check(_DOC_FRONTMATTER, _authored_fault_repo())
         self.assertNotEqual(
             0, blocked.returncode,
             "authored-fault arm must block (check_contract_shrinking).",
@@ -513,7 +525,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         )
 
         # --- Arm 2: carried-in, unauthored — must NOT be blocked -----------
-        not_blocked = _run_check(_CONTRACT_SHRINKING, _CARRIED_IN_ONLY_REPO)
+        not_blocked = _run_check(_CONTRACT_SHRINKING, _carried_in_only_repo())
         self.assertEqual(
             0,
             not_blocked.returncode,
@@ -523,7 +535,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
             f"{not_blocked.stdout}{not_blocked.stderr}",
         )
 
-        not_blocked_fm = _run_check(_DOC_FRONTMATTER, _CARRIED_IN_ONLY_REPO)
+        not_blocked_fm = _run_check(_DOC_FRONTMATTER, _carried_in_only_repo())
         self.assertEqual(
             0,
             not_blocked_fm.returncode,
@@ -549,12 +561,12 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
         this test's job is to make that failure mode observable on its own.
         """
         self.assertTrue(
-            (_AUTHORED_FAULT_REPO / ".git" / "MERGE_HEAD").exists(),
+            (_authored_fault_repo() / ".git" / "MERGE_HEAD").exists(),
             "Fixture invalid: MERGE_HEAD must be present for this "
             "assertion to mean anything.",
         )
 
-        contract_outcome = _run_check(_CONTRACT_SHRINKING, _AUTHORED_FAULT_REPO)
+        contract_outcome = _run_check(_CONTRACT_SHRINKING, _authored_fault_repo())
         self.assertNotEqual(
             0,
             contract_outcome.returncode,
@@ -563,7 +575,7 @@ class TestGE120e3iiMergeResolutionFault(unittest.TestCase):
             "attribution, never whether content is inspected.",
         )
 
-        fm_outcome = _run_check(_DOC_FRONTMATTER, _AUTHORED_FAULT_REPO)
+        fm_outcome = _run_check(_DOC_FRONTMATTER, _authored_fault_repo())
         self.assertNotEqual(
             0,
             fm_outcome.returncode,
@@ -591,7 +603,7 @@ class TestGE120e3iiReachableFromEntryPoint(unittest.TestCase):
 
     def test_ge_120e_3_ii_reachable_from_entry_point(self) -> None:
         # covers: GE-120e-3-ii
-        contract_outcome = _run_check(_CONTRACT_SHRINKING, _AUTHORED_FAULT_REPO)
+        contract_outcome = _run_check(_CONTRACT_SHRINKING, _authored_fault_repo())
         self.assertIsInstance(contract_outcome, subprocess.CompletedProcess)
         self.assertNotEqual(
             0,
@@ -602,7 +614,7 @@ class TestGE120e3iiReachableFromEntryPoint(unittest.TestCase):
             "real CLI entry point this AC requires.",
         )
 
-        fm_outcome = _run_check(_DOC_FRONTMATTER, _AUTHORED_FAULT_REPO)
+        fm_outcome = _run_check(_DOC_FRONTMATTER, _authored_fault_repo())
         self.assertIsInstance(fm_outcome, subprocess.CompletedProcess)
         self.assertNotEqual(
             0,

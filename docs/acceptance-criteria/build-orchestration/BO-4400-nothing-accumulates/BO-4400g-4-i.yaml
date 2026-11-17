@@ -1,0 +1,226 @@
+id: BO-4400g-4-i
+title: "No flow removes a workspace by any means other than the clearing door"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the five flows of BO-4400g-4 are each run as in its first scenario, pull request
+    merged and nothing unsent,
+  And the clearing door is made to refuse every clearing request during these runs, with
+    a refusal stating that the workspace is in use,
+  When each flow returns its final result,
+  Then every flow's workspace folder still exists, with its files identical to their state
+    when the clearing request was made,
+  And every flow's final result contains the door's refusal unchanged and reports the
+    workspace as kept,
+  And no flow retried the clearing with a discard token or by any other route.
+
+  Given the set of flows, skills, commands and agent instructions the install deploys, the
+    set being derived from what the install deploys and never from a hand-written list,
+  When each is run on its clearing path with the door replaced by a recorder,
+  Then every workspace that disappears during the run disappears only after a recorded
+    clearing request for it.
+depends_on: [BO-4400g-4, BO-4300g-2-i]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-3.yaml
+    relationship: related
+    status: exists
+    relevance: The hand-run ways of clearing already go through the door; this extends the check to every flow.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300g-2-i.yaml
+    relationship: constrains
+    status: exists
+    relevance: Already checks repo-wide that every removal-capable dispatch carries an authorization; this record adds the outcome check and reuses its harness and deployed-set derivation.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    state: existing
+  - path: unit_tests/_workflow_engine_harness.py
+    state: existing
+it_requirements:
+  - >-
+    NO FALLBACK AFTER A REFUSAL: once the door refuses, a flow stops clearing. It does not retry with a
+    discard token, a forced or by-location request or --delete-remote-branch, and it does not delete the
+    folder directly, run git worktree remove or send another agent. The door's refusal object appears
+    unchanged in the flow's final result, and the workspace is reported kept. The one relay lives in the
+    shared helper of templates/workflows-js/_shared/workspace-answer.js.
+  - >-
+    DERIVED SET: the flows, skills, commands and agent instructions checked are derived from what the install
+    deploys (the deployed layout), never from a hand-written list, and no surface is exempted by name.
+    Workflows are run under the engine harness. Prose surfaces are exercised by executing the clearing
+    command they publish, the pattern BO-4400a-3 uses.
+  - >-
+    RECORDER DOOR: the door is replaced by a recorder that logs each request and can be told to refuse. It
+    covers every maker verb that clears (remove, and the per-work clear-landed of BO-4400g-2 that flows send).
+    A workspace that disappears without a recorded request for it fails the check, naming the surface and the
+    step. The recorder is a mode of the exec bridge BO-4400g-4 adds to unit_tests/_workflow_engine_harness.py,
+    recognising maker commands through BO-4300g-2-i's shared parser, so it is built after both (BUILD ORDER in
+    BO-4400g-4). Finalize's scratch-copy cleanup is a recorded name-form door request like any other (BO-4400g-4,
+    FINALIZE'S SCRATCH COPY), so it needs no exemption.
+  - >-
+    BUILDS ON, DOES NOT DUPLICATE: BO-4300g-2-i checks that every removal-capable dispatch carries an
+    authorization, and BO-4400a-3 checks that the hand-run surfaces publish only the door's command. This
+    record adds only the outcome checks: nothing vanishes without a recorded door request, and refusals are
+    never worked around. It extends the same harness (recorded dispatch payloads) and the same deployed-set
+    derivation instead of forking them.
+  - >-
+    THE CHECK PROVES IT CAN FAIL: a fixture flow that deletes its folder directly, and one that retries with a
+    discard token after a refusal, are each reported. The real flows are not.
+  - >-
+    The check reads the deployed layout as a shared_layout_reader (the shared reference layout), spawns no
+    build.py and makes no live model call, so it runs in CI.
+test_required: true
+test_intent:
+  - clause: 'every flow''s workspace folder still exists, with its files identical to their state when the clearing request was made'
+    needs_test: true
+    reason: A flow that falls back to its own deletion after a refusal removes the folder, which only the disk shows.
+  - clause: 'every flow''s final result contains the door''s refusal unchanged and reports the workspace as kept'
+    needs_test: true
+    reason: A refusal that is paraphrased or reported as success hides the unsent work from the person.
+  - clause: no flow retried the clearing with a discard token or by any other route
+    needs_test: true
+    reason: A token retry turns a safe refusal into a loss of work, and the recorder shows every request made.
+  - clause: every workspace that disappears during the run disappears only after a recorded clearing request for it
+    needs_test: true
+    reason: This is the falsifiable form of "no flow carries its own deletion logic", across every deployed surface.
+test_spec:
+  - name: test_every_flow_keeps_its_folder_when_the_door_refuses_in_use
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The five flows of BO-4400g-4 are each run under run_workflow_under_e2 as in that record's first scenario
+      (pull request merged, nothing unsent), with the shell-runner stand-in replacing the door by a recorder that
+      logs every request and answers PROCESS_HOLDS_FILES (workspace in use) to each. After each flow returns the
+      workspace folder exists and every file hash equals the snapshot taken when the request was recorded. Needs the
+      additive exec bridge of unit_tests/_workflow_engine_harness.py named in BO-4400g-4 (the harness only replays
+      static label_responses today), declared in this record's declared_files.
+    proves_clause: 'every flow''s workspace folder still exists, with its files identical to their state when the clearing request was made'
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a flow that deletes its folder directly after a refusal
+      - a flow that retries with git worktree remove or another agent
+  - name: test_every_flow_relays_the_refusal_unchanged_and_reports_kept
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result of each flow holds the recorder's refusal object equal to the object it sent (all keys, no
+      paraphrase) and reports the workspace as kept, not as success. The one relay lives in the shared helper of
+      _shared/workspace-answer.js, which shellStepReply and workspaceAcceptAnswer already parse for the ensure step.
+    proves_clause: 'every flow''s final result contains the door''s refusal unchanged and reports the workspace as kept'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_no_flow_retries_with_a_token_or_another_route_after_a_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The recorder holds exactly one request per flow: no second request, no --discard-token, no
+      --delete-remote-branch, no by-location (--path) request and no dispatch to any other agent after the refusal.
+      Note workspace-answer.js workspaceRemoveCommand today appends --force (which the maker accepts and ignores):
+      the recorder classifies it by the maker's own parser, so an accepted-and-ignored --force never reads as a
+      forced retry of the name-based request, and the assertion text says so.
+    proves_clause: no flow retried the clearing with a discard token or by any other route
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+    must_catch:
+      - a flow that re-sends the clearing with the discard token returned in the refusal
+  - name: test_workspaces_disappear_only_after_a_recorded_request_across_the_deployed_set
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Marked @pytest.mark.shared_layout_reader and requesting shared_reference_layout (no build.py spawn). The
+      flows, skills, commands and agent instructions are derived from the deployed layout (never from a list, no
+      surface exempted by name, ship's SKILL.md included by executing the clearing command it publishes). Each
+      workflow is run under the harness with a recorder door and a real temporary workspace per surface. For every
+      workspace that vanishes the recorder has a request for it before it vanished; a failing case names the
+      surface and the step. Fixture flows prove the check can fail: one that rmtree()s its folder directly and one
+      that retries with a discard token after a refusal are each reported, and the real flows are not.
+    proves_clause: every workspace that disappears during the run disappears only after a recorded clearing request for it
+    code_file: unit_tests/_workflow_engine_harness.py
+    must_catch:
+      - a flow that deletes its folder directly (fixture flow)
+      - a flow that retries with a discard token (fixture flow)
+  - name: test_refused_flow_run_is_reachable_through_the_deployed_workflow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed quick-fix.js (the shortest flow) with the refusing recorder reaches the
+      clearing dispatch and relays the refusal, proving the relay is wired and not merely defined.
+    proves_clause: 'every flow''s final result contains the door''s refusal unchanged and reports the workspace as kept'
+    code_file: templates/workflows-js/quick-fix.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/quick-fix.js
+  - unit_tests/_workflow_engine_harness.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-4
+  contract: >-
+    Every flow builds its name-based clearing request through the one shared helper and relays the door's
+    answer verbatim in its final result.
+file_findings:
+  - file: templates/workflows-js/_shared/workspace-answer.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It already holds the shared reply handling (shellStepReply, workspaceAcceptAnswer, workspaceRemovalRecord at lines 324-333), which is the one relay the no-fallback requirement names.
+    decision: null
+  - file: unit_tests/_workflow_engine_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the dispatch recorder (AgentCall, HarnessResult, run_workflow_under_e2) the recorder door and the shared clearing-command parser extend, though neither the parser nor any live shell stand-in exists in it yet.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - unit_tests/_workflow_engine_harness.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: RECORDER DOOR is a mode of BO-4400g-4's harness exec bridge, using
+      BO-4300g-2-i's shared parser (built after both), and finalize's scratch-copy cleanup is a name-form door
+      request with no exemption. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+  - reason: >-
+      it-po technical enrichment 2026-11-16: depends_on gains BO-4300g-2-i, whose repo-wide check of
+      removal-capable dispatches this record builds on (asked by the orchestrator). Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "No flow carries its own deletion logic" -- the user's words, made falsifiable: a flow
+  that deletes the folder itself, or falls back to a forced removal after a refusal, leaves
+  no folder in scenario 1 and fails. Verified by running the flows, never by searching their
+  text (CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally, Not by Grep").

@@ -1,0 +1,67 @@
+id: BP-1300f-1-iv
+components:
+  - build_pipeline
+title: "A file that did not exist at the merge base has no inherited type errors, so every type error in it is new"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Scenario: A new file with a type error fails
+    Given the file scripts/fresh.py does not exist at the merge base,
+    When the pull request adds it with one "return-value" error at line 2,
+    Then the check fails,
+    And it names scripts/fresh.py, line 2 and code "return-value".
+
+  Scenario: A clean new file passes
+    Given the file scripts/fresh.py does not exist at the merge base,
+    When the pull request adds it with no type error,
+    Then the check passes and reports 1 file inspected and 0 new errors.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "An A entry has no base path: it is type-checked at the head only and its base multiset is empty. When no changed file has a base path, the base checkout and the base mypy run are skipped entirely."
+test_spec:
+  - name: test_bp_1300f_1_iv_new_file_with_an_error_fails
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "skips files with no base version instead of treating their base as empty"
+    description: "Head adds scripts/fresh.py with a return-value error at line 2; exit 1 naming scripts/fresh.py:2 and [return-value]."
+  - name: test_bp_1300f_1_iv_clean_new_file_passes
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Head adds a clean scripts/fresh.py; exit 0; summary says 1 file and 0 new errors."
+test_rationale: >-
+  Proved through a real git repository and the real module, because "did not exist
+  at the merge base" is a fact about git history that only a real repository has.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_mypy_ratchet.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary

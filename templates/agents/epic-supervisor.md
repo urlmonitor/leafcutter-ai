@@ -367,11 +367,37 @@ for payload in blocked_payloads:
 # Emit one aggregating entry per group with >= 2 members
 for (phase, summary_prefix), affected in groups.items():
     if len(affected) >= 2:
-        # Emit aggregating subagent-quality entry (non-blocking)
+        # Emit aggregating subagent-quality entry (non-blocking): run the
+        # three commands below, each as its own Bash call
         count = len(affected)
-        # Shell equivalent:
-        # FB_ID=$(python scripts/feedback/submit_feedback.py         #   --ticket "<any_affected_ticket_path>" --phase epic-supervisor         #   --category subagent-quality         #   --tags "agent-<phase>,cross-ticket-pattern,n-<count>"         #   --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets." 2>/dev/null) || FB_ID="(submit-failed)"
 ```
+
+Submit command, with `<affected_ticket_path>` any one affected ticket's path and
+`<affected_ticket_basename>` that same ticket's file name (e.g. `03-add-parser.md`):
+
+```bash
+python3 scripts/feedback/submit_feedback.py --ticket "<affected_ticket_path>" --phase epic-supervisor --category subagent-quality --tags "agent-<phase>,cross-ticket-pattern,n-<count>" --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets." 2>/tmp/feedback_err_<affected_ticket_basename>_epic-supervisor_cross-ticket-pattern.txt
+```
+
+Read-back of this run's own failure line (prints nothing and exits 0 when there is none):
+
+```bash
+sed -n '/^submit-failed:/p' /tmp/feedback_err_<affected_ticket_basename>_epic-supervisor_cross-ticket-pattern.txt
+```
+
+Recovery search (the `sidecar:` line names a recovery file):
+
+```bash
+sed -n '/^sidecar:/p' /tmp/feedback_err_<affected_ticket_basename>_epic-supervisor_cross-ticket-pattern.txt
+```
+
+Record the feedback ID by the INF-500d-3 capture precedence: the id on stdout; else the
+id inside the recovery file the `sidecar:` line names; else the read-back line copied
+verbatim into `(submit-failed:<reason>:<category>)`; else
+`(submit-failed:written-uncited:<category>)` when a `sidecar:` or
+`[submit_feedback] sink:` line exists but no id was recovered; else
+`(submit-failed:facility-unavailable:<category>)`. The reasons live only in
+`scripts/feedback/submit_failure_reasons.json`.
 
 **Non-blocking contract:** A failed `submit_feedback.py` call during pattern detection
 MUST NOT alter the blocked payload surfaced to the user. The aggregating emit is a

@@ -1,0 +1,211 @@
+id: KM-500a-4-v
+title: S1 expectations come from two independent reviewers at a pinned revision and are fixed by hash before any run
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given each S1 case needs a reviewed expected outcome
+  When the set is prepared for its first run
+  Then each expected outcome is derived by two reviewers working separately from source bytes at one pinned Git revision, and each reviewer judgment names the reviewer and that revision
+  And each reviewer judgment lists the inputs consulted, and a set in which any listed input is a run report, a system output or the other reviewer's judgment is refused as not independent
+  And where the two reviewers disagree, the case carries an adjudication with its reason or is excluded from the set, and the report states how many cases were excluded this way
+  And the hash of the case file and the hash of the oracle are fixed before the first run, and every run report carries both hashes
+  And a run whose case file or oracle no longer matches the fixed hashes is reported invalidated against S1 and contributes no figure to any S1 result
+  And a case whose pinned revision differs from the set's pinned revision is refused rather than scored.
+depends_on:
+- KM-500a-4
+- KM-500a-4-iv
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires independently reviewed cases and frozen cases before scoring.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing review_fingerprint and separation of expected from actual values that S1 keeps.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Prior Git-anchored, hashed oracle discipline; S1 adds a second independent reviewer and a no-system-output
+    rule.
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+- path: scripts/derive_kernel_path_oracle.py
+  state: to_be_created
+- path: knowledge/evaluation_provenance.py
+  state: to_be_created
+it_requirements:
+- "Pinned revision: S1 has one pinned Git SHA, recorded in set.lock.json. It must be an ancestor of origin/main when the set is frozen, so it stays reachable after merge (CI checks out with fetch-depth 0; a squash-merged branch commit would become unreachable)."
+- "Parse script (python-coder): scripts/derive_kernel_path_oracle.py takes the pinned SHA and the case targets and emits source facts (for example the descendants of a root with their work_status, the registered operations declared in source at that SHA, the mapped fields), each with the repo path and the sha256 of the exact Git blob it read. It reads bytes only through git show / git ls-tree at the pinned SHA and parses them with plain YAML/JSON parsers. It must not import knowledge.projection, knowledge.service, knowledge.query_catalog, integrations or kernel, so the oracle cannot inherit a defect of the system it judges (the precedent is the independent git archive YAML oracle in tests/knowledge/query_answer_contract_acceptance_impact.py)."
+- "Two independent reviewers (data, not code): the expected outcomes are derived by two separate agent dispatches, each started from a fresh context with no shared transcript, run by the driving session in the S1 data run (KM-500a-4-x) and not by the python-coder that builds the runner. python-coder writes no reviewer judgment, adjudication, oracle or lock content; those files are produced by KM-500a-4-x. Each reviewer is given only: cases.json without expected outcomes, the pinned SHA, the parse script and read access to Git bytes at that SHA. Neither may open reports/, any run report or run output directory, oracle.json, scripted_judgments or the other reviewer's file. Each judgment file (reviews/reviewer-a.json or reviews/reviewer-b.json) records: the producing dispatch identity, the pinned SHA, inputs consulted (path plus blob sha256 for every input), and per case the expected outcome kind, the expected operation identity and bound arguments where one applies, and a one-line derivation."
+- "Independence is enforced by code, not trusted: the provenance check refuses the whole set as not independent when any listed input of either reviewer is under reports/, is a run report or system output, is oracle.json, or is the other reviewer's judgment file, and when a reviewer's pinned SHA differs from the set's."
+- "Producer check (KM-500a-4-x): the same provenance check reads the producer record of every S1 file and refuses the whole set, naming the file and the reason, when a file records no producer, when the case file and a reviewer judgment name the same dispatch, when both reviewer judgments name the same dispatch, when an adjudication names anyone other than the user as adjudicator, or when a file names a ticket-phase build agent (for example python-coder or test-writer) as its producer. The set of ticket-phase agents is read from config/agent_registry.json (is_ticket_phase), not hard-coded."
+- "Merge and adjudication: a deterministic merge compares the two judgments per case. Agreement becomes the oracle entry. Disagreement is adjudicated only by the user, recorded in adjudication.json with the user named as adjudicator and the user's reason; otherwise the case is dropped from S1. No agent dispatch adjudicates. The report states the adjudicated count and the dropped count. The merge never picks a side on its own."
+- "Freezing (what is hashed and when): after merge, user adjudication and a passing or explicitly limited composition check, and before the first scored run of any variant (scripted or real), set.lock.json is written and committed. It records the pinned SHA and the sha256 of the exact bytes of cases.json, holdout.json, oracle.json and policy.json, plus the sorted holdout case ids. The lock commit precedes any commit that adds a run report or changes host instructions, prompts or catalog descriptions meant to be evaluated on S1; the lock-before-run check verifies that order from Git history, not from a timestamp in a file."
+- "Every run report carries the case-file sha256 and oracle sha256 (and the holdout and policy hashes). Before scoring, the runner recomputes the hashes from the files on disk. Any mismatch reports the run invalidated against S1; an absent or uncommitted lock reports the run not_run with the unmet prerequisite 'S1 not frozen' (the exact string of KM-500a-4-x). Either way the run contributes no figure to any S1 result."
+- "The oracle is assessment-only: it is opened after all cases in the run have produced actual results, and no oracle value is ever passed into a run or used to fill an actual field. A case whose own pinned revision differs from the set's is refused, not scored."
+test_required: true
+test_intent:
+- clause: "each expected outcome is derived by two reviewers working separately from source bytes at one pinned Git revision, and each reviewer judgment names the reviewer and that revision"
+  needs_test: true
+  reason: The provenance check over the real reviewer files is computed and must show two distinct reviewers at the set's revision.
+- clause: "each reviewer judgment lists the inputs consulted, and a set in which any listed input is a run report, a system output or the other reviewer's judgment is refused as not independent"
+  needs_test: true
+  reason: Refusing tainted inputs turns the blind-reviewer policy into behaviour a test can falsify.
+- clause: "where the two reviewers disagree, the case carries an adjudication with its reason or is excluded from the set, and the report states how many cases were excluded this way"
+  needs_test: true
+  reason: The merge outcome and excluded count are computed, and a merge that silently picks a side would hide disagreement.
+- clause: "the hash of the case file and the hash of the oracle are fixed before the first run, and every run report carries both hashes"
+  needs_test: true
+  reason: A report missing the hashes cannot be tied to the frozen set, which only a check on the report shows.
+- clause: "a run whose case file or oracle no longer matches the fixed hashes is reported invalidated against S1 and contributes no figure to any S1 result"
+  needs_test: true
+  reason: Editing a case after freezing is exactly the tampering this clause catches, and it must be recomputed from disk.
+- clause: "a case whose pinned revision differs from the set's pinned revision is refused rather than scored"
+  needs_test: true
+  reason: A per-case revision check is computed and its absence would let a case be scored against another revision.
+test_spec:
+- name: test_provenance_accepts_two_distinct_reviewers_at_the_set_revision
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: With two reviewer files that name distinct dispatch ids, the same pinned SHA as set.lock.json and only Git-blob inputs, the provenance result lists 2 distinct reviewers and independent true; one reviewer naming a different SHA is refused with the file and reason.
+  proves_clause: each expected outcome is derived by two reviewers working separately from source bytes at one pinned Git revision, and each reviewer judgment names the reviewer and that revision
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - both reviewer files accepted although they name the same dispatch
+    - a reviewer judgment at a revision other than the set pinned SHA accepted
+- name: test_listed_tainted_input_refuses_the_whole_set_as_not_independent
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Parametrise one reviewer input at a time over a path under reports/, a run report, a system output, oracle.json, scripted_judgments and the other reviewer's judgment file; each makes the whole set refused as not independent, naming the file and reason.
+  proves_clause: each reviewer judgment lists the inputs consulted, and a set in which any listed input is a run report, a system output or the other reviewer's judgment is refused as not independent
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a reviewer file that read a run report still being accepted
+    - a reviewer file that listed the other reviewer judgment still being accepted
+    - a reviewer file with no inputs list accepted as independent
+- name: test_merge_never_picks_a_side_and_reports_adjudicated_and_dropped_counts
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Merge two judgments with 3 agreements and 2 disagreements; agreements become oracle entries, one disagreement carries a user-adjudicated entry with reason and one is dropped, and a disagreement with no adjudication entry is excluded from the oracle; the report states adjudicated 1 and dropped 1. An adjudication naming an agent as adjudicator is refused.
+  proves_clause: where the two reviewers disagree, the case carries an adjudication with its reason or is excluded from the set, and the report states how many cases were excluded this way
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a merge that silently picks reviewer A on disagreement
+    - an adjudication by a dispatch accepted
+    - a dropped count that omits unadjudicated disagreements
+- name: test_run_report_carries_case_file_and_oracle_hashes
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: check_report on a report with both hashes matching the files on disk returns valid; a report missing either hash cannot be tied to the lock and is not valid.
+  proves_clause: the hash of the case file and the hash of the oracle are fixed before the first run, and every run report carries both hashes
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a report accepted although it carries no oracle hash
+- name: test_edited_case_after_freeze_is_invalidated_with_no_figure
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Write a lock in tmp_path, then change one byte of cases.json (and separately oracle.json); check_report recomputes the hash from disk and returns invalidated contributing no figure. With no committed lock it returns not_run with "S1 not frozen".
+  proves_clause: a run whose case file or oracle no longer matches the fixed hashes is reported invalidated against S1 and contributes no figure to any S1 result
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - comparing against a hash stored in the report instead of recomputing from disk
+    - an edited oracle still producing a figure
+- name: test_case_at_a_different_revision_is_refused_not_scored
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A case whose own pinned revision differs from the set pinned SHA is refused with a reason and absent from any score, while sibling cases at the right revision are processed.
+  proves_clause: a case whose pinned revision differs from the set's pinned revision is refused rather than scored
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a case scored against another revision
+- name: test_lock_and_oracle_are_written_and_read_back_from_disk
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Run the deterministic merge and the lock writer into a tmp_path S1 directory, read oracle.json and set.lock.json back, and assert the lock holds the pinned SHA, the sha256 of the exact bytes of each file and the sorted holdout ids.
+  proves_clause: the hash of the case file and the hash of the oracle are fixed before the first run, and every run report carries both hashes
+  code_file: knowledge/evaluation_provenance.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_derive_oracle_script_emits_source_facts_with_blob_hashes
+  target_dir: unit_tests/scripts/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Create a throwaway Git repository with a small acceptance-criteria tree, run python scripts/derive_kernel_path_oracle.py as a subprocess with the pinned SHA and a target root, and assert exit 0 and facts (descendants with work_status) each with repo path and the sha256 of the exact blob read through git show.
+  proves_clause: each expected outcome is derived by two reviewers working separately from source bytes at one pinned Git revision, and each reviewer judgment names the reviewer and that revision
+  code_file: scripts/derive_kernel_path_oracle.py
+  to_be_created: true
+  convention_test_file: unit_tests/scripts/test_bo4500b_2_identity_check.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- unit_tests/scripts/test_bo4500b_2_identity_check.py
+delivers_to:
+- agent: python-coder
+  contract: 'Frozen S1 identity (set.lock.json): {pinned_sha str, files {cases.json, holdout.json, oracle.json, policy.json: sha256 hex}, holdout_ids [str], frozen_at str};
+    provenance result {reviewers [str] (2 distinct dispatch ids), adjudicated int, dropped_by_disagreement int, independent bool, refusals [{file str, reason str}]};
+    check_report(report) -> valid|invalidated|not_run with reasons (not_run reason "S1 not frozen" when no committed lock exists), used by holdout, scoring and comparison.'
+- agent: research-agent
+  contract: 'For the S1 data run (KM-500a-4-x): python scripts/derive_kernel_path_oracle.py at the pinned SHA, emitting source facts with repo path and blob sha256;
+    the provenance check returning the provenance result above; the deterministic merge writing oracle.json from the two judgments and adjudication.json;
+    the lock writer for set.lock.json; and the lock-before-run check over Git history.'
+expects_from:
+- ac_id: KM-500a-4-iv
+  contract: S1 case set with category labels and targets.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 section 3.2: the existing oracle discipline (Git-anchored, hashed, separate from actual output)
+  is the hard part and is kept. What it lacks for S1 is a second reviewer and any evidence that reviewers did not see
+  system output; "blind host" was a policy statement with nothing recorded. The listed-inputs check turns that policy
+  into something a test can refuse. Draft. IT PO 2026-11-17: adjudication is by the user only (decision from the main
+  loop); the earlier option of a third separate dispatch as adjudicator is withdrawn. The reviewer, adjudication, oracle
+  and lock files are produced by the S1 data run KM-500a-4-x and were removed from this record''s declared_files; this
+  record owns the code that checks and freezes them. The not_run reason for a missing lock is "S1 not frozen".'

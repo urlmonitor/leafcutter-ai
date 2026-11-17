@@ -80,6 +80,18 @@ created: 2026-10-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- templates/workflows-js/plan-feature.js
 change_target: pipeline
 risk_surface: internal
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: stageGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from unit_tests._workflow_engine_harness import (
+from unit_tests._workflow_engine_workspace import (
     workspace_ensure_reply,
     workspace_refusal_reply,
 )
@@ -34,8 +34,11 @@ TARGET_BRANCH = "epic/truthful-project-record"
 
 WORKSPACE_LABEL = "workspace-ensure"
 
+# BO-4300a-1-ia: the one probe that resolves the maker's absolute path runs before the workspace step (consumer_drift).
+MAKER_PATH_LABEL = "resolve-maker-path"
+
 # Every dispatch the workspace step itself accounts for; anything else is a phase agent.
-RESOLVE_PHASE_LABELS = frozenset({"resolve-target", WORKSPACE_LABEL})
+RESOLVE_PHASE_LABELS = frozenset({"resolve-target", MAKER_PATH_LABEL, WORKSPACE_LABEL})
 
 
 def ready_workspace(path: str = NAMED_LOCATION, *, branch: str = TARGET_BRANCH, **extra: Any) -> dict[str, Any]:

@@ -1,0 +1,190 @@
+id: BO-4400g-2-ii
+title: "A squash-merged workspace whose line was deleted on the shared project is cleared; an unmerged one is kept"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace "sq-3" whose three commits reached the main line only as one combined
+    commit with the same content, and whose own line was then deleted on the shared
+    project when its pull request was merged,
+  And a workspace "gone-1" whose own line was deleted on the shared project without ever
+    being merged, so its two commits are on neither the shared project nor the main line,
+  And neither workspace holds an uncommitted change,
+  When the landed-work pass is run,
+  Then "sq-3" is cleared and no folder of it remains,
+  And "gone-1" is identical before and after,
+  And the answer lists "gone-1" as kept for holding unsent work, naming its two commits by
+    identifier.
+depends_on: [BO-4400g-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Content that reached the main line under a new identifier counts as on the main line.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1-i.yaml
+    relationship: constrains
+    status: exists
+    relevance: The squash case decided by content, not identity.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+it_requirements:
+  - >-
+    A line deleted on the shared project is never by itself evidence of landing. A workspace is cleared only
+    when its own commits, taken together, are shown by content to be on the current main line. A deleted line
+    whose commits are on neither the shared project nor the main line is kept as holds_unsent_work, naming
+    those commits by full identifier.
+  - >-
+    The door's unsent-work check must reach the same verdict for sq-3. A squash-merged commit whose own line
+    was pruned on the fetch counts as on the main line by content (BO-4100c-1-i), through the one containment
+    primitive BO-4400g-2 shares between the door and the pass. Otherwise the door refuses sq-3 with
+    UNSENT_WORK and the pass cannot clear it without a token, which it never passes.
+  - >-
+    A commit that is on neither the shared project nor the main line still produces the door's UNSENT_WORK
+    refusal exactly as today, and the pass relays it unchanged.
+  - >-
+    CODE FACTS (test-designer, 2026-11-16) and what they require. Today the door judges unsent work by commit
+    identity only and does not prune. So a squash-merged workspace is refused UNSENT_WORK, and a stale
+    remote-tracking ref left behind by a line deleted on the shared project could make unmerged work look sent.
+    For "gone-1", that would clear work that never landed. The door's check therefore gains both (a) the content
+    check of BO-4400g-2 (commits taken together against the current main line) and (b) a prune-safe line
+    check. A commit counts as sent through its own line only when that line exists on the shared project as the
+    current contact shows it (a fetch with pruning, or reading the shared project's refs). A stale
+    remote-tracking ref of a deleted line is never evidence of sent work. Both are shared by the door and the
+    pass, never copied.
+  - >-
+    worktree_remove.py (485 lines) takes wiring only, with no net growth. The primitive lives in
+    worktree_landed.py or beside the door's existing checks. No limit is raised.
+  - >-
+    PROOF RUNS THE DEPLOYED MAKER against real temporary repositories with a real bare hub. A real squash
+    merge is made on the hub and the line is deleted there, then the workspace's view of the shared project
+    is pruned. No git mock, no build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: '"sq-3" is cleared and no folder of it remains'
+    needs_test: true
+    reason: A check by reachability alone keeps every squash-merged workspace whose line was deleted, which is the 5.6 GB pile-up.
+  - clause: '"gone-1" is identical before and after'
+    needs_test: true
+    reason: A pass that reads a deleted line as landed would destroy work that never reached the main line.
+  - clause: the answer lists "gone-1" as kept for holding unsent work, naming its two commits by identifier
+    needs_test: true
+    reason: The named commits are the only way the person learns which work would be lost, and they are computed.
+test_spec:
+  - name: test_squash_merged_workspace_whose_line_was_deleted_is_cleared
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      sq-3 (three commits pushed to its own line) is squash-merged on a scratch clone of the real bare hub as one
+      combined commit with the same content, main is pushed, and the line is deleted on the hub. The workspace's
+      view of the hub is pruned (git fetch --prune in the workspace), as the record's PROOF says. clear-landed
+      --repo-root <project> (deployed maker, separate process) answers sq-3 in cleared with the door's remove
+      answer, and no folder remains. Red today: worktree_remove._unsent_commits sees three commits reachable from
+      neither origin/main nor a branch and refuses UNSENT_WORK.
+    proves_clause: '"sq-3" is cleared and no folder of it remains'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_deleted_unmerged_line_workspace_is_kept_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      gone-1's two commits were pushed, then its line was deleted on the hub without any merge, and the view is
+      pruned. After the pass gone-1 is identical (files with .git, refs), not cleared. A second variant leaves the
+      workspace's remote-tracking ref of the deleted line unpruned (the door's fetch in worktree_remove._fetch_origin
+      does not prune): it must still be kept, since a stale tracking ref is not evidence the commits are on the
+      shared project.
+    proves_clause: '"gone-1" is identical before and after'
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+    must_catch:
+      - a deleted line on the shared project read as evidence of landing
+      - a stale remote-tracking ref of a deleted line read as the commits being sent
+  - name: test_deleted_unmerged_line_is_kept_as_holds_unsent_work_naming_its_commits
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      gone-1 is in kept with reason holds_unsent_work and commits equal to its two full 40-character ids. The door's
+      own UNSENT_WORK refusal for a plain request without a token (remove --path gone-1) still comes out exactly as today
+      (code UNSENT_WORK, unsent.commits the same two commits) and the pass relays it unchanged.
+    proves_clause: the answer lists "gone-1" as kept for holding unsent work, naming its two commits by identifier
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_squash_clear_is_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The per-work form python <deployed worktree.py> clear-landed --kind feature --slug sq-3, run as a subprocess
+      with real argv, clears the squash-merged workspace and also answers kept holds_unsent_work for gone-1.
+    proves_clause: '"sq-3" is cleared and no folder of it remains'
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: >-
+    The landed rule judged by content for the workspace's own commits taken together, sharing one containment
+    primitive with the door's unsent-work check; kept reason holds_unsent_work with commits named.
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: _unsent_commits and _fetch_origin (lines 119-159) are the door's identity-only unsent check and its non-pruning fetch, which the shared containment primitive must change.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: a CODE FACTS requirement. The door judges by identity and does not prune
+      today, so it gains the content check and a prune-safe line check: a stale tracking ref of a deleted line
+      is never evidence of sent work. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Merging with "delete branch" is the normal end of a pull request here, so after a squash
+  merge the workspace's commits are reachable from nothing on the shared project. A pass
+  that only checks reachability would keep every squash-merged workspace forever (the
+  5.6 GB pile-up); a pass that treats "line gone" as "landed" would destroy "gone-1". Both
+  wrong versions are caught by this pair.

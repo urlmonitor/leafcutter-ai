@@ -13,10 +13,13 @@ DECISION HISTORY
 """
 from __future__ import annotations
 
+import ast
 import tempfile
 import unittest
 from pathlib import Path
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import deployed_maker_path
+from unit_tests.build_orchestration._bo_4300a_2_probe import deployed_identity_probe
 from unit_tests.build_orchestration._bo_4300a_1_ii_fixtures import (
     TICKET_CONTENT,
     TICKET_REL,
@@ -36,8 +39,37 @@ ALIASES = [  # (kind, legacy spelling, canonical slug) -- the table's declared p
     ("epic", "EPIC-Xray", "xray"),
     ("ac", "ac-authoring/xray", "xray"),
     ("fastlane", "fast-lane/xray", "xray"),
-    ("ticket", "feature/xray", "xray"),
 ]
+
+
+def _call_name(call: ast.Call) -> str:
+    """The called name of *call*: the attribute or bare identifier, else ''."""
+    return call.func.attr if isinstance(call.func, ast.Attribute) else getattr(call.func, "id", "")
+
+
+def _calls_named(node: ast.AST, name: str) -> list[ast.Call]:
+    """Every call under *node* whose called name is *name*."""
+    return [n for n in ast.walk(node) if isinstance(n, ast.Call) and _call_name(n) == name]
+
+
+def _rmtree_call_sites(tree: ast.AST) -> list[int]:
+    """Line numbers of every rmtree call: ``shutil.rmtree``, bare ``rmtree``, or a ``from shutil import rmtree [as x]`` alias."""
+    names = {"rmtree"} | {(al.asname or al.name) for n in ast.walk(tree)
+                          if isinstance(n, ast.ImportFrom) and n.module == "shutil"
+                          for al in n.names if al.name == "rmtree"}
+    return [c.lineno for c in ast.walk(tree) if isinstance(c, ast.Call)
+            and (isinstance(c.func, ast.Attribute) and c.func.attr == "rmtree"
+                 or isinstance(c.func, ast.Name) and c.func.id in names)]
+
+
+def _uses_result_of(func: ast.AST, name: str) -> bool:
+    """True when some call to *name* in *func* feeds an assignment, condition or return and none is a bare statement."""
+    calls = _calls_named(func, name)
+    bare = {id(n.value) for n in ast.walk(func) if isinstance(n, ast.Expr)}
+    if not calls or any(id(c) in bare for c in calls):
+        return False
+    consumers = (ast.Assign, ast.AnnAssign, ast.If, ast.Return)
+    return any(isinstance(n, consumers) and any(c is d for d in ast.walk(n) for c in calls) for n in ast.walk(func))
 
 
 class TestBO4300a2(unittest.TestCase):
@@ -172,15 +204,51 @@ class TestBO4300a2(unittest.TestCase):
         # angle: reachability
         """CLI via subprocess: ensure --kind ticket --slug <s> --ticket <path> --repo-root <project>."""
         push_ticket_to_hub(self.project)
-        res = maker(["ensure", "--kind", "ticket", "--slug", "feature/Demo-Reach", "--ticket",
+        res = maker(["ensure", "--kind", "ticket", "--slug", "Demo-Reach", "--ticket",
                      str(self.project / TICKET_REL), "--repo-root", str(self.project)], self.project.parent)
         ans = res["answer"]
         self.assertEqual((ans.get("status"), res["exit_code"]), ("ok", 0), ans)
-        self.assertEqual((ans["kind"], ans["slug"]), ("ticket", "demo-reach"), ans)  # identity step consumed the alias
+        self.assertEqual((ans["kind"], ans["slug"]), ("ticket", "demo-reach"), ans)  # identity step normalised the raw slug
         stated = Path(ans["ticket_path_in_worktree"])
         self.assertEqual(stated.read_text(encoding="utf-8"), TICKET_CONTENT)
         self.assertTrue(same(stated, Path(ans["workspace_path"]) / TICKET_REL))
 
+
+    def _deployed_identity_source(self) -> str:
+        return (deployed_maker_path().parent / "worktree_identity.py").read_text(encoding="utf-8")
+
+    def test_feature_prefix_is_never_a_ticket_alias(self):
+        # covers: BO-4300a-2
+        # angle: discrimination
+        """A4: feature/<slug> is kind feature's canonical spelling, never a ticket alias; no alias equals a kind prefix."""
+        out = deployed_identity_probe("""
+import json
+wi = wi_module
+kinds = ["epic", "ac", "fastlane", "ticket", "feature", "scratch"]
+overlap = [(k, p) for k, entries in wi.LEGACY_ALIASES.items() for p, _r in entries
+           if p in {f"{kk}/" for kk in kinds + list(wi.LEGACY_ALIASES)}]
+print(json.dumps({
+    "ticket": wi.Identity("ticket", "x").matches_branch("feature/x"),
+    "feature": wi.Identity("feature", "x").matches_branch("feature/x"),
+    "overlap": overlap,
+}))
+""")
+        self.assertIs(out["ticket"], False, out)
+        self.assertIs(out["feature"], True, out)
+        self.assertEqual(out["overlap"], [], out)
+
+    def test_discard_new_clone_uses_the_shared_delete_helper(self):
+        # covers: BO-4300a-2
+        # angle: discrimination
+        """M17: no rmtree call of any spelling in worktree_identity.py; discard_new_clone calls delete_whole_folder and uses its result; a refusal leaves no folder."""
+        tree = ast.parse(self._deployed_identity_source())
+        own_rmtree = _rmtree_call_sites(tree)
+        self.assertEqual(own_rmtree, [], f"worktree_identity.py still calls rmtree itself at lines {own_rmtree}")
+        fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "discard_new_clone")
+        self.assertTrue(_calls_named(fn, "delete_whole_folder"), "discard_new_clone must call delete_whole_folder")
+        self.assertTrue(_uses_result_of(fn, "delete_whole_folder"),
+                        "discard_new_clone must use delete_whole_folder's return value in an assignment, "
+                        "condition or return, not drop it as a bare statement")
 
 if __name__ == "__main__":
     unittest.main()

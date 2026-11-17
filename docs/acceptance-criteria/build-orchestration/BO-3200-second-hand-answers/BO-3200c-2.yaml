@@ -111,7 +111,8 @@ amended_by:
   agent: approve_acs
   date: '2026-08-26'
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-3200c-2-i
 implemented_by: []
 notes: |
   THE FIRST SCENARIO IS THE ONE THAT MATTERS and it is deliberately the harder case. Hardening

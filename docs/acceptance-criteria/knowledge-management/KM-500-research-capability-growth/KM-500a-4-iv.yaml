@@ -1,0 +1,232 @@
+id: KM-500a-4-iv
+title: The frozen planning-and-selection set S1 covers every outcome category with stated minimums and targets outside KM-500
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given the planning-and-selection case set S1 prepared for the kernel-path evaluation
+  When its composition is checked before any run
+  Then every case carries exactly one category label, and the case count per category is at least: explicit_known_operation 10, missing_typed_input 10, ambiguous_population 10, fully_specified_no_clarification 10, one_suitable_query 15, several_plausible_one_correct 15, unsupported_source_data 8, missing_query_supported_mapping 8, field_availability_gap 6, injected_provider_failure 3, injected_denied 3, injected_budget_exhausted 3
+  And ambiguous_population cases include root-only versus all-parents scope and topic versus family scope
+  And the one_suitable_query cases together expect at least 6 distinct registered operations
+  And at least one paraphrase or changed-identifier twin exists per 3 positive cases, where positive means a case in explicit_known_operation, fully_specified_no_clarification, one_suitable_query or several_plausible_one_correct
+  And each twin names its original case and carries its own reviewed expectation, so a changed-identifier twin can expect a different answer from its original
+  And the targets span at least 5 AC families other than KM-500 and TQ-500, plus at least one ADR, one component and one test as non-AC targets; targets in KM-500 or TQ-500 do not count toward that spread
+  And the set totals about 110 cases including twins
+  And a set that falls short of any minimum is reported with each short category, its count and its minimum, and every result measured on it is reported limited, never eligible for a readiness claim.
+depends_on:
+- KM-500a-4
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent's "independently reviewed research cases" Given; S1 is that case set.
+- path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+  relationship: context
+  status: exists
+  relevance: Categories map to the select step and the direct, clarify, data-gap, build and unavailable branches.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: Existing RQE pack whose oracle discipline S1 keeps; its 12 cases are explicit-operation only and do not
+    satisfy S1.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Case pack fields and the query-family table that the family spread is counted against.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: knowledge/evaluation_sets.py
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/policy.json
+  state: to_be_created
+it_requirements:
+- "Where S1 lives: tests/fixtures/kernel_path_evaluation/s1/, beside the existing Git-anchored oracle precedent tests/fixtures/query_answer_contract_acceptance/source_oracles.json. cases.json holds the development cases, holdout.json the sealed holdout cases (a separate file, so a development run never has to open it), policy.json the coverage requirement (category minimums, family spread, non-AC target kinds, twin ratio, holdout share, reviewers per case) and the frozen thresholds. Expected outcomes are NOT in these files; they live in the oracle (KM-500a-4-v)."
+- "Code versus data: python-coder owns the case-file schema and the composition check in knowledge/evaluation_sets.py (neutral knowledge code, pure, no kernel import, so the comparison in knowledge/evaluation_comparison.py can reuse it). python-coder must not write or edit case questions, category labels, targets or twin content: that content is eval-set data authored by the reviewer procedure in KM-500a-4-v."
+- "Case authoring procedure: the questions, category labels, targets and twin links are drafted, before any expected outcome exists, by a separate agent dispatch that has seen no run report, no system output and no host or catalog prompt text being tuned. The driving session runs this dispatch in the S1 data run (KM-500a-4-x), not the coder (sub-agents are depth 1, and the implementer is not independent); cases.json and holdout.json are produced there, not under this record. The case-file schema carries a producer record (dispatch identity, pinned SHA, and the statement of what the drafting dispatch did not see) so the provenance check (KM-500a-4-v) can read it."
+- "The composition check counts from the case labels themselves, never from a declared total or a summary field in the file, and reports per-category counts against the policy minimums. The minimums are read from policy.json, not hard-coded, so a later set inherits the rule."
+- "Family spread: the AC family of a target is derived from its canonical id prefix (for example GE-118 counts as GE). KM-500 and TQ-500 targets are excluded from the spread count; ADR, component and test targets are counted by entity kind. Paraphrase and changed-identifier twins name their original case id, and a twin whose original is missing is reported, not silently counted."
+- "A set short of any minimum is reported with each short category, its count and its minimum, and every result measured on it carries limited and is never eligible. This status is emitted by the check and carried into every report, not left to the reader."
+- "The check is deterministic and runs in well under 1 s for 200 cases; it reads files only and makes no network or database call."
+test_required: true
+test_intent:
+- clause: "every case carries exactly one category label, and the case count per category is at least: explicit_known_operation 10, missing_typed_input 10, ambiguous_population 10, fully_specified_no_clarification 10, one_suitable_query 15, several_plausible_one_correct 15, unsupported_source_data 8, missing_query_supported_mapping 8, field_availability_gap 6, injected_provider_failure 3, injected_denied 3, injected_budget_exhausted 3"
+  needs_test: true
+  reason: The per-category counts are computed from labels, and the real S1 file must be shown to meet them.
+- clause: "ambiguous_population cases include root-only versus all-parents scope and topic versus family scope"
+  needs_test: true
+  reason: Both ambiguity shapes must be present in the real set, and only a check over the file shows they are.
+- clause: "the one_suitable_query cases together expect at least 6 distinct registered operations"
+  needs_test: true
+  reason: Distinct-operation coverage is computed and a set built from one operation would still pass a plain count.
+- clause: "at least one paraphrase or changed-identifier twin exists per 3 positive cases, where positive means a case in explicit_known_operation, fully_specified_no_clarification, one_suitable_query or several_plausible_one_correct"
+  needs_test: true
+  reason: The twin ratio is computed over a defined positive subset that is easy to get wrong.
+- clause: "each twin names its original case and carries its own reviewed expectation, so a changed-identifier twin can expect a different answer from its original"
+  needs_test: true
+  reason: A twin that silently inherits its original's expectation would hide identifier sensitivity.
+- clause: "the targets span at least 5 AC families other than KM-500 and TQ-500, plus at least one ADR, one component and one test as non-AC targets; targets in KM-500 or TQ-500 do not count toward that spread"
+  needs_test: true
+  reason: The family derivation and the KM-500/TQ-500 exclusion are computed, and the audit found every prior set self-referential.
+- clause: "the set totals about 110 cases including twins"
+  needs_test: false
+  reason: About 110 is an approximate size with no exact bound, and the per-category minimums and twin ratio already test the composition it describes.
+- clause: "a set that falls short of any minimum is reported with each short category, its count and its minimum, and every result measured on it is reported limited, never eligible for a readiness claim"
+  needs_test: true
+  reason: The limited status must propagate into results, and a missing propagation would let a short set support a readiness claim.
+test_spec:
+- name: test_composition_counts_come_from_labels_and_minimums_from_policy
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Build a small case file in tmp_path whose summary field declares a bigger total than its labels and a policy.json with its own minimums; assert counts come from the labels, each case has exactly one category, a case with two or no category is reported, and changing a minimum in the policy changes the result without a code change.
+  proves_clause: 'every case carries exactly one category label, and the case count per category is at least: explicit_known_operation 10, missing_typed_input 10, ambiguous_population 10, fully_specified_no_clarification 10, one_suitable_query 15, several_plausible_one_correct 15, unsupported_source_data 8, missing_query_supported_mapping 8, field_availability_gap 6, injected_provider_failure 3, injected_denied 3, injected_budget_exhausted 3'
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - counting from a declared total or summary field in the file
+    - minimums hard-coded in the checker instead of read from policy.json
+- name: test_real_s1_cases_meet_every_category_minimum
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Run the composition check over the real committed tests/fixtures/kernel_path_evaluation/s1/cases.json, holdout.json and policy.json and assert status complete with no short category. STAYS RED until the S1 data run (KM-500a-4-x) commits the case files.
+  proves_clause: 'every case carries exactly one category label, and the case count per category is at least: explicit_known_operation 10, missing_typed_input 10, ambiguous_population 10, fully_specified_no_clarification 10, one_suitable_query 15, several_plausible_one_correct 15, unsupported_source_data 8, missing_query_supported_mapping 8, field_availability_gap 6, injected_provider_failure 3, injected_denied 3, injected_budget_exhausted 3'
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_ambiguous_population_needs_both_scope_shapes
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A synthetic set whose ambiguous_population cases are all root-only versus all-parents, with no topic versus family case, is reported short on the missing shape; the real S1 variant of this check STAYS RED until the data run.
+  proves_clause: ambiguous_population cases include root-only versus all-parents scope and topic versus family scope
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a set with 10 ambiguity cases of one shape passing a plain count
+- name: test_one_suitable_query_needs_six_distinct_operations
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: 15 one_suitable_query cases expecting only 5 distinct operations are reported short; 6 distinct operations pass. Operations come from the oracle expectations, not the case file.
+  proves_clause: the one_suitable_query cases together expect at least 6 distinct registered operations
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a set built from one operation passing because the plain count of 15 is met
+- name: test_twin_ratio_counts_only_the_positive_subset
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With 50 positives in the four positive categories and 16 twins the set is short; 17 twins pass; twins attached to non-positive categories do not count toward the ratio.
+  proves_clause: at least one paraphrase or changed-identifier twin exists per 3 positive cases, where positive means a case in explicit_known_operation, fully_specified_no_clarification, one_suitable_query or several_plausible_one_correct
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - twins counted over all cases instead of the positive subset
+    - the ratio rounded down so 16 twins pass
+- name: test_twin_names_original_and_has_own_expectation
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A twin whose original is missing is reported, not silently counted; a changed-identifier twin whose oracle entry is absent or copied by reference from its original is refused, and a twin with a different expected answer is accepted.
+  proves_clause: each twin names its original case and carries its own reviewed expectation, so a changed-identifier twin can expect a different answer from its original
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a twin that silently inherits its original expectation
+    - a twin with a missing original counted toward the ratio
+- name: test_family_spread_excludes_km500_and_tq500_and_requires_non_ac_kinds
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Families derive from the canonical id prefix (GE-118 counts as GE). A set with 5 families of which KM and TQ are two has 3 and is short; with no ADR, component or test target it is short on that kind.
+  proves_clause: the targets span at least 5 AC families other than KM-500 and TQ-500, plus at least one ADR, one component and one test as non-AC targets; targets in KM-500 or TQ-500 do not count toward that spread
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - KM-500 and TQ-500 targets counted toward the 5 family spread
+    - the family taken from a declared target_family field instead of the id prefix
+- name: test_short_set_reports_each_short_category_and_marks_results_limited
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A set short in two categories reports each with count and minimum, status limited, and a report built from results measured on it carries limited and is never eligible for a readiness claim.
+  proves_clause: a set that falls short of any minimum is reported with each short category, its count and its minimum, and every result measured on it is reported limited, never eligible for a readiness claim
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - the limited status dropped before reaching the result report
+    - only the first short category reported
+- name: test_composition_check_is_reachable_as_a_command_over_set_files
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: reachability
+  description: Run the composition check as a subprocess over a tmp_path set directory with file reads only and assert exit 0 and the JSON composition result with per_category, short and status; no network or database access.
+  proves_clause: ambiguous_population cases include root-only versus all-parents scope and topic versus family scope
+  code_file: knowledge/evaluation_sets.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- tests/knowledge/test_query_answer_contract_acceptance.py
+- knowledge/evaluation_comparison.py
+delivers_to:
+- agent: python-coder
+  contract: 'S1 case set (cases.json, holdout.json): producer {dispatch_id str, agent str, pinned_sha str, unseen [str]}; per case {id str, question str, category str (one of the 12 policy categories), target_ids [str], target_family str|null,
+    target_kind str, twin_of str|null, case_budget {seconds int, steps int}}; policy.json {category_minimums {name: int}, min_families int, excluded_families [KM-500, TQ-500],
+    required_non_ac_kinds [adr, component, test], twin_ratio str, holdout_share float, reviewers_per_case int, thresholds object}; composition result
+    {per_category {name: {count int, minimum int}}, families_covered int, short [{category, count, minimum}], status complete|limited}.'
+- agent: research-agent
+  contract: 'For the S1 data run (KM-500a-4-x): the case-file schema above including the producer record, policy.json, and the composition check runnable over
+    the drafted cases.json and holdout.json, returning the composition result above.'
+expects_from: null
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Minimums copied from audit 2026-11-16 section 3.4 (S1); the 12 category minimums sum to 101, and twins at one per
+  3 of the 50 positives (17 twins) bring the set to about 118, matching the audit''s "about 110". Why outside KM-500/TQ-500: audit
+  section 3.2 found every live and interpretation case targets records written by the same team that wrote the host
+  instructions and catalog descriptions. Category-to-flow mapping: explicit_known_operation = direct branch;
+  missing_typed_input and ambiguous_population = clarify branch; one_suitable_query and several_plausible_one_correct =
+  select step; unsupported_source_data and field_availability_gap = data-gap branch; missing_query_supported_mapping =
+  build branch; injected_* = unavailable branch. The case content needs reviewers who are not the implementer (see
+  KM-500a-4-v); the IT PO may split the case authoring from the composition check. Draft. IT PO 2026-11-17: the case
+  authoring is now KM-500a-4-x (the S1 data run, executed by the driving session); cases.json and holdout.json moved to
+  that record''s declared_files. This record keeps the schema, the composition check and policy.json.'

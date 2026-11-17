@@ -74,3 +74,14 @@ notes: |
   User decision 2: the IT PO keeps routing/splitting. TKT-300a-1 (IT PO assigns exactly
   one agent) and TKT-300a-3 (IT PO wires contracts) remain the planner's; this step only
   informs them.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: handback
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

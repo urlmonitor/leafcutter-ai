@@ -23,6 +23,7 @@ import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
+from typing import IO, cast
 
 import _cs_edits as edits_mod
 import _wvr_gate as gate_mod
@@ -123,16 +124,17 @@ def _export(root: Path, base_sha: str, dest: Path) -> None:
     cmd = ["git", "-C", str(root), "archive", "--format=tar", base_sha]
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)  # noqa: S603
+        stdout = cast(IO[bytes], proc.stdout)  # stdout=PIPE: Popen always opens this pipe, never None
         try:
-            _extract_stream(proc.stdout, dest)
-            while proc.stdout.read(65536):  # the tar's end padding: let git finish so its status is real
+            _extract_stream(stdout, dest)
+            while stdout.read(65536):  # the tar's end padding: let git finish so its status is real
                 pass
             proc.wait(timeout=120)
         finally:
             if proc.poll() is None:
                 proc.kill()
                 proc.wait(timeout=30)
-            proc.stdout.close()
+            stdout.close()
     except OSError as exc:
         _LOG.warning("git archive of %s failed: %s", base_sha, exc)
         raise

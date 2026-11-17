@@ -70,7 +70,7 @@ amended_by:
     The coordinator's two settlements (ADR folder excluded from the f-2 census; doc ACs close
     through ticket 13's covers-tagged test) are recorded. readiness stays approved.
 superseded_by: null
-covered_by: [BO-4300a, BO-4300b, BO-4300c, BO-4300d, BO-4300e, BO-4300f]
+covered_by: [BO-4300a, BO-4300b, BO-4300c, BO-4300d, BO-4300e, BO-4300f, BO-4300g]
 implemented_by: []
 notes: |
   ORIGIN. The user, 2026-09-25: "I only want to have ONE script that creates worktrees

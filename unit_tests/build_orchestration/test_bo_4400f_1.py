@@ -85,7 +85,8 @@ def test_route_workflow_obtains_its_scratch_item_and_exports_temp_vars(
     workflow = layout / ".leafcutter" / "workflows" / script
     route, process_labels = routes.ROUTES[script]
     item = sandbox.call("new_item", {"owner": "seed", "route": "probe"})["item"]
-    result = routes.run_route(workflow, item, sandbox.project)
+    # The workspace carries its own install (BO-4300a-1-ib): the layout stands in for it.
+    result = routes.run_route(workflow, item, layout)
     assert result.error == "", result.error
     labels = [c.label for c in result.agent_calls]
     asks = [c for c in result.agent_calls if c.label == routes.SCRATCH_LABEL]
@@ -119,7 +120,7 @@ def test_route_workflow_obtains_its_scratch_item_and_exports_temp_vars(
     assert verdict == {"expired": False, "reason": "owner_active"}, verdict
 
     # Fail-open: no item means no scratch note and an otherwise identical run.
-    bare = routes.run_route(workflow, None, sandbox.project)
+    bare = routes.run_route(workflow, None, layout)
     assert [c.label for c in bare.agent_calls] == labels
     assert routes.NOTE_MARKER not in " ".join(routes.prompt_of(c) for c in bare.agent_calls)
 

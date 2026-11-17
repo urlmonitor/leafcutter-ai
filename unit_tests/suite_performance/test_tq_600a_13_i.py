@@ -70,7 +70,7 @@ import yaml
 
 from scripts.suite_performance import check_exclusion_compensation as gate
 
-from ._workflow_jobs import FakeGitHub, WorkflowRun, find_job
+from ._workflow_jobs import FakeGitHub, WorkflowRun, find_job, with_live_lane_absent
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GATE = REPO_ROOT / "scripts" / "suite_performance" / "check_exclusion_compensation.py"
@@ -240,7 +240,7 @@ class TestTq600a13iFailingExcludedTestFailsTheJob(unittest.TestCase):
                 wf = WorkflowRun(path, project, base / "scratch", None, self.api.url)
                 run = wf.execute_job("run")
                 retry = wf.execute_job("retry", {"run": run})
-                verdict = wf.execute_job("verdict", {"run": run, "retry": retry})
+                verdict = wf.execute_job("verdict", with_live_lane_absent({"run": run, "retry": retry}))
                 names = wf.artifacts.names()
                 file = wf.artifacts.read_json("post-merge-verdict", "post-merge-verdict.json") if "post-merge-verdict" in names else None
                 outcomes.append((run, verdict, file))
@@ -289,7 +289,7 @@ class TestTq600a13iFailingExcludedTestFailsTheJob(unittest.TestCase):
                 wf = WorkflowRun(path, project, base / "scratch", None, self.api.url)
                 run = wf.execute_job("run")
                 retry = wf.execute_job("retry", {"run": run})
-                verdict = wf.execute_job("verdict", {"run": run, "retry": retry})
+                verdict = wf.execute_job("verdict", with_live_lane_absent({"run": run, "retry": retry}))
                 names = wf.artifacts.names()
                 file = wf.artifacts.read_json("post-merge-verdict", "post-merge-verdict.json") if "post-merge-verdict" in names else None
                 outcomes.append((run, verdict, file))

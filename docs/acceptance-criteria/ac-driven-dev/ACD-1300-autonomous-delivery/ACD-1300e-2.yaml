@@ -127,7 +127,7 @@ test_spec:
     framework: unittest
     type: integration
     angle: real_artifact
-    description: "With the real pause_store.py behind a stub command-step-runner, no paused_runs/<R>.json exists after D2 is answered."
+    description: "With the real pause_store.py behind a stub shell-runner, no paused_runs/<R>.json exists after D2 is answered."
     proves_clause: "And after the run moves past D2 no waiting record for run R remains on disk,"
   - name: test_three_decision_chain_each_resume_advances
     target_dir: unit_tests/workflows/
@@ -151,6 +151,14 @@ amended_by:
     date: '2026-10-16'
     by: it-po
     run_id: plan-feature-resume-and-pause
+  - reason: executor-amendment
+    date: '2026-11-04'
+    by: user
+    run_id: pf-entry-pause-20261104
+    note: >-
+      test_spec description re-grounded from command-step-runner to shell-runner (ADR-070), as
+      decided by the person at the final gate of run pf-entry-pause-20261104 and applied by the
+      main session. No other field changed.
 superseded_by: null
 covered_by: [ACD-1300e-2-i]
 implemented_by: []

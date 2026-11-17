@@ -208,7 +208,7 @@ still in their YAML, which the epic archival gate had to remediate.
 ### Agent Name Validation (Registry-Driven)
 
 When you first read a ticket's `agents:` map, validate each agent name by
-checking `leafcutter/config/agent_registry.json` (relative to the
+checking `{{config.output_root}}/config/agent_registry.json` (relative to the
 worktree root) if it exists:
 
 1. Load `agent_registry.json`. If the file does not exist, skip validation and
@@ -239,14 +239,14 @@ worktree root) if it exists:
 must-have: diagrams and ADRs before coding.
 
 **Flow-change pairs (architect + docs before coders):** For tickets generated
-from (change_target, risk_surface) pairs listed in `config/guardrail_gates.yaml`
+from (change_target, risk_surface) pairs listed in `{{config.output_root}}/config/guardrail_gates.yaml`
 `flow_change_gates:` (e.g. `code/production`, `code/all`, `schema/production`,
 `schema/all`), the computed agents map will include both `architect-review`
 (priority 4) and `documentation-expert` (priority 10). The canonical priority
 ordering above ensures these agents are dispatched before `python-coder` (6)
 and `sql-coder` (7) automatically — no special supervisor logic is required.
 This is the machine-readable complement to the flow-change gate registry in
-`config/guardrail_gates.yaml`.
+`{{config.output_root}}/config/guardrail_gates.yaml`.
 
 **frontend-coder dispatch (priority 8):**
 Invoke `frontend-coder` when `agents.get("frontend-coder") == "needed"`.
@@ -268,8 +268,8 @@ separate phases — they are internal to `frontend-coder`'s execution. Only
 ### Produces-Trait Guardrail Dispatch
 
 Before dispatching any phase agent, the ticket-supervisor MUST read that agent's
-`produces` trait from `config/agent_registry.json` (or `leafcutter/config/agent_registry.json`
-in consumer installs) and use it to determine which guardrails apply. The registry
+`produces` trait from `{{config.output_root}}/config/agent_registry.json` (the deployed
+copy, present in every install) and use it to determine which guardrails apply. The registry
 is loaded once per ticket run (cached in memory across the agent loop).
 
 **Guardrail mapping by produces value:**
@@ -291,7 +291,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 
 ```python
 # At dispatch time, before spawning next_agent:
-registry = load_json("config/agent_registry.json")
+registry = load_json("{{config.output_root}}/config/agent_registry.json")
 entry = next(a for a in registry["agents"] if a["id"] == next_agent_name)
 produces = entry.get("produces")
 
@@ -551,11 +551,18 @@ hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
    After determining this is a §3.1 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." 2>/tmp/feedback_err_mechanical-retry.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_mechanical-retry.txt
    ```
-   Read the feedback ID from the Bash tool result (stdout). If stdout is empty,
-   use `(submit-failed)` as the fallback. Include `feedback_id:` in the structured
-   payload returned to the caller.
+   (`<ticket_basename>` is the ticket file's name, e.g. `03-add-parser.md`.)
+   Then run the read-back and the recovery search, each as its own call:
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_mechanical-retry.txt
+   ```
+   ```bash
+   sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_mechanical-retry.txt
+   ```
+   Record the feedback ID by the CFCS emit contract below (the id, or the reasoned
+   marker). Include `feedback_id:` in the structured payload returned to the caller.
 
 2. **Cross-agent rework** (§3.2) — review-class agent names a sibling.
    Flip the named sibling to `needed`, respawn it with the reviewer's
@@ -563,9 +570,16 @@ hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
    After determining this is a §3.2 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." 2>/tmp/feedback_err_cross-agent-rework.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_cross-agent-rework.txt
    ```
-   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
+   Then run the read-back and the recovery search, each as its own call:
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_cross-agent-rework.txt
+   ```
+   ```bash
+   sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_cross-agent-rework.txt
+   ```
+   Record the feedback ID by the CFCS emit contract below (the id, or the reasoned marker).
 
 3. **Open-ended design choice** (§3.3) — architectural ambiguity. Spawn
    `brainstorm-lead` (shipped by ticket 09 of this epic; if not yet
@@ -575,9 +589,16 @@ hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
    After determining this is a §3.3 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." 2>/tmp/feedback_err_brainstorm-escalation.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_brainstorm-escalation.txt
    ```
-   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
+   Then run the read-back and the recovery search, each as its own call:
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_brainstorm-escalation.txt
+   ```
+   ```bash
+   sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_brainstorm-escalation.txt
+   ```
+   Record the feedback ID by the CFCS emit contract below (the id, or the reasoned marker).
 
 4. **Otherwise / cap exhausted** (§3.4) — verify the failed agent already
    set `agents.<phase>: failed` via `signoff` §4; build the §6 payload;
@@ -585,17 +606,19 @@ hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
    After determining this is a §3.4 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." 2>/tmp/feedback_err_halt.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." 2>/tmp/feedback_err_<ticket_basename>_ticket-supervisor_halt.txt
    ```
-   Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
+   Then run the read-back and the recovery search, each as its own call:
+   ```bash
+   sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_halt.txt
+   ```
+   ```bash
+   sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_ticket-supervisor_halt.txt
+   ```
+   Record the feedback ID by the CFCS emit contract below (the id, or the reasoned marker).
    Include `feedback_id:` in the blocked payload returned to the caller.
 
-**CFCS emit contract:** All four emit calls are **non-blocking side-effects**. A failed
-`submit_feedback.py` call (non-zero exit) MUST NOT abort the adjudication routing. Log
-the failure inline if possible, use `(submit-failed)` as the fallback `feedback_id`, and
-proceed with the adjudication outcome unchanged. If a secondary tooling-issue entry is
-possible (submit_feedback.py itself loaded but rejected the category), emit it with
-`--category tooling-issue` as a secondary call.
+**CFCS emit contract:** All four emit calls are **non-blocking side-effects**. A failed `submit_feedback.py` call (non-zero exit) MUST NOT abort the adjudication routing; proceed with the adjudication outcome unchanged. Record `feedback_id` by the INF-500d-3 capture precedence: the id on stdout; else the id inside the recovery file the `sidecar:` line names; else the read-back line copied verbatim into `(submit-failed:<reason>:<category>)`; else `(submit-failed:written-uncited:<category>)` when a `sidecar:` or `[submit_feedback] sink:` line exists but no id was recovered; else `(submit-failed:facility-unavailable:<category>)`. The reasons live only in `scripts/feedback/submit_failure_reasons.json`.
 
 Maintain a small in-memory counter dictionary keyed by
 `(ticket_path, phase, cap_kind)`. Counters are per-supervisor-invocation;
@@ -663,7 +686,7 @@ When escalating to the caller (case §3.4 fall-through, or
     "phase":                 "<agent name as in agents: map>",
     "blocker_summary":       "<one sentence, ≤120 chars>",
     "suggested_remediation": "<plain-English description of what the user must do>",
-    "feedback_id":           "<fb_YYYY-MM-DD_XXXXXXXX or (submit-failed)>"
+    "feedback_id":           "<fb_YYYY-MM-DD_XXXXXXXX or (submit-failed:<reason>:<category>)>"
   }
 }
 ```

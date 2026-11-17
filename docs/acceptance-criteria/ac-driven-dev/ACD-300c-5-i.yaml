@@ -133,3 +133,14 @@ notes: |
   CORRECTION 2026-10-20 (business-analyst): the premise above was wrong. The doubled word sits
   only in rationale pointer comments of plan-feature.js (15 sites), and the test file's
   line 508 asserts a commit subject, not a "Why why" message; the criteria now say so.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: finalGate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+    source: real
+    asof: '2026-10-23'

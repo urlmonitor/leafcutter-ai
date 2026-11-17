@@ -97,7 +97,7 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: [BO-4300e-1-i]
+covered_by: [BO-4300e-1-i, unit_tests/build_orchestration/test_bo_4300e_1_shapes.py, unit_tests/build_orchestration/test_bo_4300e_1_i_alias.py]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |

@@ -52,6 +52,10 @@ amended_by:
   - by: BrainCandy
     at: "2026-10-16"
     reason: "BrainCandy approved readiness on 2026-10-16 (relayed via the orchestrating session): 'approve all 13 ACs'. readiness: draft -> approved; criteria and work_status unchanged."
+  - action: amended
+    agent: it-po
+    date: '2026-11-03'
+    reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -60,16 +64,11 @@ notes: |
   (templates/workflows/build-feature.md) success path. Sibling BO-100d-2a owns
   the build-epic.js success path; both reuse the BO-100d-1a probe helper.
   Lineage: TICKET-20260527-FeedbackSinkPreDriveCheck.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.
 change_target: prompt
 risk_surface: internal
-test_required: false
-test_rationale: >-
-  The deliverable is command prose in templates/workflows/build-feature.md, read by
-  an agent; no unit test can execute it, and checking the prose for the step would
-  be the grep-only form the repo CLAUDE.md forbids for gates. The executable
-  success behaviour the prose relies on (proceed on a pass, exactly one probe line
-  at the printed absolute path, no worktree-relative file) lives in the shared
-  probe helper and is proven behaviorally by BO-100d-2a and BO-100d-2a-i. The prose
-  path is to be checked at drive time by a behavioral spot-check: run
-  /build-feature against an install with a writable external stream and confirm
-  dispatch proceeds and no worktree debugging/logs file appears.
+test_required: true

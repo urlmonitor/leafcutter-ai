@@ -1,0 +1,363 @@
+id: BO-2000g-4
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Each corrected comment example, written as the template gives it, passes the real commit-time feedback-id check"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g.yaml
+criteria: |
+  Given a scratch git repository with the project's real commit-time feedback-id check
+    installed and active as a pre-commit hook, and a scratch ticket, placed where that
+    check inspects tickets, with a Comments section,
+  And every comment example that the template lint (BO-2000g-3) examines and does not
+    exempt, taken from the agent templates and skills as shipped,
+  When each example is appended to the scratch ticket's Comments section exactly as the
+    template gives it, with no line added, removed or reordered, and only its
+    placeholders filled:
+      - the heading's date and time are filled with the current time;
+      - the heading's agent-name slot, where the example has one (for example
+        `<agent-name>` in the write-c4-diagram skill's question entry), is filled with
+        the name of an agent that uses that template or skill;
+      - a real-id placeholder is filled with the id the feedback submission step printed
+        in that same run, or with the documented failure fallback when that run failed;
+      - a `feedback-id: (not-a-signoff)` line is copied unchanged,
+  And the scratch ticket is committed once per example,
+  Then every commit succeeds with the feedback-id check having run and passed, with no
+    bypass token in the commit message and the check not skipped,
+  And no feedback-id value in any committed entry was typed by hand: each one is the
+    template's literal text or the submission step's printed output,
+  And the number of examples proven equals the number of examples the lint examined and
+    did not exempt, so adding one more conforming example to a template adds one more
+    proven case with no change to the proof.
+depends_on:
+  - BO-2000g
+  - BO-2000g-1
+  - BO-2000g-2
+  - BO-2000g-3
+doc_links:
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
+    relationship: related
+    status: exists
+    relevance: "The bypass this proof must not rely on. Its removal is a separate L1 under GE-123."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "Commit checks judge the staged change set, so the proof must stage and commit for real. A hand-built diff is not evidence."
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: describes
+    status: exists
+    relevance: "Declared sink. The proof's submission runs write to a sink in a temporary directory only."
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the fallback form the proof writes when a submission run fails."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123e-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Builds a scratch repository with the same hook installed. Reuse one harness rather than growing two."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    state: to_be_created
+  - path: unit_tests/prompt_assembly/test_bo_2000g_4.py
+    state: to_be_created
+it_requirements:
+  - >-
+    NO BUILD PER TEST. Mark the test `@pytest.mark.shared_layout_reader`. It takes what it needs
+    from the one shared deployed layout (the `shared_reference_layout` fixture,
+    scripts/suite_performance/pytest_shared_reference_layout.py): the deployed check-feedback-id
+    hook and its deployed sibling modules, the deployed submission script (scripts/feedback/) and
+    the categories config. It copies these into its own temporary scratch repository and never
+    writes into the shared layout. It spawns no build.py (CLAUDE.md, "Tests must not spawn their
+    own build.py").
+  - >-
+    The proof fails, never skips, when it cannot find the shared layout, the deployed hook or the
+    deployed submission script. A broken symlink reads as an empty directory.
+  - >-
+    THE REAL HOOK, RUN BY GIT. Install the check in the scratch repository so that `git commit`
+    itself runs it as a pre-commit hook, with the entry and arguments that the layout's hook
+    manifest declares for check-feedback-id (read from the manifest, not retyped). None of these
+    count as evidence: calling the check function directly, or hand-writing COMMIT_EDITMSG or
+    GIT_COMMIT_MSG (FP-7).
+  - >-
+    NO BYPASS ANYWHERE. Every commit runs without --no-verify, and with SKIP,
+    PRE_COMMIT_ALLOW_NO_CONFIG, GIT_COMMIT_MSG and any hooks-path override removed from its
+    environment. No commit message in the scratch history contains [NO-FEEDBACK-CHECK],
+    including the initial commit. The bypass reads the previous commit's message
+    (KI-CG-20260901).
+  - >-
+    TICKET LOCATION. The scratch ticket sits at a path the check inspects, for example
+    tickets/00_inbox/TICKET-demo.md as GE-123e-3 uses. Its frontmatter and Comments section go
+    in the initial commit. Each example is then appended and staged, so each commit adds exactly
+    one heading. The check judges added headings only (KI-CG-20261116).
+  - >-
+    REACH IS PROVEN FOR EACH EXAMPLE. For every example, the harness also commits the same filled
+    entry with its feedback-id line removed, and that commit must be refused. An example whose
+    heading the check does not recognise therefore fails the proof by name (file and heading
+    line) rather than passing vacuously. Watch two examples in particular: live-surface-tester.md
+    ~:323 (its heading carries `(status: ok)` once BO-2000g-1 lands; before that it carries
+    `(status: skipped)`, which the check may not recognise) and write-c4-diagram ~:62
+    `<agent-name>`. If the check does not recognise those headings, the proof reports them.
+  - >-
+    ONLY PLACEHOLDERS ARE FILLED; NOTHING IS TYPED. Three things are filled: (1) the heading's
+    date and time, with the current local time in the check's format; (2) an agent-name slot
+    (for example `<agent-name>` in the write-c4-diagram skill's question entry), with the name of
+    an agent that uses that template or skill, taken from data the repository already holds (the
+    template's own name, or for a skill an agent that loads it), never a name typed into the
+    proof for one example; (3) a documented real-id placeholder, with
+    the id that a real run of the deployed submit_feedback.py printed on stdout in the same test
+    run. When that run fails, (3) is filled instead with the fallback built from that run's own
+    output, exactly as the signoff skill documents it. The placeholder spellings come from the
+    same reader the lint uses (BO-2000g-3). Concrete ids in examples and
+    `feedback-id: (not-a-signoff)` are committed exactly as written. The proof records where each
+    committed value came from (template text or run output) and asserts it.
+  - >-
+    SUBMISSION RUNS ARE CONFINED. Each run gets a declared sink and a TMPDIR inside the test's
+    temporary directory (ADR-069, INF-500d-4). The repository's own feedback log and the shared
+    layout are never written. A run uses --phase set to the example's agent and --category
+    complete. A refused writer, for example research-agent, is a genuine failure and takes the
+    fallback path.
+  - >-
+    THE SAME POPULATION AS THE LINT. The examples come from BO-2000g-3's enumeration function,
+    called in the same run. The proof asserts that the number proven equals the number examined
+    minus the number exempted, and that the number is not zero. It holds no list or count of its
+    own.
+  - >-
+    THE FALLBACK FORM FOLLOWS INF-500d-3. Before INF-500d-3 lands, the fallback is the bare
+    `(submit-failed)`. After it lands, the fallback is `(submit-failed:<reason>:<category>)`,
+    taken from the run's 'submit-failed:' stderr line and checked against
+    submit_failure_reasons.json. The proof needs no edit when that change lands.
+  - >-
+    ONE HARNESS FOR THE HOOK. If GE-123e's scratch-repository commit harness exists when this
+    record is built, reuse it. Otherwise, write this harness as the reusable support module, so
+    the two records do not grow two harnesses for one hook.
+  - >-
+    RUNTIME. Each example costs one submission run and two commits, with no rebuild or re-clone
+    per example. The whole proof must finish within 60 s on a CI runner for the current
+    population: about 25 examples on 2026-11-16, a figure that must not appear in the test.
+test_intent:
+  - clause: "every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped"
+    needs_test: true
+    reason: "A harness that never runs the hook, puts the ticket outside the inspected path or leaves SKIP set passes every example, so each success must be paired with proof that the check ran."
+  - clause: "no feedback-id value in any committed entry was typed by hand: each one is the template's literal text or the submission step's printed output"
+    needs_test: true
+    reason: "Filling a placeholder with a made-up id such as fb_2026-01-01_00000000 makes every commit pass today and breaks once the hook checks values, and that is the wrong version this clause rules out."
+  - clause: "the number of examples proven equals the number of examples the lint examined and did not exempt, so adding one more conforming example to a template adds one more proven case with no change to the proof"
+    needs_test: true
+    reason: "A proof with its own hard-coded list of blocks matches the count today and silently stops covering the next example added to a template."
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Consumed by BO-2000g-4-i. The scratch-repository harness in
+    unit_tests/prompt_assembly/_bo_2000g_4_support.py. create(tmp_path, layout) returns a
+    repository with the real hook installed and the ticket committed. append_and_commit(entry_lines:
+    list[str], message: str) returns {committed: bool, exit_code: int, hook_output: str,
+    head_before: str, head_after: str}. A refused commit leaves the working tree and index as they
+    were before the append.
+expects_from:
+  - ac_id: BO-2000g-3
+    contract: >-
+      The enumeration function returning the examined, non-exempt examples as records {file,
+      heading_line, heading, body}, and the accepted-value reader for placeholder spellings. The
+      proof iterates over the same set.
+  - ac_id: INF-500d-3
+    contract: >-
+      The fallback form for a failed run. Before INF-500d-3 lands it is the bare
+      "(submit-failed)". After, it is "(submit-failed:<reason>:<category>)", built from the run's
+      single 'submit-failed:<reason>:<category>' stderr line, with <reason> one of the ids in
+      scripts/feedback/submit_failure_reasons.json in the deployed layout.
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by:
+  - BO-2000g-4-i
+implemented_by: []
+notes: |
+  This is the behavioural half of the KI. A lint can pass on text the real check still
+  refuses. The python-coder example is the case in point: a real id placed on body
+  line 3 is refused. Only a real commit against the real check proves that an agent
+  which follows its template exactly is not refused.
+
+  Pinned to the check as it is today: it accepts any non-blank value within two lines of
+  a new heading. When INF-500d-3 lands a value-shape check, the "filled with the printed
+  id" path keeps this record valid. A verbatim, unfilled placeholder would not. That is
+  why placeholders are filled from the submission step's output and not committed as
+  literal `<...>` text.
+
+  Varying-population clause (house style, BP-1600a-2): a proof with a hardcoded list of
+  N blocks satisfies a stated count. It does not satisfy "one more example means one
+  more proven case".
+
+  Memory notes for the implementer: the canonical check lives in the template tree, and
+  the scripts-side copy is a symlink. The AC hooks read the git index, not argv, so a
+  silent run is not a pass. BO-2000g-4-i is the negative control for both.
+test_spec:
+  - name: test_every_examined_example_commits_through_the_real_hook
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Marked shared_layout_reader. A scratch git repo is built under tmp_path with the deployed
+      check_feedback_id.py and its deployed siblings copied from shared_reference_layout and installed so
+      that git commit runs it as a pre-commit hook with the entry and args read from the layout's hook
+      manifest. The ticket at tickets/00_inbox/TICKET-demo.md is committed first with its Comments section.
+      For every example the BO-2000g-3 enumeration returns, the example is appended exactly as given,
+      only placeholders filled (current local date and time, an agent name taken from repository data, a
+      listed real-id placeholder filled from a real submit_feedback.py run, or the documented fallback
+      when that run fails), staged and committed once. Every commit succeeds and exits 0.
+    proves_clause: 'every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+  - name: test_the_same_entry_without_its_feedback_id_line_is_refused_for_every_example
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      For every example the harness also commits the same filled entry with its feedback-id line removed
+      and the commit must be refused with the heading in the hook output and HEAD unchanged. An example
+      whose heading the hook does not recognise fails by file and heading line, naming in particular
+      live-surface-tester (status: ok after BO-2000g-1) and the write-c4-diagram <agent-name> entry.
+    proves_clause: 'every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - a harness whose hook is never installed so every commit passes
+      - a scratch ticket placed outside tickets/ so the hook never inspects it
+      - a heading the hook does not recognise, passing vacuously
+      - SKIP=check-feedback-id left set in the environment
+  - name: test_no_bypass_in_command_environment_or_history
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Every commit is made without --no-verify. The environment given to git has SKIP,
+      PRE_COMMIT_ALLOW_NO_CONFIG, GIT_COMMIT_MSG and any hooks-path override removed, asserted on the
+      env dict actually passed. After the run no commit message in the scratch history, the initial
+      commit included, contains [NO-FEEDBACK-CHECK], and no repo-level core.hooksPath is set. COMMIT_EDITMSG
+      is never hand-written.
+    proves_clause: 'every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+    must_catch:
+      - an initial commit message containing [NO-FEEDBACK-CHECK], which the hook reads from COMMIT_EDITMSG on later commits
+      - a commit made with --no-verify
+      - an environment that still carries SKIP or GIT_COMMIT_MSG
+      - hand-written COMMIT_EDITMSG or GIT_COMMIT_MSG offered as evidence in place of git running the hook
+  - name: test_committed_feedback_ids_are_template_text_or_submission_output_never_typed
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      Each placeholder is filled with the stdout of a real run of the deployed submit_feedback.py from a
+      copied layout, with a declared sink and a TMPDIR inside tmp_path (--phase the example's agent,
+      --category complete). The proof records the source of every committed feedback-id value
+      (template text, or run output) and asserts it by reading the committed ticket back. A refused
+      writer takes the fallback path built from that run's own output as the signoff skill documents it.
+      Concrete ids and (not-a-signoff) are committed exactly as written. Placeholder spellings come from
+      the same reader as the lint.
+    proves_clause: 'no feedback-id value in any committed entry was typed by hand: each one is the template''s literal text or the submission step''s printed output'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - a placeholder filled with a made-up id such as fb_2026-01-01_00000000
+      - a placeholder committed verbatim as literal angle-bracket text
+      - a hand-typed (submit-failed) used when the submission run actually succeeded
+      - a placeholder spelling list kept in the proof instead of read from the lint's reader
+  - name: test_proven_count_equals_examined_minus_exempted_and_is_not_zero
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      The proof calls the BO-2000g-3 enumeration in the same run and asserts the number of commits proven
+      equals examined minus exempted and is above zero. A second case runs the proof over a tmp_path copy
+      of the trees with one more conforming example added and sees one more proven case with no change to
+      the proof. No list or count is held in the test.
+    proves_clause: 'the number of examples proven equals the number of examples the lint examined and did not exempt, so adding one more conforming example to a template adds one more proven case with no change to the proof'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+    must_catch:
+      - a proof with its own hard-coded list of blocks that matches today's count
+      - a proof that skips exempted and unexempted examples inconsistently with the lint
+      - a proof that passes with zero examples
+  - name: test_proof_fails_rather_than_skips_when_layout_hook_or_submit_script_is_missing
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Against an empty or broken-symlink layout directory, a missing deployed check-feedback-id hook and a
+      missing deployed scripts/feedback/submit_feedback.py, the harness raises a failure and never calls
+      pytest.skip. It never spawns build.py and never writes into the shared layout.
+    proves_clause: 'every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+  - name: test_git_commit_runs_the_deployed_hook_through_the_manifest_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Marked shared_layout_reader. A real git commit in the scratch repo with the deployed hook installed
+      from the layout's check-feedback-id manifest entry (python run_hook.py check_feedback_id.py,
+      pass_filenames false, pre-commit stage, files ^tickets/.*\.md$) is refused when a new heading has no
+      feedback-id line and accepted when it has one. The hook is not called as a function.
+    proves_clause: 'every commit succeeds with the feedback-id check having run and passed, with no bypass token in the commit message and the check not skipped'
+    code_file: templates/scripts/commit_guardian/check_feedback_id.py
+  - name: test_committed_entries_are_read_back_from_the_scratch_history
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: >-
+      After the run, git show HEAD:tickets/00_inbox/TICKET-demo.md and git log in the scratch repo are read
+      back. Each proven heading is present in exactly one commit, directly followed by its feedback-id
+      line, and the sink written by the real submit_feedback.py runs in tmp_path holds the ids committed
+      from run output.
+    proves_clause: 'no feedback-id value in any committed entry was typed by hand: each one is the template''s literal text or the submission step''s printed output'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_4_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - scripts/suite_performance/pytest_shared_reference_layout.py
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/skills/signoff/SKILL.md
+  - unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+  - unit_tests/feedback/_inf_500d_4_helpers.py

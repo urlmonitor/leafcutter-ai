@@ -255,6 +255,8 @@ superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300a_1_ia.py
 - unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py
+- unit_tests/build_orchestration/test_bo_4300a_1_ia_marker.py
+- unit_tests/workflows/test_bo2400f5iii_declined_step_core.py
 implemented_by:
 - templates/workflows-js/_shared/workspace-answer.js
 - templates/workflows-js/build-epic.js

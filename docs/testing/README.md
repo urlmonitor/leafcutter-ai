@@ -3,7 +3,7 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-10-12
+last_updated: 2026-10-23
 components:
 - infrastructure
 related_docs:
@@ -157,19 +157,12 @@ python -m pytest unit_tests/ -m manual
 
 ### Post-merge lanes
 
-Tests excluded from the default run are not dropped; two post-merge workflows run them
-after every merge to main and on a 12-hour heartbeat. Both retry failing tests once on a
-fresh runner before reporting a verdict.
-
-| Lane | Workflow | Selects | On failure |
-|------|----------|---------|------------|
-| Correctness | `Post-merge suite` | `_MANUAL` tests (`-m "manual and not timing_ratio"`) | Opens or updates the `post-merge-red` issue. The `Post-merge suite status` check holds pull requests while the lane is red, did not complete, or is stale (over 30 hours). It is not a required check yet. |
-| Timing | `Post-merge timing suite` | `timing_ratio` tests (wall-clock ratio assertions) | Opens or updates the separate `post-merge-timing` issue, which names tests that newly entered the lane and the commit that touched them. It never holds a pull request. |
-
-Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and out of
-the holding correctness lane into the timing lane. That is a reviewed change: name the
-test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
-`-m manual` for the correctness lane).
+Excluded tests are not dropped: the post-merge `Post-merge suite` runs the `_MANUAL` tests
+and the whole live-database folder after every merge to main and on the 12-hour heartbeat,
+and `Post-merge timing suite` runs the `timing_ratio` tests. Live-database tests are
+skipped in the per-PR shards, run for changed criteria only in `done-proof`, and run in
+full post-merge. See [post-merge-lanes.md](post-merge-lanes.md) for the lane table, the
+three-place account and how each lane ends.
 
 ### `Post-merge suite status` hold messages
 
@@ -272,7 +265,7 @@ The pre-commit suite runs automatically on `git commit`:
 - **Always runs**: `unit_tests/live_trader/` (unittest discover) — fast, no DB.
 - **Never runs automatically**: `unit_tests/sql_functions/` — requires a running
   DB container. Run manually before SQL changes: `poetry run python -m pytest unit_tests/sql_functions -v`.
-- `_MANUAL` tests are excluded from both suites.
+- `_MANUAL` tests are excluded from both suites; they run in the post-merge correctness lane (see Post-merge lanes).
 
 ---
 

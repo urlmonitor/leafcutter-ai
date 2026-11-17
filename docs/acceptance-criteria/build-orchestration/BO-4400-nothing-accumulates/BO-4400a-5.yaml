@@ -17,10 +17,13 @@ criteria: |
   Given end-of-route clearing (BO-4400a-1, BO-4400a-1-i, BO-4400a-2) is in place,
   When the sequence diagram for end-of-route clearing is read,
   Then it shows, in order, the route pushing its commits, the pull request being
-    opened, the route asking the one clearing door to clear its workspace, the door
-    obtaining the holds-work / holds-nothing verdict, and the route returning its result,
-  And it shows the two outcomes as separate branches: removed, and refused with the
-    unsent work named and the workspace kept,
+    opened, the pull request being merged into the main line, the route asking the one
+    clearing door to clear its workspace, the door obtaining the holds-work /
+    holds-nothing verdict and whether the work is on the main line, and the route
+    returning its result,
+  And it shows the outcomes as separate branches: removed; refused with the unsent work
+    named and the workspace kept; and, when the pull request is still open at the
+    route's end, kept as not yet on the main line and left for the landed-work pass,
   And it shows the nothing-to-deliver path reaching the same clearing request without
     a push or a pull request,
   And it shows that an epic's workspace is cleared once, after its last ticket.
@@ -46,12 +49,29 @@ it_requirements:
     never taken from this record or a ticket (CLAUDE.md 'Sequential Resource Paths Go Stale').
   - >-
     Participants named as the built components: route workflow, shell-permitted agent, the one
-    maker (remove verb), verdict (BO-4100c-1), hub. Linked from
+    maker (the clearing command the route sends), verdict (BO-4100c-1) and the landed rule
+    (BO-4400g-2), hub. Linked from
     docs/architecture/components/worktree-manager.md and docs/architecture/agent_delivery_workflows.md.
 test_required: false
+test_rationale: A sequence diagram under docs/architecture/diagrams/ that follows a route from
+  pushing and opening its pull request, through its merge, the clearing door, its holds-work
+  verdict and the main-line check, to the removed, refused-and-kept or kept-until-merged outcome,
+  plus the nothing-to-deliver path and the single clearing after an epic's last ticket. Whether
+  those branches are told faithfully to the built route is a reading judgement. The architecture
+  reviewer checks the drawing against BO-4400a-1, BO-4400a-1-i and BO-4400a-2; after wave 2, a
+  verified_by inspection does.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision at the BO-4400g plan-feature gate, 2026-11-16 (Q3, merged timing of D2): the ordered
+      steps gain the pull request being merged before the clearing request, the door's step gains the
+      main-line check, and the outcome branches gain "kept as not yet on the main line, left for the
+      landed-work pass" for a pull request still open at the route's end (BO-4400a-1's second scenario).
+      Technical fields fixed: the participants it_requirement (maker named by the clearing command, the
+      landed rule beside the verdict) and the test_rationale.
+    by: business-analyst
+    at: "2026-11-16"
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -59,3 +79,7 @@ notes: |
   Satisfies BO-4400a documentation_triggers: sequence-diagram. Re-measure the next free
   diagram id with the allocator immediately before publishing (repo CLAUDE.md: sequential
   resource ids go stale on long-lived branches).
+
+  AMENDED 2026-11-16 (user decision Q3): the order is push, pull request opened, merged, clear,
+  verdict, return, matching BO-4400a-1's delivers_to contract for this record. The third
+  branch keeps the diagram faithful to BO-4400a-1's second scenario.

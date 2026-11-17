@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "How an acceptance criterion is born, built & retired",
   "level": "pipeline",
-  "summary": "The data flow of an acceptance criterion through the AC-driven pipeline: a plain-language request is triaged, the authoring agents (PO → BA → IT PO) write the AC records into the store, you approve each stage, the scanner surfaces ready ACs, a wired ticket is generated, and once its implementation merges the AC is marked done automatically. Around that spine sit the update paths — scope stays locked to the author, existing code is discovered and back-linked, ACs can be re-homed without breaking references, and retiring an AC forces its code to be reconciled.",
+  "summary": "The data flow of an acceptance criterion through the AC-driven pipeline. A plain-language request is triaged; the product owner and business analyst each write their part into the store and you approve each stage; the IT product owner then records only what each outcome must prove, and its stage passes on its own. A rule check runs after every stage and fails closed, and each passed stage is committed. A deterministic pre-pass gathers file facts, the test designer reads the code and writes the test design and file findings, and that design is committed. Up to two IT product owner hand-back rounds decide undecided file findings, each rule-checked, and a failure stops the run. At the final gate you set one priority; the approval step first reports which criteria are held and why, then approves only the released ones. The scanner then surfaces ready criteria, never one whose test design is pending, a wired ticket is generated, and once its implementation merges the criterion is marked done automatically. Around that spine sit the update paths: scope stays locked to the author, existing code is discovered and back-linked, criteria can be re-homed without breaking references, and retiring one forces its code to be reconciled.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 2,
+  "version": 3,
   "tags": [
     "ac-driven-dev",
     "acceptance-criteria",
@@ -158,7 +158,7 @@
     {
       "id": "author",
       "label": "Author the AC tree (PO → BA → IT PO)",
-      "description": "In turn, the product owner, business analyst and IT product owner agents write the acceptance criteria into the store, from value to behaviors to technical detail.",
+      "description": "In turn, the product owner and business analyst write the acceptance criteria into the store, then the IT product owner adds routing, contracts and what each outcome must prove.",
       "order": 2,
       "agent": "plan-feature (product-owner → business-analyst → it-po)",
       "actor_kind": "llm",
@@ -174,7 +174,11 @@
         "ac/readiness: string (optional)",
         "ac/assigned_agent: null|string (optional)",
         "ac/delivers_to: array|null|object|string (optional)",
-        "ac/expects_from: array|null|object|string (optional)"
+        "ac/expects_from: array|null|object|string (optional)",
+        "ac/test_intent: array (optional)",
+        "ac/test_intent/*/clause: string (required)",
+        "ac/test_intent/*/needs_test: boolean (required)",
+        "ac/test_intent/*/reason: string (required)"
       ],
       "reads": [
         "Request"
@@ -184,7 +188,14 @@
       ],
       "implements": [
         "ACD-300b",
-        "ACD-300d"
+        "ACD-300d",
+        "ACD-2500b",
+        "ACD-2500b-1",
+        "ACD-2500e",
+        "ACD-2500e-2",
+        "ACD-2500e-3",
+        "ACD-2500f",
+        "ACD-2500f-1"
       ],
       "impl_status": "in_progress",
       "impl_asof": "2026-07-20",
@@ -277,6 +288,34 @@
                   "string"
                 ],
                 "required": false
+              },
+              {
+                "path": "/test_intent",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_intent/*/clause",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_intent/*/needs_test",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_intent/*/reason",
+                "types": [
+                  "string"
+                ],
+                "required": true
               }
             ]
           }
@@ -304,7 +343,7 @@
               "id": "ACD-300",
               "component": "ac-driven-dev",
               "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
-              "readiness": "draft",
+              "readiness": "reviewed",
               "assigned_agent": "python-coder",
               "delivers_to": {
                 "agent": "test-runner",
@@ -313,40 +352,213 @@
               "expects_from": {
                 "agent": "test-writer",
                 "contract": "A failing behavioral test baseline."
-              }
+              },
+              "test_intent": [
+                {
+                  "clause": "Then its evidence is recorded.",
+                  "needs_test": true,
+                  "reason": "The recorded evidence is the observable outcome of this requirement."
+                }
+              ]
             }
           }
         ]
       }
     },
     {
-      "id": "approve",
-      "label": "Review, approve & commit each stage",
-      "description": "You approve each authoring stage before the next agent runs, which advances the criteria's readiness and commits that stage's output to Git.",
+      "id": "ruleCheck",
+      "label": "Rule-check every authoring stage",
+      "description": "After every authoring stage, a rule check reads the changed criteria, repairs the few mistakes with one right answer, reports the rest and fails the stage on anything left open.",
       "order": 3,
-      "agent": "plan-feature gate + commit",
-      "actor_kind": "human",
-      "consumes": [
-        "ac/id: string (required)",
-        "ac/criteria: string (required)",
-        "ac/readiness: string (optional)"
-      ],
-      "produces": [
-        "ac/id: string (required)",
-        "ac/readiness: string (optional)"
-      ],
+      "agent": "requirement_rule_check.py",
+      "actor_kind": "deterministic",
       "reads": [
-        "Ac"
+        "Ac",
+        "AcStore"
       ],
       "writes": [
         "Ac"
       ],
       "implements": [
-        "ACD-300c",
-        "ACD-300g"
+        "ACD-2500a",
+        "ACD-2500a-1",
+        "ACD-2500a-1-i",
+        "ACD-2500a-1-ii",
+        "ACD-2500a-2",
+        "ACD-2500a-2-i",
+        "ACD-2500a-2-ii",
+        "ACD-2500a-2-iii",
+        "ACD-2500a-2-iv",
+        "ACD-2500a-2-v",
+        "ACD-2500a-2-vi",
+        "ACD-2500a-2-vii",
+        "ACD-2500a-2-viii",
+        "ACD-2500a-3",
+        "ACD-2500a-3-i",
+        "ACD-2500a-3-ii",
+        "ACD-200b-2"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "components": [
+                "ac_driven_dev"
+              ],
+              "readiness": "approved",
+              "assigned_agent": "python-coder",
+              "covered_by": []
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "components": [
+                "ac_driven_dev"
+              ],
+              "readiness": "reviewed",
+              "covered_by": []
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/components: array (required)",
+        "ac/readiness: string (optional)",
+        "ac/assigned_agent: null|string (optional)",
+        "ac/covered_by: array (optional; default [])"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/components: array (required)",
+        "ac/readiness: string (optional)",
+        "ac/covered_by: array (optional; default [])"
+      ],
+      "impl_asof": "2026-10-23",
+      "impl_status": "done"
+    },
+    {
+      "id": "stageGate",
+      "label": "Approve & commit the PO and BA stages",
+      "description": "You approve or send back the product owner and business analyst stages, the IT product owner's stage passes on its own, and each passed stage is committed to Git before the next agent runs.",
+      "order": 4,
+      "agent": "plan-feature gate + commit",
+      "actor_kind": "human",
+      "reads": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-300c",
+        "ACD-300c-1",
+        "ACD-300c-2",
+        "ACD-300g",
+        "ACD-300g-1",
+        "ACD-300g-1-i",
+        "ACD-300g-2",
+        "ACD-300g-2-i",
+        "ACD-300g-2-ii",
+        "ACD-300g-3",
+        "ACD-300g-4"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -386,10 +598,461 @@
                   "string"
                 ],
                 "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "draft"
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/readiness: string (optional)"
+      ],
+      "produces": [
+        "ac/id: string (required)"
+      ],
+      "impl_asof": "2026-10-23",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "testDesign",
+      "label": "Design the tests from the code",
+      "description": "A pre-pass collects the facts about each named file, then the test designer reads the code and writes each criterion's test design and its file findings as two separate results.",
+      "order": 5,
+      "agent": "design_prepass.py → test-designer",
+      "actor_kind": "llm",
+      "reads": [
+        "Ac",
+        "AcStore"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-2500c",
+        "ACD-2500c-1",
+        "ACD-2500c-1-i",
+        "ACD-2500c-2",
+        "ACD-2500c-3",
+        "ACD-2500d",
+        "ACD-2500d-1",
+        "ACD-2500d-1-i",
+        "ACD-2500d-2",
+        "ACD-2500d-5",
+        "ACD-2500d-5-i"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
               },
               {
-                "path": "/readiness",
+                "path": "/criteria",
                 "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/declared_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_intent",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_intent/*/clause",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_intent/*/needs_test",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_intent/*/reason",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_spec",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_spec/*/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_spec/*/target_dir",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_spec/*/proves_clause",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_spec/*/code_file",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_design_authorship",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_design_authorship/step",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/test_design_opened_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings/*/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/verdict",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/reason",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/decision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings_opened_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "test_intent": [
+                {
+                  "clause": "Then its evidence is recorded.",
+                  "needs_test": true,
+                  "reason": "The recorded evidence is the observable outcome of this requirement."
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "test_spec": [
+                {
+                  "name": "test_delivery_records_evidence",
+                  "target_dir": "unit_tests/delivery/",
+                  "proves_clause": "Then its evidence is recorded.",
+                  "code_file": "app/service.py"
+                }
+              ],
+              "test_design_authorship": {
+                "step": "test-designer",
+                "date": "2026-10-23"
+              },
+              "test_design_opened_files": [
+                "app/service.py"
+              ],
+              "file_findings": [
+                {
+                  "file": "app/service.py",
+                  "verdict": "describes, does not implement",
+                  "line_range": "10-24",
+                  "reason": "The file documents the evidence record but no code writes it.",
+                  "decision": null
+                }
+              ],
+              "file_findings_opened_files": [
+                "app/service.py"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/declared_files: array (optional)",
+        "ac/test_intent: array (optional)",
+        "ac/test_intent/*/clause: string (required)",
+        "ac/test_intent/*/needs_test: boolean (required)",
+        "ac/test_intent/*/reason: string (required)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/test_spec: array|null (optional)",
+        "ac/test_spec/*/name: string (required)",
+        "ac/test_spec/*/target_dir: string (required)",
+        "ac/test_spec/*/proves_clause: string (optional)",
+        "ac/test_spec/*/code_file: string (optional)",
+        "ac/test_design_authorship: object (optional)",
+        "ac/test_design_authorship/step: string (required)",
+        "ac/test_design_opened_files: array (optional)",
+        "ac/file_findings: array (optional)",
+        "ac/file_findings/*/file: string (required)",
+        "ac/file_findings/*/verdict: string (required)",
+        "ac/file_findings/*/reason: string (required)",
+        "ac/file_findings/*/decision: null|object (optional)",
+        "ac/file_findings_opened_files: array (optional)"
+      ],
+      "impl_asof": "2026-10-23",
+      "impl_status": "done"
+    },
+    {
+      "id": "handback",
+      "label": "Hand undecided file findings back to the IT PO",
+      "description": "The test design is committed, then the IT product owner decides each undecided file finding in up to two rounds, each rule-checked, and a failed round stops the run before the final gate.",
+      "order": 6,
+      "agent": "it-po",
+      "actor_kind": "llm",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-2500d-3",
+        "ACD-2500d-3-i",
+        "ACD-2500a-2-ix",
+        "ACD-2500a-2-vii"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings/*/file",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/verdict",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/decision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings/*/decision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings/*/decision/choice",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/decision/reason",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/file_findings/*/decision/by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/declared_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/delivers_to",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/expects_from",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
                   "string"
                 ],
                 "required": false
@@ -404,9 +1067,14 @@
             "origin": "illustrative",
             "label": "Input illustrative ac projection; not an execution receipt",
             "value": {
-              "id": "ACD-300",
-              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
-              "readiness": "reviewed"
+              "id": "ACD-300a",
+              "file_findings": [
+                {
+                  "file": "app/service.py",
+                  "verdict": "describes, does not implement",
+                  "decision": null
+                }
+              ]
             }
           },
           {
@@ -415,25 +1083,263 @@
             "origin": "illustrative",
             "label": "Output illustrative ac projection; not an execution receipt",
             "value": {
-              "id": "ACD-300",
-              "readiness": "approved"
+              "id": "ACD-300a",
+              "assigned_agent": "python-coder",
+              "file_findings": [
+                {
+                  "decision": {
+                    "choice": "assignment stands",
+                    "reason": "The assigned specialist writes the missing evidence code in this file.",
+                    "by": "it-po"
+                  }
+                }
+              ]
             }
           }
         ]
-      }
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/file_findings: array (optional)",
+        "ac/file_findings/*/file: string (required)",
+        "ac/file_findings/*/verdict: string (required)",
+        "ac/file_findings/*/decision: null|object (optional)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/assigned_agent: null|string (optional)",
+        "ac/file_findings/*/decision: null|object (optional)",
+        "ac/file_findings/*/decision/choice: string (required)",
+        "ac/file_findings/*/decision/reason: string (required)",
+        "ac/file_findings/*/decision/by: string (required)",
+        "ac/declared_files: array (optional)",
+        "ac/delivers_to: array|null|object|string (optional)",
+        "ac/expects_from: array|null|object|string (optional)"
+      ],
+      "impl_asof": "2026-10-23",
+      "impl_status": "done"
+    },
+    {
+      "id": "finalGate",
+      "label": "Final gate: set priority & approve released criteria",
+      "description": "You set one priority and approve only the criteria nothing holds back, held ones are listed with their reason, and the approval step records it and commits the batch.",
+      "order": 7,
+      "agent": "plan-feature final gate + approve_acs.py",
+      "actor_kind": "human",
+      "reads": [
+        "Ac"
+      ],
+      "writes": [
+        "Ac"
+      ],
+      "implements": [
+        "ACD-300c-3",
+        "ACD-300c-4",
+        "ACD-300c-4-i",
+        "ACD-300c-4-ii",
+        "ACD-300c-4-iii",
+        "ACD-300c-4-iv",
+        "ACD-300c-5",
+        "ACD-300c-5-i",
+        "ACD-2500b-2",
+        "ACD-2500d-2-i",
+        "ACD-2500d-3-i"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_intent",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_spec",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
+              },
+              {
+                "path": "/file_findings/*/decision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/hold_reason",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/priority",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/amended_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/amended_by/*",
+                "types": [
+                  "object",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "reviewed",
+              "test_intent": [
+                {
+                  "clause": "Then its evidence is recorded.",
+                  "needs_test": true,
+                  "reason": "The recorded evidence is the observable outcome of this requirement."
+                }
+              ],
+              "test_spec": [
+                {
+                  "name": "test_delivery_records_evidence",
+                  "target_dir": "unit_tests/delivery/",
+                  "proves_clause": "Then its evidence is recorded.",
+                  "code_file": "app/service.py"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300b",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "reviewed",
+              "hold_reason": "reference file pending"
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300a",
+              "readiness": "approved",
+              "priority": "high",
+              "amended_by": [
+                {
+                  "action": "approved",
+                  "agent": "approve_acs",
+                  "date": "2026-10-23"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/test_intent: array (optional)",
+        "ac/test_spec: array|null (optional)",
+        "ac/file_findings/*/decision: null|object (optional)",
+        "ac/hold_reason: string (optional)"
+      ],
+      "produces": [
+        "ac/id: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/priority: string (optional)",
+        "ac/amended_by: array (optional; default [])",
+        "ac/amended_by/*: object|string (each present item/value)"
+      ],
+      "impl_asof": "2026-10-23",
+      "impl_status": "done"
     },
     {
       "id": "scan",
       "label": "Scan the store for ready work",
-      "description": "The scanner finds the unblocked leaf acceptance criteria that are ready to build and presents them as a prioritized backlog of what to build next.",
-      "order": 4,
+      "description": "The scanner finds the unblocked leaf acceptance criteria that are ready to build, holds back any whose test design is still pending, and presents the rest as a prioritized backlog.",
+      "order": 8,
       "agent": "scan_ac_store.py + ac_prioritizer.py",
       "actor_kind": "deterministic",
       "consumes": [
         "ac/id: string (required)",
         "ac/readiness: string (optional)",
         "ac/work_status: null|string (optional)",
-        "ac/depends_on: array|null (optional)"
+        "ac/depends_on: array|null (optional)",
+        "ac/test_intent: array (optional)",
+        "ac/test_spec: array|null (optional)"
       ],
       "produces": [
         "ac/id: string (required)",
@@ -446,7 +1352,9 @@
         "Ac"
       ],
       "implements": [
-        "ACD-400a"
+        "ACD-400a",
+        "ACD-2500b-2-i",
+        "ACD-2500b-3"
       ],
       "impl_status": "in_progress",
       "impl_asof": "2026-08-18",
@@ -479,6 +1387,21 @@
               },
               {
                 "path": "/depends_on",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_intent",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_spec",
                 "types": [
                   "array",
                   "null"
@@ -535,7 +1458,22 @@
               "id": "ACD-300",
               "readiness": "approved",
               "work_status": "todo",
-              "depends_on": []
+              "depends_on": [],
+              "test_intent": [
+                {
+                  "clause": "Then its evidence is recorded.",
+                  "needs_test": true,
+                  "reason": "The recorded evidence is the observable outcome of this requirement."
+                }
+              ],
+              "test_spec": [
+                {
+                  "name": "test_delivery_records_evidence",
+                  "target_dir": "unit_tests/delivery/",
+                  "proves_clause": "Then its evidence is recorded.",
+                  "code_file": "app/service.py"
+                }
+              ]
             }
           },
           {
@@ -556,8 +1494,8 @@
     {
       "id": "generate",
       "label": "Generate a wired ticket",
-      "description": "For a chosen ready criterion, the generator produces a fully wired ticket and links the two so the ticket and the criterion point at each other.",
-      "order": 5,
+      "description": "For a chosen ready criterion, the generator produces a fully wired ticket and links the two, and it refuses a criterion whose test design is still pending.",
+      "order": 9,
       "agent": "generate_ticket_from_ac.py",
       "actor_kind": "deterministic",
       "consumes": [
@@ -565,7 +1503,9 @@
         "ac/criteria: string (required)",
         "ac/assigned_agent: null|string (optional)",
         "ac/delivers_to: array|null|object|string (optional)",
-        "ac/expects_from: array|null|object|string (optional)"
+        "ac/expects_from: array|null|object|string (optional)",
+        "ac/test_intent: array (optional)",
+        "ac/test_spec: array|null (optional)"
       ],
       "produces": [
         "ac/id: string (required)",
@@ -579,7 +1519,8 @@
         "Ac"
       ],
       "implements": [
-        "ACD-400b"
+        "ACD-400b",
+        "ACD-2500b-2-i"
       ],
       "impl_status": "done",
       "impl_asof": "2026-07-20",
@@ -629,6 +1570,21 @@
                   "string"
                 ],
                 "required": false
+              },
+              {
+                "path": "/test_intent",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/test_spec",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
               }
             ]
           }
@@ -672,7 +1628,22 @@
               "expects_from": {
                 "agent": "test-writer",
                 "contract": "A failing behavioral test baseline."
-              }
+              },
+              "test_intent": [
+                {
+                  "clause": "Then its evidence is recorded.",
+                  "needs_test": true,
+                  "reason": "The recorded evidence is the observable outcome of this requirement."
+                }
+              ],
+              "test_spec": [
+                {
+                  "name": "test_delivery_records_evidence",
+                  "target_dir": "unit_tests/delivery/",
+                  "proves_clause": "Then its evidence is recorded.",
+                  "code_file": "app/service.py"
+                }
+              ]
             }
           },
           {
@@ -694,7 +1665,7 @@
       "id": "complete",
       "label": "Implement, then mark the AC done",
       "description": "Once the implementing ticket merges, the system automatically marks every acceptance criterion that ticket covered as done.",
-      "order": 6,
+      "order": 10,
       "agent": "mark_ac_done.py + post-merge hook",
       "actor_kind": "deterministic",
       "consumes": [
@@ -1160,11 +2131,11 @@
     }
   ],
   "impl_summary": {
-    "done": 2,
+    "done": 6,
     "in_progress": 4,
     "not_started": 4,
-    "total": 10,
-    "asof": "2026-08-18"
+    "total": 14,
+    "asof": "2026-10-23"
   },
   "acceptance_scenarios": [
     {
@@ -1176,26 +2147,50 @@
     {
       "for": "author",
       "given": "a triaged request",
-      "when": "the authoring agents run in sequence",
-      "then": "L0-L3 acceptance criteria are written to the AC store and never to ticket files"
+      "when": "the authoring agents for its route run in sequence",
+      "then": "L0-L3 acceptance criteria are written to the AC store and never to ticket files, and the IT product owner records per outcome clause whether a test is needed and why, writing no test design"
     },
     {
-      "for": "approve",
-      "given": "a completed authoring stage",
+      "for": "ruleCheck",
+      "given": "an authoring stage that changed requirement records",
+      "when": "the requirement rule check runs at the end of that stage",
+      "then": "only one-right-answer violations are repaired, every other finding names its file and rule, and the stage is not complete unless the check passed on at least one record"
+    },
+    {
+      "for": "stageGate",
+      "given": "a rule-checked product owner or business analyst stage",
       "when": "you approve it",
-      "then": "the AC's readiness advances and the stage output is committed to git before the next agent runs"
+      "then": "its records are committed to git before the next agent runs, while the IT product owner stage passes its gate automatically and is committed the same way"
+    },
+    {
+      "for": "testDesign",
+      "given": "records carrying test intent and a pre-pass report of their files",
+      "when": "the test designer runs",
+      "then": "each clause that needs a test gets a test design entry grounded in a file it opened and marked with its author, and the file findings are written to a separate field"
+    },
+    {
+      "for": "handback",
+      "given": "a test design with a file finding that has no recorded decision",
+      "when": "the hand-back runs",
+      "then": "the design is committed, the IT product owner records a decision in at most two rounds, each round is rule-checked as the hand-back stage, and a failed check stops the run before the final gate"
+    },
+    {
+      "for": "finalGate",
+      "given": "a batch in which the hold report holds one record as test design pending",
+      "when": "you set priority high and approve",
+      "then": "only the released records become approved with that priority and one appended approval entry, the held record stays reviewed and is listed with its reason, and a failed write stops the run before the commit"
     },
     {
       "for": "scan",
       "given": "a store of acceptance criteria",
       "when": "the scanner runs",
-      "then": "every todo, unblocked leaf AC is surfaced as prioritized ready work"
+      "then": "every todo, unblocked leaf AC is surfaced as prioritized ready work, except one whose test design is still pending"
     },
     {
       "for": "generate",
       "given": "a ready AC",
       "when": "a ticket is generated from it",
-      "then": "the ticket is fully wired and the AC records the implemented_by back-reference"
+      "then": "the ticket is fully wired and the AC records the implemented_by back-reference, and an AC whose test design is pending gets no ticket"
     },
     {
       "for": "complete",
@@ -1240,6 +2235,12 @@
       "by": "flow-author (agent-led I/O contract migration)",
       "date": "2026-10-03",
       "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (right-job-right-agent product-truth refresh)",
+      "date": "2026-10-23",
+      "note": "Brought the flow in line with the merged right-job-right-agent epics: split authoring into author, rule check, test design and hand-back steps and the approval into the stage gates and the final gate; added test intent, test design, file findings, priority, amendment and hold-reason fields to the io_contracts; linked the scan and generate steps to the test-design-pending hold. Approved by the user 2026-10-23."
     }
   ],
   "contract_definitions": {

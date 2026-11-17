@@ -18,7 +18,7 @@ from unit_tests.workflows._fast_lane_claim_fixtures import claim_ran
 
 SCRATCH_LABEL = "scratch-item"
 NOTE_MARKER = "SCRATCH (BO-4400f-1)"
-_COMMAND_RE = re.compile(r"python3?\s+\S*scratch\.py\s+new-item\s[^`\n]*")
+_COMMAND_RE = re.compile(r'python3?\s+"?[^\s"]*scratch\.py"?\s+new-item\s[^`\n]*')
 
 # script -> (route name, labels of the process-starting dispatches that must
 # carry the scratch environment once the item exists)

@@ -59,7 +59,7 @@ def fixture(repository_id: str) -> ProjectionSnapshot:
     sha = hashlib.sha1(b"leafcutter synthetic knowledge fixture v1").hexdigest()
     nodes = []
     for identifier, kind in specs.items():
-        properties = {"synthetic": True}
+        properties: dict[str, object] = {"synthetic": True}
         if kind == "Decision":
             properties.update(
                 status="corrected" if identifier == "D-old" else "current",

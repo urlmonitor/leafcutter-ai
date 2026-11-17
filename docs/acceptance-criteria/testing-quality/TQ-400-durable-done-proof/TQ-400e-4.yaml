@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: approved
-priority: medium
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a finished record declared test-free whose stated reason is absent, empty,
@@ -22,7 +22,11 @@ criteria: |
   And the report states that the declaration was refused and that the missing
     reason is why,
   And the record is therefore eligible for the same demotion any other unproven
-    record receives.
+    record receives,
+  And once the typed verification record of BO-2500f is in force, a declaration
+    whose reason is present but whose verification record is absent or does not
+    hold is refused on the same terms, and the report names the part of the
+    verification record that failed.
 depends_on:
   - TQ-400e
   - TQ-400e-3
@@ -47,6 +51,11 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The must_block modifier: known-bad input through the SAME entry point, asserting it blocks. Also the failure angle and its fail-open precedents (BO-1700's gate had to be flipped to fail-closed; a wrong-shape config raised an uncaught exception and blocked commits) — both directions are live risks here."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: describes
+    status: exists
+    relevance: 'The decision this record implements: wave 1 (section 1) or wave 2 (section 2)
+      of the verification-method rule.'
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -57,16 +66,30 @@ it_requirements:
   - "DO NOT VALIDATE THE REASON'S CONTENT, ONLY ITS PRESENCE. The gate is 'is there a positively-confirmed non-empty reason', not 'is the reason good'. Judging quality is the reader's job — TQ-400e-3 puts the text in the report so a human can judge it. A content heuristic would be both unfalsifiable and trivially gamed."
   - "MUST NOT CONTRADICT THE AUTHORING-TIME RULE. _ac_schema_validators.py already rejects test_required: false on an approved, not-yet-done, leaf code AC. This refusal must operate on the population that rule leaves legal (non-code and already-done records), or a record becomes legal to one layer and illegal to the other."
   - "Must handle errors gracefully per the project error handling policy — every failure path must log at WARNING or higher and either re-raise or resolve to refusal, and none may resolve to honouring. Note the deliberate asymmetry with TQ-400e-2: uncertainty about EVIDENCE abstains, uncertainty about an EXEMPTION refuses. Both refuse to silently give the record what it wants."
+  - 'CURRENCY NOTE (IT PO, 2026-10-25). Since BO-2500a-1-ii (done) the honouring point is no
+    longer a bare `test_required is False` skip: check_done_proof.py consults the shared predicate
+    is_covers_tag_waived (templates/scripts/commit_guardian/check_done_proof.py :462, :534,
+    :600), which already requires a non-empty reason. Line numbers above are history. The sweep
+    calls the shared predicate; it never re-implements it.'
+  - WAVE-2 CLAUSE (appended 2026-10-25). After BO-2500f-4's switch is on, a reasoned declaration
+    with no holding verification record goes through the SAME entry point and the SAME unproven
+    outcome; the report names the failed_part from BO-2500f-4's verdict verbatim. No separate
+    outcome and no second reader.
+  - TEST CONTRACT GAP. The protected test_spec covers the reasonless case only; the test-designer
+    must add a must_block descriptor for a reasoned record whose verification record is absent
+    or does not hold.
 delivers_to:
   - agent: python-coder
     contract: "The enforceable half of the exemption path: a record carrying test_required: false without a positively-confirmed non-empty test_rationale is classified unproven — the same class, and the same demotable population, as a record with no declaration — with a refusal reason stated in the report. TQ-400b-1 demotes it like any other unproven record; TQ-400d-1 includes it in the triage pile."
 expects_from:
-  ac_id: TQ-400e-3
-  contract: >-
-    The honoured-exemption path and its stated-reason requirement. This AC is the
-    must-block counterpart: it feeds a reasonless declaration through that same
-    entry point and requires it to be refused. The identity of the entry point is
-    the contract — a refusal implemented anywhere else does not satisfy it.
+  - ac_id: TQ-400e-3
+    contract: 'The honoured-exemption path and its stated-reason requirement. This AC is the
+      must-block counterpart: it feeds a reasonless declaration through that same entry point
+      and requires it to be refused. The identity of the entry point is the contract — a refusal
+      implemented anywhere else does not satisfy it.'
+  - ac_id: BO-2500f-4
+    contract: The shared rule's verdict {waived, failed_part, reason}; failed_part is named
+      in the report for a refused reasoned declaration.
 test_spec:
   - name: test_tq_400e_4_reasonless_declaration_is_refused_through_the_honouring_entry_point
     target_dir: unit_tests/ac_store/
@@ -92,6 +115,25 @@ test_spec:
     type: integration
     angle: criterion
     description: "In one run, a refused declaration and a record carrying no declaration at all reach the SAME outcome class, and both are actually demoted when outcomes are applied. Assert the refused record is not parked in a separate non-demotable state — a third 'refused' outcome outside the demotable population defeats this AC as completely as honouring the declaration would."
+  - name: test_tq_400e_4_reasoned_declaration_without_a_holding_record_is_refused_through_the_honouring_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_done_proof.py --mode ci, as a subprocess, asserting exit code and report"
+    description: "MUST_BLOCK. Through the real check_done_proof.py --mode ci subprocess with BO-2500f-4's switch turned on through its declared mechanism, a done record with test_required false and a non-empty rationale but no verified_by, and one with a verified_by whose check is not wired, are refused (exit 1) and the report names the failed_part from the shared verdict verbatim; a reasoned record with a holding record in the same store is honoured."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration whose reason is present but whose verification record is absent or does not hold is refused on the same terms, and the report names the part of the verification record that failed"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+  - name: test_tq_400e_4_reasoned_but_unverified_declaration_is_unproven_on_the_same_terms_as_an_undeclared_record
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With bo-2500f-4's switch turned on through its declared mechanism, a reasoned declaration with a failing verification record and a record with no declaration get the same unproven outcome class in one run, no third refused outcome exists, and both are eligible for the same demotion."
+    proves_clause: "once the typed verification record of BO-2500f is in force, a declaration whose reason is present but whose verification record is absent or does not hold is refused on the same terms, and the report names the part of the verification record that failed"
+    code_file: templates/scripts/commit_guardian/check_done_proof.py
+    convention_test_file: unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
 test_rationale: |
   An exemption gate has exactly one interesting property — can it actually refuse — and that
   property is invisible to every positive-path test and to any test that calls a validator
@@ -120,12 +162,30 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-18'
+- reason: scope-addition
+  by: business-analyst
+  at: 2026-10-25
+  directed_by: user
+  note: >-
+    Wave 2 of the done-proof remedy (BO-2500f): appended one clause so that, after BO-2500f is in force, a reasoned declaration with no holding verification record is refused on the same terms as a reasonless one. No existing clause altered or removed. Directed by the user at the PO gate 2026-10-25 (scope change 3).
+- reason: technical-enrichment
+  by: it-po
+  at: '2026-10-25'
+  note: Re-checked against the clause the BA appended on 2026-10-25. Added a currency note,
+    the wave-2 clause rides the same entry point and names BO-2500f-4's failed_part, and the
+    test-contract gap. expects_from BO-2500f-4 added (existing TQ-400e-3 contract kept verbatim).
+    readiness returned to reviewed until the test-designer covers the appended clause. criteria
+    and test_spec untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-10-25'
 superseded_by: null
 covered_by:
   - TQ-400e-4-i
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+declares_side_effect: false
 notes: |
   This is the must_block modifier from docs/testing/test-angles.md applied to the
   exemption path: an exemption gate that cannot refuse is inert, and a

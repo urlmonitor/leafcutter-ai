@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 parent: KM-400b
 criteria: |
   Given a source revision, mapping version and graph evidence baseline
@@ -44,6 +44,7 @@ origin_agent: business-analyst
 created: '2026-10-01'
 amended_by:
   - "2026-10-14: business-analyst added L3 children KM-400b-5-i (a publication that fails after it began storing removes its own generation in the same operation and still reports its cause) and KM-400b-5-ii (if that removal fails, both failures are reported and the stranded generation is named). Failed publications had only been marked failed, stranding ~10.7k nodes and ~28.4k relationships each run until two hosted instances hit the relationship cap. This record's criteria, fields and tests are unchanged. work_status moved from done to in_progress because both new children are todo."
+  - "2026-11-17: BrainCandy added L3 child KM-400b-5-vii (planning or writing batches before begin_writes is refused with a RuntimeError naming begin_writes, before anything reaches the store, and recording a retried batch is refused the same way; a failed batch and activation are not refused). Authored and implemented in the same change, so it lands done; this record's criteria, fields and tests are unchanged."
 superseded_by: null
 covered_by:
 - KM-400b-5-i
@@ -52,6 +53,7 @@ covered_by:
 - KM-400b-5-iv
 - KM-400b-5-v
 - KM-400b-5-vi
+- KM-400b-5-vii
 - tests/knowledge_live/neo4j_checks.py::test_live_idempotence_scope_metadata_and_rebuild
 - tests/knowledge_live/neo4j_checks.py::test_live_retention_starts_when_generation_is_retired
 implemented_by:

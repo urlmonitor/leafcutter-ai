@@ -78,20 +78,14 @@ it_requirements:
     under Q1 feeds TQ-500a-1''s existing falsifiability answer (see the BA note).'
   - Must stay within each template's file-size budget. If the addition pushes a template over
     the limit, move shared text into a skill both writers load, rather than trimming the questions.
-test_required: false
-test_rationale: 'Prompt-only: the deliverable is instruction text in two agent templates.
-  No deterministic unit test can show that an LLM asked the three questions well, and a test
-  asserting the questions appear in the template is the grep-only proof CLAUDE.md forbids.
-  Substitutes: (1) the deterministic backstop is TQ-500g''s mutation runs, which apply the
-  named wrong versions to finished code and decide survival by running tests, not by the writer''s
-  opinion; (2) recommended eval: register test-writer and sql-test-writer in scripts/evals/agent_eval_config.json
-  (artifact mode) with the incident-1 refresh-gate case from this AC''s Given as a gold row.
-  The produced test must go red when retry_due is left unset, and the report must list that
-  wrong version. No such eval set exists yet (follow-up AC); (3) pr-reviewer checks both template
-  diffs against each Then clause.'
+test_required: true
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-03'
+  reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by:
   - TQ-500f-4-i
@@ -119,3 +113,8 @@ notes: |
 
   SINGLE AGENT, TWO TEMPLATES. Both edits are llm-expert prompt work with the
   same content; kept as one AC so the two writers cannot drift apart.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

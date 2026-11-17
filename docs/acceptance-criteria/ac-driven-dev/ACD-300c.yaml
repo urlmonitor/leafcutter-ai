@@ -3,20 +3,25 @@ components:
   - ac_driven_dev
 readiness: reviewed
 priority: medium
-title: "The user confirms each authoring stage before the next agent begins"
+title: "The user confirms the product owner's and business analyst's output, and approves the batch at a final gate after the test design"
 component: ac-driven-dev
 level: L1
 status: active
 req_status: active
 work_status: in_progress
 criteria: |
-  Between each authoring agent's output and the next agent's invocation, the
+  After the product owner's stage and after the business analyst's stage, the
   workflow presents the produced ACs to the user and waits for explicit
   confirmation. The user can approve (continue to next stage), request edits
   (re-invoke the same agent with feedback), or cancel (abort the pipeline and
-  keep any ACs already written as drafts). No downstream agent is invoked
-  without prior-stage approval. The final gate additionally allows the user
-  to set priority and promote readiness to approved.
+  keep any ACs already written as drafts). The technical planner's stage has no
+  human gate: it is approved automatically once its requirement rule check
+  passes. A requirement rule check runs after every authoring stage and fails
+  closed — a stage whose check fails is re-authored, never approved. No
+  downstream agent is invoked without the prior stage's approval. The final
+  gate follows the test-design stage: the user sets one priority for the batch,
+  and approval promotes to approved exactly the records the approval-hold
+  report releases; held records stay reviewed, shown with their reason.
 depends_on: [ACD-300, ACD-300b]
 doc_links: []
 assigned_agent: python-coder
@@ -25,7 +30,16 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+- reason: 'pipeline refresh after #1245/#1246: human gates sit only after the product
+    owner and the business analyst, plus the final gate; the technical planner''s stage
+    is auto-gated; every authoring stage is rule-checked fail-closed; the final gate
+    follows the test-design stage and approves only what the hold report releases (one
+    priority; held records stay reviewed with their reason). Title follows the criteria.
+    The user-controls-progression intent is unchanged.'
+  date: '2026-10-23'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: [ACD-300c-1, ACD-300c-2, ACD-300c-3, ACD-300c-4, ACD-300c-5]
 implemented_by:
@@ -34,7 +48,7 @@ change_target: pipeline
 risk_surface: contract_boundary
 product_truth:
   - flow: leafcutter/ac-lifecycle
-    node: approve
+    node: stageGate
     node_kind: step
     flow_kind: data
     screen: null
@@ -42,4 +56,4 @@ product_truth:
     entities:
       - Ac
     source: real
-    asof: '2026-07-20'
+    asof: '2026-10-23'

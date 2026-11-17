@@ -120,10 +120,14 @@ superseded_by: null
 covered_by:
   - GE-120e-1-i
   - GE-120e-1-ii
+  - GE-120e-1-iii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/28_TICKET-20260825-GE-120e-1.md
 - templates/scripts/commit_guardian/_authored_change.py
-- unit_tests/portability/test_ge_120e_1.py
+- unit_tests/portability/ge_120e_1/_support.py
+- unit_tests/portability/ge_120e_1/test_ge_120e_1_criterion.py
+- unit_tests/portability/ge_120e_1/test_ge_120e_1_boundary_and_seam.py
+- unit_tests/portability/ge_120e_1/test_ge_120e_1_failure_and_reachability.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

@@ -104,7 +104,7 @@ def _make_zero_artifact_store(tmp: Path, *, with_eval_file: bool) -> Path:
         (store / "schemas" / schema_name).write_bytes((_SCHEMAS_DIR / schema_name).read_bytes())
     (tmp / "acceptance-criteria").mkdir(parents=True)
 
-    index = {
+    index: dict[str, list[object] | dict[str, object]] = {
         "artifacts": [],
         "entity_registry": [],
         "by_component": {},

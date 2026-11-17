@@ -46,10 +46,14 @@ it_requirements:
   - "A ticket with ANY AC-side deliverable still unsigned MUST NOT be judged done-eligible -- all-signed (each slot signed_off or not_applicable) is the done condition, derived data-driven from the deliverable set, never a hard-coded craft/phase list."
   - "Author the done-eligibility rule UNIFORMLY across BOTH the runbook (building-epics/SKILL.md) and the supervisor template (ticket-supervisor.md) so no reader is exempt (read-side-first invariant, ADR-026)."
   - "No executable pytest surface is authored here (prose change) -- see test_required. Per CLAUDE.md 'Gate/Workflow ACs verify behaviorally', behavioral correctness is proven by the AC-side sign-off record tests (ACD-1800b-1a), the ticket-done computation tests (ACD-1800b-2-i), and an ADR-026 rule-7 spot-check asserting the AC-side sign-offs are CONSUMED in the mark-done control flow (thin -> done-eligible; unsigned deliverable -> not) -- never grep-only."
-test_required: false
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-12
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: []
 implemented_by: []

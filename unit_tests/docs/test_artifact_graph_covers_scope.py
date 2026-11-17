@@ -54,7 +54,17 @@ _TEST_ROOTS = [
 # the old rule, 240 once a superseded AC (status: superseded or
 # superseded_by, see _STATUS_SUPERSEDED_RE below) stops counting, because
 # 3 untagged done ACs are superseded. The mark drops to 240.
-HIGH_WATER_MARK = 240
+# KM-ADM-005-1, measured 2026-10-25: 1761 finished records, 1518 tagged, 209 untagged,
+# 34 excluded (3 superseded + 31 "waived: declared test-free with a stated reason",
+# decided by the shared is_covers_tag_waived predicate). Inclusion rule: a finished
+# record counts as untagged only if no test tags it, it is not superseded, and the
+# done gate does not waive it. The mark drops from 240 to 209.
+# KM-ADM-005-3, measured 2026-11-16 on 32e6aa89f: 1859 finished records, 1613 tagged, 162 untagged,
+# 84 excluded (3 superseded + 34 waived + 47 "proved through its children (tags read, tests not run)").
+# Inclusion rule: a finished L0, L1 or docs-only composite whose covered_by is complete leaves the
+# count when the done gate's own _unproven_composite_children finds no unproven child; code L2s stay
+# counted. The mark drops from 209 to 162.
+HIGH_WATER_MARK = 162
 
 _WORK_STATUS_DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
 # A superseded AC (status superseded_by / superseded) has no current behaviour
@@ -202,7 +212,7 @@ def _collect_covers_tagged_ids() -> set[str]:
     return tagged
 
 
-def test_untagged_done_ac_backlog_does_not_grow():
+def test_untagged_done_ac_backlog_does_not_grow(ac_root=_AC_ROOT):
     # covers: KM-ADM-005
     """KM-ADM-005 ratchet: count every work_status: done AC in the live
     store (docs/acceptance-criteria/) whose `id` (quote-stripped) does not
@@ -214,10 +224,32 @@ def test_untagged_done_ac_backlog_does_not_grow():
     growing while leaving the existing backlog to be retired separately
     (per KM-ADM-005's notes). Marking a further AC done without a covering
     test must push the count over the mark and fail this test.
+
+    KM-ADM-005-1: the count comes from scripts/ac_store/untagged_done_count.py,
+    which leaves out superseded records and records the done gate waives (the
+    shared is_covers_tag_waived predicate), prints each exclusion with its ground,
+    and asserts untagged + exclusions + tagged == finished. `ac_root` defaults to
+    the live store; a test may point it at a copy.
     """
-    done_ids = _collect_done_ac_ids()
-    tagged_ids = _collect_covers_tagged_ids()
-    untagged = sorted(done_ids - tagged_ids)
+    import sys
+
+    sys.path.insert(0, str(_REPO_ROOT / "scripts" / "ac_store"))
+    import untagged_done_count
+
+    result = untagged_done_count.measure(ac_root, _TEST_ROOTS)
+    for ground, count in sorted(result.exclusions.items()):
+        ids = result.excluded_ids.get(ground, [])
+        listed = f": {', '.join(ids)}" if ground == untagged_done_count.GROUND_PROVED else ""
+        print(f"untagged-done exclusion: {count} - {ground}{listed}")
+    print(f"untagged-done records related to a parent only through the parent field: {result.parent_field_only}")
+    for path in result.unreadable:
+        print(f"untagged-done UNREADABLE record file: {path}")
+    assert not result.unreadable, f"unreadable done-record files: {result.unreadable}"
+    result.assert_sum()
+    assert result.unexplained_shortfall == 0, (
+        f"{result.unexplained_shortfall} excluded record(s) have no published ground"
+    )
+    untagged = result.untagged
 
     assert len(untagged) <= HIGH_WATER_MARK, (
         f"untagged-done AC backlog grew to {len(untagged)}, exceeding "
@@ -225,3 +257,90 @@ def test_untagged_done_ac_backlog_does_not_grow():
         "added without a `# covers: <id>` tagged test. New ids pushing the "
         f"count over the mark: {untagged[:20]}{'...' if len(untagged) > 20 else ''}"
     )
+
+
+def test_waived_close_does_not_raise_the_count_and_an_unwaived_close_still_fails_the_ratchet(tmp_path):
+    # covers: KM-ADM-005-1
+    # angle: criterion
+    """KM-ADM-005-1: on a temp copy of the live store, one more done waived record leaves the count and the
+    ratchet unchanged; one more done test-free record with no reason and no tag raises the count by one and
+    fails the ratchet. The ratchet check takes the store root through `ac_root` (default: the live store);
+    the copy is used only here.
+    """
+    import shutil
+    import sys
+
+    import pytest
+    import yaml
+
+    sys.path.insert(0, str(_REPO_ROOT / "scripts" / "ac_store"))
+    import untagged_done_count
+
+    copy = tmp_path / "acs"
+    shutil.copytree(_AC_ROOT, copy)
+
+    def record(ac_id, **fields):
+        data = {"id": ac_id, "title": ac_id, "component": "x", "level": "L3", "status": "active",
+                "work_status": "done", **fields}
+        (copy / f"{ac_id}.yaml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    before = len(untagged_done_count.measure(copy, _TEST_ROOTS).untagged)
+    record("ZZ-KM5-1", test_required=False, test_rationale="Docs-only change; no executable behaviour to test.")
+    assert len(untagged_done_count.measure(copy, _TEST_ROOTS).untagged) == before
+    test_untagged_done_ac_backlog_does_not_grow(ac_root=copy)
+    record("ZZ-KM5-2", test_required=False)
+    assert len(untagged_done_count.measure(copy, _TEST_ROOTS).untagged) == before + 1
+    with pytest.raises(AssertionError):
+        test_untagged_done_ac_backlog_does_not_grow(ac_root=copy)
+
+
+def test_ratchet_run_reports_its_exclusions_with_grounds_and_passes_on_the_live_store():
+    # covers: KM-ADM-005-1
+    # angle: reachability
+    """KM-ADM-005-1: pytest run as a subprocess on the ratchet test with output shown exits 0 and states each
+    exclusion count paired with its ground, so the ratchet calls the new module and not its old inline count.
+    """
+    import os
+    import subprocess
+    import sys
+
+    ratchet = "unit_tests/docs/test_artifact_graph_covers_scope.py::test_untagged_done_ac_backlog_does_not_grow"
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", ratchet, "-s", "-q", "-p", "no:cacheprovider"],
+        cwd=str(_REPO_ROOT), capture_output=True, text=True, encoding="utf-8", timeout=900,
+        env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode == 0, output[-2000:]
+    ground = "waived: declared test-free with a stated reason"
+    assert re.search(rf"(\d+\D{{0,6}}{re.escape(ground)}|{re.escape(ground)}\D{{0,6}}\d+)", output), (
+        f"the ratchet run does not state the waived exclusion count with its ground: {output[-1500:]}")
+
+
+def test_ratchet_subprocess_run_prints_the_new_ground_with_its_count_and_ids():
+    # covers: KM-ADM-005-3
+    # angle: reachability
+    """KM-ADM-005-3: pytest run as a subprocess on the ratchet test with output shown exits 0 and prints one
+    line holding the new ground, its count and the sorted ids it excluded, so the ratchet calls the new rule
+    and the ids are visible on every run.
+    """
+    import os
+    import subprocess
+    import sys
+
+    ratchet = "unit_tests/docs/test_artifact_graph_covers_scope.py::test_untagged_done_ac_backlog_does_not_grow"
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", ratchet, "-s", "-q", "-p", "no:cacheprovider"],
+        cwd=str(_REPO_ROOT), capture_output=True, text=True, encoding="utf-8", timeout=900,
+        env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode == 0, output[-2000:]
+    ground = "proved through its children (tags read, tests not run)"
+    lines = [line for line in output.splitlines() if ground in line]
+    assert len(lines) == 1, f"the new ground must be printed on exactly one line: {output[-1500:]}"
+    match = re.search(rf"exclusion: (\d+) - {re.escape(ground)}: (.+)$", lines[0])
+    assert match, f"the line does not carry count, ground and ids: {lines[0]!r}"
+    ids = [i.strip() for i in match.group(2).split(",")]
+    assert int(match.group(1)) == len(ids) > 0, lines[0]
+    assert ids == sorted(ids), "the printed ids must be sorted"

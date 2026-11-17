@@ -303,11 +303,30 @@ destination override; the script prints the sink it used on stderr.
 Run a single command (per the shell convention — no chaining):
 
 ```bash
-python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err.txt
+python3 scripts/feedback/submit_feedback.py --ticket <ticket_path> --phase user-surface-smoker --category complete --note "<one-sentence summary>" 2>/tmp/feedback_err_<ticket_basename>_user-surface-smoker.txt
 ```
 
-Read the feedback ID from the Bash tool result (stdout). If stdout is empty, use
-`(submit-failed)` as the fallback value.
+`<ticket_basename>` is the ticket file's name (e.g. `03-add-parser.md`).
+
+Read-back of this run's own failure line (prints nothing and exits 0 when there is none):
+
+```bash
+sed -n '/^submit-failed:/p' /tmp/feedback_err_<ticket_basename>_user-surface-smoker.txt
+```
+
+Recovery search (the `sidecar:` line names a recovery file):
+
+```bash
+sed -n '/^sidecar:/p' /tmp/feedback_err_<ticket_basename>_user-surface-smoker.txt
+```
+
+Record the feedback ID by the INF-500d-3 capture precedence: the id on stdout; else
+the id inside the recovery file the `sidecar:` line names; else the read-back line
+copied verbatim into `(submit-failed:<reason>:<category>)`; else
+`(submit-failed:written-uncited:<category>)` when a `sidecar:` or
+`[submit_feedback] sink:` line exists but no id was recovered; else
+`(submit-failed:facility-unavailable:<category>)`. The reasons live only in
+`scripts/feedback/submit_failure_reasons.json`. A failed submit is not a phase failure.
 
 """
 ====================================================================

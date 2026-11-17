@@ -14,11 +14,15 @@ import re
 import sys
 import tempfile
 import unittest
+from importlib.abc import Loader
+from importlib.machinery import ModuleSpec
 from pathlib import Path
 from typing import Any
 
 _HELPER = Path(__file__).resolve().parent / "_ar_200b_2_support.py"
 _spec = importlib.util.spec_from_file_location("_ar_200b_2_support", _HELPER)
+assert isinstance(_spec, ModuleSpec)
+assert isinstance(_spec.loader, Loader)
 S: Any = importlib.util.module_from_spec(_spec)
 sys.modules["_ar_200b_2_support"] = S
 _spec.loader.exec_module(S)

@@ -180,12 +180,16 @@ class TestSetAsideCountUnchangedByTheRename(unittest.TestCase):
     def test_set_aside_count_matches_independent_recount_after_the_rename(self) -> None:
         # covers: UXP-700d-3-i
         # angle: seam
+        # The timeout is a hang guard, not a speed budget: this test must scan the REAL
+        # store (its point is an independent recount), and a whole-store scan measured
+        # 21.7s locally on 2026-10-23 and exceeded 30s on CI twice in a row once a shard
+        # split ran it cold. See KI-ACS-20261023-whole-store-scans-under-30s-hang-guards.
         result = subprocess.run(
             [sys.executable, str(_SCAN_SCRIPT), "--json"],
             cwd=str(_REPO_ROOT),
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=300,
         )
         self.assertEqual(
             result.returncode,

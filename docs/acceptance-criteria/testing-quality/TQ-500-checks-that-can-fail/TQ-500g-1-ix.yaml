@@ -202,6 +202,14 @@ delivers_to:
   ac_id: TQ-500g-1-vii
   contract: Same list step and same writer CLI, with the same JSON, as for TQ-500g-1-v. The route sends
     the list's owed array to test-breaker unchanged.
+- agent: python-coder
+  ac_id: TQ-500g-1-xi
+  contract: 'The writer as merged, extended in place by TQ-500g-1-xi: _wvw_list.derive_owed (the one reading
+    of owed names and in-scope files), _wvw_prepare.alter (exact-once application, CRLF rule, path refusals),
+    _wvw_reply (reply parsing and exact name matching) and _wvw_write.run_write (work folder
+    <git-dir>/leafcutter/work/<work-key>/, atomic manifest write). Manifest entries keep {name, status,
+    reason, files: [{path, altered_copy}], diff} and gain the additive keys replacements, alteration_id and
+    source.'
 expects_from:
 - ac_id: TQ-500g-1-iv
   contract: 'Reply of agent test-breaker. Exactly one JSON value, either {work_key: str, entries: [{name:
@@ -255,7 +263,11 @@ it_requirements:
   list was printed, including owed []; exit 1 when the AC store or test root cannot be read, or on an internal
   error, still printing the shape with owed [] and error set. Progress logging goes to stderr only. Listing
   reads the AC store only and writes nothing: no work folder, no file in the working tree. It finishes
-  within 2 seconds for up to 50 requirement ids.'
+  within 2 seconds for up to 50 requirement ids. Amended 2026-10-23 (TQ-500g-1-xi): the shape gains
+  to_prepare and decisions; without --work-key to_prepare equals owed, decisions is [] and everything above
+  holds unchanged. With --work-key the list reads that work''s pins and writes exactly one file,
+  <work folder>/plan.json, still nothing in the working tree; the pin checks of TQ-500g-1-xiii may run
+  pytest then, so the 2-second figure applies to the no-work-key case.'
 - 'One reading for list, write and runner. The list step and the write step call the same function for the
   owed names and their in-scope files, and that function is built on the runner''s declared-scope reader
   in _wvr_scope (or wherever the runner''s reader lives), extended in place. For the same ids, AC store and
@@ -277,7 +289,9 @@ it_requirements:
   the two strings are identical. A reply name that differs in case, spacing or anything else is unowed.
   Unowed names and alias names in the reply get no manifest entry and are listed under ignored_reply_names
   on stdout. An owed name the reply does not answer becomes could_not_prepare with the reason "no alteration
-  returned". An owed name answered by more than one reply entry becomes could_not_prepare with the reason
+  returned". (Amended 2026-10-23, TQ-500g-1-xi: this applies to the names the plan sends to the preparer;
+  a name planned "pinned" or "declared" is built from the pin or the declaration, and a reply answer for it
+  is listed under ignored_reply_names and never used.) An owed name answered by more than one reply entry becomes could_not_prepare with the reason
   "more than one alteration returned", even when the answers agree; one is never picked. The manifest holds
   each owed name exactly once, spelled as the test entries spell it, in the order the declared-scope reader
   yields them.'
@@ -309,9 +323,13 @@ it_requirements:
   from the reply. Unified format: --- a/<path> and +++ b/<path> headers, 3 lines of context, and the name''s
   files in reply order joined into one string. A CRLF file is diffed in its LF form, so the diff reads
   the same on every checkout. A could_not_prepare entry has files [] and diff "".'
-- 'Stale and unreadable (decision 2f). The writer''s first filesystem action removes any alterations.json
-  and copies folder that an earlier preparation of the same work left in the work folder. That happens
-  before the reply is read. The reply is unreadable when it is empty, is not one JSON object (for example
+- 'Stale and unreadable (decision 2f, amended 2026-10-23 by TQ-500g-1-xv). The writer''s first filesystem
+  action MOVES any alterations.json and copies folder that an earlier preparation of the same work left in
+  the work folder into <work folder>/history/<NNNN>/ (four digits, one more than the highest existing), and
+  deletes only a leftover alterations.json.tmp. A move that fails stops the step with exit 1 and no new
+  manifest. That happens before the reply is read. Nothing under history/ is ever deleted, rewritten or
+  handed to the runner, and the pin store (<git-dir>/leafcutter/pins/, TQ-500g-1-xi) lies outside the work
+  folder, so this step can reach neither. The reply is unreadable when it is empty, is not one JSON object (for example
   cut off part-way), matches neither the success shape (work_key plus an entries list) nor the failed shape,
   or carries a work_key other than --work-key. Unreadable stops the step with the error "the preparer''s
   reply could not be read: <detail>". The failed shape stops it with "the preparer reported failure: <blocker_summary>".
@@ -330,7 +348,9 @@ it_requirements:
 - 'Gate-file location (decision 2h). The work folder is <git-dir>/leafcutter/work/<work-key>/. git-dir comes
   from git rev-parse --absolute-git-dir run in --test-root, or from the runner''s work-folder helper if
   it has one; there is never a second path rule. The folder holds alterations.json and a copies/ folder
-  with one subfolder per prepared name, mirroring the repo-relative paths. The work key must be one plain
+  with one subfolder per prepared name, mirroring the repo-relative paths, and (amended 2026-10-23 by
+  TQ-500g-1-xi and -xv) plan.json and history/<NNNN>/ with the earlier runs'' manifests and copies. Pins
+  live beside it, never inside it: <git-dir>/leafcutter/pins/<work-key>.json. The work key must be one plain
   path segment (no separator, no ..), or the step stops. No git stash, no commit, and no write anywhere
   in the working tree: git status --porcelain and git stash list are identical before and after.'
 - Deterministic and idempotent. The same reply, owed names and code as written give a byte-identical manifest
@@ -604,6 +624,16 @@ amended_by:
       steps, list and write. test_spec goes from eight to nine owed names and
       gains R9, list-step and schema-field entries. delivers_to gains the
       list-output contract for TQ-500g-1-v, -vi and -vii. criteria unchanged.
+  - reason: "Reconciled with the pinning ACs TQ-500g-1-xi and -xv (IT-PO pass 2026-10-23): decision 2f's removal of the earlier manifest and copies becomes a move into history/<NNNN>/; pins live outside the work folder; the list step gains --work-key, to_prepare and decisions (unchanged without --work-key); a pinned or declared name is never expected in the reply. delivers_to gains TQ-500g-1-xi. Criteria unchanged; the stale-manifest clause still holds."
+    by: it-po
+    at: 2026-10-23
+    note: >-
+      The clause "no manifest left by an earlier preparation of the same work
+      remains to be read in its place" stays true: after the move nothing is at
+      the current manifest path, and the runner reads only the path finish
+      hands it. The existing test test_stale_manifest_never_survives_a_new_preparation
+      keeps its assertions (no manifest at the path, no stale copy under
+      copies/); history/ is a separate folder.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -799,3 +829,13 @@ notes: |
   measured on a developer machine. TQ-500g-1-v gates instead on scaling (50
   ids take at most 2.0 x the 1-id time + 1.0 s) plus an absolute ceiling of
   15 s per run, after the absolute budget failed in CI's Proof-of-done job.
+
+  IT-PO RECONCILIATION (2026-10-23): PINNING (TQ-500g-1-xi to -xvii)
+  Decision 2f no longer deletes: the earlier manifest and copies are moved
+  into history/<NNNN>/ (TQ-500g-1-xv), and pins live in
+  <git-dir>/leafcutter/pins/, outside the work folder, so this step cannot
+  delete or move them. The criteria clause "no manifest left by an earlier
+  preparation ... remains to be read in its place" is kept true by the move
+  and by the runner reading only the path it is handed. The list step's
+  --work-key extension and the reply's narrower expected set are recorded in
+  it_requirements; the build lives under TQ-500g-1-xi, not here.

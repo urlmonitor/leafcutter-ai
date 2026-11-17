@@ -45,7 +45,11 @@ EXEMPTIONS: list[dict[str, str]] = [
     {
         "kind": "file",
         "path": "unit_tests/build_orchestration/_workspace_maker_builders.py",
-        "reason": "The one legacy_worktree test helper that builds an old-way workspace for the cut-over tests.",
+        "reason": (
+            "The legacy_worktree test helper that builds an old-way workspace for the cut-over tests, "
+            "and the link_checkout / unlink_checkout helpers (via _run_link), which deliberately run "
+            "the raw old-way command to fabricate or remove a linked checkout as test fixtures."
+        ),
     },
     {"kind": "folder", "path": "docs/analysis/", "reason": "Analyses are records of the past."},
     {"kind": "folder", "path": "docs/known-issues/", "reason": "Known issues are records of the past."},
@@ -206,7 +210,8 @@ def howto_texts() -> dict[str, str]:
 def paragraphs(text: str) -> list[tuple[int, str]]:
     """``(first line number, paragraph text)`` blocks separated by blank lines."""
     out: list[tuple[int, str]] = []
-    start, buf = 1, []
+    start = 1
+    buf: list[str] = []
     for i, line in enumerate(text.splitlines(), 1):
         if line.strip():
             if not buf:

@@ -161,3 +161,15 @@ notes: |
   ORDERING: build this AC and ACD-2500d-5-i before ACD-2500c-1 and ACD-2500d-1/-2/-3, which write
   their procedures into the template this AC creates. depends_on carries only the hierarchy link; the
   ordering is carried by those ACs' expects_from.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: testDesign
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

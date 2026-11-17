@@ -15,8 +15,10 @@ BUSINESS CONTEXT: Every existing project still holds old-style workspaces that
     are restored by the run that clears the last one.
 ARCHITECTURE: Stdlib-only. The unsent-work verdict is ``worktree_remove.
     unsent_work`` (BO-4100c-1), imported, never copied. The identity of a
-    brought-over workspace comes from ``worktree_identity``'s declared aliases
-    and its place from ``worktree_layout`` (Q4 + Q5). Registrations are read as
+    brought-over workspace comes from ``worktree_identity`` (canonical prefixes,
+    then declared aliases) and its place from ``worktree_layout``; what must be
+    kept or reported comes from ``worktree_migrate_guards`` and the copy-and-prove
+    steps from ``worktree_migrate_carry``. Registrations are read as
     plain files under ``<git-common-dir>/worktrees`` and deleted individually
     (no ``git worktree prune``, which would touch entries this verb does not
     own). The report is ONE JSON object (``retired``, ``brought_over``,
@@ -29,11 +31,7 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
-import shutil
-import stat
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +39,8 @@ import worktree_answer as wa
 import worktree_git as wg
 import worktree_identity as wi
 import worktree_layout as wl
+import worktree_migrate_carry as wmc
+import worktree_migrate_guards as wmg
 import worktree_paths as wp
 import worktree_remove as wrm
 
@@ -59,6 +59,7 @@ class Registration:
     folder: Path | None
     branch: str | None
     stuck: bool
+    lock: str | None = None
 
 
 @dataclass(frozen=True)
@@ -93,34 +94,37 @@ def registrations(repo_root: Path) -> list[Registration]:
         gitdir, head = _text(entry / "gitdir"), _text(entry / "HEAD")
         folder = Path(gitdir).parent if gitdir else None
         branch = head[len("ref: refs/heads/"):] if head.startswith("ref: refs/heads/") else None
-        stuck = _text(entry / "locked").startswith("initializing") and (folder is None or not folder.exists())
-        found.append(Registration(entry, folder, branch, stuck))
+        lock = _text(entry / "locked") if (entry / "locked").exists() else None
+        stuck = lock == wmg.WSL_LOCK and (folder is None or not folder.exists())
+        found.append(Registration(entry, folder, branch, stuck, lock))
     return found
 
 
-def _rmtree_onerror(func: Any, target: str, _exc: Any) -> None:
-    """Clear the read-only bit and retry the failed deletion once."""
-    os.chmod(target, stat.S_IWRITE)
-    func(target)
-
-
-def _drop(path: Path) -> str | None:
-    """Delete the folder *path* (a registration or a failed clone); an error text, or ``None``."""
-    try:
-        shutil.rmtree(path, onerror=_rmtree_onerror)
-    except OSError as exc:
-        _log.warning("_drop: could not delete %s: %s", path, exc)
-        return f"could not delete {path}: {exc}"
-    return None
-
-
 def identity_for(branch: str) -> wi.Identity | None:
-    """The canonical identity a legacy *branch* maps to through the declared aliases, else ``None``."""
+    """The one canonical identity a legacy *branch* maps to, else ``None``.
+
+    The canonical ``<kind>/`` prefixes are tried first, the kinds' declared
+    legacy aliases second, so a line is never given two identities (A4). The
+    slug is whatever ``wi.slugify`` makes of the rest; whether it is usable is
+    :func:`identity_problem`'s call.
+    """
+    canonical = [(kind, f"{kind}/") for kind in wg.VALID_KINDS]
     declared = [(kind, prefix) for kind, aliases in wi.LEGACY_ALIASES.items() for prefix, _why in aliases]
-    for kind, prefix in [*declared, *((kind, f"{kind}/") for kind in wg.VALID_KINDS)]:
+    for kind, prefix in [*canonical, *declared]:
         if branch.startswith(prefix) and len(branch) > len(prefix):
             return wi.Identity(kind, wi.slugify(branch[len(prefix):]))
     return None
+
+
+def identity_problem(branch: str | None) -> tuple[wi.Identity | None, str | None]:
+    """``(identity, None)`` for a mappable line, else ``(None, why it is left for a decision)``."""
+    ident = identity_for(branch) if branch else None
+    if ident is None:
+        return None, f"no kind prefix or declared alias maps line of work {branch!r} to a kind and name"
+    problem = wi.slug_problem(ident.slug)
+    if problem is not None:
+        return None, f"the name part of line of work {branch!r} cannot name a workspace: {problem}"
+    return ident, None
 
 
 # ----------------------------------------------------------------- housekeeping
@@ -157,113 +161,6 @@ def restore_housekeeping(repo_root: Path) -> None:
 
 # --------------------------------------------------------------------- bring over
 
-def _status_paths(folder: Path) -> set[str] | None:
-    """Every path git reports as changed or untracked in *folder* (rename sources included), or ``None``."""
-    proc = wg.run_git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], folder)
-    if proc.returncode != 0:
-        return None
-    parts, paths, i = proc.stdout.split("\0"), set(), 0
-    while i < len(parts):
-        item = parts[i]
-        i += 1
-        if len(item) < 4:
-            continue
-        paths.add(item[3:])
-        if item[0] in "RC" and i < len(parts) and parts[i]:
-            paths.add(parts[i])
-            i += 1
-    return paths
-
-
-def _bytes(path: Path) -> bytes | None:
-    """The file's bytes, or ``None`` when it is not a readable file."""
-    try:
-        return path.read_bytes() if path.is_file() else None
-    except OSError as exc:
-        _log.warning("_bytes: cannot read %s: %s", path, exc)
-        return None
-
-
-def _carry(src: Path, dst: Path, paths: set[str]) -> None:
-    """Write each changed path's current bytes from *src* into *dst* (or remove it there if gone)."""
-    for rel in sorted(paths):
-        source, target = src / rel, dst / rel
-        if source.is_file():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
-        elif target.exists():
-            os.chmod(target, stat.S_IWRITE)
-            target.unlink()
-
-
-def _lossless(src: Path, dst: Path, paths: set[str], commits: list[str]) -> str | None:
-    """Why the clone is NOT provably lossless, or ``None`` when every check holds."""
-    head = [wg.run_git(["rev-parse", "HEAD"], folder).stdout.strip() for folder in (src, dst)]
-    if not head[0] or head[0] != head[1]:
-        return "the clone's HEAD is not the original's"
-    for sha in commits:
-        if wg.run_git(["cat-file", "-e", f"{sha}^{{commit}}"], dst).returncode != 0:
-            return f"commit {sha} is missing from the clone"
-    if _status_paths(dst) != paths:
-        return "the clone's changed-file set differs from the original's"
-    differing = [rel for rel in sorted(paths) if _bytes(src / rel) != _bytes(dst / rel)]
-    return f"content differs for {differing[0]}" if differing else None
-
-
-def _marker(ctx: Context, reg: Registration, ident: wi.Identity, target: Path) -> dict[str, Any]:
-    """The ready marker for a brought-over workspace (hub and project stored relative to it)."""
-    base = wg.run_git(["rev-parse", "origin/main"], target).stdout.strip() or None
-    return {
-        "schema_version": 1, "kind": ident.kind, "slug": ident.slug, "branch": reg.branch,
-        "hub": wp.portable(ctx.hub, target), "project_root": wp.portable(str(ctx.repo_root), target),
-        "base_commit": base, "maker_version": wg.MAKER_VERSION, "state": "ready", "line_of_work": "resumed",
-        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "brought_over_from": str(reg.folder),
-    }
-
-
-def _git_steps(ctx: Context, reg: Registration, target: Path) -> str | None:
-    """Clone the hub to *target* and check the legacy line out on it; the failing step, or ``None``."""
-    branch = reg.branch or ""
-    steps = [
-        (["clone", "--no-checkout", "--local", ctx.hub, str(target)], ctx.repo_root),
-        (["fetch", str(ctx.repo_root), f"+refs/heads/{branch}:refs/heads/{branch}"], target),
-        (["checkout", "-f", branch], target),
-    ]
-    for cmd, cwd in steps:
-        proc = wg.run_git(cmd, cwd)
-        if proc.returncode != 0:
-            return f"git {cmd[0]} failed: {proc.stderr.strip()}"
-    if wg.run_git(["rev-parse", "--verify", "-q", f"refs/remotes/origin/{branch}"], target).returncode == 0:
-        wg.run_git(["branch", f"--set-upstream-to=origin/{branch}"], target)
-    return None
-
-
-def _build_clone(ctx: Context, reg: Registration, ident: wi.Identity, target: Path,
-                 unsent: dict[str, Any]) -> str | None:
-    """Make the marker-bearing clone at *target*; a reason it could not be proved lossless, else ``None``."""
-    folder = reg.folder
-    paths = _status_paths(folder) if folder else None
-    if folder is None or paths is None:
-        return "the changed files of the old workspace could not be listed"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        reason = _git_steps(ctx, reg, target)
-        if reason is None:
-            _carry(folder, target, paths)
-            reason = _lossless(folder, target, paths, unsent["commits"])
-        if reason is None:
-            wg.write_marker(target, _marker(ctx, reg, ident, target))
-    except OSError as exc:
-        _log.warning("_build_clone: %s", exc)
-        reason = f"file operation failed: {exc}"
-    if reason is not None:
-        _drop(target)
-        if not any(target.parent.iterdir()):
-            target.parent.rmdir()
-    return reason
-
-
 # ------------------------------------------------------------------ per workspace
 
 def _decide(base: dict[str, Any], reason: str) -> tuple[str, dict[str, Any]]:
@@ -271,51 +168,98 @@ def _decide(base: dict[str, Any], reason: str) -> tuple[str, dict[str, Any]]:
     return "needs_decision", {**base, "reason": reason}
 
 
-def _retire(ctx: Context, reg: Registration, base: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """Remove the old workspace's folder and its registration (it holds nothing unsent)."""
+def _both(why: str, folder: Path | None, target: Path, admin: Path) -> str:
+    """A reason that names BOTH locations (the old workspace and the verified copy) and what remains of each."""
+    return (f"{why}. Nothing further was deleted: the old workspace is at {folder} (its registration is {admin}) "
+            f"and the verified brought-over copy is at {target}; decide which to keep.")
+
+
+def _retire(ctx: Context, reg: Registration, base: dict[str, Any],
+            before: dict[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
+    """Remove the old workspace's folder and its registration (it holds nothing unsent).
+
+    The git-ignored files the deletion removes are listed first, from git's
+    own ignored listing, on the entry and in the preview (A9b). Just before
+    the delete the folder is checked unchanged since *before* (M-2).
+    """
+    folder = reg.folder if reg.folder is not None and reg.folder.exists() else None
+    ignored = wmg.ignored_paths(folder) if folder else []
+    if ignored is None:
+        return _decide(base, "could not check which ignored files it holds; it is left as it is")
     if not ctx.preview:
-        failure = wrm._delete_tree(reg.folder) if reg.folder and reg.folder.exists() else None  # noqa: SLF001
+        if folder and before is not None and wmc.snapshot(folder, []) != before:
+            return _decide(base, "it changed after it was checked (or could not be checked again); it is left as it is")
+        failure = wrm.delete_whole_folder(folder) if folder else None
         if failure is not None:
-            return _decide(base, failure["message"])
-        error = _drop(reg.admin)
+            return _decide(base, f"{failure} What remains is still at {folder}; its registration {reg.admin} was kept.")
+        error = wrm.delete_whole_folder(reg.admin)
         if error is not None:
-            return _decide(base, error)
-    return "retired", base
+            return _decide(base, f"its folder was removed but its registration {reg.admin} could not be: {error}")
+    return "retired", {**base, "ignored_removed": ignored}
+
+
+def _finish_bring_over(reg: Registration, base: dict[str, Any], brought: dict[str, Any], target: Path,
+                       before: dict[str, Any], carried: list[str]) -> tuple[str, dict[str, Any]]:
+    """Retire the old folder once it is shown unchanged since the proof; the verified copy is NEVER deleted here."""
+    folder = reg.folder
+    if folder is None or wmc.snapshot(folder, carried) != before:
+        return _decide(base, _both("the old workspace changed while it was copied (or could not be checked again)",
+                                   folder, target, reg.admin))
+    failure = wrm.delete_whole_folder(folder)
+    if failure is not None:
+        return _decide(base, _both(f"the old folder could not be fully removed ({failure}); it may be partly deleted",
+                                   folder, target, reg.admin))
+    error = wrm.delete_whole_folder(reg.admin)
+    if error is not None:
+        return _decide(base, _both(f"the old folder was removed but its registration could not be ({error})",
+                                   folder, target, reg.admin))
+    return "brought_over", brought
 
 
 def _bring_over(ctx: Context, reg: Registration, base: dict[str, Any],
                 unsent: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """Bring the unsent work over to its canonical place, or list it for a decision (never guessing)."""
-    ident = identity_for(reg.branch) if reg.branch else None
-    if ident is None:
-        return _decide(base, f"no declared alias maps line of work {reg.branch!r} to a kind and name")
+    ident, problem = identity_problem(reg.branch)
+    folder = reg.folder
+    if ident is None or folder is None or reg.branch is None:
+        return _decide(base, problem or "no identity")
     target = wl.workspace_path_for(ctx.place, ident.kind, ident.slug)
     if target.exists():
         return _decide(base, f"{target} is already occupied")
-    brought = {**base, "workspace_path": str(target)}
+    ignored = wmg.ignored_paths(folder)
+    if ignored is None:
+        return _decide(base, "could not check which ignored files it holds; it is left as it is")
+    carried, install = wmc.split_ignored(ignored)
+    brought = {**base, "workspace_path": str(target), "next": f"ensure --kind {ident.kind} --slug {ident.slug}",
+               "ignored_removed": install}
     if ctx.preview:
         return "brought_over", brought
-    reason = _build_clone(ctx, reg, ident, target, unsent)
+    before = wmc.snapshot(folder, carried, unsent)
+    if before is None:
+        return _decide(base, "could not check what it holds; it is left as it is")
+    reason = wmc.build_clone(ctx.repo_root, ctx.hub, folder, reg.branch, ident, target, before, carried)
     if reason is not None:
         return _decide(base, f"not provably lossless, left untouched: {reason}")
-    outcome, entry = _retire(ctx, reg, base)
-    if outcome != "retired":
-        _drop(target)
-        return _decide(base, f"the brought-over copy was withdrawn: {entry['reason']}")
-    return "brought_over", brought
+    return _finish_bring_over(reg, base, brought, target, before, carried)
 
 
 def handle(ctx: Context, reg: Registration) -> tuple[str, dict[str, Any]]:
     """Take the BO-4100c-1 verdict for one old workspace and act on it; ``(bucket, report entry)``."""
     base = {"path": str(reg.folder), "branch": reg.branch}
+    kept = wmg.blocker(ctx.repo_root, reg.admin, reg.folder, reg.branch, reg.lock)
+    if kept is not None:
+        return _decide(base, kept)
     if reg.folder is None or not reg.folder.exists():
         return _retire(ctx, reg, base)  # a registration whose folder is gone holds nothing
     unsent, refusal = wrm.unsent_work(reg.folder)
     if unsent is None:
         return _decide(base, (refusal or {}).get("message", "the unsent work could not be classified"))
-    if not unsent["commits"] and not unsent["files"]:
-        return _retire(ctx, reg, base)
-    return _bring_over(ctx, reg, base, unsent)
+    if unsent["commits"] or unsent["files"]:
+        return _bring_over(ctx, reg, base, unsent)
+    before = None if ctx.preview else wmc.snapshot(reg.folder, [], unsent)
+    if before is None and not ctx.preview:
+        return _decide(base, "could not check what it holds; it is left as it is")
+    return _retire(ctx, reg, base, before)
 
 
 def _summary(report: dict[str, Any]) -> str:
@@ -347,7 +291,7 @@ def cmd_migrate_legacy(args: argparse.Namespace) -> dict[str, Any]:
         if reg.stuck:
             report["unfinished_removed"].append(reg.admin.name)
             if not ctx.preview:
-                _drop(reg.admin)
+                wrm.delete_whole_folder(reg.admin)
             continue
         bucket, entry = handle(ctx, reg)
         report[bucket].append(entry)
@@ -377,4 +321,10 @@ def add_parser(sub: Any) -> None:
 #   written 'ready' with line_of_work 'resumed' so a later ensure re-readies
 #   it. Housekeeping is held and its previous values recorded under
 #   leafcutter.cutover.* until needs_decision is empty. (ADR-018)
+# - 2026-10-22 [python-coder/EPIC-WorkspaceMakerHardening/08]: clone the main
+#   checkout (A1), marker 'creating' + `next` (A8), canonical-first identity
+#   (A4), shared delete/status helpers (M17), guards and ignored_removed (A9).
+#   Rework (pr-reviewer): the verified copy is never deleted; the old folder is
+#   deleted only after an unchanged re-check; guards fail closed; ignored files
+#   are carried. (ADR-018)
 # ===========================================================================

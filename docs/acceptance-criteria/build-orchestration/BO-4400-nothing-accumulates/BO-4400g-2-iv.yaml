@@ -1,0 +1,195 @@
+id: BO-4400g-2-iv
+title: "Two landed-work passes running at the same moment clear each workspace once and both report truthfully"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project with three landed workspaces "ff-1", "ff-2" and "ff-3", each holding
+    nothing unsent, and one workspace "open-1" not yet on the main line,
+  When two landed-work passes are started at the same moment, as an hourly timer and a
+    session start would,
+  Then afterwards no folder of "ff-1", "ff-2" or "ff-3" remains and "open-1" is identical
+    before and after,
+  And between the two answers each of "ff-1", "ff-2" and "ff-3" is reported cleared by
+    exactly one pass,
+  And the other pass reports each of them as already gone or not listed, never as a
+    failure,
+  And both passes end with exactly one answer each, and neither asks a question.
+depends_on: [BO-4400g-2, BO-4400g-1-i]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400d-3.yaml
+    relationship: related
+    status: exists
+    relevance: The session-start trigger that may run alongside a timer.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-1-ii.yaml
+    relationship: constrains
+    status: exists
+    relevance: The maker's per-work lock (two requests for one work never race; bounded, IN_PROGRESS otherwise) is reused for clearing, never a second scheme.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_landed.py
+    state: to_be_created
+  - path: templates/scripts/worktree_remove.py
+    state: existing
+it_requirements:
+  - >-
+    CONCURRENT PASSES ARE SAFE: two passes may run at once (an hourly timer and a session start). For each
+    workspace, at most one clear runs at a time, through the maker's existing per-work lock (BO-4300d-1-ii),
+    which a clear takes as ensure does, with no second lock scheme. CODE FACT (test-designer, 2026-11-16):
+    cmd_remove takes no per-work lock today. The clear reuses worktree_ensure_state.ensure_lock, wired in
+    from worktree_remove.py; the lock module itself is not changed. A workspace cleared by the other pass
+    between this pass's listing and its
+    turn is reported in already_gone (the BO-4400g-1-i no-workspace answer), never as a failure.
+  - >-
+    Waiting on the other pass is bounded in time. When the bound runs out, the workspace is reported as
+    already being cleared by another request (already_gone when the other request succeeded), never left
+    unreported. The pass never hangs.
+  - >-
+    No folder is ever left half-cleared by the two passes racing. A clear the other pass already finished
+    must never make this pass delete anything further at that location.
+  - >-
+    Both answers are complete. Every workspace either pass saw appears in exactly one of cleared, kept and
+    already_gone in each answer, and both passes exit with the status of a completed pass.
+  - >-
+    worktree_remove.py (485 lines) takes wiring only, with no net growth. worktree_ensure_state.py, which holds
+    the lock (399 lines), is reused as it is. No limit is raised.
+  - >-
+    PROOF RUNS TWO DEPLOYED MAKER PROCESSES started together against the same real temporary project and
+    bare hub, repeated several times so that an interleaving bug shows. It asserts on both answers and on the
+    disk afterwards. No git mock, no build.py spawn, and isolated HOME and git config.
+test_required: true
+test_intent:
+  - clause: afterwards no folder of "ff-1", "ff-2" or "ff-3" remains and "open-1" is identical before and after
+    needs_test: true
+    reason: Two passes racing can leave a half-deleted folder or clear the wrong one, which only the disk afterwards shows.
+  - clause: between the two answers each of "ff-1", "ff-2" and "ff-3" is reported cleared by exactly one pass
+    needs_test: true
+    reason: A double report means two clears ran on one folder, and a missing report means a clear went unrecorded.
+  - clause: the other pass reports each of them as already gone or not listed, never as a failure
+    needs_test: true
+    reason: A timer that sees a failure every time a session start ran first would raise a false alert every night.
+  - clause: both passes end with exactly one answer each, and neither asks a question
+    needs_test: true
+    reason: A pass blocked on the other's lock without a bound, or one that prompts, never answers its timer.
+test_spec:
+  - name: test_two_simultaneous_passes_leave_no_landed_folder_and_keep_open_1
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      ff-1, ff-2, ff-3 landed (real fast-forward merges on the bare hub) and open-1 pushed but unmerged. Two
+      clear-landed --repo-root <project> processes are started together (released by a barrier file both poll),
+      repeated several rounds on fresh fixtures so an interleaving bug shows. Afterwards no folder of ff-1..ff-3
+      remains (no half-cleared folder either: list shows none and no record with state clearing), and open-1 is
+      identical.
+    proves_clause: afterwards no folder of "ff-1", "ff-2" or "ff-3" remains and "open-1" is identical before and after
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_each_landed_workspace_is_reported_cleared_by_exactly_one_pass
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Across both answers each of ff-1, ff-2, ff-3 appears in cleared exactly once (not zero times, not twice), and
+      in each answer every workspace the pass listed is in exactly one of cleared, kept and already_gone.
+    proves_clause: between the two answers each of "ff-1", "ff-2" and "ff-3" is reported cleared by exactly one pass
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_the_losing_pass_reports_already_gone_never_a_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      For each workspace the other pass cleared, this pass lists it in already_gone (or not at all), its status is ok
+      and its exit code 0, and no entry carries a refusal code. The per-work lock of worktree_ensure_state is the
+      only mutual exclusion (no second lock file scheme appears in the landing place afterwards).
+    proves_clause: the other pass reports each of them as already gone or not listed, never as a failure
+    code_file: templates/scripts/worktree_remove.py
+  - name: test_both_passes_answer_once_and_never_prompt
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Both processes run with stdin a real open pipe nobody writes to (Popen and wait, not communicate()), each ends
+      within a timeout with exactly one JSON object on stdout. A lock that never releases would hang past the bound,
+      which fails the test. A second variant plants a live lock file for one work (worktree_ensure_state.lock_path
+      layout, a running pid, stamped as _try_create writes it) and sets LEAFCUTTER_WORKSPACE_LOCK_WAIT to a few
+      seconds: the pass ends within that bound and reports that workspace as already being cleared by another
+      request, never leaves it unreported. Today cmd_remove takes no per-work lock at all (worktree_remove.py never
+      calls ensure_lock), so the lock wiring is new work of this record.
+    proves_clause: both passes end with exactly one answer each, and neither asks a question
+    code_file: templates/scripts/worktree_landed.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
+  - name: test_concurrent_passes_are_reachable_through_the_real_cli
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      Both processes are python <deployed worktree.py> clear-landed with real argv.
+    proves_clause: both passes end with exactly one answer each, and neither asks a question
+    code_file: templates/scripts/worktree.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/worktree_landed.py
+  - templates/scripts/worktree.py
+  - templates/scripts/worktree_remove.py
+  - templates/scripts/worktree_ensure_state.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
+delivers_to: null
+expects_from:
+  ac_id: BO-4400g-2
+  contract: >-
+    The clear-landed answer with its already_gone list, and the door's no-workspace answer of BO-4400g-1-i for
+    work cleared by another request first.
+file_findings:
+  - file: templates/scripts/worktree_remove.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the door's one entry (cmd_remove takes no per-work lock today), so wiring the existing worktree_ensure_state lock around a clear is its share, with no net line growth.
+    decision: null
+file_findings_opened_files:
+  - templates/scripts/worktree_remove.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: CONCURRENT PASSES records that cmd_remove takes no per-work lock today and
+      that the clear reuses worktree_ensure_state.ensure_lock. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Safe to run unattended (e.g. from an hourly timer or at session start)" -- the user's
+  words. Both triggers firing together is the case that turns a half-cleared folder or a
+  false failure into a nightly alert.

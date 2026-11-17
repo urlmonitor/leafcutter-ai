@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-09-28
+last_updated: 2026-10-23
 components:
   - build_orchestration
 related_docs:
@@ -16,6 +16,7 @@ related_docs:
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
   - docs/architecture/diagrams/c3-012-ticket-close-paths-sequence.md
+  - docs/architecture/diagrams/c3-037-shared-block-install-and-identity-check-components.md
 ---
 
 # Build Orchestration
@@ -226,3 +227,17 @@ finding.
 
 - [Runtime Reachability Guard — Data Flow](../diagrams/c3-010-reachability-guard-data-flow.md) — capability inventory from the built parser, invocation collection from automation scripts, the comparison, and the refuse-not-warn exit.
 - [How to resolve a check-reachability guard finding](../../how-to/resolve-a-reachability-guard-finding.md) — the operator procedure: wire up the caller, or record an exemption.
+
+## Shared Blocks — Written Once, Filled Into Every Route at Install
+
+Workflow bodies cannot import code or call each other (ADR-030). So logic that several routes
+share is written once, as a block source under `templates/workflows-js/_shared/`. The workflow
+build phase validates the whole route set, then fills each empty marker pair in a route template
+from its source. A test-suite identity check then reads the installed routes and confirms that
+every copy matches its source byte for byte. WORKSPACE-ANSWER is filled into seven routes today.
+COMMIT-ANSWER is built, and the build fills its `config/commit_step.json` values in at install
+time, but no route has adopted it yet.
+
+- [Shared Blocks — Install-Time Fill and Identity Check — Component Diagram](../diagrams/c3-037-shared-block-install-and-identity-check-components.md) — the block sources, route templates with empty marker pairs, the install step (one step, two blocks), the commit step's configuration feeding the install, the installed routes, COMMIT-ANSWER's planned consumers, and the identity check reading installed routes.
+- [Shared blocks reference](../../reference/shared-blocks.md) — the marker grammar.
+- [Shared block install failures](../../reference/shared-block-install-failures.md) — the text of each install failure.

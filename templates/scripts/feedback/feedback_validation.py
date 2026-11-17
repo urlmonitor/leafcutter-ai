@@ -18,9 +18,12 @@ from __future__ import annotations
 import difflib
 import hashlib
 import json
+import logging
 import re
 import secrets
 import sys
+
+logger = logging.getLogger(__name__)
 
 VALID_ADDRESSED_BY_TYPES = ("ticket", "commit", "pr")
 _TAG_RE = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
@@ -74,14 +77,12 @@ def validate_writer(phase: str, category: str, cats: dict) -> None:
         category: The category id string.
         cats: The loaded categories dict.
     """
-    allowed: list = cats[category].get("allowed_writers", [])
     if writer_allowed(phase, category, cats):
         return
-    print(
-        f"ERROR: Phase '{phase}' is not an allowed writer for category "
-        f"'{category}'. Allowed writers: {', '.join(allowed)}",
-        file=sys.stderr,
-    )
+    # The allowed_writers list is deliberately not echoed (information exposure).
+    message = f"Phase '{phase}' is not an allowed writer for category '{category}'."
+    logger.warning(message)
+    print(f"ERROR: {message}", file=sys.stderr)
     sys.exit(1)
 
 

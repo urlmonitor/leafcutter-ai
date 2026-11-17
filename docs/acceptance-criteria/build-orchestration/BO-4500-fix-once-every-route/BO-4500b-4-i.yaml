@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -63,6 +63,13 @@ expects_from:
   - ac_id: BO-4500b-4
     contract: "Reference page anchors, one per install failure, linked instead of restated."
 test_required: false
+test_rationale: >-
+  A how-to has no executable behaviour of its own. Its first scenario is verified, as this
+  record's it_requirements prescribe, by walking both procedures on a scratch copy of the
+  package (fixture DEMO-ANSWER block in quick-fix.js, COMMIT-ANSWER marked in plan-feature.js):
+  the install succeeded and the identity check reported DEMO-ANSWER with 1 inspected copy;
+  keeping the declaration once a route marked the block failed the install as stale. The
+  failure messages it links to are covered by the BO-4500b-1 tests.
 origin_agent: business-analyst
 created: 2026-10-20
 amended_by: []

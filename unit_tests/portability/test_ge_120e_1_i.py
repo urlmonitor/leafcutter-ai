@@ -335,6 +335,8 @@ class TestCleanAutomergeWithNoAuthoredContentIsNotBlocked(unittest.TestCase):
     """AC-1: the change set it inspects is empty, it raises no objection,
     and the commit is not blocked."""
 
+    fixture: _EmptyAuthoredChangeSetFixture
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.fixture = _EmptyAuthoredChangeSetFixture()
@@ -391,6 +393,8 @@ class TestCleanAutomergeWithNoAuthoredContentIsNotBlocked(unittest.TestCase):
 class TestEmptyChangeSetDoesNotFallBackToStagedTree(unittest.TestCase):
     """AC-2: it does not fall back to the whole staged tree on finding the
     change set empty."""
+
+    fixture: _EmptyAuthoredChangeSetFixture
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -504,6 +508,9 @@ class TestReachableFromDeployedEntryPoint(unittest.TestCase):
     defect (and, once fixed, its absence) is reachable there too — not only
     from templates/scripts/commit_guardian/ source.
     """
+
+    fixture: _EmptyAuthoredChangeSetFixture
+    deployed_ok: bool
 
     @classmethod
     def setUpClass(cls) -> None:

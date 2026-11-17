@@ -10,6 +10,7 @@ components:
   - commit_guardian
   - git_vcs_operations
 related_docs:
+  - docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
   - docs/architecture/adrs/ADR-068-drift-exempt-gets-its-own-result-column.md
   - docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
   - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md

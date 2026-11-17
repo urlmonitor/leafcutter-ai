@@ -64,13 +64,18 @@ expects_from:
     contract: "The slot naming and parameterised-criteria rules used to shape the pattern record produced mid-run."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+- action: amended
+  agent: it-po
+  date: '2026-11-01'
+  reason: "BO-2500a-8-iv backfill class decision of 2026-11-01, class prompt: test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. Criteria and readiness unchanged."
 superseded_by: null
 covered_by: [ACS-500g-4-i]
 implemented_by: []
 change_target: prompt
 risk_surface: internal
-test_required: false
+declares_side_effect: true
+test_required: true
 notes: |
   Half (a) of the L1's two halves — ONGOING promotion. Keeps the inventory
   growing as new requirements are written. Distinct from half (b), the

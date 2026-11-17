@@ -35,11 +35,9 @@ then auto-commits and opens a pull request. This is the `fast-lane-ship`
 workflow, shimmed by [templates/commands/fast-lane-build.md](../../templates/commands/fast-lane-build.md).
 The lean loop is **inlined inside `fast-lane-ship.js`**, not a separate file it
 calls out to. A second runner, `fast-lane-build.js`, once existed and was never
-dispatched by anything; it was deleted under `BO-2400c-1-v`. There is exactly one
-fast-lane runner.
+dispatched by anything; it was deleted under `BO-2400c-1-v`. There is exactly one fast-lane runner.
 
-To see everything that still needs building first, export the build backlog as a
-JSON dataflow:
+To see everything that still needs building first, export the build backlog as a JSON dataflow:
 
 ```bash
 python scripts/build_orchestration/build_dataflow.py \
@@ -394,6 +392,8 @@ The workflow returns:
 After the workflow returns `status: ok`, commit the staged output using
 `/commit` (or `COMMIT_AGENT_MODE=1` in a supervised batch drive). The workflow
 itself does not commit.
+
+Before that commit the workflow makes the [wrong-version runs](../reference/wrong-version-runs.md).
 
 ---
 

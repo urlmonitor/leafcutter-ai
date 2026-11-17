@@ -1,0 +1,78 @@
+id: BP-1300f-1-iii
+components:
+  - build_pipeline
+title: "A renamed file is compared with its old path at the merge base, so moving a file that has old type errors is not charged for them"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given at the merge base the file scripts/old_name.py has two type errors.
+
+  Scenario: A rename keeps its old errors uncharged
+    When the pull request renames scripts/old_name.py to scripts/new_name.py and edits
+      one comment line, so git detects the change as a rename,
+    Then the check passes,
+    And it reports 1 file inspected, 0 new errors and 2 existing errors left untouched.
+
+  Scenario: An error added to a renamed file is charged to its new path
+    When the pull request renames the file to scripts/new_name.py and adds one new
+      type error to it,
+    Then the check fails,
+    And it names scripts/new_name.py and the head line of the added error,
+    And it does not report the two old errors as new.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "RENAMES: the changed-file list comes from `git diff --name-status -z -M --diff-filter=ACMR <merge base> HEAD -- <pathspecs>`; an R entry yields (old path, new path). The base run type-checks the OLD path inside the base checkout and re-keys every base error to the NEW path before comparing."
+  - "A rename git does not detect (similarity under its threshold) arrives as an A entry and is judged as a new file (BP-1300f-1-iv); that is git's call, not this check's."
+  - "The base side is a temporary EXPORT of the merge-base tree, never a checkout: `git archive --format=tar <merge base>` read from the subprocess's stdout and extracted with Python's tarfile (no shell pipe), the directory removed in a finally block whatever the outcome. Only the workspace maker creates checkouts in this repository (BO-4300f-2 census). git archive drops paths marked export-ignore; this repository marks none (checked 2026-11-16), and a changed file that were marked so would be missing at the base, which makes mypy refuse to run: could-not-check, never a silent pass. mypy runs in the export with the same flags and the same cwd-relative paths, so the whole base tree is the type-checking context."
+test_spec:
+  - name: test_bp_1300f_1_iii_renamed_file_keeps_its_old_errors_uncharged
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "looks up the base errors under the new path, finds none, and charges every error as new"
+      - "drops R entries from the changed-file list so the renamed file is never inspected"
+    description: "Base old_name.py with 2 errors; head renames it to new_name.py with a one-line comment edit; exit 0; summary says 1 file, 0 new errors, 2 existing errors untouched."
+  - name: test_bp_1300f_1_iii_renamed_file_with_an_added_error_fails_naming_the_new_path
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "reports the added error under the old path"
+    description: "Head renames and adds one error; exit 1; the new error is named at scripts/new_name.py with its head line; exactly 1 new error."
+test_rationale: >-
+  Rename detection is git's, so it is proved through a real git repository with a
+  real `git mv`, a real commit and the real module. The second arm stops a version
+  that passes renames by never inspecting them.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_mypy_ratchet.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary

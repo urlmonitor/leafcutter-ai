@@ -96,6 +96,7 @@ covered_by:
   - INF-700a-5-i
   - INF-700a-5-ii
   - INF-700a-5-iii
+  - INF-700a-5-iv
 implemented_by:
 - scripts/knowledge/completion_routing.py
 - scripts/knowledge/completion_routing_state.py

@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -45,7 +45,8 @@ amended_by:
     note: "Added it_requirements (reproduce a module-scope raise at collection time, distinct from -i missing-import; determinism under pytest-randomly). Confirmed python-coder / S."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - pytest.ini
 notes: |
   Distinct from -i (missing import): here the module imports a real target but
   the file's top-level code raises during collection. Both classes of collection

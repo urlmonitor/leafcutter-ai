@@ -1,0 +1,113 @@
+id: BO-2400f-7-xii
+components:
+  - build_orchestration
+title: "How-to update: the state-unknown, ran-and-failed and held halts, each with its remedy, and how a claim of unknown outcome is reconciled"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane how-to after BO-2400f-7-vii, BO-2400f-7-ix and BO-2400f-10-iv are
+    built,
+  When an operator reads it,
+  Then it describes the state-unknown halt: that it is reached when a command step's reply
+    carries no exit status and is not the command-step-runner's decline (for example, the
+    command was still running when its time budget was spent), that the halt names the step,
+    the agent asked and what came back, and that it means the command may have run and what
+    it changed is not known,
+  And it gives the state-unknown remedy: read the work_status of the run's acceptance
+    criteria in the store before starting another run, and do not treat the step as never
+    attempted,
+  And it describes the ran-and-failed claim halt: that the claim command ran and ended with
+    a failure status other than held, that the halt names its exit status and quotes its
+    standard error, that the run reconciles the claim before it reports (as below), and
+    that the operator's remedy is to act on the cause the quoted standard error names,
+  And it describes the held claim halt: that it names the acceptance criteria already at
+    in_progress, that the run did not find out which run holds them, and that the remedy is
+    to wait for the run that holds them or, if no run does, to return them to todo,
+  And it states that a declined step, a state-unknown step, a ran-and-failed claim and a
+    held claim are four different halts, and that a halted run reports exactly one of them
+    and never two.
+
+  Given the same how-to,
+  When an operator reads what happens after a claim that ended as state unknown or as
+    ran-and-failed,
+  Then it says the run reads the store before it reports, releases back to todo only the
+    acceptance criteria that read todo before the claim and in_progress after it, and never
+    releases one that was already in_progress before the claim,
+  And it says the halt lists the criteria found claimed and released and the criteria found
+    unchanged, or says nothing was found claimed,
+  And it says that when the store cannot be read the halt lists the criteria possibly left
+    at in_progress, and that a later run aimed at them is refused until they are returned
+    to todo.
+
+  Given the same how-to,
+  When it is compared with the run's actual halt kinds,
+  Then every halt kind the how-to names exists in the lane as built, and state unknown,
+    ran-and-failed and held are among them.
+depends_on: [BO-2400f-7, BO-2400f-7-vii, BO-2400f-7-ix, BO-2400f-10-iv, BO-2400a-6-i]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: modifies
+    status: exists
+    relevance: "The operator how-to. Section 4 ('When a Gate Blocks the Loop') covers only the gate halts today; it names none of the claim or command-step halts."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-vii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Defines the state-unknown halt."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-ix.yaml
+    relationship: describes
+    status: exists
+    relevance: "Defines the ran-and-failed and held claim halts and the held remedy."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10-iv.yaml
+    relationship: describes
+    status: exists
+    relevance: "Defines the reconciliation of a claim of unknown outcome."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-6-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling how-to record for the same document: the declined-step halt and its remedy. This record adds the halts beside it and does not restate it."
+assigned_agent: documentation-expert
+estimated_complexity: S
+test_required: false
+test_rationale: |
+  Prose documentation, following the store's convention for this tree (BO-2400a-6, BO-2400a-6-i,
+  BO-2400a-7 and BO-2400a-8 are test_required: false). The one mechanically checkable clause
+  (every halt kind named exists in the lane) is verified by the author at sign-off against the
+  built lane and by review. A text-match test on a how-to would pin wording, not correctness.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7-ix
+  contract: "The claim-step halt kinds as built (declined_step, claim_command_failed, claim_held, state_unknown), the fields each names, and the held remedy wording; plus BO-2400f-10-iv's reconciliation report and BO-2400f-7-vii's state_unknown halt."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Raised by the BA's own follow-up on the 2026-11-16 records: docs/how-to/fast-lane-build.md
+  covers the gate halts only, so an operator meeting the 2026-11-16 halt shapes has no page
+  that says what each means or what to do.
+
+  NOT A DUPLICATE OF BO-2400a-6-i. That record (todo) documents the command-step-runner, the
+  declined-step halt and its remedy, and launching from any checkout. This record documents the
+  three halts BO-2400f-7-vii and BO-2400f-7-ix add beside it, and the reconciliation of
+  BO-2400f-10-iv. It depends on BO-2400a-6-i so the declined-step section exists before these
+  are written next to it.
+
+  PLACEMENT. Under BO-2400f-7, the claim step whose children define these halts. L2 records
+  carry no child cap, so a twelfth child is allowed; BO-2400f is at its child override (13) and
+  BO-2400a-6's sibling tree is about a different change.
+
+  Document only what is built. Halt-kind names and field names are taken verbatim from the built
+  lane, never from these records' drafts.

@@ -69,3 +69,16 @@ notes: |
   The halt clause is the build-time twin of ACD-2500b-2-i (gate) - both are needed
   because a record can reach the test writer through a path other than the queue
   (fast lane, quick-fix).
+product_truth:
+  - flow: leafcutter/how-acs-are-built
+    node: test
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - Test
+      - Ticket
+    source: real
+    asof: '2026-10-23'

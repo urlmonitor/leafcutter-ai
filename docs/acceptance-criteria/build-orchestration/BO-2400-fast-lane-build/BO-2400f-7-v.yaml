@@ -1,0 +1,145 @@
+id: BO-2400f-7-v
+components:
+  - build_orchestration
+title: "The command-step-runner stays with a long-running command until it ends, and never replies while a command it started is still running"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the command-step-runner is asked to run one command in a named workspace with a
+    time budget of 600 seconds,
+  And the command takes 270 seconds to end on the host (the duration measured for a
+    store-wide fast-lane command on 2026-09-30, once it was given 600 seconds),
+  When the command-step-runner performs the request,
+  Then it replies only after the command has ended, with the command's exit status, its
+    standard output and its standard error (the result reply of BO-2400a-1-i),
+  And the shell's 120-second default limit neither stops the command nor ends the wait.
+
+  Given the shell moves the command to the background before it ends,
+  When the command-step-runner continues,
+  Then it waits on that background command until it ends, and then replies with that
+    command's exit status and output,
+  And it does not end its turn while that command is still running, because ending its
+    turn stops the command part-way.
+
+  Given the command is still running when the full 600-second budget has elapsed,
+  When the command-step-runner replies,
+  Then the reply says the command had not finished, names the command, the workspace and
+    the number of seconds it waited, and says that what the command changed is unknown,
+  And that reply carries no exit status and does not say declined, so the run can tell it
+    apart from a result and from a decline.
+
+  Given a request that states no time budget,
+  When the command-step-runner runs the command,
+  Then it waits up to 600 seconds, not the shell's 120-second default.
+depends_on: [BO-2400f-7, BO-2400a-1-i]
+doc_links:
+  - path: templates/agents/command-step-runner.md
+    relationship: modifies
+    status: exists
+    relevance: "The runner's instructions say nothing about time limits or background commands (per the 2026-11-16 analysis). This record adds the wait rule and the unfinished reply."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Defines the runner's two reply shapes (result with exit status, decline without). This record adds a third, the unfinished reply, which also carries no exit status but is not a decline."
+  - path: docs/analysis/2026-09-30-fast-lane-claim-cost-2-where-the-time-goes.md
+    relationship: describes
+    status: exists
+    relevance: "Measured the same command ending at 270 s once given 600 s."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+declares_side_effect: false
+declared_files:
+  - path: templates/agents/command-step-runner.md
+    state: existing
+it_requirements:
+  - >-
+    The runner's wait is bounded by the budget the request states, never by the shell's
+    per-call default. A request with no stated budget is waited on for 600 seconds. The rule
+    lives in the runner's own instructions, so it ships to consumer installs; raising the
+    shell default globally or editing harness settings does not satisfy this record.
+  - >-
+    A single shell call is capped at 600 seconds by the tool itself. A stated budget above
+    that (the claim's 900 seconds, BO-2400f-7-vi) must still be honoured, by waiting on the
+    backgrounded command across further calls until it ends or the budget is spent. The
+    budget is counted from the moment the command started, not reset per call.
+  - >-
+    The runner never re-runs, retries or kills a command it started in order to finish its
+    turn. A store-changing command run twice can apply twice; a command stopped part-way
+    leaves its effect unknown. Ending the turn while the command still runs is forbidden for
+    the same reason.
+  - >-
+    The unfinished reply is a third reply shape, distinct from both BO-2400a-1-i shapes:
+    it carries unfinished true, the command verbatim, the workspace, the step and the seconds
+    waited as an integer, and it carries neither an exit_status key nor a declined key. The
+    existing result and decline shapes stay exactly as BO-2400a-1-i defines them.
+  - >-
+    The result reply for a command that ran past 120 seconds is the same shape as for a
+    quick one: exit_status as an integer and both streams relayed verbatim, each in its own
+    field. A slow command must not change which stream its output is reported on.
+  - >-
+    No test is required for this record: every clause is model behaviour (how long the runner
+    waits and when it ends its turn), which a unit test cannot observe, and a test that greps
+    the template for the rule's wording would pass on a runner that ignores it. The
+    observable halves are proved elsewhere: the budget on every request by BO-2400f-7-vi, and
+    the lane's reading of an unfinished reply by BO-2400f-7-vii.
+test_required: false
+test_rationale: >-
+  This record changes only the command-step-runner's instructions: how long it waits for a
+  command and that it never ends its turn while one runs. That is model behaviour, which a
+  unit test cannot observe. The observable halves are proved elsewhere. BO-2400f-7-vi
+  proves every request states its budget. BO-2400f-7-vii proves the lane reads an
+  unfinished reply as state unknown.
+file_findings:
+  - file: templates/agents/command-step-runner.md
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the runner's own instructions and today carries no time-limit, background-wait or unfinished-reply rule, so it is the right surface for the wait rule this record adds.
+    decision: null
+file_findings_opened_files:
+  - templates/agents/command-step-runner.md
+delivers_to:
+  agent: python-coder
+  contract: "Runner replies after the command ends (result with exit_status) or, when the stated budget is exhausted, an unfinished reply {command, workspace, step, waited_seconds, unfinished: true} with no exit_status and no declined key. BO-2400f-7-vii classifies the unfinished reply as state unknown."
+expects_from:
+  ac_id: BO-2400f-7-vi
+  contract: "Each command-step request states its time budget as `time_budget_seconds: <positive integer>`; the runner waits up to that many seconds, and 600 when the request states none."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-11-16, run wf_f26bd73c-98c. The claim runner's one shell call passed no time
+  limit, reached the 120-second default, and was moved to the background. The runner replied
+  without an exit status and ended its turn; the background command's output reads [killed]
+  at the moment the runner ended. Whether the claim had changed anything is unknown. The lane
+  read the reply as a decline and released nothing.
+
+  Other agents already pass 600 s (test-writer, the coder at its green gate). Run 1's
+  producibility agent overran 120 s and improvised a bounded wait on the background output;
+  that worked, but only because the agent thought of it. This record makes it the runner's
+  rule.
+
+  CONTRACT WIDENING. BO-2400a-1-i (done) fixes two reply shapes. The unfinished reply is a
+  third. It must not reuse the decline shape: a decline means nothing ran, an unfinished
+  reply means something may have run. BO-2400a-1-i needs a contract-widened-by entry when
+  this record is approved (the BO-4500a-5-viii precedent).
+
+  Not in scope: raising the shell's default limit globally. It changes every agent, hides
+  real hangs, and does not ship to consumer installs (2026-11-16 analysis).

@@ -118,7 +118,7 @@ def lock_refusal(output: str) -> StepRefusal | None:
 def git(args: list[str], cwd: Path, env: dict | None = None, stdin: str | None = None):
     """Run git; an unrunnable git is a refusal, a non-zero exit is the caller's to read."""
     try:
-        return subprocess.run(["git", *args], cwd=cwd, env=env, input=stdin, capture_output=True, text=True, check=False)
+        return subprocess.run(["git", *args], cwd=cwd, env=env, input=stdin, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
     except OSError as exc:
         raise StepRefusal("step_vcs_error", f"cannot run git: {exc}") from exc
 

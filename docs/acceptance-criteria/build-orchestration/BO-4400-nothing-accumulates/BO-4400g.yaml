@@ -1,0 +1,116 @@
+id: BO-4400g
+title: "Workspaces are cleared once their work has landed, by naming the work, from one place every flow uses"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Say which work is finished -- the right workspace goes, and anything already landed is tidied for you.
+
+  Any flow, or you, can ask for a piece of work's workspace to be cleared just by naming
+  the work, the same way it was asked for in the first place. Every workspace of this
+  project whose work is already fully part of the shared main line, or is all on its own
+  line on the shared project, where it stays, with no file in it changed for 14 days, and
+  that holds nothing unsent, can be cleared in one unattended pass that never asks a question, can be
+  previewed first, and reports everything it kept and why. Every flow that makes a
+  workspace clears it through that same one place, so no flow carries its own way of
+  deleting one -- and unsent work, other projects' workspaces and the main checkout are
+  never touched.
+depends_on: [BO-4400, BO-4300e]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e.yaml
+    relationship: constrains
+    status: exists
+    relevance: The one clearing door and its unsent-work refusal; this record adds naming the work and the landed-work pass, it does not restate the door's safety rules.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: One piece of work is always recognised as the same workspace, older spellings included.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: The holds-work / holds-nothing verdict, including content that reached main under a new identifier (squash).
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+  - path: docs/how-to/clear-a-workspace.md
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      User decision at the plan-feature gate, 2026-11-16 (14-day rule for pushed but unmerged work): the
+      criteria body's pass sentence also covers a workspace whose work is all on its own line on the shared
+      project, where it stays, with no file in it changed for 14 days, holding nothing unsent. Title, tagline
+      and every other sentence unchanged. Notes record the decision. A PO review of the added words is
+      recommended.
+    by: business-analyst
+    at: "2026-11-16"
+superseded_by: null
+covered_by: [BO-4400g-1, BO-4400g-2, BO-4400g-3, BO-4400g-4, BO-4400g-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+notes: |
+  ORIGIN. /plan-feature request, 2026-10-25 (behavioral route, parent_l1_id BO-4300e):
+  "Workspaces are cleared once their work has landed, from one central place any flow can
+  call by the work's name." Evidence given: on 2026-10-25 the maker's landing place held 19
+  workspaces (6 ac, 3 epic, 3 fastlane, 7 feature), 5.6 GB, on a ~50 GB WSL disk budget; most
+  PRs were merged by hand after the flow had ended. Only finalize step 7 and the ship skill
+  call the maker's clearing today; plan-feature, the fast lane, build-feature without
+  finalize and quick-fix never clear.
+
+  WHY HERE AND NOT UNDER BO-4300e (placement decided by the BA, flag for the PO/user):
+  - BO-4300e holds 5 of 5 L2 children (L1 cap 5), so no new L2 fits under it.
+  - The request asked for a NEW SIBLING L1 of BO-4300e, but BO-4300 already holds 7 of 7
+    L1s (a..g; L0 cap 7, no child_limit_override). A BO-4300h would be refused by the
+    tree-limit hook.
+  - BO-4400 holds 6 of 7 L1s and its own boundary rule (PROJECT_CONTEXT, BO-4400 notes) says
+    "that it IS cleared, by every route" belongs to BO-4400. The name-based clearing request
+    and the landed-work pass are additions to the door that exist to serve that promise, so
+    this L1 depends on BO-4300e and reuses it rather than restating it. This takes BO-4400's
+    LAST L1 slot (7/7).
+  - BO-4400a (route-end clearing) and BO-4400d (routine sweep) are each at 5/5 and were not
+    usable hosts.
+
+  OUT OF SCOPE, OWNED ELSEWHERE: the rule for which caller may tell a workflow agent to
+  remove a workspace, and finalize step 7's authorization, belong to the BO-4300g family;
+  this L1 does not restate it, and BO-4400g-4 builds on it (D1). Finalize step 7 stays
+  exactly as BO-4300g-3 defines it (user answer Q1, 2026-11-16). The discard token for
+  unsent work stays BO-4300e-3 -- the landed-work pass never uses one.
+
+  TIMING CONFLICT, RESOLVED (user decision D2, 2026-11-16): a flow clears its workspace after
+  its pull request has merged, using the landed rule of BO-4400g-2 for its one workspace; a
+  flow that ends before its pull request is merged clears nothing and leaves the workspace to
+  the landed-work pass. BO-4400g-4 and BO-4400a-1 are amended to this timing, and the PO
+  amended BO-4400's KEY FRAMING DECISION and BO-4400a to it the same day. A flow that ends
+  with nothing to deliver clears its own workspace at once; the seven-day idle threshold
+  guards only the landed-work pass (user answer Q2, 2026-11-16). The older BO-4400a children
+  were brought in line (user answer Q3): BO-4400a-1-ii, BO-4400a-2-i, BO-4400a-4, BO-4400a-5.
+
+  USER DECISION 2026-11-16 (plan-feature gate): the landed-work pass also clears a workspace
+  whose work is pushed but never merged, once it holds nothing unsent and no file in it has
+  changed for 14 days; the work stays on its line on the shared project. The pass stays
+  git-only, so an open pull request untouched for 14 days counts the same and is cleared;
+  asking the maker for that work again resumes the line. The rule is the pass's alone; flows
+  are unchanged (BO-4400g-2-v; criteria body amended to match).
+
+  OTHER DECISIONS 2026-11-16 (IT PO gate): D1 -- every flow's own clearing request is the
+  exact name-based clearing command sent through shell-runner, which is itself the caller's
+  authorization for that one workspace (BO-4300g, BO-4300g-2, BO-4300g-2-i amended). D3 -- the
+  maker gains the squash content check under BO-4400g-2; BO-4100c-1 reuses it later. D4 --
+  ship's prose change is BO-4400g-4-ii.

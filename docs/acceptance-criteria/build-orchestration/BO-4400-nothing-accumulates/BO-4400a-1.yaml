@@ -1,5 +1,5 @@
 id: BO-4400a-1
-title: "Every route that opens a pull request clears its workspace right after opening it"
+title: "Every route that opens a pull request clears its workspace at its end once that pull request has merged"
 component: build-orchestration
 components:
   - build_orchestration
@@ -13,12 +13,13 @@ priority: high
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
-declares_side_effect: true
+declares_side_effect: false
 criteria: |
   Given each of these routes is run against a real test project with a real shared
     project, each in a workspace obtained from the one workspace maker, and each
     driven to the point where its commits are pushed to its own line of work on the
-    shared project and its pull request is open:
+    shared project, its pull request is open, and that pull request has been merged
+    into the main line before the route returns:
     - the build of a single ticket,
     - the build of an epic of three tickets,
     - the quick fix,
@@ -30,14 +31,26 @@ criteria: |
     its workspace is absent from the live set,
   And the clearing was performed by the one shared clearing door: the route's final
     result contains the door's own answer for that workspace, reporting it removed,
-  And the clearing happened after the pull request was opened and before the route
-    returned: the pull request exists and lists every commit the route made,
-  And no person was asked to confirm the clearing,
-  And commits that are pushed to the workspace's own line on the shared project count
-    as sent for this decision, so an open, unmerged pull request never makes the
-    workspace read as holding unsent work.
-depends_on: [BO-4400a, BO-4300e-2, BO-4300f-1, BO-4100c-1]
+  And the clearing happened after the pull request was merged and before the route
+    returned: the main line holds every change the route made,
+  And no person was asked to confirm the clearing.
+
+  Given the same six routes are each driven to the point where their commits are pushed
+    to their own line of work on the shared project and their pull request is open but
+    not yet merged into the main line when the route returns,
+  When each route returns its final result,
+  Then for every route its workspace still exists, identical to its state when its pull
+    request was opened,
+  And the route's final result reports the workspace as kept because its work is not yet
+    on the main line, leaving it for the landed-work pass to clear after the merge.
+depends_on: [BO-4400a, BO-4300e-2, BO-4300f-1, BO-4400g-2, BO-4400g-4]
 doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400g-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      The landed rule each route applies to its one workspace at its end (user decision D2,
+      2026-11-16): cleared once merged, kept as not yet on the main line while the pull request is open.
   - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
     relationship: constrains
     status: exists
@@ -84,11 +97,30 @@ delivers_to:
   - agent: documentation-expert
     contract: "The six-route table (route, end state, moment of clearing incl. nothing-to-deliver) the how-to BO-4400a-4 reproduces."
   - agent: architecture-diagram-author
-    contract: "Ordered steps push -> pull request -> clearing request -> verdict -> return, and the removed / refused branches, for BO-4400a-5."
+    contract: "Ordered steps push -> pull request -> merge -> clearing request -> verdict -> return, and the removed / kept branches, for BO-4400a-5."
 expects_from:
-  ac_id: BO-4300e-2
-  contract: "One clearing request that answers without prompting: removed, or refused naming the unsent work."
+  ac_id: BO-4400g-2
+  contract: >-
+    The per-work command clear-landed --kind K --slug S (or --branch B) for the route's own work. It applies the
+    landed rule with no idle threshold and answers without prompting. It reports cleared, carrying the door's own
+    removed answer, or kept with reason not_on_main (pull request still open) or holds_unsent_work (commits and
+    files named). Work with no commit of its own and nothing unsent is cleared at once.
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    state: existing
+  - path: templates/workflows-js/build-ticket.js
+    state: existing
+  - path: templates/workflows-js/build-epic.js
+    state: existing
+  - path: templates/workflows-js/build-feature.js
+    state: existing
+  - path: templates/workflows-js/quick-fix.js
+    state: existing
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
 it_requirements:
   - >-
     ROUTE SURFACES: single-ticket build (templates/workflows-js/build-ticket.js and the single-ticket
@@ -104,27 +136,31 @@ it_requirements:
     orchestrator instead of being made. This AC's proof still drives the backlog route by executing
     the command its prose publishes.
   - >-
-    ONE DOOR: the clear is the one maker's `remove` verb (templates/scripts/worktree.py per
-    BO-4300a-1; name provisional, not yet on disk). No route deletes a folder, runs `git worktree
+    ONE DOOR: the clear goes through the one maker, templates/scripts/worktree.py (on disk since BO-4300a-1),
+    by the per-work clear-landed command of BO-4400g-2, which clears through the maker's own remove verb. No
+    route deletes a folder, runs `git worktree
     remove`, `rm -rf`, `shutil.rmtree` or any forced removal by its own means, and no route relies on
     finalize-feature to clear.
   - >-
     E2 CONSTRAINT (ADR-030): workflow bodies have no filesystem or process access. The clearing is
     exactly one agent() dispatch, carrying a result schema, to an agent whose registry entry has
-    permits_shell: true, instructing it to run one exact absolute `<path printed by worktree.py
-    where> remove --path <workspace>` command unchanged and return stdout verbatim. Never
-    status-checker, never free-form clean-up steps. Workflow edits are made in
+    permits_shell: true, instructing it to run one exact absolute clearing command unchanged and
+    return stdout verbatim: the name-based command of BO-4400g-4 for the route's own work, never
+    --path, sent to shell-runner (ADR-070; user decision D1, 2026-11-16). Never status-checker,
+    never free-form clean-up steps. Workflow edits are made in
     templates/workflows-js/ and reach .claude/workflows/ only through the build.
   - >-
     NO DISCARD AUTHORISATION ON ANY ROUTE PATH: a route never passes the maker's up-front discard
     authorisation (BO-4300e-3). Per the 2026-10-09 Q8 decision the holds-nothing verdict is the only
     safety check; a refusal is relayed as work kept, never retried with force.
   - >-
-    VERDICT PREREQUISITE: the door's classification is BO-4300e-2's -- commits reachable from
-    neither origin/<branch> nor origin/main after a fetch, plus uncommitted and untracked changes --
-    so a pushed, unmerged branch reads holds-nothing. BO-4100c-1's narrower wording must be amended
-    to match before this AC is buildable (see notes); the implementer must not re-derive the verdict
-    inside a route.
+    VERDICT (user decision D2, 2026-11-16): the route's decision is the landed rule of BO-4400g-2
+    applied to its one workspace, so a pushed but unmerged line is kept as not_on_main and never
+    cleared by the route. The implementer must not re-derive the verdict inside a route. BO-4100c-1's
+    pushed-line wording is no longer a prerequisite of this record. The rule's idle thresholds (7 days, and
+    14 days for pushed but unmerged work, BO-4400g-2-v) guard only the unattended pass: a route that ends
+    with no commit of its own and nothing unsent clears its workspace at once (user decision Q2, 2026-11-16;
+    BO-4400a-1-i).
   - >-
     The route waits for the door's answer with a bounded timeout (configurable, default 120 s); a
     timeout is reported in the final result as clearing-not-confirmed naming the workspace path,
@@ -143,24 +179,52 @@ it_requirements:
     -- never on workflow source text (CLAUDE.md 'Gate / Workflow ACs -- Verify Behaviorally, Not by
     Grep').
   - >-
+    HARNESS PREREQUISITE (test-designer finding, 2026-11-16): the harness has no stand-in that executes the
+    real maker today. The proof uses the exec bridge that BO-4400g-4 adds to
+    unit_tests/_workflow_engine_harness.py, with BO-4300g-2-i's shared clearing-command parser, so this record
+    and its children (-1-i, -1-ii) are built after that bridge or in the same build (depends_on BO-4400g-4).
+  - >-
     ISOLATION: all projects, hubs, workspaces and HOME / XDG_CACHE_HOME / TMPDIR live under the
     test's temp directory and git runs with isolated global and system config; the developer's own
     repository, branches, registered worktrees and caches are unchanged afterwards (BO-4300f-4-i,
     KI-TQ-012). Tests do not spawn the package's scripts/build.py; deployed copies come from the
     shared reference layout (CLAUDE.md 'Tests must not spawn their own build.py').
 test_required: true
+test_intent:
+  - clause: for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set
+    needs_test: true
+    reason: A route that never reaches its clearing step leaves the folder, which only the disk and the listing show.
+  - clause: 'the clearing was performed by the one shared clearing door: the route''s final result contains the door''s own answer for that workspace, reporting it removed'
+    needs_test: true
+    reason: A route that deletes by its own means leaves no door answer, which is how a second deletion route is caught.
+  - clause: 'the clearing happened after the pull request was merged and before the route returned: the main line holds every change the route made'
+    needs_test: true
+    reason: A clear placed before the merge would treat a pushed line as sent, and the recorded order against the hub shows it.
+  - clause: no person was asked to confirm the clearing
+    needs_test: true
+    reason: An unattended route stalls on any question, and the recorded dispatches show whether one was asked.
+  - clause: for every route its workspace still exists, identical to its state when its pull request was opened
+    needs_test: true
+    reason: Clearing on a pushed but unmerged line is the timing the user decided against, and a snapshot catches it.
+  - clause: 'the route''s final result reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass to clear after the merge'
+    needs_test: true
+    reason: The kept reason must come from the real one-work answer, or the person cannot tell kept from failed.
 test_spec:
   - name: test_every_route_leaves_no_workspace_folder_after_its_pull_request
+    proves_clause: 'for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: criterion
     description: >-
-      For each of the six routes driven to an open pull request, no folder remains at the workspace
-      location and the maker's list verb no longer reports it.
+      For each of the six routes driven to a pull request merged before the route returns, no folder
+      remains at the workspace location and the maker's list verb no longer reports it.
     must_catch:
       - "a route that never calls the door (folder remains)"
   - name: test_route_result_carries_the_doors_removed_answer
+    proves_clause: 'the clearing was performed by the one shared clearing door: the route''s final result contains the door''s own answer for that workspace, reporting it removed'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -169,38 +233,163 @@ test_spec:
     must_catch:
       - "a route that removes the folder by its own means (result lacks the door's answer)"
   - name: test_clearing_is_ordered_after_pull_request_and_before_return
+    proves_clause: 'the clearing happened after the pull request was merged and before the route returned: the main line holds every change the route made'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: reachability
     description: >-
-      Recorded dispatch order is push, pull-request stand-in, clearing request, return; the
-      recorded pull request lists every commit the route made.
+      Recorded dispatch order is push, pull-request stand-in, merge of that pull request into the
+      hub's main line, clearing request, return; the hub's main line holds every change the route made.
     must_catch:
       - "clearing placed before the push (door refuses, folder remains, or the PR is missing commits)"
+      - "clearing placed before the merge (the landed rule keeps the workspace, folder remains)"
   - name: test_clearing_never_asks_for_confirmation
+    proves_clause: no person was asked to confirm the clearing
+    code_file: templates/workflows-js/_shared/workspace-answer.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: failure
     description: "With stdin closed and no gate replies scripted, every route completes its clear; no gate or question dispatch is recorded."
-  - name: test_pushed_unmerged_line_reads_as_sent
+  - name: test_pushed_unmerged_line_is_kept_for_the_landed_work_pass
+    proves_clause: 'for every route its workspace still exists, identical to its state when its pull request was opened'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: discrimination
-    description: "A workspace whose commits are on origin/<branch> but not on origin/main is removed, not refused."
+    description: >-
+      A route that returns while its pull request is open (commits on origin/<branch>, not on origin/main)
+      leaves its workspace identical and its final result reports it kept as not yet on the main line.
     must_catch:
-      - "verdict computed against origin/main only (open PR reads as unsent work)"
+      - "a route that clears on a pushed but unmerged line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
+  - name: test_route_clearing_is_the_per_work_clear_landed_command_sent_to_shell_runner
+    proves_clause: 'the clearing was performed by the one shared clearing door: the route''s final result contains the door''s own answer for that workspace, reporting it removed'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Grounding added at the test-designer pass (nothing above is weakened). From HarnessResult.agent_calls of each
+      deployed route, the one clearing dispatch has agent_type shell-runner, a prompt that is one plain command with
+      the absolute deployed maker path, the verb clear-landed, --kind and --slug (or --branch) equal to the flags of
+      the route's own ensure dispatch, and no --path. The helper that builds it is the shared one in
+      _shared/workspace-answer.js, whose makerCommand today supports no branch flag and no clear-landed verb
+      (workspaceRemoveCommand builds remove --path with --force), so this is red until the build.
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_single_ticket_and_epic_routes_reach_their_clearing_step
+    proves_clause: 'for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed build-ticket.js (single ticket) is driven to a merged pull request under
+      run_workflow_under_e2 and the clearing dispatch is recorded, and the same for build-epic.js (three tickets),
+      each with the live shell-runner stand-in that runs the dispatched maker command for real. The record's
+      PROOF needs that stand-in, which the harness lacks today: run_workflow_under_e2 serialises static
+      label_responses into a node shim with no process access, so an additive exec bridge is a prerequisite.
+    code_file: templates/workflows-js/build-ticket.js
+  - name: test_epic_route_reaches_its_clearing_step_once
+    proves_clause: 'for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      The deployed build-epic.js (and the epic path of build-feature.js) is run to the epic's end: one clearing
+      dispatch is recorded, after the last ticket and after the merge.
+    code_file: templates/workflows-js/build-epic.js
+  - name: test_quick_fix_requirements_authoring_and_fast_lane_routes_reach_their_clearing_step
+    proves_clause: 'for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      quick-fix.js, plan-feature.js and fast-lane-ship.js, each deployed and run to a merged pull request, record a
+      clearing dispatch (none of them carries one today) and leave no folder; one test per route in the file.
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_open_pull_request_route_result_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Each deployed route returning with its pull request still open carries the maker's real one-work answer, kept
+      with reason not_on_main, relayed verbatim in its final result (not removed, not a failure), leaving the
+      workspace for the landed-work pass.
+    proves_clause: 'the route''s final result reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass to clear after the merge'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_backlog_route_publishes_the_one_clearing_command_and_it_runs
+    proves_clause: 'for every route no folder remains at the location its workspace occupied and its workspace is absent from the live set'
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      templates/workflows/build-backlog.md has no .js driver, so the proof (as the record says) extracts the one
+      clearing command its prose publishes, fills in the fixture's project root and work name, and runs it as a
+      subprocess against a real merged workspace on a real bare hub: the folder is gone and the answer carries the
+      door's removed answer. The text check is limited to the absence of any other removal instruction.
+    code_file: templates/workflows/build-backlog.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/build-ticket.js
+  - templates/workflows-js/build-epic.js
+  - templates/workflows-js/quick-fix.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows/build-backlog.md
+  - unit_tests/_workflow_engine_harness.py
+  - templates/scripts/worktree.py
 test_rationale: >-
   The claim is that six different routes reach one door at one moment. Only a real run of each
   deployed workflow, with the maker executed for real against real repositories, can show the folder
-  is gone, the answer came from the door, and the order was push then PR then clear. A grep of the
+  is gone, the answer came from the door, and the order was push, then PR, then merge, then clear. A grep of the
   workflow sources would pass on a clearing step that is defined and never reached -- the
   fast-lane-build.js failure.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: >-
+      User decision D2, 2026-11-16 (timing of a route's own clear, resolving the conflict flagged on
+      BO-4400g and BO-4400g-4): a route clears its workspace after its pull request has merged, using the
+      landed rule of BO-4400g-2 for its one workspace; a route that ends with its pull request still open
+      clears nothing and leaves the workspace to the landed-work pass. Changed only as far as needed: the
+      title; the first Given now has the pull request merged before the route returns; the ordering clause
+      says merged instead of opened; the last And-clause (pushed counts as sent, so an open pull request
+      never reads as unsent work) is replaced by a second scenario for the open pull request. depends_on
+      swaps BO-4100c-1 for BO-4400g-2, and the IT PO fields the change made untrue are fixed minimally:
+      the E2 command (name-based, never --path, user decision D1), the verdict prerequisite, two test_spec
+      entries, the test rationale and the diagram contract.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User answer Q2 at the BO-4400g plan-feature gate, 2026-11-16: a route with nothing to deliver clears its
+      own workspace at once and the idle threshold is the landed-work pass's alone (BO-4400a-1-i stands).
+      Criteria unchanged, as neither scenario contradicts it. The VERDICT it_requirement gains one sentence
+      saying so, and the notes record it and that the PO amended BO-4400a and BO-4400 the same day.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po, 2026-11-16: expects_from moves from BO-4300e-2, which declares no delivery, to BO-4400g-2's
+      per-work clear-landed command, the one command a route now sends (D1, D2, Q2). Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17, after the test design. declared_files added (the route workflows and the shared
+      helper; build-backlog.md stays llm-expert companion work). ONE DOOR no longer says the maker is "not yet on
+      disk". A HARNESS PREREQUISITE requirement names BO-4400g-4's exec bridge, and depends_on gains BO-4400g-4 for
+      that build order (no cycle: BO-4400g-4 depends on no BO-4400a record). Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400a-1-i, BO-4400a-1-ii]
 implemented_by: []
@@ -208,13 +397,23 @@ notes: |
   Gap G1 (success path). finalize-feature is NOT the cleanup point (BO-4400 key framing
   decision); finalize may still clear, but no route in the list may rely on it.
 
-  VERDICT WORDING CONFLICT (flagged, not resolved here): BO-4100c-1's criteria say a
-  workspace holds work when "its branch carries a commit not reachable from the shared main
-  line". Read literally, every workspace with an open, unmerged pull request holds work and
-  this record can never be satisfied. BO-4300e-2's it_requirements already use the wider
-  "reachable from neither its own pushed line nor the shared main line" definition. The last
-  And-clause above states the definition this record relies on; BO-4100c-1 needs an amendment
-  (owner: PO / BA of BO-4100) to match before this is buildable.
+  TIMING AMENDED (user decision D2, 2026-11-16): a route clears its own workspace only after
+  its pull request has merged, by the landed rule of BO-4400g-2; with the pull request still
+  open at the route's end the workspace is kept, reported as not yet on the main line, and the
+  landed-work pass (BO-4400g-2) clears it after the merge. This replaces the 2026-10-09
+  "at the latest right after the pull request is opened" reading for this record. The product
+  owner amended the parent BO-4400a and the L0 BO-4400 to the same timing the same day.
+
+  NOTHING TO DELIVER (user decision Q2, 2026-11-16): a route that ends with no commit of its
+  own clears its workspace at once, as BO-4400a-1-i states; the seven-day idle threshold of
+  BO-4400g-2, like the fourteen-day one for pushed but unmerged work (BO-4400g-2-v, user
+  decision 2026-11-16), guards only the unattended pass. A route whose pull request is never
+  merged keeps its workspace until that pass clears it after 14 days idle. Neither scenario here contradicts this, so the
+  criteria are unchanged; the VERDICT it_requirement carries the rule.
+
+  VERDICT WORDING CONFLICT (resolved by D2, 2026-11-16): this record no longer relies on a
+  pushed, unmerged line reading as holding nothing, so the BO-4100c-1 wording amendment it
+  asked for is no longer a prerequisite here.
 
   Proof must drive each route to its end state and inspect the disk afterwards (repo
   CLAUDE.md: gate/workflow ACs are verified by running them, never by grep).

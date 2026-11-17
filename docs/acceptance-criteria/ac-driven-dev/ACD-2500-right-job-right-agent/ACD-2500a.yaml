@@ -54,3 +54,15 @@ notes: |
   instructions, otherwise the outcome (a shorter, judgment-only planner) is not
   delivered. The BA must first inventory existing store checks (a schema checker is
   already installed by the build) and extend rather than duplicate them.
+product_truth:
+  - flow: leafcutter/ac-lifecycle
+    node: ruleCheck
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities:
+      - Ac
+      - AcStore
+    source: real
+    asof: '2026-10-23'

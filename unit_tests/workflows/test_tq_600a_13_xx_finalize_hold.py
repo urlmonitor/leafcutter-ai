@@ -66,6 +66,7 @@ _FORBIDDEN_PROMPT_FRAGMENTS = (
 # The dispatches finalize issued BEFORE this change, on an all-green run (BO-4300: the workspace maker's
 # answer replaces the pre-flight probe; the baseline is a scratch workspace, a deploy, one pytest run, its removal).
 _PRE_CHANGE_LABELS = [
+    "resolve-maker-path",  # BO-4300a-1-ia: the one maker-path probe before the first maker request (consumer_drift)
     "workspace-ensure", "gh-config", "step-0-baseline-workspace", "step-0-baseline-deploy",
     "step-0-baseline", _CLEANUP, "step-1-pr-probe",
     "step-2-merge-main", "step-3-test-run", "step-3.5-closure-probe",
@@ -234,7 +235,8 @@ class TestOnlyTheExactNameIsTheHold(_FinalizeHoldCase):
                 self.assertFalse(payload.get("external_hold"), payload)
                 self.assertEqual(len(self.labels_of(result, _MERGE)), 1, self.labels(result))
                 self.assertEqual(payload.get("status"), "ok", payload)
-        for malformed in ("no json in this reply at all", {"oops": True}, []):
+        malformed_replies: tuple[object, ...] = ("no json in this reply at all", {"oops": True}, [])
+        for malformed in malformed_replies:
             with self.subTest(reply=malformed):
                 result = self.run_with(malformed)
                 self.assertEqual(len(self.labels_of(result, CHECKS_LABEL)), 1, self.labels(result))

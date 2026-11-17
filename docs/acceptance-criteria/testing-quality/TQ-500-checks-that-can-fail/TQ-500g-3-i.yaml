@@ -337,3 +337,10 @@ notes: |
   (only the test writer records; a later coder or remedy edit stops) were
   approved by user 2026-10-22, answered directly by the user in the main
   session's AskUserQuestion.
+
+  AS BUILT (IT-PO note, 2026-10-23, user decision OQ-6 for TQ-500g-5): the
+  record step stores the base commit with the list, and check honours a list
+  recorded at an ancestor of the current base for each entry whose file no
+  commit since that base touched (git merge-base --is-ancestor, then git log
+  over the range). A list whose base is not an ancestor excuses nothing.
+  Notes only; criteria unchanged.

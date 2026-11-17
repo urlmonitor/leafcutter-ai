@@ -66,17 +66,7 @@ delivers_to:
   - agent: python-coder
     contract: "One completion_manifest key per work item answering the seam rule, in one of exactly two conforming shapes: a covered answer naming producing side and consuming side, or a not-applicable answer carrying a non-empty reason. Absent, reasonless, and duplicated are the three non-conforming states BP-1100g-5-i reads for and reports by name."
 expects_from: null
-test_required: false
-test_rationale: |
-  Genuinely test-free at this AC's boundary. change_target is prompt: every Then clause
-  describes what an LLM agent writes into its own sign-off record, and no unit test can
-  produce that record. The falsifiable half of this behaviour is deliberately located in
-  the child, BP-1100g-5-i, which builds the reader that detects absent / reasonless /
-  duplicated answers over the records a run actually emitted — this AC is composite and
-  its proof comes from that child. The available proxies are both dishonest: grepping
-  templates/agents/test-writer.md for the mandate asserts prose presence, not compliance,
-  and validating a hand-typed manifest asserts the fixture rather than the writer.
-  Reviewing surfaces: pr-reviewer and the llm-expert Prompt-Quality Checklist.
+test_required: true
 origin_agent: BrainCandy
 created: 2026-08-17
 amended_by:
@@ -109,6 +99,10 @@ amended_by:
     NOTE: not_applicable is a NEW enum value — zero occurrences existed anywhere under
     templates/ or scripts/ on origin/main before this change, so nothing validates its
     spelling yet. That validator is BP-1100g-5-i. criteria untouched.'
+- action: amended
+  agent: it-po
+  date: '2026-11-03'
+  reason: 'Prompt-class decision of 2026-11-03 (BO-2500a-8-iv follow-up, KI-BO-20261102): test_required false changed to true; proved by an agent eval case, the route BO-2500a-8-ii took. The earlier test_rationale is removed because it no longer applies. Criteria and readiness unchanged.'
 superseded_by: null
 covered_by:
   - BP-1100g-5-i
@@ -152,3 +146,8 @@ notes: |
   ONE-FIXED-KEY-TOKEN requirement is the load-bearing constraint here — it is
   what makes BP-1100g-5-i's reader buildable, and the same requirement is stated
   on BP-1100g-2 for the entry-point key so both ride one reader.
+
+  2026-11-03: superseded. The prompt-class decision (BO-2500a-8-iv follow-up,
+  KI-BO-20261102) set test_required true, proved by an agent eval case as BO-2500a-8-ii
+  was. Any text in this record saying test_required is false, that the record is
+  test-free, or that it is verified by review only instead of a test no longer applies.

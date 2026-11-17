@@ -86,7 +86,7 @@ population is the one that matters here.)
 | `deployed` | the file ships through `build.py`: a hook, a gate, an agent template, a workflow, or anything they import | Does it work in the deployed layout, not just the source tree? |
 | `boundary` | the AC names a range, a limit, a count, or a shape that can be empty / one / many | empty / one / many / limit / malformed-but-parseable |
 | `failure` | the AC names an error path, a fallback, or a fail-open/fail-closed contract | the error path — and does it fail *closed*? |
-| `discrimination` | **conditional, trigger-fired:** the work fixes a bug, or adds or changes a condition of a gate or guard, or a `test_spec` entry carries `must_catch` | Would this test go red under a named plausible wrong version of the code, not only when the code is absent? Incident catalogue: [failure catalogue](test-angles-failure-catalogue.md#discrimination-shaped-failure-family). |
+| `discrimination` | **conditional, trigger-fired:** the work fixes a bug, or adds or changes a condition of a gate or guard, or a `test_spec` entry carries `must_catch` | Would this test go red under a named plausible wrong version of the code, not only when the code is absent? Incident catalogue: [failure catalogue](test-angles-failure-catalogue.md#discrimination-shaped-failure-family). The runs that check it: [wrong-version runs](../reference/wrong-version-runs.md). |
 
 **How to select, given the cap of 4.** `criterion` + `reachability` are the **floor** —
 always both, never negotiable; that pair is what the generator's reachability floor now

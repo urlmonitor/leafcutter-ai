@@ -246,9 +246,11 @@ class TestBP600WorkflowInPlaceAndSelfIsolation:
         )
         calls_by_label = {c.label: c for c in result.agent_calls}
         assert "workspace-ensure" in calls_by_label
-        first = min(result.agent_calls, key=lambda c: c.call_index)
-        assert first.label == "workspace-ensure", (
-            f"The workspace step must be the first dispatch (BP-600a-1). First: {first.label!r}"
+        # BO-4300a-1-ia: the one maker-path probe precedes the maker request, so the workspace step is the
+        # first dispatch after it, and nothing else comes before (consumer_drift).
+        first_two = [c.label for c in sorted(result.agent_calls, key=lambda c: c.call_index)[:2]]
+        assert first_two == ["resolve-maker-path", "workspace-ensure"], (
+            f"The workspace step must be the first dispatch (BP-600a-1). First two: {first_two!r}"
         )
         later_call = calls_by_label["ac-creation"]
         assert "/isolated/wt-threaded" in later_call.prompt, (

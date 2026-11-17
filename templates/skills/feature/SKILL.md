@@ -25,8 +25,9 @@ Run the maker as ONE command, by the absolute path of the deployed
 `worktree.py` (the install's `scripts/worktree.py`; the path `worktree.py
 where` prints). Never use a cwd-relative path and never chain commands:
 
+Run ONE exact command, unchanged, quoting the maker path and every value, and return its stdout verbatim:
 ```bash
-python <absolute-install-root>/scripts/worktree.py ensure --kind <kind> --slug <slug> --repo-root <absolute-project-root>
+python "<absolute-install-root>/scripts/worktree.py" ensure --kind "<kind>" --slug "<slug>" --repo-root "<absolute-project-root>"
 ```
 
 If the work is a ticket, add `--ticket <absolute path of the ticket's main copy>`.

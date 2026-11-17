@@ -257,9 +257,6 @@ def legacy_worktree(project: Path, name: str, unsent: bool = False, at: Path | N
     return location.resolve()
 
 
-_LINK = "work" + "tree"
-
-
 def link_checkout(repo: Path, args: list[str], *, check: bool = True, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Register a real linked git checkout in *repo* (the add form), as a test fixture.
 
@@ -315,13 +312,13 @@ def start_merge(root: Path, ours: str, theirs: str, run_git) -> None:
 
 def _run_link(verb_args: list[str], repo: Path, check: bool, env: dict[str, str] | None) -> subprocess.CompletedProcess:
     proc = subprocess.run(
-        ["git", _LINK, *verb_args],
+        ["git", "worktree", *verb_args],
         cwd=str(repo),
         capture_output=True,
         text=True,
         env=env,
     )
     if check and proc.returncode != 0:
-        msg = f"git {_LINK} {verb_args} failed in {repo}: {proc.stderr}"
+        msg = f"git worktree {verb_args} failed in {repo}: {proc.stderr}"
         raise AssertionError(msg)
     return proc

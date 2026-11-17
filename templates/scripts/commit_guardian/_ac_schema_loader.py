@@ -14,6 +14,7 @@ DECISION HISTORY:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -39,3 +40,20 @@ def _load_schema(root: Path) -> dict[str, Any] | None:
     except OSError as exc:
         print(f"Warning: cannot read schema {schema_path}: {exc}", file=sys.stderr)
         return None
+
+
+def _find_project_root() -> Path | None:
+    """Find the project root by .git or CLAUDE.md presence.
+
+    Returns:
+        Absolute Path of the project root, or None if not found.
+    """
+    env_root = os.environ.get("HOOK_ROOT")
+    if env_root:
+        return Path(env_root)
+
+    for ancestor in [Path.cwd(), *Path.cwd().parents]:
+        if (ancestor / ".git").exists() or (ancestor / "CLAUDE.md").exists():
+            return ancestor
+
+    return None

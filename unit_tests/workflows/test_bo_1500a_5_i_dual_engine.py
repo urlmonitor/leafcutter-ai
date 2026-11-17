@@ -117,8 +117,8 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
     # or commit-stage-output.
     actual_calls = [(c.agent_type, c.label) for c in result.agent_calls]
     assert actual_calls == [
+        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path; BO-4300a-1-ia: first, the branch check names it (consumer_drift)
         ("shell-runner", "detect-current-branch"),
-        ("shell-runner", "resolve-maker-path"),  # ACD-2100a-1: the maker's absolute in-repo path
         ("shell-runner", "workspace-ensure"),
     ], (
         f"M-2 / BO-1500a-5-i: expected the run to halt immediately after the "

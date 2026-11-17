@@ -134,45 +134,40 @@ _FILTER_IMPORT_ERR = ""
 _MARK_DONE_IMPORT_ERR = ""
 _CHECK_STALE_IMPORT_ERR = ""
 
-claim_build_set = None  # type: ignore[assignment]
-release_claim = None  # type: ignore[assignment]
-filter_already_claimed = None  # type: ignore[assignment]
-mark_done_built_acs = None  # type: ignore[assignment]
-check_no_stale_todo = None  # type: ignore[assignment]
-select_batch = None  # type: ignore[assignment]
-
+# A name whose import fails stays unbound; every test reaches it only after
+# its _require_*_impl guard (or the select_batch skip) has stopped the test.
 try:
-    from fast_lane import claim_build_set  # type: ignore[no-redef]
+    from fast_lane import claim_build_set
     _CLAIM_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _CLAIM_IMPORT_ERR = str(_exc)
 
 try:
-    from fast_lane import release_claim  # type: ignore[no-redef]
+    from fast_lane import release_claim
     _RELEASE_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _RELEASE_IMPORT_ERR = str(_exc)
 
 try:
-    from fast_lane import filter_already_claimed  # type: ignore[no-redef]
+    from fast_lane import filter_already_claimed
     _FILTER_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _FILTER_IMPORT_ERR = str(_exc)
 
 try:
-    from fast_lane import mark_done_built_acs  # type: ignore[no-redef]
+    from fast_lane import mark_done_built_acs
     _MARK_DONE_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _MARK_DONE_IMPORT_ERR = str(_exc)
 
 try:
-    from fast_lane import check_no_stale_todo  # type: ignore[no-redef]
+    from fast_lane import check_no_stale_todo
     _CHECK_STALE_IMPORT_OK = True
 except (ImportError, AttributeError) as _exc:
     _CHECK_STALE_IMPORT_ERR = str(_exc)
 
 try:
-    from fast_lane import select_batch  # type: ignore[no-redef]
+    from fast_lane import select_batch
     _SELECT_BATCH_IMPORT_OK = True
 except (ImportError, AttributeError):
     pass

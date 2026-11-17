@@ -1,0 +1,27 @@
+# Recorded BAD output: calls resolve_test_db_address but still hard-codes host, port and database.
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, "scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
+
+
+class TestStoredProcedure(unittest.TestCase):
+    def setUp(self):
+        address = resolve_test_db_address(Path.cwd())
+        self.address = address
+        self.conn = psycopg2.connect(host="db.example.invalid", port=5432, dbname="app_test")
+        self.conn.autocommit = False
+
+    def tearDown(self):
+        self.conn.rollback()
+        self.conn.close()
+
+    def test_procedure_returns_rows(self):
+        # covers: TQ-9401
+        with self.conn.cursor() as cur:
+            cur.execute("select 1")
+            self.assertEqual(cur.fetchone(), (1,))

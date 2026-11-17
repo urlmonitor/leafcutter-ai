@@ -93,7 +93,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # one and the deployed generator dies at import -- loudly, unlike the
     # importlib try/except degradation above, because the shell imports them
     # unconditionally.
-    #
     # The shell resolves them via importlib.import_module under a prefix
     # COMPUTED from its own __name__ (it must work both package-qualified and
     # as a bare directory import). A computed name is undecidable statically,
@@ -118,10 +117,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_gtfa_frontmatter.py",         "_gtfa_frontmatter.py"),
     # _gtfa_impl_py.py owns the "implementation .py in scope" predicate that
     # gates the generated ticket's ## Test Requirements section (TKT-500f-6).
-    # _gtfa_body.py and _gtfa_tests_section.py import it at MODULE scope, so
-    # omitting it here ships a generator that dies at import with
-    # ModuleNotFoundError in the deployed layout while every unit test --
-    # importing from source -- stays green.
     ("scripts/ac_store/_gtfa_impl_py.py",             "_gtfa_impl_py.py"),
     ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
     ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
@@ -170,6 +165,11 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # (BP-900h-4): an underscore reads to the declaring-files inspector as
     # "same-dir sibling", wrong for this cross-directory import.
     ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    # covers_tag_identity.py (TQ-500f-3-iii) -- the ONE tag-to-test matcher. Imported
+    # by done_proof.py (check_done_proof hook) and by build_orchestration/_fl_common.py
+    # (fast_lane.py verify_red_baseline); missing here = ModuleNotFoundError in both.
+    ("scripts/ac_store/covers_tag_identity.py", "covers_tag_identity.py"),
+    ("scripts/ac_store/project_python.py", "project_python.py"),  # TQ-500f-3-vi: imported by done_proof + fast_lane
     ("scripts/ac_store/pytest_outcome_reader.py", "pytest_outcome_reader.py"),  # TQ-500g-4
     # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
     # done_proof_kind_support.py loads to read each test's real exception
@@ -485,6 +485,16 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         "skill_registry.json",
         "guardrail_gates.yaml",
         "paths.json", "surface_craft_map.yaml", "commit_step.json",
+        # BP-900b-5: read by the deployed commit_classifier.py and
+        # commit_pattern_learner.py (commit.md Step 2a), and by agent prompts
+        # (onboard.md and test-writer.md read the defaults; test-writer.md
+        # validates ## Test Requirements against the schema). None shipped.
+        # build.py's two Set-B tuples declare commit_message_patterns.json,
+        # which the closure guard resolves from both deployed scripts. The two
+        # skills_config/test_requirements files are read by prompts only, so
+        # no deployed script's closure demands them there.
+        "commit_message_patterns.json", "skills_config.default.json",
+        "test_requirements.schema.json",
     ):
         core_config_src = _bp.PACKAGE_ROOT / "config" / core_config_name
         if not core_config_src.is_file():

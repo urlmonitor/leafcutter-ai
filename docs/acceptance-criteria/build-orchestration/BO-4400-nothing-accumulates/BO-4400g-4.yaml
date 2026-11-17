@@ -1,0 +1,592 @@
+id: BO-4400g-4
+title: "Every flow that makes a workspace clears it by naming its work once its pull request has merged, and leaves anything kept to the landed-work pass"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given each of these flows is run against a real test project with a real shared project,
+    each in a workspace obtained from the one workspace maker, and each driven to the point
+    where its pull request has been merged into the main line before the flow returns (for
+    ship, its work merged directly into the main line):
+    - requirements authoring, for the work "ac/clear-merged-workspaces",
+    - the fast lane, for the work "fastlane/tq-200d-3",
+    - the feature build followed by finalizing it, for the work "feature/alpha",
+    - the quick fix, for the work "ticket/fix-null-slug",
+    - ship, for the work "feature/beta",
+  When each flow returns its final result,
+  Then no folder remains at the location its workspace occupied,
+  And the flow's final result contains the clearing door's own answer for that workspace,
+    reporting it cleared,
+  And the clearing request the flow sent named its work by the same name it used to obtain
+    the workspace, and gave no location,
+  And the clearing request was made after the work was merged into the main line,
+  And no flow other than finalizing dispatched an agent whose registered abilities include
+    removing a workspace or deleting a branch: each of their clearing requests was the one
+    clearing command, run exactly as given,
+  And finalizing's only such dispatch was its step-7 workspace removal, carrying beside its
+    clearing request the authorization that names exactly its own workspace and line of work.
+
+  Given the fast lane for the work "fastlane/tq-200d-4" is driven to the point where its
+    pull request is open and not yet merged into the main line when the flow returns,
+  When the flow returns its final result,
+  Then the workspace of "fastlane/tq-200d-4" still exists, identical to its state when its
+    pull request was opened,
+  And the flow's final result reports that workspace as kept because its work is not yet
+    on the main line.
+
+  Given that pull request is afterwards merged into the main line by hand and the workspace
+    holds nothing unsent,
+  When the landed-work pass is next run,
+  Then the workspace of "fastlane/tq-200d-4" is cleared,
+  And no step of the fast lane, or of any other flow, was run between the flow's return and
+    that clearing.
+depends_on: [BO-4400g, BO-4400g-1, BO-4400g-2, BO-4300f-1, BO-4300g-1, BO-4300g-2, BO-4300g-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Route-end clearing for six routes, amended 2026-11-16 to the same merged timing (user decision
+      D2). This record adds ship and finalize, requires the request to name the work, and hands kept
+      workspaces to the landed-work pass.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      A run with nothing to deliver clears its own workspace at once; the idle threshold is the landed-work
+      pass's alone (user decision Q2, 2026-11-16). Stated and proved there, not restated here.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300f-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: Every route already gets its workspace from the one maker; this is the clearing end.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/finalize-feature.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300g-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: A dispatch to a removal-capable agent carries removal_authorization naming one exact workspace and branch; built on, not restated.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300g-2.yaml
+    relationship: constrains
+    status: exists
+    relevance: Says plan-feature makes no removal-capable dispatch at all and finalize makes exactly one (step 7); amended 2026-11-16 (user decision D1) so a flow's own name-based clearing command sent to shell-runner is the one permitted exception.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300g-3.yaml
+    relationship: constrains
+    status: exists
+    relevance: Finalize step 7 gets its workspace from a fresh maker locate and carries the authorization; this record changes only its door request to the name form.
+  - path: docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md
+    relationship: constrains
+    status: exists
+    relevance: Every workflow step that gives an agent a command line goes to shell-runner as one plain command, with the section 5 reply check.
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: constrains
+    status: exists
+    relevance: Workflow bodies cannot run a process; each maker command is one agent dispatch.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declared_files:
+  - path: templates/workflows-js/_shared/workspace-answer.js
+    state: existing
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+  - path: templates/workflows-js/fast-lane-ship.js
+    state: existing
+  - path: templates/workflows-js/build-feature.js
+    state: existing
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+  - path: templates/workflows-js/quick-fix.js
+    state: existing
+  - path: templates/workflows-js/build-ticket.js
+    state: existing
+  - path: templates/workflows-js/build-epic.js
+    state: existing
+  - path: unit_tests/_workflow_engine_harness.py
+    state: existing
+it_requirements:
+  - >-
+    HARNESS EXEC BRIDGE, OWNED HERE (test-designer finding, 2026-11-16): unit_tests/_workflow_engine_harness.py
+    only replays static label_responses. It has no shell-runner stand-in that runs the real maker. This record
+    adds one, additively. A dispatch whose command is a maker command, recognised by the shared clearing-command
+    parser that BO-4300g-2-i owns, is executed against the real deployed maker, and its stdout becomes the
+    reply; every other dispatch keeps the static label_responses. The harness is extended, never forked.
+    BUILD ORDER: BO-4300g-2-i's parser first, then this bridge, then BO-4400g-4-i (which adds the recorder and
+    refusal mode on top of it). The flow proofs of BO-4400a-1, -1-i, -1-ii, -2, -2-i and -3-i run on this same
+    bridge, so they are built after it or in the same build.
+  - >-
+    FINALIZE'S SCRATCH COPY, DECIDED: finalize's cleanup-baseline-worktree step (around line 501 of
+    finalize-feature.js) removes the scratch workspace it obtained from the maker (kind scratch, with a slug)
+    with remove --path, through workspaceRemoveCommand, which also appends --force. Keeping it out of scope with
+    --path would contradict BO-4300g-2-i's approved check, which fails any clearing command that does not name
+    the run's own work. So it moves to the name form, remove --kind scratch --slug <the slug the run's own
+    workspace step used>, built by the same shared helper. --force is dropped: the maker accepts it and
+    ignores it (a loss needs a discard token), so dropping it changes no behaviour. workspaceRemoveCommand(path)
+    then has no caller left and is removed in the same change, after a search for other callers, so no
+    workflow can send --path. The step stays best-effort, and its answer stays in scratch_clearing.
+  - >-
+    FLOW SURFACES: requirements authoring (templates/workflows-js/plan-feature.js), the fast lane
+    (fast-lane-ship.js, which /fast-lane-build drives), the feature build (build-feature.js, with the
+    single-ticket and epic workflows it delegates to, build-ticket.js and build-epic.js) and its finalize
+    (finalize-feature.js), and the quick fix (quick-fix.js, the primary driver of /quick-fix). Ship
+    is only prose (templates/skills/ship/SKILL.md, which today clears with remove --path). It is owned by
+    llm-expert and is companion work, not this agent's surface. The companion change: ship sends remove
+    --kind feature --slug <name> (the identity its step 1 already locates by) through the absolute deployed
+    maker path, relays the door's answer unchanged, and keeps no other removal instruction. It is its own
+    llm-expert record, BO-4400g-4-ii (user decision D4, 2026-11-16), an L3 under this record because
+    BO-4400g is at its five-child cap.
+  - >-
+    ONE REQUEST BUILDER: every flow builds its clearing request through the one shared helper in
+    templates/workflows-js/_shared/workspace-answer.js. The helper gains a name-based form that replaces
+    workspaceRemoveCommand(path) (see FINALIZE'S SCRATCH COPY) and takes the same work identity (kind and short name, or line-of-work
+    name) the flow used to obtain the workspace. No flow composes a remove command of its own, passes --path,
+    or takes the work's location from an earlier answer, the target argument or agent prose.
+  - >-
+    THE COMMAND (settles the planner note under TIMING): every flow except finalize sends the per-work mode of
+    BO-4400g-2, <maker> clear-landed --kind K --slug S (or --branch B), to shell-runner as its one clearing
+    command. That mode applies the landed rule with no idle threshold: merged work is cleared through the
+    door, a workspace with no commit of its own and nothing unsent is cleared at once (BO-4400a-1-i), and
+    pushed but unmerged work is kept as not_on_main. Its one-work answer carries the door's own remove answer
+    when it clears. Finalize step 7 runs after finalize's own merge step, so its clearing request is the door's
+    remove by name (remove --kind K --slug S), carried in the worktree-agent request beside BO-4300g-3's
+    removal_authorization. worktree-agent's remove action (BO-4300g-1, todo, llm-expert) issues remove by that
+    name; that is a note for BO-4300g-1's builder, and its criteria do not change.
+  - >-
+    AUTHORIZATION, BUILT ON BO-4300g AND NOT RESTATED: a flow reaches the door only through a dispatch path
+    that BO-4300g allows. Any dispatch to a removal-capable agent carries removal_authorization exactly as
+    BO-4300g-1 defines it, built only from a definite ok answer of a maker locate by the same name (the
+    BO-4300g-3 pattern), and it passes the BO-4300g-2-i repo-wide check. Finalize step 7 keeps BO-4300g-3's
+    locate and authorization unchanged; only the door request it leads to takes the name form.
+  - >-
+    WHO CLEARS, DECIDED (user decision D1, 2026-11-16, option B of the former open question): an end-of-run
+    clear in every flow except finalize sends the exact name-based clearing command to shell-runner, never to
+    worktree-agent or any removal-capable agent. That one command, naming the flow's own work and no location,
+    is itself the caller's authorization for exactly that one workspace; BO-4300g, BO-4300g-2 and BO-4300g-2-i
+    are amended to state this exception. Finalize step 7 keeps BO-4300g-3 unchanged (see AUTHORIZATION above).
+  - >-
+    TIMING, DECIDED (user decision D2, 2026-11-16): a flow clears only after its pull request has merged, by
+    the landed rule of BO-4400g-2 applied to its one workspace, never a second rule. A flow that ends before
+    its pull request is merged clears nothing: its workspace is kept with reason not_on_main and left as it is
+    for the landed-work pass, and the flow's final result carries the answer that says it was kept and why.
+    BO-4400a-1 is amended to the same timing. The one exception (user decision Q2, 2026-11-16): the rule's
+    idle thresholds (7 days, and 14 days for pushed but unmerged work, BO-4400g-2-v) guard only the
+    unattended pass, so a flow that ends with no commit of its own and nothing unsent clears its own
+    workspace at once (BO-4400a-1-i). The door's plain remove counts a pushed line as sent, so the command a
+    flow sends applies the landed rule without its idle thresholds: the per-work clear-landed of THE COMMAND
+    above (decided by the technical planner, 2026-11-16).
+  - >-
+    ONE CLEARING STEP PER FLOW, SHARED WITH BO-4400a-1: BO-4400a-1 (approved, todo) adds the route-end
+    clearing step to requirements authoring, the fast lane, the quick fix and the builds. This record must not
+    add a second clearing step beside it. Whichever record is built first adds the single step through the
+    shared helper, and the other only changes the request it sends. Build both in one build, after the timing
+    decision.
+  - >-
+    RELAY: the door's answer is relayed verbatim in the flow's final result, one object per BO-4300c-2. A
+    refusal is reported as kept, never as success, and is never worked around (BO-4400g-4-i). The no-workspace
+    answer of BO-4400g-1-i is reported as already gone, not as a failure. The bounded wait and the
+    clearing-not-confirmed outcome of BO-4400a-1 are reused, not redefined.
+  - >-
+    E2 AND ADR-070: workflow bodies cannot run processes (ADR-030). Every maker command is one plain command
+    line with absolute paths, sent through shell-runner (ADR-070 section 2), and each reply passes the section
+    5 reply check. Edit templates/workflows-js/ only; the deployed copies come from the build (ADR-001).
+  - >-
+    EXISTING TESTS that pin the old dispatch sequence or the --path request are updated in the same change,
+    never skipped or marked expected-failure: the finalize step-7 drivers of BO-4300g-3 and INF-700a-5-i, and
+    the plan-feature dispatch-order test in unit_tests/test_workflow_dual_engine.py.
+  - >-
+    PROOF RUNS THE DEPLOYED WORKFLOWS under unit_tests/_workflow_engine_harness.py, with label-scripted agent
+    replies. The shell-runner stand-in executes the real deployed maker against real temporary repositories
+    and a real bare hub, and the pull-request merge is a recording stand-in with no network. The proof
+    asserts on the recorded dispatches, the final result and the disk afterwards. It never greps workflow
+    source, never spawns build.py (the shared reference layout), and isolates HOME and git config.
+test_required: true
+test_intent:
+  - clause: no folder remains at the location its workspace occupied
+    needs_test: true
+    reason: A flow that never reaches its clearing step leaves the folder, and the pile-up this family exists for comes back.
+  - clause: 'the flow''s final result contains the clearing door''s own answer for that workspace, reporting it cleared'
+    needs_test: true
+    reason: A flow that removes the folder by its own means leaves no door answer, which is how a second deletion route is caught.
+  - clause: the clearing request the flow sent named its work by the same name it used to obtain the workspace, and gave no location
+    needs_test: true
+    reason: A request rebuilt from a parsed location reintroduces the look-up-parse-resend chain this record removes.
+  - clause: the clearing request was made after the work was merged into the main line
+    needs_test: true
+    reason: A clear placed before the merge would treat a pushed line as sent, and only the recorded order against the hub's merge shows it.
+  - clause: 'no flow other than finalizing dispatched an agent whose registered abilities include removing a workspace or deleting a branch: each of their clearing requests was the one clearing command, run exactly as given'
+    needs_test: true
+    reason: A flow that routes its clear to worktree-agent, or hands shell-runner a changed command, breaks the user's decision D1 and the BO-4300g bound.
+  - clause: 'finalizing''s only such dispatch was its step-7 workspace removal, carrying beside its clearing request the authorization that names exactly its own workspace and line of work'
+    needs_test: false
+    reason: BO-4300g-2 counts finalize's removal-capable dispatches and BO-4300g-3 proves the step-7 authorization, so a test here would repeat theirs.
+  - clause: the workspace of "fastlane/tq-200d-4" still exists, identical to its state when its pull request was opened
+    needs_test: true
+    reason: A flow that clears on a pushed but unmerged line would remove it, which is the timing the user decided against.
+  - clause: 'the flow''s final result reports that workspace as kept because its work is not yet on the main line'
+    needs_test: true
+    reason: The kept reason must come from the real one-work answer, or the person cannot tell kept from failed.
+  - clause: the workspace of "fastlane/tq-200d-4" is cleared
+    needs_test: true
+    reason: A workspace a flow kept must still be reachable by the landed-work pass, or it is never cleared.
+  - clause: 'no step of the fast lane, or of any other flow, was run between the flow''s return and that clearing'
+    needs_test: true
+    reason: The clear must come from the pass alone, not from a flow that has to be run again.
+test_spec:
+  - name: test_each_merged_flow_leaves_no_folder_at_its_workspace_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The deployed plan-feature, fast-lane-ship, build-feature plus finalize-feature, and quick-fix workflows are run
+      under unit_tests/_workflow_engine_harness.py run_workflow_under_e2 (a node subprocess), each with label-scripted
+      agent replies, a workspace made by the real deployed maker's ensure on a real project and bare hub, and its pull
+      request merged on the hub before the flow returns. PREREQUISITE the build must add: the harness today replays
+      static JSON label_responses (_build_shim serialises them into the node shim, which holds no process access), so a
+      shell-runner stand-in that really runs the dispatched maker command needs an additive exec bridge in the
+      harness (a label marked to execute its dispatched command host-side and return stdout). With it, after the
+      flow returns, os.path.lexists is false for the workspace location of each flow. Red today: no flow but
+      finalize clears (plan-feature.js, fast-lane-ship.js, build-feature.js and quick-fix.js carry no clearing dispatch).
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_final_result_contains_the_doors_own_clearing_answer
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result (the script's returned value) of each flow contains the maker's one-work answer verbatim,
+      including the door's remove answer with removed_path equal to the location the flow's ensure answered. A flow
+      that deletes by its own means or reports success without the answer leaves it out.
+    proves_clause: 'the flow''s final result contains the clearing door''s own answer for that workspace, reporting it cleared'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_clearing_request_names_the_work_the_workspace_was_obtained_by_and_no_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      From HarnessResult.agent_calls, take the dispatch whose command runs a maker clearing verb and compare its
+      flags with the ensure dispatch's: same kind and short name (or same line of work), no --path, no location
+      string of the workspace anywhere in the command. Today the shared helper builds only workspaceRemoveCommand(path)
+      through makerCommand, whose flags know kind, slug, ticket, path and force and no branch or clear-landed verb.
+    proves_clause: the clearing request the flow sent named its work by the same name it used to obtain the workspace, and gave no location
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_clearing_request_is_dispatched_after_the_merge_reached_the_hub_main_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The live stand-in records, at the moment it executes the clearing command, whether the hub's main contains
+      every commit the flow made (git merge-base --is-ancestor on the real bare hub), and the dispatch order puts
+      the merge before the clear. A variant that places the clear before the merge keeps the workspace as not_on_main
+      (the landed rule), so the folder remains and the test fails.
+    proves_clause: the clearing request was made after the work was merged into the main line
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_only_finalize_dispatches_a_removal_capable_agent_and_each_clear_is_the_one_command
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      For every flow except finalize, no recorded dispatch goes to an agent whose config/agent_registry.json entry
+      declares removal_capable true (the set is read from the registry at test time, as BO-4300g-2 does, not a list
+      kept here), and each clearing dispatch goes to shell-runner with a prompt equal to the one exact command,
+      unchanged (no extra words, one plain command, absolute path). Existing code to leave alone: finalize's
+      cleanup-baseline-worktree already sends remove --path through shellStepDispatch.
+    proves_clause: 'no flow other than finalizing dispatched an agent whose registered abilities include removing a workspace or deleting a branch: each of their clearing requests was the one clearing command, run exactly as given'
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_flow_ending_with_an_open_pull_request_keeps_its_workspace_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The fast lane for fastlane/tq-200d-4 is driven to a pull request that stays open (commits pushed to its own
+      line on the real hub, nothing merged). The workspace is byte-identical (files with .git, refs) to its snapshot
+      taken when the pull request was opened. The clearing command still ran (per-work clear-landed with no idle
+      threshold) and kept it.
+    proves_clause: the workspace of "fastlane/tq-200d-4" still exists, identical to its state when its pull request was opened
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_open_pull_request_result_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      HarnessResult.result carries the maker's real one-work answer with kept reason not_on_main, relayed verbatim,
+      and not reported as a failure or as removed.
+    proves_clause: 'the flow''s final result reports that workspace as kept because its work is not yet on the main line'
+    code_file: templates/workflows-js/_shared/workspace-answer.js
+  - name: test_landed_work_pass_clears_the_kept_fastlane_workspace_after_a_hand_merge
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      After the flow returned, the pull request is merged on the hub by hand (a real merge pushed from a scratch
+      clone), then python <deployed worktree.py> clear-landed --repo-root <project> runs as a subprocess. The
+      fastlane/tq-200d-4 folder is gone and the answer lists it in cleared. Depends on BO-4400g-2 being built.
+    proves_clause: the workspace of "fastlane/tq-200d-4" is cleared
+    code_file: templates/scripts/worktree.py
+  - name: test_nothing_ran_between_the_flow_return_and_the_pass_clearing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The harness recorded exactly the dispatches of the one flow run and none after it returned (the test makes
+      no second run_workflow_under_e2 call before the pass), and the stand-in log shows the only clearing command
+      after the return is the pass's own. A sibling flow's step is never invoked.
+    proves_clause: 'no step of the fast lane, or of any other flow, was run between the flow''s return and that clearing'
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_plan_feature_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed plan-feature.js (requirements authoring for ac/clear-merged-workspaces),
+      driven to its end: a clearing dispatch is recorded and the disk shows the effect.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/plan-feature.js
+  - name: test_fast_lane_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed fast-lane-ship.js for fastlane/tq-200d-3 driven to a merged pull request:
+      the clearing dispatch is recorded and the folder is gone.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/fast-lane-ship.js
+  - name: test_feature_build_and_finalize_reach_their_clearing_in_the_deployed_flows
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      build-feature.js for feature/alpha is driven to its pull request and then finalize-feature.js through step 7:
+      build-feature sends its per-work clearing command (kept as not_on_main until the merge), and finalize's
+      step-7-remove-worktree is the one dispatch to the removal-capable agent, carrying the name-based clearing
+      request beside BO-4300g-3's removal_authorization.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/build-feature.js
+  - name: test_quick_fix_reaches_its_clearing_step_in_the_deployed_flow
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: >-
+      run_workflow_under_e2 on the deployed quick-fix.js for ticket/fix-null-slug driven to a merged pull request:
+      the clearing dispatch is recorded and the folder is gone.
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/quick-fix.js
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/quick-fix.js
+  - templates/scripts/worktree.py
+  - unit_tests/_workflow_engine_harness.py
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Every flow's clearing request is built by the one shared helper in
+      templates/workflows-js/_shared/workspace-answer.js from the flow's own work identity (kind and short
+      name, or line-of-work name; never --path), and the door's answer is placed verbatim in the flow's final
+      result (one BO-4300c-2 object): ok means cleared, a refusal means kept, and the BO-4400g-1-i
+      no-workspace answer means already gone. Consumed by BO-4400g-4-i.
+expects_from:
+  - ac_id: BO-4400g-2
+    contract: >-
+      The per-work command clear-landed --kind K --slug S (or --branch B), applying the landed rule with no idle
+      threshold to one work, answering in the clear-landed shape: cleared (carrying the door's own remove
+      answer), kept with reason not_on_main or holds_unsent_work, or already_gone.
+  - ac_id: BO-4400g-1
+    contract: >-
+      remove by work name (--kind/--slug or --branch) through the door, with ok, refusal and no-workspace
+      answers per BO-4400g-1 and BO-4400g-1-i; finalize step 7 uses this form.
+  - ac_id: BO-4300g-1
+    contract: >-
+      removal_authorization = {workspace_path: string (absolute), branch: string} in the dispatching
+      workflow's own request to a removal-capable agent; workflow dispatches fill both fields (BO-4300g-2-i).
+  - ac_id: BO-4300g-3
+    contract: >-
+      Finalize step 7 dispatch (label step-7-remove-worktree) carrying removal_authorization built from a fresh
+      maker locate by the run's kind and slug.
+file_findings:
+  - file: templates/workflows-js/_shared/workspace-answer.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its makerCommand (lines 215-221) knows only --kind, --slug, --ticket, --path and --force and workspaceRemoveCommand (lines 253-256) builds remove --path, so it is the one shared helper that gains the name-based clearing form.
+    decision: null
+  - file: templates/workflows-js/plan-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains a workspace through the shared helper and holds no clearing dispatch today, so it is the flow surface where the end-of-run clearing step is added.
+    decision: null
+  - file: templates/workflows-js/fast-lane-ship.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the full-arc fast lane that opens a pull request and carries no clearing dispatch today, so the one clearing step is added here.
+    decision: null
+  - file: templates/workflows-js/build-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It creates the workspace and routes to the build flows and holds no clearing dispatch today, so it is a surface of the one clearing step, though build-ticket.js and build-epic.js are the flows BO-4400a-1 names for the same step.
+    decision: null
+  - file: templates/workflows-js/finalize-feature.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its step-7-remove-worktree dispatch to worktree-agent (line 1771) is the one removal-capable dispatch whose door request takes the name form, and its cleanup-baseline-worktree step (line 501) already sends remove --path through the shared helper.
+    decision: null
+  - file: templates/workflows-js/quick-fix.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It is the quick fix driver and carries no clearing dispatch today, so the clearing step is added here.
+    decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains its workspace with workspaceEnsure (kind ticket, line 1372) and carries no clearing dispatch, so the single-ticket route's one clearing step takes its work name from that same call.
+    decision: null
+  - file: templates/workflows-js/build-epic.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains the epic workspace with workspaceEnsure (kind epic, line 303) and carries no clearing dispatch, so the epic's one clearing step at the run's end is added here.
+    decision: null
+  - file: unit_tests/_workflow_engine_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its run_workflow_under_e2 replays static label_responses through a node shim with no process access and has no clearing-command parser, so the additive exec bridge and the shared parser the flow proofs need go here.
+    decision: null
+file_findings_opened_files:
+  - templates/workflows-js/_shared/workspace-answer.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/fast-lane-ship.js
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/finalize-feature.js
+  - templates/workflows-js/quick-fix.js
+  - templates/workflows-js/build-ticket.js
+  - templates/workflows-js/build-epic.js
+  - unit_tests/_workflow_engine_harness.py
+origin_agent: business-analyst
+created: 2026-10-25
+amended_by:
+  - reason: >-
+      it-po technical enrichment 2026-11-16: depends_on gains BO-4300g-1, BO-4300g-2 and BO-4300g-3, so the
+      flows' clearing builds on the caller-authorization family (asked by the orchestrator). Criteria unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      User decisions D1, D2 and D4 at the IT PO gate, 2026-11-16. Title gains "once its pull request has
+      merged". Scenario 1 gains two clauses: the clearing request is made after the merge (D2), and no flow
+      except finalizing dispatches a removal-capable agent, each clear being the one clearing command run as
+      given (D1). The former scenario 2 is split: a new scenario pins that a flow ending with its pull request
+      still open keeps the workspace and reports it not yet on the main line (D2), and the landed-work pass
+      scenario is kept word for word. It_requirements: the D1 open question and the open TIMING note are
+      replaced by the decisions, and the ship companion note now names BO-4400g-4-ii (D4). covered_by gains
+      BO-4400g-4-ii.
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      User answers Q1 and Q2 at the BO-4400g plan-feature gate, 2026-11-16. Q1 (finalize step 7 stays as
+      BO-4300g-3 defines it): scenario 1's removal-capable clause is scoped to the flows other than
+      finalizing, and one And-clause states that finalizing's only such dispatch is its step-7 removal,
+      whose authorization sits beside its clearing request. Q2 (a flow with nothing to deliver clears its own
+      workspace at once; the idle threshold is the pass's alone): one sentence added to the TIMING
+      it_requirement and its planner note, a doc_link to BO-4400a-1-i, and notes. No scenario added: BO-4400a-1-i
+      already makes Q2 testable. The new And-clause has no test_intent entry yet (IT PO).
+    by: business-analyst
+    at: "2026-11-16"
+  - reason: >-
+      it-po second pass, 2026-11-16, technical fields only. A THE COMMAND requirement settles the planner note:
+      flows send BO-4400g-2's per-work clear-landed to shell-runner, and finalize step 7 sends remove by name
+      beside BO-4300g-3's authorization. expects_from gains BO-4400g-2. test_intent gains the five new clauses
+      (finalize's step-7 clause is needs_test false, being proved by BO-4300g-2 and BO-4300g-3). Criteria
+      unchanged.
+    by: it-po
+    at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17, after the test design. declared_files gains build-ticket.js, build-epic.js and
+      unit_tests/_workflow_engine_harness.py. HARNESS EXEC BRIDGE: owned here, with its build order (BO-4300g-2-i's
+      parser, then this bridge, then BO-4400g-4-i and the BO-4400a flow proofs). FINALIZE'S SCRATCH COPY: moved to
+      the name form rather than kept out of scope, because BO-4300g-2-i's check would fail a --path clearing
+      command; --force dropped (the maker ignores it), and workspaceRemoveCommand(path) removed once it has no
+      caller. FLOW SURFACES names the delegated workflows. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+superseded_by: null
+covered_by: [BO-4400g-4-i, BO-4400g-4-ii]
+implemented_by: []
+notes: |
+  User request item (3). The five flows are the user's list. BO-4400a-1 covers the
+  single-ticket build, epic build, quick fix, requirements authoring, fast lane and backlog
+  build with the same merged timing (amended 2026-11-16); this record adds ship and finalize,
+  and makes the request carry the work's name.
+
+  TIMING, RESOLVED (user decision D2, 2026-11-16): a flow clears its workspace after its pull
+  request has merged, using the landed rule of BO-4400g-2 for its one workspace, so unmerged or
+  unsent work is kept with a reason and never removed. A flow that ends before its pull
+  request is merged clears nothing and leaves the workspace to the landed-work pass. Scenario 1
+  covers merged -> cleared; scenario 2 covers PR open at flow end -> kept; scenario 3 covers
+  the landed-work pass clearing it afterwards. BO-4400a-1's PR-open clause is amended to match.
+
+  NOTHING TO DELIVER (user decision Q2, 2026-11-16): a flow that ends with no commit of its
+  own and nothing unsent clears its own workspace at once; the seven-day idle threshold of
+  BO-4400g-2, like the fourteen-day one for pushed but unmerged work (BO-4400g-2-v, user
+  decision 2026-11-16), applies only to the unattended pass. BO-4400a-1-i states and proves this for the
+  fast lane, the epic build and requirements authoring, so no scenario is added here; the
+  TIMING it_requirement carries the one-line rule.
+
+  WHO CLEARS, RESOLVED (user decision D1, 2026-11-16): every flow's own end-of-run clearing
+  request is the exact name-based clearing command, sent through shell-runner (ADR-070), not
+  through worktree-agent; that command is itself the caller's authorization for exactly that
+  one workspace. Finalize is outside this decision: its step-7 removal stays exactly as
+  BO-4300g-3 defines it (worktree-agent with removal_authorization), keeping BO-4300g-2's
+  "exactly one dispatch goes to a removal-capable agent -- the step-7 workspace removal".
+  Confirmed by the user (Q1, 2026-11-16); scenario 1's last clause now says so.
+
+  SHIP (user decision D4, 2026-11-16): ship's prose change is its own llm-expert record,
+  BO-4400g-4-ii.
+
+  OUT OF SCOPE: whether a workflow agent is authorized to perform finalize's removal, and how
+  finalize step 7 names that authorization, is owned by the BO-4300g family (BO-4300g-3 for
+  step 7). This record only requires that the request names the work and goes through the
+  door.

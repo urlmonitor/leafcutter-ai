@@ -33,6 +33,8 @@ STAGE_TRUNCATED = "truncated"
 STAGE_INCONSISTENT_EXIT = "exit_status_without_failures"
 STAGE_NOTHING_PASSED = "nothing_passed"
 STAGE_MOSTLY_SKIPPED = "mostly_skipped"
+STAGE_LIVE_STARTUP = "live_database_startup"  # TQ-600a-13-xxii: the live lane's database never became reachable
+STAGE_LIVE_UNREACHABLE = "live_database_unreachable"  # TQ-600a-13-xxiii: a live test skipped for want of a database
 
 ABORTED_EXIT_STATUSES = frozenset({2, 3, 4})
 FAILED_STATES = frozenset({"failed", "error"})
