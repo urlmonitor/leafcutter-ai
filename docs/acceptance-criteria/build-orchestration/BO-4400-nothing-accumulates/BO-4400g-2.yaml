@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -200,6 +200,12 @@ it_requirements:
     unsent-work check run again at the moment of each clear (BO-4400g-2-iii), and concurrent passes are safe
     through the maker's existing per-work mutual exclusion, with no second lock scheme (BO-4400g-2-iv).
   - >-
+    ONE TEST SEAM: the pass has exactly one documented seam between its assessment and its clearing step, for
+    example an environment-provided barrier file that the pass waits on only when that variable is set. It is
+    inert otherwise and bounded in time. BO-4400g-2-iii and the sweep's race record BO-4400d-1-i (the sweep
+    runs this pass) both use it, so the write between assessment and clear is made the same deterministic way,
+    never by a sleep race. Its name and behaviour are documented in worktree-manager.md beside the verb.
+  - >-
     HALF-CLEARED AND RECORD-LESS LEFTOVERS (BO-4300e-2-ix..xii) in this project's landing place are not
     judged by the landed rule (user decision 2026-11-16, ONE RULE owned by the door): the pass hands each to
     the clearing door, which clears it only under the door's own rule for a record-less leftover matching its
@@ -220,6 +226,8 @@ it_requirements:
     fast-forward, merge-commit and squash merges made on the hub and a second project in the same parent
     folder. No git mock, no import of a maker module for the asserted behaviour, no build.py spawn (the shared
     reference layout), and isolated HOME and git config. Ages are set through file modification times.
+    Fixture note: make_project in _workspace_maker_fixtures.py fixes the directory names (project, hub.git)
+    under its tmp folder, so the second project ("blog") is built under its own tmp root beside the first.
 test_required: true
 test_intent:
   - clause: '"ff-1", "mc-1", "sq-1" and "idle-1" are cleared, each through the same clearing door a single clearing request uses, and no folder of them remains'
@@ -406,7 +414,10 @@ file_findings:
     line_range: 146-175
     found_in: null
     reason: Its verb table and module table (lines 146-175) describe the maker's verbs and modules and gain the clear-landed row and the worktree_landed.py row.
-    decision: null
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside the new verb and module (one row in each table), so no other agent owns the work.
+      by: it-po
 file_findings_opened_files:
   - templates/scripts/worktree.py
   - templates/scripts/worktree_remove.py
@@ -461,6 +472,13 @@ amended_by:
       the llm-expert contract for ship. expects_from drops BO-4100c-1 (decision D3). Criteria unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17, after the test design: a ONE TEST SEAM requirement (one documented seam
+      between assessment and clear, shared with BO-4400d-1-i), and a fixture note in PROOF (make_project fixes
+      directory names, so the second project needs its own tmp root). The worktree-manager.md finding is decided
+      as assignment stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400g-2-i, BO-4400g-2-ii, BO-4400g-2-iii, BO-4400g-2-iv, BO-4400g-2-v]
 implemented_by: []

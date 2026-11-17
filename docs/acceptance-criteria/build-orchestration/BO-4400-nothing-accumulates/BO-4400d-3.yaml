@@ -50,7 +50,16 @@ expects_from:
   ac_id: BO-4400d-2
   contract: "Sweep entry point and its report."
 package_surface: false
+declared_files:
+  - path: templates/hooks/sweep_on_session_start.py
+    state: to_be_created
+  - path: templates/settings.json
+    state: existing
 it_requirements:
+  - >-
+    NAMES, DECIDED 2026-11-17: the hook script is templates/hooks/sweep_on_session_start.py, beside the existing
+    hooks there. It starts the sweep entry point decided in BO-4400d-1 (the deployed
+    scripts/worktree_sweep.py), never the maker's verbs directly.
   - >-
     SURFACE: a new Claude Code SessionStart hook script under templates/hooks/, registered in the
     SessionStart section of templates/settings.json (none exists today), both reaching the install
@@ -84,14 +93,38 @@ it_requirements:
     landed workspace (its commits merged on a real bare hub), the durable log line, the second-start not-due output, and exactly one
     sweep for two concurrent starts (two processes released by a barrier). No build.py spawn.
 test_required: true
+test_intent:
+  - clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
+    needs_test: true
+    reason: A hook that is registered but never starts the sweep reclaims nothing, which only the deployed hook run shows.
+  - clause: the session is ready for input before the sweep finishes
+    needs_test: true
+    reason: A sweep run in the foreground holds up every session start, which the hook's return time shows.
+  - clause: 'the sweep''s report is written to a durable log location and its one-line summary (items cleared, bytes freed) is shown in the session'
+    needs_test: true
+    reason: A report kept only in the workspace or the temp folder is lost, and the durable file can be read back.
+  - clause: when a second session starts 10 minutes later, no second sweep is started and the session states when the next sweep is due
+    needs_test: true
+    reason: Without the interval check, a burst of sessions sweeps repeatedly, which a second start shows.
+  - clause: when two sessions start at the same moment, exactly one sweep runs
+    needs_test: true
+    reason: A check-then-write interval file races, and two hook processes released together expose it.
 test_spec:
   - name: test_session_start_launches_a_real_sweep_when_due
+    proves_clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: reachability
     description: "With no sweep in the last 24 hours, the deployed hook starts a sweep and the landed workspace is gone once it finishes."
   - name: test_session_start_returns_before_sweep_finishes
+    proves_clause: the session is ready for input before the sweep finishes
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -100,18 +133,30 @@ test_spec:
     must_catch:
       - "hook runs the sweep in the foreground"
   - name: test_sweep_report_written_to_durable_log_and_summary_surfaced
+    proves_clause: 'the sweep''s report is written to a durable log location and its one-line summary (items cleared, bytes freed) is shown in the session'
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: seam
     description: "The durable log holds the report and the one-line summary (items cleared, bytes freed) is emitted to the session."
   - name: test_second_start_within_interval_runs_no_sweep_and_states_next_due
+    proves_clause: when a second session starts 10 minutes later, no second sweep is started and the session states when the next sweep is due
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "A start 10 minutes later spawns no sweep and prints when the next sweep is due."
   - name: test_two_simultaneous_starts_run_exactly_one_sweep
+    proves_clause: when two sessions start at the same moment, exactly one sweep runs
+    code_file: templates/hooks/sweep_on_session_start.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -120,6 +165,7 @@ test_spec:
     must_catch:
       - "check-then-write interval file without an atomic lock"
   - name: test_started_sweep_clears_a_landed_workspace_not_a_pushed_unmerged_one
+    proves_clause: a real sweep is started without anyone asking for it, and the workspace is gone once it finishes
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -137,6 +183,7 @@ test_design_authorship:
   date: "2026-11-16"
 test_design_opened_files:
   - templates/settings.json
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 test_rationale: >-
   A session hook is only proven by running the deployed hook the way Claude Code runs it; timing,
   concurrency and the background hand-off cannot be observed from source.
@@ -151,6 +198,12 @@ amended_by:
       workspace.
     by: business-analyst
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (the new hook script templates/hooks/sweep_on_session_start.py
+      and templates/settings.json, which gains the SessionStart section), plus a NAMES requirement: the hook starts
+      the sweep entry point of BO-4400d-1. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

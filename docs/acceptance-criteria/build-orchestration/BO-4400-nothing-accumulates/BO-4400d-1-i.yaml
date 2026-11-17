@@ -41,6 +41,9 @@ expects_from:
   ac_id: BO-4400d-1
   contract: "Sweep selection."
 package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_sweep.py
+    state: to_be_created
 it_requirements:
   - >-
     The listing is a candidate set only: for each candidate the in-use check and the door's
@@ -50,12 +53,27 @@ it_requirements:
     The sweep continues to the remaining items after keeping one.
   - >-
     PROOF: deterministic, not timing-based -- the test pauses the deployed sweep between listing and
-    removal through a documented test hook (e.g. an environment-provided barrier file the sweep
-    waits on only when set), writes the file and starts a real process holding the in-use signal,
-    then releases it.
+    removal through the ONE TEST SEAM of BO-4400g-2. That seam sits inside the landed-work pass the sweep's
+    workspace part runs, and BO-4400g-2-iii uses the same one, so the sweep adds no seam of its own. The test
+    writes the file and starts a real process whose working folder is inside the workspace (the door's
+    program check), then releases the seam.
 test_required: true
+test_intent:
+  - clause: '"idle-1" is not removed and the new file is byte-identical to what was written'
+    needs_test: true
+    reason: A sweep that trusts its listing instead of the door's checks at removal time would delete the new file.
+  - clause: 'the sweep''s result reports "idle-1" as kept, with the reason that it was found holding work or in use when its turn came'
+    needs_test: true
+    reason: The door's refusal must reach the sweep's result with its reason, not be swallowed or reported as a failure.
+  - clause: the sweep continues with the remaining items
+    needs_test: true
+    reason: A refusal that aborts the sweep would leave every later item in place.
 test_spec:
   - name: test_workspace_gaining_work_after_listing_is_kept_byte_identical
+    proves_clause: '"idle-1" is not removed and the new file is byte-identical to what was written'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -64,12 +82,17 @@ test_spec:
     must_catch:
       - "decide once from the listing, then remove from that list"
   - name: test_late_kept_workspace_reported_with_reason_and_sweep_continues
+    proves_clause: 'the sweep''s result reports "idle-1" as kept, with the reason that it was found holding work or in use when its turn came'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: seam
     description: "The result reports idle-1 as kept with the holds-work or in-use reason, and later items are still processed."
   - name: test_sweep_race_through_the_deployed_sweep_runs_the_pass_with_its_seam
+    proves_clause: the sweep continues with the remaining items
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -81,12 +104,15 @@ test_spec:
       new file into idle-1 and starts a real program in it, releases the barrier, and asserts the sweep's result
       reports idle-1 kept (holds_unsent_work naming the file, or in_use) while the later items are still processed.
       One seam, documented once for both records, so the two tests share it rather than each inventing a hook.
-    code_file: templates/scripts/worktree.py
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
 test_design_authorship:
   step: test-designer
   date: "2026-11-16"
 test_design_opened_files:
   - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 test_rationale: >-
   A list-then-delete race is invisible to any test that does not change the world between the two
   steps; a barrier makes that window deterministic instead of flaky.
@@ -100,6 +126,12 @@ amended_by:
       are unchanged. doc_links gains BO-4400g-2-iii. No technical field became untrue.
     by: business-analyst
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (templates/scripts/worktree_sweep.py, to be created by
+      BO-4400d-1). PROOF uses the one shared seam of BO-4400g-2 inside the pass instead of a sweep-level hook.
+      Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

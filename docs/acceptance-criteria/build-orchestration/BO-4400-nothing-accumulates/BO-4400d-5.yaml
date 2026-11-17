@@ -56,6 +56,71 @@ it_requirements:
     (BO-4400f-1)"; outputs "preview / real report" and "durable report log". There is no edge from the sweep
     to the door except through the pass.
 test_required: true
+test_intent:
+  - clause: it shows the sweep as one component with its session-start trigger
+    needs_test: true
+    reason: Under the 2026-11-01 user decision a diagram label must match a real artefact, so the component and trigger names are checked against the built sweep and hook.
+  - clause: 'it shows the sweep''s connections to each capability it uses: the landed-work pass for workspaces, which itself uses the complete workspace listing, the holds-work / holds-nothing verdict, the in-use check and the one shared clearing door; the outside-item inventory; and the scratch age and ownership rule'
+    needs_test: true
+    reason: A diagram that still draws the sweep straight to the verdict contradicts ONE RULE, and the edges can be read from the diagram source and compared with the confirmed connector names.
+  - clause: 'it shows the sweep''s two outputs: the preview / real report, and the durable report log'
+    needs_test: true
+    reason: Both outputs are real artefacts of the built sweep, so their labels are checkable against it.
+  - clause: it shows no direct connection from the sweep to deleting a workspace folder other than through the one shared clearing door
+    needs_test: true
+    reason: A drawn shortcut to deletion would document a route the door exists to forbid, and the diagram's edge list shows it.
+test_spec:
+  - name: test_diagram_shows_the_sweep_with_its_session_start_trigger_matching_real_artefacts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Finds the sweep diagram under docs/architecture/diagrams/ by its content (the label "landed-work pass (worktree.py
+      clear-landed)"; the test fails when none or two match, since its c3-NNN id is allocated at publish time) and
+      parses its edge list. The sweep appears as one component with a session-start trigger edge whose labels equal real
+      artefacts of the build: the hook file under templates/hooks/ and the sweep entry point under templates/scripts/.
+    proves_clause: it shows the sweep as one component with its session-start trigger
+    code_file: docs/architecture/components/worktree-manager.md
+  - name: test_diagram_edges_are_the_confirmed_connector_names
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The sweep has edges to "landed-work pass (worktree.py clear-landed)", "outside-item inventory (BO-4400b-1)" and
+      "scratch age and ownership rule (BO-4400f-1)", and the pass has edges to the four capabilities of the confirmed
+      connector names; there is no edge from the sweep straight to the verdict. The component entry in
+      worktree-manager.md links the diagram. The verbs named in the labels are checked against the deployed maker's
+      real verb table.
+    proves_clause: 'it shows the sweep''s connections to each capability it uses: the landed-work pass for workspaces, which itself uses the complete workspace listing, the holds-work / holds-nothing verdict, the in-use check and the one shared clearing door; the outside-item inventory; and the scratch age and ownership rule'
+    code_file: docs/architecture/components/worktree-manager.md
+  - name: test_diagram_shows_both_outputs
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The diagram has exactly the two outputs "preview / real report" and "durable report log", and the durable log
+      label names the debugging/logs location the built sweep writes (BO-4400d-3).
+    proves_clause: 'it shows the sweep''s two outputs: the preview / real report, and the durable report log'
+    code_file: docs/architecture/components/worktree-manager.md
+  - name: test_diagram_has_no_workspace_deletion_edge_except_through_the_door
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Over the parsed edge list no edge leaves the sweep for workspace deletion except the one through the pass to
+      "clearing door (worktree.py remove)". A planted fixture diagram with a direct sweep-to-deletion edge fails the
+      same check, so the check is shown able to fail.
+    proves_clause: it shows no direct connection from the sweep to deleting a workspace folder other than through the one shared clearing door
+    code_file: docs/architecture/components/worktree-manager.md
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+  - docs/architecture/components/worktree-manager.md
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by:
@@ -78,6 +143,13 @@ amended_by:
     Connector names confirmed against the ONE RULE design: the second it_requirement lists each connector by
     the built name (clear-landed, the door's unsent-work and program checks, remove, the inventory, the
     scratch rule, the two outputs). Criteria unchanged.
+- action: amended
+  agent: it-po
+  date: '2026-11-17'
+  reason: >-
+    test_intent added for all four clauses. test_required stays true under the 2026-11-01 user decision
+    that a diagram label must match a real artefact. No declared_files, because the diagram's id is
+    allocated at publish time. Criteria unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []

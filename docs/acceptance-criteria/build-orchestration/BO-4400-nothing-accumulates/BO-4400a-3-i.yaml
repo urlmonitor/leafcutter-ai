@@ -24,7 +24,7 @@ criteria: |
   And finalize's result contains the one shared clearing door's answer for it,
   And given instead the workspace has already been cleared by its route, the step
     reports that there was nothing to clear and finalizing still completes.
-depends_on: [BO-4400a-3]
+depends_on: [BO-4400a-3, BO-4400g-4]
 doc_links:
   - path: docs/how-to/finalize-feature.md
     relationship: describes
@@ -43,7 +43,14 @@ expects_from:
     (label step-7-remove-worktree) carrying removal_authorization {workspace_path, branch} built from a definite
     ok locate answer; no removal dispatch on any other answer.
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
 it_requirements:
+  - >-
+    HARNESS PREREQUISITE: the proof runs finalize with the real maker through the exec bridge that BO-4400g-4 adds
+    to unit_tests/_workflow_engine_harness.py, beside the finalize-to-step-7 driver of BO-4300g-3, so this record
+    is built after that bridge (depends_on BO-4400g-4).
   - >-
     SURFACE: templates/workflows-js/finalize-feature.js, the workspace-teardown step (Step 7). Its
     interactive confirmation gate is removed. Step 7 is exactly what BO-4300g-3 defines: one read-only
@@ -69,8 +76,23 @@ it_requirements:
     against a temporary project, hub and merged branch. Isolation and no-build.py rules as
     BO-4400a-1.
 test_required: true
+test_intent:
+  - clause: the step completes without waiting for any input
+    needs_test: true
+    reason: Finalize's teardown deadlocked on a yes it could not give, and only an unattended run shows the gate is gone.
+  - clause: 'no folder remains at the workspace''s location'
+    needs_test: true
+    reason: Step 7 must still remove the merged workspace, which the disk afterwards shows.
+  - clause: 'finalize''s result contains the one shared clearing door''s answer for it'
+    needs_test: true
+    reason: A step 7 that deletes by its own means leaves no door answer in finalize's result.
+  - clause: given instead the workspace has already been cleared by its route, the step reports that there was nothing to clear and finalizing still completes
+    needs_test: true
+    reason: Absence is the ordinary case once routes clear themselves, so it must never halt finalize.
 test_spec:
   - name: test_finalize_clear_step_completes_with_no_person_available
+    proves_clause: the step completes without waiting for any input
+    code_file: templates/workflows-js/finalize-feature.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -79,18 +101,23 @@ test_spec:
     must_catch:
       - "interactive confirmation gate left in Step 7"
   - name: test_finalize_clears_merged_workspace_through_the_door
+    proves_clause: 'no folder remains at the workspace''s location'
+    code_file: templates/workflows-js/finalize-feature.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: criterion
     description: "No folder remains at the workspace location and finalize's result contains the door's removed answer."
   - name: test_finalize_reports_nothing_to_clear_when_workspace_already_gone
+    proves_clause: given instead the workspace has already been cleared by its route, the step reports that there was nothing to clear and finalizing still completes
+    code_file: templates/workflows-js/finalize-feature.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "With the workspace already removed by its route, the step reports nothing to clear and finalize completes."
   - name: test_finalize_step_7_is_reached_and_makes_its_one_removal_capable_dispatch
+    proves_clause: 'finalize''s result contains the one shared clearing door''s answer for it'
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -105,6 +132,7 @@ test_spec:
       removal_authorization beside the name-based remove request.
     code_file: templates/workflows-js/finalize-feature.js
   - name: test_merged_squash_workspace_is_cleared_by_the_name_based_remove_without_a_token
+    proves_clause: 'no folder remains at the workspace''s location'
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -136,6 +164,11 @@ amended_by:
       Criteria unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (finalize-feature.js), a HARNESS PREREQUISITE
+      requirement, and depends_on gains BO-4400g-4 for that build order. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

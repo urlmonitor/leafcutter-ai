@@ -47,7 +47,13 @@ expects_from:
   ac_id: BO-4400a-2
   contract: "Halt-path handling that keeps work and names it."
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/quick-fix.js
+    state: existing
 it_requirements:
+  - >-
+    HARNESS PREREQUISITE: the three PROOF variants run the real maker through the exec bridge that BO-4400g-4
+    adds to unit_tests/_workflow_engine_harness.py, so this record is built after that bridge.
   - >-
     quick-fix.js issues the route-end clearing request after a post-pull-request step fails, using
     BO-4400a-1's shared step; the final result reports status failed, names the failing step, and
@@ -64,8 +70,32 @@ it_requirements:
     step after the merge then fails with no file change. The maker is executed for real. Isolation and
     no-build.py rules as BO-4400a-1.
 test_required: true
+test_intent:
+  - clause: the workspace still exists, identical to its state when the step failed
+    needs_test: true
+    reason: Clearing on the pushed but unmerged line would remove it, which a snapshot catches.
+  - clause: the final result reports the run as failed and names the failing step
+    needs_test: true
+    reason: A clearing answer must never overwrite the run's failure, in either scenario, and the result field shows it.
+  - clause: the final result also reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass
+    needs_test: true
+    reason: The kept reason must come from the real one-work answer, not the success flag.
+  - clause: given instead the step after the pull request creates one new commit and then fails before pushing it
+    needs_test: false
+    reason: This line sets up the second variant's fixture and is not an outcome of the run.
+  - clause: the workspace still exists and the final result names that one commit as kept
+    needs_test: true
+    reason: A clear on any failure without consulting the verdict would lose the new commit; the door's refusal must reach the result.
+  - clause: no folder remains at the location its workspace occupied
+    needs_test: true
+    reason: A route that clears only on success leaves a landed workspace behind after a post-merge failure, which the disk shows.
+  - clause: 'the final result also contains the one shared clearing door''s answer reporting the workspace removed'
+    needs_test: true
+    reason: The clear must go through the door even on a failed run, which its answer in the result shows.
 test_spec:
   - name: test_post_pr_failure_with_open_pull_request_keeps_workspace_and_reports_failure
+    proves_clause: the workspace still exists, identical to its state when the step failed
+    code_file: templates/workflows-js/quick-fix.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -74,7 +104,39 @@ test_spec:
     must_catch:
       - "clear on the pushed but unmerged line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
       - "the run's failed status replaced by the clearing answer"
+  - name: test_post_pr_failure_with_open_pull_request_names_the_failing_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In the open-pull-request variant the final result's status is failed and it names the failing step; the
+      clearing answer never replaces the run's own failed status.
+    proves_clause: the final result reports the run as failed and names the failing step
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_post_pr_failure_with_open_pull_request_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In the same variant the result also carries the maker's real one-work answer, kept with reason not_on_main,
+      relayed verbatim and not as removed.
+    proves_clause: the final result also reports the workspace as kept because its work is not yet on the main line, leaving it for the landed-work pass
+    code_file: templates/workflows-js/quick-fix.js
+  - name: test_post_pr_failure_after_one_new_commit_is_the_variant_the_given_describes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The scripted step after the pull request makes one new real commit in the workspace and then fails before
+      pushing it: the run is driven through that variant, which is the premise of the next entry's assertions.
+    proves_clause: given instead the step after the pull request creates one new commit and then fails before pushing it
+    code_file: templates/workflows-js/quick-fix.js
   - name: test_post_pr_failure_with_new_unpushed_commit_keeps_workspace
+    proves_clause: the workspace still exists and the final result names that one commit as kept
+    code_file: templates/workflows-js/quick-fix.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -83,6 +145,8 @@ test_spec:
     must_catch:
       - "clear on any post-PR failure without consulting the verdict"
   - name: test_post_merge_failure_clears_workspace_and_still_reports_failure
+    proves_clause: no folder remains at the location its workspace occupied
+    code_file: templates/workflows-js/quick-fix.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -96,6 +160,7 @@ test_spec:
       - "the run's failed status replaced by the clearing answer"
       - "a squash-merged line judged by commit identity, so the landed workspace is kept"
   - name: test_quick_fix_post_pr_failure_reaches_its_clearing_step_in_the_deployed_flow
+    proves_clause: the final result reports the run as failed and names the failing step
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -108,6 +173,7 @@ test_spec:
       prerequisite (the harness replays static label_responses).
     code_file: templates/workflows-js/quick-fix.js
   - name: test_merged_squash_with_deleted_line_is_judged_by_content_in_the_real_maker
+    proves_clause: 'the final result also contains the one shared clearing door''s answer reporting the workspace removed'
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -156,6 +222,11 @@ amended_by:
       variant, and the test_rationale covers three variants. Criteria unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (quick-fix.js) and a HARNESS PREREQUISITE requirement.
+      Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

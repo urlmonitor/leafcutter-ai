@@ -128,7 +128,9 @@ it_requirements:
     WHICH COMMANDS CLEAR (user decision D1, 2026-11-16): a dispatch's command clears a workspace when it runs
     a maker verb that clears (remove, or the per-work clear-landed of BO-4400g-2). That set is recognised by
     one shared command parser in the workflow engine harness, used by this record and BO-4300g-2-i, never a
-    second copy. The run's own end-of-run clearing command is the one permitted exception. It goes to
+    second copy. BUILD ORDER: BO-4300g-2-i owns and builds that parser, so this record's last test_spec entry
+    (test_plan_feature_run_sends_only_its_own_name_based_clearing_command) is written after it. The run it
+    drives also needs BO-4400g-4's harness exec bridge. The run's own end-of-run clearing command is the one permitted exception. It goes to
     shell-runner (removal_capable false), names the run's own work as its workspace step named it, and gives
     no location.
 delivers_to:
@@ -443,6 +445,19 @@ amended_by:
       code, so the test-designer should ground it at its next pass.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: WHICH COMMANDS CLEAR gains the build order (BO-4300g-2-i's parser and
+      BO-4400g-4's exec bridge before this record's last test_spec entry). Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
+  - reason: >-
+      Notes correction, 2026-11-17: the D1 note no longer says finalize sends no clearing command of the
+      exception's kind. Step 7 still stays as BO-4300g-3 defines it, and finalize's baseline scratch-copy
+      cleanup is one name-based clearing command of that kind for its own scratch workspace, following the
+      IT PO's move of cleanup-baseline-worktree to remove --kind scratch --slug through shell-runner.
+      Criteria unchanged.
+    by: business-analyst
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4300g-2-i]
 implemented_by: []
@@ -483,8 +498,11 @@ notes: |
   covered by it. "No dispatch at all to a removal-capable agent" still holds, since
   shell-runner declares removal_capable false. Finalize's scenario is unchanged: its step-7
   removal stays its one removal-capable dispatch, exactly as BO-4300g-3 defines it
-  (worktree-agent with removal_authorization), and finalize sends no clearing command of the
-  exception's kind. Confirmed by the user (Q1, 2026-11-16).
+  (worktree-agent with removal_authorization). Confirmed by the user (Q1, 2026-11-16).
+  Finalize's own baseline scratch-copy cleanup is one name-based clearing command of the
+  exception's kind (remove --kind scratch --slug <slug> through shell-runner), for its own
+  scratch workspace, because that copy is a maker workspace the run obtained (IT PO change;
+  BO-4300g-2-i treats every workspace the run obtained as the run's own work).
 
 # ====================================================================
 # DECISION HISTORY

@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -187,13 +187,21 @@ file_findings:
     line_range: 146-154
     found_in: null
     reason: Its verb table (line 154 shows migrate-legacy [--preview]) describes the verbs and gains the clear-landed --preview row.
-    decision: null
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside the --preview flag (one row), so no other agent owns the work.
+      by: it-po
 file_findings_opened_files:
   - templates/scripts/worktree.py
   - docs/architecture/components/worktree-manager.md
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the worktree-manager.md finding is decided as assignment stands. Criteria
+      unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

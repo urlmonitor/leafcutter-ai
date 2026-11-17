@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: pipeline
@@ -71,7 +71,10 @@ it_requirements:
     RECORDER DOOR: the door is replaced by a recorder that logs each request and can be told to refuse. It
     covers every maker verb that clears (remove, and the per-work clear-landed of BO-4400g-2 that flows send).
     A workspace that disappears without a recorded request for it fails the check, naming the surface and the
-    step.
+    step. The recorder is a mode of the exec bridge BO-4400g-4 adds to unit_tests/_workflow_engine_harness.py,
+    recognising maker commands through BO-4300g-2-i's shared parser, so it is built after both (BUILD ORDER in
+    BO-4400g-4). Finalize's scratch-copy cleanup is a recorded name-form door request like any other (BO-4400g-4,
+    FINALIZE'S SCRATCH COPY), so it needs no exemption.
   - >-
     BUILDS ON, DOES NOT DUPLICATE: BO-4300g-2-i checks that every removal-capable dispatch carries an
     authorization, and BO-4400a-3 checks that the hand-run surfaces publish only the door's command. This
@@ -202,6 +205,12 @@ file_findings_opened_files:
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: RECORDER DOOR is a mode of BO-4400g-4's harness exec bridge, using
+      BO-4300g-2-i's shared parser (built after both), and finalize's scratch-copy cleanup is a name-form door
+      request with no exemption. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
   - reason: >-
       it-po technical enrichment 2026-11-16: depends_on gains BO-4300g-2-i, whose repo-wide check of
       removal-capable dispatches this record builds on (asked by the orchestrator). Criteria unchanged.

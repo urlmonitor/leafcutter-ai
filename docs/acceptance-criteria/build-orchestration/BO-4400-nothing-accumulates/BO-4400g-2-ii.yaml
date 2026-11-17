@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -63,6 +63,16 @@ it_requirements:
   - >-
     A commit that is on neither the shared project nor the main line still produces the door's UNSENT_WORK
     refusal exactly as today, and the pass relays it unchanged.
+  - >-
+    CODE FACTS (test-designer, 2026-11-16) and what they require. Today the door judges unsent work by commit
+    identity only and does not prune. So a squash-merged workspace is refused UNSENT_WORK, and a stale
+    remote-tracking ref left behind by a line deleted on the shared project could make unmerged work look sent.
+    For "gone-1", that would clear work that never landed. The door's check therefore gains both (a) the content
+    check of BO-4400g-2 (commits taken together against the current main line) and (b) a prune-safe line
+    check. A commit counts as sent through its own line only when that line exists on the shared project as the
+    current contact shows it (a fetch with pruning, or reading the shared project's refs). A stale
+    remote-tracking ref of a deleted line is never evidence of sent work. Both are shared by the door and the
+    pass, never copied.
   - >-
     worktree_remove.py (485 lines) takes wiring only, with no net growth. The primitive lives in
     worktree_landed.py or beside the door's existing checks. No limit is raised.
@@ -162,7 +172,13 @@ file_findings_opened_files:
   - templates/scripts/worktree_remove.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: a CODE FACTS requirement. The door judges by identity and does not prune
+      today, so it gains the content check and a prune-safe line check: a stale tracking ref of a deleted line
+      is never evidence of sent work. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -49,7 +49,16 @@ expects_from:
   ac_id: BO-4400a-1
   contract: "The route-end clearing call."
 package_surface: false
+declared_files:
+  - path: templates/workflows-js/build-epic.js
+    state: existing
+  - path: templates/workflows-js/build-feature.js
+    state: existing
 it_requirements:
+  - >-
+    HARNESS PREREQUISITE: the proof runs the real maker through the exec bridge that BO-4400g-4 adds to
+    unit_tests/_workflow_engine_harness.py, so it is built after that bridge (through BO-4400a-1's depends_on
+    BO-4400g-4).
   - >-
     The epic's clearing step sits at the epic run's end -- after the last ticket's delivery step
     and before build-epic.js / build-feature.js returns -- never inside the per-ticket
@@ -68,8 +77,26 @@ it_requirements:
     The mid-drive observation is taken by the scripted reply of the third ticket's coder step,
     which records whether the workspace folder exists at that moment.
 test_required: true
+test_intent:
+  - clause: 'the epic''s workspace still exists and the third ticket''s build continues in it'
+    needs_test: true
+    reason: A clear hooked onto the per-ticket pull-request phase removes the workspace mid-drive, which only an observation at the third ticket shows.
+  - clause: 'when the third ticket''s commits have been pushed, the epic''s pull request has been merged into the main line and the epic run returns, no folder remains at the location the epic''s workspace occupied'
+    needs_test: true
+    reason: The epic's one clearing must still happen at the run's end once merged, which the disk afterwards shows.
+  - clause: the one shared clearing door was asked to clear that workspace exactly once during the whole run
+    needs_test: true
+    reason: Parallel ticket batches issuing their own clears would ask more than once, which the recorded dispatches count.
+  - clause: 'the epic''s workspace still exists, identical to its state after the third ticket''s commits were pushed'
+    needs_test: true
+    reason: An epic's pull request is open for the whole drive, so a clear that treats a pushed line as sent would remove the workspace.
+  - clause: the final result reports the workspace as kept because its work is not yet on the main line
+    needs_test: true
+    reason: The kept reason must come from the real one-work answer, not a fixed message.
 test_spec:
   - name: test_epic_workspace_exists_while_third_ticket_builds
+    proves_clause: 'the epic''s workspace still exists and the third ticket''s build continues in it'
+    code_file: templates/workflows-js/build-epic.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -78,18 +105,34 @@ test_spec:
     must_catch:
       - "clear hooked onto the per-ticket pull-request phase"
   - name: test_epic_workspace_absent_after_epic_returns
+    proves_clause: 'when the third ticket''s commits have been pushed, the epic''s pull request has been merged into the main line and the epic run returns, no folder remains at the location the epic''s workspace occupied'
+    code_file: templates/workflows-js/build-epic.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: criterion
     description: "After the third ticket's commits are pushed, the epic's pull request is merged on the hub and the run returns, no folder remains at the epic workspace location."
   - name: test_epic_run_asks_the_door_exactly_once
+    proves_clause: the one shared clearing door was asked to clear that workspace exactly once during the whole run
+    code_file: templates/workflows-js/build-epic.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: boundary
     description: "The recorded dispatch list contains exactly one clearing request for the epic workspace."
+  - name: test_epic_open_pull_request_result_reports_kept_not_on_main
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      With the epic's pull request left open, the run's final result carries the maker's real one-work answer, kept
+      with reason not_on_main, relayed verbatim and not reported as removed or as a failure.
+    proves_clause: the final result reports the workspace as kept because its work is not yet on the main line
+    code_file: templates/workflows-js/build-epic.js
   - name: test_epic_workspace_kept_while_epic_pull_request_is_open
+    proves_clause: 'the epic''s workspace still exists, identical to its state after the third ticket''s commits were pushed'
+    code_file: templates/workflows-js/build-epic.js
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -103,6 +146,7 @@ test_spec:
       - "clear on the pushed but unmerged epic line (the door's pushed-counts-as-sent verdict used instead of the landed rule)"
       - "kept workspace reported as removed or as a failure instead of not yet on the main line"
   - name: test_epic_route_is_reachable_through_the_deployed_build_epic_workflow
+    proves_clause: 'when the third ticket''s commits have been pushed, the epic''s pull request has been merged into the main line and the epic run returns, no folder remains at the location the epic''s workspace occupied'
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -116,6 +160,7 @@ test_spec:
       label_responses today, so the observation uses the stand-in's host-side exec bridge (a prerequisite).
     code_file: templates/workflows-js/build-epic.js
   - name: test_epic_clearing_command_is_the_per_work_command_for_the_epics_own_work
+    proves_clause: the one shared clearing door was asked to clear that workspace exactly once during the whole run
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -153,6 +198,11 @@ amended_by:
       "one maker remove request". Criteria unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (build-epic.js, build-feature.js) and a HARNESS
+      PREREQUISITE requirement (BO-4400g-4's exec bridge). Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

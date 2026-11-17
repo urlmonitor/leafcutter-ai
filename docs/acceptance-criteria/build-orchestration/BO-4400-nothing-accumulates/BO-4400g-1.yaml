@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -102,7 +102,7 @@ it_requirements:
     substring or similarity, so "alpha" never reaches "alpha-v2".
   - >-
     LINE-OF-WORK NAME: remove accepts the line-of-work name under the option spelling locate already uses
-    (--branch). The name is resolved to the work's identity and position by the identity and landing rules,
+    (--branch), added to the remove sub-parser in templates/scripts/worktree.py (wiring only). The name is resolved to the work's identity and position by the identity and landing rules,
     not only by scanning workspace records, so it reaches the same folder that --path and --kind/--slug
     reach, a leftover whose record is gone included. This removes the reason BO-4300e-2-ix gave for leaving
     --branch off remove (record lookup fails once the record is gone). An alias that matches two
@@ -283,7 +283,10 @@ file_findings:
     line_range: 146-154
     found_in: null
     reason: Its verb table row for remove (line 152) still shows only --path, which is the documentation the record says must gain every name form.
-    decision: null
+    decision:
+      choice: assignment stands
+      reason: The page is the reference the record updates beside its code change (the remove row gains --branch and --kind/--slug), so no other agent owns the work.
+      by: it-po
 file_findings_opened_files:
   - templates/scripts/worktree.py
   - templates/scripts/worktree_remove.py
@@ -291,7 +294,12 @@ file_findings_opened_files:
   - docs/architecture/components/worktree-manager.md
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the LINE-OF-WORK NAME requirement names the remove sub-parser in worktree.py
+      (already declared). The worktree-manager.md finding is decided as assignment stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400g-1-i, BO-4400g-1-ii]
 implemented_by: []

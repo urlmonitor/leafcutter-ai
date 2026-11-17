@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: docs
@@ -146,8 +146,7 @@ test_spec:
       key sets of the example's top level, its cleared or would_clear entry and its kept entry with the real answer's.
       Also runs the page's preview and real-pass commands as subprocesses and checks both exit 0.
     proves_clause: it shows how to preview the landed-work pass and how to run it, with one example answer listing a cleared workspace and a kept workspace with its reason
-    code_file: templates/scripts/worktree_landed.py
-    to_be_created: true
+    code_file: docs/how-to/clear-a-workspace.md
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
   - name: test_how_to_lists_exactly_the_kept_reasons_the_maker_emits
     target_dir: unit_tests/build_orchestration/
@@ -160,8 +159,7 @@ test_spec:
       worktree_landed.py (text scan of its source as the convention test does for the answer codes); a reason the
       maker never emits, or one it emits and the page omits, fails.
     proves_clause: it lists every reason a workspace is kept -- not yet on the main line, holds unsent work, no work of its own yet, in use, landing could not be confirmed, shared project unreachable -- and what the person can do about each
-    code_file: templates/scripts/worktree_landed.py
-    to_be_created: true
+    code_file: docs/how-to/clear-a-workspace.md
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
   - name: test_how_to_states_the_14_day_rule_matching_the_named_default
     target_dir: unit_tests/build_orchestration/
@@ -174,8 +172,7 @@ test_spec:
       again resumes the line. A page that gives 7 for pushed work, or a source whose default changed, fails. The
       behaviour behind the sentence is proven by BO-4400g-2-v.
     proves_clause: 'it states that a workspace kept as not yet on the main line is cleared by the pass once it holds nothing unsent and no file in it has changed for 14 days, that its work stays on its line on the shared project, and that asking for that work''s workspace again resumes the line'
-    code_file: templates/scripts/worktree_landed.py
-    to_be_created: true
+    code_file: docs/how-to/clear-a-workspace.md
     convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
   - name: test_how_to_unattended_command_runs_with_no_input_and_returns_documented_exit_codes
     target_dir: unit_tests/build_orchestration/
@@ -217,7 +214,6 @@ test_design_authorship:
   step: test-designer
   date: "2026-11-16"
 test_design_opened_files:
-  - templates/scripts/worktree_landed.py
   - docs/how-to/clear-a-workspace.md
   - templates/scripts/worktree.py
   - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
@@ -238,19 +234,30 @@ file_findings:
     line_range: 1-30
     found_in: null
     reason: It is the one existing clearing guide (frontmatter and step 1, locate then clear by location) and is the page the record extends rather than duplicates.
-    decision: null
+    decision:
+      choice: assignment stands
+      reason: A how-to page is documentation-expert's surface and the record extends it, so the assignment is right.
+      by: it-po
   - file: docs/reference/workspace-maker-answer.md
     verdict: describes, does not implement
     line_range: 1-40
     found_in: null
     reason: It is the answer reference whose caller rule 1 (anything other than ok stops the caller) is why the no-workspace and kept answers are documented there as ok, and it gains each new or changed answer once.
-    decision: null
+    decision:
+      choice: assignment stands
+      reason: The answer reference is documentation-expert's surface and gains each new answer once, so the assignment is right.
+      by: it-po
 file_findings_opened_files:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the two page findings (how-to, answer reference) are decided as assignment
+      stands. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
   - reason: >-
       User decision at the BO-4400g plan-feature gate, 2026-11-16 (14-day rule, BO-4400g-2-v): one And-clause
       added so a reader of "not yet on the main line" learns the pass clears that workspace after 14 days with

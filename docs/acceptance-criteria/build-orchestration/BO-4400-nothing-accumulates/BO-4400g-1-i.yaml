@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -64,7 +64,9 @@ it_requirements:
     definite no-workspace answer that a caller can tell apart from a clear and that is not a failure, since
     every caller stops on any non-ok answer (workspace-maker-answer.md, caller rule 1). Decided (user
     accepted the default, Q3, 2026-11-16): status ok, exit 0, code OK, no removed_path, an additive field
-    absent set to true, and a message naming the work. A --path request for a location that holds nothing keeps today's
+    absent set to true, and a message naming the work. THIS IS A CHANGE: today remove answers such a request
+    NOT_FOUND (refused, exit 2). For a name-based request that answer becomes the ok/absent answer, and any
+    existing test that pins NOT_FOUND for a by-name request of missing work is updated in the same change. A --path request for a location that holds nothing keeps today's
     answer.
   - >-
     An older spelling and the current kind and short name resolve to the same single workspace (BO-4300a-2).
@@ -203,7 +205,12 @@ file_findings_opened_files:
   - templates/scripts/worktree_admin.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: the first it_requirement says explicitly that remove answers NOT_FOUND today
+      and that the by-name answer for missing work changes to ok with absent true. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

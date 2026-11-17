@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -53,7 +53,9 @@ it_requirements:
   - >-
     CONCURRENT PASSES ARE SAFE: two passes may run at once (an hourly timer and a session start). For each
     workspace, at most one clear runs at a time, through the maker's existing per-work lock (BO-4300d-1-ii),
-    which a clear takes as ensure does, with no second lock scheme. A workspace cleared by the other pass
+    which a clear takes as ensure does, with no second lock scheme. CODE FACT (test-designer, 2026-11-16):
+    cmd_remove takes no per-work lock today. The clear reuses worktree_ensure_state.ensure_lock, wired in
+    from worktree_remove.py; the lock module itself is not changed. A workspace cleared by the other pass
     between this pass's listing and its
     turn is reported in already_gone (the BO-4400g-1-i no-workspace answer), never as a failure.
   - >-
@@ -178,7 +180,12 @@ file_findings_opened_files:
   - templates/scripts/worktree_remove.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: CONCURRENT PASSES records that cmd_remove takes no per-work lock today and
+      that the clear reuses worktree_ensure_state.ensure_lock. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

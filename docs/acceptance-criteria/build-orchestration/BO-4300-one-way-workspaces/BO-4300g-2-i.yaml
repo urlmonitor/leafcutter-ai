@@ -87,7 +87,13 @@ it_requirements:
     BO-4400g-2), whichever agent receives it. That set is recognised by one shared command parser in
     unit_tests/_workflow_engine_harness.py, the same one BO-4300g-2 uses. A clearing command sent to an agent
     that cannot remove passes only as the flow's own name-based command. "The flow's own work" is read from
-    the same recorded run's workspace step, never from a hand-written list.
+    the same recorded run's workspace steps, never from a hand-written list. A run that obtained more than one
+    workspace (finalize's scratch copy, kind scratch, beside its own work) owns each of them, so finalize's
+    scratch-copy cleanup passes once it uses the name form (BO-4400g-4, FINALIZE'S SCRATCH COPY).
+  - >-
+    PARSER OWNERSHIP AND BUILD ORDER (2026-11-17): this record owns the shared clearing-command parser in
+    unit_tests/_workflow_engine_harness.py and builds it first. BO-4300g-2's last test_spec entry, BO-4400g-4's
+    harness exec bridge and BO-4400g-4-i's recorder all use it and are built after it.
   - >-
     Recording each dispatch's request payload (not only the agent type) is the harness capability
     this check needs. The harness is extended, never forked, so the BO-4300g-2 and BO-4300g-3
@@ -285,6 +291,12 @@ amended_by:
     was written without opening code, so the test-designer should ground it at its next pass.
   by: it-po
   at: "2026-11-16"
+- reason: >-
+    it-po third pass, 2026-11-17: this record owns the shared clearing-command parser and builds it first
+    (PARSER OWNERSHIP AND BUILD ORDER). "The flow's own work" covers every workspace the run obtained, so
+    finalize's name-form scratch cleanup passes. Criteria unchanged.
+  by: it-po
+  at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

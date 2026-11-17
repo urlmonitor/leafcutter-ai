@@ -50,11 +50,20 @@ expects_from:
   ac_id: BO-4400a-1
   contract: "Final route-end behaviour to describe."
 package_surface: false
+declared_files:
+  - path: docs/how-to/clear-a-workspace.md
+    state: existing
+  - path: docs/how-to/finalize-feature.md
+    state: existing
+  - path: docs/how-to/fast-lane-build.md
+    state: existing
 it_requirements:
   - >-
-    New how-to under docs/how-to/ (file name chosen by documentation-expert, e.g.
-    workspace-clearing.md) with the repo's doc frontmatter; registered through the doc-index flow,
-    never by hand-editing docs/INDEX.md.
+    ONE CLEARING GUIDE (decided 2026-11-17): the guide this record writes is a section of the existing
+    docs/how-to/clear-a-workspace.md, not a new page. BO-4400g-5 requires that there is still exactly one how-to
+    guide for clearing a workspace, and a second page (the former "e.g. workspace-clearing.md") would break that.
+    The page keeps its frontmatter conventions and last_updated, and stays within the document length limits.
+    Index registration, if any, goes through the doc-index flow, never by hand-editing docs/INDEX.md.
   - >-
     The route table is taken from the built behaviour delivered by BO-4400a-1 (six routes, their
     end states incl. nothing-to-deliver); cross-link docs/how-to/finalize-feature.md and
@@ -64,6 +73,94 @@ it_requirements:
     Commands are shown as the one maker's remove verb exactly as the built maker accepts it; no
     forced removal or folder deletion appears anywhere on the page.
 test_required: true
+test_intent:
+  - clause: the guide contains a table with one row for each of the six routes named in BO-4400a-1 stating the moment its workspace is cleared, including the nothing-to-deliver case
+    needs_test: true
+    reason: The table must list exactly the six routes and their built clearing moments, which a doc test can compare with BO-4400a-1's route list.
+  - clause: 'the guide states that a workspace is cleared once its work has landed on the main line -- at the route''s end when its pull request has merged by then, at finalizing''s workspace removal, and otherwise by the landed-work pass -- and that a route never waits for finalizing'
+    needs_test: true
+    reason: The old PR-open timing is the wording most likely to survive, and a doc test catches the page still promising it.
+  - clause: 'the guide walks through a stopped run: reading the kept workspace''s location and unsent work from the run''s result, sending that work, and clearing the workspace through the one door'
+    needs_test: true
+    reason: The walk-through must use the real result field names and the maker's real command, which a doc test ties to the sources.
+  - clause: the guide names the one clearing door as the only way to remove a workspace and states that clearing a workspace holding nothing unsent asks no question
+    needs_test: true
+    reason: The promise must match the maker, which never prompts, and its presence on the page is checkable.
+  - clause: the guide contains no instruction to remove a workspace by forced removal or by deleting its folder
+    needs_test: true
+    reason: A published deletion command bypasses the unsent-work check, and a scan of the fenced commands catches it.
+test_spec:
+  - name: test_guide_route_table_has_one_row_per_route_with_its_clearing_moment
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Reads docs/how-to/clear-a-workspace.md as text (the convention of test_bo_4300e_5_i_docs.py, which reads the page
+      and the maker sources) and parses the route table inside the new section. It has exactly six rows named
+      like the routes of BO-4400a-1 (single-ticket build, epic build, quick fix, requirements authoring, fast lane,
+      backlog build), each stating a clearing moment, and a nothing-to-deliver statement. A fifth or seventh row, or a
+      row whose moment still says "when the pull request is opened", fails.
+    proves_clause: the guide contains a table with one row for each of the six routes named in BO-4400a-1 stating the moment its workspace is cleared, including the nothing-to-deliver case
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_guide_states_cleared_once_landed_and_no_route_waits_for_finalizing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: >-
+      The section states the three moments (the route's end after the merge, finalizing's workspace removal, the
+      landed-work pass) and that a route never waits for finalizing, and does not call finalizing the only cleanup
+      point nor promise clearing at the moment the pull request is opened (the stale wording).
+    proves_clause: 'the guide states that a workspace is cleared once its work has landed on the main line -- at the route''s end when its pull request has merged by then, at finalizing''s workspace removal, and otherwise by the landed-work pass -- and that a route never waits for finalizing'
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_guide_stopped_run_walkthrough_uses_real_result_fields_and_a_command_the_maker_accepts
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      The walk-through names the kept-workspace fields the routes relay (workspace_path, reason, commits, files, as
+      BO-4400a-2 delivers) and publishes the maker command that clears through the door. The test runs that command,
+      with its placeholders filled from a fixture, as a subprocess against the deployed maker on a workspace
+      holding nothing unsent, and it is accepted (not a USAGE refusal) and clears the folder.
+    proves_clause: 'the guide walks through a stopped run: reading the kept workspace''s location and unsent work from the run''s result, sending that work, and clearing the workspace through the one door'
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_guide_names_the_one_door_and_states_no_question_is_asked
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The section names the maker's remove as the only way to remove a workspace and states that clearing a workspace
+      holding nothing unsent asks no question. The claim is checked against the maker's behaviour by the existing
+      test_bo_4300c_2_never_prompts.py, so this test only checks the page's wording is present.
+    proves_clause: the guide names the one clearing door as the only way to remove a workspace and states that clearing a workspace holding nothing unsent asks no question
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - name: test_guide_contains_no_forced_or_folder_deleting_instruction
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Scans every fenced command of the page with the DELETE_COMMANDS pattern of test_bo_4300e_5_i_docs.py (rm,
+      rmdir, Remove-Item, rmtree, del, git worktree remove) and for --force, --discard-token and
+      --delete-remote-branch used as a way to clear. A planted fixture page with each fails the same scan, so the
+      scan is shown able to fail.
+    proves_clause: the guide contains no instruction to remove a workspace by forced removal or by deleting its folder
+    code_file: docs/how-to/clear-a-workspace.md
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+  - docs/how-to/clear-a-workspace.md
+  - unit_tests/build_orchestration/test_bo_4300e_5_i_docs.py
+  - unit_tests/build_orchestration/test_bo_4300c_2_never_prompts.py
 origin_agent: business-analyst
 created: 2026-10-09
 amended_by:
@@ -81,6 +178,14 @@ amended_by:
     and otherwise by the landed-work pass -- and that a route never waits for finalizing. The Given names the
     landed-work pass; depends_on gains BO-4400g-2 and doc_links gains docs/how-to/clear-a-workspace.md.
     Technical field fixed: the second it_requirement now says "the only cleanup point".
+- action: amended
+  agent: it-po
+  date: '2026-11-17'
+  reason: >-
+    The guide is a section of the existing docs/how-to/clear-a-workspace.md, not a new page, because BO-4400g-5
+    requires exactly one clearing how-to. declared_files is added (that page plus finalize-feature.md and
+    fast-lane-build.md, which are updated where they call finalize the only cleanup point), and test_intent
+    is added for all five clauses. Criteria unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []

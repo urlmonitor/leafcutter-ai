@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -53,7 +53,16 @@ declared_files:
     state: existing
   - path: templates/scripts/worktree_remove.py
     state: existing
+  - path: templates/scripts/worktree_remove_half.py
+    state: existing
+  - path: templates/scripts/worktree.py
+    state: existing
 it_requirements:
+  - >-
+    CODE FACT (test-designer, 2026-11-16): today the target resolution in templates/scripts/worktree_remove_half.py
+    lets --path win silently when --kind/--slug are also given. That precedence is removed: every given form is
+    resolved and compared first (below), and the remove sub-parser in worktree.py stops treating the forms as
+    exclusive alternatives (wiring only, no net growth).
   - >-
     When a request names the work in more than one form (--kind/--slug, --branch, --path), every form is
     resolved first. When they point at different workspaces, or one of them at none, the request is refused
@@ -181,13 +190,32 @@ file_findings:
     found_in: null
     reason: cmd_remove calls target_path (via worktree_remove_half) first, and that is where mixed forms are silently resolved today, so the check must be wired in before any program check or fetch.
     decision: null
+  - file: templates/scripts/worktree.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its remove parser (lines 285-290, built through wrh.add_target_args) is where --branch is added beside --path, --kind and --slug so mixed forms reach the agreement check, and at 425 lines it takes wiring only.
+    decision: null
+  - file: templates/scripts/worktree_remove_half.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its target_path (lines 170-183) returns the --path location before it looks at --kind and --slug, which is exactly where mixed forms are silently resolved today, so the agreement check is wired here.
+    decision: null
 file_findings_opened_files:
   - templates/scripts/worktree_admin.py
   - templates/scripts/worktree_remove.py
   - templates/scripts/worktree_remove_half.py
+  - templates/scripts/worktree.py
 origin_agent: business-analyst
 created: 2026-10-25
-amended_by: []
+amended_by:
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files gains templates/scripts/worktree_remove_half.py (its target
+      resolution lets --path win silently today) and worktree.py (the remove parser). A CODE FACT requirement
+      removes that precedence. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

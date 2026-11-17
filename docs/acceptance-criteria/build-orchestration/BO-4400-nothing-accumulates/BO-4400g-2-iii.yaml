@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
@@ -78,7 +78,8 @@ it_requirements:
   - >-
     PROOF RUNS THE DEPLOYED MAKER against real temporary repositories with a real bare hub and a real program
     holding files open with its working folder inside busy-1. The write between assessment and clear is made
-    through a seam that runs in the pass's own process between the two steps, not by a sleep race. The program
+    through the ONE TEST SEAM of BO-4400g-2 (shared with BO-4400d-1-i), which runs in the pass's own process
+    between the two steps, not by a sleep race. The program
     is left running and is checked alive afterwards. No git mock, no build.py spawn, and isolated HOME and git
     config.
 test_required: true
@@ -202,6 +203,11 @@ amended_by:
       Behaviour unchanged.
     by: business-analyst
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: PROOF names the one shared seam of BO-4400g-2 (also used by BO-4400d-1-i)
+      for the write between assessment and clear. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -61,7 +61,14 @@ expects_from:
       clear-landed --preview (BO-4400g-3): preview true, would_clear [{kind, slug, branch, location}] and kept
       entries with their reasons, from the same decision function as the real pass.
 package_surface: false
+declared_files:
+  - path: templates/scripts/worktree_sweep.py
+    state: to_be_created
 it_requirements:
+  - >-
+    The report and the --dry-run preview live in the sweep entry point decided in BO-4400d-1,
+    templates/scripts/worktree_sweep.py. The pass's --preview in worktree.py is code under test here and is
+    not edited by this record.
   - >-
     Preview and real run share ONE selection code path; preview performs no write of any kind
     (no removal, no log, no marker, no lock file left behind). For workspaces that path is the landed-work
@@ -80,20 +87,51 @@ it_requirements:
     item itself beforehand, snapshots the whole fixture tree (paths and hashes) around the preview,
     and compares the preview list to the real run's removed list.
 test_required: true
+test_intent:
+  - clause: nothing on disk changes
+    needs_test: true
+    reason: A preview that writes a log, lock or marker, or removes anything, breaks its promise, which a snapshot catches.
+  - clause: the preview lists each item it would remove by kind and location with its size in bytes, lists each item it would keep with the reason, and states a count and a total in bytes for the items it would remove
+    needs_test: true
+    reason: Each field of the preview is computed, and a person decides from it.
+  - clause: 'the workspaces it lists as would-remove, and the kept workspaces with their reasons, are exactly those the landed-work pass''s preview gives for the same workspaces'
+    needs_test: true
+    reason: Under ONE RULE the sweep's workspace preview is the pass's, and a separately written selection would drift.
+  - clause: when the sweep is then run for real with nothing changed in between, it removes exactly the items the preview listed
+    needs_test: true
+    reason: A preview and a real run on different selection paths pass their own checks and still disagree.
+  - clause: 'the real sweep''s report states the count of items removed per kind (workspaces, scratch items, outside items) and the total bytes freed, which equals the sum of the removed items'' sizes measured beforehand'
+    needs_test: true
+    reason: A report built from an estimate cannot match sizes measured independently by the test.
+  - clause: when one more expired scratch item of 4096 bytes is added and the preview is run again, its count is one greater and its total is 4096 bytes greater
+    needs_test: true
+    reason: A fixed or estimated figure fails a varying population, which this one-item change exposes.
 test_spec:
   - name: test_preview_changes_nothing_on_disk
+    proves_clause: nothing on disk changes
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: criterion
     description: "The fixture tree's paths and hashes are identical before and after the preview."
   - name: test_preview_lists_items_with_sizes_reasons_count_and_total
+    proves_clause: the preview lists each item it would remove by kind and location with its size in bytes, lists each item it would keep with the reason, and states a count and a total in bytes for the items it would remove
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: seam
     description: "The preview lists each would-remove item with kind, location and bytes, each kept item with its reason, a count and a total."
   - name: test_sweep_preview_workspaces_equal_the_landed_work_pass_preview
+    proves_clause: 'the workspaces it lists as would-remove, and the kept workspaces with their reasons, are exactly those the landed-work pass''s preview gives for the same workspaces'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -107,6 +145,10 @@ test_spec:
       - "sweep preview selects workspaces by holds-nothing alone instead of the pass's rule"
       - "sweep preview computes its own kept reasons instead of relaying the pass's"
   - name: test_real_sweep_removes_exactly_what_preview_listed
+    proves_clause: when the sweep is then run for real with nothing changed in between, it removes exactly the items the preview listed
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -115,12 +157,20 @@ test_spec:
     must_catch:
       - "preview and real run use different selection logic"
   - name: test_real_report_counts_per_kind_and_total_equal_measured_sizes
+    proves_clause: 'the real sweep''s report states the count of items removed per kind (workspaces, scratch items, outside items) and the total bytes freed, which equals the sum of the removed items'' sizes measured beforehand'
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
     angle: real_artifact
     description: "Per-kind counts match and total_bytes equals the sum of the removed items' sizes measured by the test beforehand."
   - name: test_one_more_expired_4096_byte_item_moves_count_and_total
+    proves_clause: when one more expired scratch item of 4096 bytes is added and the preview is run again, its count is one greater and its total is 4096 bytes greater
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -129,6 +179,7 @@ test_spec:
     must_catch:
       - "report built from a fixed or estimated figure"
   - name: test_sweep_preview_flag_is_reachable_and_runs_the_pass_preview_underneath
+    proves_clause: 'the workspaces it lists as would-remove, and the kept workspaces with their reasons, are exactly those the landed-work pass''s preview gives for the same workspaces'
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: behavioral
@@ -139,12 +190,15 @@ test_spec:
       worktree.py> clear-landed --preview --repo-root <project> prints for the same fixture, whose --preview flag is
       the convention worktree_migrate.add_parser already uses. Sizes are added by the sweep only (the pass's entries
       carry none), so the comparison removes the bytes key before comparing.
-    code_file: templates/scripts/worktree.py
+    code_file: templates/scripts/worktree_sweep.py
+    to_be_created: true
+    convention_test_file: unit_tests/build_orchestration/test_bo_4300e_2.py
 test_design_authorship:
   step: test-designer
   date: "2026-11-16"
 test_design_opened_files:
   - templates/scripts/worktree.py
+  - unit_tests/build_orchestration/test_bo_4300e_2.py
 test_rationale: >-
   A report figure is only trustworthy if it moves with the world. Measuring independently, then
   adding exactly one known-size item, is the varying-population check that a fixed or estimated
@@ -166,6 +220,11 @@ amended_by:
       expects_from gains BO-4400g-2. Criteria unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17: declared_files added (templates/scripts/worktree_sweep.py), plus one
+      requirement naming it as the entry point of the report and the preview. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400d-2-i]
 implemented_by: []

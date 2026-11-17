@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: pipeline
@@ -118,11 +118,37 @@ declared_files:
     state: existing
   - path: templates/workflows-js/quick-fix.js
     state: existing
+  - path: templates/workflows-js/build-ticket.js
+    state: existing
+  - path: templates/workflows-js/build-epic.js
+    state: existing
+  - path: unit_tests/_workflow_engine_harness.py
+    state: existing
 it_requirements:
   - >-
+    HARNESS EXEC BRIDGE, OWNED HERE (test-designer finding, 2026-11-16): unit_tests/_workflow_engine_harness.py
+    only replays static label_responses. It has no shell-runner stand-in that runs the real maker. This record
+    adds one, additively. A dispatch whose command is a maker command, recognised by the shared clearing-command
+    parser that BO-4300g-2-i owns, is executed against the real deployed maker, and its stdout becomes the
+    reply; every other dispatch keeps the static label_responses. The harness is extended, never forked.
+    BUILD ORDER: BO-4300g-2-i's parser first, then this bridge, then BO-4400g-4-i (which adds the recorder and
+    refusal mode on top of it). The flow proofs of BO-4400a-1, -1-i, -1-ii, -2, -2-i and -3-i run on this same
+    bridge, so they are built after it or in the same build.
+  - >-
+    FINALIZE'S SCRATCH COPY, DECIDED: finalize's cleanup-baseline-worktree step (around line 501 of
+    finalize-feature.js) removes the scratch workspace it obtained from the maker (kind scratch, with a slug)
+    with remove --path, through workspaceRemoveCommand, which also appends --force. Keeping it out of scope with
+    --path would contradict BO-4300g-2-i's approved check, which fails any clearing command that does not name
+    the run's own work. So it moves to the name form, remove --kind scratch --slug <the slug the run's own
+    workspace step used>, built by the same shared helper. --force is dropped: the maker accepts it and
+    ignores it (a loss needs a discard token), so dropping it changes no behaviour. workspaceRemoveCommand(path)
+    then has no caller left and is removed in the same change, after a search for other callers, so no
+    workflow can send --path. The step stays best-effort, and its answer stays in scratch_clearing.
+  - >-
     FLOW SURFACES: requirements authoring (templates/workflows-js/plan-feature.js), the fast lane
-    (fast-lane-ship.js, which /fast-lane-build drives), the feature build (build-feature.js) and its
-    finalize (finalize-feature.js), and the quick fix (quick-fix.js, the primary driver of /quick-fix). Ship
+    (fast-lane-ship.js, which /fast-lane-build drives), the feature build (build-feature.js, with the
+    single-ticket and epic workflows it delegates to, build-ticket.js and build-epic.js) and its finalize
+    (finalize-feature.js), and the quick fix (quick-fix.js, the primary driver of /quick-fix). Ship
     is only prose (templates/skills/ship/SKILL.md, which today clears with remove --path). It is owned by
     llm-expert and is companion work, not this agent's surface. The companion change: ship sends remove
     --kind feature --slug <name> (the identity its step 1 already locates by) through the absolute deployed
@@ -131,8 +157,8 @@ it_requirements:
     BO-4400g is at its five-child cap.
   - >-
     ONE REQUEST BUILDER: every flow builds its clearing request through the one shared helper in
-    templates/workflows-js/_shared/workspace-answer.js. The helper gains a name-based form beside
-    workspaceRemoveCommand(path) and takes the same work identity (kind and short name, or line-of-work
+    templates/workflows-js/_shared/workspace-answer.js. The helper gains a name-based form that replaces
+    workspaceRemoveCommand(path) (see FINALIZE'S SCRATCH COPY) and takes the same work identity (kind and short name, or line-of-work
     name) the flow used to obtain the workspace. No flow composes a remove command of its own, passes --path,
     or takes the work's location from an earlier answer, the target argument or agent prose.
   - >-
@@ -452,6 +478,24 @@ file_findings:
     found_in: null
     reason: It is the quick fix driver and carries no clearing dispatch today, so the clearing step is added here.
     decision: null
+  - file: templates/workflows-js/build-ticket.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains its workspace with workspaceEnsure (kind ticket, line 1372) and carries no clearing dispatch, so the single-ticket route's one clearing step takes its work name from that same call.
+    decision: null
+  - file: templates/workflows-js/build-epic.js
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It obtains the epic workspace with workspaceEnsure (kind epic, line 303) and carries no clearing dispatch, so the epic's one clearing step at the run's end is added here.
+    decision: null
+  - file: unit_tests/_workflow_engine_harness.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: Its run_workflow_under_e2 replays static label_responses through a node shim with no process access and has no clearing-command parser, so the additive exec bridge and the shared parser the flow proofs need go here.
+    decision: null
 file_findings_opened_files:
   - templates/workflows-js/_shared/workspace-answer.js
   - templates/workflows-js/plan-feature.js
@@ -459,6 +503,9 @@ file_findings_opened_files:
   - templates/workflows-js/build-feature.js
   - templates/workflows-js/finalize-feature.js
   - templates/workflows-js/quick-fix.js
+  - templates/workflows-js/build-ticket.js
+  - templates/workflows-js/build-epic.js
+  - unit_tests/_workflow_engine_harness.py
 origin_agent: business-analyst
 created: 2026-10-25
 amended_by:
@@ -496,6 +543,15 @@ amended_by:
       unchanged.
     by: it-po
     at: "2026-11-16"
+  - reason: >-
+      it-po third pass, 2026-11-17, after the test design. declared_files gains build-ticket.js, build-epic.js and
+      unit_tests/_workflow_engine_harness.py. HARNESS EXEC BRIDGE: owned here, with its build order (BO-4300g-2-i's
+      parser, then this bridge, then BO-4400g-4-i and the BO-4400a flow proofs). FINALIZE'S SCRATCH COPY: moved to
+      the name form rather than kept out of scope, because BO-4300g-2-i's check would fail a --path clearing
+      command; --force dropped (the maker ignores it), and workspaceRemoveCommand(path) removed once it has no
+      caller. FLOW SURFACES names the delegated workflows. Criteria unchanged.
+    by: it-po
+    at: "2026-11-17"
 superseded_by: null
 covered_by: [BO-4400g-4-i, BO-4400g-4-ii]
 implemented_by: []
