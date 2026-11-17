@@ -1,0 +1,186 @@
+id: KM-500d-3-i
+title: A comparison works out representativeness from the case set, and a self-declared representative flag changes nothing
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500d-3
+criteria: |
+  Given a baseline report and a proposal report measured on the same 12-case pack, which covers 6 of the 8 query families and has no category reaching its minimum
+  And the pack's coverage block declares representative as true
+  When the two reports are compared
+  Then the comparison outcome is limited, and its reasons name the coverage conditions measured from the cases that are not met, for example "families covered 6 of 8" and each category below its minimum with its count
+  And the declared representative value is shown as a claim made by the pack and does not change the outcome
+  And comparing the same two reports again with only that flag changed from true to false, or removed, gives the same outcome and the same reasons
+
+  Given a baseline report and a proposal report measured on a case set whose own category labels, target families and holdout meet the coverage requirement fixed with that set
+  And the set's coverage block declares no representative value
+  When the two reports are compared and the other promotion gates pass
+  Then the comparison outcome is eligible
+  And the representativeness result states the counts it was worked out from: cases per category, target families covered, holdout size and reviewers per case.
+depends_on:
+- KM-500d-3
+- KM-500a-4-iv
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500d-3.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires a representative set and leaves an insufficient corpus limited rather than inventing a
+    score.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Comparison gates and the rule that passing a nonrepresentative sample stays limited for promotion.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing rule; a coverage answer states what it was measured against.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: knowledge/evaluation_representativeness.py
+  state: to_be_created
+- path: knowledge/evaluation_comparison.py
+  state: existing
+it_requirements:
+- "Remove the trust in the self-declared flag: knowledge/evaluation_comparison.py:54-57 turns limited into eligible when both reports say coverage.representative is true. After this change the promotion outcome is computed from the derived representativeness result only. The declared value may be echoed in the output as a claim made by the pack, and no code path reads it for the outcome."
+- "Representativeness is a pure function in neutral knowledge/ over the case rows of the reports (category, target family, holdout membership, reviewers per case) and the frozen coverage requirement. It reuses the composition rules of knowledge/evaluation_sets.py (KM-500a-4-iv) rather than a second implementation, so the comparison and the S1 composition check cannot disagree."
+- "Reasons are stable, human-readable strings that name each unmet condition with its measured count and requirement (for example 'families covered 6 of 8', '<category> 3 of 10'). The result always states the counts it was derived from: cases per category, target families covered, holdout size and reviewers per case."
+- "Determinism: identical inputs give an identical outcome and identical ordered reasons, so that flipping or removing only the declared flag provably changes nothing."
+- "Backward compatibility: the existing comparison outcomes not_run (no gates), invalidated (incompatible scope) and blocked (failed gates) keep their meaning, and tests/knowledge/test_query_answer_contract_acceptance_evaluation.py stays green without being weakened. Comparison remains pure: no query activation, source mutation or model training."
+test_required: true
+test_intent:
+- clause: "the comparison outcome is limited, and its reasons name the coverage conditions measured from the cases that are not met, for example \"families covered 6 of 8\" and each category below its minimum with its count"
+  needs_test: true
+  reason: The reasons are computed from case labels and must name the measured shortfalls.
+- clause: "the declared representative value is shown as a claim made by the pack and does not change the outcome"
+  needs_test: true
+  reason: Today the flag decides the outcome, so a test must show it no longer does.
+- clause: "comparing the same two reports again with only that flag changed from true to false, or removed, gives the same outcome and the same reasons"
+  needs_test: true
+  reason: This is the named wrong version, a one-boolean edit that must have no effect.
+- clause: "the comparison outcome is eligible"
+  needs_test: true
+  reason: The positive path must be shown reachable from derived coverage alone, or the change could make promotion impossible.
+- clause: "the representativeness result states the counts it was worked out from: cases per category, target families covered, holdout size and reviewers per case"
+  needs_test: true
+  reason: The stated counts are computed and must match the case rows they came from.
+test_spec:
+- name: test_twelve_case_pack_is_limited_with_measured_shortfall_reasons
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Compare a baseline and a proposal measured on a 12-case pack covering 6 of 8 families with every category below its minimum, other gates passing and coverage.representative true; the promotion is limited and the ordered reasons include "families covered 6 of 8" and each category below its minimum with its count, derived from case rows.
+  proves_clause: the comparison outcome is limited, and its reasons name the coverage conditions measured from the cases that are not met, for example "families covered 6 of 8" and each category below its minimum with its count
+  code_file: knowledge/evaluation_representativeness.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - reasons that quote the declared flag instead of measured counts
+    - a category below its minimum left out of the reasons
+- name: test_declared_representative_flag_is_only_a_claim_and_changes_nothing
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Through compare_reports in knowledge/evaluation_comparison.py with both reports declaring representative true, the output echoes the declared value as declared_claim, and promotion stays limited; this is the case that today returns eligible because of lines 54-57.
+  proves_clause: the declared representative value is shown as a claim made by the pack and does not change the outcome
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a self-declared representative flag still flipping limited to eligible
+    - the declared claim omitted from the output
+- name: test_flipping_or_removing_the_flag_gives_identical_outcome_and_reasons
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Compare the same two reports three times with coverage.representative true, false and removed; the status, promotion and the ordered reasons are equal across all three, and a repeat of the same input gives identical output.
+  proves_clause: comparing the same two reports again with only that flag changed from true to false, or removed, gives the same outcome and the same reasons
+  code_file: knowledge/evaluation_comparison.py
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a one-boolean edit that changes the promotion outcome
+    - reasons whose order depends on dict or set iteration
+- name: test_set_meeting_the_requirement_without_a_flag_is_eligible
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: A case set whose labels, target families and holdout meet the frozen coverage requirement and whose coverage block declares no representative value, compared with all other gates passing, gives promotion eligible; a variant with one category one case short gives limited.
+  proves_clause: the comparison outcome is eligible
+  code_file: knowledge/evaluation_representativeness.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - promotion that stays limited when the flag is absent, making eligibility unreachable
+- name: test_representativeness_result_states_its_counts_from_the_case_rows
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The result lists cases per category, families covered against required, holdout size and reviewers per case min and max, all equal to counts recomputed independently from the case rows used as input.
+  proves_clause: 'the representativeness result states the counts it was worked out from: cases per category, target families covered, holdout size and reviewers per case'
+  code_file: knowledge/evaluation_representativeness.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - counts copied from a declared coverage block instead of the case rows
+- name: test_compare_command_ignores_the_flag_end_to_end
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Write baseline, proposal and gates JSON to tmp_path, run python -m knowledge compare as a subprocess with the flag true then removed, and assert both runs print the same limited outcome and reasons with exit 0.
+  proves_clause: the comparison outcome is limited, and its reasons name the coverage conditions measured from the cases that are not met, for example "families covered 6 of 8" and each category below its minimum with its count
+  code_file: knowledge/__main__.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- knowledge/evaluation_comparison.py
+- knowledge/__main__.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+file_findings:
+- file: knowledge/evaluation_comparison.py
+  verdict: consistent
+  line_range: null
+  found_in: null
+  reason: It holds the compare_reports promotion logic that today turns limited into eligible from the self-declared representative flag at lines 54-57.
+  decision: null
+file_findings_opened_files:
+- knowledge/evaluation_comparison.py
+delivers_to:
+- agent: python-coder
+  contract: 'Representativeness result {status: representative|limited, counts {per_category {name: int}, families_covered int, families_required int, holdout_size int,
+    reviewers_per_case {min int, max int}, unlabelled int}, reasons [str], declared_claim bool|null}; compare_reports output gains representativeness and never reads coverage.representative for promotion.'
+- agent: documentation-expert
+  contract: The rule that comparison representativeness is derived from the case set and its frozen coverage requirement, and that the pack flag is only a claim, for the how-to.
+expects_from:
+- ac_id: KM-500d-3
+  contract: Versioned evaluation report from python -m knowledge evaluate with case rows (id, family, category, execution_state, verdict), coverage block, review_fingerprint,
+    source_sha and implementation_digest, as the comparison input.
+- ac_id: KM-500a-4-iv
+  contract: Per-case category, target family and holdout labels, and the minimums frozen with the set.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500d-3.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 section 1 risk 4: the comparison turns limited into eligible when the pack says
+  coverage.representative is true (knowledge/evaluation_comparison.py:54-57), and nothing checks that claim, so a
+  promotion gate can be passed by editing one boolean. The flag-flip clause is the named wrong version a test must go
+  red under. Draft.'

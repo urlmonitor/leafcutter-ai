@@ -1,0 +1,187 @@
+id: KM-500a-4-vi
+title: A sealed quarter of S1 is never used while iterating, and stops counting as clean once its configuration changes
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given S1 holds a sealed holdout of 25% of its cases, rounded up, in which every category with at least 4 cases has at least one holdout case
+  When a development run is made while host instructions, prompts or catalog descriptions are being changed
+  Then the holdout cases are not executed and their content is not shown in the development report, which states only the sealed holdout count
+  And holdout membership is fixed by hash together with the case file, so moving a case into or out of the holdout invalidates the set as in the S1 hash rule
+  And a holdout run states the configuration identity it was scored under: host instruction and prompt identifiers, catalog descriptor digests and the threshold set
+  And after a holdout run, any change to that configuration identity marks later holdout results as exposed, not clean holdout evidence
+  And development results and holdout results are never combined into one figure.
+depends_on:
+- KM-500a-4
+- KM-500a-4-iv
+- KM-500a-4-v
+- KM-500a-4-x
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires frozen cases and thresholds before scoring the proposed planner.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing version identities that a configuration identity is built from.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: knowledge/evaluation_holdout.py
+  state: to_be_created
+- path: integrations/kernel_path_evaluation.py
+  state: to_be_created
+- path: tests/fixtures/kernel_path_evaluation/s1/holdout_runs.json
+  state: to_be_created
+it_requirements:
+- "Run mode is an explicit input (development or holdout) and defaults to development. A development run never opens holdout.json and never sends holdout content to any provider; the development report states only the sealed holdout count taken from set.lock.json."
+- "Holdout selection: 25% of S1 rounded up, with at least one holdout case in every category of 4 or more cases. The membership is the holdout_ids list hashed in set.lock.json (KM-500a-4-v), so any move into or out of the holdout changes the set identity and invalidates the set."
+- "Configuration identity is one digest over host instruction and prompt identifiers, catalog descriptor digests and the threshold set, computed the same way by the runner and by this check (one shared function, no second implementation)."
+- "Exposure ledger: each holdout run appends its configuration identity and set identity to tests/fixtures/kernel_path_evaluation/s1/holdout_runs.json, append-only. A later holdout run under a different configuration identity is marked exposed, not clean, and the mark is computed from the ledger, never set by hand. The ledger is written only by the runner."
+- "Development and holdout results are reported in separate sections and are never summed, averaged or pooled into one figure."
+- "Process control outside the code: a holdout file in the repository can still be read by an agent that tunes prompts or catalog descriptions. Any such tuning dispatch must be told not to open tests/fixtures/kernel_path_evaluation/s1/holdout.json or oracle.json. A holdout run made after such a read counts as exposed."
+test_required: true
+test_intent:
+- clause: "the holdout cases are not executed and their content is not shown in the development report, which states only the sealed holdout count"
+  needs_test: true
+  reason: Leaking holdout content into a development report is the contamination the record prevents, and only a check on the report shows it.
+- clause: "holdout membership is fixed by hash together with the case file, so moving a case into or out of the holdout invalidates the set as in the S1 hash rule"
+  needs_test: true
+  reason: Membership is part of the computed set identity and a check that ignores it would allow quiet reshuffling.
+- clause: "a holdout run states the configuration identity it was scored under: host instruction and prompt identifiers, catalog descriptor digests and the threshold set"
+  needs_test: true
+  reason: The configuration identity is computed and a missing component would hide a configuration change.
+- clause: "after a holdout run, any change to that configuration identity marks later holdout results as exposed, not clean holdout evidence"
+  needs_test: true
+  reason: The exposed mark is derived from the ledger and is the only guard against reusing a holdout after tuning.
+- clause: "development results and holdout results are never combined into one figure"
+  needs_test: true
+  reason: Pooling the two sections is an aggregation mistake that would not raise any error.
+test_spec:
+- name: test_development_run_never_opens_or_executes_holdout_cases
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Run a development-mode scripted run over a tmp_path S1 copy whose holdout.json contains marker text; assert holdout.json is never opened (read spy), no holdout case is started on the kernel, the provider seam sees no marker text, and the report shows only holdout sealed_count taken from set.lock.json with no holdout id or question text.
+  proves_clause: the holdout cases are not executed and their content is not shown in the development report, which states only the sealed holdout count
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a holdout id used in a development run still counting as clean
+    - holdout question text leaking into the development report
+    - a development run that opens holdout.json
+- name: test_moving_a_case_in_or_out_of_holdout_invalidates_the_set
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Move one case id into and then out of holdout_ids in a tmp_path lock while the case file bytes stay the same; the set identity check reports invalidated against S1 each time. Holdout membership is read from the lock and never recomputed.
+  proves_clause: holdout membership is fixed by hash together with the case file, so moving a case into or out of the holdout invalidates the set as in the S1 hash rule
+  code_file: knowledge/evaluation_holdout.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - holdout membership excluded from the hashed set identity
+    - membership recomputed from the case file instead of read from the lock
+- name: test_holdout_report_states_full_configuration_identity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The configuration identity digest covers host instruction and prompt identifiers, catalog descriptor digests and the threshold set; changing any one component changes the digest, and the runner and the check use one shared function.
+  proves_clause: 'a holdout run states the configuration identity it was scored under: host instruction and prompt identifiers, catalog descriptor digests and the threshold set'
+  code_file: knowledge/evaluation_holdout.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a digest that omits the threshold set so a threshold change hides
+    - a second implementation of the digest in the runner
+- name: test_holdout_result_is_exposed_after_configuration_change
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Append holdout run 1 under configuration A to a tmp_path ledger, then a run under configuration B; the later result is marked exposed, and a rerun under A stays clean. The status is computed from the ledger and a caller-supplied status is ignored.
+  proves_clause: after a holdout run, any change to that configuration identity marks later holdout results as exposed, not clean holdout evidence
+  code_file: knowledge/evaluation_holdout.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a holdout scored once then reused after tuning still reading as clean
+    - the exposed mark set by hand or passed in by the caller
+- name: test_holdout_ledger_is_appended_by_the_runner_and_read_back
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Run a holdout-mode scripted run with the ledger path pointed at a tmp_path holdout_runs.json, read the file back and assert one appended entry carrying the configuration identity and set identity; a second run appends and never rewrites the first entry.
+  proves_clause: after a holdout run, any change to that configuration identity marks later holdout results as exposed, not clean holdout evidence
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_development_and_holdout_results_are_never_pooled
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A report with development and holdout sections keeps separate numerators and denominators and carries no summed, averaged or pooled figure across them.
+  proves_clause: development results and holdout results are never combined into one figure
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - development and holdout pass counts summed into one overall rate
+- name: test_run_mode_is_reachable_from_knowledge_cli_and_defaults_to_development
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the sibling kernel-path command of integrations/knowledge_cli.py as a subprocess with no mode argument and assert a development report with sealed_count only; run it with the holdout mode and assert a holdout_status in the report.
+  proves_clause: the holdout cases are not executed and their content is not shown in the development report, which states only the sealed holdout count
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- integrations/knowledge_cli.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+delivers_to:
+- agent: python-coder
+  contract: 'Run mode development|holdout; development report {holdout: {sealed_count int}} with no holdout case ids or text; holdout report {configuration_identity str,
+    holdout_status clean|exposed}; sections {development, holdout} never pooled.'
+- agent: documentation-expert
+  contract: Development versus holdout run modes and the rule that marks a holdout result exposed, for the how-to.
+expects_from:
+- ac_id: KM-500a-4-v
+  contract: Fixed case-file and oracle hashes and invalidation on change.
+- ac_id: KM-500a-4-x
+  contract: Committed holdout.json and set.lock.json from the S1 data run; holdout membership is the lock's holdout_ids list, read from
+    the lock and never recomputed by this record.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 section 3.2: the precision repair that went from 10/12 to 16/16 was revised against the 12 IP
+  cases; only the 4 H holdouts were clean, and the live retest re-asked the question the repair targeted. The exposed
+  marking was not asked for by name; without it a holdout scored once, then reused after tuning, still reads as clean.
+  Draft. IT PO 2026-11-17: expects_from KM-500a-4-x added, because holdout runs score against the frozen S1 files the
+  data run commits. The BA should add the matching depends_on KM-500a-4-x. No cycle: KM-500a-4-x depends only on
+  KM-500a-4, KM-500a-4-iv and KM-500a-4-v.'

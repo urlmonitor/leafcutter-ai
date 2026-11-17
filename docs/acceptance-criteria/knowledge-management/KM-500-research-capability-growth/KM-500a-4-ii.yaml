@@ -1,0 +1,191 @@
+id: KM-500a-4-ii
+title: Scripted, mixed and real results are labelled per actor, and a real-model figure needs three repetitions
+component: knowledge-management
+components:
+- knowledge_management
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-500a-4
+criteria: |
+  Given a kernel-path evaluation run of 20 cases that uses a scripted host and the real configured Jev
+  When the report is produced
+  Then each case result labels the host as scripted and Jev as real, and the run-level evidence label is mixed, not real
+  And only results in which every judging actor is real count toward a real-model quality figure, while scripted and mixed results appear in separately labelled sections with their own denominators
+  And a real-model quality figure is given only after 3 repetitions of the same frozen case set under the same configuration identity, with the minimum, maximum and mean of each category figure across the repetitions
+  And with fewer than 3 completed repetitions the real-model figure is marked limited, states how many repetitions completed, and carries no threshold verdict
+  And a repetition that stops partway counts as one attempt, its unfinished cases are reported not run, and none of its cases are dropped from the denominators
+  And a synthetic example case, one not drawn from the frozen reviewed set, is labelled synthetic and never counts toward a real-model figure.
+depends_on:
+- KM-500a-4
+- KM-500a-4-i
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Parent requires scripted judgments and synthetic examples to be labelled separately from real-provider evidence.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: context
+  status: exists
+  relevance: Existing report states and denominators the labels attach to.
+- path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+  relationship: context
+  status: exists
+  relevance: Inherited standing rule; a figure states the total it was measured against.
+assigned_agent: python-coder
+estimated_complexity: M
+declared_files:
+- path: integrations/kernel_path_labels.py
+  state: to_be_created
+- path: integrations/kernel_path_evaluation.py
+  state: to_be_created
+it_requirements:
+- "Labels are derived from the provider actually bound for each actor in the run (the composed host adapter and Jev factory), never from a caller-supplied label or a case-file field. A scripted provider is any provider from kernel/providers/fakes.py or another non-network double; a real provider is the configured networked one."
+- "Run-level label rule: real only when every judging actor in every counted case is real; mixed when actors differ; scripted when every actor is scripted; synthetic for any case whose id is not in the frozen S1 set identity (KM-500a-4-v). Synthetic membership is decided by set membership, never by a flag in the case."
+- "A real-model figure is computed only over all-real results. Scripted, mixed and synthetic results are reported in their own sections with their own denominators and are never merged into the real figure."
+- "Repetition identity: each repetition records its index, the S1 set identity and a configuration identity (host instruction and prompt identifiers, Jev model and settings identifiers, catalog descriptor digests, threshold set). Repetitions under different configuration identities are never aggregated together."
+- "The real-model figure is given only when 3 repetitions completed under one configuration identity, with per-category min, max and mean. Below 3 completed repetitions the figure is labelled limited, states the completed count and carries no threshold verdict."
+- "An interrupted repetition counts as one attempt, keeps every case in the denominators, and reports unfinished cases not_run. Repetitions run sequentially and a repeated invocation never silently replaces an earlier repetition's record."
+- "Real-model repetitions multiply provider cost by 3: the run must state the number of planned provider-bound cases before it starts and honour the existing reserve-before-use task budgets."
+test_required: true
+test_intent:
+- clause: "each case result labels the host as scripted and Jev as real, and the run-level evidence label is mixed, not real"
+  needs_test: true
+  reason: The label is derived from the bound providers, and reporting mixed as real is the false claim the record forbids.
+- clause: "only results in which every judging actor is real count toward a real-model quality figure, while scripted and mixed results appear in separately labelled sections with their own denominators"
+  needs_test: true
+  reason: Section membership and its denominators are computed and a leak would inflate the real figure.
+- clause: "a real-model quality figure is given only after 3 repetitions of the same frozen case set under the same configuration identity, with the minimum, maximum and mean of each category figure across the repetitions"
+  needs_test: true
+  reason: The repetition gate and the spread figures are computed behaviour that a wrong aggregation would change silently.
+- clause: "with fewer than 3 completed repetitions the real-model figure is marked limited, states how many repetitions completed, and carries no threshold verdict"
+  needs_test: true
+  reason: Omitting the limited marker would present a single noisy run as a quality claim.
+- clause: "a repetition that stops partway counts as one attempt, its unfinished cases are reported not run, and none of its cases are dropped from the denominators"
+  needs_test: true
+  reason: Dropping unfinished cases is a denominator change that no other check would notice.
+- clause: "a synthetic example case, one not drawn from the frozen reviewed set, is labelled synthetic and never counts toward a real-model figure"
+  needs_test: true
+  reason: Synthetic membership is decided by set identity and a wrong check would let invented cases count as evidence.
+test_spec:
+- name: test_scripted_host_real_jev_labelled_per_actor_and_run_is_mixed
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Bind a scripted host adapter (a kernel/providers/fakes.py double) and a stand-in networked Jev factory, run 20 frozen-set cases, and assert each case has host scripted and jev real and the run evidence label is mixed, never real. A caller-supplied label or case-file label field must be ignored.
+  proves_clause: each case result labels the host as scripted and Jev as real, and the run-level evidence label is mixed, not real
+  code_file: integrations/kernel_path_labels.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a run of scripted host plus real Jev reported as real
+    - a label copied from a case-file field instead of the bound provider
+- name: test_only_all_real_results_reach_the_real_model_figure
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Feed all-real, mixed, scripted and synthetic case results together and assert the real figure's denominator counts only all-real results while the other three appear in separate sections with their own denominators.
+  proves_clause: only results in which every judging actor is real count toward a real-model quality figure, while scripted and mixed results appear in separately labelled sections with their own denominators
+  code_file: integrations/kernel_path_labels.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a mixed or scripted result merged into the real-model denominator
+- name: test_real_figure_given_after_three_repetitions_with_min_max_mean
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Three completed repetitions of one frozen set under one configuration identity give a measured figure with per-category minimum, maximum and mean equal to values recomputed by hand; repetitions under a different configuration identity are not aggregated with them.
+  proves_clause: a real-model quality figure is given only after 3 repetitions of the same frozen case set under the same configuration identity, with the minimum, maximum and mean of each category figure across the repetitions
+  code_file: integrations/kernel_path_labels.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+- name: test_fewer_than_three_repetitions_is_limited_without_threshold_verdict
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: With 1 and with 2 completed repetitions the figure status is limited, the completed count is stated and no threshold verdict key is present.
+  proves_clause: with fewer than 3 completed repetitions the real-model figure is marked limited, states how many repetitions completed, and carries no threshold verdict
+  code_file: integrations/kernel_path_labels.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - a single noisy real run presented as measured
+    - a threshold verdict emitted below 3 repetitions
+- name: test_interrupted_repetition_counts_once_and_keeps_cases_as_not_run
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Stop a repetition after 5 of 20 cases; it counts as one attempt, the 15 unfinished cases are not_run, all 20 stay in the denominators, and a repeated invocation does not replace the earlier repetition record.
+  proves_clause: a repetition that stops partway counts as one attempt, its unfinished cases are reported not run, and none of its cases are dropped from the denominators
+  code_file: integrations/kernel_path_evaluation.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - unfinished cases dropped from the denominators
+    - an interrupted repetition counted as completed
+- name: test_case_outside_frozen_set_is_synthetic_by_membership_not_flag
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: A case whose id is not in the frozen set identity is labelled synthetic and excluded from the real figure even when its case record carries a flag claiming it is real or reviewed.
+  proves_clause: a synthetic example case, one not drawn from the frozen reviewed set, is labelled synthetic and never counts toward a real-model figure
+  code_file: integrations/kernel_path_labels.py
+  to_be_created: true
+  convention_test_file: tests/knowledge/test_query_answer_contract_acceptance.py
+  must_catch:
+    - synthetic membership decided by a flag inside the case instead of set membership
+- name: test_label_report_is_reachable_from_knowledge_cli
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Run the sibling kernel-path command of integrations/knowledge_cli.py as a subprocess with a scripted host and a scripted Jev and assert the JSON report carries per-case labels and a run evidence label of scripted.
+  proves_clause: each case result labels the host as scripted and Jev as real, and the run-level evidence label is mixed, not real
+  code_file: integrations/knowledge_cli.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-17"
+test_design_opened_files:
+- integrations/knowledge_cli.py
+- tests/knowledge/test_query_answer_contract_acceptance.py
+delivers_to:
+- agent: python-coder
+  contract: 'Evidence labels: per case {host: scripted|real, jev: scripted|real, case_label: scripted|mixed|real|synthetic}; per run {evidence_label: scripted|mixed|real,
+    sections: {real|mixed|scripted|synthetic: {denominators}}, repetitions: {completed int, attempted int, configuration_identity str},
+    real_model_figure: {status: limited|measured, per_category: {name: {min float, max float, mean float}}}|absent}.'
+- agent: python-coder
+  contract: The label fields above, so the required suite can assert every scripted S1 case is labelled scripted and no scripted result reaches a real-model figure.
+- agent: python-coder
+  contract: The per-case case_label (scripted|mixed|real|synthetic) and the run's real-model sections above, so the scorer (KM-500a-4-vii) gives threshold verdicts
+    in model-judged categories only to all-real results and reports scripted results in those categories without a verdict.
+- agent: documentation-expert
+  contract: The scripted, mixed, real and synthetic label meanings and the 3-repetition rule, for the how-to.
+expects_from:
+- ac_id: KM-500a-4-i
+  contract: Per-case kernel-path result carrying host and Jev identities and call counts.
+origin_agent: business-analyst
+created: '2026-11-16'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-17'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'Audit 2026-11-16 section 3.2: no existing set records repeated runs or variance, and the biggest executed
+  real-model set with retrieval is 4 cases, which cannot be told apart from noise. The mixed label was not asked for by
+  name; without it a scripted-host, real-Jev run would be reported as either scripted or real and either label would be
+  false. Draft.'

@@ -130,6 +130,8 @@ covered_by:
 - tests/knowledge/test_query_answer_contract_acceptance_evaluation.py
 - tests/knowledge/test_query_answer_contract_acceptance_clauses.py
 - tests/knowledge/query_answer_contract_acceptance_corpus.py
+- KM-500d-3-i
+- KM-500d-3-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500d-3.md
 change_target: code
