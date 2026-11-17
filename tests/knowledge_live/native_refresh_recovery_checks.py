@@ -91,7 +91,8 @@ def test_interrupted_publication_removes_its_partial_generation_and_retry_keeps_
             # The operator retry goes through the native refresh tool, as before KM-400b-5-i.
             monkeypatch.setattr(native_refresh, "resolve_neo4j", lambda config: credentials)
             monkeypatch.setattr(native_refresh, "writer_backend", lambda root: db)
-            monkeypatch.setattr(native_refresh, "load_snapshot", lambda *args: target)
+            # A real load reads source afresh; never hand back the object the failed publish collapsed in place.
+            monkeypatch.setattr(native_refresh, "load_snapshot", lambda *args: snapshot("new", 251))
             args = argparse.Namespace(
                 root=str(Path(__file__).resolve().parents[2]),
                 source_root="unused-by-fixture",
