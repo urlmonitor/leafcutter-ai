@@ -1,0 +1,39 @@
+# LIVE PROBE for TQ-600a-13-x. Never merged; the PR carrying it is closed after observation.
+# 1. `spoof` is a PR-added job named exactly like the required context. It passes.
+#    Once the ruleset is pinned to the hold App (5249547) it must NOT satisfy the check.
+# 2. `secret-read-plain` shows a PR-added workflow cannot read the App key without the environment.
+# 3. `secret-read-env` shows the main-only environment refuses a PR ref.
+# Each prints only "present" or "absent" -- never any part of a value.
+name: zz probe (hold app)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  spoof:
+    name: Post-merge suite status
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "spoof job passing on purpose"
+
+  secret-read-plain:
+    name: probe secret read (no environment)
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          K: ${{ secrets.HOLD_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$K" ]; then echo "HOLD_APP_PRIVATE_KEY: present"; else echo "HOLD_APP_PRIVATE_KEY: absent"; fi
+
+  secret-read-env:
+    name: probe secret read (environment post-merge-hold)
+    runs-on: ubuntu-latest
+    environment: post-merge-hold
+    steps:
+      - env:
+          K: ${{ secrets.HOLD_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$K" ]; then echo "HOLD_APP_PRIVATE_KEY: present"; else echo "HOLD_APP_PRIVATE_KEY: absent"; fi
