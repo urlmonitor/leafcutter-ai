@@ -59,7 +59,12 @@ _TEST_ROOTS = [
 # decided by the shared is_covers_tag_waived predicate). Inclusion rule: a finished
 # record counts as untagged only if no test tags it, it is not superseded, and the
 # done gate does not waive it. The mark drops from 240 to 209.
-HIGH_WATER_MARK = 209
+# KM-ADM-005-3, measured 2026-11-16 on 32e6aa89f: 1859 finished records, 1613 tagged, 162 untagged,
+# 84 excluded (3 superseded + 34 waived + 47 "proved through its children (tags read, tests not run)").
+# Inclusion rule: a finished L0, L1 or docs-only composite whose covered_by is complete leaves the
+# count when the done gate's own _unproven_composite_children finds no unproven child; code L2s stay
+# counted. The mark drops from 209 to 162.
+HIGH_WATER_MARK = 162
 
 _WORK_STATUS_DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
 # A superseded AC (status superseded_by / superseded) has no current behaviour
@@ -232,8 +237,11 @@ def test_untagged_done_ac_backlog_does_not_grow(ac_root=_AC_ROOT):
     import untagged_done_count
 
     result = untagged_done_count.measure(ac_root, _TEST_ROOTS)
-    for line in result.exclusion_lines():
-        print(f"untagged-done exclusion: {line}")
+    for ground, count in sorted(result.exclusions.items()):
+        ids = result.excluded_ids.get(ground, [])
+        listed = f": {', '.join(ids)}" if ground == untagged_done_count.GROUND_PROVED else ""
+        print(f"untagged-done exclusion: {count} - {ground}{listed}")
+    print(f"untagged-done records related to a parent only through the parent field: {result.parent_field_only}")
     for path in result.unreadable:
         print(f"untagged-done UNREADABLE record file: {path}")
     assert not result.unreadable, f"unreadable done-record files: {result.unreadable}"
@@ -307,3 +315,32 @@ def test_ratchet_run_reports_its_exclusions_with_grounds_and_passes_on_the_live_
     ground = "waived: declared test-free with a stated reason"
     assert re.search(rf"(\d+\D{{0,6}}{re.escape(ground)}|{re.escape(ground)}\D{{0,6}}\d+)", output), (
         f"the ratchet run does not state the waived exclusion count with its ground: {output[-1500:]}")
+
+
+def test_ratchet_subprocess_run_prints_the_new_ground_with_its_count_and_ids():
+    # covers: KM-ADM-005-3
+    # angle: reachability
+    """KM-ADM-005-3: pytest run as a subprocess on the ratchet test with output shown exits 0 and prints one
+    line holding the new ground, its count and the sorted ids it excluded, so the ratchet calls the new rule
+    and the ids are visible on every run.
+    """
+    import os
+    import subprocess
+    import sys
+
+    ratchet = "unit_tests/docs/test_artifact_graph_covers_scope.py::test_untagged_done_ac_backlog_does_not_grow"
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", ratchet, "-s", "-q", "-p", "no:cacheprovider"],
+        cwd=str(_REPO_ROOT), capture_output=True, text=True, encoding="utf-8", timeout=900,
+        env={**os.environ, "PYTHONUTF8": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode == 0, output[-2000:]
+    ground = "proved through its children (tags read, tests not run)"
+    lines = [line for line in output.splitlines() if ground in line]
+    assert len(lines) == 1, f"the new ground must be printed on exactly one line: {output[-1500:]}"
+    match = re.search(rf"exclusion: (\d+) - {re.escape(ground)}: (.+)$", lines[0])
+    assert match, f"the line does not carry count, ground and ids: {lines[0]!r}"
+    ids = [i.strip() for i in match.group(2).split(",")]
+    assert int(match.group(1)) == len(ids) > 0, lines[0]
+    assert ids == sorted(ids), "the printed ids must be sorted"

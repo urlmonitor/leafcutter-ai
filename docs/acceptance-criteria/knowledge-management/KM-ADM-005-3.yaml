@@ -1,0 +1,478 @@
+id: KM-ADM-005-3
+components:
+  - knowledge_management
+  - testing_quality
+title: "A finished L0, L1 or docs-only composite whose children the done gate proves leaves the untagged-done count, named, under a ground that says tags were read and tests were not run"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the untagged-done ratchet, which counts finished records that no test tags
+    and already excludes records under the grounds "superseded" and "waived: declared
+    test-free with a stated reason" (KM-ADM-005-1),
+  And a finished record that carries no covers tag of its own and whose covered_by
+    lists at least one acceptance-criterion id as a child (a composite),
+  When the ratchet measures its count,
+  Then the composite leaves the count under the ground "proved through its children
+    (tags read, tests not run)" only when all three of these hold:
+      (a) the done gate's own composite rule, looked up when the ratchet runs and
+          given the set of ids tagged by the done gate's own covers-tag pattern, finds
+          no unproven child;
+      (b) its covered_by is complete: every live (not superseded) record on disk
+          whose parent is this record is listed in it;
+      (c) it is level L0 or L1, or its change_target is exactly "docs",
+  And every finished record is placed in exactly one bucket, tested in this order:
+    tagged, superseded, waived, proved through its children, untagged,
+  And a finished L1 X-100a whose children X-100a-1 and X-100a-2 are both finished and
+    each tagged by a collected test leaves the count under the new ground,
+  And a finished L1 X-100a whose child X-100a-2 has work_status todo stays counted,
+    even when X-100a-2 carries a covers tag,
+  And a finished L1 X-100a whose finished L2 child X-100a-1 is itself an untagged
+    composite with an unfinished or untagged child X-100a-1-i stays counted,
+  And a finished L2 X-100a-1 whose change_target is code, schema, pipeline, config or
+    prompt stays counted while it has no covers tag of its own, even when every one of
+    its children is finished and tagged,
+  And a finished L2 X-100a-1 whose change_target is "docs" and whose children are all
+    finished and tagged leaves the count under the new ground,
+  And a finished L1 X-100a whose covered_by lists X-100a-1 but omits a live child
+    X-100a-2 that exists on disk stays counted, while a superseded child X-100a-3
+    missing from covered_by does not keep it counted,
+  And a child whose only mention of its id is a prose "covers:" line that the done
+    gate's covers-tag pattern does not accept does not prove its parent, even when
+    the ratchet's own tag reading counts that child as tagged,
+  And when the done gate's composite rule is replaced at run time by one that reports
+    an unproven child for every record, a composite that left under the new ground is
+    counted untagged again, and when it is replaced by one that reports none, a
+    composite with an unfinished child leaves the count if (b) and (c) hold,
+  And the ground's published wording states that the children's tags were read and
+    their tests were not run, and never states or implies that any test passed,
+  And the ratchet's published measurement lists, by id, each record excluded under
+    this ground, beside the ground's count,
+  And the new ground is on the published list of legitimate grounds (ACS-1100b-1),
+    and untagged plus every exclusion count plus tagged still equals the number of
+    finished records enumerated,
+  And in the same change the recorded high-water mark is lowered to the count
+    measured at build time, with that measurement's date, commit and inclusion rule
+    recorded beside it, and is never left at the old value or raised.
+depends_on: [KM-ADM-005, KM-ADM-005-1]
+doc_links:
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    relationship: verifies
+    status: exists
+    relevance: "The ratchet (test_untagged_done_ac_backlog_does_not_grow). HIGH_WATER_MARK = 209 on origin/main 1b4a4b859; this record adds the fourth exclusion ground and lowers the mark."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-005-1.yaml
+    relationship: context
+    status: exists
+    relevance: "Created the exclusion-with-ground reporting, the one ground list and the sum check this record extends."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b-1.yaml
+    relationship: constrains
+    status: exists
+    relevance: "Every exclusion states its ground; counts sum; provenance and measurement date travel with the figure."
+  - path: docs/architecture/adrs/ADR-076-verification-methods-for-non-test-requirements.md
+    relationship: constrains
+    status: exists
+    relevance: "A3.1 forbids justifying a finished claim with a reason written later. This ground writes no reason: it recomputes the evidence from the store and the test roots on every run."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500b-1-ii.yaml
+    relationship: constrains
+    status: exists
+    relevance: "The done gate's composite model (fulfilment derived from children) that clause (a) consults through _unproven_composite_children at run time, never re-implemented."
+  - path: docs/known-issues/ac-store/open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md
+    relationship: context
+    status: exists
+    relevance: "The open known issue this record answers for L0, L1 and docs-only composites: the ratchet counted a composite the gate proves through its children. Code L2 composites stay counted by design."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+declares_side_effect: false
+declared_files:
+  - path: scripts/ac_store/untagged_done_count.py
+    state: existing
+  - path: unit_tests/docs/test_artifact_graph_covers_scope.py
+    state: existing
+it_requirements:
+  - "Clause (a) is decided by a call to _unproven_composite_children looked up as an attribute of the _done_proof_composite module when the ratchet runs (the way untagged_done_count.py already reaches is_covers_tag_waived through its _helpers module), never a name bound by from-import, a copy or a re-typed rule. Patching that module attribute must change the ratchet's verdict. The ratchet adds no child judgement of its own (no check of a child's work_status, tag or waiver): the rule's empty or non-empty answer is the whole of clause (a)."
+  - "scripts/ac_store/_done_proof_composite.py is not edited: it is 592 lines, already over the check-file-size cap. All new logic goes in scripts/ac_store/untagged_done_count.py (162 lines today), which must stay under the 400-line limit, plus the ratchet test file."
+  - "The tagged-id set handed to the composite rule is built with the done gate's own covers-tag pattern, COVERS_TAG_RE in scripts/ac_store/test_enforcement.py, read at run time (for example through the gate's own collector _collect_all_covered_ids) over the ratchet's existing test roots. The ratchet's own _COVERS_RE set keeps deciding the 'tagged' bucket only and is never passed to the composite rule; the two sets stay separate."
+  - "Bucket order is fixed: tagged, superseded, waived, proved through its children, untagged, and each finished record lands in exactly one bucket. The composite rule is consulted only for a record that reaches the fourth test and already satisfies conditions (c) and (b), so it runs for few records."
+  - "Condition (b) reads the whole store, not only finished records: every record whose parent field, or whose id-derived parent (ac_parent_id.derive_parent_id), is the composite and which the shared retirement predicate (ac_retirement.is_retired, the one the composite rule itself uses) does not retire must be among the composite's AC-id children as _composite_child_ids reads covered_by. No re-typed parent or supersession rule; a structurally invalid supersession counts as live, so the parent stays counted (fail closed). derive_parent_id mis-derives ids with a two-part prefix (KM-ADM-100a gives KM-ADM), so either source naming the composite makes a record its child, and the builder reports how many records in the store it could relate only through the parent field."
+  - "Condition (c) accepts level L0 or L1, or a change_target that is the string 'docs' or a list whose only member is 'docs'. An absent or null change_target, any other value, or a list mixing 'docs' with another target keeps an L2 or L3 counted (fail closed)."
+  - "The ground string is declared once, as a module constant in untagged_done_count.py added to PUBLISHED_GROUNDS beside the two existing grounds (ACS-1100b-1 remains their eventual owner; no second list). Its wording says the children's tags were read and their tests were not run, and contains no claim that a test passed or that anything was verified."
+  - "The measurement carries the ids excluded under the new ground, sorted, and the ratchet run prints them beside that ground's count on every run. The sum check and the unexplained-shortfall check are unchanged in meaning and still run on every ratchet run."
+  - "The new import works in both layouts the module already supports: the flat sibling import with scripts/ac_store on sys.path (as the ratchet test arranges) and the package-style fallback. _done_proof_composite itself flat-imports ac_retirement and test_enforcement and reaches its waiver through done_proof, so an import that cannot resolve fails the ratchet loudly; it never degrades silently into a measurement without the fourth ground."
+  - "Store-wide inputs (the store id set, the parent index, the gate's tagged-id set) are computed once per measurement, not once per record. The ratchet test on the live store must finish within 120 seconds; the builder measures its run time on the branch and reports it."
+  - "Errors are handled per the project error handling policy: unreadable records stay listed in 'unreadable' and fail the sum as today, and an exception raised by the composite rule propagates and fails the ratchet instead of being caught and turned into a bucket."
+  - "HIGH_WATER_MARK is lowered in the same change: re-measured on the branch at build time and recorded in the comment beside it (the file's existing style) with the measured value, the measurement date, the commit measured and the inclusion rule including the new ground. The 162 measured on 4ba177be7 is the expectation only; a different measured figure is reported, never forced. The mark is never raised and never left at 209."
+  - "A changelog entry is required in the same change (changelogs/, written through the changelog agent), stating the new exclusion ground, which composites it covers and which stay counted, and the old and new mark with the measurement behind it."
+  - "The change lands on its own, with no done-gate change first or alongside: check_done_proof.py, done_proof.py and mark_ac_done.py are not edited. The ratchet is then stricter than the gate on code, schema, pipeline, config and prompt L2 composites, which is the intended result."
+  - "No new dependency beyond the standard library and PyYAML, which the module already uses. The existing KM-ADM-005-1 tests (unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py and the ratchet file's own tests) stay green unchanged."
+test_required: true
+test_intent:
+  - clause: 'the composite leaves the count under the ground "proved through its children (tags read, tests not run)" only when all three of these hold: (a) the done gate''s own composite rule, looked up when the ratchet runs and given the set of ids tagged by the done gate''s own covers-tag pattern, finds no unproven child; (b) its covered_by is complete: every live (not superseded) record on disk whose parent is this record is listed in it; (c) it is level L0 or L1, or its change_target is exactly "docs"'
+    needs_test: true
+    reason: The three-way conjunction is the new exclusion, and a rule that drops any one condition lets a composite leave the count it should stay in.
+  - clause: 'every finished record is placed in exactly one bucket, tested in this order: tagged, superseded, waived, proved through its children, untagged'
+    needs_test: true
+    reason: The bucket order decides which ground a record is reported under, and a wrong order double-counts or mislabels records silently.
+  - clause: a finished L1 X-100a whose children X-100a-1 and X-100a-2 are both finished and each tagged by a collected test leaves the count under the new ground
+    needs_test: true
+    reason: This is the main positive case, and a ratchet that still counts a proved L1 keeps failing correct closes.
+  - clause: a finished L1 X-100a whose child X-100a-2 has work_status todo stays counted, even when X-100a-2 carries a covers tag
+    needs_test: true
+    reason: A rule that reads the child's tag but not its work_status would let an unfinished child prove its parent.
+  - clause: a finished L1 X-100a whose finished L2 child X-100a-1 is itself an untagged composite with an unfinished or untagged child X-100a-1-i stays counted
+    needs_test: true
+    reason: Only the recursive case shows the gate's rule is applied down the whole subtree and not to direct children alone.
+  - clause: a finished L2 X-100a-1 whose change_target is code, schema, pipeline, config or prompt stays counted while it has no covers tag of its own, even when every one of its children is finished and tagged
+    needs_test: true
+    reason: A rule applied to every level would exclude code L2s whose children prove only edge cases, which is the defect this record avoids.
+  - clause: a finished L2 X-100a-1 whose change_target is "docs" and whose children are all finished and tagged leaves the count under the new ground
+    needs_test: true
+    reason: A level-only rule would keep counting docs aggregators, so the docs case must be shown to leave the count.
+  - clause: a finished L1 X-100a whose covered_by lists X-100a-1 but omits a live child X-100a-2 that exists on disk stays counted, while a superseded child X-100a-3 missing from covered_by does not keep it counted
+    needs_test: true
+    reason: The completeness check reads the store beyond covered_by, and both the live and the superseded omission must be judged correctly.
+  - clause: a child whose only mention of its id is a prose "covers:" line that the done gate's covers-tag pattern does not accept does not prove its parent, even when the ratchet's own tag reading counts that child as tagged
+    needs_test: true
+    reason: Only this case tells the gate's tag set from the ratchet's looser one, so passing the wrong set would go unnoticed without it.
+  - clause: when the done gate's composite rule is replaced at run time by one that reports an unproven child for every record, a composite that left under the new ground is counted untagged again, and when it is replaced by one that reports none, a composite with an unfinished child leaves the count if (b) and (c) hold
+    needs_test: true
+    reason: A copied or import-bound rule, or a ratchet-side child check, ignores the replacement, and only patching the rule at run time exposes it.
+  - clause: the ground's published wording states that the children's tags were read and their tests were not run, and never states or implies that any test passed
+    needs_test: true
+    reason: The ground string is published output, and wording that claims a passed test would overstate the evidence the ratchet gathered.
+  - clause: the ratchet's published measurement lists, by id, each record excluded under this ground, beside the ground's count
+    needs_test: true
+    reason: The id list is computed output of the run, and a count without the ids would hide which composites left.
+  - clause: the new ground is on the published list of legitimate grounds (ACS-1100b-1), and untagged plus every exclusion count plus tagged still equals the number of finished records enumerated
+    needs_test: true
+    reason: A ground missing from the published list turns into an unexplained shortfall, and the sum is arithmetic that breaks silently on a misplaced bucket.
+  - clause: in the same change the recorded high-water mark is lowered to the count measured at build time, with that measurement's date, commit and inclusion rule recorded beside it, and is never left at the old value or raised
+    needs_test: false
+    reason: The new mark is a measured constant written once with its provenance; review compares it with the measurement, and a test would only restate the number.
+test_spec:
+  - name: test_composite_leaves_the_count_only_when_a_b_and_c_all_hold
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "On a fixture store written with yaml.safe_dump and a fixture test tree holding real '# covers:' lines, measure() leaves a finished L1 composite out under the new ground only when its children are proved (a), covered_by is complete (b) and level or change_target qualifies (c); breaking any one of the three keeps it in untagged."
+    proves_clause: 'the composite leaves the count under the ground "proved through its children (tags read, tests not run)" only when all three of these hold: (a) the done gate''s own composite rule, looked up when the ratchet runs and given the set of ids tagged by the done gate''s own covers-tag pattern, finds no unproven child; (b) its covered_by is complete: every live (not superseded) record on disk whose parent is this record is listed in it; (c) it is level L0 or L1, or its change_target is exactly "docs"'
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a rule that checks only (a) and ignores covered_by completeness (b)
+      - a rule that checks only (a) and (b) and ignores level and change_target (c)
+      - a rule that accepts a change_target list mixing 'docs' with another target, or an absent change_target, on an L2
+      - a rule that never consults the gate and trusts covered_by alone
+  - name: test_composite_whose_every_child_is_retired_is_not_vacuously_proved
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A finished L1 with no own tag whose only AC-id children are retired by a valid supersession stays counted, because the gate's rule falls back to the record's own tag; with an own tag it is tagged, never the new ground."
+    proves_clause: 'the composite leaves the count under the ground "proved through its children (tags read, tests not run)" only when all three of these hold: (a) the done gate''s own composite rule, looked up when the ratchet runs and given the set of ids tagged by the done gate''s own covers-tag pattern, finds no unproven child; (b) its covered_by is complete: every live (not superseded) record on disk whose parent is this record is listed in it; (c) it is level L0 or L1, or its change_target is exactly "docs"'
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a vacuous proof when every child is retired, so the composite leaves the count with nothing proving it
+      - a ratchet that treats an empty list of live children as no unproven child without asking the gate rule
+  - name: test_test_paths_in_covered_by_are_not_read_as_children
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A finished L1 whose covered_by lists one proved AC-id child plus a test file path leaves the count, and the path is never looked up as a child or as a live record needing listing; a covered_by holding only test paths is a leaf and stays counted when untagged."
+    proves_clause: 'the composite leaves the count under the ground "proved through its children (tags read, tests not run)" only when all three of these hold: (a) the done gate''s own composite rule, looked up when the ratchet runs and given the set of ids tagged by the done gate''s own covers-tag pattern, finds no unproven child; (b) its covered_by is complete: every live (not superseded) record on disk whose parent is this record is listed in it; (c) it is level L0 or L1, or its change_target is exactly "docs"'
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - test paths read as children, so a path entry is judged unproven or counted as a child
+      - a ratchet that treats any non-empty covered_by as a composite
+  - name: test_gate_tag_set_is_built_from_the_ratchets_test_roots_not_the_repo_root
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A child tagged only in a file outside the passed test roots, or only in a .js file the gate collector does not read, does not prove its parent; the same tag inside a passed root as a .py file does."
+    proves_clause: 'the composite leaves the count under the ground "proved through its children (tags read, tests not run)" only when all three of these hold: (a) the done gate''s own composite rule, looked up when the ratchet runs and given the set of ids tagged by the done gate''s own covers-tag pattern, finds no unproven child; (b) its covered_by is complete: every live (not superseded) record on disk whose parent is this record is listed in it; (c) it is level L0 or L1, or its change_target is exactly "docs"'
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a tag set built from the gate's repo-root default instead of the ratchet's own test roots
+      - a tag set that reuses the ratchet's own collect_covers_tags, which also reads .js files
+  - name: test_each_finished_record_lands_in_exactly_one_bucket_in_the_fixed_order
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A fixture store holds a tagged L1 composite with proved children, a superseded L1 composite with proved children, a waived L1 composite with proved children and a plain proved L1 composite; each lands in tagged, superseded, waived and the new ground respectively, never two, and untagged plus every exclusion plus tagged equals finished."
+    proves_clause: 'every finished record is placed in exactly one bucket, tested in this order: tagged, superseded, waived, proved through its children, untagged'
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - the proved-through-children test placed before the tagged, superseded or waived tests so a record is reported under the wrong ground
+      - a composite counted both as tagged and under the new ground
+      - an untagged remainder that still lists a record already excluded under the new ground
+  - name: test_proved_l1_with_two_tagged_done_children_leaves_the_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A finished L1 X-100a with finished children X-100a-1 and X-100a-2, each tagged by a covers line in a collected test file, is absent from untagged and counted once under the new ground."
+    proves_clause: a finished L1 X-100a whose children X-100a-1 and X-100a-2 are both finished and each tagged by a collected test leaves the count under the new ground
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+  - name: test_child_with_work_status_todo_keeps_the_parent_counted_even_when_tagged
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A finished L1 X-100a whose child X-100a-2 is work_status todo but carries a covers tag stays in untagged; flipping that child to done moves the parent to the new ground."
+    proves_clause: a finished L1 X-100a whose child X-100a-2 has work_status todo stays counted, even when X-100a-2 carries a covers tag
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - tag-only judging that ignores work_status
+  - name: test_untagged_composite_grandchild_keeps_the_parent_counted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A finished L1 X-100a with finished L2 child X-100a-1, itself an untagged composite whose child X-100a-1-i is todo or done-but-untagged, stays in untagged; with X-100a-1-i done and tagged the L1 leaves the count."
+    proves_clause: a finished L1 X-100a whose finished L2 child X-100a-1 is itself an untagged composite with an unfinished or untagged child X-100a-1-i stays counted
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - looking at direct children only, with no recursion
+      - a child judged by its own work_status alone without descending into its covered_by
+  - name: test_code_schema_pipeline_config_prompt_l2_composite_stays_counted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "For each change_target of code, schema, pipeline, config and prompt, a finished L2 composite with no own tag whose children are all finished and tagged stays in untagged; an absent change_target and a docs-plus-code list do the same."
+    proves_clause: a finished L2 X-100a-1 whose change_target is code, schema, pipeline, config or prompt stays counted while it has no covers tag of its own, even when every one of its children is finished and tagged
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - excluding code L2s because the done gate's rule was applied at every level
+      - a change_target check that treats an absent or mixed value as docs
+  - name: test_docs_l2_composite_with_proved_children_leaves_the_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A finished L2 X-100a-1 whose change_target is 'docs' (as a string and as a one-member list) with finished tagged children leaves untagged and is counted under the new ground."
+    proves_clause: a finished L2 X-100a-1 whose change_target is "docs" and whose children are all finished and tagged leaves the count under the new ground
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a level-only rule that keeps counting docs aggregators
+  - name: test_incomplete_covered_by_keeps_the_parent_counted_and_superseded_omission_does_not
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A finished L1 X-100a lists X-100a-1 only while a live child X-100a-2 sits on disk: stays counted, whether the child names it through the parent field or only through its id; a superseded X-100a-3 missing from covered_by leaves it counted under the new ground; a structurally invalid supersession counts as live."
+    proves_clause: a finished L1 X-100a whose covered_by lists X-100a-1 but omits a live child X-100a-2 that exists on disk stays counted, while a superseded child X-100a-3 missing from covered_by does not keep it counted
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - an incomplete covered_by accepted
+      - a completeness check that reads covered_by or finished records only and never the whole store
+      - a completeness check that counts a superseded child as live
+      - a re-typed supersession rule that treats an invalid supersession as retired
+  - name: test_prose_covers_line_the_gate_pattern_rejects_does_not_prove_the_parent
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The fixture test tree names X-100a-1 only in a docstring line 'covers: X-100a-1' with no comment marker; the ratchet's own reading counts the child tagged, the gate's COVERS_TAG_RE does not, and the parent X-100a stays in untagged."
+    proves_clause: a child whose only mention of its id is a prose "covers:" line that the done gate's covers-tag pattern does not accept does not prove its parent, even when the ratchet's own tag reading counts that child as tagged
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - the ratchet's loose _COVERS_RE used in place of COVERS_TAG_RE to build the set passed to the composite rule
+  - name: test_patching_the_gate_composite_rule_flips_the_verdict_both_ways
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "With monkeypatch on the _done_proof_composite module attribute _unproven_composite_children (flat module and package-style name when loaded) returning an unproven id for every record, a composite that left the count is untagged again; returning an empty list, a composite with a todo child leaves the count when (b) and (c) hold."
+    proves_clause: when the done gate's composite rule is replaced at run time by one that reports an unproven child for every record, a composite that left under the new ground is counted untagged again, and when it is replaced by one that reports none, a composite with an unfinished child leaves the count if (b) and (c) hold
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a re-typed copy of the gate rule inside the ratchet
+      - the rule bound by from-import so a run-time patch is ignored
+      - a ratchet-side child check of work_status, tag or waiver that overrides the rule's answer
+  - name: test_ground_wording_says_tags_read_and_tests_not_run_and_claims_no_pass
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The new ground constant, found as the one added to PUBLISHED_GROUNDS beside the two existing ones, contains 'tags read' and 'tests not run' and none of 'pass', 'passed', 'passing', 'verified' in any case; the key of the measurement's exclusions equals that constant."
+    proves_clause: the ground's published wording states that the children's tags were read and their tests were not run, and never states or implies that any test passed
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a ground worded 'tests pass'
+      - a ground worded 'proved' or 'verified' without the tags read and tests not run qualifier
+      - an exclusions key that differs from the constant on PUBLISHED_GROUNDS
+  - name: test_measurement_lists_the_excluded_ids_sorted_beside_the_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "With three composites leaving under the new ground in an unsorted write order, the measurement carries their ids sorted and the count equals their number; calling the ratchet test function on the fixture store with its test roots patched prints the ids on the line beside that ground's count."
+    proves_clause: the ratchet's published measurement lists, by id, each record excluded under this ground, beside the ground's count
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    must_catch:
+      - a count without the ids
+      - an id list that is unsorted or includes a record excluded under another ground
+  - name: test_new_ground_is_published_and_the_sum_still_holds_on_a_fixture_and_the_live_store
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The new ground is a member of PUBLISHED_GROUNDS and untagged plus every exclusion plus tagged equals finished with unexplained_shortfall 0; with the ground removed from PUBLISHED_GROUNDS by monkeypatch the excluded composites become an unexplained shortfall and assert_sum raises."
+    proves_clause: the new ground is on the published list of legitimate grounds (ACS-1100b-1), and untagged plus every exclusion count plus tagged still equals the number of finished records enumerated
+    code_file: scripts/ac_store/untagged_done_count.py
+    to_be_created: true
+    convention_test_file: unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+    must_catch:
+      - a ground missing from PUBLISHED_GROUNDS
+      - a second list of grounds kept apart from PUBLISHED_GROUNDS
+      - a bucket that counts a composite twice or not at all
+  - name: test_untagged_done_ac_backlog_does_not_grow
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: e2e
+    angle: criterion
+    description: "The existing ratchet run over the real store and the real test roots: the sum holds, no shortfall, no unreadable file, and the untagged count stays at or below the lowered HIGH_WATER_MARK."
+    proves_clause: the new ground is on the published list of legitimate grounds (ACS-1100b-1), and untagged plus every exclusion count plus tagged still equals the number of finished records enumerated
+    code_file: scripts/ac_store/untagged_done_count.py
+  - name: test_ratchet_subprocess_run_prints_the_new_ground_with_its_count_and_ids
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Runs pytest as a subprocess on the ratchet test with output shown, as the existing reachability test does, exits 0 and states the new ground with its count and the excluded ids on the live store; no build.py is spawned."
+    proves_clause: the ratchet's published measurement lists, by id, each record excluded under this ground, beside the ground's count
+    code_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    to_be_created: true
+    convention_test_file: unit_tests/docs/test_artifact_graph_covers_scope.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - scripts/ac_store/untagged_done_count.py
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
+  - unit_tests/ac_store/test_km_adm_005_1_untagged_done_count.py
+  - scripts/ac_store/_done_proof_composite.py
+  - scripts/ac_store/test_enforcement.py
+  - scripts/ac_store/ac_retirement.py
+file_findings:
+  - file: scripts/ac_store/untagged_done_count.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It defines the grounds, bucket order and sum check that the criteria extend with the fourth ground.
+    decision: null
+  - file: unit_tests/docs/test_artifact_graph_covers_scope.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It holds the ratchet and the HIGH_WATER_MARK constant that the criteria lower.
+    decision: null
+file_findings_opened_files:
+  - scripts/ac_store/untagged_done_count.py
+  - unit_tests/docs/test_artifact_graph_covers_scope.py
+delivers_to: null
+expects_from:
+  - ac_id: KM-ADM-005-1
+    contract: "scripts/ac_store/untagged_done_count.py: measure(ac_root: Path, test_roots: Sequence[Path]) -> Measurement {finished: int, tagged: int, untagged: list[str] (sorted ids), exclusions: dict[str, int] (ground string -> count), unexplained_shortfall: int, unreadable: list[str] (paths)}, with PUBLISHED_GROUNDS (frozenset of ground strings), the bucket order tagged, superseded, waived, untagged, and the sum check. This record inserts the fourth ground before untagged and adds the ids excluded under it."
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+  - scripts/ac_store/untagged_done_count.py
+notes: |
+  Authored by the business-analyst from a decision already taken (two independent
+  analyses converged on it). The analysis report the brief cites
+  (/tmp/claude-scratch/analysis/ratchet-option-b.md) was not present on disk when this
+  record was written; the criteria follow the brief's statement of the decision. Its
+  landing-order section is superseded in any case: this change lands on its own, with
+  no gate change first.
+
+  NAMES THE IT PO WILL NEED (kept out of the criteria, which describe behaviour):
+  - The ratchet: unit_tests/docs/test_artifact_graph_covers_scope.py::
+    test_untagged_done_ac_backlog_does_not_grow, measuring through
+    scripts/ac_store/untagged_done_count.py.
+  - "The done gate's own composite rule" is _unproven_composite_children in
+    scripts/ac_store/_done_proof_composite.py. Clause (a) and the run-time-replacement
+    clause require it to be looked up through its module when the ratchet runs, never
+    copied or imported by value, so that patching it flips the ratchet's verdict.
+  - "The done gate's own covers-tag pattern" is COVERS_TAG_RE in scripts/ac_store/test_enforcement.py.
+    The tagged-id set passed to the composite rule is built with that pattern, not the
+    ratchet's looser one; the prose-line clause is the case that tells them apart.
+
+  WHY ONLY L0, L1 AND DOCS-ONLY COMPOSITES. An L0 or L1 states a benefit its children
+  deliver, so proof through the children is proof of the record. A code, schema,
+  pipeline, config or prompt L2/L3 states the main behaviour itself, and its -i children
+  are edge cases or side constraints. INF-600b-1 is the worked example: it promises links
+  on a card, and its only child covers OMITTING links for missing docs, so a proved child
+  says nothing about the links. Such a record still counts until it has its own tag.
+
+  WHY THE GROUND SAYS "TAGS READ, TESTS NOT RUN". The ratchet reads covers tags and
+  work_status; it executes no test. A ground saying "proved" without that qualifier, or
+  "tests passed", would claim evidence the measurement never gathered.
+
+  ADR-076 A3. A3.1 forbids justifying a finished claim with a reason written later. This
+  ground writes no reason into any record and stores no verdict: it recomputes the
+  evidence (children's work_status, the gate's covers tags, covered_by against the
+  records on disk) on every ratchet run, so a composite whose child later regresses
+  re-enters the count on the next run.
+
+  MEASUREMENT. On 4ba177be7, 47 composites leave under this ground (39 L1, 6 L0,
+  DK-600c-5, DK-600d-5), which would put the mark at 162. main has moved since; the
+  builder re-measures on the branch at build time and records the measured value, its
+  date, commit and inclusion rule beside HIGH_WATER_MARK. A different figure is reported,
+  never forced. Like KM-ADM-005-1, this is a re-scoping of the population, not TQ-400d's
+  drawdown; nothing ever raises the mark.
+
+  The fixture ids in the criteria (X-100a and its children) are illustrative; any
+  temporary store with that shape exercises the clause.
+
+  OUT OF SCOPE, FOLLOW-UPS (named here, not specified):
+  - The 19 tagged composites that have unproven children. They leave the count as
+    "tagged" before this ground is reached, and CI's done_proof.py leaf path never
+    checks their children.
+  - Covers tags in files no test lane collects (for example
+    tests/knowledge_live/neo4j_checks.py), which the ratchet reads as tags although no
+    lane runs them.
+  - The done-gate change requiring code L2s to carry their own covers tag.
