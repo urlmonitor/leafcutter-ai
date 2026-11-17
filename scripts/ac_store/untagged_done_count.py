@@ -51,9 +51,11 @@ GROUND_SUPERSEDED = "superseded"
 GROUND_WAIVED = "waived: declared test-free with a stated reason"
 GROUND_PROVED = "proved through its children (tags read, tests not run)"
 PUBLISHED_GROUNDS = frozenset({GROUND_SUPERSEDED, GROUND_WAIVED, GROUND_PROVED})
-_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 _DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
+_ID_LINE_RE = re.compile(r"^id:\s*(.+?)\s*$", re.M)
+_PARENT_LINE_RE = re.compile(r"^parent:\s*(.+?)\s*$", re.M)
+_RETIRED_LINE_RE = re.compile(r"^status:\s*[\"']?superseded", re.M)
 _SUPERSEDED_RE = re.compile(r"^superseded(_by)?$")
 _COVERS_RE = re.compile(r"covers:\s*([A-Za-z0-9\-_,\s\"']+)")
 _TAG_SUFFIXES = {".py", ".ts", ".tsx", ".js"}
@@ -106,6 +108,7 @@ class _Store:
     records: list[dict] = field(default_factory=list)  # every readable record with an id
     paths: dict[str, Path] = field(default_factory=dict)  # filename stem -> first path
     unreadable: list[str] = field(default_factory=list)  # done-record files that could not be read
+    skipped_field_only: int = 0  # unparsed, never-retired files related to a parent only by the parent field
 
     @property
     def finished(self) -> list[dict]:
@@ -113,31 +116,73 @@ class _Store:
         return [r for r in self.records if r.get("work_status") == "done"]
 
 
-def _read_record(path: Path, unreadable: list[str]) -> dict | None:
-    """Return the parsed record at *path*, or None; a done-looking file that fails is listed unreadable."""
+def _parse_record(text: str) -> dict | None:
+    """Return the record parsed from *text*, or None when it is not a mapping with an id."""
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        unreadable.append(str(path))
-        return None
-    looks_done = bool(_DONE_RE.search(text))
-    try:
-        data = yaml.load(text, Loader=_LOADER)  # a safe loader (C or pure Python)
+        data = yaml.safe_load(text)  # pure-Python parser: a C-parser site must be declared (TQ-600a-11)
     except yaml.YAMLError:
-        data = None
-    if isinstance(data, dict) and data.get("id") is not None:
-        return data
-    if looks_done:
-        unreadable.append(str(path))
-    return None
+        return None
+    return data if isinstance(data, dict) and data.get("id") is not None else None
+
+
+def _line_value(pattern: re.Pattern[str], text: str) -> str:
+    """Return the quote-stripped value of the first line of *text* matching *pattern*, or ''."""
+    match = pattern.search(text)
+    return _strip_quotes(match.group(1).split("#")[0]) if match else ""
+
+
+def _may_parent_a_candidate(path: Path, text: str, candidates: frozenset[str]) -> bool:
+    """Return whether the cheap reading of *text* relates it to a candidate composite.
+
+    Related means the ``parent:`` line, or the parent derived from the ``id:`` line or the filename
+    stem, names a candidate. Everything else cannot enter the candidate's live-children set.
+    """
+    ids = {path.stem, _line_value(_ID_LINE_RE, text)} - {""}
+    related = {_line_value(_PARENT_LINE_RE, text)} | {ac_parent_id.derive_parent_id(i) for i in ids}
+    return bool(related & candidates)
+
+
+def _cheap_field_only(text: str) -> int:
+    """Return 1 when *text* names a parent on its ``parent:`` line that differs from the id-derived one."""
+    ac_id = _line_value(_ID_LINE_RE, text)
+    named = _line_value(_PARENT_LINE_RE, text)
+    return int(bool(ac_id) and bool(named) and named != ac_parent_id.derive_parent_id(ac_id))
 
 
 def _load_store(ac_root: Path) -> _Store:
-    """Read every record under *ac_root* once."""
+    """Read every file under *ac_root* once and parse only the records the ratchet can need.
+
+    Parsed in full: each done-looking record, and each other record whose parent could be a finished
+    L0/L1/docs composite (the only records whose liveness ``_covered_by_complete`` asks about).
+    ``paths`` still names every file, so ``store_ids`` stays the full set of stems.
+    """
     store = _Store()
+    texts: dict[Path, str] = {}
     for path in sorted(Path(ac_root).rglob("*.yaml")):
         store.paths.setdefault(path.stem, path)
-        data = _read_record(path, store.unreadable)
+        try:
+            texts[path] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            store.unreadable.append(str(path))
+    others: list[Path] = []
+    for path, text in texts.items():
+        if not _DONE_RE.search(text):
+            others.append(path)
+            continue
+        data = _parse_record(text)
+        if data is None:
+            store.unreadable.append(str(path))
+        else:
+            store.records.append(data)
+    candidates = frozenset(
+        _strip_quotes(str(r["id"])) for r in store.finished if _docs_or_top_level(r) and r.get("covered_by")
+    )
+    for path in others:
+        text = texts[path]
+        if not (_RETIRED_LINE_RE.search(text) or _may_parent_a_candidate(path, text, candidates)):
+            store.skipped_field_only += _cheap_field_only(text)  # never retired: counts without a parse
+            continue
+        data = _parse_record(text)
         if data is not None:
             store.records.append(data)
     return store
@@ -232,7 +277,7 @@ def _build_context(store: _Store, test_roots: Sequence[Path]) -> _Context:
         store_ids=store_ids,
         root=_IndexedRoot(store.paths),
         live_children=live_children,
-        parent_field_only=field_only,
+        parent_field_only=field_only + store.skipped_field_only,
     )
 
 
