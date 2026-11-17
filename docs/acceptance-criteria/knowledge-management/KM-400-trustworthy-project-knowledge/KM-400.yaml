@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 criteria: 'Make informed decisions with evidence you can revisit.
 
 
@@ -60,6 +60,19 @@ amended_by:
   stays in_progress (KM-400e-5 in_progress, KM-400e-8 todo) with its override reduced
   to 6. This L0 stays in_progress, since KM-400e and the new KM-400f are both
   unfinished. No criteria, no vision and no roadmap change.'
+- '2026-11-17: business-analyst moved work_status from in_progress to done. The record is
+  closed through its children''s proof under KM-ADM-005-3, not through a test or a waiver
+  of its own. All six L1s named in covered_by — KM-400a, KM-400b, KM-400c, KM-400d,
+  KM-400e and KM-400f — are work_status done (KM-400e closed earlier the same day, also
+  through its children), covered_by lists every live child on disk, and every leaf below
+  them carries a covers tag. The promise is met by what they deliver: finding the
+  requirements and rules that govern the work (KM-400a) and the relevant lessons and
+  corrections (KM-400c), checking where each answer came from (KM-400d, KM-400e), returning
+  to the same project version while changes land without disturbing evidence in use
+  (KM-400b), staying inside declared limits (KM-400f), and making missing or unavailable
+  knowledge visible rather than a false assurance (KM-400e, KM-400d). The previous entry''s
+  statement that KM-400e and KM-400f are unfinished is now superseded. The scope boundaries
+  in notes are unchanged. No criteria, covered_by or title changed.'
 superseded_by: null
 covered_by:
 - KM-400a
