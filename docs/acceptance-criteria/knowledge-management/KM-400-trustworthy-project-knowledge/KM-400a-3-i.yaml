@@ -1,3 +1,4 @@
+# probe: never merge (KM-400 live test tracebacks)
 id: KM-400a-3-i
 title: Explore native project types, complete metadata and declared component membership in Aura
 component: knowledge-management
