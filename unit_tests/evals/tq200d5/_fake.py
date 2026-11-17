@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,7 +49,7 @@ def module(name: str):
     return importlib.import_module(name)
 
 
-def is_claude_launch(argv: object) -> bool:
+def is_claude_launch(argv: str | Sequence[object]) -> bool:
     """The harness's agent launch is the only call with an --output-format option."""
     text = argv if isinstance(argv, str) else " ".join(str(a) for a in argv)
     return "--output-format" in text
@@ -88,7 +89,7 @@ def cannot_start(exc: BaseException) -> dict:
 class Call:
     """One launch of the fake claude, as the harness made it."""
 
-    argv: object
+    argv: str | Sequence[object]
     kwargs: dict
     caller: str
     prompt_path: str | None
@@ -119,7 +120,7 @@ class Call:
         return {p for p in re.split(r"\s+", " ".join(self.parts)) if p.startswith("--")}
 
 
-def _prompt_path(argv: object) -> str | None:
+def _prompt_path(argv: str | Sequence[object]) -> str | None:
     return prompt_path([argv] if isinstance(argv, str) else list(argv))[1]
 
 

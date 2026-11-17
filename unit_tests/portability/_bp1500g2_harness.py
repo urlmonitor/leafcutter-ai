@@ -49,6 +49,8 @@ ARCHITECTURE: A sibling of `_bp1500g1_harness`, NOT a replacement. The
 from __future__ import annotations
 
 import ast
+import importlib.abc
+import importlib.machinery
 import importlib.util
 import inspect
 import re
@@ -84,6 +86,8 @@ def _import_fresh_module(module_name_prefix: str, file_path: Path):
     """
     unique_name = f"{module_name_prefix}_{uuid.uuid4().hex}"
     spec = importlib.util.spec_from_file_location(unique_name, file_path)
+    assert isinstance(spec, importlib.machinery.ModuleSpec), file_path
+    assert isinstance(spec.loader, importlib.abc.Loader), file_path
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
     spec.loader.exec_module(module)

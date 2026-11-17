@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,7 +44,8 @@ amended_by:
     note: "Added it_requirements (reproduce ModuleNotFoundError at collection time; determinism under pytest-randomly). Confirmed python-coder / S."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - pytest.ini
 notes: |
   This is the exact symptom that motivated TQ-100a: a single test written for a
   not-yet-built feature imports its (absent) module and, without isolation,

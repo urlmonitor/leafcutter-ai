@@ -1,0 +1,127 @@
+id: BP-1300f-1-vi
+components:
+  - build_pipeline
+title: "The type check states what it inspected: a pass names its counts, a run with nothing to inspect says so, and a run that could not type-check never passes"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Scenario: A pass names what it checked
+    Given a pull request that changes 1 Python file in scope carrying 2 type errors it
+      inherited and adds none,
+    When the check runs,
+    Then it exits 0 with the summary line
+      "mypy ratchet: 1 file, 0 new errors (2 existing errors untouched, 0 removed), 0 new type-ignores".
+
+  Scenario: Nothing in scope is not a pass on content
+    Given a pull request that changes only docs/notes.md and a Python file outside the
+      job's pathspecs,
+    When the check runs,
+    Then it exits 0,
+    And it states that it inspected 0 files and that no type check ran,
+    And it prints no "0 new errors" summary.
+
+  Scenario: A type checker that cannot finish is could-not-check, never a pass
+    Given a pull request whose changed file has a syntax error, so mypy stops with
+      exit status 2,
+    When the check runs,
+    Then it exits non-zero,
+    And it states that it could not type-check and shows mypy's own output,
+    And it prints no pass summary.
+
+  Scenario: A missing type checker, or one that lists nothing, is could-not-check
+    Given the interpreter that runs the check has no usable mypy, so
+      "python -m mypy" answers "No module named mypy" with exit status 1,
+      or a mypy that exits with status 1 without printing a single error line,
+    When the check runs,
+    Then it exits non-zero, states that it could not check, and prints no pass summary,
+    And on a usable mypy its output names the mypy version it ran.
+
+  Scenario: A base that cannot be resolved is could-not-check
+    Given the base given to the check names no revision in the repository,
+    When the check runs,
+    Then it exits non-zero, states that it could not check and names the base.
+depends_on:
+  - BP-1300f-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300f-1.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/ci/mypy_ratchet.py
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EXIT CODES: 0 = pass, or nothing inspected (stated); 1 = new errors or new type-ignores; 2 = could not check (git failed, mypy exited with a status other than 0 or 1, a file could not be read or tokenized, bad arguments)."
+  - "SUMMARY ON PASS: 'mypy ratchet: <n> file(s), <k> new error(s) (<m> existing error(s) untouched, <r> removed), <t> new type-ignore(s)'; on failure the same counts follow 'mypy ratchet FAILED:'."
+  - "NOTHING INSPECTED: 'mypy ratchet: NOTHING INSPECTED -- 0 changed Python files in scope ...; no type check ran. This is not a pass on content.' -- printed instead of the summary, exit 0 (a pull request that touches no Python must not go red), and mypy is not invoked."
+  - "COULD NOT CHECK: 'mypy ratchet: COULD NOT CHECK -- <reason>', mypy's stdout and stderr relayed, exit 2. The pass summary never appears on this path."
+  - "STATUS 1 IS NOT ENOUGH: `python -m mypy` with mypy absent exits 1, the same status as 'errors found'. Before the first run the check probes `<python> -m mypy --version` and prints the answer ('Type checker: mypy <version>'); a probe that fails or does not answer 'mypy ...' is could-not-check. A mypy run with status 1 and no error line in its output is could-not-check too. (Found on this record's own pull request: the first CI run passed in under two seconds and its log gave no evidence that mypy had run, which is how the hole was noticed.)"
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): every git and mypy subprocess call and every file read is wrapped in a specific except (OSError, subprocess.SubprocessError, tokenize.TokenError, SyntaxError, UnicodeDecodeError), logged at WARNING and converted to the could-not-check outcome; pure parsing and comparison functions carry no try/except."
+test_spec:
+  - name: test_bp_1300f_1_vi_pass_summary_names_files_new_existing_and_ignores
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "One changed file with 2 inherited errors and no additions: exit 0 and the exact summary line."
+  - name: test_bp_1300f_1_vi_nothing_in_scope_says_nothing_was_inspected
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "prints the '0 new errors' pass summary when no file was inspected"
+    description: "Head changes docs/notes.md and tools/x.py (outside the pathspecs); exit 0; output says NOTHING INSPECTED and that no type check ran; no '0 new errors' text."
+  - name: test_bp_1300f_1_vi_mypy_that_cannot_finish_is_could_not_check
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "treats mypy exit status 2 as 'errors found' and compares a partial error list"
+      - "treats mypy exit status 2 as success"
+    description: "Head introduces a syntax error so mypy exits 2; the module exits 2, says COULD NOT CHECK, relays mypy's syntax message, and prints no pass summary."
+  - name: test_bp_1300f_1_vi_missing_or_silent_mypy_is_could_not_check
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    must_catch:
+      - "reads mypy exit status 1 with no error line as 'errors found, none in the inspected files' and passes"
+    description: "A stub mypy package on PYTHONPATH (the real environment manipulated, the module untouched): one answers --version but exits 1 with no output, one answers every call with 'No module named mypy' and exit 1; both give exit 2, COULD NOT CHECK naming the cause, and no summary."
+  - name: test_bp_1300f_1_vi_unresolvable_base_is_could_not_check
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "--base names a missing ref; exit 2; output says COULD NOT CHECK and names the ref."
+test_rationale: >-
+  Each arm is about what the real CLI prints and returns, so each runs the real
+  module against a real temporary git repository; the could-not-check arm uses a real
+  mypy exit status 2 (a syntax error), not a stub.
+delivers_to: null
+expects_from:
+  - ac_id: BP-1300f-1-i
+    contract: "Per-file new / existing-untouched / removed error counts."
+  - ac_id: BP-1300f-1-v
+    contract: "Total new and removed type-ignore comments."
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by:
+  - reason: "BrainCandy (human user) via the BP-1300f-1 build session, 2026-11-16: added the missing-or-silent mypy scenario"
+    detail: "The first CI run on the introducing pull request showed `python -m mypy` exiting 1 (the 'errors found' status) is also what an interpreter without mypy returns, which the module read as a pass. Added one scenario (missing mypy, or status 1 with no error line, is could-not-check; the output names the mypy version), one it_requirement and one test_spec entry. No other clause changed."
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1300f_1_ignores_and_verdict.py
+implemented_by:
+  - scripts/ci/mypy_ratchet.py
+change_target:
+  - code
+risk_surface: contract_boundary

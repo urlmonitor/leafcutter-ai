@@ -149,6 +149,7 @@ class DocMakerCase(unittest.TestCase):
         argv = shlex.split(text, posix=True)
         idx = next((i for i, a in enumerate(argv) if a.endswith("worktree.py")), None)
         self.assertIsNotNone(idx, command)
+        assert isinstance(idx, int)
         self.assertNotIn("$", text, f"unexpanded shell variable in: {command}")
         return [sys.executable, str(self.maker), *argv[idx + 1:]]
 

@@ -1,0 +1,186 @@
+id: TQ-100b-1-iv
+components:
+  - testing_quality
+title: "A masked failure is reported in pytest's own expected-failure form, so every reader classifies it as an expected failure"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a test that covers an acceptance criterion whose work_status is not done,
+    and the test fails on an assertion while masking is on (AC_ENFORCE_STRICT unset),
+  When the enforcement plugin downgrades that failure to informational,
+  Then the test's report uses pytest's own expected-failure form: outcome "skipped" with
+    the masking reason in its wasxfail attribute, never an outcome value pytest does not
+    define,
+  And the terminal shows it as an expected failure: status letter "x", verbose word
+    "XFAIL", counted under "xfailed" in the session summary, with the session exit status
+    unchanged,
+  And the JUnit XML records it as a skipped test of type pytest.xfail carrying the masking
+    reason, and counts it in the suite's tests and skipped totals,
+  And it is classified the same way when the session is distributed over pytest-xdist
+    workers, and it never counts toward --maxfail,
+  And each reader of a test run gives the verdict it gave before: the shared pytest -v
+    outcome reader reads XFAIL, the fast lane's red-baseline gate counts that as red, the
+    post-merge fix proof labels it xfailed, and a run under AC_ENFORCE_STRICT=1 still
+    reports the failure as FAILED,
+  And the post-merge lane report records it as skipped, the status it already gives
+    pytest's own expected failure, instead of passed.
+depends_on:
+  - TQ-100b-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "The informational (non-blocking) treatment of a not-done AC's failing test whose report form this record pins."
+  - path: scripts/ac_store/pytest_ac_enforcement.py
+    relationship: modifies
+    status: exists
+    relevance: "The plugin's pytest_runtest_makereport hookwrapper sets the masked report's outcome."
+  - path: scripts/ac_store/pytest_outcome_reader.py
+    relationship: describes
+    status: exists
+    relevance: "The one shared reader of pytest -v output (done_proof, kind reader, fast lane red-baseline gate). Reads XFAIL from both the old XFAILED word and pytest's XFAIL word."
+  - path: scripts/build_orchestration/_fl_red_baseline_support.py
+    relationship: describes
+    status: exists
+    relevance: "_RED_OUTCOMES counts XFAIL as red (the one-red rule); the verdict on a masked test must stay red."
+  - path: scripts/ci/post_merge_fix_proof.py
+    relationship: modifies
+    status: exists
+    relevance: "_distinct_status special-cases outcome == 'xfailed'; it must still label the new shape xfailed, through its skipped + wasxfail branch."
+  - path: scripts/ci/_lane_report_plugin.py
+    relationship: describes
+    status: exists
+    relevance: "Classifies by report.failed / report.skipped; it read the old shape (neither flag set) as passed."
+declared_files:
+  - path: scripts/ac_store/pytest_ac_enforcement.py
+    state: existing
+  - path: scripts/ci/post_merge_fix_proof.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE CHANGE. In pytest_runtest_makereport, set report.outcome = "skipped" and keep
+    report.wasxfail = <reason>, the shape _pytest/skipping.py gives a native xfail. The mypy
+    error at that assignment (Literal['xfailed'] is not assignable to
+    Literal['passed', 'failed', 'skipped']) must be gone without `# type: ignore`, `cast` or
+    `Any`.
+  - >-
+    NO READER MAY DEPEND ON THE STRING "xfailed". post_merge_fix_proof._distinct_status keeps
+    its outcome == "xfailed" branch only for reports written by an older copy of the plugin;
+    the new shape reaches its skipped + wasxfail branch and is labelled xfailed there.
+  - >-
+    STRICT READERS STAY STRICT. done_proof._run_pytest_and_parse, done_proof_kind_support,
+    the fast lane's verify_red_baseline / verify_green_and_coverage and _wvr_pytest run their
+    child under AC_ENFORCE_STRICT=1, and every CI and post-merge pytest step sets it, so
+    masking never reaches a gate. Nothing in this change may relax that.
+  - >-
+    BEHAVIOURAL PROOF ONLY. Verification runs real pytest sessions as subprocesses in a temp
+    directory, with LEAFCUTTER_AC_STORE_ROOT pointing at a synthetic store and
+    AC_ENFORCE_STRICT removed from the child environment (CI sets it in the parent). Never
+    construct a TestReport by hand and never grep the plugin source.
+  - >-
+    MASKING STAYS LOUD. The per-test "AC-ENFORCEMENT [MASKED FAILURE]" line and the
+    end-of-session summary are unchanged.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-100b-1
+    contract: "The session-scoped plugin that downgrades a not-done AC's assertion failure to an informational outcome."
+test_intent:
+  - clause: 'the test''s report uses pytest''s own expected-failure form: outcome "skipped" with the masking reason in its wasxfail attribute, never an outcome value pytest does not define'
+    needs_test: true
+    reason: An outcome pytest does not define leaves passed, failed and skipped all false, so every flag-based reader guesses.
+  - clause: 'the terminal shows it as an expected failure: status letter "x", verbose word "XFAIL", counted under "xfailed" in the session summary, with the session exit status unchanged'
+    needs_test: true
+    reason: The old shape printed the failure letter F for a masked test.
+  - clause: 'the JUnit XML records it as a skipped test of type pytest.xfail carrying the masking reason, and counts it in the suite''s tests and skipped totals'
+    needs_test: true
+    reason: The old shape wrote a plain passing testcase and a tests total one short of the testcases listed.
+  - clause: 'it is classified the same way when the session is distributed over pytest-xdist workers, and it never counts toward --maxfail'
+    needs_test: true
+    reason: Reports cross a process boundary under xdist, and a masked failure counted toward --maxfail would stop a run early.
+  - clause: 'each reader of a test run gives the verdict it gave before: the shared pytest -v outcome reader reads XFAIL, the fast lane''s red-baseline gate counts that as red, the post-merge fix proof labels it xfailed, and a run under AC_ENFORCE_STRICT=1 still reports the failure as FAILED'
+    needs_test: true
+    reason: The verbose word changes from XFAILED to XFAIL, and a reader matching the old word exactly would read nothing.
+  - clause: 'the post-merge lane report records it as skipped, the status it already gives pytest''s own expected failure, instead of passed'
+    needs_test: true
+    reason: A masked failure read as passed is a red test counted green.
+test_spec:
+  - name: test_tq_100b_1_iv_masked_failure_reads_as_xfail_in_terminal_and_junit
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "python -m pytest with -p scripts.ac_store.pytest_ac_enforcement over a temp test file and a synthetic AC store, AC_ENFORCE_STRICT removed, with --junitxml"
+    description: The masked test prints x and XFAIL, the summary counts 1 xfailed, the exit status is 0, and the JUnit testcase carries a skipped element of type pytest.xfail with the masking reason while the suite counts it in tests and skipped.
+    proves_clause: 'the terminal shows it as an expected failure: status letter "x", verbose word "XFAIL", counted under "xfailed" in the session summary, with the session exit status unchanged'
+    code_file: scripts/ac_store/pytest_ac_enforcement.py
+    must_catch:
+      - "report.outcome is set to \"xfailed\", so the progress letter is F and JUnit records the masked failure as a plain passing testcase"
+      - "report.outcome is set to \"skipped\" but wasxfail is not set, so the masked failure reads as a plain skip (letter s, no pytest.xfail type)"
+      - "the masked failure is left as failed, so the exit status is 1"
+  - name: test_tq_100b_1_iv_masked_failure_reads_as_xfail_under_xdist_and_maxfail
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same session run with -n 2 and --junitxml, and serially with --maxfail=1 over a masked failure followed by a real failure and a passing test"
+    description: Under xdist the masked test reads XFAIL and JUnit pytest.xfail; under --maxfail=1 the run stops only after the real failure, so the masked failure is not counted.
+    proves_clause: 'it is classified the same way when the session is distributed over pytest-xdist workers, and it never counts toward --maxfail'
+    code_file: scripts/ac_store/pytest_ac_enforcement.py
+    must_catch:
+      - "report.outcome is set to \"xfailed\", so the xdist JUnit testcase has no skipped element"
+      - "the masked failure is left as failed, so --maxfail=1 stops the run at the masked test"
+  - name: test_tq_100b_1_iv_every_reader_gives_its_previous_verdict
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    surface_invoked: "real pytest -v output read by pytest_outcome_reader.parse_pytest_outcomes and classified by _fl_red_baseline_support._classify_outcome_bucket; each real call report labelled by post_merge_fix_proof._distinct_status inside the session; the same test run under AC_ENFORCE_STRICT=1"
+    description: The shared reader reads XFAIL and the red-baseline bucket is red; the fix proof labels the masked report xfailed; under strict the reader reads FAILED and JUnit records a failure.
+    proves_clause: 'each reader of a test run gives the verdict it gave before: the shared pytest -v outcome reader reads XFAIL, the fast lane''s red-baseline gate counts that as red, the post-merge fix proof labels it xfailed, and a run under AC_ENFORCE_STRICT=1 still reports the failure as FAILED'
+    code_file: scripts/ac_store/pytest_ac_enforcement.py
+    must_catch:
+      - "report.outcome is set to \"skipped\" but wasxfail is not set, so the reader reads SKIPPED, the red-baseline bucket is not red and the fix proof labels it skipped"
+      - "strict mode stops surfacing the failure, so the strict run reads XFAIL instead of FAILED"
+  - name: test_tq_100b_1_iv_lane_report_records_masked_failure_as_skipped_like_native_xfail
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same session with -p scripts.ci._lane_report_plugin --lane-report <path>, over a masked failure and a native @pytest.mark.xfail failure"
+    description: The lane report records the masked test as skipped, exactly the status it records for the native expected failure, and never as passed.
+    proves_clause: 'the post-merge lane report records it as skipped, the status it already gives pytest''s own expected failure, instead of passed'
+    code_file: scripts/ac_store/pytest_ac_enforcement.py
+    must_catch:
+      - "report.outcome is set to \"xfailed\", so the lane report records the masked failure as passed"
+origin_agent: BrainCandy
+created: 2026-11-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_tq_100b_1_iv_xfail_convention.py
+implemented_by:
+  - scripts/ac_store/pytest_ac_enforcement.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  MEASURED BEFORE THE CHANGE (pytest 9.0.3, pytest-xdist 3.8.0, 2026-11-16). With outcome
+  "xfailed" the masked test printed the progress letter F, the verbose word XFAILED, and
+  the summary counted it as "1 xfailed" (pytest keys its stats by the outcome string). The
+  exit status was unaffected and --maxfail did not count it (pytest counts only
+  report.failed). But JUnit XML wrote it as a plain passing <testcase/> with no skipped
+  element, and the suite's tests total was one short of the testcases it listed (tests="3"
+  for four testcases, skipped="0"). xdist gave the same picture. The post-merge lane
+  report recorded it as "passed".
+
+  WHY THE GATES NEVER SAW IT. Every CI and post-merge pytest step sets AC_ENFORCE_STRICT=1,
+  and done_proof, the kind reader, the fast lane and the wrong-version runner set it in
+  their child environment, so masking never happens where a gate reads results. The wrong
+  classification showed in local runs, in JUnit consumers and in anything reading flags.

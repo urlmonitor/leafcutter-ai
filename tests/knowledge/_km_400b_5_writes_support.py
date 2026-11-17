@@ -303,7 +303,7 @@ def make_snapshot(nodes, edges=(), repo=REPO_ID, generation=GENERATION):
     )
 
 
-_OVERHEAD = {}
+_OVERHEAD: dict[str, int] = {}
 
 
 def bulk_for(target_row_bytes):

@@ -344,7 +344,8 @@ def _run_hook_on_staged(rel_path: str) -> subprocess.CompletedProcess:
         target = repo / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("export function run() { return 1; }", encoding="utf-8")
-        _git(repo, "init", "-q"), _git(repo, "add", rel_path)
+        _git(repo, "init", "-q")
+        _git(repo, "add", rel_path)
         return subprocess.run(
             [sys.executable, str(hook)],
             cwd=repo, env=_GIT_ENV, capture_output=True, text=True, encoding="utf-8",

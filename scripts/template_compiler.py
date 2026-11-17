@@ -28,6 +28,8 @@ ARCHITECTURE: Public functions: parse_frontmatter (YAML header extraction),
 
 from __future__ import annotations
 
+import copy
+import functools
 import re
 from pathlib import Path
 from typing import Any
@@ -122,6 +124,26 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     fm_text = text[3:end].strip()
     body = text[end + 4:].lstrip("\n")
 
+    # A deep copy, because callers pop and set keys on what they are handed and a
+    # shared stored object would carry that mutation into the next parse of the
+    # same text. deepcopy keeps aliased sub-objects aliased, as yaml.load made them.
+    return copy.deepcopy(_parsed_frontmatter(fm_text)), body
+
+
+# BP-900g-8-vi: a fresh-consumer build calls parse_frontmatter ~1,600 times over
+# ~180 distinct texts, and each PyYAML parse is the expensive part. The memo is
+# in-process only (never written to disk, gone when the build exits) and bounded.
+# The key is the frontmatter text itself, so two different texts cannot collide.
+_FRONTMATTER_CACHE_SIZE = 1024
+
+
+@functools.lru_cache(maxsize=_FRONTMATTER_CACHE_SIZE)
+def _parsed_frontmatter(fm_text: str) -> Any:
+    """Parse one frontmatter text with yaml.SafeLoader; a YAML error gives ``{}``.
+
+    The result is stored by the memo and shared between calls, so callers must
+    go through parse_frontmatter, which hands out a deep copy.
+    """
     # Deliberately yaml.SafeLoader, NOT the shared fast accessor
     # (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this is the entry
     # point for compile_agent_template/compile_skill_template, i.e. it runs
@@ -141,11 +163,9 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     # degrade path where the loss is at least total and uniform rather than
     # field-by-field unpredictable.
     try:
-        fm = yaml.load(fm_text, Loader=yaml.SafeLoader) or {}
+        return yaml.load(fm_text, Loader=yaml.SafeLoader) or {}
     except yaml.YAMLError:
-        fm = {}
-
-    return fm, body
+        return {}
 
 
 def strip_metadata_sections(body: str) -> str:

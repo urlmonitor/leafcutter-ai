@@ -89,6 +89,8 @@ class Neo4jBackend:
     publication_failure: dict | None = None
     # Completed-batch progress of the last publication's writes; reset by neo4j_projection.publish.
     publication_progress: dict | None = None
+    # Write settings in force for the current build, set by neo4j_writes.begin_writes (absent until then).
+    _write_settings: dict
     # Lookup policy for the adapter's own calls; __init__ reads LEAFCUTTER_NEO4J_ADDRESS_FAMILY.
     address_family: str = "ipv4"
     # True once verify_connectivity() succeeded on this backend's driver (set per instance).

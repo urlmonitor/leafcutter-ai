@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -110,7 +111,7 @@ class _Refusal:
 
     def __init__(self, monkeypatch) -> None:
         self.hits = 0
-        real = {"Path.unlink": Path.unlink, "os.unlink": os.unlink, "os.remove": os.remove}
+        real: dict[str, Callable[..., None]] = {"Path.unlink": Path.unlink, "os.unlink": os.unlink, "os.remove": os.remove}
 
         def refused(target) -> bool:
             return Path(str(target)).name.startswith("agent_eval_input_")

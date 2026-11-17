@@ -93,6 +93,7 @@ class FinalizeScratchCase(RealMakerCase):
         # (1) finalize's own workspace, made for real
         probe = run_scenario(FINALIZE, hostile_reply("ok"))
         main_cmd = maker_command_line([c for c in probe.agent_calls if c.label == WORKSPACE_LABEL][0].prompt)
+        assert isinstance(main_cmd, str), "finalize's workspace dispatch carries no maker command"
         main = self.exec_maker_command(main_cmd)
         self.assertEqual(main["answer"].get("status"), "ok", msg=f"{main['res']}")
         # (2) the scratch copy: capture the command finalize dispatches, run it for real
@@ -101,6 +102,7 @@ class FinalizeScratchCase(RealMakerCase):
         scratch_calls = [c for c in probe2.agent_calls if c.label == SCRATCH_LABEL]
         self.assertEqual(len(scratch_calls), 1, msg="finalize did not dispatch the scratch request once")
         scratch_cmd = maker_command_line(scratch_calls[0].prompt)
+        assert isinstance(scratch_cmd, str), "finalize's scratch dispatch carries no maker command"
         self.assertIn("--kind scratch", scratch_cmd)
         scratch = self.exec_maker_command(scratch_cmd)
         self.assertEqual(scratch["answer"].get("status"), "ok", msg=f"{scratch['res']}")
@@ -115,7 +117,9 @@ class FinalizeScratchCase(RealMakerCase):
         removes = remove_calls(probe3)
         removal = None
         if removes:
-            removal = self.exec_maker_command(maker_command_line(removes[0].prompt))
+            remove_cmd = maker_command_line(removes[0].prompt)
+            assert isinstance(remove_cmd, str), "finalize's removal dispatch carries no maker command"
+            removal = self.exec_maker_command(remove_cmd)
             labels[removes[0].label] = removal["reply"]
         final = run_scenario(FINALIZE, main["reply"], extra_labels=labels)
         return {"hub_tip": hub_tip, "scratch": scratch["answer"], "removal": removal, "removes": removes,

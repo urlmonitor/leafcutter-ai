@@ -187,6 +187,7 @@ class RealMakerCase(WorkspaceCase):
         self.assertEqual(len(calls), 1, msg=f"{name}: expected one workspace dispatch, got {len(calls)}")
         command = maker_command_line(calls[0].prompt)
         self.assertIsNotNone(command, msg=f"{name}: workspace dispatch carries no maker command")
+        assert isinstance(command, str)
         real = self.exec_maker_command(command)
         self.assertEqual(real["answer"].get("status"), "ok", msg=f"{name}: real maker said {real['res']}")
         result = scenario(name, real["reply"], args_extra=args_extra, extra_labels=extra_labels)
@@ -196,6 +197,7 @@ class RealMakerCase(WorkspaceCase):
         ws = Path(answer["workspace_path"])
         marker = marker_of(ws)
         self.assertIsNotNone(marker, msg=f"{who}: workspace {ws} carries no maker marker")
+        assert isinstance(marker, dict)
         self.assertEqual(marker.get("state", "ready"), "ready", msg=f"{who}: {marker}")
         shared = [k for k in ("kind", "slug", "branch", "base_commit") if k in answer and k in marker]
         self.assertGreaterEqual(len(shared), 2, msg=f"{who}: answer {answer} and marker {marker} share <2 fields")

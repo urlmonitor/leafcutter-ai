@@ -75,7 +75,7 @@ def extract(root: Path) -> list[NativeRecord]:
         if native_id in seen:
             raise ValueError(f"duplicate MockData identity: {native_id} at {source_path}")
         seen.add(native_id)
-        derived = {"manifest_registered": native_id in manifests}
+        derived: dict[str, object] = {"manifest_registered": native_id in manifests}
         title = description = ""
         if native_id in manifests:
             entry, locator, declared_source = manifests[native_id]

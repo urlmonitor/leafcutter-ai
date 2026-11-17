@@ -186,7 +186,9 @@ covered_by:
   - BP-100k-3-v
   - BP-100k-3-vi
   - BP-100k-3-vii
-  - unit_tests/commit_guardian/test_bp_100k_3.py
+  - unit_tests/commit_guardian/bp_100k_3/test_bp_100k_3_build_drift_reporting.py
+  - unit_tests/commit_guardian/bp_100k_3/test_bp_100k_3_exemption_registry.py
+  - unit_tests/commit_guardian/bp_100k_3/test_bp_100k_3_function_and_main.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md
   - templates/scripts/commit_guardian/_drift_exemptions.py

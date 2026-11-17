@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -180,7 +180,8 @@ created: 2026-09-07
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/known-issues/testing-quality/resolved/resolved-high-ki-tq-012-a-test-fixture-reassigns-the-real.md
 change_target:
   - code
   - docs

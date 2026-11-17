@@ -19,7 +19,6 @@ ARCHITECTURE: ``launch`` is the only place the harness calls ``subprocess.run`` 
 from __future__ import annotations
 
 import contextlib
-import functools
 import logging
 import os
 import shutil
@@ -47,10 +46,18 @@ class AgentLaunchError(Exception):
     row_id: str | None = None
 
 
-@functools.cache
+_LAUNCH_ERROR_TYPES: dict[type[Exception], type[AgentLaunchError]] = {}
+
+
 def _launch_error_type(base: type[Exception]) -> type[AgentLaunchError]:
-    """A class that is both ``AgentLaunchError`` and the caller's own error type, so existing handlers still match."""
-    return type("AgentLaunchFailure", (AgentLaunchError, base), {})
+    """A class that is both ``AgentLaunchError`` and the caller's own error type, so existing handlers still match.
+
+    Made once per *base* and reused. A plain memo rather than ``functools.cache``: the type checker
+    reads a class object as not ``Hashable``, the argument type ``functools.cache`` requires.
+    """
+    if base not in _LAUNCH_ERROR_TYPES:
+        _LAUNCH_ERROR_TYPES[base] = type("AgentLaunchFailure", (AgentLaunchError, base), {})
+    return _LAUNCH_ERROR_TYPES[base]
 
 
 def find_claude() -> str:

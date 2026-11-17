@@ -55,6 +55,7 @@ class TestD3DerivedLookups(unittest.TestCase):
         # The stated figure is the entries of the four lookups the real generator wrote.
         self.assertEqual(n_base, sc.lookup_entry_total(base["index"]))
         self.assertEqual(n_grown, sc.lookup_entry_total(grown["index"]))
+        assert isinstance(n_base, int) and isinstance(n_grown, int)
         self.assertGreater(n_grown, n_base)
 
 

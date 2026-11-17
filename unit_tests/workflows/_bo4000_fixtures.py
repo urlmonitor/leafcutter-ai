@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from unit_tests._workflow_engine_harness import (
+from unit_tests._workflow_engine_workspace import (
     workspace_ensure_reply,
     workspace_refusal_reply,
 )

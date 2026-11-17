@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: in_progress
+work_status: done
 criteria: |
   Return to the same evidence even as the project changes.
 
@@ -65,6 +65,14 @@ amended_by:
     child_limit_override. work_status moves from done to in_progress, honestly: KM-400b-2
     and KM-400b-5 are in_progress with todo children, and the L1 promise that failed updates
     leave the previous version usable has been broken in production since 2026-10-12.'
+  - '2026-11-16: closed, work_status in_progress to done. KM-400b-1 through KM-400b-5 and
+    every L3 under them (KM-400b-2-i, -ii and -iii; KM-400b-5-i through -vi) are done on
+    main. This record now has a covering test of its own, tests/knowledge/test_km_400b.py,
+    which follows one repository through the whole promise with the real sync over real Git
+    commits: a published version is identifiable, a failed update leaves it usable and
+    removes only what it wrote, the next good update becomes the new identifiable version
+    while the old one stays intact, and the knowledge rebuilds from the repository into an
+    empty store. Criteria, other fields and children are unchanged.'
 superseded_by: null
 covered_by:
   - KM-400b-1
@@ -72,6 +80,7 @@ covered_by:
   - KM-400b-3
   - KM-400b-4
   - KM-400b-5
+  - tests/knowledge/test_km_400b.py
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -48,7 +48,7 @@ except ImportError:
         "Decompose into L2/L3 first, or use /ba to generate behavioral specifications."
     )
 
-    def detect_ac_mode(ac_id: str, level: str, covered_by: list) -> dict:
+    def detect_ac_mode(ac_id: str, level: str, covered_by: list | None) -> dict:
         raise ImportError(
             "scripts.build_ac_mode_detection is not yet implemented — "
             "this is the expected red state for TDD test stub. "

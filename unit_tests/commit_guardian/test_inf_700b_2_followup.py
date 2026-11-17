@@ -63,6 +63,9 @@ def _copy(src: Path, dst: Path) -> None:
 class TestCliRegistryPresenceM1(unittest.TestCase):
     """The CLI is run over a temp package copy whose registry file is varied."""
 
+    _tmp: tempfile.TemporaryDirectory[str]
+    root: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         cls._tmp = tempfile.TemporaryDirectory()
@@ -127,6 +130,10 @@ class TestCliRegistryPresenceM1(unittest.TestCase):
 
 class TestHookScopeIsPackageTemplatesOnlyM3(unittest.TestCase):
     """Consumer-style layout: package under ``leafcutter-ai/``, consumer's own ``templates/``."""
+
+    _tmp: tempfile.TemporaryDirectory[str]
+    entry: str
+    repo: Path
 
     @classmethod
     def setUpClass(cls) -> None:

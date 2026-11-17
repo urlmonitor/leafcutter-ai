@@ -81,7 +81,7 @@ class TestFlowPathsArePlatformIndependent(unittest.TestCase):
         )
         self.assertEqual(emitted, "flows/demo-product/sub/a-journey.flow.json")
 
-        flow = {"id": "demo-product/a-journey", "component": "demo-product", "level": None, "entities": []}
+        flow: dict[str, object] = {"id": "demo-product/a-journey", "component": "demo-product", "level": None, "entities": []}
         index_entry = gpt.build_by_flow({flow["id"]: flow}, paths, {})[flow["id"]]
         self.assertEqual(index_entry["path"], "flows/demo-product/sub/a-journey.flow.json",
                          "the index entry must carry the same forward-slash key the loader emitted")
@@ -189,6 +189,7 @@ class TestFlowPathsArePlatformIndependent(unittest.TestCase):
             verdict_line,
             f"no JSON verdict line found on stdout: {result.stdout!r}",
         )
+        assert isinstance(verdict_line, str)
         verdict = json.loads(verdict_line)
         self.assertEqual(
             verdict.get("outcome"),
@@ -219,7 +220,7 @@ class TestDerivedIndexComparisonIsSeparatorTolerant(unittest.TestCase):
         fallen behind" has no equivalent tolerance for a foreign-spelled
         artifact that reaches it by any other route.
         """
-        flow = {
+        flow: dict[str, object] = {
             "id": "demo/a",
             "component": "demo",
             "level": None,

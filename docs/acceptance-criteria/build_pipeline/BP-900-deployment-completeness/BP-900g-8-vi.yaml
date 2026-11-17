@@ -1,0 +1,94 @@
+id: BP-900g-8-vi
+components:
+  - build_pipeline
+title: "The build parses each distinct frontmatter text once, however many times it asks for it"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+created_by: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+criteria: |
+  Given a build that asks template_compiler.parse_frontmatter for the same template
+    text many times (a fresh-consumer build made 1,606 calls over 176 distinct texts),
+  When the same frontmatter text is parsed repeatedly in one process,
+  Then the YAML loader is invoked once for that text, not once per call,
+  And two texts that differ in any character are each parsed by the loader,
+  And the stored parses live only in the memory of the running process, and nothing
+    carries over to a later build,
+  And the number of stored parses is bounded, so a long-lived process that parses many
+    different texts does not grow without limit,
+  Because a profile of a fresh-consumer build put about 34 of its 77 profiled seconds
+    in the pure-Python YAML stack called from parse_frontmatter, and measured 14.9
+    CPU seconds of the unprofiled build in that function, of which 13.9 were re-parses
+    of text already parsed.
+depends_on:
+  - BP-900g-8
+  - BP-900g-8-v
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-v.yaml"
+    relationship: related
+    status: exists
+    relevance: "Owns the equality of what a reused parse returns. This record owns only how often the loader runs."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Home of parse_frontmatter and the in-memory reuse."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+package_surface: false
+it_requirements:
+  - "The speed property is asserted by counting yaml.load invocations from parse_frontmatter, never by wall-clock time."
+  - "The reuse is an in-process, size-bounded memo (functools.lru_cache). No file, no environment variable and no module state outside the memo's own storage."
+  - "The key is the frontmatter text itself, not a hash of it, so two different texts can never collide."
+test_spec:
+  - name: test_repeated_text_invokes_the_loader_once
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    surface_invoked: "template_compiler.parse_frontmatter with yaml.load wrapped to count calls, over one text parsed twenty times and over distinct texts"
+    description: "Twenty parses of one text call the loader once; N distinct texts call it N times; a text differing by one character is parsed again."
+    must_catch:
+      - "No reuse at all, so the loader runs once per call."
+      - "A key that ignores part of the text, so a different text is answered from the wrong stored parse."
+  - name: test_reuse_is_in_memory_only_and_bounded
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "template_compiler.parse_frontmatter run in a temporary working directory, then the memo's reported size after more distinct texts than its bound"
+    description: "Parsing leaves no new file in the working directory or the system temp area under the test's control, and the number of stored parses never exceeds the declared bound."
+    must_catch:
+      - "A persisted cache file."
+      - "An unbounded dictionary."
+test_rationale: |
+  The discrimination entry is red before the change (the loader runs per call) and
+  green after, and it counts the repeated work directly instead of timing it, because
+  this host's timings vary by several times with no code change. The boundary entry
+  holds the two constraints the reuse was approved under: in memory only, and bounded.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-11-16
+created_by_ticket: null
+superseded_by: null
+covered_by:
+  - unit_tests/test_bp_900g_8_v_frontmatter_reuse.py
+implemented_by:
+  - scripts/template_compiler.py
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Measured on origin/main 67a7b443 (2026-11-16), fixture repo holding only docs/ and
+  project.txt: cProfile of a full build showed 1,606 parse_frontmatter calls
+  (29.6 s cumulative of 56.5 s profiled), 1,574 of them reaching yaml.load. Counting
+  distinct texts in a second run gave 176. The loader invocations therefore fall from
+  1,606 to 176 (-89%).

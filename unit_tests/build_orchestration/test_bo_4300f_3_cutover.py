@@ -64,6 +64,7 @@ class CutOverCase(MigrateCase):
     def entry_for(self, answer: dict[str, Any], legacy: Path, bucket: str = "brought_over") -> dict[str, Any]:
         entry = next((e for e in answer[bucket] if norm(e["path"]) == norm(legacy)), None)
         self.assertIsNotNone(entry, msg=f"{legacy} is not in {bucket}: {answer}")
+        assert isinstance(entry, dict)
         return entry
 
     def maker(self, args: list[str]) -> dict[str, Any]:

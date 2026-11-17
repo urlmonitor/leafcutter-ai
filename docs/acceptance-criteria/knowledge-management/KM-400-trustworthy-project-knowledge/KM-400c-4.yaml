@@ -42,9 +42,11 @@ expects_from:
     preserve canonical identities and declared ownership.
 origin_agent: business-analyst
 created: '2026-10-01'
-amended_by: []
+amended_by:
+  - "2026-11-16: BrainCandy added L3 child KM-400c-4-i (the embedding ingestion job requires a provider, and its contract does not admit a missing one). embed_snapshot declared its provider as optional while dereferencing it unconditionally, so a None provider always raised AttributeError. This record's criteria, fields and tests are unchanged; the child is done in the same change."
 superseded_by: null
 covered_by:
+- KM-400c-4-i
 - tests/knowledge/test_core.py::test_semantic_unready_is_not_empty_success
 - tests/knowledge/test_core.py::test_vector_dimension_and_nonfinite_fail_closed_before_search
 - tests/knowledge/test_embedding_jobs.py::test_reviewed_decision_text_cache_is_model_and_content_bound

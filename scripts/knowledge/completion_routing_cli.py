@@ -194,18 +194,19 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     args = parse_args(argv)
     paths = _resolve_sink_and_state(args)
+    reply: dict[str, Any]
     if paths is None and args.command == "waiting":
         reply = {
             "case": "did_not_run", "waiting": None, "records": [],
             "note": "no build-time knowledge-sink declaration and no --sink given",
         }
-    elif args.command == "waiting":
-        reply = _routing.waiting_learnings(sink_path=paths[0], state_path=paths[1])
     elif paths is None:
         reply = _did_not_run(
             "no build-time knowledge-sink declaration beside this script and no "
             "--sink given; refusing to guess a path relative to the current directory"
         )
+    elif args.command == "waiting":
+        reply = _routing.waiting_learnings(sink_path=paths[0], state_path=paths[1])
     elif args.command == "stage":
         reply = _stage(args, *paths)
     else:

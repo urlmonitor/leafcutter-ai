@@ -249,8 +249,7 @@ class TestRenderMasterPlan:
             "dep_graph": {"ACD-001": [], "ACD-002": ["ACD-001"]},
             "topo_order": ["ACD-001", "ACD-002"],
         }
-        base.update(overrides)
-        return base
+        return {**base, **overrides}
 
     def test_frontmatter_has_epic_name(self) -> None:
         # covers: ACD-1200a-7

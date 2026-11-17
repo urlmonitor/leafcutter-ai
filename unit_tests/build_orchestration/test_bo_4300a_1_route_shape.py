@@ -53,6 +53,10 @@ def _split_canary_checks(answer: dict) -> tuple[dict, dict]:
 class TestBO4300a1RouteShape(unittest.TestCase):
     """AC-4 shape proof against the DEPLOYED maker."""
 
+    deployed: DeployedMakerBuild
+    _tmp: tempfile.TemporaryDirectory[str]
+    tmp_path: Path
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.deployed = DeployedMakerBuild.build()

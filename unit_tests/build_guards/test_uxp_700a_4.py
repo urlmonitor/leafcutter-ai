@@ -356,6 +356,7 @@ class TestRequiredFileCountIsDerivedNotRestated(unittest.TestCase):
             f"checked (AC-4) -- found no '<N> required file(s)' pattern in "
             f"the mutated run's output:\n{mutated_output}",
         )
+        assert isinstance(baseline_count, int)
         self.assertEqual(
             mutated_count,
             baseline_count + 1,
@@ -383,6 +384,9 @@ class TestUxp700a4ReachableFromEntryPoint(unittest.TestCase):
     tempdir instead, mirroring unit_tests/product_truth/test_uxp_700a_1.py's
     TestUxp700a1ReachableFromEntryPoint verbatim.
     """
+
+    _isolated_tree: Path
+    _build_result: subprocess.CompletedProcess[str]
 
     @classmethod
     def setUpClass(cls) -> None:

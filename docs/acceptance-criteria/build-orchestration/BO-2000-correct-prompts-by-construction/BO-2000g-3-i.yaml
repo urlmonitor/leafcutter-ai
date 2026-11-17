@@ -1,0 +1,163 @@
+id: BO-2000g-3-i
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Position is exact: a blank line or any other line before the feedback-id line fails the lint"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000g-3.yaml
+criteria: |
+  Given three synthetic examples in a skill file, each under the heading
+    `### 2026-05-08 15:12 — python-coder (status: ok)`:
+      (a) a blank line, then `feedback-id: fb_2026-05-08_aa112233`;
+      (b) `red_baseline_results:`, then `  - test_name: test_foo`, then
+          `feedback-id: fb_2026-05-08_aa112233`;
+      (c) `completion_manifest:`, then `feedback-id: fb_2026-05-08_aa112233`,
+  When the template lint runs,
+  Then it fails on all three and names each heading's line number,
+  And for (a) it reports a blank first body line, even though the commit-time
+    feedback-id check (which looks up to two added lines below a heading) would accept
+    (a) and (c),
+  And when each example is changed so that the feedback-id line sits directly under the
+    heading, with its other lines unchanged below it, the lint passes all three.
+depends_on:
+  - BO-2000g-3
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The commit-time check's two-line window, which this record shows the lint must not copy."
+assigned_agent: python-coder
+estimated_complexity: S
+declared_files:
+  - path: unit_tests/prompt_assembly/test_bo_2000g_3_i.py
+    state: to_be_created
+it_requirements:
+  - >-
+    Run BO-2000g-3's lint entry point over a temporary skill tree that holds the three synthetic
+    examples. Never write into templates/skills/.
+  - >-
+    The blank-first-line case is reported as its own case: the report says the first body line
+    is blank, not just that the feedback-id line is missing.
+  - >-
+    The lint's position rule is signoff §3 Body item 1 ("always first"), never the commit-time
+    check's two-line window. This record pins that difference and must go red if the lint is
+    changed to search within two lines.
+  - >-
+    Reported line numbers are 1-based and point at each heading line, so all three examples in
+    the one file are named separately.
+test_intent:
+  - clause: "it fails on all three and names each heading's line number"
+    needs_test: true
+    reason: "A lint that searches within two lines, as the commit-time check does, lets (a) and (c) through, and one that stops at the first failure names only one heading."
+  - clause: "for (a) it reports a blank first body line, even though the commit-time feedback-id check (which looks up to two added lines below a heading) would accept (a) and (c)"
+    needs_test: true
+    reason: "The natural wrong version skips blank lines before reading the first body line, and it would accept (a)."
+  - clause: "when each example is changed so that the feedback-id line sits directly under the heading, with its other lines unchanged below it, the lint passes all three"
+    needs_test: true
+    reason: "This shows each failure came from the line position alone, so a lint that also objects to the red_baseline or completion_manifest lines that follow is caught."
+delivers_to: null
+expects_from:
+  ac_id: BO-2000g-3
+  contract: "The template lint whose first-body-line rule this scenario pins"
+origin_agent: business-analyst
+created: 2026-11-16
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-11-16'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Why the lint is stricter than the commit-time check. A template whose id sits on body
+  line 2 passes the check today. An agent that then adds one line above the id (a
+  completion_manifest, a red_baseline block) pushes it to line 3, and the check refuses
+  the commit. That is the python-coder failure in the KI. "First body line" is the
+  signoff skill's own rule (§3 Body item 1, "always first"). A lint that searched
+  "within two lines" would copy the check's window and let (a) and (c) through. That is
+  the wrong version this record exists to catch.
+test_spec:
+  - name: test_all_three_misplaced_examples_fail_and_each_heading_line_is_named
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      A tmp_path skill tree holds one file with the three synthetic examples (a) blank line then the
+      id, (b) red_baseline_results: and a test entry then the id, (c) completion_manifest: then the id,
+      all under ### 2026-05-08 15:12 — python-coder (status: ok). The lint entry point fails on all three
+      and returns three failures with three distinct 1-based heading line numbers. templates/skills/
+      is never written.
+    proves_clause: 'it fails on all three and names each heading''s line number'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that searches the two lines below the heading as the hook does, which passes (a) and (c)
+      - a lint that stops at the first failure and names one heading only
+      - a lint that reports the first body line number instead of the heading line number
+  - name: test_blank_first_body_line_is_reported_as_blank_not_as_missing_id
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: >-
+      For (a) the failure record carries first_body_line null (blank) and the formatted report says the
+      first body line is blank. For (b) and (c) the record carries the found text. The test also feeds
+      (a) and (c) to the hook's own two-line rule from check_feedback_id.py and shows the hook accepts
+      them, pinning the difference.
+    proves_clause: 'for (a) it reports a blank first body line, even though the commit-time feedback-id check (which looks up to two added lines below a heading) would accept (a) and (c)'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+    must_catch:
+      - a lint that skips blank lines before reading the first body line and so accepts (a)
+      - a lint that reports (a) only as feedback-id missing without saying the first line is blank
+      - a lint changed to look within two lines
+  - name: test_moving_the_id_directly_under_the_heading_passes_all_three
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: >-
+      Each example is rewritten so the feedback-id line is directly under the heading with its other
+      lines unchanged and in order below it (red_baseline_results: and the test entry for (b),
+      completion_manifest: for (c)). The lint then passes all three with no failure, so a lint that
+      objects to the lines that follow is caught.
+    proves_clause: 'when each example is changed so that the feedback-id line sits directly under the heading, with its other lines unchanged below it, the lint passes all three'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+  - name: test_position_rule_is_reached_through_a_fresh_interpreter_run_of_the_lint
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: >-
+      Runs the lint entry point of the support module in a fresh python -I subprocess from the repo
+      root with the tmp_path tree as the root argument, prints the result as JSON, and asserts exit 0,
+      three failures for the misplaced examples and none for the corrected ones.
+    proves_clause: 'it fails on all three and names each heading''s line number'
+    code_file: unit_tests/prompt_assembly/_bo_2000g_3_support.py
+    to_be_created: true
+    convention_test_file: unit_tests/prompt_assembly/test_signoff_block_protocol.py
+test_design_authorship:
+  step: test-designer
+  date: "2026-11-16"
+test_design_opened_files:
+  - templates/scripts/commit_guardian/check_feedback_id.py
+  - templates/skills/signoff/SKILL.md
+  - unit_tests/prompt_assembly/test_signoff_block_protocol.py
