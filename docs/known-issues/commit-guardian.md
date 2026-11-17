@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-11-16'
+last_updated: '2026-11-17'
 components:
   - commit_guardian
 related_docs:
@@ -73,13 +73,13 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 86** (1 blocker, 35 high, 50 low) · **Resolved: 29** (recounted from the directory 2026-10-25; +3 open 2026-11-16)
+**Open: 88** (0 blocker, 36 high, 52 low) · **Resolved: 29** (recounted from the directory 2026-11-17, after KI-CG-20260909-gate-root-files was reclassified from blocker to low)
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable | [open-blocker-ki-cg-20260909-gate-root-files.md](commit-guardian/open-blocker-ki-cg-20260909-gate-root-files.md) |
+| `low` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable (reclassified from blocker 2026-11-17: the `M` half is fixed by PR #857; five root files are still missing from the shipped allowlist) | [open-low-ki-cg-20260909-gate-root-files.md](commit-guardian/open-low-ki-cg-20260909-gate-root-files.md) |
 | `high` | KI-CG-001 — AC hooks are scoped to the git index, so parent-level drift is unreachable | [open-high-ki-cg-001.md](commit-guardian/open-high-ki-cg-001.md) |
 | `high` | KI-CG-006 — The pre-commit proof-of-done gate and the CI backstop disagree on what a valid tag is, in both directions | [open-high-ki-cg-006.md](commit-guardian/open-high-ki-cg-006.md) |
 | `high` | KI-CG-007 — The sanctioned way to add a component produces an entry the required gate rejects, and the gate's stated rule is weaker than the one it enforces | [open-high-ki-cg-007.md](commit-guardian/open-high-ki-cg-007.md) |

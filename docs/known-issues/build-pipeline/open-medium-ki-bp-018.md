@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-11-17'
 components:
   - build_pipeline
 related_docs:
@@ -17,8 +17,8 @@ related_docs:
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
 > 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
-> Filename severity is the three-level index bucket (`blocker`); the
-> original grading is the `**Severity:**` line below, unchanged.
+> Filename severity is `medium` since 2026-11-17, matching the `**Severity:**` line below,
+> which has read medium since 2026-09-01. Only the filename was stale.
 
 - **Severity:** medium — **DOWNGRADED from blocker 2026-09-01**; see "What has changed" below.
   Two of this entry's three findings are fixed and shipped. The third, the hand-listed deploy
@@ -30,7 +30,10 @@ related_docs:
 **WHAT HAS CHANGED, 2026-09-01.** This entry was written as three findings. Verified against
 `origin/main` today:
 
-1. **"No build phase can fail the build" — FIXED.** BP-900g-9 shipped
+1. **"No build phase can fail the build" — FIXED** by PR #623 (`8be523f48`, BP-900g-9;
+   completed at nine sites by #661). *2026-11-17: the accumulator now lives in
+   `build_phases_deploy_failures.py` and `main()` reaches it through
+   `build_main_helpers.py`:339; the behaviour is unchanged.* BP-900g-9 shipped
    `DeployDeclarationError` with a module-level accumulator; nine declared-deploy sites now
    record every unresolvable entry and `raise_if_deploy_failures()` raises once, which `main()`
    catches and returns 1 on. Verified: nine `record_deploy_failure(` call sites in
@@ -40,9 +43,14 @@ related_docs:
    tracks.** BP-900g-8 derived the *closure* (what a deployed script imports) and the
    *manifest* side; it did not derive the *deploy declaration*. `AC_STORE_DEPLOY_MAP`,
    `AGENT_SUPPORT_SCRIPT_DIRS`/`_FILES`, the per-phase `deploy_scripts` lists and their mirrors
-   in `build.py` are all still hand-maintained.
-3. **"Nothing verifies the deployed tree is complete" — SUBSTANTIALLY FIXED.** BP-900g-8's
-   intra-package closure guard runs as a preflight and can fail the build.
+   in `build.py` are all still hand-maintained. *Still true 2026-11-17:* see the
+   reclassification note at the end for current line numbers.
+3. **"Nothing verifies the deployed tree is complete" — FIXED, further than this said.**
+   BP-900g-8's intra-package closure guard runs as a preflight and can fail the build
+   (`build.py`:1750-1760). *2026-11-17:* `extract_compiled_script_path_refs()` now has a
+   production caller: `scripts/ci/check_consumer_install.py`:342, run by the consumer-install
+   job at `ci.yml`:1053 (`c7254ae38`, BP-900h-1). The "no production call site" text in
+   Finding 3 below and in the 2026-09-23 note is out of date.
 
 **Why medium and not closed.** The remaining hand-lists are exactly what produced this entry's
 recurrence history — four rounds of "add the missing module" before anyone treated the list
@@ -175,5 +183,27 @@ the kind of hand-maintenance-by-addition this entry's Finding 2 describes as the
 not a derivation. `extract_compiled_script_path_refs()` — the function that would verify the
 *deployed* tree — still has no production call site. Nothing in the repo suggests Finding 2 has
 progressed since this entry's own 2026-09-01 assessment; kept open, medium, as already recorded.
+
+## Reclassified 2026-11-17: filename blocker to medium
+
+The entry has said medium since 2026-09-01 (PR #678); only the `open-blocker-` filename and
+its index row still said blocker. Renamed with `git mv`. Re-verified against origin/main
+`70971399d`:
+- **Finding 1, fixed** by PR #623 (BP-900g-9). An unresolvable declared entry is recorded and
+  `raise_if_deploy_failures()` stops the build.
+- **Finding 3, fixed further than the entry said.** `extract_compiled_script_path_refs` is
+  called by `scripts/ci/check_consumer_install.py`:342, which CI runs at `ci.yml`:1053
+  (`c7254ae38`, BP-900h-1). The closure guard is wired at `build.py`:1750-1760.
+- **Finding 2, still true.** The deploy set is listed by hand: `AC_STORE_DEPLOY_MAP`
+  (`build_phases_ac_store.py`:82), `AGENT_SUPPORT_SCRIPT_DIRS` / `_FILES`
+  (`build_phases_script_deploy.py`:74, :92), the core-config tuple duplicated at
+  `build.py`:522-562 and :801-821, and the `goal_to_epic.py` / `build_ac_mode_detection.py`
+  pair at `build.py`:468, :474 and :768.
+
+**Follow-up:** BP-1500b-2 (`readiness: approved`, `work_status: todo`) derives orphans from
+current sources instead of a maintained list, and BP-900c-4 (`readiness: reviewed`,
+`work_status: todo`) covers a broken reference whose path a declaration already names.
+BP-900g-9 itself stays `todo`: its nine tagged tests pass locally, but its child BP-900g-9-i
+is `todo` with no covering test, so the parent cannot be marked done yet.
 
 ---

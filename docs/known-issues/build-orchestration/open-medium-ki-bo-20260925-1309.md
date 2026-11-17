@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-25'
-last_updated: '2026-09-25'
+last_updated: '2026-11-17'
 components:
   - build_orchestration
 related_docs:
@@ -15,7 +15,7 @@ related_docs:
 
 # KI-BO-20260925-1309 — A phase agent wraps its whole reply in one `input` string, and the schema's misleading error sends every retry after the wrong field, so the drive halts with the work already done
 
-- **Severity:** blocker
+- **Severity:** medium (reclassified from blocker 2026-11-17; see the note at the end)
 - **Status:** open — mitigated by BO-3000b and BO-2000c-5 (see *Fix*); the underlying contract conflict has no AC yet
 - **Occurrences:** 3 drives halted, all on 2026-09-25 against EPIC-TruthfulProjectRecord:
   `wf_ee4e9d81-680` (documentation-expert and ac-fulfillment-gate), `wf_e1f3e873-096`
@@ -100,3 +100,22 @@ Neither removes the conflict. The durable fix is to state the phase reply contra
 shared `signoff` skill, and replace the conflicting output block in all 36 templates; that would
 also close the remaining scope of KI-BO-20260901-1045 and KI-BO-20260907-0851. It needs ACs through
 `/plan-feature`, not a quick fix.
+
+## Reclassified 2026-11-17: blocker to medium
+
+Re-verified against origin/main `70971399d`. The halt this entry records no longer happens the
+way it did:
+- **Fixed: the misleading schema error.** The handoff conditional now requires `status` before
+  it demands `handoff_target` (`build-feature.js`:349-354, `build-ticket.js`:150), from PR #902,
+  `aed7081af` (BO-3000b).
+- **Mitigated: the `input` wrapper.** Both dispatch prompts tell the agent to fill the reply
+  tool's fields and never to pass the reply as a JSON string or inside an `input` field
+  (`build-feature.js`:2178, `build-ticket.js`:1776), from PR #903, `ddd91f97c` (BO-2000c-5).
+- **Still open: the contract conflict.** The "Machine-Parsed Dispatch Output Contract" block is
+  now in 40 templates under `templates/agents/`, up from 36. `documentation-expert.md`:409 still
+  says the reply "MUST be exactly one JSON value". The `signoff` skill states no reply contract.
+  No recurrence has been recorded since 2026-09-25.
+
+**Follow-up:** the durable fix still needs ACs through `/plan-feature`: state the reply
+contract once, in `signoff`, and replace the template blocks. Bundle it with the remaining
+scope of KI-BO-20260901-1045 and KI-BO-20260907-0851.

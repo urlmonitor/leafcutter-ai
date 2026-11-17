@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-11-03'
+last_updated: '2026-11-17'
 components:
   - testing_quality
 related_docs:
@@ -55,13 +55,13 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 41** (1 blocker, 15 high, 25 low) · **Resolved: 16** (recounted from the directory 2026-11-04, after resolving the temp-cleanup, WHERE-filtered COUNT(*), not-run-sentence, one-catching-test, bare-asserts and unrequested-report-wording known issues)
+**Open: 41** (0 blocker, 15 high, 1 medium, 25 low) · **Resolved: 16** (recounted from the directory 2026-11-17, after KI-TQ-007 was reclassified from blocker to medium)
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-TQ-007 — Six review rounds verified a component without once asking what invokes it | [open-blocker-ki-tq-007.md](testing-quality/open-blocker-ki-tq-007.md) |
+| `medium` | KI-TQ-007 — Six review rounds verified a component without once asking what invokes it (reclassified from blocker 2026-11-17: detection shipped in #787, 4 known unregistered scripts remain; advertised-vs-run reconciliation is GE-120h-1/-2) | [open-medium-ki-tq-007.md](testing-quality/open-medium-ki-tq-007.md) |
 | `high` | KI-TQ-001 — An unanswered eval row scores as an all-negative prediction, so a dead agent's floor is not zero | [open-high-ki-tq-001.md](testing-quality/open-high-ki-tq-001.md) |
 | `high` | KI-TQ-002 — The CI eval job reports missing credentials as a low quality score | [open-high-ki-tq-002.md](testing-quality/open-high-ki-tq-002.md) |
 | `high` | KI-TQ-004 — Bare-name `sys.modules` caching lets a stale deployed copy shadow the canonical module for a whole pytest session | [open-high-ki-tq-004.md](testing-quality/open-high-ki-tq-004.md) |
